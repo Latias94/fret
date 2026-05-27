@@ -18,12 +18,14 @@ use fret_runtime::{
     ModelsHost, ShareSheetToken, TickId, TimeHost, TimerToken,
 };
 use fret_ui::action::UiActionHost;
+use fret_ui::element::{LayoutStyle, Length, PointerRegionProps, SizeStyle};
 
 use super::hover_anchor::{HoverTooltipAnchorSource, hovered_canvas_anchor_rect_for_surface};
 
 use super::overlay_elements::{
     build_hover_tooltip_overlay_spec, clamp_marquee_overlay_rect_to_bounds,
 };
+use super::overlays::push_overlay_layer_if_needed;
 use super::pointer_down::read_left_pointer_down_snapshot_action_host;
 use super::surface_support::collect_node_label_and_ports;
 use super::{
@@ -5086,6 +5088,99 @@ fn build_hover_tooltip_overlay_spec_flips_below_anchor_when_needed() {
     assert_eq!(spec.top, Px(11.0));
     assert_eq!(spec.width, Px(240.0));
     assert!(spec.hide_label_summary);
+}
+
+#[test]
+fn declarative_overlay_layer_is_input_transparent_over_canvas_region() {
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let mut services = FakeUiServices;
+    let window = AppWindowId::default();
+    let bounds = test_node_graph_surface_bounds();
+    ui.set_window(window);
+    host.bounds = bounds;
+
+    let canvas_downs = Arc::new(AtomicUsize::new(0));
+    let overlay_downs = Arc::new(AtomicUsize::new(0));
+    let canvas_downs_hook = canvas_downs.clone();
+    let overlay_downs_hook = overlay_downs.clone();
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        "node-graph-declarative-overlay-input-transparency",
+        |cx| {
+            let mut canvas_region = PointerRegionProps::default();
+            canvas_region.layout = LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let canvas = cx.pointer_region(canvas_region, |cx| {
+                cx.pointer_region_on_pointer_down(Arc::new(move |_host, _cx, _down| {
+                    canvas_downs_hook.fetch_add(1, Ordering::Relaxed);
+                    true
+                }));
+                Vec::new()
+            });
+
+            let mut overlay_children = Vec::new();
+            let mut overlay_region = PointerRegionProps::default();
+            overlay_region.layout = LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            overlay_children.push(cx.pointer_region(overlay_region, |cx| {
+                cx.pointer_region_on_pointer_down(Arc::new(move |_host, _cx, _down| {
+                    overlay_downs_hook.fetch_add(1, Ordering::Relaxed);
+                    true
+                }));
+                Vec::new()
+            }));
+
+            let mut out = vec![canvas];
+            push_overlay_layer_if_needed(cx, &mut out, overlay_children);
+            out
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut host, &mut services, bounds, 1.0);
+
+    let position = Point::new(Px(320.0), Px(240.0));
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: PointerId::default(),
+            position,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        canvas_downs.load(Ordering::Relaxed),
+        1,
+        "declarative overlay layer should pass pointer input through to the canvas region"
+    );
+    assert_eq!(
+        overlay_downs.load(Ordering::Relaxed),
+        0,
+        "diagnostics-only declarative overlays must not become interactive hit-test roots"
+    );
 }
 
 #[test]

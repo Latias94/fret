@@ -888,6 +888,11 @@ canonical data flow and invalidation boundaries:
 - [x] **Overlay input transparency by default**
   - XyFlow: most overlays are pointer-events: none except interactive controls
   - fret-node: portal root is now mounted via input-transparent dismissible root; per-node portal wrappers are `Semantics`
+  - Declarative surface: diagnostics-only overlay layers are hit-test transparent over the canvas
+    region, so hover/marquee overlays do not steal input from the underlying surface.
+  - Conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    (`declarative_overlay_layer_is_input_transparent_over_canvas_region`),
+    `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`
 
 ---
 

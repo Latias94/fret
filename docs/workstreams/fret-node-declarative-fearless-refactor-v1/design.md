@@ -444,6 +444,9 @@ Status note (2026-04-03):
 - The closeout gate set for the FNDX consumer-surface slices now passes
   (`cargo fmt --check`, `cargo nextest run -p fret-node`, and
   `cargo check -p fret-node --features compat-retained-canvas --tests`).
+- FNDX-040 locks the first concrete declarative overlay behavior parity gate: overlay layers remain
+  hit-test transparent over the canvas region, so diagnostics-only hover/marquee overlays do not
+  steal pointer input from the underlying surface.
 - The next narrow follow-up inside Slice 3 should choose one concrete declarative overlay behavior
   parity gap and lock it with a behavior/conformance gate, not reopen the now-aligned policy
   placement seams as unowned experiments.

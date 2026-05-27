@@ -32,13 +32,16 @@
     "cargo fmt --check",
     "cargo nextest run -p fret-node",
     "cargo nextest run -p fret-node public_node_graph_guides_teach_binding_first_surface",
+    "cargo nextest run -p fret-node declarative_overlay_layer_is_input_transparent_over_canvas_region",
     "cargo nextest run -p fret-node --no-default-features runtime",
     "cargo check -p fret-node --features compat-retained-canvas --tests",
     "python3 tools/check_layering.py"
   ],
   "evidence": [
     "docs/node-graph-how-to-build-like-xyflow.md",
+    "docs/node-graph-xyflow-parity.md",
     "ecosystem/fret-node/README.md",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs",
     "ecosystem/fret-node/src/surface_policy_tests.rs",
     "docs/workstreams/fret-node-declarative-fearless-refactor-v1/HANDOFF.md"
   ],
@@ -47,6 +50,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane while the public story remains declarative-first and controller/binding-first. FNDX-010/FNDX-020/FNDX-030 are closeout-verified; the next default task is FNDX-040, a concrete declarative overlay parity/conformance slice."
+    "notes": "Continue this lane while the public story remains declarative-first and controller/binding-first. FNDX-010/FNDX-020/FNDX-030 are closeout-verified, and FNDX-040 has the first concrete declarative overlay parity gate; future tasks should keep choosing one observable overlay behavior plus one narrow gate."
   }
 }

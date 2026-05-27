@@ -13,14 +13,25 @@ older graph/view/controller triplets or direct retained authoring.
 
 ## Active Task
 
-- Task ID: none currently in progress.
-- Last closed task: FNDX-030.
-- Next proposed task: FNDX-040, a concrete declarative overlay parity/conformance slice.
-- Status: FNDX-010, FNDX-020, and FNDX-030 are done and closeout-verified for their bounded
-  claims. The full workstream remains active because FNDX-030 intentionally closed ownership
-  placement, not full declarative overlay parity.
+- Task ID: FNDX-040.
+- Owner: current Codex session.
+- Status: DONE.
+- Claim: declarative overlay layers stay input-transparent over the canvas region, matching the
+  XyFlow-style "overlay root does not steal input" outcome and the retained portal pointer
+  passthrough conformance posture.
 - Review: use `review-workstream` before accepting broader lane closure.
 - Evidence:
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs` adds
+    `declarative_overlay_layer_is_input_transparent_over_canvas_region`, which fails if an overlay
+    layer can intercept pointer input before the canvas region.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/overlays.rs` keeps the declarative overlay
+    layer behind `hit_test_gate(false)`.
+  - `docs/node-graph-xyflow-parity.md` now names declarative overlay-layer input transparency next
+    to the retained portal-root input transparency contract.
+  - Fresh gates passed:
+    `cargo nextest run -p fret-node declarative_overlay_layer_is_input_transparent_over_canvas_region`,
+    `cargo check -p fret-node --features compat-retained-canvas --tests`, and
+    `cargo fmt --check`.
   - `ecosystem/fret-node/src/surface_policy_tests.rs` locks the FNDX-030 ownership boundary:
     toolbar public policy types stay in `toolbar_policy.rs`, menu/searcher policy enums stay in
     `state_overlay_policy.rs`, and retained menu/searcher lifecycle writes route through named
@@ -48,13 +59,15 @@ older graph/view/controller triplets or direct retained authoring.
   overlay behavior parity should be split into future focused conformance tasks.
 - Keep this workstream active after closeout verification and split the next step as FNDX-040
   instead of marking the whole lane complete.
+- FNDX-040 chose input transparency as the first concrete declarative overlay parity gate and did
+  not widen the overlay policy surface.
 
 ## Blockers
 
-- None for FNDX-030.
+- None for FNDX-040.
 
 ## Next Recommended Action
 
-- Start FNDX-040: choose one observable overlay behavior that matters to the XYFlow-style consumer
-  story (anchoring, input transparency, dismissal, focus return, or add-on placement), then add a
-  focused declarative behavior gate or paired declarative-vs-retained conformance gate.
+- Pick the next overlay parity behavior only if it has a concrete observable outcome and a narrow
+  gate. Good candidates are dismissal/focus-return behavior for an actual declarative add-on or
+  anchoring parity for a specific overlay under motion.

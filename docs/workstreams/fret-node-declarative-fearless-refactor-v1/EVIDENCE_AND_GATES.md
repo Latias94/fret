@@ -5,10 +5,10 @@ Last updated: 2026-05-27
 
 ## Current Focus
 
-FNDX-010, FNDX-020, and FNDX-030 are now verified with the closeout gate set for this workstream
-slice. The lane stays active because FNDX-030 only closed overlay/menu/toolbar policy placement; it
-did not claim full declarative overlay parity. The next slice should be a concrete declarative
-overlay parity/conformance task rather than another ownership-placement pass.
+FNDX-040 is the first concrete declarative overlay parity/conformance follow-up after the
+overlay/menu/toolbar policy-placement closure. It locks the XyFlow-style "overlay root does not
+steal input" outcome for declarative overlay layers, aligned with the retained portal pointer
+passthrough conformance coverage.
 
 ## Targeted Iteration Gates
 
@@ -55,6 +55,13 @@ cargo nextest run -p fret-node --no-default-features runtime
 This gate protects the headless runtime/change/store behavior while consumer docs reference
 `NodeGraphStore`, controlled mode, and transaction-backed changes.
 
+```bash
+cargo nextest run -p fret-node declarative_overlay_layer_is_input_transparent_over_canvas_region
+```
+
+This gate proves declarative overlay layers stay hit-test transparent over the canvas region, so
+diagnostics-only hover/marquee overlays do not steal pointer input from the underlying surface.
+
 ## Package And Boundary Gates
 
 ```bash
@@ -89,8 +96,10 @@ closeout note must name those failures.
 - `ecosystem/fret-node/src/ui/controller_store_sync.rs`
 - `ecosystem/fret-node/src/ui/overlays/toolbar_policy.rs`
 - `ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 - `ecosystem/fret-node/src/ui/canvas/state/state_overlay_policy.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/overlay.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/overlay.rs`
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/README.md`
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/design.md`
@@ -126,5 +135,12 @@ closeout note must name those failures.
     public guide, controlled-mode policy, and overlay/menu/toolbar source-policy slices.
   - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed; proves retained
     compatibility test targets still compile after the overlay policy placement closure.
+- FNDX-040:
+  - `cargo nextest run -p fret-node declarative_overlay_layer_is_input_transparent_over_canvas_region`:
+    passed; proves the declarative overlay layer remains input-transparent even if an overlay child
+    contains a pointer region.
+  - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed; proves retained
+    compatibility test targets still compile with the new declarative overlay behavior gate.
+  - `cargo fmt --check`: passed; proves formatting is clean after the new Rust test.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

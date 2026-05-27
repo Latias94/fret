@@ -89,11 +89,12 @@ Execution companion: `design.md` (surface map + next worktree order).
     - `cargo nextest run -p fret-node --features compat-retained-canvas overlay_menu_toolbar_policy_ownership_stays_on_named_seams`: passed.
     - `cargo nextest run -p fret-node --features compat-retained-canvas overlay_policy_modules_compile_without_retained_canvas_compat default_overlay_policy_surfaces_stay_off_retained_bridge`: passed.
     - `cargo fmt --check`: passed.
-- [ ] FNDX-040 Close one concrete declarative overlay parity gap with a behavior/conformance gate.
+- [x] FNDX-040 Close one concrete declarative overlay parity gap with a behavior/conformance gate.
   - Scope:
     - `ecosystem/fret-node/src/ui/declarative/paint_only/overlays.rs`
     - `ecosystem/fret-node/src/ui/declarative/paint_only/overlay_elements.rs`
-    - the retained overlay conformance fixture or policy seam that owns the selected behavior
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`
     - `docs/node-graph-xyflow-parity.md`
   - Validation:
     - a focused declarative overlay behavior gate, or a paired declarative-vs-retained conformance
@@ -101,6 +102,18 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Exit note: this follow-up must prove one observable editor behavior on the declarative path
     (anchoring, input transparency, dismissal, focus return, or add-on placement) instead of only
     moving policy types between files.
+  - Landed behavior: declarative overlay layers are input-transparent over the canvas region,
+    matching the XyFlow-style "overlay root does not steal input" outcome already covered for
+    retained portal roots.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/overlays.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node declarative_overlay_layer_is_input_transparent_over_canvas_region`: passed.
+    - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed.
+    - `cargo fmt --check`: passed.
 
 ## M0 - Decision gates and internal seam map
 

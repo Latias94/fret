@@ -509,9 +509,10 @@ real editors.
 
 - FNDX-030 closed the overlay/menu/toolbar policy-placement decision with source-policy coverage,
   and the closeout gate set for the recent FNDX slices passed.
-- This milestone is not fully closed by that result: the next slice should prove one observable
-  declarative overlay behavior with a focused behavior/conformance gate instead of only moving
-  policy ownership seams.
+- FNDX-040 adds the first concrete declarative overlay behavior gate after that decision:
+  diagnostics-only overlay layers stay hit-test transparent over the canvas region.
+- This milestone is not fully closed by that result: the next slice should continue proving one
+  observable declarative overlay behavior at a time instead of only moving policy ownership seams.
 
 ### Progress note (2026-03-06)
 
