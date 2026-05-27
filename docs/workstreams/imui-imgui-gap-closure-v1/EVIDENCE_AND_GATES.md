@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Floating Area Layout Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI floating area shell layout and hit-test gate selection moved into a private
+owner without changing floating-area registration, drag position reconciliation, no-input behavior,
+hit-test passthrough behavior, area test IDs, response population, or public-in-IMUI APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/area.rs` keeps layer child registration, drag
+  snapshot/state reconciliation, child mounting, final test-id stamping, and
+  `FloatingAreaResponse` construction.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/area/layout.rs` owns absolute area layout props,
+  `interactivity_gate_props` selection for `no_inputs`, `hit_test_gate_props` selection for
+  hit-test passthrough, and the container fallback.
+- `tools/gate_imui_workstream_source.py` now rejects floating-area layout/gate bodies from drifting
+  back into `area.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating::input_modes --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Floating Layer Z-Order Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI floating layer z-order state and snapshot projection moved into a private

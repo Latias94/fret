@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 floating area layout owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_surface/area/layout.rs` now owns absolute area layout
+props, `interactivity_gate_props` selection for `no_inputs`, `hit_test_gate_props` selection for
+hit-test passthrough, and the container fallback. `floating_surface/area.rs` keeps layer child
+registration, drag snapshot/state reconciliation, child mounting, final test-id stamping, and
+`FloatingAreaResponse` construction.
+
 2026-05-28 floating layer z-order owner-split result:
 `ecosystem/fret-ui-kit/src/imui/floating_surface/layer/z_order.rs` now owns
 `FloatWindowLayerZOrder`, z-order membership, bring-to-front reordering, missing-window pruning,

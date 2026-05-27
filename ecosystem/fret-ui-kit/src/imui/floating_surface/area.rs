@@ -2,14 +2,14 @@ use std::sync::Arc;
 
 use fret_core::Point;
 use fret_core::window::WindowMetricsService;
-use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Overflow, PositionStyle,
-};
+use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
 use super::super::{FloatingAreaContext, FloatingAreaOptions, FloatingAreaResponse, ImUiFacade};
 use super::kinds::float_window_drag_kind_for_element;
 use super::state::FloatingAreaState;
+
+mod layout;
 
 pub(in crate::imui) fn floating_area_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -101,46 +101,7 @@ pub(in crate::imui) fn floating_area_element<H: UiHost>(
             |st| (st.position, st.test_id.clone()),
         );
 
-        let mut props = ContainerProps::default();
-        props.layout = LayoutStyle {
-            position: PositionStyle::Absolute,
-            inset: InsetStyle {
-                left: Some(final_position.x).into(),
-                top: Some(final_position.y).into(),
-                ..Default::default()
-            },
-            overflow: Overflow::Visible,
-            ..Default::default()
-        };
-
-        let area = if options.no_inputs {
-            let layout = props.layout;
-            let mut gate = cx.interactivity_gate_props(
-                fret_ui::element::InteractivityGateProps {
-                    layout,
-                    present: true,
-                    interactive: false,
-                },
-                |_cx| out,
-            );
-            gate.id = area_id;
-            gate
-        } else if options.hit_test_passthrough {
-            let layout = props.layout;
-            let mut gate = cx.hit_test_gate_props(
-                fret_ui::element::HitTestGateProps {
-                    layout,
-                    hit_test: false,
-                },
-                |_cx| out,
-            );
-            gate.id = area_id;
-            gate
-        } else {
-            let mut area = cx.container(props, move |_cx| out);
-            area.id = area_id;
-            area
-        };
+        let area = layout::floating_area_shell(cx, area_id, final_position, &options, out);
         let area = area.test_id(final_test_id);
 
         let response = FloatingAreaResponse {

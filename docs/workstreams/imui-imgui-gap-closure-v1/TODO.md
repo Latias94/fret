@@ -44,6 +44,15 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI floating area shell layout and hit-test gate selection out of
+      `ecosystem/fret-ui-kit/src/imui/floating_surface/area.rs` into a private layout owner without
+      changing floating-area registration, drag position reconciliation, no-input behavior,
+      hit-test passthrough behavior, area test IDs, response population, or public-in-IMUI APIs.
+      Result: `floating_surface/area/layout.rs` owns absolute area layout props,
+      `interactivity_gate_props` selection for `no_inputs`, `hit_test_gate_props` selection for
+      hit-test passthrough, and the container fallback. `area.rs` keeps layer child registration,
+      drag snapshot/state reconciliation, child mounting, final test-id stamping, and
+      `FloatingAreaResponse` construction.
 - [x] Split IMUI floating layer z-order state and snapshot projection out of
       `ecosystem/fret-ui-kit/src/imui/floating_surface/layer.rs` into a private owner without
       changing floating layer child registration, bring-to-front activation, missing-window
