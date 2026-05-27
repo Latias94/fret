@@ -137,6 +137,14 @@ Last updated: 2026-05-27
       `ResponseExt::default()` initialization, final `ui.add(...)`, and response return.
       `routing.rs` keeps public dispatch, checkbox/radio/action role selection, noop-hook routing,
       and label identity scoping.
+- [x] Split IMUI menu-item routing dispatch out of
+      `ecosystem/fret-ui-kit/src/imui/menu_controls/routing.rs` into a private dispatch owner
+      without changing public menu item entry points, checkbox/radio/action role selection,
+      noop-hook routing, `##/###` label identity scoping, pressable-hook forwarding, response
+      assembly, or final element mounting.
+      Result: `menu_controls/routing/dispatch.rs` owns public menu-item entry wrappers,
+      checkbox/radio/action role selection, noop-hook routing, and identity-to-mount dispatch.
+      `routing.rs` is now a private dispatch/identity/mount module index and re-export hub.
 - [x] Split IMUI container child building, linear layout, scroll, and grid element composition out
       of `ecosystem/fret-ui-kit/src/imui/containers.rs` into private owner modules without
       changing horizontal/vertical/grid/scroll facade helpers, option forwarding, test-id

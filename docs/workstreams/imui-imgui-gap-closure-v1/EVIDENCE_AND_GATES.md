@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Menu-Item Routing Dispatch Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI menu-item routing dispatch moved into a private owner without changing public
+menu item entry points, checkbox/radio/action role selection, noop-hook routing, `##/###` label
+identity scoping, pressable-hook forwarding, response assembly, or final element mounting.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/routing.rs` is now a private
+  dispatch/identity/mount module index and re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch.rs` owns public menu-item entry
+  wrappers, checkbox/radio/action role selection, noop-hook routing, and identity-to-mount
+  dispatch.
+- `tools/gate_imui_workstream_source.py` now rejects public menu-item dispatch bodies from
+  drifting back into root `menu_controls/routing.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_controls::tests --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Disclosure Layout Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI disclosure content/root layout moved into a private owner without changing

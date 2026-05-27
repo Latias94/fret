@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 menu-item routing dispatch owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch.rs` now owns public menu-item entry
+wrappers, checkbox/radio/action role selection, noop-hook routing, and identity-to-mount dispatch.
+`menu_controls/routing.rs` is now a private dispatch/identity/mount module index and re-export hub.
+
 2026-05-27 disclosure layout owner-split result:
 `ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout.rs` now owns content container
 composition, body `ImUiFacade` construction, root column layout, and content/root test-id
