@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 tab-family selected-model normalization owner-split result:
+`ecosystem/fret-ui-kit/src/imui/tab_family_controls/items/selection.rs` now owns selected model
+reads, current-tab validity checks, default-selected fallback, first-enabled fallback, and model
+correction writes. `tab_family_controls/items.rs` keeps `BuiltTabItem`, trigger response
+aggregation, focus fallback, tab-list/panel assembly, and final `TabBarResponse` construction.
+
 2026-05-27 control chrome palette owner-split result:
 `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome.rs` now owns `ImUiControlPalette`, button
 theme color resolution, field theme color resolution, and compact button/field container chrome.

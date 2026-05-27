@@ -7,6 +7,8 @@ use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ColumnProps, LayoutStyle, Length, RowProps, SpacingLength};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
+mod selection;
+
 use super::trigger;
 use crate::imui::{TabBarOptions, TabBarResponse, TabTriggerResponse};
 use crate::primitives::tabs;
@@ -30,7 +32,7 @@ pub(super) fn render_tab_bar<H: UiHost>(
     build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
     options: TabBarOptions,
 ) -> (AnyElement, TabBarResponse) {
-    let selected = normalize_selected_tab(cx, &selected_model, &items);
+    let selected = selection::normalize_selected_tab(cx, &selected_model, &items);
     let selected_changed =
         super::super::model_value_changed_for(cx, cx.root_id(), selected.clone());
     let set_size = items.len().min(u32::MAX as usize) as u32;
@@ -147,36 +149,4 @@ pub(super) fn render_tab_bar<H: UiHost>(
             triggers: trigger_responses,
         },
     )
-}
-
-fn normalize_selected_tab<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    selected_model: &Model<Option<Arc<str>>>,
-    items: &[BuiltTabItem],
-) -> Option<Arc<str>> {
-    let current = cx
-        .read_model(
-            selected_model,
-            fret_ui::Invalidation::Paint,
-            |_app, value| value.clone(),
-        )
-        .unwrap_or(None);
-    let current_is_valid = current.as_ref().is_some_and(|selected_id| {
-        items
-            .iter()
-            .any(|item| item.enabled && item.id.as_ref() == selected_id.as_ref())
-    });
-    if current_is_valid {
-        return current;
-    }
-
-    let next = items
-        .iter()
-        .find(|item| item.enabled && item.default_selected)
-        .or_else(|| items.iter().find(|item| item.enabled))
-        .map(|item| item.id.clone());
-    let _ = cx.app.models_mut().update(selected_model, |value| {
-        *value = next.clone();
-    });
-    next
 }

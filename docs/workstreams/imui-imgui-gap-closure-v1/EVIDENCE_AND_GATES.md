@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Tab-Family Selection Owner-Split Evidence - 2026-05-27
+
+Claim verified: selected-tab normalization moved out of the tab-family item/list owner into a
+private sub-owner without changing selected fallback order, disabled-tab filtering,
+selected-model correction, trigger response aggregation, focus fallback, tab-list semantics, panel
+mounting, or `TabBarResponse` assembly.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items/selection.rs` now owns selected model
+  reads, current-tab validity checks, default-selected fallback, first-enabled fallback, and model
+  correction writes.
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items.rs` keeps `BuiltTabItem`, trigger
+  response aggregation, focus fallback, tab-list/panel assembly, and final `TabBarResponse`
+  construction.
+- `tools/gate_imui_workstream_source.py` now rejects selection model reads/writes from drifting
+  back into `tab_family_controls/items.rs` and rejects tab-list/panel/trigger assembly from
+  drifting into the selection owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::tabs --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui
+  composition::layout_collections::tab_bar_helper_arranges_tabs_horizontally_and_stamps_tab_semantics
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Control Chrome Palette Owner-Split Evidence - 2026-05-27
 
 Claim verified: shared IMUI control palette/theme chrome moved behind a private owner without
@@ -1454,15 +1488,15 @@ Gate note:
 
 ## Tab Family Items Owner-Split Evidence - 2026-05-26
 
-Claim verified: IMUI tab-family item collection, selected-model normalization, tab-list semantics,
-trigger response aggregation, focus fallback, and selected-panel assembly moved into a focused
-private owner without changing the public tab-bar builder or response surface.
+Claim verified: IMUI tab-family item collection, tab-list semantics, trigger response aggregation,
+focus fallback, and selected-panel assembly moved into a focused private owner without changing the
+public tab-bar builder or response surface. Selected-model normalization was split deeper into
+`tab_family_controls/items/selection.rs` on 2026-05-27.
 
 Evidence:
 
 - `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items.rs` now owns `BuiltTabItem`,
-  selected-tab normalization, tab-list semantics, trigger response aggregation, focus fallback, and
-  selected panel assembly.
+  tab-list semantics, trigger response aggregation, focus fallback, and selected panel assembly.
 - `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs` keeps the public `ImUiTabBar` builder,
   `tab_item(...)` / `begin_tab_item(...)` collection API, and `tab_bar_element(...)` entrypoint.
 - `ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger.rs` remains the per-trigger owner for

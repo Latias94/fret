@@ -414,11 +414,19 @@ Last updated: 2026-05-27
 - [x] Split IMUI tab-family item collection, selected-model normalization, and panel/list assembly
       out of `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs` into a private owner module
       without changing the public tab-bar builder or response surface.
-      Result: `tab_family_controls/items.rs` owns `BuiltTabItem`, selected-tab normalization,
-      tab-list semantics, trigger response aggregation, focus fallback, and selected panel
-      assembly. The root `tab_family_controls.rs` keeps the public `ImUiTabBar` builder and
-      `tab_bar_element(...)` entrypoint, while `trigger.rs` keeps per-trigger activation and
-      shortcut behavior.
+      Result: `tab_family_controls/items.rs` owns `BuiltTabItem`, tab-list semantics, trigger
+      response aggregation, focus fallback, and selected panel assembly. The root
+      `tab_family_controls.rs` keeps the public `ImUiTabBar` builder and `tab_bar_element(...)`
+      entrypoint, while `trigger.rs` keeps per-trigger activation and shortcut behavior.
+- [x] Split IMUI tab-family selected-model normalization out of
+      `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items.rs` into a private owner module
+      without changing selected fallback order, disabled-tab filtering, selected-model correction,
+      trigger response aggregation, focus fallback, tab-list semantics, panel mounting, or
+      `TabBarResponse` assembly.
+      Result: `tab_family_controls/items/selection.rs` owns selected model reads, current-tab
+      validity checks, default-selected fallback, first-enabled fallback, and model correction
+      writes. `tab_family_controls/items.rs` keeps `BuiltTabItem`, trigger response aggregation,
+      focus fallback, tab-list/panel assembly, and final `TabBarResponse` construction.
 - [x] Split IMUI popup-menu policy state and panel composition out of
       `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu.rs` into private owner modules without
       changing popup/menu/submenu behavior or facade entry points.
