@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Debug-Draw Summary Projection Owner-Split Evidence - 2026-05-27
+
+Claim verified: debug-draw command summary geometry and clip-state projection moved into private
+owners without changing command summary values, channel assignment, clip stack depth, media
+summaries, or list summary behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/geometry.rs`
+  owns point/vertex/index/triangle-count summaries for geometric commands.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/clip_state.rs`
+  owns push/pop/current clip rect projection and clip-depth updates.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection.rs` keeps
+  `summary_with_clip_state(...)`, media summary routing, text summary routing, and clip command
+  kind routing.
+- `tools/gate_imui_workstream_source.py` now requires the geometry and clip-state owners while
+  rejecting geometric summary bodies and clip-depth mutation from the root summary projection file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls --no-fail-fast`:
+  pass; 38 tests.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass; 1 test.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Canonical Workbench Teaching-Doc Refresh Evidence - 2026-05-27
 
 Claim verified: first-party teaching docs no longer claim the canonical workbench delegates to the

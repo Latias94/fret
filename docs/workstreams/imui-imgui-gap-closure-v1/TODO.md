@@ -44,6 +44,14 @@ Last updated: 2026-05-27
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw command summary geometry and clip-state projection out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection.rs` into
+      private owner modules without changing `DebugDrawCommandSummary` values, channel assignment,
+      clip stack depth, media summaries, or command-list summary behavior.
+      Result: `commands/summary_projection/geometry.rs` owns point/vertex/index/triangle-count
+      summaries for geometric commands, `commands/summary_projection/clip_state.rs` owns
+      push/pop/current clip rect and depth updates, and the root summary projection file keeps the
+      public-in-debug-draw entry point plus media/text/clip command routing.
 - [x] Split IMUI debug-draw path-command dispatch by shape family out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands.rs` into
       private linear, round, and bezier owners without changing path command routing, canvas keys,

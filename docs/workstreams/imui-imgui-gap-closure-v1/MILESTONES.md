@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 debug-draw summary projection owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/geometry.rs` now
+owns point/vertex/index/triangle-count summaries for geometric commands.
+`summary_projection/clip_state.rs` owns push/pop/current clip rect and clip-depth updates.
+`summary_projection.rs` keeps the public-in-debug-draw entry point plus media/text/clip command
+routing.
+
 2026-05-27 canonical workbench teaching-doc refresh result:
 `docs/examples/README.md`, `apps/fret-cookbook/README.md`, and
 `apps/fret-cookbook/EXAMPLES.md` now say `imui_editor_workbench_demo` mounts the editor-notes
