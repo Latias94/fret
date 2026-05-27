@@ -30,6 +30,12 @@ installation, activate/shortcut model toggling, context-menu key handling, trans
 and `ResponseExt` population. `checkbox.rs` keeps label identity, `CheckboxOptions` a11y wiring,
 field chrome, checkbox indicator mounting, boolean label mounting, and fill-row visual assembly.
 
+2026-05-27 radio behavior owner-split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/radio/behavior.rs` now owns pressable behavior
+installation, activate/shortcut click signaling, context-menu key handling, transient clicked
+reads, and `ResponseExt` population. `radio.rs` keeps label identity, `RadioOptions` a11y wiring,
+field chrome, radio indicator mounting, boolean label mounting, and fill-row visual assembly.
+
 2026-05-27 debug-draw media paint owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` keeps
 `paint_debug_draw_media_command(...)` routing. `paint/media/raster.rs` owns image, image-region, and

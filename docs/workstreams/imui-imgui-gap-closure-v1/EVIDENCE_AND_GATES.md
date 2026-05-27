@@ -106,6 +106,43 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Radio Behavior Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI radio pressable behavior moved into a private owner without changing label
+identity, radio a11y, shortcut gating, context-menu keyboard requests, click response population,
+field chrome, or visual row layout.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio.rs` keeps label identity, `RadioOptions`
+  a11y wiring, field chrome, radio indicator mounting, boolean label mounting, and fill-row visual
+  assembly.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio/behavior.rs` owns pressable behavior
+  installation, activate/shortcut click signaling, context-menu key handling, transient clicked
+  reads, and `ResponseExt` population.
+- `ecosystem/fret-imui/src/tests/models_controls/radio.rs` covers click, shortcut, and Shift+F10
+  behavior at the thin `fret-imui` facade layer.
+- `tools/gate_imui_workstream_source.py` now requires the radio behavior owner and rejects
+  pressable behavior bodies from drifting back into `radio.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -p fret-imui`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui models_controls::radio --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui models_controls::radio label_identity::model_controls
+  composition::control_geometry::button_family_variants_and_radio_mount_with_expected_bounds
+  composition::control_geometry::control_disabled_state_changes_keep_outer_bounds_stable
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Media Paint Owner-Split Evidence - 2026-05-27
 
 Claim verified: debug-draw media paint routing moved into private raster, rounded, and SVG owners
@@ -2228,9 +2265,11 @@ Evidence:
   response population after the root boolean-controls split. 2026-05-27 follow-up:
   `checkbox.rs` now keeps label/a11y/chrome/visual assembly while `checkbox/behavior.rs` owns the
   concrete pressable behavior.
-- `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio.rs` now owns radio label identity,
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio.rs` originally owned radio label identity,
   focused shortcut handling, context-menu request handling, click reporting, and pressable response
-  population.
+  population after the root boolean-controls split. 2026-05-27 radio follow-up:
+  `radio.rs` now keeps label/a11y/chrome/visual assembly while `radio/behavior.rs` owns the
+  concrete pressable behavior.
 - `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` is now a module/re-export index beside the
   existing `switch.rs` and `visual.rs` owners.
 - `tools/gate_imui_workstream_source.py` now requires the split checkbox/radio owners and rejects

@@ -482,6 +482,7 @@
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/radio.rs",
+    "ecosystem/fret-ui-kit/src/imui/boolean_controls/radio/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs",
@@ -981,6 +982,7 @@
     "ecosystem/fret-imui/src/tests/composition/layout_collections.rs",
     "ecosystem/fret-imui/src/tests/models_combo/mod.rs",
     "ecosystem/fret-imui/src/tests/models_controls/mod.rs",
+    "ecosystem/fret-imui/src/tests/models_controls/radio.rs",
     "ecosystem/fret-imui/src/tests/models_text_area/mod.rs",
     "ecosystem/fret-imui/src/tests/models_text_picker/mod.rs",
     "ecosystem/fret-imui/src/tests/interaction_drag/mod.rs"
