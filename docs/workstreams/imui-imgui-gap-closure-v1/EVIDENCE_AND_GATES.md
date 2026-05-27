@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Menu Routing Dispatch Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI menu item routing dispatch split into private entry and core owners without
+changing menu item method names, checkbox/radio/action semantics roles, action forwarding,
+label-identity scoping, pressable hook injection, mount routing, response population, or
+public-in-IMUI APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch.rs` is now a private
+  module/re-export index.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/entries.rs` owns public-in-IMUI
+  menu-item entry wrappers plus semantics/action selection.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/core.rs` owns no-op pressable
+  hook and identity-to-mount dispatch.
+- `tools/gate_imui_workstream_source.py` now rejects entry/core bodies from drifting back into
+  `dispatch.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_controls::tests --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Facade Support Slider Math Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI slider math helpers moved into a private owner without changing slider range

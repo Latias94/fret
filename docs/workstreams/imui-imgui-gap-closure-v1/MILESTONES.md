@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 menu routing dispatch owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/entries.rs` now owns
+public-in-IMUI menu-item entry wrappers plus semantics/action selection.
+`menu_controls/routing/dispatch/core.rs` owns no-op pressable hook and identity-to-mount dispatch.
+`menu_controls/routing/dispatch.rs` is now a private module/re-export index.
+
 2026-05-28 facade support slider math owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_support/slider_math.rs` now owns
 `slider_step_or_default`, `slider_normalize_range`, `slider_clamp_and_snap`, and

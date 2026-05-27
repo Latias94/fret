@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI menu item routing dispatch into private entry and core owners without changing
+      menu item method names, checkbox/radio/action semantics roles, action forwarding,
+      label-identity scoping, pressable hook injection, mount routing, response population, or
+      public-in-IMUI APIs.
+      Result: `menu_controls/routing/dispatch/entries.rs` owns public-in-IMUI menu-item entry
+      wrappers and semantics/action selection.
+      `menu_controls/routing/dispatch/core.rs` owns no-op pressable hook and identity-to-mount
+      dispatch. `menu_controls/routing/dispatch.rs` is now a private module/re-export index.
 - [x] Split IMUI slider math helpers out of
       `ecosystem/fret-ui-kit/src/imui/facade_support.rs` into a private slider-math owner without
       changing slider range normalization, step fallback, clamp/snap behavior, pointer-to-value
