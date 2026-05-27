@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 button visual a11y/variant owner-split result:
+`ecosystem/fret-ui-kit/src/imui/button_controls/visual/a11y.rs` now owns button `PressableA11y`
+construction, `SemanticsRole::Button`, custom label fallback, and arrow a11y labels.
+`button_controls/visual/variant.rs` owns variant sizing plus arrow glyph selection.
+`button_controls/visual.rs` keeps `ButtonVisual`, `ButtonVisualContent`, chrome resolution, and
+visible/invisible content assembly.
+
 2026-05-28 tab item list/panel owner-split result:
 `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items/list.rs` now owns tab-list semantics,
 trigger rendering, selected/first-focusable trigger tracking, and `TabTriggerResponse`

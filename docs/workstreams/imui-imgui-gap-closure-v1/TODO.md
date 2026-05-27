@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI button visual a11y and variant layout/glyph policy out of
+      `ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` into private owner modules
+      without changing public button APIs, button a11y labels, arrow a11y labels, arrow glyphs,
+      variant sizing, or chrome/content assembly.
+      Result: `button_controls/visual/a11y.rs` owns button `PressableA11y` construction and
+      label fallback policy, `button_controls/visual/variant.rs` owns variant sizing plus arrow
+      glyph selection, and `visual.rs` keeps `ButtonVisual`, `ButtonVisualContent`, chrome
+      resolution, and visible/invisible content assembly.
 - [x] Split IMUI tab item list semantics and selected-panel rendering out of
       `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items.rs` into private list and panel
       owners without changing selected-model normalization, trigger response collection, focus

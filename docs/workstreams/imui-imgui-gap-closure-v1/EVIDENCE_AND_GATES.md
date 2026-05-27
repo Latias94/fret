@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Button Visual A11y/Variant Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI button visual a11y and variant layout/glyph policy moved into private owners
+without changing public button APIs, button a11y labels, arrow a11y labels, arrow glyphs, variant
+sizing, or chrome/content assembly.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` keeps `ButtonVisual`,
+  `ButtonVisualContent`, chrome resolution, and visible/invisible content assembly.
+- `ecosystem/fret-ui-kit/src/imui/button_controls/visual/a11y.rs` owns button `PressableA11y`
+  construction, `SemanticsRole::Button`, custom label fallback, and arrow a11y labels.
+- `ecosystem/fret-ui-kit/src/imui/button_controls/visual/variant.rs` owns variant sizing and arrow
+  glyph selection.
+- `tools/gate_imui_workstream_source.py` now rejects a11y and variant-layout bodies from drifting
+  back into `visual.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Tab Item List/Panel Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI tab item list semantics and selected-panel rendering moved into private

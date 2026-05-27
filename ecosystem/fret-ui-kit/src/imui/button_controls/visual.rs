@@ -1,12 +1,17 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
-use fret_ui::element::{
-    AnyElement, ContainerProps, Length, PressableA11y, PressableProps, PressableState,
-};
+use fret_core::{Color, Corners, Edges, Px};
+use fret_ui::element::{AnyElement, ContainerProps, PressableState};
 use fret_ui::{ElementContext, UiHost};
 
-use super::super::{ButtonArrowDirection, ButtonOptions, ButtonVariant, control_chrome};
+use super::super::{ButtonVariant, control_chrome};
+
+mod a11y;
+mod variant;
+
+pub(super) use a11y::button_a11y;
+pub(super) use variant::apply_button_variant_layout;
+use variant::arrow_symbol;
 
 pub(super) struct ButtonVisual {
     chrome: ContainerProps,
@@ -33,39 +38,6 @@ impl ButtonVisualContent {
         vec![cx.flex(control_chrome::centered_row_props(), move |cx| {
             vec![control_chrome::control_text(cx, label.clone(), foreground)]
         })]
-    }
-}
-
-pub(super) fn button_a11y(
-    label: &Arc<str>,
-    options: &ButtonOptions,
-    variant: ButtonVariant,
-) -> PressableA11y {
-    PressableA11y {
-        role: Some(SemanticsRole::Button),
-        label: button_a11y_label(label, options, variant),
-        test_id: options.test_id.clone(),
-        ..Default::default()
-    }
-}
-
-pub(super) fn apply_button_variant_layout(props: &mut PressableProps, variant: ButtonVariant) {
-    match variant {
-        ButtonVariant::Default => {
-            props.layout.size.min_height = Some(Length::Px(control_chrome::BUTTON_MIN_HEIGHT));
-        }
-        ButtonVariant::Small => {
-            props.layout.size.min_height =
-                Some(Length::Px(control_chrome::SMALL_BUTTON_MIN_HEIGHT));
-        }
-        ButtonVariant::Arrow(_) => {
-            props.layout.size.width = Length::Px(control_chrome::ARROW_BUTTON_SIZE);
-            props.layout.size.height = Length::Px(control_chrome::ARROW_BUTTON_SIZE);
-        }
-        ButtonVariant::Invisible { size } => {
-            props.layout.size.width = Length::Px(size.width);
-            props.layout.size.height = Length::Px(size.height);
-        }
     }
 }
 
@@ -122,34 +94,4 @@ impl ButtonVisual {
             },
         }
     }
-}
-
-fn arrow_symbol(direction: ButtonArrowDirection) -> Arc<str> {
-    Arc::from(match direction {
-        ButtonArrowDirection::Left => "<",
-        ButtonArrowDirection::Right => ">",
-        ButtonArrowDirection::Up => "^",
-        ButtonArrowDirection::Down => "v",
-    })
-}
-
-fn arrow_a11y_label(direction: ButtonArrowDirection) -> Arc<str> {
-    Arc::from(match direction {
-        ButtonArrowDirection::Left => "Left arrow button",
-        ButtonArrowDirection::Right => "Right arrow button",
-        ButtonArrowDirection::Up => "Up arrow button",
-        ButtonArrowDirection::Down => "Down arrow button",
-    })
-}
-
-fn button_a11y_label(
-    label: &Arc<str>,
-    options: &ButtonOptions,
-    variant: ButtonVariant,
-) -> Option<Arc<str>> {
-    options.a11y_label.clone().or_else(|| match variant {
-        ButtonVariant::Arrow(direction) => Some(arrow_a11y_label(direction)),
-        ButtonVariant::Invisible { .. } if label.is_empty() => None,
-        _ => Some(label.clone()),
-    })
 }
