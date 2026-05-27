@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Text Picker Entry Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI input-text picker completion/history entry wrappers moved into a private
+entry owner without changing public facade call paths, completion picker behavior, history picker
+filter/open normalization, core picker orchestration, or final response shape.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` keeps core picker orchestration and
+  re-exports the entry helpers.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/entry.rs` owns
+  `input_text_completion_model_with_options(...)`, `input_text_history_model_with_options(...)`,
+  and history option normalization.
+- `tools/gate_imui_workstream_source.py` now rejects completion/history wrapper bodies from
+  drifting back into root `text_picker_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Floating Window Shell Props Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI floating-window shell frame/title/body props moved into a private owner

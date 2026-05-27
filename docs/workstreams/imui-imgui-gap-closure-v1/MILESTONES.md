@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 text-picker entry owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/entry.rs` now owns completion/history wrapper
+functions plus history filter/open normalization. `text_picker_controls.rs` keeps core picker
+orchestration and re-exports the entry helpers.
+
 2026-05-27 floating-window shell props owner-split result:
 `ecosystem/fret-ui-kit/src/imui/floating_window_shell/props.rs` now owns frame, title-bar, shell
 column, and clipped-body props. `floating_window_shell.rs` keeps shell composition, blocker

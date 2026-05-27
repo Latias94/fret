@@ -7,6 +7,7 @@ use fret_ui::UiHost;
 use super::{InputTextPickerOptions, InputTextPickerResponse, UiWriterImUiFacadeExt};
 
 mod candidates;
+mod entry;
 mod input;
 mod keyboard;
 mod open_policy;
@@ -26,36 +27,14 @@ use open_policy::{
 use popup::{InputTextPickerPopupInput, render_text_picker_popup};
 use response::merge_text_picker_pick_response;
 
-pub(super) fn input_text_completion_model_with_options<
+pub(super) use entry::{
+    input_text_completion_model_with_options, input_text_history_model_with_options,
+};
+
+pub(super) fn input_text_picker_model_with_options<
     H: UiHost,
     W: UiWriterImUiFacadeExt<H> + ?Sized,
 >(
-    ui: &mut W,
-    id: &str,
-    model: &fret_runtime::Model<String>,
-    candidates: &[Arc<str>],
-    options: InputTextPickerOptions,
-) -> InputTextPickerResponse {
-    input_text_picker_model_with_options(ui, id, model, candidates, options)
-}
-
-pub(super) fn input_text_history_model_with_options<
-    H: UiHost,
-    W: UiWriterImUiFacadeExt<H> + ?Sized,
->(
-    ui: &mut W,
-    id: &str,
-    model: &fret_runtime::Model<String>,
-    history: &[Arc<str>],
-    mut options: InputTextPickerOptions,
-) -> InputTextPickerResponse {
-    options.filter = super::InputTextPickerFilter::None;
-    options.open_when_empty = true;
-    options.hide_when_exact_match = false;
-    input_text_picker_model_with_options(ui, id, model, history, options)
-}
-
-fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     id: &str,
     model: &fret_runtime::Model<String>,
