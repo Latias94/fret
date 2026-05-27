@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "slug": "material3-search-view-state-packet-v1",
+  "title": "Material 3 SearchView State Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "follow_on",
+  "problem": "Closed lane that added explicit Material3 SearchView docked/full-screen presentation selection, modal full-screen rendering, overlay-local focus, Escape collapse, and headless golden coverage without changing crates/*.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-search-view-state-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-search-view-state-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-search-view-state-packet-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-search-view-state-packet-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-search-view-state-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-search-view-state-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "The existing SearchView only renders a docked popover even though Compose Material3 splits docked and full-screen expanded search presentations.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_view_exposes_stable_part_test_ids",
+      "cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_view_suite_goldens_v1"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-search-view-state-packet-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "search-view-automation-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_view_exposes_stable_part_test_ids"
+    },
+    {
+      "name": "search-view-headless-golden-suite",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_view_suite_goldens_v1"
+    },
+    {
+      "name": "material3-crate-check-diagnostics-tests",
+      "command": "cargo check -p fret-ui-material3 --features diagnostics --tests"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md",
+    "docs/workstreams/material3-search-view-state-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md",
+    "docs/workstreams/material3-search-view-state-packet-v1/artifacts/search_view_source_packet_v1.md",
+    "repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/SearchBar.kt",
+    "ecosystem/fret-ui-material3/src/search_view.rs",
+    "ecosystem/fret-ui-material3/src/search_bar.rs",
+    "ecosystem/fret-ui-material3/tests/search_view_behavior.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "ecosystem/fret-ui-material3/tests/radio_alignment.rs",
+    "goldens/material3-headless/v1/material3-search-view.*.json",
+    "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-search-view-screenshots.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This SearchView state packet is closed. Start a new narrow lane only for predictive back gesture progress, generic platform-back event contracts, top app bar search behavior, or mobile IME/window inset choreography."
+  }
+}

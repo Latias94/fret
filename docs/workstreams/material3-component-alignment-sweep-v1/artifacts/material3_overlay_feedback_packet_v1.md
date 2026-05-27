@@ -16,8 +16,9 @@ Observable outcomes for this packet:
   typeahead, Escape dismissal, outside-press dismissal, and focus restore in reusable menu policy.
 - Dialogs expose stable scrim/panel selectors, use dialog semantics on the panel, and keep modal
   focus trap/restore in kit overlay policy.
-- Bottom sheets expose stable scrim/sheet/drag-handle selectors without adding layout-sensitive
-  chrome aliases that would change current sizing.
+- Bottom sheets expose stable scrim/sheet/drag-handle selectors. The follow-on
+  `material3-bottom-sheet-chrome-alias-packet-v1` added layout-safe `bottom_sheet.chrome` and
+  `modal_bottom_sheet.sheet.chrome` aliases using hidden diagnostic anchors.
 - Tooltips expose stable base and chrome selectors while preserving provider delay and safe-hover
   policy.
 - Snackbars pass stable root selectors into the kit toast layer instead of duplicating toast
@@ -30,7 +31,7 @@ Observable outcomes for this packet:
 | `Menu` | `material_recipe`, `test_harness` | Added root `.chrome` and preserved item `.chrome` selectors. Roving focus/typeahead stay local to the recipe until another consumer proves a shared kit abstraction. |
 | `DropdownMenu` | `kit_policy`, `material_recipe`, `test_harness` | Uses the shared dismissible menu path for Escape/outside dismissal and focus restore. The live menu surface inherits Material menu chrome selectors. The outside-press test was repaired because the previous underlay probe landed inside the open menu. |
 | `Dialog` | `kit_policy`, `material_recipe`, `diagnostics` | Dialog now derives dotted `scrim`, `scrim.chrome`, `panel`, and `panel.chrome` selectors from the base id. The panel now reports `SemanticsRole::Dialog`; focus trap/restore remains kit overlay policy. |
-| `BottomSheet` | `kit_policy`, `material_recipe`, `test_harness` | Modal bottom sheet derives dotted `scrim`, `scrim.chrome`, `sheet`, and `sheet.drag-handle` selectors; docked bottom sheet derives `drag-handle`. Root/sheet `.chrome` aliases were withheld because adding semantic markers to layout-critical containers changed the headless scene width. |
+| `BottomSheet` | `kit_policy`, `material_recipe`, `material_foundation`, `test_harness` | Modal bottom sheet derives dotted `scrim`, `scrim.chrome`, `sheet`, `sheet.chrome`, and `sheet.drag-handle` selectors; docked bottom sheet derives `chrome` and `drag-handle`. The chrome aliases are hidden layout-only diagnostic anchors, so bottom-sheet headless goldens remain stable. |
 | `Tooltip` | `kit_policy`, `material_recipe`, `mechanism_follow_on` | Plain and rich tooltips now accept `test_id` and expose `.chrome`. Provider delay/safe-hover stay in kit policy. Rich tooltip interactivity remains a mechanism follow-on because tooltip overlays are currently click-through. |
 | `Snackbar` | `kit_policy`, `material_recipe`, `test_harness` | `Snackbar::test_id` forwards to `ToastRequest::test_id`, keeping toast viewport/action/close/live-region details in `fret-ui-kit`. Subpart selectors can be added in kit if a consumer needs them. |
 
@@ -50,21 +51,24 @@ New or confirmed selector contracts:
 - `dialog.scrim.chrome`
 - `dialog.panel`
 - `dialog.panel.chrome`
+- `bottom_sheet.chrome`
 - `bottom_sheet.drag-handle`
 - `modal_bottom_sheet.scrim`
 - `modal_bottom_sheet.scrim.chrome`
 - `modal_bottom_sheet.sheet`
+- `modal_bottom_sheet.sheet.chrome`
 - `modal_bottom_sheet.sheet.drag-handle`
 - `tooltip`
 - `tooltip.chrome`
 - `snackbar`
 
-Intentionally not added in this packet:
+Resolved by follow-on:
 
 - `bottom_sheet.chrome`
 - `modal_bottom_sheet.sheet.chrome`
 
-Those aliases need a layout-safe semantic alias mechanism or an explicit component sizing decision.
+These aliases use Material3 hidden diagnostic anchors instead of visible or layout-participating
+markers.
 
 ## Implementation Anchors
 
@@ -109,8 +113,9 @@ cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless
 
 ## Follow-Ons
 
-- `M3CAS-070-F1`: Add a layout-safe semantic alias/test-id marker for chrome selectors on
-  layout-critical nodes, then revisit bottom sheet root/sheet `.chrome`.
+- `M3CAS-070-F1`: Resolved by
+  `docs/workstreams/material3-bottom-sheet-chrome-alias-packet-v1/`; bottom sheet root/sheet
+  `.chrome` aliases now use hidden diagnostic anchors and bottom-sheet goldens remain stable.
 - `M3CAS-070-F2`: Decide whether rich tooltip actions should be interactive. If yes, split an
   ADR-backed overlay mechanism change because current tooltip overlays are intentionally
   click-through.

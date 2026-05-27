@@ -45,8 +45,9 @@ Material outcomes used by this packet:
 - Autocomplete separates editable query from committed value; blur/selection policy is recipe-level.
 - Exposed dropdown treats the menu anchor as an editable/selectable field and reverts an uncommitted
   query to the committed selection on blur.
-- SearchView has a larger Material state machine in Compose; the current Fret implementation is a
-  docked MVP using the shared search bar plus overlay policy.
+- SearchView has a larger Material state machine in Compose; the original M3CAS-050 Fret surface was
+  a docked MVP using the shared search bar plus overlay policy. The follow-on
+  `material3-search-view-state-packet-v1` added an explicit full-screen presentation slice.
 
 ## Findings
 
@@ -114,11 +115,14 @@ the overlay, and blur restores the committed selection when the query is not com
 
 Layer classification:
 
-- `material_recipe`: `SearchBar` owns its pill field chrome and icon slots.
-- `kit_policy`: `SearchView` uses existing overlay policy for the docked view.
-- `diagnostics`: stable `.chrome`, `.leading-icon`, `.trailing-icon`, and `.overlay` ids are live.
-- `follow_on`: full Compose `SearchBarState`, predictive back, and full-screen search behavior are
-  larger than M3CAS-050 and should be handled only when the product surface needs them.
+- `material_recipe`: `SearchBar` owns its pill field chrome and icon slots; `SearchView` now owns
+  docked vs full-screen presentation selection and overlay-local header composition.
+- `kit_policy`: `SearchView` uses existing overlay policy for docked popovers and modal full-screen
+  presentation.
+- `diagnostics`: stable `.chrome`, `.leading-icon`, `.trailing-icon`, `.overlay`, and
+  `.overlay.header` ids are live.
+- `follow_on`: predictive back gesture progress and a generic platform-back event remain separate
+  mechanism work only if a product surface needs them.
 
 No shared Material foundation issue was proven for search beyond stable part-id coverage.
 
@@ -173,5 +177,7 @@ Results:
   Fret API still has one `supporting_text` slot plus `error` state.
 - Outlined TextField outline/cutout remains border-based; no separate `.outline` selector was added
   because this packet only proved a filled active-indicator diagnostic need.
-- SearchView remains a docked MVP; full Compose search transitions/back handling are follow-on work.
+- SearchView full-screen presentation is now covered by
+  `material3-search-view-state-packet-v1`; predictive back progress and platform back events remain
+  out of scope.
 - Picker fields are intentionally deferred to M3CAS-060.

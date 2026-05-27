@@ -1226,7 +1226,7 @@ fn material3_search_bar_exposes_stable_part_test_ids() {
 #[test]
 fn material3_search_view_exposes_stable_part_test_ids() {
     use fret_icons::ids;
-    use fret_ui_material3::SearchView;
+    use fret_ui_material3::{SearchView, SearchViewPresentation};
 
     let mut app = TestHost::default();
     app.set_global(PlatformCapabilities::default());
@@ -1244,6 +1244,8 @@ fn material3_search_view_exposes_stable_part_test_ids() {
 
     let open = app.models_mut().insert(true);
     let query = app.models_mut().insert(String::new());
+    let full_screen_open = app.models_mut().insert(true);
+    let full_screen_query = app.models_mut().insert(String::new());
     let render = move |ui: &mut UiTree<TestHost>,
                        app: &mut TestHost,
                        services: &mut dyn UiServices| {
@@ -1259,7 +1261,25 @@ fn material3_search_view_exposes_stable_part_test_ids() {
                         cx.text_props(fret_ui::element::TextProps::new(Arc::<str>::from("Result"))),
                     ]
                 });
-            vec![with_padding(cx, Px(32.0), view)]
+            let full_screen_view =
+                SearchView::new(full_screen_open.clone(), full_screen_query.clone())
+                    .a11y_label("Material full-screen search view")
+                    .placeholder("Search full screen")
+                    .leading_icon(ids::ui::SEARCH)
+                    .trailing_icon(ids::ui::CLOSE)
+                    .test_id("m3-search-view-full")
+                    .presentation(SearchViewPresentation::FullScreen)
+                    .into_element(cx, |cx| {
+                        vec![
+                            cx.text_props(fret_ui::element::TextProps::new(Arc::<str>::from(
+                                "Full-screen result",
+                            ))),
+                        ]
+                    });
+            vec![
+                with_padding(cx, Px(32.0), view),
+                with_padding(cx, Px(32.0), full_screen_view),
+            ]
         })
     };
 
@@ -1274,7 +1294,9 @@ fn material3_search_view_exposes_stable_part_test_ids() {
     );
 
     for _ in 0..4 {
-        if live_test_id_exists(&ui, &app, window, "m3-search-view.overlay") {
+        if live_test_id_exists(&ui, &app, window, "m3-search-view.overlay")
+            && live_test_id_exists(&ui, &app, window, "m3-search-view-full.overlay.header")
+        {
             break;
         }
         run_overlay_frame(
@@ -1294,6 +1316,15 @@ fn material3_search_view_exposes_stable_part_test_ids() {
         "m3-search-view.leading-icon",
         "m3-search-view.trailing-icon",
         "m3-search-view.overlay",
+        "m3-search-view-full",
+        "m3-search-view-full.chrome",
+        "m3-search-view-full.leading-icon",
+        "m3-search-view-full.trailing-icon",
+        "m3-search-view-full.overlay",
+        "m3-search-view-full.overlay.header",
+        "m3-search-view-full.overlay.header.chrome",
+        "m3-search-view-full.overlay.header.leading-icon",
+        "m3-search-view-full.overlay.header.trailing-icon",
     ] {
         assert!(
             live_test_id_exists(&ui, &app, window, id),
@@ -1862,7 +1893,11 @@ fn material3_dialog_and_bottom_sheet_expose_stable_part_test_ids() {
         ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-        for id in ["m3-bottom-sheet", "m3-bottom-sheet.drag-handle"] {
+        for id in [
+            "m3-bottom-sheet",
+            "m3-bottom-sheet.chrome",
+            "m3-bottom-sheet.drag-handle",
+        ] {
             assert!(
                 live_test_id_exists(&ui, &app, window, id),
                 "expected live DockedBottomSheet part test_id {id}"
@@ -1933,6 +1968,7 @@ fn material3_dialog_and_bottom_sheet_expose_stable_part_test_ids() {
             "m3-modal-bottom-sheet.scrim",
             "m3-modal-bottom-sheet.scrim.chrome",
             "m3-modal-bottom-sheet.sheet",
+            "m3-modal-bottom-sheet.sheet.chrome",
             "m3-modal-bottom-sheet.sheet.drag-handle",
         ] {
             assert!(

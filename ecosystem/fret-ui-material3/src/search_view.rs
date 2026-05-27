@@ -7,13 +7,18 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Edges, Px, SemanticsRole};
+use fret_core::{Axis, Edges, Px, SemanticsRole};
 use fret_icons::IconId;
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, ContainerProps, Length, Overflow, SemanticsDecoration};
+use fret_ui::element::{
+    AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
+    SemanticsDecoration,
+};
 use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
+use fret_ui_kit::overlay_controller;
+use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::SearchBar;
@@ -23,10 +28,18 @@ use crate::foundation::test_id::part_test_id;
 use crate::search_bar::SearchBarHeaderTokens;
 use crate::tokens::{dropdown_menu as dropdown_menu_tokens, search_view as search_view_tokens};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SearchViewPresentation {
+    #[default]
+    Docked,
+    FullScreen,
+}
+
 #[derive(Debug, Clone)]
 pub struct SearchView {
     open: Model<bool>,
     query: Model<String>,
+    presentation: SearchViewPresentation,
     disabled: bool,
     placeholder: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
@@ -43,6 +56,7 @@ impl SearchView {
         Self {
             open,
             query,
+            presentation: SearchViewPresentation::default(),
             disabled: false,
             placeholder: None,
             a11y_label: None,
@@ -89,6 +103,21 @@ impl SearchView {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn presentation(mut self, presentation: SearchViewPresentation) -> Self {
+        self.presentation = presentation;
+        self
+    }
+
+    pub fn full_screen(mut self) -> Self {
+        self.presentation = SearchViewPresentation::FullScreen;
+        self
+    }
+
+    pub fn docked(mut self) -> Self {
+        self.presentation = SearchViewPresentation::Docked;
         self
     }
 
@@ -208,6 +237,137 @@ impl SearchView {
             let Some(input_id) = input_id_out.get() else {
                 return bar;
             };
+
+            if self.presentation == SearchViewPresentation::FullScreen {
+                let overlay_test_id = self
+                    .overlay_test_id
+                    .clone()
+                    .or_else(|| root_test_id.as_ref().map(|id| part_test_id(id, "overlay")));
+                let header_test_id = root_test_id
+                    .as_ref()
+                    .map(|id| part_test_id(id, "overlay.header"));
+                let header_input_id_out: Rc<Cell<Option<GlobalElementId>>> =
+                    Rc::new(Cell::new(None));
+                let header_input_id_out_for_bar = header_input_id_out.clone();
+
+                let mut header = SearchBar::new(self.query.clone())
+                    .disabled(self.disabled)
+                    .placeholder_opt(self.placeholder.clone())
+                    .a11y_label_opt(self.a11y_label.clone())
+                    .test_id_opt(header_test_id)
+                    .expanded_model(self.open.clone())
+                    .header_tokens(SearchBarHeaderTokens::SearchView)
+                    .input_id_out(header_input_id_out_for_bar);
+                if let Some(icon) = self.leading_icon.as_ref() {
+                    header = header.leading_icon(icon.clone());
+                }
+                if let Some(icon) = self.trailing_icon.as_ref() {
+                    header = header.trailing_icon(icon.clone());
+                }
+                let header = header.into_element(cx);
+                let initial_focus = header_input_id_out.get();
+
+                let (container_color, divider_color) = {
+                    let theme = Theme::global(&*cx.app);
+                    (
+                        search_view_tokens::container_color(theme),
+                        search_view_tokens::divider_color(theme),
+                    )
+                };
+
+                let overlay_root = cx.named("full_screen_overlay", move |cx| {
+                    let mut panel_container = ContainerProps::default();
+                    panel_container.layout.size.width = Length::Fill;
+                    panel_container.layout.size.height = Length::Fill;
+                    panel_container.layout.overflow = Overflow::Clip;
+                    panel_container.background = Some(container_color);
+
+                    let mut column = FlexProps::default();
+                    column.direction = Axis::Vertical;
+                    column.justify = MainAlign::Start;
+                    column.align = CrossAlign::Stretch;
+                    column.wrap = false;
+                    column.gap = Px(0.0).into();
+                    column.layout.size.width = Length::Fill;
+                    column.layout.size.height = Length::Fill;
+
+                    let panel = cx.container(panel_container, move |cx| {
+                        let divider = cx.container(
+                            ContainerProps {
+                                layout: fret_ui::element::LayoutStyle {
+                                    size: fret_ui::element::SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Px(Px(1.0)),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                background: Some(divider_color),
+                                ..Default::default()
+                            },
+                            |_cx| Vec::<AnyElement>::new(),
+                        );
+
+                        let body = cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = fret_ui::element::LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout.flex.grow = 1.0;
+                                    layout
+                                },
+                                padding: Edges::all(Px(8.0)).into(),
+                                ..Default::default()
+                            },
+                            content,
+                        );
+
+                        vec![cx.flex(column, move |_cx| vec![header, divider, body])]
+                    });
+
+                    let panel = if let Some(test_id) = overlay_test_id.as_ref() {
+                        panel.attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(SemanticsRole::Dialog)
+                                .test_id(test_id.clone()),
+                        )
+                    } else {
+                        panel
+                    };
+
+                    let trapped = focus_scope_prim::focus_trap(cx, move |_cx| vec![panel]);
+
+                    fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
+                        cx,
+                        motion.alpha,
+                        fret_core::Transform2D::IDENTITY,
+                        overlay_presence.interactive,
+                        vec![trapped],
+                    )
+                });
+
+                let overlay_id = cx.root_id();
+                let mut request = overlay_controller::OverlayRequest::modal(
+                    overlay_id,
+                    Some(input_id),
+                    self.open.clone(),
+                    overlay_presence,
+                    vec![overlay_root],
+                );
+                request.root_name = Some(format!("material3.search_view.full_screen.{}", input_id.0));
+                request.close_on_window_focus_lost = true;
+                request.close_on_window_resize = true;
+                request.initial_focus = initial_focus;
+                request.on_close_auto_focus = Some(Arc::new(|_host, _cx, request| {
+                    request.prevent_default();
+                }));
+
+                OverlayController::request(cx, request);
+
+                return bar;
+            }
+
             let Some(anchor) = fret_ui_kit::overlay::anchor_bounds_for_element(cx, input_id) else {
                 return bar;
             };

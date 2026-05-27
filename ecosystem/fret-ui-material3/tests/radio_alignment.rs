@@ -11296,7 +11296,7 @@ fn material3_headless_search_bar_suite_goldens_v1() {
 #[test]
 fn material3_headless_search_view_suite_goldens_v1() {
     use fret_ui::element::FlexProps;
-    use fret_ui_material3::SearchView;
+    use fret_ui_material3::{SearchView, SearchViewPresentation};
 
     let schemes = [
         (
@@ -11327,7 +11327,11 @@ fn material3_headless_search_view_suite_goldens_v1() {
         for (mode, variant, label) in schemes {
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
 
-            for (case_name, open) in [("closed", false), ("open", true)] {
+            for (case_name, open, presentation) in [
+                ("closed", false, SearchViewPresentation::Docked),
+                ("open", true, SearchViewPresentation::Docked),
+                ("full_screen_open", true, SearchViewPresentation::FullScreen),
+            ] {
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -11374,6 +11378,7 @@ fn material3_headless_search_view_suite_goldens_v1() {
                                 .placeholder("Search")
                                 .a11y_label("Search")
                                 .test_id("sv")
+                                .presentation(presentation)
                                 .into_element(cx, |_cx| vec![content]);
 
                             let content = cx.named("search_view_root", |cx| {

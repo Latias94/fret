@@ -12,8 +12,8 @@ use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::{DismissReason, DismissRequestCx, OnActivate, OnDismissRequest};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableA11y, PressableProps, RingPlacement, RingStyle,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetEdge, LayoutStyle, Length, MainAlign,
+    Overflow, PressableA11y, PressableProps, RingPlacement, RingStyle,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
@@ -22,7 +22,7 @@ use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::foundation::surface::material_surface_style;
-use crate::foundation::test_id::part_test_id;
+use crate::foundation::test_id::{absolute_region_layout, diagnostic_anchor, part_test_id};
 use crate::motion;
 use crate::tokens::sheet_bottom as sheet_tokens;
 
@@ -174,13 +174,33 @@ impl DockedBottomSheet {
                 out
             });
 
+            let chrome_test_id = test_id.as_ref().map(|id| part_test_id(id, "chrome"));
+
             cx.semantics(
                 fret_ui::element::SemanticsProps {
                     role: SemanticsRole::Group,
                     test_id,
                     ..Default::default()
                 },
-                move |cx| vec![cx.container(container, move |_cx| vec![content_el])],
+                move |cx| {
+                    vec![cx.container(container, move |cx| {
+                        let mut children = Vec::new();
+                        if let Some(test_id) = chrome_test_id.clone() {
+                            children.push(diagnostic_anchor(
+                                cx,
+                                test_id,
+                                absolute_region_layout(
+                                    InsetEdge::Px(Px(0.0)),
+                                    InsetEdge::Px(Px(0.0)),
+                                    Length::Fill,
+                                    Length::Fill,
+                                ),
+                            ));
+                        }
+                        children.push(content_el);
+                        children
+                    })]
+                },
             )
         })
     }

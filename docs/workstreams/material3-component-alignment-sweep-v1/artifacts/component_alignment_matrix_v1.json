@@ -157,28 +157,31 @@
     {
       "id": "bottom_sheet",
       "family": "overlay_feedback",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_chrome_alias_aligned",
       "wave": "wave3_overlay_feedback",
       "default_owner_bias": "material_recipe",
-      "packet_strategy": "overlay_packet",
-      "first_gate_kind": "diag_dismiss_focus_motion",
-      "selector_status": "overlay_feedback_selector_ready_with_known_chrome_gap",
+      "packet_strategy": "overlay_packet_plus_chrome_alias_follow_on",
+      "first_gate_kind": "layout_safe_chrome_anchor",
+      "selector_status": "overlay_feedback_selector_ready",
       "stable_part_ids": [
         "bottom_sheet",
+        "bottom_sheet.chrome",
         "bottom_sheet.drag-handle",
         "modal_bottom_sheet.scrim",
         "modal_bottom_sheet.scrim.chrome",
         "modal_bottom_sheet.sheet",
+        "modal_bottom_sheet.sheet.chrome",
         "modal_bottom_sheet.sheet.drag-handle"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+        "docs/workstreams/material3-bottom-sheet-chrome-alias-packet-v1/artifacts/bottom_sheet_chrome_alias_packet_v1.md"
       ],
       "layer_classification": [
-        "material_recipe owns docked/modal sheet composition, scrim/sheet/drag-handle part ids, and Material sheet chrome",
+        "material_recipe owns docked/modal sheet composition, scrim/sheet/drag-handle part ids, and hidden layout-safe sheet chrome aliases",
         "kit_policy owns modal overlay request, scrim dismiss, focus trap, and focus restore through existing overlay primitives",
-        "test_harness/material_recipe follow-on covers layout-safe chrome aliases because root/sheet chrome markers changed current headless sheet sizing",
-        "no new mechanism gap was fixed in this packet"
+        "material_foundation owns the reusable hidden diagnostic anchor helper used to avoid layout and scene drift",
+        "no new mechanism gap found"
       ]
     },
     {
@@ -789,11 +792,11 @@
     {
       "id": "search_view",
       "family": "field",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_full_screen_state_aligned",
       "wave": "wave2_field_family",
       "default_owner_bias": "kit_policy",
-      "packet_strategy": "field_overlay_packet",
-      "first_gate_kind": "diag_overlay_search",
+      "packet_strategy": "field_overlay_and_full_screen_packet",
+      "first_gate_kind": "modal_overlay_focus_escape",
       "selector_status": "field_selector_ready",
       "selector_artifact": "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
       "stable_part_ids": [
@@ -801,16 +804,21 @@
         "search_view.chrome",
         "search_view.leading-icon",
         "search_view.trailing-icon",
-        "search_view.overlay"
+        "search_view.overlay",
+        "search_view.overlay.header",
+        "search_view.overlay.header.chrome",
+        "search_view.overlay.header.leading-icon",
+        "search_view.overlay.header.trailing-icon"
       ],
       "packet_artifacts": [
         "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md",
+        "docs/workstreams/material3-search-view-state-packet-v1/artifacts/search_view_source_packet_v1.md"
       ],
       "layer_classification": [
-        "material_recipe owns the docked MVP composition",
-        "kit_policy owns overlay/dismiss routing through existing overlay primitives",
-        "follow_on covers full Compose SearchBarState, full-screen transitions, and back handling"
+        "material_recipe owns docked/full-screen SearchView presentation selection, header/content composition, and stable part ids",
+        "kit_policy owns modal/dismiss routing, Escape collapse, focus containment, and focus handoff through existing overlay primitives",
+        "mechanism follow-on covers platform predictive-back events only if an app surface proves Escape/back-equivalent collapse is insufficient"
       ]
     },
     {

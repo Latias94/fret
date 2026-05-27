@@ -84,7 +84,7 @@ pub use navigation_rail::{NavigationRail, NavigationRailItem};
 pub use progress_indicator::{CircularProgressIndicator, LinearProgressIndicator};
 pub use radio::{Radio, RadioGroup, RadioGroupItem, RadioGroupOrientation, RadioStyle};
 pub use search_bar::SearchBar;
-pub use search_view::SearchView;
+pub use search_view::{SearchView, SearchViewPresentation};
 pub use segmented_button::{SegmentedButtonItem, SegmentedButtonSet};
 pub use select::{Select, SelectItem, SelectStyle, SelectVariant};
 pub use slider::{RangeSlider, Slider, SliderStyle};
