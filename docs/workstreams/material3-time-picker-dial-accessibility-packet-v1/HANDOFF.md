@@ -10,10 +10,11 @@ button surface that already owns label and selected-state semantics.
 
 ## Next Action
 
-Continue with a separate packet for invalid input error/supporting text, live-region announcements,
-or DatePicker disabled/localized semantics.
+Invalid input error/supporting text was closed by
+`docs/workstreams/material3-time-picker-input-error-packet-v1/`. Selector spoken labels were closed
+by `docs/workstreams/material3-time-picker-a11y-labels-packet-v1/`. Continue with DatePicker
+localized semantics or a shared Material string-registry packet.
 
 ## Non-Goals
 
-Do not fold invalid input error text, live-region announcements, or DatePicker accessibility depth
-into this packet.
+Do not fold DatePicker accessibility depth or string-registry architecture into this packet.

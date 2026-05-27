@@ -26,5 +26,5 @@
     "git diff --check"
   ],
   "next_task": null,
-  "continuation_policy": "Close this lane once dial label ids are implemented, gated, and recorded. Split invalid input, live-region, and DatePicker semantics into separate packets."
+  "continuation_policy": "Closed. Invalid input is covered by material3-time-picker-input-error-packet-v1, selector spoken labels by material3-time-picker-a11y-labels-packet-v1, and DatePicker/localization semantics remain separate packets."
 }

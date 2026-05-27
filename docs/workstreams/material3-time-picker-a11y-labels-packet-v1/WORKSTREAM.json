@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "slug": "material3-time-picker-a11y-labels-packet-v1",
+  "title": "Material 3 TimePicker Accessibility Labels Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "closeout",
+  "problem": "Closed recipe-local follow-on for Compose-aligned TimePicker selector roles, spoken values, dial labels, and AM/PM period grouping.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-time-picker-a11y-labels-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-time-picker-a11y-labels-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-time-picker-a11y-labels-packet-v1/TODO.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-time-picker-a11y-labels-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-time-picker-a11y-labels-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Render docked TimePicker in dial and input modes, then inspect selector roles, labels, values, selected flags, dial labels, and AM/PM period group semantics.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_uses_compose_aligned_accessibility_labels"
+    ]
+  },
+  "gates": [
+    {
+      "name": "material3-time-picker-a11y-labels",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_uses_compose_aligned_accessibility_labels"
+    },
+    {
+      "name": "material3-time-picker-selector-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_exposes_stable_part_test_ids"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-material3/src/time_picker.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "return_to_material3_sweep",
+    "notes": "TimePicker accessibility labels are closed. Localization/string registry remains a separate follow-on."
+  }
+}

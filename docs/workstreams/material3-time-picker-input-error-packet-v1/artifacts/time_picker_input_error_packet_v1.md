@@ -35,5 +35,5 @@ cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_
 
 ## Residual Risk
 
-Localized TimePicker strings and broader selection/mode-change announcements remain open
-accessibility-depth follow-ons.
+Localized TimePicker strings remain an accessibility-depth follow-on. Compose only uses a polite
+live region for input supporting text, which this packet already covers.

@@ -22,13 +22,14 @@ and select the next `known_follow_ons` component slice.
 
 ## Remaining TimePicker Follow-Ons
 
-- Localized TimePicker labels and error strings.
-- Broader live-region announcement coverage for selection/mode changes if future APG/Compose
-  parity work proves it belongs in recipe code.
+- Localized TimePicker labels and error strings through a Material string registry.
+- Selector roles/spoken labels were closed by
+  `docs/workstreams/material3-time-picker-a11y-labels-packet-v1/`.
 
 ## Gates To Re-Run
 
 ```powershell
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_time_input_rejects_invalid_values_and_recovers
 cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_exposes_stable_part_test_ids
+cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_uses_compose_aligned_accessibility_labels
 ```

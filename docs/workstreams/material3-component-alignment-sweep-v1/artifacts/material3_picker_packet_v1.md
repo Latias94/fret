@@ -35,6 +35,7 @@ goldens.
 | Date selectable-date disabling | `material_recipe` | A DatePicker predicate now disables blocked day cells across docked and modal surfaces while preserving value-derived anchors. |
 | Date displayed-month live region | `material_recipe` | The month/year label now has docked/modal part ids and polite atomic live-region semantics. |
 | Time input invalid/error text | `material_recipe` | Editable invalid input stays staged, exposes invalid semantics, and switches supporting text without changing committed time. |
+| Time selector accessibility labels | `material_recipe` | Hour/minute selectors now expose Compose-aligned radio-button semantics, spoken values, dial labels, and period-group labels. |
 | Headless picker golden drift | `test_harness` | The current scenes are stable. Previous picker goldens encoded stale stretched underlay/action-button geometry. |
 | Accessibility parity depth | `follow_on` | Richer calendar/time-grid semantics should be split from this selector/golden packet. |
 
@@ -86,6 +87,7 @@ TimePicker now derives stable ids from the supplied base:
 - `time_picker.clock-dial.chrome`
 - `time_picker.clock-dial.hour.<HH>`
 - `time_picker.clock-dial.minute.<MM>`
+- `time_picker.period`
 - `time_picker.period.am`
 - `time_picker.period.pm`
 - `time_picker.input.hour`
@@ -94,6 +96,7 @@ TimePicker now derives stable ids from the supplied base:
 - `time_picker.input.minute`
 - `time_picker.input.minute.chrome`
 - `time_picker.input.minute.supporting-text`
+- `time_picker.input.period`
 - `time_picker.input.period.am`
 - `time_picker.input.period.pm`
 - `time_picker.scrim`
@@ -110,6 +113,12 @@ TimePicker input mode now keeps editable invalid state separate from the committ
   `Hour must be 0-23`, `Hour must be 1-12`, or `Minute must be 0-59`.
 - Supporting text parts are polite atomic live regions.
 
+TimePicker selector accessibility labels now align with Compose Material3:
+
+- Hour/minute display selectors are `RadioButton` semantics with selected state.
+- Selector values and dial labels expose spoken labels such as `9 o'clock` and `41 minutes`.
+- Dial and input period controls have parent `Select AM or PM` group labels.
+
 The UI gallery TimePicker chrome-fill diagnostic was updated to use these base-derived selectors.
 
 ## Evidence
@@ -123,6 +132,7 @@ The UI gallery TimePicker chrome-fill diagnostic was updated to use these base-d
 - `docs/workstreams/material3-date-picker-month-live-region-packet-v1/artifacts/date_picker_month_live_region_packet_v1.md`
 - `docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/artifacts/time_picker_dial_accessibility_packet_v1.md`
 - `docs/workstreams/material3-time-picker-input-error-packet-v1/artifacts/time_picker_input_error_packet_v1.md`
+- `docs/workstreams/material3-time-picker-a11y-labels-packet-v1/artifacts/time_picker_a11y_labels_packet_v1.md`
 - `tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-time-picker-chrome-fill.json`
 - `goldens/material3-headless/v1/material3-date-picker.*.json`
 - `goldens/material3-headless/v1/material3-time-picker.*.json`
@@ -135,6 +145,7 @@ cargo check -p fret-ui-material3 --features diagnostics --tests
 cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface
 cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_respects_selectable_dates
 cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_month_label_is_polite_live_region
+cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_uses_compose_aligned_accessibility_labels
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_clock_dial_drag_updates_time
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_selector_keyboard_arrows_step_time
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_time_input_replaces_and_auto_advances_hour
@@ -153,7 +164,7 @@ python tools/check_workstream_catalog.py
 ## Residual Risk
 
 - DatePicker still needs localized day/month labels and richer date descriptions.
-- TimePicker still needs localized labels/strings and broader live-region announcements beyond the
-  input supporting-text error state closed here.
+- TimePicker still needs localized labels/strings via a Material string registry. Compose only
+  exposes `liveRegion = Polite` for input supporting text, which is already closed here.
 - These are accessibility depth follow-ons, not blockers for the current component/foundation
   classification. They should be split if M3CAS-070/M3CAS-080 shows a shared a11y primitive need.

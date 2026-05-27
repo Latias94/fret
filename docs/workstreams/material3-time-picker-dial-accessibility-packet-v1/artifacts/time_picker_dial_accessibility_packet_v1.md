@@ -31,6 +31,7 @@ asserts all 12-hour labels and all minute-step labels after switching to the min
 
 - 24-hour mode receives the same value-derived helper, but this packet gates the default 12-hour
   dial because that is the currently exposed automation surface.
-- Invalid input error text, live-region announcements, and localized/verbose spoken labels remain
-  follow-ons.
-
+- Invalid input error text was closed by `material3-time-picker-input-error-packet-v1`.
+- Verbose selector/dial spoken labels were closed by
+  `material3-time-picker-a11y-labels-packet-v1`.
+- Localized TimePicker strings remain a follow-on.

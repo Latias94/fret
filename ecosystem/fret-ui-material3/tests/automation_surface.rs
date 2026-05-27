@@ -4,7 +4,9 @@
 
 use std::sync::Arc;
 
-use fret_core::{AppWindowId, Point, PointerId, Px, Rect, SemanticsLive, Size, UiServices};
+use fret_core::{
+    AppWindowId, Point, PointerId, Px, Rect, SemanticsLive, SemanticsRole, Size, UiServices,
+};
 use fret_runtime::{ModelHost, PlatformCapabilities};
 use fret_ui::UiTree;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
@@ -74,6 +76,44 @@ fn semantics_node_label(ui: &UiTree<TestHost>, test_id: &str) -> String {
         .label
         .clone()
         .unwrap_or_else(|| panic!("expected semantics label for test_id {test_id}"))
+}
+
+fn semantics_node_value(ui: &UiTree<TestHost>, test_id: &str) -> Option<String> {
+    ui.semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.test_id.as_deref() == Some(test_id))
+        })
+        .unwrap_or_else(|| panic!("expected semantics node for test_id {test_id}"))
+        .value
+        .clone()
+}
+
+fn semantics_node_role(ui: &UiTree<TestHost>, test_id: &str) -> SemanticsRole {
+    ui.semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.test_id.as_deref() == Some(test_id))
+        })
+        .unwrap_or_else(|| panic!("expected semantics node for test_id {test_id}"))
+        .role
+}
+
+fn semantics_node_selected(ui: &UiTree<TestHost>, test_id: &str) -> bool {
+    ui.semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.test_id.as_deref() == Some(test_id))
+        })
+        .unwrap_or_else(|| panic!("expected semantics node for test_id {test_id}"))
+        .flags
+        .selected
 }
 
 fn semantics_node_live(ui: &UiTree<TestHost>, test_id: &str) -> Option<(SemanticsLive, bool)> {
@@ -1848,6 +1888,7 @@ fn material3_time_picker_exposes_stable_part_test_ids() {
             "m3-time-picker.minute-selector.chrome",
             "m3-time-picker.clock-dial",
             "m3-time-picker.clock-dial.chrome",
+            "m3-time-picker.period",
             "m3-time-picker.period.am",
             "m3-time-picker.period.pm",
         ] {
@@ -1961,6 +2002,7 @@ fn material3_time_picker_exposes_stable_part_test_ids() {
             "m3-time-picker-input.input.minute",
             "m3-time-picker-input.input.minute.chrome",
             "m3-time-picker-input.input.minute.supporting-text",
+            "m3-time-picker-input.input.period",
             "m3-time-picker-input.input.period.am",
             "m3-time-picker-input.input.period.pm",
         ] {
@@ -2031,12 +2073,187 @@ fn material3_time_picker_exposes_stable_part_test_ids() {
             "m3-time-picker-modal.clock-dial.hour.09",
             "m3-time-picker-modal.hour-selector",
             "m3-time-picker-modal.minute-selector",
+            "m3-time-picker-modal.period",
         ] {
             assert!(
                 live_test_id_exists(&ui, &app, window, id),
                 "expected live TimePicker dialog part test_id {id}"
             );
         }
+    }
+}
+
+#[test]
+fn material3_time_picker_uses_compose_aligned_accessibility_labels() {
+    use fret_ui_material3::{DockedTimePicker, TimePickerDisplayMode};
+    use time::Time;
+
+    {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(560.0), Px(520.0)),
+        );
+
+        let time = app
+            .models_mut()
+            .insert(Time::from_hms(9, 41, 0).expect("valid time"));
+        let render =
+            move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let picker = DockedTimePicker::new(time.clone())
+                        .display_mode(TimePickerDisplayMode::Dial)
+                        .test_id("m3-time-picker")
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(32.0), picker)]
+                })
+            };
+
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(
+            semantics_node_role(&ui, "m3-time-picker.hour-selector"),
+            SemanticsRole::RadioButton
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker.hour-selector"),
+            "Select hour"
+        );
+        assert_eq!(
+            semantics_node_value(&ui, "m3-time-picker.hour-selector").as_deref(),
+            Some("9 o'clock")
+        );
+        assert!(semantics_node_selected(&ui, "m3-time-picker.hour-selector"));
+        assert_eq!(
+            semantics_node_role(&ui, "m3-time-picker.minute-selector"),
+            SemanticsRole::RadioButton
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker.minute-selector"),
+            "Select minutes"
+        );
+        assert_eq!(
+            semantics_node_value(&ui, "m3-time-picker.minute-selector").as_deref(),
+            Some("41 minutes")
+        );
+        assert!(!semantics_node_selected(
+            &ui,
+            "m3-time-picker.minute-selector"
+        ));
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker.clock-dial.hour.09"),
+            "9 o'clock"
+        );
+        assert_eq!(
+            semantics_node_role(&ui, "m3-time-picker.period"),
+            SemanticsRole::Group
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker.period"),
+            "Select AM or PM"
+        );
+        assert!(semantics_node_selected(&ui, "m3-time-picker.period.am"));
+        assert!(!semantics_node_selected(&ui, "m3-time-picker.period.pm"));
+
+        click_semantics_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            "m3-time-picker.minute-selector",
+            PointerId(1),
+        );
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert!(!semantics_node_selected(
+            &ui,
+            "m3-time-picker.hour-selector"
+        ));
+        assert!(semantics_node_selected(
+            &ui,
+            "m3-time-picker.minute-selector"
+        ));
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker.clock-dial.minute.55"),
+            "55 minutes"
+        );
+    }
+
+    {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(560.0), Px(520.0)),
+        );
+
+        let time = app
+            .models_mut()
+            .insert(Time::from_hms(21, 5, 0).expect("valid time"));
+        let render =
+            move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let picker = DockedTimePicker::new(time.clone())
+                        .display_mode(TimePickerDisplayMode::Input)
+                        .test_id("m3-time-picker-input")
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(32.0), picker)]
+                })
+            };
+
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(
+            semantics_node_role(&ui, "m3-time-picker-input.input.hour"),
+            SemanticsRole::TextField
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-input.input.hour"),
+            "for hour"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-input.input.minute"),
+            "for minutes"
+        );
+        assert_eq!(
+            semantics_node_role(&ui, "m3-time-picker-input.input.period"),
+            SemanticsRole::Group
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-input.input.period"),
+            "Select AM or PM"
+        );
+        assert!(!semantics_node_selected(
+            &ui,
+            "m3-time-picker-input.input.period.am"
+        ));
+        assert!(semantics_node_selected(
+            &ui,
+            "m3-time-picker-input.input.period.pm"
+        ));
     }
 }
 

@@ -80,14 +80,49 @@ fn cached_minute_dial_label(n: u32) -> Arc<str> {
     }
 }
 
-fn time_picker_hour_field_label() -> Arc<str> {
+fn time_picker_hour_selection_label() -> Arc<str> {
     static LABEL: OnceLock<Arc<str>> = OnceLock::new();
-    LABEL.get_or_init(|| Arc::<str>::from("Hour")).clone()
+    LABEL
+        .get_or_init(|| Arc::<str>::from("Select hour"))
+        .clone()
 }
 
-fn time_picker_minute_field_label() -> Arc<str> {
+fn time_picker_minute_selection_label() -> Arc<str> {
     static LABEL: OnceLock<Arc<str>> = OnceLock::new();
-    LABEL.get_or_init(|| Arc::<str>::from("Minute")).clone()
+    LABEL
+        .get_or_init(|| Arc::<str>::from("Select minutes"))
+        .clone()
+}
+
+fn time_picker_hour_text_field_label() -> Arc<str> {
+    static LABEL: OnceLock<Arc<str>> = OnceLock::new();
+    LABEL.get_or_init(|| Arc::<str>::from("for hour")).clone()
+}
+
+fn time_picker_minute_text_field_label() -> Arc<str> {
+    static LABEL: OnceLock<Arc<str>> = OnceLock::new();
+    LABEL
+        .get_or_init(|| Arc::<str>::from("for minutes"))
+        .clone()
+}
+
+fn time_picker_period_toggle_label() -> Arc<str> {
+    static LABEL: OnceLock<Arc<str>> = OnceLock::new();
+    LABEL
+        .get_or_init(|| Arc::<str>::from("Select AM or PM"))
+        .clone()
+}
+
+fn time_picker_hour_value_description(hour: u32, is_24h: bool) -> Arc<str> {
+    if is_24h {
+        Arc::<str>::from(format!("{hour} hours"))
+    } else {
+        Arc::<str>::from(format!("{hour} o'clock"))
+    }
+}
+
+fn time_picker_minute_value_description(minute: u32) -> Arc<str> {
+    Arc::<str>::from(format!("{minute} minutes"))
 }
 
 fn time_picker_separator_text() -> Arc<str> {
@@ -971,8 +1006,9 @@ fn time_picker_display<H: UiHost>(
             .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.minute-selector"));
         let hour_el = time_selector_field(
             cx,
-            time_picker_hour_field_label(),
+            time_picker_hour_selection_label(),
             hour_s.clone(),
+            time_picker_hour_value_description(hour.into(), is_24h),
             selection == TimePickerSelection::Hour,
             hour_test_id,
             time_model.clone(),
@@ -996,8 +1032,9 @@ fn time_picker_display<H: UiHost>(
 
         let minute_el = time_selector_field(
             cx,
-            time_picker_minute_field_label(),
+            time_picker_minute_selection_label(),
             minute_s.clone(),
+            time_picker_minute_value_description(minute.into()),
             selection == TimePickerSelection::Minute,
             minute_test_id,
             time_model.clone(),
@@ -1039,7 +1076,7 @@ fn time_picker_time_input<H: UiHost>(
 
     let hour_column = time_input_field_column(
         cx,
-        Arc::<str>::from("Hour"),
+        time_picker_hour_text_field_label(),
         time_input_supporting_text(TimeInputFieldKind::Hour, is_24h, hour_valid),
         !hour_valid,
         TimeInputFieldKind::Hour,
@@ -1053,7 +1090,7 @@ fn time_picker_time_input<H: UiHost>(
     );
     let minute_column = time_input_field_column(
         cx,
-        Arc::<str>::from("Minute"),
+        time_picker_minute_text_field_label(),
         time_input_supporting_text(TimeInputFieldKind::Minute, is_24h, minute_valid),
         !minute_valid,
         TimeInputFieldKind::Minute,
@@ -1507,6 +1544,7 @@ fn time_selector_field<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     a11y_label: Arc<str>,
     text: Arc<str>,
+    a11y_value: Arc<str>,
     selected: bool,
     test_id: Arc<str>,
     time_model: Model<Time>,
@@ -1589,8 +1627,9 @@ fn time_selector_field<H: UiHost>(
             focusable: enabled,
             key_activation: Default::default(),
             a11y: PressableA11y {
-                role: Some(SemanticsRole::Button),
+                role: Some(SemanticsRole::RadioButton),
                 label: Some(a11y_label.clone()),
+                value: Some(a11y_value.clone()),
                 test_id: Some(test_id.clone()),
                 selected,
                 ..Default::default()
@@ -2010,7 +2049,10 @@ fn dial_label<H: UiHost>(
             key_activation: Default::default(),
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
-                label: Some(cached_decimal_0_59(label)),
+                label: Some(match selection {
+                    TimePickerSelection::Hour => time_picker_hour_value_description(label, is_24h),
+                    TimePickerSelection::Minute => time_picker_minute_value_description(label),
+                }),
                 test_id: Some(test_id.clone()),
                 selected,
                 ..Default::default()
@@ -2140,6 +2182,8 @@ fn time_input_period_selector<H: UiHost>(
         .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.input.period.am"));
     let pm_test_id = time_picker_part_test_id(&test_id, "input.period.pm")
         .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.input.period.pm"));
+    let period_test_id = time_picker_part_test_id(&test_id, "input.period")
+        .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.input.period"));
 
     cx.container(container, move |cx| {
         let am = time_input_period_item(
@@ -2160,6 +2204,12 @@ fn time_input_period_selector<H: UiHost>(
         );
         vec![cx.flex(flex, move |_cx| vec![am, pm])]
     })
+    .a11y(
+        SemanticsDecoration::default()
+            .role(SemanticsRole::Group)
+            .label(time_picker_period_toggle_label())
+            .test_id(period_test_id),
+    )
 }
 
 fn time_input_period_item<H: UiHost>(
@@ -2381,6 +2431,8 @@ fn time_picker_period_selector<H: UiHost>(
         .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.period.am"));
     let pm_test_id = time_picker_part_test_id(&test_id, "period.pm")
         .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.period.pm"));
+    let period_test_id = time_picker_part_test_id(&test_id, "period")
+        .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.period"));
 
     cx.container(container, move |cx| {
         let am = period_item(
@@ -2401,6 +2453,12 @@ fn time_picker_period_selector<H: UiHost>(
         );
         vec![cx.flex(flex, move |_cx| vec![am, pm])]
     })
+    .a11y(
+        SemanticsDecoration::default()
+            .role(SemanticsRole::Group)
+            .label(time_picker_period_toggle_label())
+            .test_id(period_test_id),
+    )
 }
 
 fn period_item<H: UiHost>(
