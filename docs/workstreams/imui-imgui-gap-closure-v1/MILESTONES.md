@@ -169,6 +169,12 @@ reads, current-tab validity checks, default-selected fallback, first-enabled fal
 correction writes. `tab_family_controls/items.rs` keeps `BuiltTabItem`, trigger response
 aggregation, focus fallback, tab-list/panel assembly, and final `TabBarResponse` construction.
 
+2026-05-27 tab trigger behavior owner-split result:
+`ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger/behavior.rs` now owns active-trigger
+behavior installation, keyboard lifecycle marking, selected-model writes, activate-shortcut
+handling, clicked transient reads, and `ResponseExt` population. `trigger.rs` now keeps tab trigger
+props, collection a11y, keyed trigger assembly, and visual mounting.
+
 2026-05-27 control chrome palette owner-split result:
 `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome.rs` now owns `ImUiControlPalette`, button
 theme color resolution, field theme color resolution, and compact button/field container chrome.

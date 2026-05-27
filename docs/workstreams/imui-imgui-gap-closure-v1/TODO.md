@@ -623,6 +623,14 @@ Last updated: 2026-05-27
       validity checks, default-selected fallback, first-enabled fallback, and model correction
       writes. `tab_family_controls/items.rs` keeps `BuiltTabItem`, trigger response aggregation,
       focus fallback, tab-list/panel assembly, and final `TabBarResponse` construction.
+- [x] Split IMUI tab trigger active-trigger behavior out of
+      `ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger.rs` into a private behavior owner
+      without changing tab a11y, selected-model writes, activate-shortcut handling, clicked
+      response population, or tab visual construction.
+      Result: `tab_family_controls/trigger/behavior.rs` owns active-trigger behavior installation,
+      keyboard lifecycle marking, selected-model writes, activate-shortcut handling, clicked
+      transient reads, and `ResponseExt` population. `trigger.rs` keeps tab trigger props,
+      collection a11y, keyed trigger assembly, and visual mounting.
 - [x] Split IMUI popup-menu policy state and panel composition out of
       `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu.rs` into private owner modules without
       changing popup/menu/submenu behavior or facade entry points.

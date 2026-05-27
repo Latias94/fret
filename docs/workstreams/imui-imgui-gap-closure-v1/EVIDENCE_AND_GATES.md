@@ -69,6 +69,40 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Tab Trigger Behavior Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI tab trigger behavior moved into a private owner without changing tab a11y,
+active-trigger lifecycle, selected-tab model writes, activate-shortcut handling, clicked response
+population, or tab visual construction.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger.rs` keeps tab trigger props, tab
+  collection a11y, keyed trigger assembly, and visual mounting.
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger/behavior.rs` owns active-trigger
+  behavior installation, keyboard lifecycle marking, selected-model writes, activate-shortcut
+  handling, clicked transient reads, and `ResponseExt` population.
+- `tools/gate_imui_workstream_source.py` now requires the tab trigger behavior owner and rejects
+  inline active-trigger behavior bodies from drifting back into `tab_family_controls/trigger.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib tab_family_controls --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui
+  interaction_menu_tabs::tabs::tab_bar_helper_switches_selected_panel_and_updates_selection_model
+  interaction_menu_tabs::tabs::tab_item_activate_shortcut_is_scoped_to_focused_trigger
+  interaction_menu_tabs::tabs::tab_bar_helper_reports_selected_change_and_trigger_edges
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Flow Options Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI flow/layout option records and token defaults moved into narrower private
