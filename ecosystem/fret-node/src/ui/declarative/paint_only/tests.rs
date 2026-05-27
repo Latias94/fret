@@ -1111,6 +1111,33 @@ fn render_surface_semantics_snapshot_with_props(
     view_state: NodeGraphViewState,
     props_for_binding: impl FnOnce(&NodeGraphSurfaceBinding) -> super::NodeGraphSurfaceProps,
 ) -> fret_core::SemanticsSnapshot {
+    render_surface_semantics_snapshot_with_editor_config_and_props(
+        graph,
+        view_state,
+        default_editor_config(),
+        props_for_binding,
+    )
+}
+
+fn render_surface_semantics_snapshot_with_editor_config(
+    graph: Graph,
+    view_state: NodeGraphViewState,
+    editor_config: NodeGraphEditorConfig,
+) -> fret_core::SemanticsSnapshot {
+    render_surface_semantics_snapshot_with_editor_config_and_props(
+        graph,
+        view_state,
+        editor_config,
+        |binding| binding.surface_props(),
+    )
+}
+
+fn render_surface_semantics_snapshot_with_editor_config_and_props(
+    graph: Graph,
+    view_state: NodeGraphViewState,
+    editor_config: NodeGraphEditorConfig,
+    props_for_binding: impl FnOnce(&NodeGraphSurfaceBinding) -> super::NodeGraphSurfaceProps,
+) -> fret_core::SemanticsSnapshot {
     let mut host = TestActionHostImpl::default();
     let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
     let window = AppWindowId::default();
@@ -1118,8 +1145,7 @@ fn render_surface_semantics_snapshot_with_props(
     let bounds = test_node_graph_surface_bounds();
     host.bounds = bounds;
     let mut services = FakeUiServices;
-    let binding =
-        NodeGraphSurfaceBinding::new(&mut host.models, graph, view_state, default_editor_config());
+    let binding = NodeGraphSurfaceBinding::new(&mut host.models, graph, view_state, editor_config);
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -1328,6 +1354,23 @@ fn node_graph_surface_props_new_wires_default_active_descendant_internals() {
     );
 
     assert_canvas_active_descendant_label(&snapshot, "Port in");
+}
+
+#[test]
+fn node_graph_surface_disable_keyboard_a11y_suppresses_active_descendant() {
+    let (graph, a, _a_in, _a_out, _b, _b_in) = make_graph_two_nodes_with_ports();
+    let snapshot = render_surface_semantics_snapshot_with_editor_config(
+        graph,
+        NodeGraphViewState {
+            selected_nodes: vec![a],
+            ..Default::default()
+        },
+        test_editor_config(|config| {
+            config.interaction.disable_keyboard_a11y = true;
+        }),
+    );
+
+    assert_canvas_has_no_active_descendant(&snapshot);
 }
 
 #[test]

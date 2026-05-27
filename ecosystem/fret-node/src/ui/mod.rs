@@ -2,14 +2,12 @@
 //!
 //! This module is behind the `fret-ui` feature.
 //!
-//! Retained-canvas integration surfaces (the legacy widget/editor stack) are behind
-//! `compat-retained-canvas`. The old `fret-ui` retained bridge has been deleted; this feature now
-//! only gates node-local legacy canvas modules that consume stable `fret-ui` widget/context exports.
+//! The supported authoring surface is binding/controller/declarative composition; legacy retained
+//! canvas widget authoring has been removed from this crate.
 
 pub mod binding;
 mod canvas;
 pub mod commands;
-mod compat_transport;
 pub mod controller;
 pub mod declarative;
 pub mod edge_types;
@@ -32,7 +30,7 @@ mod overlays;
 mod screen_space_placement;
 
 pub use binding::NodeGraphSurfaceBinding;
-pub use canvas::NodeResizeHandle;
+pub use canvas::{NodeResizeHandle, NodeResizeHandleSet};
 pub use commands::register_node_graph_commands;
 pub use controller::{
     NodeGraphController, NodeGraphControllerError, NodeGraphEdgeUpdate,
@@ -70,7 +68,7 @@ pub use portal_layout::NodeGraphPortalNodeLayout;
 pub use presenter::{
     DefaultNodeGraphPresenter, EdgeMarker, EdgeMarkerKind, EdgeRenderHint, EdgeRouteKind,
     InsertNodeCandidate, NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter,
-    NodeResizeConstraintsPx, NodeResizeHandleSet, PortAnchorHint, RegistryNodeGraphPresenter,
+    NodeResizeConstraintsPx, PortAnchorHint, RegistryNodeGraphPresenter,
 };
 pub use presets::{NodeGraphPresetFamily, NodeGraphPresetSkinV1};
 pub use registry::{NodeGraphNodeRenderer, NodeGraphNodeTypes};
@@ -81,8 +79,3 @@ pub use skin::{
 };
 pub use style::{NodeGraphColorMode, NodeGraphStyle};
 pub use viewport_options::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions};
-
-#[cfg(all(test, feature = "compat-retained-canvas"))]
-pub(crate) use canvas::{
-    NodeGraphCanvas, NodeGraphCanvasCommitOutcome, NodeGraphCanvasMiddlewareCx,
-};

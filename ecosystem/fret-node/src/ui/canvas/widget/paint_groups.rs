@@ -1,2 +1,0 @@
-mod chrome;
-mod overlay;

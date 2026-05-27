@@ -27,7 +27,7 @@ If you are building a typical editor UI with a single graph instance, prefer the
 **binding-first declarative** path: construct one store-backed `NodeGraphSurfaceBinding`, render
 `node_graph_surface(...)`, use the binding's common helpers for viewport/history/controlled-sync
 work, and construct `NodeGraphController::new(binding.store_model())` explicitly only when you need
-the lower-level controller surface or retained/compat composition. This keeps undo/redo, lookup
+the lower-level controller surface or custom declarative composition. This keeps undo/redo, lookup
 caches, and editor
 interactions in the store/runtime while teaching the same declarative surface that app code should
 copy.
@@ -62,7 +62,7 @@ copy.
   They intentionally expose `NodeGraphNodeUpdate` / `NodeGraphEdgeUpdate` drafts instead of raw
   `Node` / `Edge`, so structural port edits and endpoint rewires stay on explicit transactions.
 - Treat `NodeGraphController::new(binding.store_model())` as the explicit lower-level escape hatch
-  for controller-only helpers or retained/compat wiring.
+  for controller-only helpers or custom declarative wiring.
 - When you already own explicit graph/view/editor-config mirrors plus controller state, use
   `NodeGraphSurfaceBinding::from_models_and_controller(...)`; this is an advanced constructor, not
   the default teaching path.

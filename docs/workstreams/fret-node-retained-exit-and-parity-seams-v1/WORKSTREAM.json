@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "slug": "fret-node-retained-exit-and-parity-seams-v1",
+  "title": "`fret-node` Retained Exit And Parity Seams v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "execution",
+  "problem": "`fret-node` still carries a retained canvas compatibility island, stale retained API docs, reusable canvas mechanics in the graph crate, and partially documented XyFlow hook/focus seams.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/fret-node-retained-exit-and-parity-seams-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-retained-exit-and-parity-seams-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/fret-node-retained-exit-and-parity-seams-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/fret-node-retained-exit-and-parity-seams-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/fret-node-retained-exit-and-parity-seams-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/fret-node-retained-exit-and-parity-seams-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    }
+  ],
+  "current_task": null,
+  "next_task": null,
+  "gates": [
+    "cargo nextest run -p fret-node --no-default-features",
+    "cargo nextest run -p fret-node",
+    "cargo nextest run -p fret-canvas",
+    "cargo fmt --check",
+    "cargo clippy -p fret-node --no-default-features --all-targets -- -D warnings",
+    "cargo clippy -p fret-canvas --all-targets -- -D warnings",
+    "python3 tools/check_layering.py"
+  ],
+  "evidence": [
+    "docs/workstreams/fret-node-retained-exit-and-parity-seams-v1/DESIGN.md",
+    "docs/workstreams/fret-node-retained-exit-and-parity-seams-v1/TODO.md",
+    "docs/workstreams/fret-node-retained-exit-and-parity-seams-v1/EVIDENCE_AND_GATES.md",
+    "docs/node-graph-controlled-mode.md",
+    "docs/node-graph-how-to-build-like-xyflow.md",
+    "docs/node-graph-xyflow-parity.md",
+    "ecosystem/fret-node/Cargo.toml",
+    "ecosystem/fret-node/src/ui/canvas",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs",
+    "ecosystem/fret-canvas/src",
+    "docs/workstreams/fret-node-retained-exit-and-parity-seams-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0028-declarative-elements-and-element-state.md",
+    "docs/adr/0031-app-owned-models-and-leasing-updates.md",
+    "docs/adr/0051-model-observation-and-ui-invalidation-propagation.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0330-retained-runtime-internal-and-compat-surface.md"
+  ],
+  "dependencies": [
+    "docs/workstreams/fret-node-architecture-fearless-refactor-v2",
+    "docs/workstreams/fret-node-retained-canvas-mirror-cleanup-v1",
+    "docs/workstreams/fret-node-runtime-store-contract-closure-v1"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed. Start a separate follow-on for full semantic focus nodes, port-focus authoring, minimap/controls focus, or a broader ReactFlow hook facade; do not reopen this lane."
+  }
+}

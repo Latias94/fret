@@ -33,11 +33,6 @@ mod toolbar_layout_policy;
 mod toolbar_policy;
 mod toolbars_declarative;
 
-#[cfg(feature = "compat-retained-canvas")]
-pub use group_rename::{GroupRenameOverlay, NodeGraphOverlayState};
-#[cfg(feature = "compat-retained-canvas")]
-pub(in crate::ui) use rename_policy::open_group_rename_session;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum OverlayPlacement {
     /// Positions itself within the canvas bounds (legacy / backwards-compatible).

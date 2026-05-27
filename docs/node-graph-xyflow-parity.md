@@ -55,19 +55,17 @@ internals/geometry/caches, treat the following behaviors as locked outcomes:
 For the detailed internals contract checklist, see `docs/workstreams/standalone/fret-node-internals-m0.md`.
 
 - **Pan-only must not rebuild geometry** (derived geometry caches are reused; internals update only).
-  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
-  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/derived_geometry_invalidation_conformance.rs`
-  - Evidence: `ecosystem/fret-node/src/ui/canvas/state.rs` (`DerivedBuildCounters`) + `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 - **Semantic zoom discipline** (node sizes stay constant in window space; geometry rebuild is scoped and deterministic).
-  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 - **Hit-testing determinism** (same inputs → same hit results; Strict vs Loose modes are stable).
-  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/declarative/paint_only/{surface_math.rs,tests.rs}`
 - **Invalidation ordering discipline** (measured geometry updates are observed without requiring a layout pass).
-  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/invalidation_ordering_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 - **Cache guardrails** (paint reuses cached paths/text between frames; warming behavior stays stable).
-  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
-  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edges_tile_equivalence_conformance.rs`
-  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edge_labels_tile_equivalence_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 Suggested local gates while refactoring:
 
@@ -128,7 +126,10 @@ High-level layering (ADR 0126):
 - **Edit ops / undo**: `ecosystem/fret-node/src/ops/*`
 - **Runtime change model (headless-safe)**: `ecosystem/fret-node/src/runtime/*`
 - **UI substrate (optional, default)**: `ecosystem/fret-node/src/ui/*`
-  - canvas widget: `ecosystem/fret-node/src/ui/canvas/*` and `ecosystem/fret-node/src/ui/canvas/widget.rs`
+  - declarative surface: `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    plus support modules in `ecosystem/fret-node/src/ui/declarative/paint_only/*`
+  - surface binding/controller: `ecosystem/fret-node/src/ui/{binding.rs,controller.rs}`
+  - canvas support math/indexes: `ecosystem/fret-node/src/ui/canvas/*`
   - derived internals (entry + impl): `ecosystem/fret-node/src/ui/internals.rs` and `ecosystem/fret-node/src/ui/internals/*` (`MeasuredGeometryStore` in `ecosystem/fret-node/src/ui/measured.rs`)
   - overlays (rename, controls, minimap): `ecosystem/fret-node/src/ui/overlays/mod.rs`
   - portal escape hatch: `ecosystem/fret-node/src/ui/portal.rs`
@@ -153,7 +154,9 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - `NodeGraphStore::subscribe_selector` exists (dedup by `PartialEq`), and `subscribe_selector_diff` provides `(prev, next)`.
     - It is not memoized and does not provide structured diffs beyond `(prev, next)`.
     - `Graph` and `NodeGraphViewState` remain separate by design (hard serialization boundary).
-    - UI bridge (partial): `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::with_store`) routes view-state and graph edits (commit/undo/redo) through the store.
+    - UI bridge (partial): `NodeGraphSurfaceBinding` routes view-state and graph edits
+      (commit/undo/redo) through `NodeGraphStore`, while app commands use
+      `NodeGraphController` over the same store model.
 
 - [~] **Internals update pipeline ("node internals" as derived UI state)**
   - XyFlow: `updateNodeInternals(...)` in `repo-ref/xyflow/packages/react/src/store/index.ts`
@@ -186,8 +189,6 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - fret-node:
     - callback contract + store adapter: `ecosystem/fret-node/src/runtime/callbacks.rs` (`NodeGraphCommitCallbacks`, `NodeGraphViewCallbacks`, `NodeGraphGestureCallbacks`, `NodeGraphCallbacks`, `install_callbacks`)
     - connection change extraction: `ecosystem/fret-node/src/runtime/callbacks.rs` (`connection_changes_from_transaction`)
-    - UI glue (legacy canvas compatibility island): `ecosystem/fret-node/src/ui/canvas/widget.rs`
-      (`NodeGraphCanvas::with_callbacks`)
     - declarative app path: `NodeGraphSurfaceBinding` plus
       `apps/fret-examples/src/node_graph_demo.rs`
   - Notes:
@@ -205,14 +206,16 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - node drag move: `on_node_drag` (UI-driven)
       - view: `on_viewport_change` / `on_selection_change` (derived from `ViewChange`)
     - Store-level commit/view callbacks (`install_callbacks`) remain headless-safe and can be used without `fret-ui`.
-    - App code should usually implement commit/view layers; retained canvas glue owns gesture lifecycle hooks.
+    - App code should usually implement commit/view layers; declarative surface input handlers own transient gesture lifecycle hooks.
 
 - [~] **Controlled/uncontrolled patterns**
   - XyFlow: controlled nodes/edges vs internal store
   - fret-node:
     - store-driven (recommended default):
-      - `NodeGraphCanvas::with_store`: `ecosystem/fret-node/src/ui/canvas/widget.rs`
-      - optional callbacks: `NodeGraphCanvas::with_callbacks`: `ecosystem/fret-node/src/ui/canvas/widget.rs`
+      - `NodeGraphSurfaceBinding::new(...)` or `NodeGraphSurfaceBinding::from_store(...)`
+      - render with `node_graph_surface(...)` / `node_graph_surface_in(...)`
+      - app commands/tooling use `NodeGraphController::new(surface.store_model())`
+      - optional callbacks: `runtime::callbacks::install_callbacks(...)`
     - controlled mode building blocks (keep your own `Graph`/`NodeGraphViewState` as source of truth):
       - layered callbacks + apply: `ecosystem/fret-node/src/runtime/callbacks.rs`, `ecosystem/fret-node/src/runtime/apply.rs`
       - conformance test: `ecosystem/fret-node/src/runtime/tests.rs` (`controlled_graph_can_apply_store_changes_via_callbacks`)
@@ -241,7 +244,8 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - `nodeTypes` registry (portal-based): `ecosystem/fret-node/src/ui/registry.rs` (`NodeGraphNodeTypes`)
     - `edgeTypes` registry (hint overrides): `ecosystem/fret-node/src/ui/edge_types.rs` (`NodeGraphEdgeTypes`)
   - Notes:
-    - `NodeGraphPresenter::edge_render_hint` remains the baseline; `NodeGraphEdgeTypes` overrides are applied in `NodeGraphCanvas`.
+    - `NodeGraphPresenter::edge_render_hint` remains the baseline; `NodeGraphEdgeTypes`
+      overrides are applied by the declarative paint-only surface.
     - Stage 2 custom edge paths are supported via `NodeGraphEdgeTypes::register_path(...)` (`EdgeCustomPath`).
       The canvas uses the custom path for painting, hit-testing, edge labels, and EdgeToolbar internals.
 
@@ -250,16 +254,17 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - fret-node:
     - `NodeGraphNodeTypes` stores per-kind renderers as `FnMut`, enabling per-type state/caches
     - portal subtree instances are keyed by `NodeId` via `NodeGraphPortalHost` (`ecx.keyed(node_id, ...)`)
-    - lifecycle conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_lifecycle_conformance.rs`
+    - lifecycle conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
   - Notes:
     - still missing a first-class lifecycle contract for node/edge wrappers and update scheduling (internals measurement invalidation, memoization policy).
 
 - [~] **Plugin-like policy hooks (no forking the canvas)**
   - XyFlow: store middleware maps for node/edge changes
   - fret-node:
-    - UI middleware contract (event/command/commit hooks): `ecosystem/fret-node/src/ui/canvas/middleware.rs`
-    - install middleware into the canvas: `NodeGraphCanvas::with_middleware` (`ecosystem/fret-node/src/ui/canvas/widget.rs`)
-    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/middleware_conformance.rs`
+    - headless store callback/middleware seams live in `ecosystem/fret-node/src/runtime/*`
+    - declarative surface hooks are intentionally narrow today: app-visible graph/view changes
+      flow through `NodeGraphStore`, `NodeGraphCallbacks`, and `NodeGraphController`
+    - gap: first-class UI interaction interception hooks need a supported declarative surface seam
 
 ## 0.4 Batteries-included add-ons (Controls / MiniMap / Background / Panels)
 
@@ -267,19 +272,19 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/MiniMap/MiniMap.tsx`
   - fret-node: `NodeGraphMiniMapOverlay` (derived-internals driven) + B-layer navigation wiring via `NodeGraphController`
   - Contract: `docs/node-graph-addons-minimap-controls.md`
-  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
+  - Conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 - [x] **Controls**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/Controls/Controls.tsx`
   - fret-node: `NodeGraphControlsOverlay` + command binding injection (`NodeGraphControlsBindings`)
   - Contract: `docs/node-graph-addons-minimap-controls.md`
-  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
+  - Conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 - [x] **Background**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/Background/Background.tsx`
   - fret-node: grid patterns (`Lines` / `Dots` / `Cross`) + explicit theme/token plumbing contract
   - Contract: `docs/node-graph-addons-theming.md`
-  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
+  - Conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 - [x] **NodeToolbar**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/NodeToolbar/NodeToolbar.tsx`
@@ -295,7 +300,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - `NodeGraphPanel` provides window-space anchored overlay composition: `ecosystem/fret-node/src/ui/panel.rs`
     - `NodeGraphControlsOverlay::in_panel_bounds` + `NodeGraphMiniMapOverlay::in_panel_bounds` support panel-based placement
     - demo usage: `apps/fret-examples/src/node_graph_demo.rs`
-    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_toolbars_conformance.rs`
+    - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ---
 
@@ -305,7 +310,8 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 - [~] **Window-space vs canvas-space mapping is explicit**
   - XyFlow: `packages/react/src/container/ZoomPane/index.tsx` (writes `transform`), `@xyflow/system` transform helpers
-  - fret-node: `NodeGraphViewState { pan, zoom }` in `ecosystem/fret-node/src/io/mod.rs`, conversions in `NodeGraphCanvas`
+  - fret-node: `NodeGraphViewState { pan, zoom }` in `ecosystem/fret-node/src/io/mod.rs`,
+    conversions on `NodeGraphSurfaceBinding` / `NodeGraphController`
   - Notes: keep a single canonical transform and expose helpers for:
     - `window_point -> canvas_point`
     - `canvas_point -> window_point`
@@ -319,7 +325,8 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 - [~] **Pan on drag (background)**
   - XyFlow: `packages/system/src/xypanzoom/XYPanZoom.ts` (`panOnDrag`, filters, handlers)
-  - fret-node: `NodeGraphCanvas` (background drag pans; behavior lives in canvas event handling)
+  - fret-node: declarative surface input handlers (background drag pans; behavior lives in
+    `ecosystem/fret-node/src/ui/declarative/paint_only/*`)
   - Notes:
     - parity knobs:
       - [x] space-to-pan (hold Space + drag with left mouse): `NodeGraphInteractionState.space_to_pan`
@@ -329,9 +336,10 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - right click pan semantics:
       - when `pan_on_drag.right = true`, right-button drag pans the canvas and suppresses context menu.
       - a context menu opens only on a "right click" (no drag beyond click distance), on pointer-up.
-    - Implementation detail: `NodeGraphCanvas` uses `render_transform` for pan/zoom, so pointer event positions are in the widget's local (canvas) coordinates and change as pan changes.
+    - Implementation detail: the declarative surface uses an explicit pan/zoom transform, so pointer event positions must be normalized before mutating view state.
       Panning deltas must be computed in a stable coordinate space (screen/global) to avoid feedback jitter.
-      See `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom.rs` (`pan_last_screen_pos` sampling).
+      See `ecosystem/fret-node/src/ui/declarative/view_reducer.rs` and the
+      binding/controller coordinate helpers.
 
 - [~] **Zoom on wheel / pinch / double click**
   - XyFlow: `packages/system/src/xypanzoom/XYPanZoom.ts` (`zoomOnScroll`, `zoomOnPinch`, `zoomOnDoubleClick`)
@@ -350,21 +358,23 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - Pan activation key override: holding `pan_activation_key_code` (default: Space) enables
       panning-on-scroll even when `pan_on_scroll` is false (XyFlow `panActivationKeyCode`).
       This override is gated by `space_to_pan` for backward compatibility.
-    - implementation: wheel without zoom activation pans; on Windows/Linux, `Shift+wheel` maps vertical wheel delta to horizontal panning (matching XyFlow) (`ecosystem/fret-node/src/ui/canvas/widget.rs`)
+    - implementation: wheel without zoom activation pans; on Windows/Linux, `Shift+wheel`
+      maps vertical wheel delta to horizontal panning (matching XyFlow) in the declarative surface input path
 
 - [x] **Zoom activation key**
   - XyFlow: `ZoomPane` passes `zoomActivationKeyPressed` into `XYPanZoom.update(...)`
   - fret-node:
     - persisted config: `NodeGraphInteractionState.zoom_activation_key` (`ecosystem/fret-node/src/io/mod.rs`)
     - enable/disable: `NodeGraphInteractionState.zoom_on_scroll` + `zoom_on_scroll_speed`
-    - implementation: wheel zoom is gated by `zoom_activation_key.is_pressed(modifiers)` (`ecosystem/fret-node/src/ui/canvas/widget.rs`)
+    - implementation: wheel zoom is gated by `zoom_activation_key.is_pressed(modifiers)` in the declarative surface input path
 
 ## 1.3 View constraints and persistence
 
 - [x] **Translate extent (world bounds) constraint**
   - XyFlow: `translateExtent` in `XYPanZoom` constrain pipeline
-  - fret-node: `NodeGraphInteractionState.translate_extent` clamped in `NodeGraphCanvas::update_view_state(...)`
-  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/translate_extent_conformance.rs`
+  - fret-node: `NodeGraphInteractionState.translate_extent` clamped through
+    `NodeGraphController` / `NodeGraphSurfaceBinding` view-state update helpers
+  - Conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 - [x] **Fit view / frame all / frame selection**
   - XyFlow: `fitViewport(...)` from `@xyflow/system`, surfaced via `useReactFlow().fitView()` and `<Controls />`
@@ -400,33 +410,37 @@ canonical data flow and invalidation boundaries:
     - painting coordinates,
     - port hit-testing / connection candidate selection,
     - conservative AABBs used for spatial indexing and culling.
-  - Built and cached by: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/{base_cache,cache_keys,updates,spatial_index}.rs`
+  - Built and cached by: `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    using `ecosystem/fret-node/src/ui/canvas/geometry/*`
   - Invalidation key (must remain stable and auditable):
     - graph revision + zoom + node-origin + draw order fingerprint + presenter revision + edgeTypes revision.
     - **Pan-only must not invalidate** this cache (it is applied via render transforms).
-    - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
-    - Rebuild counters (`DerivedBuildCounters`) increment only on cache-key changes and are asserted by conformance tests.
-    - Evidence: `ecosystem/fret-node/src/ui/canvas/state.rs`, `ecosystem/fret-node/src/ui/canvas/widget.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
+    - Evidence: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - Rebuilds are keyed by `DerivedGeometryCacheState` / `derived_geometry_cache_key(...)`
+      and asserted by conformance tests.
+    - Evidence: `ecosystem/fret-node/src/ui/declarative/paint_only/{cache.rs,tests.rs}`
 - **Spatial index (canvas space, UI-only)**
   - `CanvasSpatialDerived` is derived output built from `Graph + CanvasGeometry` and spatial tuning, used by hit-testing and previews.
     - It bundles the coarse rect/radius query acceleration structure (`CanvasSpatialIndex`), port→edge adjacency (`CanvasPortEdgeAdjacency`), and edge-AABB padding policy.
-  - Built by: `ecosystem/fret-node/src/ui/canvas/spatial.rs` and wired by `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/spatial_index.rs`
+  - Built by: `ecosystem/fret-node/src/ui/canvas/spatial.rs` and wired by
+    `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
   - Edge AABB padding is treated as a correctness guardrail: it must cover at least the effective
     edge hit slop (`edge_interaction_width`) and the visible wire stroke width (`NodeGraphStyle.wire_width`),
     even if the tuning knobs are reduced.
   - Custom edges (`edgeTypes` Stage 2) may patch conservative edge bounds in the index when a
     custom path is present (to keep hit-testing and culling consistent).
-  - Implementation: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/spatial_index.rs`
+  - Implementation: `ecosystem/fret-node/src/ui/canvas/spatial.rs`
 - **Internals snapshot (window space, UI-only)**
   - `NodeGraphInternalsSnapshot` is derived output for overlays/inspectors/a11y:
     window-space node rects, port bounds/centers, edge centers, and the current canvas transform.
-  - Written by: `ecosystem/fret-node/src/ui/canvas/widget/stores.rs` and `ecosystem/fret-node/src/ui/canvas/widget/stores/internals.rs`
+  - Written by: `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    into `NodeGraphInternalsStore`
   - Invalidation key includes pan + bounds origin/size, so panning updates internals without forcing
     a geometry rebuild.
 - **Hit-testing (consumer)**
   - All pointer hit-testing and connection candidate selection must use `CanvasGeometry` +
     `CanvasSpatialDerived` (never ad-hoc “layout guesses”).
-- Implemented in: `ecosystem/fret-node/src/ui/canvas/widget/hit_test/mod.rs` and `ecosystem/fret-node/src/ui/canvas/widget/hit_test/*`
+- Implemented in: `ecosystem/fret-node/src/ui/declarative/paint_only/{surface_math.rs,pointer_down.rs,pointer_move.rs}`
 
 ## 2.1 User node vs internal node separation
 
@@ -448,8 +462,9 @@ canonical data flow and invalidation boundaries:
       `MeasuredGeometryStore::apply_exclusive_batch_if_changed(...)` in `ecosystem/fret-node/src/ui/measured.rs`
     - Portal measurement source publishes growth-only node size hints:
       - `NodeGraphPortalHost` in `ecosystem/fret-node/src/ui/portal.rs`
-      - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_geometry_conformance.rs`
-      - Integration conformance (canvas observes portal measurement on next paint): `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_internals_conformance.rs`
+      - Conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+      - Integration conformance (surface observes portal measurement on next frame):
+        `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
   - TODO: extend measurement sources:
     - canvas-rendered node chrome geometry (ports, header/body)
     - portal-provided port anchor bounds (if/when portals render custom handles)
@@ -462,7 +477,7 @@ canonical data flow and invalidation boundaries:
     - `NodeGraphInternalsStore.snapshot().ports_window` is the canonical port anchor rect in window space.
     - hit-testing and connection candidate selection use the derived port anchor rect (not ad-hoc center-only heuristics).
   - Conformance:
-    - measured hint influences strict hit-testing: `ecosystem/fret-node/src/ui/canvas/widget/tests/measured_port_anchor_conformance.rs`
+    - measured hint influences strict hit-testing: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ## 2.3 Z-order (draw order) and elevation
 
@@ -479,19 +494,20 @@ canonical data flow and invalidation boundaries:
 
 - [~] **Click to select node**
   - XyFlow: `handleNodeClick(...)` used by `NodeWrapper` (`components/NodeWrapper/index.tsx`)
-  - fret-node: selection logic in `NodeGraphCanvas` (click selects; supports marquee)
+  - fret-node: selection logic in the declarative surface input path (click selects; supports marquee)
     - per-node override: `Node.selectable` (XyFlow `node.selectable`)
       - XyFlow: `repo-ref/xyflow/packages/system/src/types/nodes.ts` (`NodeBase.selectable?: boolean`)
       - fret-node: `ecosystem/fret-node/src/core/model.rs` (`Node.selectable: Option<bool>`)
-      - enforced by: `NodeGraphCanvas::node_is_selectable` + `left_click.rs` + `marquee.rs` + `focus_next_node` + `CMD_NODE_GRAPH_SELECT_ALL`
-      - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+      - enforced by: `NodeGraphInteractionState` gates, declarative input handlers, and `CMD_NODE_GRAPH_SELECT_ALL`
+      - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
     - per-node override: `Node.deletable` (XyFlow `node.deletable`)
       - XyFlow: `repo-ref/xyflow/packages/system/src/types/nodes.ts` (`NodeBase.deletable?: boolean`)
       - fret-node: `ecosystem/fret-node/src/core/model.rs` (`Node.deletable: Option<bool>`)
       - global gate: `NodeGraphInteractionState.nodes_deletable` (XyFlow `nodesDeletable`)
         - fret-node: `ecosystem/fret-node/src/io/mod.rs`
-      - enforced by: `NodeGraphCanvas::node_is_deletable` + `NodeGraphCanvas::delete_selection_ops` (used by `CMD_NODE_GRAPH_DELETE_SELECTION` / `CMD_NODE_GRAPH_CUT`)
-      - conformance: `ecosystem/fret-node/src/ui/canvas/widget.rs` (`delete_selection_respects_node_deletable_and_keeps_undeletable_selected`)
+      - enforced by: controller/store delete-selection planning used by
+        `CMD_NODE_GRAPH_DELETE_SELECTION` / `CMD_NODE_GRAPH_CUT`
+      - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 - [~] **Select edge / edge focus**
   - XyFlow: edges are focusable and selectable; store fields `edgesFocusable`, `edgesReconnectable`, `elementsSelectable`
@@ -503,15 +519,16 @@ canonical data flow and invalidation boundaries:
     - per-edge override: `Edge.selectable` (XyFlow `edge.selectable`)
       - XyFlow: `repo-ref/xyflow/packages/system/src/types/edges.ts` (`EdgeBase.selectable?: boolean`)
       - fret-node: `ecosystem/fret-node/src/core/model.rs` (`Edge.selectable: Option<bool>`)
-      - enforced by: `NodeGraphCanvas::edge_is_selectable` + `left_click.rs` + `marquee.rs` + `focus_next_edge`
-      - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+      - enforced by: `NodeGraphInteractionState` gates, declarative input handlers, and edge focus traversal
+      - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
     - per-edge override: `Edge.deletable` (XyFlow `edge.deletable`)
       - XyFlow: `repo-ref/xyflow/packages/system/src/types/edges.ts` (`EdgeBase.deletable?: boolean`)
       - fret-node: `ecosystem/fret-node/src/core/model.rs` (`Edge.deletable: Option<bool>`)
       - global gate: `NodeGraphInteractionState.edges_deletable` (XyFlow `edgesDeletable`)
         - fret-node: `ecosystem/fret-node/src/io/mod.rs`
-      - enforced by: `NodeGraphCanvas::edge_is_deletable` + `NodeGraphCanvas::delete_selection_ops` (used by `CMD_NODE_GRAPH_DELETE_SELECTION` / `CMD_NODE_GRAPH_CUT`)
-      - conformance: `ecosystem/fret-node/src/ui/canvas/widget.rs` (`delete_selection_respects_edge_deletable_and_keeps_undeletable_selected`)
+      - enforced by: controller/store delete-selection planning used by
+        `CMD_NODE_GRAPH_DELETE_SELECTION` / `CMD_NODE_GRAPH_CUT`
+      - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 - [~] **Selection keyboard a11y**
   - XyFlow: `elementSelectionKeys` and arrow-key movement in `NodeWrapper` (`onKeyDown`)
@@ -570,8 +587,8 @@ canonical data flow and invalidation boundaries:
   - fret-node:
     - global gate: `NodeGraphInteractionState.nodes_draggable` (`ecosystem/fret-node/src/io/mod.rs`)
     - per-node override: `Node.draggable: Option<bool>` (`ecosystem/fret-node/src/core/model.rs`)
-    - enforced by: `NodeGraphCanvas::node_is_draggable` + `left_click.rs` + `pending_drag.rs`
-    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+    - enforced by: `NodeGraphInteractionState` gates and declarative input handlers
+    - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 - [~] **Node drag threshold**
   - XyFlow: store `nodeDragThreshold`; used by `XYDrag` (`packages/system/src/xydrag/XYDrag.ts`)
@@ -587,8 +604,7 @@ canonical data flow and invalidation boundaries:
   - XyFlow: `node.dragHandle` passed into `useDrag` via `handleSelector`
   - fret-node:
     - persisted toggle: `NodeGraphInteractionState.node_drag_handle_mode` (`ecosystem/fret-node/src/io/mod.rs`)
-    - drag start gating: `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs` +
-      `ecosystem/fret-node/src/ui/canvas/widget/pending_drag.rs`
+    - drag start gating: declarative surface input handlers plus interaction-state policy
     - future: can be extended with presenter hints / portal-measured drag regions (per-node parity)
 
 ## 4.3 Snap to grid and snaplines
@@ -599,7 +615,8 @@ canonical data flow and invalidation boundaries:
 
 - [~] **Snaplines**
   - XyFlow: optional; depends on userland or extensions
-  - fret-node: implemented snaplines (`ecosystem/fret-node/src/ui/canvas/snaplines.rs`)
+  - fret-node: snapline policy is preserved as model/view policy; the former retained-widget
+    implementation was removed with the compatibility island and needs a declarative surface owner
 
 ## 4.4 Node extent / movement bounds
 
@@ -612,9 +629,9 @@ canonical data flow and invalidation boundaries:
   - fret-node: supports node-local extent rects and group-parent extents (with `expand_parent` escape hatch)
   - fret-node (now):
     - model: `Node.extent: Option<NodeExtent>` + `Node.expand_parent: Option<bool>` (`ecosystem/fret-node/src/core/model.rs`)
-    - node drag: `ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs` (per-node rect clamp; parent clamp vs expand)
-    - node resize: `ecosystem/fret-node/src/ui/canvas/widget/node_resize.rs` (bound intersection; expand parent on resize)
-    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+    - node drag / resize: declarative surface input path applies per-node rect clamp,
+      parent clamp, and expand-parent policy
+    - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ## 4.5 Auto-pan while dragging
 
@@ -639,10 +656,10 @@ canonical data flow and invalidation boundaries:
     - per-node: `Node.connectable: Option<bool>` in `ecosystem/fret-node/src/core/model.rs`
     - global: `NodeGraphInteractionState.nodes_connectable` in `ecosystem/fret-node/src/io/mod.rs`
     - enforced by:
-      - connection start gating (port hit): `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs`
-      - candidate selection gating: `NodeGraphCanvas::pick_target_port` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
-      - forced-target / sticky-wire gating: `ecosystem/fret-node/src/ui/canvas/widget/wire_drag.rs`, `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire.rs`
-    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+      - connection start gating: declarative surface port hit-testing
+      - candidate selection gating: declarative surface target-port planning over `CanvasGeometry`
+      - forced-target / sticky-wire gating: connection planning through the same rules/store path
+    - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ## 5.0.1 Handle/port connectability (`isConnectable*`)
 
@@ -661,10 +678,10 @@ canonical data flow and invalidation boundaries:
       - start: `connectable_start` gates creating a new wire drag from a port click
       - end: `connectable_end` gates target port selection and forced-target connections (incl. click-to-connect)
     - enforced by:
-      - start gating: `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs`
-      - end gating: `NodeGraphCanvas::pick_target_port` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
-      - forced-target + sticky-wire: `ecosystem/fret-node/src/ui/canvas/widget/wire_drag.rs`, `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire.rs`
-    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+      - start gating: declarative surface port hit-testing
+      - end gating: declarative surface target-port planning over `CanvasGeometry`
+      - forced-target + sticky-wire: connection planning through the same rules/store path
+    - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ## 5.1 Connection mode (Strict vs Loose)
 
@@ -676,13 +693,13 @@ canonical data flow and invalidation boundaries:
   - fret-node:
     - mode: `NodeGraphConnectionMode` in `ecosystem/fret-node/src/interaction/mod.rs` (re-exported by `ecosystem/fret-node/src/io/mod.rs`)
     - UI:
-      - strict: target picking requires opposite `PortDirection` (`NodeGraphCanvas::pick_target_port`)
+      - strict: target picking requires opposite `PortDirection`
       - loose: target picking allows either direction within radius; when multiple handles overlap, prefers the opposite side
     - rules:
       - `plan_connect_with_mode` mirrors XyFlow's strict/loose validity and allows same-node connections (disallow only `port == port`)
       - `plan_reconnect_edge_with_mode` mirrors the same constraints for edge reconnection
     - toggle command: `node_graph.toggle_connection_mode`
-    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/connection_mode_conformance.rs`
+    - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ## 5.2 Connection radius and hit-testing
 
@@ -733,7 +750,7 @@ canonical data flow and invalidation boundaries:
 - [~] **Edge types (bezier/step/smooth) and markers**
   - XyFlow: edge types in React package; system provides geometry helpers
   - fret-node: presenter hint supports `EdgeRouteKind::{bezier, straight, step}` and end markers (`EdgeMarkerKind::Arrow`); other marker styles remain TODO
-    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_size_zoom_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_step_tangent_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_bezier_tangent_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_tangent_fallback_conformance.rs`
+    - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 - [~] **Interaction width**
   - XyFlow: `interactionWidth` on edges (`components/EdgeWrapper/index.tsx`)
@@ -743,7 +760,7 @@ canonical data flow and invalidation boundaries:
   - XyFlow: `EdgeLabelRenderer` component
   - fret-node: presenter can provide `EdgeRenderHint.label`; labels render on the canvas near the edge midpoint (non-interactive)
     - per-edge label border override: `EdgeRenderHint.color`
-    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edge_labels_tile_equivalence_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_label_route_anchor_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_label_style_override_conformance.rs`
+    - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ## 6.2 Edge selection and context menus
 
@@ -765,20 +782,20 @@ canonical data flow and invalidation boundaries:
         - XyFlow endpoint gating: `repo-ref/xyflow/packages/react/src/components/EdgeWrapper/EdgeUpdateAnchors.tsx`
         - fret-node model: `ecosystem/fret-node/src/core/model.rs` (`Edge.reconnectable: Option<EdgeReconnectable>`)
         - fret-node enforcement:
-          - anchor hit-testing: `NodeGraphCanvas::hit_edge_focus_anchor` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
-          - reconnect drag threshold: `ecosystem/fret-node/src/ui/canvas/widget/edge_drag.rs`
-          - ctrl-yank filtering: `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs`
-        - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+          - anchor hit-testing: declarative edge focus-anchor semantics and canvas geometry
+          - reconnect drag threshold: declarative surface input handlers
+          - ctrl-yank filtering: interaction-state policy in the same input path
+        - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
   - TODO: parity knobs:
     - cancel behavior:
-      - [x] Escape / focus loss cancels active reconnect/connect drags: `ecosystem/fret-node/src/ui/canvas/widget/cancel.rs`, `ecosystem/fret-node/src/ui/canvas/widget.rs`
+      - [x] Escape / focus loss cancels active reconnect/connect drags through the declarative surface input path
       - [x] outside press / pointer-capture loss:
-        - inferred from `PointerEvent::Move.buttons` when an expected "up" is missed: `ecosystem/fret-node/src/ui/canvas/widget.rs`
-        - right click cancels active gestures before opening the context menu: `ecosystem/fret-node/src/ui/canvas/widget.rs`
+        - inferred from `PointerEvent::Move.buttons` when an expected "up" is missed
+        - right click cancels active gestures before opening the context menu
         - [x] platform pointer-left maps to `Event::PointerCancel` and clears capture:
           - winit mapping: `crates/fret-runner-winit/src/lib.rs`
           - capture routing + auto-release: `crates/fret-ui/src/tree/dispatch.rs`
-          - canvas cancel handling: `ecosystem/fret-node/src/ui/canvas/widget.rs`
+          - surface cancel handling: `ecosystem/fret-node/src/ui/declarative/paint_only/*`
     - reconnect on drop on empty canvas: `NodeGraphInteractionState.reconnect_on_drop_empty`
 
 ## 6.4 Edge split / reroute node
@@ -786,21 +803,22 @@ canonical data flow and invalidation boundaries:
 - [~] **Insert node on edge**
   - XyFlow: can be userland patterns (drag-and-drop on edge)
   - fret-node:
-    - edge context menu supports insertion flows: `ecosystem/fret-node/src/ui/canvas/widget/right_click.rs`
-    - searcher-based picker + insert op: `ecosystem/fret-node/src/ui/canvas/widget/edge_insert.rs`
+    - edge context menu supports insertion flows through declarative overlays and controller/store commands
+    - searcher-based picker + insert op remains a supported policy target for the declarative surface
 
 - [x] **Reroute node and manual edge splitting**
   - XyFlow: userland / pro features; system supports hit-testing
   - fret-node:
     - reroute kind: `ecosystem/fret-node/src/lib.rs` (`REROUTE_KIND`)
     - split plan: `ecosystem/fret-node/src/ui/presenter.rs` (`plan_split_edge` / `plan_split_edge_candidate`)
-    - edge menu action: `CMD_NODE_GRAPH_INSERT_REROUTE` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
-    - double-click wire insertion (optional): `NodeGraphInteractionState.reroute_on_edge_double_click` + `NodeGraphCanvas::event` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
-    - alt+double-click wire opens the insert-node picker (searcher UX): `NodeGraphCanvas::event` -> `open_edge_insert_node_picker` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - edge menu action: `CMD_NODE_GRAPH_INSERT_REROUTE` in `ecosystem/fret-node/src/ui/commands.rs`
+    - double-click wire insertion (optional): `NodeGraphInteractionState.reroute_on_edge_double_click`
+      with declarative surface input handling
+    - alt+double-click wire opens the insert-node picker (searcher UX) through declarative surface input handling
     - alt+drag wire opens the insert-node picker on release (optional): `NodeGraphInteractionState.edge_insert_on_alt_drag`
-      - start gesture: `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs`
-      - threshold + pointer-up completion: `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag.rs`
-    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_gestures_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_conformance.rs`
+      - start gesture: declarative surface input handlers
+      - threshold + pointer-up completion: declarative surface gesture state
+    - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ---
 
@@ -831,8 +849,8 @@ canonical data flow and invalidation boundaries:
 - [x] **Keep aspect ratio**
   - XyFlow: `keepAspectRatio`
   - fret-node:
-    - aspect ratio option in the resize session: `ecosystem/fret-node/src/ui/canvas/widget/node_resize.rs`
-    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/node_resize.rs` (`resize_keeps_aspect_ratio_for_corner_handles`)
+    - aspect ratio option in the declarative resize session
+    - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 - [x] **Resize snaps to grid**
   - XyFlow: `XYResizer` uses `snapGrid` / `snapToGrid`
@@ -844,7 +862,7 @@ canonical data flow and invalidation boundaries:
   - XyFlow: `expandParent` / `extent: 'parent'` pipeline in store + resizer
   - fret-node:
     - implemented for `Node.parent: GroupId` containers (groups expand to contain moved/resized child when `expand_parent=true`)
-    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+    - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ---
 
@@ -856,7 +874,7 @@ canonical data flow and invalidation boundaries:
   - XyFlow: `additional-components/Controls/Controls.tsx`
   - fret-node: `NodeGraphControlsOverlay` (zoom/fit/reset + Strict/Loose toggle)
   - Contract: `docs/node-graph-addons-minimap-controls.md`
-  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
+  - Conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ## 8.2 Minimap
 
@@ -864,14 +882,14 @@ canonical data flow and invalidation boundaries:
   - XyFlow: `MiniMap.tsx` + `@xyflow/system` `XYMinimap` (`packages/system/src/xyminimap/index.ts`)
   - fret-node: `NodeGraphMiniMapOverlay` consumes `NodeGraphInternalsStore` and view state
   - Contract: `docs/node-graph-addons-minimap-controls.md`
-  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
+  - Conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ## 8.3 Background patterns
 
 - [x] **Grid background patterns (lines/dots/cross)**
   - XyFlow: `additional-components/Background/Background.tsx` (dots/lines/cross patterns)
   - fret-node:
-    - renderer: `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`
+    - renderer: `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
     - style surface:
       - `NodeGraphStyle.grid_pattern` (`Lines` / `Dots` / `Cross`)
       - `NodeGraphStyle.grid_line_width`
@@ -879,7 +897,7 @@ canonical data flow and invalidation boundaries:
       - `NodeGraphStyle.grid_cross_size`
       - see: `ecosystem/fret-node/src/ui/style.rs`
   - Contract: `docs/node-graph-addons-theming.md`
-  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
+  - Conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ## 8.4 Viewport portals and window-space overlays
 
@@ -894,7 +912,7 @@ canonical data flow and invalidation boundaries:
     region, so hover/marquee overlays do not steal input from the underlying surface.
   - Conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
     (`declarative_overlay_layer_is_input_transparent_over_canvas_region`),
-    `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`
+    `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 - [x] **Hover tooltip anchoring under node motion**
   - XyFlow outcome: overlays stay visually attached to the moving node/handle rather than stale
@@ -933,29 +951,33 @@ canonical data flow and invalidation boundaries:
   - XyFlow: deleteKeyCode, selectionKeyCode, multiSelectionKeyCode, etc.
   - fret-node:
     - stable command IDs + registration: `ecosystem/fret-node/src/ui/commands.rs`
-    - canvas behavior: `ecosystem/fret-node/src/ui/canvas/widget.rs` (copy/cut/paste/duplicate/delete/select-all + arrow-key nudge)
+    - surface behavior: declarative surface/controller command path (copy/cut/paste/duplicate/delete/select-all + arrow-key nudge)
     - selection align/distribute commands: `node_graph.align_*`, `node_graph.distribute_{x,y}`
     - key policy parity:
       - `deleteKeyCode`: `NodeGraphInteractionState.delete_key` (default: Backspace)
       - `nodesDeletable` / `edgesDeletable` + per-element `deletable`:
         - `NodeGraphInteractionState.{nodes_deletable, edges_deletable}` in `ecosystem/fret-node/src/io/mod.rs`
         - `Node.deletable` / `Edge.deletable` in `ecosystem/fret-node/src/core/model.rs`
-        - enforced by: `NodeGraphCanvas::delete_selection_ops` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
+        - enforced by: controller/store delete-selection planning
       - `selectionKeyCode`: `NodeGraphInteractionState.selection_key` (default: Shift)
       - `multiSelectionKeyCode`: `NodeGraphInteractionState.multi_selection_key` (default: Ctrl/Cmd)
-      - `disableKeyboardA11y`: `NodeGraphInteractionState.disable_keyboard_a11y` (disables keyboard focus traversal / a11y paths, not delete/copy/paste)
+      - `disableKeyboardA11y`: `NodeGraphInteractionState.disable_keyboard_a11y`
+        gates the declarative active-descendant/a11y path without disabling edit commands
     - [x] configurable nudge step (screen px vs grid step):
       - config: `NodeGraphInteractionState.{nudge_step_mode,nudge_step_px,nudge_fast_step_px}` in `ecosystem/fret-node/src/io/mod.rs`
-      - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/nudge_step_conformance.rs`
-    - TODO: keyboard focus semantics
+      - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 - [~] **Roving focus / a11y semantics**
   - XyFlow: has ARIA descriptions and keyboard a11y paths in `NodeWrapper`
   - fret-node:
-    - `Tab` / `Shift+Tab` focus-cycle nodes (updates selection): `ecosystem/fret-node/src/ui/canvas/widget.rs`
-    - `Ctrl/Cmd+Tab` focus-cycle edges (updates selection): `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `Tab` / `Shift+Tab` focus-cycle nodes (updates selection): declarative surface command path
+    - `Ctrl/Cmd+Tab` focus-cycle edges (updates selection): declarative surface command path
     - [x] `active_descendant` semantics are stable when `NodeGraphA11yFocused{Port,Edge,Node}` children are mounted:
-      - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/a11y_active_descendant_conformance.rs`
+      - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - [x] `disableKeyboardA11y` suppresses active-descendant semantics at the
+      declarative surface internals boundary:
+      - implementation: `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+      - conformance: `node_graph_surface_disable_keyboard_a11y_suppresses_active_descendant`
     - TODO: semantic focus nodes (ARIA-like), ports focus path, and minimap/controls focus
 
 ---
@@ -970,7 +992,7 @@ canonical data flow and invalidation boundaries:
   - XyFlow: userland; but many examples implement it
   - fret-node:
     - deterministic fragment payload: `ecosystem/fret-node/src/ops/fragment.rs` (`GraphFragment`)
-    - system clipboard integration: `ecosystem/fret-node/src/ui/canvas/widget.rs` (`ClipboardWriteText` / `ClipboardReadText`)
+    - system clipboard integration: declarative surface command path (`ClipboardWriteText` / `ClipboardReadText`)
     - captures selected nodes + selected groups (including group children) + internal edges
     - subgraph payload hygiene: referenced imports are included for pasted subgraph nodes, and duplicated imports are filtered at apply points
       - conformance: `ecosystem/fret-node/src/ops/tests.rs` (`fragment_from_nodes_includes_referenced_subgraph_imports`, `fragment_paste_transaction_keeps_subgraph_target_graph_id_and_adds_import`)
@@ -985,22 +1007,32 @@ canonical data flow and invalidation boundaries:
   - XyFlow: DOM-based; relies on React optimizations and virtualization patterns
   - fret-node:
     - [x] portal subtree culling by viewport: `ecosystem/fret-node/src/ui/portal.rs` (`NodeGraphPortalHost::layout`)
-    - [x] canvas paint culling by viewport (nodes/edges): `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::paint`)
-    - [x] edge paint culling uses a spatial rect query (avoids per-frame full scans): `ecosystem/fret-node/src/ui/canvas/spatial.rs` (`CanvasSpatialDerived::query_edges_in_rect`), `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::paint`)
-    - [x] node visibility culling uses a spatial rect query (avoids per-frame full scans): `ecosystem/fret-node/src/ui/canvas/spatial.rs` (`CanvasSpatialDerived::query_nodes_in_rect`), `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::paint`)
-    - [x] culling metrics gate (candidate/visible counts shrink when culling is enabled): `ecosystem/fret-node/src/ui/canvas/widget/tests/render_culling_metrics_conformance.rs`
-    - [x] cached edge path tessellation (wires + markers; preview uses the same cache): `ecosystem/fret-node/src/ui/canvas/paint.rs` (`CanvasPaintCache`)
-    - [x] cached text shaping/metrics (covers `TextService::{prepare,measure}`): `ecosystem/fret-node/src/ui/canvas/paint.rs` (`CanvasPaintCache`)
-    - [~] incremental scene op updates (true retained scene graph diffing)
-      - node/group/edge chrome static layer replay cache (viewport-tile keyed): `ecosystem/fret-node/src/ui/canvas/widget/paint_root/` (`cached_groups.rs` / `cached_nodes.rs` / `cached.rs`; `groups_scene_cache` / `nodes_scene_cache` / `edges_scene_cache` / `edge_labels_scene_cache`)
-      - perf conformance: cached edge scene does not revisit presenter on small pans: `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
-      - edge + edge label cache warmup is budgeted per frame: `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
+    - [x] canvas paint culling by viewport (nodes/edges): `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - [x] edge paint culling uses a spatial rect query (avoids per-frame full scans):
+      `ecosystem/fret-node/src/ui/canvas/spatial.rs` (`CanvasSpatialDerived::query_edges_in_rect`)
+      and `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - [x] node visibility culling uses a spatial rect query (avoids per-frame full scans):
+      `ecosystem/fret-node/src/ui/canvas/spatial.rs` (`CanvasSpatialDerived::query_nodes_in_rect`)
+      and `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - [x] culling metrics gate (candidate/visible counts shrink when culling is enabled):
+      `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - [x] cached edge path tessellation (wires + markers; preview uses the same cache):
+      `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - [x] cached text shaping/metrics (covers `TextService::{prepare,measure}`):
+      `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - [~] incremental scene op updates (declarative paint-cache replay rather than a
+      public retained scene graph contract)
+      - node/group/edge chrome static layer replay cache (viewport-tile keyed):
+        `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+      - perf conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 - [~] **Derived geometry invalidation discipline**
   - XyFlow: `updateNodeInternals` is explicit and batched
   - fret-node:
-    - [x] measured geometry epsilon + batch semantics conformance tests: `ecosystem/fret-node/src/ui/measured.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/derived_geometry_invalidation_conformance.rs`
-    - [x] invalidation ordering conformance harness: `ecosystem/fret-node/src/ui/canvas/widget/tests/invalidation_ordering_conformance.rs`
+    - [x] measured geometry epsilon + batch semantics conformance tests:
+      `ecosystem/fret-node/src/ui/measured.rs`, `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - [x] invalidation ordering conformance harness:
+      `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ---
 
@@ -1017,7 +1049,8 @@ canonical data flow and invalidation boundaries:
 - [~] **Custom edge types**
   - XyFlow: edge types (`edgeTypes`) + label renderer
   - fret-node:
-    - Stage 1 (hint overrides): `ecosystem/fret-node/src/ui/edge_types.rs` + `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - Stage 1 (hint overrides): `ecosystem/fret-node/src/ui/edge_types.rs` +
+      `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
     - Stage 2 (custom paths): implemented via `NodeGraphEdgeTypes::register_path(...)` and
       `wire_math::path_midpoint_and_normal(...)` (label anchor + normal).
 
@@ -1025,7 +1058,8 @@ canonical data flow and invalidation boundaries:
   - XyFlow: store middleware maps for node/edge changes
   - fret-node:
     - store middleware (headless-safe): `ecosystem/fret-node/src/runtime/middleware.rs` (`NodeGraphStoreMiddleware`)
-    - canvas middleware (UI input/tx gate): `ecosystem/fret-node/src/ui/canvas/middleware.rs` (`NodeGraphCanvasMiddleware`)
+    - UI input/tx interception needs a supported declarative hook seam; the former retained
+      canvas middleware surface was removed with the compatibility island.
   - Notes:
     - A higher-level "plugin packaging" story (capability discovery, composition rules, versioning) is still evolving.
 
@@ -1038,17 +1072,17 @@ canonical data flow and invalidation boundaries:
 
 - [~] **Automated conformance tests**
   - Current coverage:
-    - drag/connect undo granularity: `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - drag/connect undo granularity: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
     - connection drag threshold helper (canvas-space under `render_transform`): `ecosystem/fret-canvas/src/drag/threshold.rs` (`exceeds_drag_threshold_in_canvas_space`)
     - clipboard fragment determinism: `ecosystem/fret-node/src/ops/fragment.rs`
-    - paint cache conformance (path/text reuse + auto-measure dedupe): `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
-    - interaction conformance (marquee + reconnect threshold): `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
-    - derived internals conformance (semantic zoom + pan-only invalidation): `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
-    - connect/reconnect determinism (forced target + conversion workflows): `ecosystem/fret-node/src/ui/canvas/widget/tests/connect_conformance.rs`
-    - hit-testing conformance (Strict vs Loose): `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
-    - portal conformance (input-transparent overlay root): `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_conformance.rs`
-    - portal keyboard conformance (focused text input isolates shortcuts): `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_keyboard_conformance.rs`
-    - portal pointer passthrough conformance (interactive region is opt-in): `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`
+    - paint cache conformance (path/text reuse + auto-measure dedupe): `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - interaction conformance (marquee + reconnect threshold): `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - derived internals conformance (semantic zoom + pan-only invalidation): `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - connect/reconnect determinism (forced target + conversion workflows): `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - hit-testing conformance (Strict vs Loose): `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - portal conformance (input-transparent overlay root): `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - portal keyboard conformance (focused text input isolates shortcuts): `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - portal pointer passthrough conformance (interactive region is opt-in): `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
   - Target:
     - selection invariants
     - drag session -> single transaction

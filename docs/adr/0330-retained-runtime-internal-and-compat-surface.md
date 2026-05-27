@@ -18,9 +18,11 @@ mechanism, not the component ecosystem authoring model. The remaining risk was t
 contexts from the crate root by default. That made retained authoring look like the stable public
 API even after the retained bridge and several retained component paths were deleted.
 
-This also created an architectural conflict for low-level surfaces such as `fret-node`: the legacy
-retained canvas/editor implementation still needs the runtime contexts while the rest of the node
-graph surface is already declarative-first and should not teach retained widget authoring.
+This also created an architectural conflict for low-level surfaces such as `fret-node`: its legacy
+retained canvas/editor implementation used to need runtime contexts while the rest of the node graph
+surface was already declarative-first and should not teach retained widget authoring. That
+compatibility island has now been deleted; the supported node graph authoring surface is
+binding/controller/declarative composition.
 
 The GPUI/Zed reference split supports the same direction: `repo-ref/zed/crates/gpui/src/element.rs`
 exposes `Render`, `RenderOnce`, `Element`, `IntoElement`, and `AnyElement` as the authoring model,
@@ -48,11 +50,13 @@ trait as the default component API.
      `Widget`.
 
 4. Compatibility islands are explicit and delete-planned.
-   - Existing low-level legacy surfaces such as `fret-node/compat-retained-canvas` may keep using
-     retained contexts while the declarative canvas/viewport adapter matures.
+   - Existing low-level legacy surfaces may keep using retained contexts only when a workstream
+     records why a declarative/binding-first adapter is not yet sufficient.
    - Such crates must opt into `fret-ui/compat-retained-widgets` explicitly.
    - Compatibility islands must be source-policy gated and tracked by workstreams, not normalized
      as the public ecosystem API.
+   - `fret-node` no longer has a retained canvas compatibility island or a
+     `compat-retained-canvas` feature.
 
 5. Shared mechanism contract types can remain public.
    - `Invalidation` and `CommandAvailability` are still public mechanism data types because they
@@ -66,8 +70,8 @@ trait as the default component API.
 - The default app/component story now matches the documented declarative-only ecosystem boundary.
 - Retained runtime work can continue without forcing every ecosystem crate to treat `Widget` as a
   stable authoring contract.
-- `fret-node` keeps its legacy retained canvas island compiling only through an explicit feature
-  edge, which makes future deletion or adapter replacement reviewable.
+- `fret-node` now uses binding/controller/declarative composition for supported UI authoring; the
+  legacy retained canvas feature and node-local retained widget island were deleted.
 - Any new component crate or first-party example that needs retained widget contexts must justify
   that as a low-level adapter, not as ordinary component authoring.
 
@@ -75,8 +79,11 @@ trait as the default component API.
 
 - `crates/fret-ui/src/lib.rs` keeps `CommandAvailability` and `Invalidation` on the default root
   surface and gates `Widget` plus retained contexts behind `compat-retained-widgets`.
-- `ecosystem/fret-node/compat-retained-canvas` enables `fret-ui/compat-retained-widgets` explicitly
-  for the remaining retained canvas/editor island.
+- `ecosystem/fret-node/Cargo.toml` no longer defines `compat-retained-canvas`, and
+  `ecosystem/fret-node/src/ui/canvas` now contains only supported declarative-surface support
+  modules such as geometry, route math, spatial lookup, and resize handle types.
+- `ecosystem/fret-node/src/surface_policy_tests.rs` locks the retained exit by checking that the
+  feature, raw retained transport queue, and retained widget source island stay removed.
 - `docs/workstreams/retained-public-surface-exit-v1/` tracks the public-surface exit and the next
   adapter migration slices.
 - The broader six-cut convergence plan is tracked by

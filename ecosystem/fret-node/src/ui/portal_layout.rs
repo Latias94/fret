@@ -1,7 +1,7 @@
 //! Shared portal layout data types.
 //!
-//! These types intentionally do not depend on the retained bridge so they can be used by
-//! declarative-first surfaces and registries without enabling `compat-retained-canvas`.
+//! These types intentionally do not depend on retained widget plumbing so they can be used by
+//! declarative-first surfaces and registries.
 
 use fret_core::Rect;
 

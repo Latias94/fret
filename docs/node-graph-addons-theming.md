@@ -1,10 +1,10 @@
 # Node graph theming & token plumbing (contract)
 
-This document defines the stable, **policy-light** theming contract for `ecosystem/fret-node`.
+This document defines the stable, **policy-light** theming direction for `ecosystem/fret-node`.
 
 `fret-node` does not ship a component library. Theming here means **explicit, bounded token
-bundles** (`NodeGraphStyle`, `NodeGraphBackgroundStyle`) that embedding apps can store in a B-layer
-store and apply to the canvas/overlays without reaching into widget internals.
+bundles** (`NodeGraphStyle`, `NodeGraphBackgroundStyle`) consumed by the declarative node graph
+surface and overlays without exposing implementation-local canvas state.
 
 ## Who owns what
 
@@ -36,27 +36,27 @@ interaction logic or derived geometry.
 
 ## Precedence rules
 
-### 1) Explicit style wins
+### 1) Declarative surface style source
 
-If you pass a full style with `NodeGraphCanvas::with_style(style)`, that configuration is used as
-is (and `colorMode` is disabled).
+The current public declarative surface derives `NodeGraphStyle` from the host `Theme` snapshot.
+First-class per-surface style injection is intentionally deferred until the binding/controller API
+has a stable policy for theme tracking, invalidation, and geometry-cache ownership.
 
 ### 2) `colorMode` owns the base palette
 
-If you pass `NodeGraphCanvas::with_color_mode(mode)`, the canvas will sync its base `NodeGraphStyle`
-from the current theme snapshot:
+`NodeGraphColorMode` remains the palette vocabulary for style construction:
 
 - `System`: tracks theme revision (for live theme switches),
 - `Light` / `Dark`: forces the corresponding XyFlow-like palettes.
 
-This sync clears paint caches. Derived geometry / spatial index invalidation is **gated by the
-geometry fingerprint** (paint-only palette changes must not rebuild geometry).
+Derived geometry / spatial index invalidation is **gated by the geometry fingerprint**
+(paint-only palette changes must not rebuild geometry).
 
 ### 3) Background overrides are additive
 
-If you also pass `NodeGraphCanvas::with_background_style(background)`, the background tokens are
-applied **after** any `colorMode` sync. This keeps background customization stable even when the
-base style is updated from the theme.
+`NodeGraphBackgroundStyle` remains a bounded sub-bundle that can be applied to a `NodeGraphStyle`
+value with `NodeGraphStyle::with_background_style(...)`. Public per-surface background injection is
+deferred with the broader style injection API.
 
 Background updates are **paint-only**: they must not rebuild derived geometry (conformance gate).
 
@@ -64,18 +64,19 @@ Background updates are **paint-only**: they must not rebuild derived geometry (c
 
 ### Per-editor background variant (store-driven)
 
-Keep a background token bundle in your B-layer store and apply it when building the editor UI:
+Keep a background token bundle in your B-layer store, derive a `NodeGraphStyle`, and pass it only
+through explicit style/preset seams once those seams are promoted:
 
 ```rust
 let mut style = NodeGraphStyle::from_theme(Theme::global(app));
 let background = store.read(|s| s.node_graph_background); // NodeGraphBackgroundStyle
 style = style.with_background_style(background);
 
-let canvas = NodeGraphCanvas::new(graph, view).with_style(style);
+let _style = style;
 ```
 
-If you prefer `colorMode` tracking, use `with_color_mode(...)` and still apply
-`with_background_style(...)` for per-editor background overrides.
+Until then, use the app `Theme`, paint override providers, and `NodeGraphSkin`/preset seams for
+supported UI customization.
 
 Evidence (demo):
 
@@ -83,23 +84,17 @@ Evidence (demo):
 
 ## Conformance gates
 
-- Background updates do not rebuild derived geometry:
-  `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
-- Theme-driven style sync does not rebuild derived geometry when only paint tokens change:
-  `ecosystem/fret-node/src/ui/canvas/widget/tests/theme_style_invalidation_conformance.rs`
+- Paint-only cache keys include style paint tokens while derived geometry keys use geometry tokens:
+  `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+- Declarative surface conformance:
+  `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ## Accessibility note
 
-If you want `aria-activedescendant`-style semantics for focused nodes/ports/edges, mount the
-semantics-only children under the canvas (in this exact order):
-
-- `NodeGraphA11yFocusedPort`
-- `NodeGraphA11yFocusedEdge`
-- `NodeGraphA11yFocusedNode`
-
-The canvas will set `SemanticsNode.active_descendant` to one of these children based on its
-internal focus state.
+If you want `aria-activedescendant`-style semantics for focused nodes/ports/edges, keep the derived
+internals store (`NodeGraphInternalsStore`) attached to the declarative surface and expose semantics
+through declarative children rather than implementation-local canvas widgets.
 
 Conformance:
 
-- `ecosystem/fret-node/src/ui/canvas/widget/tests/a11y_active_descendant_conformance.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`

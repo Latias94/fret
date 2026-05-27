@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 473
+- Dedicated directories: 477
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2023,6 +2023,7 @@ Rule:
 - `docs/workstreams/fret-launch-root-surface-convergence-v1/` — first n/a, latest n/a, 5 markdown docs (active follow-on for keeping launch root surfaces and examples converged on `FnDriver` while treating direct `WinitAppDriver` usage as an explicit compatibility exception; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/` — first 2026-03-13, latest 2026-04-26, 5 markdown docs (maintenance lane for launch runner scheduling semantics and first-frame bootstrap evidence; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-mechanism-harness-v1/` — first 2026-05-11, latest 2026-05-11, 6 markdown docs (active mechanism-first harness lane for self-drawn UI layout/invalidation coverage, UI Gallery diag gates, findings evidence, and next-slice selection)
+- `docs/workstreams/fret-node-architecture-fearless-refactor-v2/` — first 2026-05-28, latest 2026-05-28, 5 markdown docs (complete architecture lane that deepened mutation, store, state, patch, canvas, and test seams while deleting historical compatibility where proven; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-06, 3 markdown docs
 - `docs/workstreams/fret-node-event-runtime-adapter-v1/` — first n/a, latest n/a, 5 markdown docs (active follow-on for splitting retained node graph event runtime entrypoint wiring behind a named adapter; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-low-level-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed lane that proved low-level host operations and command dispatch adapter seams for the retained node graph compatibility island; includes `WORKSTREAM.json`)
@@ -2046,6 +2047,9 @@ Rule:
 - `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/` — first n/a, latest n/a, 7 markdown docs (closed narrow follow-on that audited paint-root frame setup and split bounds/viewport/render-cull route inputs behind a frame viewport adapter seam; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-paint-root-pass-clip-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that isolated node graph paint-root immediate pass static scene sink access behind a pass scene adapter seam while splitting deeper cached internals into follow-ons; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-paint-root-tail-cleanup-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that isolated node graph paint-root root frame tail cleanup PopClip emission behind a minimal adapter seam; includes `WORKSTREAM.json`)
+- `docs/workstreams/fret-node-retained-canvas-mirror-cleanup-v1/` — first 2026-05-27, latest 2026-05-27, 6 markdown docs (closed follow-on that removed retained NodeGraphCanvas top-level graph/view/editor-config mirrors in favor of the store-first source of truth; includes `WORKSTREAM.json`)
+- `docs/workstreams/fret-node-retained-exit-and-parity-seams-v1/` — first 2026-05-28, latest 2026-05-28, 6 markdown docs (closed fearless refactor lane that deleted the retained canvas compatibility island, refreshed public docs, moved generic resize handles to `fret-canvas`, and landed the `disableKeyboardA11y` active-descendant gate; includes `WORKSTREAM.json`)
+- `docs/workstreams/fret-node-runtime-store-contract-closure-v1/` — first 2026-05-26, latest 2026-05-27, 7 markdown docs (complete runtime/store closure lane for the node graph binding/controller/store contract; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-style-skinning-v1/` — first 2026-02-27, latest 2026-03-01, 7 markdown docs
 - `docs/workstreams/fret-node-style-skinning-v2/` — first 2026-03-01, latest 2026-03-01, 3 markdown docs
 - `docs/workstreams/fret-node-style-skinning-v3/` — first 2026-03-02, latest 2026-03-02, 6 markdown docs

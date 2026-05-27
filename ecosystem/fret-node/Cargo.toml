@@ -34,13 +34,6 @@ ui = ["fret-ui"]
 # Enables integration helpers for `crates/fret-ui` (canvas widget, action hooks, styling surfaces).
 fret-ui = ["dep:fret-ui", "dep:fret-runtime", "dep:fret-canvas", "dep:fret-ui-kit"]
 
-# Compatibility: opt into the legacy retained canvas implementation island.
-#
-# This is intentionally not part of the default feature set. It no longer enables the deleted
-# fret-ui retained bridge; the remaining code must explicitly opt into fret-ui's retained widget
-# authoring compatibility exports.
-compat-retained-canvas = ["fret-ui", "fret-ui/compat-retained-widgets"]
-
 # Opt into the `rstar` spatial index backend for large graphs.
 canvas-rstar = ["fret-ui", "fret-canvas/rstar"]
 

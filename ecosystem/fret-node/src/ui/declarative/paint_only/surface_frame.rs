@@ -75,17 +75,30 @@ fn sync_binding_internals_for_surface(
         zoom: view.zoom,
     };
 
-    let focused_node = view_state
-        .selected_nodes
-        .iter()
-        .copied()
-        .find(|node| geom.nodes.contains_key(node));
-    let focused_edge = view_state.selected_edges.iter().copied().find(|edge| {
-        edges_cache
-            .draws
-            .as_deref()
-            .is_some_and(|draws| draws.iter().any(|draw| draw.edge == *edge))
-    });
+    let keyboard_a11y_disabled =
+        read_authoritative_interaction_config_in_models(models, binding, |config| {
+            config.disable_keyboard_a11y
+        })
+        .unwrap_or(false);
+    let focused_node = if keyboard_a11y_disabled {
+        None
+    } else {
+        view_state
+            .selected_nodes
+            .iter()
+            .copied()
+            .find(|node| geom.nodes.contains_key(node))
+    };
+    let focused_edge = if keyboard_a11y_disabled {
+        None
+    } else {
+        view_state.selected_edges.iter().copied().find(|edge| {
+            edges_cache
+                .draws
+                .as_deref()
+                .is_some_and(|draws| draws.iter().any(|draw| draw.edge == *edge))
+        })
+    };
     let focused_port = focused_node.and_then(|node| {
         geom.ports
             .iter()

@@ -15,7 +15,7 @@ For the parity matrix and milestones, see:
 1) **Headless document + ops** (`core` / `ops`): serializable graph + deterministic transactions.
 2) **Headless runtime ergonomics** (`runtime`): store, lookups, XyFlow-style apply/change helpers.
 3) **UI integration** (`ui`): `NodeGraphSurfaceBinding`, `node_graph_surface(...)`,
-   `NodeGraphController`, overlays, panels, presenters, and optional retained compatibility wiring.
+   `NodeGraphController`, overlays, panels, presenters, and portal renderers.
 
 The node editor UI is intended to be “editor-grade” (multi-window, docking, overlays), so UI add-ons
 are hosted in **window space** (outside the pan/zoom render transform).
@@ -58,8 +58,6 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret::App>, surface: &NodeGraphSurf
 
 Use this surface as the root of the editor composition, then add optional node portals, panels,
 toolbars, minimap, controls, diagnostics, or domain actions through the binding/controller path.
-Direct retained canvas authoring is compatibility/internal territory; new app code should keep the
-declarative root surface as the taught default.
 
 Concrete example:
 
@@ -140,9 +138,8 @@ Stable contract:
 
 - `docs/node-graph-addons-minimap-controls.md`
 
-Keep add-ons bound to the controller/store surface where possible. Compatibility retained plumbing
-may still host parts of the implementation, but guides and demos should not teach raw queue or
-retained widget ownership as the normal downstream API.
+Keep add-ons bound to the controller/store surface where possible. Guides and demos should not teach
+raw queue ownership or implementation-local surface state as the normal downstream API.
 
 ## Blackboard variables (symbols) and symbol references
 
