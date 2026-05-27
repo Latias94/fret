@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Facade Floating/Popup Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI facade floating/popup thin forwarding moved into private floating, popup,
+tooltip, drag/drop, and window owners without changing trait method names, facade forwarding, popup
+open/close behavior, tooltip forwarding, drag/drop forwarding, or floating-window routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs` is now a private module/re-export
+  index for the floating/popup facade cluster.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup/floating.rs` owns floating
+  layer/area forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup/popup.rs` owns popup open/close,
+  menu, modal, and context-menu forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup/tooltip.rs` owns tooltip
+  forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup/drag_drop_facade.rs` owns drag/drop
+  forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup/window.rs` owns floating-window
+  forwarding.
+- `tools/gate_imui_workstream_source.py` now rejects forwarding bodies from drifting back into
+  `floating_popup.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_tooltip_smoke --test
+  imui_drag_drop_smoke --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui floating popup_hover --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Button Behavior Action Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI button action payload storage and command dispatch moved into a private owner

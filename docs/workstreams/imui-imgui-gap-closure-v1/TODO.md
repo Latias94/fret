@@ -44,6 +44,15 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI facade floating/popup thin forwarding out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs` into private floating,
+      popup, tooltip, drag/drop, and window owner modules without changing trait method names,
+      facade forwarding, popup open/close behavior, tooltip forwarding, drag/drop forwarding, or
+      floating-window routing.
+      Result: `floating_popup.rs` is now a private module/re-export index; `floating.rs` owns
+      floating layer/area forwarding, `popup.rs` owns popup open/close/menu/modal/context
+      forwarding, `tooltip.rs` owns tooltip forwarding, `drag_drop_facade.rs` owns drag/drop
+      forwarding, and `window.rs` owns floating-window forwarding.
 - [x] Split IMUI button action payload and command dispatch out of
       `ecosystem/fret-ui-kit/src/imui/button_controls/behavior.rs` into a private action owner
       without changing button pressable behavior, shortcut activation, command gating, action

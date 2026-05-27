@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 facade floating/popup owner-split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs` is now a private module/re-export
+index. `floating_popup/floating.rs` owns floating layer/area forwarding, `popup.rs` owns popup
+open/close/menu/modal/context forwarding, `tooltip.rs` owns tooltip forwarding,
+`drag_drop_facade.rs` owns drag/drop forwarding, and `window.rs` owns floating-window forwarding.
+
 2026-05-28 button behavior action owner-split result:
 `ecosystem/fret-ui-kit/src/imui/button_controls/behavior/action.rs` now owns `ButtonAction`, action
 payload storage, command dispatch source recording, pending payload recording, and final action
