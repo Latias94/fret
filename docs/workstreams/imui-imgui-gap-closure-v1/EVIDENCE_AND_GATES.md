@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Debug-Draw Path-Command Family Owner-Split Evidence - 2026-05-27
+
+Claim verified: path-command dispatch is split by shape family without changing canvas keys, draw
+order, path command routing, or the underlying path paint helpers.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands/linear.rs` owns
+  line, polyline, polygon, rect-outline, quad, and triangle command dispatch.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands/round.rs` owns
+  circle, ngon, and ellipse command dispatch.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands/beziers.rs` owns
+  quadratic and cubic bezier command dispatch.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands.rs` is now a thin
+  family router, and `tools/gate_imui_workstream_source.py` freezes the owner split.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls --no-fail-fast`:
+  pass; 38 tests.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass; 1 test.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Path-Shape Dispatch Owner-Split Evidence - 2026-05-27
 
 Claim verified: path-shape paint dispatch moved out of the root debug-draw paint-shapes module

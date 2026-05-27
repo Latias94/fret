@@ -28,6 +28,14 @@ Last updated: 2026-05-27
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw path-command dispatch by shape family out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands.rs` into
+      private linear, round, and bezier owners without changing path command routing, canvas keys,
+      draw order, or path paint helpers.
+      Result: `path_commands/linear.rs` owns line/polyline/polygon/rect/quad/triangle dispatch,
+      `path_commands/round.rs` owns circle/ngon/ellipse dispatch, and
+      `path_commands/beziers.rs` owns quadratic/cubic bezier dispatch. The `path_commands.rs`
+      root is now a thin family router.
 - [x] Split IMUI debug-draw path-shape paint dispatch out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes.rs` into a private owner
       module without changing command order, canvas keys, stroke/fill geometry, mesh painting,

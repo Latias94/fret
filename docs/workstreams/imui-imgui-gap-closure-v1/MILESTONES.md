@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 debug-draw path-command family owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands.rs` is now a thin
+family router. `path_commands/linear.rs` owns line/polyline/polygon/rect/quad/triangle dispatch,
+`path_commands/round.rs` owns circle/ngon/ellipse dispatch, and `path_commands/beziers.rs` owns
+quadratic/cubic bezier dispatch.
+
 2026-05-27 debug-draw path-shape dispatch owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands.rs` now owns
 line/polyline/polygon, rect-outline, quad, triangle, circle, ngon, ellipse, and bezier dispatch into
