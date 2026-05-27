@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 floating options owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_options.rs` is now a thin re-export index.
+`floating_options/window.rs` owns `FloatingWindowResizeOptions`, `FloatingWindowOptions`,
+`WindowOptions`, defaults, and builder methods. `floating_options/area.rs` owns
+`FloatingAreaOptions`, `FloatingAreaContext`, area defaults, and context accessors. The opaque
+context source gate now follows the area owner.
+
 2026-05-27 drag response source/target owner-split result:
 `ecosystem/fret-ui-kit/src/imui/response/drag/source.rs` now owns `DragSourceResponse` storage,
 inactive/new constructors, and source read accessors.

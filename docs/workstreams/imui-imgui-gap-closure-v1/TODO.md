@@ -142,6 +142,14 @@ Last updated: 2026-05-27
       `DropTargetResponse<T>` storage, empty construction, preview/delivered payload and position
       accessors, source id reads, and session reads. The root `drag.rs` keeps generic
       `DragResponse` edge/motion state and re-exports.
+- [x] Split IMUI floating option/context types out of
+      `ecosystem/fret-ui-kit/src/imui/floating_options.rs` into private owner modules without
+      changing public re-export paths, option field names/defaults, builder methods, floating
+      behavior, or `FloatingAreaContext` accessor-first shape.
+      Result: `floating_options/window.rs` owns `FloatingWindowResizeOptions`,
+      `FloatingWindowOptions`, `WindowOptions`, defaults, and builder methods;
+      `floating_options/area.rs` owns `FloatingAreaOptions`, `FloatingAreaContext`, area defaults,
+      and context accessors. The root `floating_options.rs` is now a thin re-export index.
 - [x] Split IMUI boolean-control visual chrome out of
       `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` and its switch owner without changing
       the public checkbox/radio/switch surface.

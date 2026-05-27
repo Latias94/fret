@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Floating Options Owner-Split Evidence - 2026-05-27
+
+Claim verified: floating window options and floating area options/context moved behind separate
+private owners without changing public re-export paths, option field names/defaults, builder
+methods, `FloatingAreaContext` accessor-first shape, floating behavior tests, or title-bar chrome
+text-role coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_options.rs` is now a thin re-export index for the
+  area/window option owners.
+- `ecosystem/fret-ui-kit/src/imui/floating_options/window.rs` owns
+  `FloatingWindowResizeOptions`, `FloatingWindowOptions`, `WindowOptions`, default behavior flags,
+  resize defaults, and window option builder methods.
+- `ecosystem/fret-ui-kit/src/imui/floating_options/area.rs` owns `FloatingAreaOptions`,
+  `FloatingAreaContext`, area option defaults, and context accessors.
+- `tools/gate_imui_workstream_source.py` now follows the opaque `FloatingAreaContext` check to the
+  area owner and rejects the public option structs from drifting back into the root index.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui
+  floating_window_close_glyph_uses_shared_chrome_glyph_text_role --no-fail-fast`: pass; 1 test,
+  736 skipped.
+- `cargo nextest run -p fret-imui floating --no-fail-fast`: pass; 25 tests, 156 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Drag Response Source/Target Owner-Split Evidence - 2026-05-27
 
 Claim verified: drag-source and typed drop-target response records moved behind private owners
