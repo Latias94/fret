@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Table Row-Group Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI table row-group pinned-cell splitting, row flex layout, and center horizontal
+scroll wrapping moved into private owner modules without changing table row/header layout,
+pinned-column ordering, horizontal-scroll wrapping, hidden-column behavior, or table public APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` keeps
+  `wrap_pinned_table_row_groups(...)` orchestration.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups/split.rs` owns pinned-cell detection
+  and left/center/right grouping.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups/layout.rs` owns row outer/fill/pinned
+  and scroll-content horizontal flex wrappers.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups/scroll.rs` owns center horizontal
+  scroll wrapping.
+- `tools/gate_imui_workstream_source.py` now rejects split/layout/scroll bodies from the root row
+  group orchestrator and requires the private owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_controls --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Draw-List Linear Owner-Split Evidence - 2026-05-27
 
 Claim verified: debug-draw draw-list linear shape authoring moved into private line/poly and

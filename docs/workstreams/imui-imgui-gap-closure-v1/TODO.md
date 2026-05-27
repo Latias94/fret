@@ -44,6 +44,13 @@ Last updated: 2026-05-27
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI table row-group pinned-cell splitting, row flex layout, and horizontal-scroll
+      wrapper helpers out of `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` into
+      private owner modules without changing table row/header layout, pinned-column ordering,
+      horizontal-scroll wrapping, or table public APIs.
+      Result: `row_groups.rs` keeps `wrap_pinned_table_row_groups(...)` orchestration,
+      `row_groups/split.rs` owns pinned-cell grouping, `row_groups/layout.rs` owns horizontal row
+      flex wrappers, and `row_groups/scroll.rs` owns center horizontal scroll wrapping.
 - [x] Split IMUI debug-draw draw-list linear shape authoring out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear.rs` into private
       line/poly and rect/quad/triangle owner modules without changing draw-list authoring method

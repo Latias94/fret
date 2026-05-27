@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 table row-group owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` keeps
+`wrap_pinned_table_row_groups(...)` orchestration. `row_groups/split.rs` owns pinned-cell
+classification, `row_groups/layout.rs` owns horizontal row flex wrappers, and
+`row_groups/scroll.rs` owns center horizontal scroll wrapping.
+
 2026-05-27 debug-draw draw-list linear owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear.rs` is now a private
 module index. `linear/line_poly.rs` owns line, polyline, convex polygon fill, and concave polygon
