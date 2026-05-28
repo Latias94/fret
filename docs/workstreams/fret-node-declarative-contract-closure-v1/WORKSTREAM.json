@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "fret-node-declarative-contract-closure-v1",
   "title": "`fret-node` Declarative Contract Closure v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-28",
   "scope_kind": "execution",
   "problem": "`fret-node` has deleted retained node graph authoring, but stale docs/ADRs and duplicate store/binding/declarative seams can still pull future work away from the store-first declarative contract.",
@@ -26,10 +26,14 @@
     {
       "role": "handoff",
       "path": "docs/workstreams/fret-node-declarative-contract-closure-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/fret-node-declarative-contract-closure-v1/CLOSEOUT_AUDIT_2026-05-28.md"
     }
   ],
   "current_task": null,
-  "next_task": "FNDC-050",
+  "next_task": null,
   "gates": [
     "cargo nextest run -p fret-node --no-default-features retained_node_graph_current_guidance_stays_declarative",
     "cargo nextest run -p fret-node --no-default-features",
@@ -42,6 +46,7 @@
   "evidence": [
     "docs/workstreams/fret-node-declarative-contract-closure-v1/DESIGN.md",
     "docs/workstreams/fret-node-declarative-contract-closure-v1/TODO.md",
+    "docs/workstreams/fret-node-declarative-contract-closure-v1/CLOSEOUT_AUDIT_2026-05-28.md",
     "docs/workstreams/standalone/xyflow-gap-analysis.md",
     "docs/adr/0128-canvas-widgets-and-interactive-surfaces.md",
     "docs/adr/0135-node-graph-canvas-middleware.md",
@@ -65,7 +70,7 @@
     "docs/workstreams/fret-node-retained-exit-and-parity-seams-v1"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue this lane while the target remains store-first/declarative-first contract closure. Do not reopen closed retained lanes; split broad ReactFlow hook facade or full semantic focus tree work into follow-ons."
+    "default_action": "split_follow_on",
+    "notes": "This lane is closed. Do not reopen closed retained lanes; split pointer/command hook expansion, ReactFlow facade work, semantic focus tree work, or deeper cache/scene-plan extraction into narrower follow-ons."
   }
 }

@@ -31,15 +31,18 @@ use super::surface_support::collect_node_label_and_ports;
 use super::{
     AuthoritativeSurfaceBoundarySnapshot, DeclarativeDiagKeyAction, DeclarativeDiagViewPreset,
     DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState, HoverAnchorStore,
-    Invalidation, LeftPointerDownOutcome, LeftPointerDownSnapshot, LeftPointerReleaseOutcome,
-    MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase, NodeDragPointerMoveOutcome,
-    NodeDragReleaseOutcome, NodeDragState, NodeGraphDeclarativePortalRenderer,
+    Invalidation, KeyHandlerParams, LeftPointerDownOutcome, LeftPointerDownSnapshot,
+    LeftPointerReleaseOutcome, MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase,
+    NodeDragPointerMoveOutcome, NodeDragReleaseOutcome, NodeDragState,
+    NodeGraphDeclarativeInteractionContext, NodeGraphDeclarativeInteractionHook,
+    NodeGraphDeclarativeInteractionOutcome, NodeGraphDeclarativePortalRenderer,
     NodeGraphDiagnosticsConfig, NodeGraphVisibleSubsetPortalConfig, NodeRectDraw,
-    PendingSelectionState, PortalBoundsStore, PortalDebugFlags, PortalMeasuredGeometryState,
-    apply_declarative_diag_view_preset_action_host, authoritative_surface_boundary_snapshot,
-    begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
-    build_click_selection_preview_nodes, build_diag_normalize_visible_node_transaction,
-    build_diag_nudge_visible_node_transaction, build_marquee_preview_selected_nodes,
+    PaintOnlyInteractionFrameInputs, PendingSelectionState, PortalBoundsStore, PortalDebugFlags,
+    PortalMeasuredGeometryState, apply_declarative_diag_view_preset_action_host,
+    authoritative_surface_boundary_snapshot, begin_left_pointer_down_action_host,
+    begin_pan_pointer_down_action_host, build_click_selection_preview_nodes,
+    build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
+    build_key_down_capture_handler, build_marquee_preview_selected_nodes,
     build_node_drag_transaction, collect_portal_label_infos_for_visible_subset,
     commit_graph_transaction, commit_marquee_selection_action_host, commit_node_drag_transaction,
     commit_pending_selection_action_host, complete_left_pointer_release_action_host,
@@ -51,19 +54,19 @@ use super::{
     handle_marquee_pointer_move_action_host, handle_node_drag_left_pointer_release_action_host,
     handle_node_drag_pointer_move_action_host,
     handle_pending_selection_left_pointer_release_action_host, node_drag_commit_delta,
-    nodes_cache_key, pointer_cancel_declarative_interactions_action_host,
-    pointer_crossed_threshold, read_authoritative_view_state_in_models,
-    record_portal_measured_node_size_in_state, resolve_hover_tooltip_anchor, stable_hash_u64,
-    sync_authoritative_surface_boundary_in_models, sync_hover_anchor_store_in_models,
-    sync_portal_canvas_bounds_in_models, update_hovered_node_pointer_move_action_host,
-    update_view_state_action_host, view_from_state,
+    nodes_cache_key, plan_paint_only_interaction_frame,
+    pointer_cancel_declarative_interactions_action_host, pointer_crossed_threshold,
+    read_authoritative_view_state_in_models, record_portal_measured_node_size_in_state,
+    resolve_hover_tooltip_anchor, stable_hash_u64, sync_authoritative_surface_boundary_in_models,
+    sync_hover_anchor_store_in_models, sync_portal_canvas_bounds_in_models,
+    update_hovered_node_pointer_move_action_host, update_view_state_action_host, view_from_state,
 };
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group, GroupId,
     Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
 use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
-use crate::ops::GraphOp;
+use crate::ops::{GraphOp, GraphTransaction};
 use crate::runtime::callbacks::{
     NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks, SelectionChange,
     install_callbacks,
@@ -2975,6 +2978,114 @@ fn declarative_diag_key_action_from_key_gates_on_diag_toggle() {
 }
 
 #[test]
+fn declarative_interaction_hook_commits_only_through_binding_dispatch_context() {
+    struct MoveNodeOnKey {
+        node: NodeId,
+        calls: Rc<RefCell<usize>>,
+    }
+
+    impl NodeGraphDeclarativeInteractionHook for MoveNodeOnKey {
+        fn handle_key_down(
+            &mut self,
+            ctx: &mut NodeGraphDeclarativeInteractionContext<'_>,
+            key: fret_ui::action::KeyDownCx,
+        ) -> NodeGraphDeclarativeInteractionOutcome {
+            if key.key != fret_core::KeyCode::KeyN {
+                return NodeGraphDeclarativeInteractionOutcome::NotHandled;
+            }
+            *self.calls.borrow_mut() += 1;
+
+            let graph = ctx.graph_snapshot().expect("hook graph snapshot");
+            let node = graph.nodes.get(&self.node).expect("node exists");
+            let mut tx = GraphTransaction::new().with_label("Hook Move Node");
+            tx.push(GraphOp::SetNodePos {
+                id: self.node,
+                from: node.pos,
+                to: CanvasPoint {
+                    x: node.pos.x + 8.0,
+                    y: node.pos.y + 4.0,
+                },
+            });
+            let outcome = ctx.dispatch_transaction(&tx).expect("hook dispatch");
+            assert_eq!(outcome.committed().ops.len(), 1);
+            ctx.request_focus_to_surface();
+            ctx.request_redraw();
+            ctx.notify();
+            NodeGraphDeclarativeInteractionOutcome::Handled
+        }
+    }
+
+    let mut host = TestActionHostImpl::default();
+    let node = NodeId::from_u128(99641);
+    let mut graph_value = Graph::new(GraphId::from_u128(99641));
+    graph_value
+        .nodes
+        .insert(node, test_node(CanvasPoint { x: 2.0, y: 3.0 }));
+    let graph = host.models.insert(graph_value.clone());
+    let view_state = host.models.insert(NodeGraphViewState::default());
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        NodeGraphViewState::default(),
+        default_editor_config(),
+    ));
+    let controller = NodeGraphController::new(store.clone());
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
+    let hook_calls = Rc::new(RefCell::new(0));
+    let hook = Rc::new(RefCell::new(MoveNodeOnKey {
+        node,
+        calls: hook_calls.clone(),
+    }));
+    let handler = build_key_down_capture_handler(KeyHandlerParams {
+        drag: host.models.insert(None::<DragState>),
+        marquee_drag: host.models.insert(None::<MarqueeDragState>),
+        node_drag: host.models.insert(None::<NodeDragState>),
+        pending_selection: host.models.insert(None::<PendingSelectionState>),
+        binding: binding.clone(),
+        portal_bounds_store: host.models.insert(PortalBoundsStore::default()),
+        portal_debug_flags: host.models.insert(PortalDebugFlags::default()),
+        diagnostics: NodeGraphDiagnosticsConfig::default(),
+        diag_paint_overrides_value: Arc::new(NodeGraphPaintOverridesMap::default()),
+        diag_paint_overrides_enabled: host.models.insert(false),
+        interaction_hook: Some(hook),
+        min_zoom: 0.1,
+        max_zoom: 8.0,
+    });
+
+    let handled = handler(
+        &mut host,
+        test_action_cx(),
+        fret_ui::action::KeyDownCx {
+            key: fret_core::KeyCode::KeyN,
+            modifiers: Modifiers::default(),
+            repeat: false,
+            ime_composing: false,
+        },
+    );
+
+    assert!(handled);
+    assert_eq!(*hook_calls.borrow(), 1);
+    let projection_pos = host
+        .models
+        .read(&graph, |graph| graph.nodes.get(&node).map(|node| node.pos))
+        .ok()
+        .flatten()
+        .expect("projection node pos");
+    let store_pos = host
+        .models
+        .read(&store, |store| {
+            store.graph().nodes.get(&node).map(|node| node.pos)
+        })
+        .ok()
+        .flatten()
+        .expect("store node pos");
+    assert_eq!(projection_pos, CanvasPoint { x: 10.0, y: 7.0 });
+    assert_eq!(store_pos, projection_pos);
+    assert_eq!(host.requested_focus, vec![test_action_cx().target]);
+    assert_eq!(host.redraw_requests, vec![test_action_cx().window]);
+    assert_eq!(host.notifications, vec![test_action_cx()]);
+}
+
+#[test]
 fn apply_declarative_diag_view_preset_action_host_offset_partial_marquee_clears_selection() {
     let mut host = TestActionHostImpl::default();
     let view_value = NodeGraphViewState {
@@ -3662,13 +3773,15 @@ fn update_view_state_action_host_uses_authoritative_store_view_state_when_bound_
     assert_eq!(synced_node, Some(CanvasPoint { x: 8.0, y: 16.0 }));
 }
 
-fn declarative_paint_only_runtime_sources() -> [(&'static str, &'static str); 21] {
+fn declarative_paint_only_runtime_sources() -> [(&'static str, &'static str); 24] {
     [
         ("paint_only.rs", include_str!("../paint_only.rs")),
         ("cache.rs", include_str!("cache.rs")),
         ("diag.rs", include_str!("diag.rs")),
+        ("frame_plan.rs", include_str!("frame_plan.rs")),
         ("hover_anchor.rs", include_str!("hover_anchor.rs")),
         ("input_handlers.rs", include_str!("input_handlers.rs")),
+        ("interaction_hooks.rs", include_str!("interaction_hooks.rs")),
         ("overlay_elements.rs", include_str!("overlay_elements.rs")),
         ("overlays.rs", include_str!("overlays.rs")),
         ("pointer_down.rs", include_str!("pointer_down.rs")),
@@ -3688,6 +3801,7 @@ fn declarative_paint_only_runtime_sources() -> [(&'static str, &'static str); 21
         ("surface_shell.rs", include_str!("surface_shell.rs")),
         ("surface_state.rs", include_str!("surface_state.rs")),
         ("surface_support.rs", include_str!("surface_support.rs")),
+        ("transactions.rs", include_str!("transactions.rs")),
     ]
 }
 
@@ -3721,7 +3835,7 @@ fn declarative_paint_only_graph_edit_paths_stay_on_transactions_seam() {
             "{path} must not replace the authoritative document directly; graph-edit gestures must stay transaction-backed",
         );
 
-        if path == "transactions.rs" {
+        if path == "transactions.rs" || path == "interaction_hooks.rs" {
             continue;
         }
 
@@ -3952,6 +4066,58 @@ fn effective_selected_nodes_for_paint_falls_back_from_inactive_marquee_to_pendin
 
     assert_eq!(from_pending, vec![node_b]);
     assert_eq!(from_view, vec![node_a]);
+}
+
+#[test]
+fn paint_only_interaction_frame_plan_is_pure_snapshot_state() {
+    let node_a = NodeId::from_u128(9021);
+    let node_b = NodeId::from_u128(9022);
+    let node_c = NodeId::from_u128(9023);
+    let view_state = NodeGraphViewState {
+        selected_nodes: vec![node_a],
+        ..NodeGraphViewState::default()
+    };
+    let drag = DragState {
+        button: MouseButton::Middle,
+        last_pos: Point::new(Px(0.0), Px(0.0)),
+    };
+    let pending = PendingSelectionState {
+        nodes: Arc::from([node_b]),
+        clear_edges: false,
+        clear_groups: false,
+    };
+    let marquee = MarqueeDragState {
+        start_screen: Point::new(Px(0.0), Px(0.0)),
+        current_screen: Point::new(Px(10.0), Px(10.0)),
+        active: false,
+        toggle: false,
+        base_selected_nodes: Arc::from([]),
+        preview_selected_nodes: Arc::from([node_c]),
+    };
+    let node_drag = NodeDragState {
+        start_screen: Point::new(Px(0.0), Px(0.0)),
+        current_screen: Point::new(Px(2.0), Px(3.0)),
+        phase: NodeDragPhase::Armed,
+        nodes_sorted: Arc::from([node_a]),
+    };
+
+    let plan = plan_paint_only_interaction_frame(PaintOnlyInteractionFrameInputs {
+        view_state: &view_state,
+        drag: Some(drag),
+        marquee: Some(&marquee),
+        node_drag: Some(&node_drag),
+        pending_selection: Some(&pending),
+        hovered_node: Some(node_c),
+    });
+
+    assert!(plan.panning);
+    assert!(!plan.marquee_active);
+    assert!(plan.node_drag_armed);
+    assert!(!plan.node_dragging);
+    assert!(plan.hovered);
+    assert_eq!(plan.hovered_node, Some(node_c));
+    assert_eq!(plan.effective_selected_nodes, vec![node_b]);
+    assert_eq!(plan.selected_nodes_len(), 1);
 }
 
 #[test]

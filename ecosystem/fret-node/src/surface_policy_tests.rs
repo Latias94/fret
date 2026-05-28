@@ -19,6 +19,8 @@ const UI_CONTROLLER_STORE_SYNC_RS: &str = include_str!("ui/controller_store_sync
 const UI_CONTROLLER_UPDATES_RS: &str = include_str!("ui/controller_updates.rs");
 const UI_CONTROLLER_VIEWPORT_RS: &str = include_str!("ui/controller_viewport.rs");
 const UI_DECLARATIVE_MOD_RS: &str = include_str!("ui/declarative/mod.rs");
+const UI_DECLARATIVE_INTERACTION_HOOKS_RS: &str =
+    include_str!("ui/declarative/paint_only/interaction_hooks.rs");
 const UI_MOD_RS: &str = include_str!("ui/mod.rs");
 const UI_OVERLAYS_MOD_RS: &str = include_str!("ui/overlays/mod.rs");
 const UI_OVERLAY_TOOLBAR_POLICY_RS: &str = include_str!("ui/overlays/toolbar_policy.rs");
@@ -426,6 +428,42 @@ fn controlled_sync_public_surface_stays_full_replace_first_until_workload_proves
             "diff-first controlled sync remains deferred; found `{forbidden}`"
         );
     }
+}
+
+#[test]
+fn declarative_interaction_hook_contract_stays_store_first() {
+    assert!(UI_DECLARATIVE_MOD_RS.contains("NodeGraphDeclarativeInteractionHook"));
+    assert!(UI_MOD_RS.contains("NodeGraphDeclarativeInteractionHook"));
+    assert!(
+        UI_DECLARATIVE_INTERACTION_HOOKS_RS
+            .contains("pub struct NodeGraphDeclarativeInteractionContext")
+    );
+    assert!(
+        UI_DECLARATIVE_INTERACTION_HOOKS_RS.contains("dispatch_transaction(\n")
+            || UI_DECLARATIVE_INTERACTION_HOOKS_RS.contains("dispatch_transaction(&mut self")
+    );
+    assert!(UI_DECLARATIVE_INTERACTION_HOOKS_RS.contains("replace_view_state("));
+    assert!(
+        UI_DECLARATIVE_INTERACTION_HOOKS_RS
+            .contains("instead of a\n/// mutable `Graph` or raw model store")
+    );
+    assert!(!UI_DECLARATIVE_INTERACTION_HOOKS_RS.contains("pub host:"));
+    assert!(!UI_DECLARATIVE_INTERACTION_HOOKS_RS.contains("pub graph:"));
+    assert!(!UI_DECLARATIVE_INTERACTION_HOOKS_RS.contains("&mut Graph"));
+    assert!(
+        ADR_0135_NODE_GRAPH_CANVAS_MIDDLEWARE_MD.contains("NodeGraphDeclarativeInteractionHook")
+    );
+    assert!(
+        ADR_0135_NODE_GRAPH_CANVAS_MIDDLEWARE_MD
+            .contains("Hooks receive a `NodeGraphDeclarativeInteractionContext`")
+    );
+    assert!(NODE_GRAPH_XYFLOW_GUIDE_MD.contains("NodeGraphDeclarativeInteractionHook"));
+    assert!(NODE_GRAPH_XYFLOW_GUIDE_MD.contains("not mutable graph ownership"));
+    assert!(NODE_GRAPH_CONTROLLED_MODE_MD.contains("NodeGraphSurfaceProps::interaction_hook"));
+    assert!(
+        NODE_GRAPH_CONTROLLED_MODE_MD
+            .contains("must commit graph edits through\n  binding/controller/store helpers")
+    );
 }
 
 #[test]

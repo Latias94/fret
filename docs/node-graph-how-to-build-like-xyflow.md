@@ -32,6 +32,9 @@ This is the closest match to “useReactFlow + built-ins”:
 - App actions should prefer the binding helpers (`dispatch_transaction*`, `set_viewport*`,
   `fit_view_nodes_in_bounds*`, `update_node*`, `update_edge*`, `undo*`, `redo*`) before dropping to
   an explicit controller.
+- Tool-mode or shortcut interception belongs on `NodeGraphDeclarativeInteractionHook` through
+  `NodeGraphSurfaceProps::interaction_hook`; hooks receive store snapshots and binding/controller
+  commit helpers, not mutable graph ownership.
 - When lower-level imperative ownership is useful, derive it explicitly with
   `NodeGraphController::new(surface.store_model())`.
 

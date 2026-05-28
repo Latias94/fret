@@ -1,17 +1,17 @@
 # `fret-node` Declarative Contract Closure v1 - TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-28
 
 Task IDs use `FNDC` for node declarative contract closure.
 
 ## Cross-cutting Guardrails
 
-- [ ] Keep `NodeGraphStore` as the graph commit authority.
-- [ ] Do not reintroduce retained node graph public authoring or `compat-retained-canvas`.
-- [ ] Prefer deleting stale retained guidance over compatibility shims.
-- [ ] Keep headless runtime/store surfaces free of `fret-ui`.
-- [ ] Add focused gates before shrinking source-policy or public surfaces.
+- [x] Keep `NodeGraphStore` as the graph commit authority.
+- [x] Do not reintroduce retained node graph public authoring or `compat-retained-canvas`.
+- [x] Prefer deleting stale retained guidance over compatibility shims.
+- [x] Keep headless runtime/store surfaces free of `fret-ui`.
+- [x] Add focused gates before shrinking source-policy or public surfaces.
 
 ## M0 - Scope And Evidence Freeze
 
@@ -80,35 +80,43 @@ Task IDs use `FNDC` for node declarative contract closure.
 
 ## M4 - Declarative Interaction Hook Contract
 
-- [ ] FNDC-050 [owner=codex] [deps=FNDC-020,FNDC-030] [scope=docs/adr,ecosystem/fret-node/src/ui/declarative,ecosystem/fret-node/src/runtime]
+- [x] FNDC-050 [owner=codex] [deps=FNDC-020,FNDC-030] [scope=docs/adr,ecosystem/fret-node/src/ui/declarative,ecosystem/fret-node/src/runtime]
   Goal: Replace the obsolete retained `NodeGraphCanvasMiddleware` direction with a declarative
   interaction hook contract that cannot bypass store commits.
   Validation:
   - focused hook contract test or compile gate
   - `cargo nextest run -p fret-node`
-  Review: Reject any hook that mutates `Graph` directly or becomes a second store.
+  Review: DONE. The first hook point is key-down capture, and its public context exposes snapshots
+  plus binding/controller commit helpers instead of `&mut Graph` or raw model-store access.
   Evidence:
-  - new or updated ADR evidence
-  - focused test path
-  Handoff: Keep broad ReactFlow hook facade work as follow-on unless a minimal proof lands.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/interaction_hooks.rs`
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+  - `ecosystem/fret-node/src/surface_policy_tests.rs`
+  - `docs/adr/0135-node-graph-canvas-middleware.md`
+  - `docs/node-graph-how-to-build-like-xyflow.md`
+  - `docs/node-graph-controlled-mode.md`
+  Handoff: DONE. Broad ReactFlow hook facade work remains a follow-on; continue with `FNDC-060`.
 
 ## M5 - Paint-only Orchestration Split
 
-- [ ] FNDC-060 [owner=codex] [deps=FNDC-030] [scope=ecosystem/fret-node/src/ui/declarative/paint_only*,ecosystem/fret-canvas]
+- [x] FNDC-060 [owner=codex] [deps=FNDC-030] [scope=ecosystem/fret-node/src/ui/declarative/paint_only*,ecosystem/fret-canvas]
   Goal: Extract one meaningful pure frame/scene plan or record a negative audit that explains why
   the current paint-only orchestration should remain as-is.
   Validation:
   - `cargo nextest run -p fret-node node_graph_surface cache paint_only`
   - `cargo nextest run -p fret-canvas` if shared helpers move down
-  Review: The extraction must reduce host-side coupling or generic duplication, not just move lines.
+  Review: DONE. Extracted a pure interaction frame plan from `prepare_surface_frame`; no helper
+  moved to `fret-canvas` because the proof remains node-graph-specific.
   Evidence:
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/frame_plan.rs`
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
   - `ecosystem/fret-node/src/ui/declarative/paint_only/*`
-  - optional `ecosystem/fret-canvas/src/*`
-  Handoff: Split large paint/cache work into narrower adapter lanes if needed.
+  Handoff: DONE. Continue with `FNDC-070` lane closeout.
 
 ## M6 - Closeout
 
-- [ ] FNDC-070 [owner=planner] [deps=FNDC-020,FNDC-030,FNDC-040,FNDC-050,FNDC-060] [scope=docs/workstreams/fret-node-declarative-contract-closure-v1]
+- [x] FNDC-070 [owner=codex] [deps=FNDC-020,FNDC-030,FNDC-040,FNDC-050,FNDC-060] [scope=docs/workstreams/fret-node-declarative-contract-closure-v1]
   Goal: Verify the lane, update evidence, and close or split remaining work.
   Validation:
   - `cargo fmt --check`
@@ -117,8 +125,10 @@ Task IDs use `FNDC` for node declarative contract closure.
   - `cargo nextest run -p fret-canvas`
   - `python3 tools/check_layering.py`
   - `python3 tools/check_workstream_catalog.py`
-  Review: Use `review-workstream` and `verify-rust-workstream` before closing.
+  Review: DONE. No blocking workstream or code-quality findings remained after closeout gates.
   Evidence:
   - `docs/workstreams/fret-node-declarative-contract-closure-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/fret-node-declarative-contract-closure-v1/WORKSTREAM.json`
-  Handoff: Close this lane only after broader ReactFlow/a11y follow-ons are explicit.
+  - `docs/workstreams/fret-node-declarative-contract-closure-v1/CLOSEOUT_AUDIT_2026-05-28.md`
+  Handoff: DONE. Broader ReactFlow hook facade, pointer/command hook expansion, semantic focus
+  tree, and deeper cache/scene-plan extraction are explicit follow-ons.

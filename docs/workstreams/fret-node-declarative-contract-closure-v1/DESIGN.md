@@ -1,7 +1,12 @@
 # `fret-node` Declarative Contract Closure v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-28
+
+Status note (2026-05-28): this lane is closed. The retained-current-fact drift, store dispatch
+duplication, binding projection boundary, declarative interaction hook contract, and paint-only
+interaction frame-plan proof are implemented and covered by fresh closeout gates. Follow-on work
+should start as narrower lanes rather than reopening this one.
 
 ## Why This Lane Exists
 

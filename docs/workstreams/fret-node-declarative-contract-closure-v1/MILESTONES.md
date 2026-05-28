@@ -1,6 +1,6 @@
 # `fret-node` Declarative Contract Closure v1 - Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-28
 
 ## M0 - Scope And Evidence Freeze
@@ -68,6 +68,8 @@ Primary gates:
 
 ## M4 - Declarative Interaction Hook Contract
 
+Status: Complete (2026-05-28).
+
 Exit criteria:
 
 - The obsolete retained middleware direction is replaced by a declarative hook contract or a focused
@@ -82,6 +84,8 @@ Primary gates:
 
 ## M5 - Paint-only Orchestration Split
 
+Status: Complete (2026-05-28).
+
 Exit criteria:
 
 - At least one pure frame/scene planning extraction lands, or a negative audit records why the
@@ -94,6 +98,8 @@ Primary gates:
 - `cargo nextest run -p fret-canvas` when touched
 
 ## M6 - Closeout
+
+Status: Complete (2026-05-28).
 
 Exit criteria:
 

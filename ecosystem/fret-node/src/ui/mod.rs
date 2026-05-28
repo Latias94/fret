@@ -37,6 +37,8 @@ pub use controller::{
     NodeGraphNodeConnectionsQuery, NodeGraphNodeUpdate, NodeGraphPortConnectionsQuery,
 };
 pub use declarative::{
+    NodeGraphDeclarativeInteractionContext, NodeGraphDeclarativeInteractionHook,
+    NodeGraphDeclarativeInteractionHookRef, NodeGraphDeclarativeInteractionOutcome,
     NodeGraphDeclarativePortalCommandHandler, NodeGraphDeclarativePortalCommandHandlerRef,
     NodeGraphDeclarativePortalRenderer, NodeGraphDiagnosticsConfig, NodeGraphSurfaceProps,
     NodeGraphVisibleSubsetPortalConfig, PortalCommandOutcome, PortalTextCommand,

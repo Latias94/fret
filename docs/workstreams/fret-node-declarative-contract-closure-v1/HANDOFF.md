@@ -1,33 +1,36 @@
 # `fret-node` Declarative Contract Closure v1 - Handoff
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-28
 
 ## Current State
 
-The workstream has been opened as a follow-on to the completed architecture, runtime-store, and
-retained-exit lanes. FNDC-020, FNDC-030, and FNDC-040 are complete. Current retained guidance is
-binding/controller/declarative-first, `NodeGraphStore` dispatch now shares one internal commit path
-for store-profile and external-profile transaction dispatch, and binding graph/view/config app model
-handles are documented as store-derived projections instead of a second authority.
+This workstream is closed. FNDC-010 through FNDC-070 are complete. Current retained guidance is
+binding/controller/declarative-first, `NodeGraphStore` dispatch shares one internal commit path for
+store-profile and external-profile transaction dispatch, binding graph/view/config app model handles
+are documented as store-derived projections, declarative input interception has a store-first
+key-down hook contract, and paint-only orchestration has one pure interaction frame plan extracted
+from host-bound frame assembly.
 
 ## Last Completed Task
 
-- Task ID: FNDC-040
+- Task ID: FNDC-070
 - Owner: codex
 - Files:
-  - `ecosystem/fret-node/src/ui/binding.rs`
-  - `ecosystem/fret-node/src/ui/binding_store_sync.rs`
-  - `ecosystem/fret-node/src/ui/binding_viewport.rs`
-  - `ecosystem/fret-node/src/ui/controller.rs`
-  - `ecosystem/fret-node/src/surface_policy_tests.rs`
-  - `docs/node-graph-how-to-build-like-xyflow.md`
-  - `docs/node-graph-controlled-mode.md`
+  - `docs/workstreams/fret-node-declarative-contract-closure-v1/DESIGN.md`
+  - `docs/workstreams/fret-node-declarative-contract-closure-v1/TODO.md`
+  - `docs/workstreams/fret-node-declarative-contract-closure-v1/MILESTONES.md`
+  - `docs/workstreams/fret-node-declarative-contract-closure-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/fret-node-declarative-contract-closure-v1/HANDOFF.md`
+  - `docs/workstreams/fret-node-declarative-contract-closure-v1/WORKSTREAM.json`
+  - `docs/workstreams/fret-node-declarative-contract-closure-v1/CLOSEOUT_AUDIT_2026-05-28.md`
 - Validation:
-  - `cargo nextest run -p fret-node view_projection_model graph_projection_model_is_not_the_authoritative_store_graph binding_surface controller_surface public_node_graph_guides`
-  - `cargo nextest run -p fret-node`
   - `cargo fmt --check`
+  - `cargo nextest run -p fret-node --no-default-features`
+  - `cargo nextest run -p fret-node`
+  - `cargo nextest run -p fret-canvas`
   - `python3 -m json.tool docs/workstreams/fret-node-declarative-contract-closure-v1/WORKSTREAM.json`
+  - `python3 tools/check_layering.py`
   - `python3 tools/check_workstream_catalog.py`
   - `git diff --check`
 - Status: DONE
@@ -51,12 +54,29 @@ handles are documented as store-derived projections instead of a second authorit
   `NodeGraphStore` graph and are overwritten by `sync_from_store`.
 - Updated public node graph guides to keep mutations flowing through binding helpers,
   `NodeGraphController`, or `NodeGraphStore`.
+- Added `NodeGraphDeclarativeInteractionHook` as the declarative replacement seam for retained
+  canvas middleware, with key-down capture as the first implemented hook point.
+- Kept the hook context store-first: it exposes snapshots and binding/controller helper methods, not
+  raw graph/model-store mutation.
+- Updated ADR 0135 and public node graph guides to describe the declarative hook replacement path.
+- Extracted `plan_paint_only_interaction_frame` so per-frame transient interaction paint/semantics
+  decisions are pure snapshot derivation before host-bound cache and internals sync.
+- Kept the extraction inside `fret-node`; the helper is node-graph-specific and does not yet justify
+  a `fret-canvas` move.
+- Closed the lane with fresh `fret-node`, `fret-canvas`, format, layering, catalog, JSON, and diff
+  gates.
 
 ## Blockers
 
-- None currently.
+- None.
 
-## Next Recommended Action
+## Follow-ons
 
-- Start FNDC-050: replace the obsolete retained `NodeGraphCanvasMiddleware` direction with a
-  declarative interaction hook contract that cannot bypass store commits.
+- Add pointer, command, and observer hook methods to `NodeGraphDeclarativeInteractionHook` when a
+  concrete editor workflow proves the need.
+- Start a separate ReactFlow/XyFlow facade lane if app authors need a broader `useReactFlow`-style
+  hook bundle.
+- Start a semantic focus/a11y lane for nodes, ports, minimap, and controls if richer keyboard
+  navigation or screen-reader evidence requires it.
+- Split a cache/scene-plan adapter lane only when a domain-neutral helper has a non-node consumer or
+  a clear `fret-canvas` contract.

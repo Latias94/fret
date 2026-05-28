@@ -15,10 +15,11 @@ use super::surface_support::{
     read_authoritative_interaction_config_in_models, read_authoritative_runtime_tuning_in_models,
 };
 use super::{
-    PaintOnlySurfaceModels, PortalBoundsStore, PortalMeasuredGeometryFlushOutcome,
-    SurfaceSemanticsParams, authoritative_surface_boundary_snapshot,
-    collect_edge_paint_diagnostics, collect_portal_diagnostics, declarative_presenter_revision,
-    effective_selected_nodes_for_paint, flush_portal_measured_geometry_state,
+    PaintOnlyInteractionFrameInputs, PaintOnlySurfaceModels, PortalBoundsStore,
+    PortalMeasuredGeometryFlushOutcome, SurfaceSemanticsParams,
+    authoritative_surface_boundary_snapshot, collect_edge_paint_diagnostics,
+    collect_portal_diagnostics, declarative_presenter_revision,
+    flush_portal_measured_geometry_state, plan_paint_only_interaction_frame,
     read_authoritative_graph_in_models, read_authoritative_view_state_in_models, stable_hash_u64,
     sync_authoritative_surface_boundary_in_models, sync_derived_cache, sync_edges_cache,
     sync_grid_cache, sync_nodes_cache, view_from_state,
@@ -269,22 +270,14 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
     let drag_value = cx
         .get_model_copied(drag, Invalidation::Layout)
         .unwrap_or(None);
-    let panning = drag_value.is_some();
 
     let marquee_value = cx
         .get_model_cloned(marquee_drag, Invalidation::Layout)
         .unwrap_or(None);
-    let marquee_active = marquee_value.as_ref().is_some_and(|state| state.active);
 
     let node_drag_value = cx
         .get_model_cloned(node_drag, Invalidation::Layout)
         .unwrap_or(None);
-    let node_drag_armed = node_drag_value
-        .as_ref()
-        .is_some_and(super::NodeDragState::is_armed);
-    let node_dragging = node_drag_value
-        .as_ref()
-        .is_some_and(super::NodeDragState::is_active);
     let pending_selection_value = cx
         .get_model_cloned(pending_selection, Invalidation::Layout)
         .unwrap_or(None);
@@ -415,13 +408,14 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
     let hovered_node_value = cx
         .get_model_copied(hovered_node, Invalidation::Paint)
         .unwrap_or(None);
-    let hovered = hovered_node_value.is_some();
-    let effective_selected_nodes = effective_selected_nodes_for_paint(
-        &view_value,
-        marquee_value.as_ref(),
-        pending_selection_value.as_ref(),
-    );
-    let selected_nodes_len = effective_selected_nodes.len();
+    let interaction_plan = plan_paint_only_interaction_frame(PaintOnlyInteractionFrameInputs {
+        view_state: &view_value,
+        drag: drag_value,
+        marquee: marquee_value.as_ref(),
+        node_drag: node_drag_value.as_ref(),
+        pending_selection: pending_selection_value.as_ref(),
+        hovered_node: hovered_node_value,
+    });
     let portals_disabled = cx
         .get_model_copied(portal_debug_flags, Invalidation::Paint)
         .unwrap_or_default()
@@ -445,12 +439,12 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         node_drag_value.as_ref(),
     );
     let semantics_value = super::build_surface_semantics_value(SurfaceSemanticsParams {
-        panning,
-        marquee_active,
-        node_drag_armed,
-        node_dragging,
-        hovered,
-        selected_nodes_len,
+        panning: interaction_plan.panning,
+        marquee_active: interaction_plan.marquee_active,
+        node_drag_armed: interaction_plan.node_drag_armed,
+        node_dragging: interaction_plan.node_dragging,
+        hovered: interaction_plan.hovered,
+        selected_nodes_len: interaction_plan.selected_nodes_len(),
         grid_cached,
         geom_cached,
         nodes_cached,
@@ -473,17 +467,17 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         diagnostics,
         diag_paint_overrides_value,
         paint_overrides_ref,
-        panning,
+        panning: interaction_plan.panning,
+        marquee_active: interaction_plan.marquee_active,
         marquee_value,
-        marquee_active,
         node_drag_value,
-        node_dragging,
+        node_dragging: interaction_plan.node_dragging,
         grid_cache_value,
         derived_cache_value,
         nodes_cache_value,
         edges_cache_value,
-        hovered_node_value,
-        effective_selected_nodes,
+        hovered_node_value: interaction_plan.hovered_node,
+        effective_selected_nodes: interaction_plan.effective_selected_nodes,
         portals_disabled,
         semantics_value,
         test_id,

@@ -48,6 +48,31 @@ The replacement direction is:
 - Require any UI hook that commits graph edits to go through the store dispatch path.
 - Treat retained middleware references below as historical design context only.
 
+## Replacement Contract: Declarative Interaction Hooks
+
+The supported replacement for retained canvas input interception is
+`NodeGraphDeclarativeInteractionHook` on `NodeGraphSurfaceProps`.
+
+The first shipped hook point is key-down capture for the declarative surface. This is intentionally
+small: it covers tool-mode and shortcut interception without reopening retained widget authoring or
+adding a second graph owner.
+
+Hooks receive a `NodeGraphDeclarativeInteractionContext`, not a mutable `Graph` and not raw
+`ModelStore` access. The context may expose:
+
+- immutable graph/view snapshots for planning,
+- binding/controller helpers that dispatch `GraphTransaction` through `NodeGraphStore`,
+- view-state replacement helpers that preserve binding projection sync,
+- focus/redraw/notify side-effect helpers for the current surface target.
+
+The context must not expose `&mut Graph`, graph projection model mutation, or a retained
+`NodeGraphCanvasMiddleware` chain. Any hook that wants to commit graph edits must submit a
+`GraphTransaction` through the binding/controller/store dispatch path, so validation,
+normalization, history, callbacks, and store events remain centralized.
+
+Pointer, command, and observer hooks can be added later under the same contract. They should extend
+`NodeGraphDeclarativeInteractionHook` rather than introduce another middleware family.
+
 ## Historical Decision (Superseded)
 
 ### 1) Introduce a `NodeGraphCanvasMiddleware` extension point (ecosystem)

@@ -15,7 +15,8 @@ use crate::ui::paint_overrides::NodeGraphPaintOverridesMap;
 
 use super::{
     DeclarativeDiagKeyAction, DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState,
-    GridPaintCacheState, MarqueeDragState, NodeDragState, PendingSelectionState, PortalBoundsStore,
+    GridPaintCacheState, MarqueeDragState, NodeDragState, NodeGraphDeclarativeInteractionContext,
+    NodeGraphDeclarativeInteractionHookRef, PendingSelectionState, PortalBoundsStore,
     PortalDebugFlags, apply_pan_by_screen_delta, apply_zoom_about_screen_point,
     begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
     handle_declarative_diag_key_action_host, handle_declarative_escape_key_action_host,
@@ -43,6 +44,7 @@ pub(super) struct KeyHandlerParams {
     pub(super) diagnostics: super::NodeGraphDiagnosticsConfig,
     pub(super) diag_paint_overrides_value: Arc<NodeGraphPaintOverridesMap>,
     pub(super) diag_paint_overrides_enabled: Model<bool>,
+    pub(super) interaction_hook: Option<NodeGraphDeclarativeInteractionHookRef>,
     pub(super) min_zoom: f32,
     pub(super) max_zoom: f32,
 }
@@ -102,6 +104,18 @@ pub(super) fn build_key_down_capture_handler(params: KeyHandlerParams) -> OnKeyD
     Arc::new(move |host, action_cx: ActionCx, key: KeyDownCx| {
         if key.repeat || key.ime_composing {
             return false;
+        }
+
+        if let Some(interaction_hook) = params.interaction_hook.as_ref() {
+            let handled = {
+                let mut hook = interaction_hook.borrow_mut();
+                let mut ctx =
+                    NodeGraphDeclarativeInteractionContext::new(host, action_cx, &params.binding);
+                hook.handle_key_down(&mut ctx, key).is_handled()
+            };
+            if handled {
+                return true;
+            }
         }
 
         if key.key == fret_core::KeyCode::Escape {

@@ -46,7 +46,8 @@ copy.
   - `ecosystem/fret-node/src/ui/controller.rs` (`NodeGraphController`)
   - `ecosystem/fret-node/src/ui/binding.rs` + `binding_queries.rs` + `binding_store_sync.rs` +
     `binding_viewport.rs` (`NodeGraphSurfaceBinding`)
-  - `ecosystem/fret-node/src/ui/declarative/mod.rs` (`NodeGraphSurfaceProps`, `node_graph_surface`)
+  - `ecosystem/fret-node/src/ui/declarative/mod.rs` (`NodeGraphSurfaceProps`,
+    `NodeGraphDeclarativeInteractionHook`, `node_graph_surface`)
 
 ## Pattern A - Binding-first declarative surface (recommended default)
 
@@ -69,6 +70,9 @@ copy.
 - When you already own explicit graph/view/editor-config projection models plus controller state, use
   `NodeGraphSurfaceBinding::from_models_and_controller(...)`; this is an advanced constructor, not
   the default teaching path.
+- Use `NodeGraphSurfaceProps::interaction_hook` for declarative tool-mode or shortcut interception.
+  Hook code receives `NodeGraphDeclarativeInteractionContext` and must commit graph edits through
+  binding/controller/store helpers rather than mutating a graph directly.
 - Expect transient paint-only interaction sessions to stay local to the surface: marquee preview,
   pending click-selection preview, hover targets, and live drag arming/preview are not persisted
   into `NodeGraphViewState` until commit/cancel time.

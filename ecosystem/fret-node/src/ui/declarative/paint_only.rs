@@ -45,10 +45,14 @@ use crate::ui::{
 mod cache;
 #[path = "paint_only/diag.rs"]
 mod diag;
+#[path = "paint_only/frame_plan.rs"]
+mod frame_plan;
 #[path = "paint_only/hover_anchor.rs"]
 mod hover_anchor;
 #[path = "paint_only/input_handlers.rs"]
 mod input_handlers;
+#[path = "paint_only/interaction_hooks.rs"]
+mod interaction_hooks;
 #[path = "paint_only/overlay_elements.rs"]
 mod overlay_elements;
 #[path = "paint_only/overlays.rs"]
@@ -97,6 +101,7 @@ use self::diag::{
     handle_declarative_diag_key_action_host, handle_declarative_escape_key_action_host,
     handle_declarative_keyboard_zoom_action_host,
 };
+use self::frame_plan::{PaintOnlyInteractionFrameInputs, plan_paint_only_interaction_frame};
 #[cfg(test)]
 use self::hover_anchor::resolve_hover_tooltip_anchor;
 use self::hover_anchor::{HoverAnchorStore, sync_hover_anchor_store_in_models};
@@ -105,6 +110,10 @@ use self::input_handlers::{
     PointerMoveHandlerParams, WheelHandlerParams, build_key_down_capture_handler,
     build_pinch_handler, build_pointer_cancel_handler, build_pointer_down_handler,
     build_pointer_move_handler, build_pointer_up_handler, build_wheel_handler,
+};
+pub use self::interaction_hooks::{
+    NodeGraphDeclarativeInteractionContext, NodeGraphDeclarativeInteractionHook,
+    NodeGraphDeclarativeInteractionHookRef, NodeGraphDeclarativeInteractionOutcome,
 };
 use self::overlays::{
     HoverTooltipOverlayParams, push_hover_tooltip_overlay_if_needed,
@@ -295,6 +304,9 @@ pub struct NodeGraphSurfaceProps {
     /// Optional command handler for declarative portal subtrees.
     pub portal_command_handler: Option<NodeGraphDeclarativePortalCommandHandlerRef>,
 
+    /// Optional store-first hook for declarative surface input interception.
+    pub interaction_hook: Option<NodeGraphDeclarativeInteractionHookRef>,
+
     /// Declarative diagnostics policy for debug-only shortcuts and overlays.
     pub diagnostics: NodeGraphDiagnosticsConfig,
 
@@ -327,6 +339,7 @@ impl NodeGraphSurfaceProps {
             a11y_internals,
             portal_hosting: NodeGraphVisibleSubsetPortalConfig::default(),
             portal_command_handler: None,
+            interaction_hook: None,
             diagnostics: NodeGraphDiagnosticsConfig::default(),
             cull_margin_screen_px: 256.0,
             pan_button: MouseButton::Middle,
@@ -388,6 +401,7 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
         a11y_internals,
         portal_hosting,
         portal_command_handler,
+        interaction_hook,
         diagnostics,
         cull_margin_screen_px,
         pan_button,
@@ -567,6 +581,7 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
                     canvas,
                     measured_geometry_present: measured_geometry.is_some(),
                     portal_hosting,
+                    interaction_hook: interaction_hook.clone(),
                     cull_margin_screen_px,
                     pan_button,
                     min_zoom,

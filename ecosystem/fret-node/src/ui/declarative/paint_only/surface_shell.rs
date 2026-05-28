@@ -24,6 +24,7 @@ pub(super) struct SurfaceShellParams<'a, H: UiHost> {
     pub(super) max_zoom: f32,
     pub(super) wheel_zoom: super::NodeGraphWheelZoomConfig,
     pub(super) pinch_zoom_speed: f32,
+    pub(super) interaction_hook: Option<super::NodeGraphDeclarativeInteractionHookRef>,
     pub(super) portal_renderer: Option<&'a mut dyn super::NodeGraphDeclarativePortalRenderer<H>>,
     pub(super) surface_models: PaintOnlySurfaceModels,
     pub(super) prepared_frame: PreparedPaintOnlySurfaceFrame,
@@ -46,6 +47,7 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
         max_zoom,
         wheel_zoom,
         pinch_zoom_speed,
+        interaction_hook,
         portal_renderer,
         surface_models,
         prepared_frame,
@@ -89,6 +91,7 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
         diagnostics: prepared_frame.diagnostics,
         diag_paint_overrides_value: prepared_frame.diag_paint_overrides_value.clone(),
         diag_paint_overrides_enabled: diag_paint_overrides_enabled.clone(),
+        interaction_hook: interaction_hook.clone(),
         min_zoom,
         max_zoom,
     });
