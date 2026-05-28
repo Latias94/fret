@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Menubar Active-Trigger Reconcile Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI menubar active-trigger reconciliation split into a private owner without
+changing open-menu synchronization, active-trigger installation, close-after-render reconciliation,
+popup close restoration, or begin-menu public behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger.rs`
+  keeps active-trigger open-menu sync, active-trigger installation, and the private reconcile
+  re-export.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger/reconcile.rs`
+  owns close-after-render reconciliation, popup close restoration, and open-menu/group-active
+  cleanup.
+- `tools/gate_imui_workstream_source.py` now rejects close/reconcile state cleanup from drifting
+  back into `active_trigger.rs` and checks the dedicated reconcile owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass; 18
+  menu/submenu/tab tests passed.
+
 ## Begin Menu Capture Read Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI begin-menu capture read helpers split into a private owner without changing

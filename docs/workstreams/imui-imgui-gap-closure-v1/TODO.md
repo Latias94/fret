@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI menubar active-trigger reconciliation into a private owner without changing
+      open-menu synchronization, active-trigger installation, close-after-render reconciliation,
+      popup close restoration, or begin-menu public behavior.
+      Result: `menu_family_controls/menu_state/open_policy/active_trigger/reconcile.rs` owns
+      close/reconcile state cleanup. `active_trigger.rs` keeps active-trigger sync/activation and
+      re-exports the reconcile owner.
 - [x] Split IMUI begin-menu capture read helpers into a private owner without changing
       row/popup/was-open model identity, open-menu model reads, render-state writeback, or menubar
       open-policy behavior.

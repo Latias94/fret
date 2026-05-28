@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 menubar active-trigger reconcile owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger/reconcile.rs`
+now owns close-after-render reconciliation, popup close restoration, and open-menu/group-active
+cleanup. `active_trigger.rs` keeps active-trigger open-menu sync, activation, and the private
+re-export.
+
 2026-05-28 begin-menu capture read owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/capture/read.rs` now owns bool and
 open-menu model reads for begin-menu capture/open-policy. `capture.rs` keeps `BeginMenuState`,
