@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw draw-list image authoring into private mesh, raster, and rounded-image
+      owners without changing `ImUiDebugDrawList` image method names, default option forwarding,
+      command payload variants, vertex/index collection, image-region/quad recording, rounded
+      command recording, summaries, paint dispatch, or public debug-draw APIs.
+      Result: `debug_draw_controls/draw_list/images.rs` is now a private module index.
+      `images/mesh.rs` owns triangle-mesh command recording, `images/raster.rs` owns image,
+      image-region, and image-quad recording, and `images/rounded.rs` owns rounded image/region
+      command recording.
 - [x] Split IMUI debug-draw paint helpers into private media, mesh, and rounded-corner owners
       without changing opacity sanitization, UV validation, rounded-corner projection, triangle
       mesh filtering, image triangle mesh filtering, raster image scene ops, region scene ops, or

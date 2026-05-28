@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 debug-draw draw-list image-authoring owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list/images.rs` is now a private module
+index. `images/mesh.rs` owns image triangle-mesh command recording, `images/raster.rs` owns image,
+image-region, and image-quad command recording, and `images/rounded.rs` owns rounded image/region
+command recording.
+
 2026-05-28 debug-draw paint-helper owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_helpers.rs` is now a private
 module/re-export index. `paint_helpers/media.rs` owns opacity/UV validation plus raster image scene

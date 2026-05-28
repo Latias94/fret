@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Debug Draw Draw-List Image-Authoring Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI debug-draw draw-list image authoring split into private mesh, raster, and
+rounded-image owners without changing `ImUiDebugDrawList` image method names, default option
+forwarding, command payload variants, vertex/index collection, image-region/quad recording, rounded
+command recording, summaries, paint dispatch, or public debug-draw APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list/images.rs` is now a private module
+  index.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list/images/mesh.rs` owns image
+  triangle-mesh command recording.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list/images/raster.rs` owns image,
+  image-region, and image-quad command recording.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list/images/rounded.rs` owns rounded
+  image/region command recording.
+- `tools/gate_imui_workstream_source.py` now rejects image-authoring command bodies from drifting
+  back into `draw_list/images.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw --no-fail-fast`: pass;
+  38 debug-draw tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug Draw Paint-Helper Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI debug-draw paint helpers split into private media, mesh, and rounded-corner
