@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI menu option records into menu-bar, begin-menu/submenu, and menu-item private
+      owners without changing public option type names, default values, submenu popup placement,
+      shortcut fields, root re-exports, menu smoke behavior, or menu/tab interaction behavior.
+      Result: `options/menus/menu.rs` is now a public re-export hub. `menu/bar.rs` owns
+      `MenuBarOptions`, `menu/begin.rs` owns `BeginMenuOptions` and `BeginSubmenuOptions`, and
+      `menu/item.rs` owns `MenuItemOptions`.
 - [x] Split IMUI combo control option types into direct-combo and model-combo private owners
       without changing public option type names, default values, placeholder text, popup defaults,
       shortcut fields, facade imports, combo smoke behavior, or combo-model behavior.

@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Menu Option Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI menu option records split into menu-bar, begin-menu/submenu, and menu-item
+private owners without changing public option type names, default values, submenu popup placement,
+shortcut fields, root re-exports, menu smoke behavior, or menu/tab interaction behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/menus/menu.rs` is now a public re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/options/menus/menu/bar.rs` owns `MenuBarOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/menus/menu/begin.rs` owns `BeginMenuOptions`,
+  `BeginSubmenuOptions`, and the submenu popup placement defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/menus/menu/item.rs` owns `MenuItemOptions`.
+- `tools/gate_imui_workstream_source.py` now rejects these option bodies from drifting back into
+  `menu.rs` and checks the three dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs popup_hover --no-fail-fast`:
+  pass.
+
 ## Combo Control Option Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI combo control option types split into direct-combo and model-combo private
@@ -5542,9 +5572,9 @@ Evidence:
 - `ecosystem/fret-ui-kit/src/imui/options/menus/popup.rs` now owns `PopupMenuOptions` and
   `PopupModalOptions`, including popper placement, default sizes, modal/auto-focus, and
   outside-press close defaults.
-- `ecosystem/fret-ui-kit/src/imui/options/menus/menu.rs` now owns `MenuBarOptions`,
-  `BeginMenuOptions`, `BeginSubmenuOptions`, and `MenuItemOptions`, including item-local shortcut
-  seams and submenu popup defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/menus/menu.rs` is the menu-option re-export hub. The
+  2026-05-28 menu option owner split records the current child owners for `MenuBarOptions`,
+  `BeginMenuOptions`, `BeginSubmenuOptions`, and `MenuItemOptions`.
 - `ecosystem/fret-ui-kit/src/imui/options/menus/tab.rs` now owns `TabBarOptions`.
 - `ecosystem/fret-ui-kit/src/imui/options/menus/tooltip.rs` now owns `TooltipOptions`, including
   popper placement, estimated size, window margin, delay overrides, hoverable-content policy, and
