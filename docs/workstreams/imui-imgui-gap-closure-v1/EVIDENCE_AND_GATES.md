@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Facade Menu-Item Inherent Wrapper Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI facade menu-item inherent wrappers split into a private owner without changing
+plain menu-item wrappers, checkbox/radio wrappers, action menu item wrappers, focusable recording,
+begin-menu/submenu wrappers, command presentation forwarding, or public facade method names.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs` keeps begin-menu/submenu inherent
+  wrappers and command button wiring.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items/item_methods.rs` owns plain,
+  checkbox/radio, and action menu item inherent wrappers.
+- `tools/gate_imui_workstream_source.py` now rejects plain/checked/action menu item wrappers from
+  drifting back into `menu_items.rs` and checks the dedicated item-method owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `$env:CARGO_INCREMENTAL='0'; cargo test -p fret-imui menu_item_checkbox --no-run`: pass.
+- `$env:CARGO_INCREMENTAL='0'; cargo test -p fret-imui menu_item_checkbox -- --nocapture`:
+  pass; 1 checkbox semantics test passed.
+- `$env:CARGO_INCREMENTAL='0'; cargo test -p fret-imui menu_item_activate_shortcut -- --nocapture`:
+  pass; 2 menu shortcut tests passed.
+- `$env:CARGO_INCREMENTAL='0'; cargo test -p fret-imui begin_menu_helper_toggles -- --nocapture`:
+  pass; 1 begin-menu action test passed.
+
 ## Menu Dispatch Entry Variant Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI menu dispatch checked/action entry variants split into private owners without

@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI facade menu-item inherent wrappers into a private owner without changing plain
+      menu-item wrappers, checkbox/radio wrappers, action menu item wrappers, focusable recording,
+      begin-menu/submenu wrappers, command presentation forwarding, or public facade method names.
+      Result: `facade_writer/menu_items/item_methods.rs` owns plain, checkbox/radio, and action
+      menu item inherent wrappers. `facade_writer/menu_items.rs` keeps begin-menu/submenu inherent
+      wrappers and command menu item wiring.
 - [x] Split IMUI menu dispatch checked/action entry variants into private owners without changing
       plain menu-item routing, pressable-hook entry routing, checkbox/radio semantics, action
       dispatch forwarding, label identity handling, mount routing, or public facade menu item

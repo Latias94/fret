@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 facade menu-item inherent wrapper owner-split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items/item_methods.rs` now owns plain,
+checkbox/radio, and action menu item inherent wrappers. `facade_writer/menu_items.rs` keeps
+begin-menu/submenu inherent wrappers and command menu item wiring.
+
 2026-05-28 menu dispatch entry variant owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/entries/checked.rs` now owns
 checkbox/radio entry wrappers and checked-state semantics, while
