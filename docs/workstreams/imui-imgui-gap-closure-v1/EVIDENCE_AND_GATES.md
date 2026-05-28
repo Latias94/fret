@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Table Option Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI table/row/cell option records split into private owners without changing
+public option type names, default values, `TableOptions` debug formatting, horizontal-scroll
+defaults, row/cell background seams, root re-exports, table smoke behavior, or table composition
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/collections/table.rs` is now a public re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/options/collections/table/root.rs` owns `TableOptions`, its
+  debug projection, and table defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/collections/table/row.rs` owns `TableRowOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/collections/table/cell.rs` owns `TableCellOptions`.
+- `tools/gate_imui_workstream_source.py` now rejects these option bodies from drifting back into
+  `table.rs` and checks the three dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui composition table --no-fail-fast`:
+  pass.
+
 ## Menu Option Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI menu option records split into menu-bar, begin-menu/submenu, and menu-item
@@ -5810,9 +5841,9 @@ Evidence:
 - `ecosystem/fret-ui-kit/src/imui/options/collections/table_column.rs` now owns
   `TableColumnWidth`, `TableColumnResizeOptions`, `TableSortDirection`, `TableColumnPin`, and
   `TableColumn`, including identity inference, visibility, sorting, resizing, and pin helpers.
-- `ecosystem/fret-ui-kit/src/imui/options/collections/table.rs` now owns `TableOptions`,
-  `TableRowOptions`, and `TableCellOptions`, including table debug formatting and default
-  row/column gap policy.
+- `ecosystem/fret-ui-kit/src/imui/options/collections/table.rs` is the table-option re-export
+  hub. The 2026-05-28 table option owner split records the current child owners for
+  `TableOptions`, `TableRowOptions`, and `TableCellOptions`.
 - `ecosystem/fret-ui-kit/src/imui/options/collections/virtual_list.rs` now owns
   `VirtualListOptions`, including viewport, measurement, cache, gap, scroll-margin, known-height,
   and handle defaults.

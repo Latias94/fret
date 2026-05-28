@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI table/row/cell option records into private owners without changing public option
+      type names, default values, `TableOptions` debug formatting, horizontal-scroll defaults,
+      row/cell background seams, root re-exports, table smoke behavior, or table composition
+      behavior.
+      Result: `options/collections/table.rs` is now a public re-export hub. `table/root.rs` owns
+      `TableOptions`, `table/row.rs` owns `TableRowOptions`, and `table/cell.rs` owns
+      `TableCellOptions`.
 - [x] Split IMUI menu option records into menu-bar, begin-menu/submenu, and menu-item private
       owners without changing public option type names, default values, submenu popup placement,
       shortcut fields, root re-exports, menu smoke behavior, or menu/tab interaction behavior.
@@ -1051,7 +1058,7 @@ Last updated: 2026-05-28
       `ecosystem/fret-ui-kit/src/imui/options/collections.rs` into private owner modules without
       changing table, table-column, or virtual-list option type names and defaults.
       Result: `collections/table_column.rs` owns table column identity/visibility/sort/resize/pin
-      helpers, `collections/table.rs` owns table/row/cell options, and
+      helpers, `collections/table.rs` is the current table option re-export hub, and
       `collections/virtual_list.rs` owns virtual-list defaults. The root `collections.rs` file is
       now a thin module/re-export index.
 - [x] Split IMUI table-column primitive option types out of

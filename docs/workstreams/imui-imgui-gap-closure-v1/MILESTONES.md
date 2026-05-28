@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 table option owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/collections/table.rs` is now a public re-export hub.
+`table/root.rs` owns `TableOptions`, `table/row.rs` owns `TableRowOptions`, and `table/cell.rs`
+owns `TableCellOptions`.
+
 2026-05-28 menu option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/menus/menu.rs` is now a public re-export hub.
 `menu/bar.rs` owns `MenuBarOptions`, `menu/begin.rs` owns `BeginMenuOptions` and
