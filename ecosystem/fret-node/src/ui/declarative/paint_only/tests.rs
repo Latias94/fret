@@ -55,8 +55,8 @@ use super::{
     handle_declarative_pointer_up_action_host, handle_marquee_left_pointer_release_action_host,
     handle_marquee_pointer_move_action_host, handle_node_drag_left_pointer_release_action_host,
     handle_node_drag_pointer_move_action_host,
-    handle_pending_selection_left_pointer_release_action_host, node_drag_commit_delta,
-    nodes_cache_key, plan_paint_only_interaction_frame,
+    handle_pending_selection_left_pointer_release_action_host, hit_test_edge_at_canvas_point,
+    node_drag_commit_delta, nodes_cache_key, plan_paint_only_interaction_frame,
     pointer_cancel_declarative_interactions_action_host, pointer_crossed_threshold,
     read_authoritative_view_state_in_models, record_portal_measured_node_size_in_state,
     resolve_hover_tooltip_anchor, stable_hash_u64, sync_authoritative_surface_boundary_in_models,
@@ -5831,8 +5831,15 @@ fn custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates() {
             })
         },
     );
-    let overrides =
-        build_edge_spatial_rect_overrides(&graph, 1.0, &geom, &style, Some(&edge_types));
+    let interaction = NodeGraphEditorConfig::default().resolved_interaction_state();
+    let overrides = build_edge_spatial_rect_overrides(
+        &graph,
+        1.0,
+        &geom,
+        &interaction,
+        &style,
+        Some(&edge_types),
+    );
     assert_eq!(overrides.len(), 1);
     assert_eq!(overrides[0].0, edge);
 
@@ -5854,6 +5861,88 @@ fn custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates() {
             .query_edges_sorted_dedup(far, 1.0, &mut scratch)
             .contains(&edge),
         "custom edge path conservative AABB should feed the spatial index candidate set"
+    );
+}
+
+#[test]
+fn custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate() {
+    let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let style = crate::ui::style::NodeGraphStyle::default();
+    let edge_types = NodeGraphEdgeTypes::new().register_path(
+        EdgeTypeKey::new("data"),
+        move |_graph, _edge_id, _style, _hint, input| {
+            let corner_x = Point::new(Px(input.from.x.0 + 320.0), input.from.y);
+            let corner_y = Point::new(corner_x.x, Px(input.from.y.0 + 280.0));
+            let return_x = Point::new(input.to.x, corner_y.y);
+            Some(EdgeCustomPath {
+                cache_key: 89,
+                commands: vec![
+                    PathCommand::MoveTo(input.from),
+                    PathCommand::LineTo(corner_x),
+                    PathCommand::LineTo(corner_y),
+                    PathCommand::LineTo(return_x),
+                    PathCommand::LineTo(input.to),
+                ],
+            })
+        },
+    );
+    let edge_value = graph.edges.get(&edge).expect("edge present");
+    let from = geom.port_center(edge_value.from).expect("from port center");
+    let hit = Point::new(Px(from.x.0 + 320.0), Px(from.y.0 + 180.0));
+    let miss_inside_custom_aabb = Point::new(Px(from.x.0 + 220.0), Px(from.y.0 + 180.0));
+
+    let mut spatial = crate::ui::canvas::CanvasSpatialDerived::build(&graph, &geom, 1.0, 0.0, 64.0);
+    let mut interaction = NodeGraphEditorConfig::default().resolved_interaction_state();
+    interaction.edge_interaction_width = 12.0;
+    interaction.bezier_hit_test_steps = 24;
+    for (edge_id, rect) in build_edge_spatial_rect_overrides(
+        &graph,
+        1.0,
+        &geom,
+        &interaction,
+        &style,
+        Some(&edge_types),
+    ) {
+        spatial.update_edge_rect(edge_id, rect);
+    }
+    let mut scratch = Vec::new();
+    assert!(
+        spatial
+            .query_edges_sorted_dedup(miss_inside_custom_aabb, 1.0, &mut scratch)
+            .contains(&edge),
+        "miss point should still be a coarse spatial candidate so the exact path filter is tested"
+    );
+
+    assert_eq!(
+        hit_test_edge_at_canvas_point(
+            &graph,
+            1.0,
+            &geom,
+            &spatial,
+            &interaction,
+            &style,
+            Some(&edge_types),
+            hit,
+            &mut scratch,
+        )
+        .map(|hit| hit.edge),
+        Some(edge)
+    );
+    assert_eq!(
+        hit_test_edge_at_canvas_point(
+            &graph,
+            1.0,
+            &geom,
+            &spatial,
+            &interaction,
+            &style,
+            Some(&edge_types),
+            miss_inside_custom_aabb,
+            &mut scratch,
+        ),
+        None,
+        "coarse AABB candidates must still be rejected when the point is outside the custom path interaction width"
     );
 }
 

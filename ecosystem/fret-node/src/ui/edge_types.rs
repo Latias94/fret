@@ -9,9 +9,9 @@
 //! and keeps hit-testing consistent by sharing the same hint source.
 //!
 //! Stage 2: optionally provide a **custom edge path** builder (and still keep the serialized
-//! graph model UI-free). The default declarative surface uses custom paths for paint/culling only;
-//! geometry-backed hit-testing stays on the conservative presenter route until the path contract is
-//! split into an explicit spatial-index input.
+//! graph model UI-free). The default declarative surface uses custom paths for paint, conservative
+//! spatial-index candidates, and exact path-distance hit filtering. Edge labels and EdgeToolbar
+//! internals remain separate overlay/component contracts.
 
 use std::collections::BTreeMap;
 use std::rc::Rc;

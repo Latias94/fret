@@ -1,3 +1,4 @@
+use super::edge_hit_test::effective_edge_hit_width_screen_px;
 use super::*;
 
 #[derive(Debug, Clone, Default)]
@@ -415,7 +416,7 @@ pub(super) fn canvas_viewport_rect(
     ))
 }
 
-fn edge_commands_for_route(
+pub(super) fn edge_commands_for_route(
     route: EdgeRouteKind,
     from: Point,
     to: Point,
@@ -505,18 +506,15 @@ fn edge_commands_bbox(commands: &[PathCommand], fallback_from: Point, fallback_t
     )
 }
 
-fn padded_edge_bbox(
+fn padded_edge_bbox_with_screen_width(
     commands: &[PathCommand],
     from: Point,
     to: Point,
     zoom: f32,
-    style: &NodeGraphStyle,
-    width_mul: f32,
+    screen_width_px: f32,
 ) -> Rect {
     let mut bbox = edge_commands_bbox(commands, from, to);
-    let pad = (style.geometry.wire_width * width_mul.max(1.0))
-        .max(style.paint.wire_interaction_width)
-        / zoom;
+    let pad = screen_width_px / zoom;
     let pad = pad.max(0.0);
     bbox = Rect::new(
         Point::new(Px(bbox.origin.x.0 - pad), Px(bbox.origin.y.0 - pad)),
@@ -528,10 +526,24 @@ fn padded_edge_bbox(
     bbox
 }
 
+fn padded_edge_bbox(
+    commands: &[PathCommand],
+    from: Point,
+    to: Point,
+    zoom: f32,
+    style: &NodeGraphStyle,
+    width_mul: f32,
+) -> Rect {
+    let screen_width_px =
+        (style.geometry.wire_width * width_mul.max(1.0)).max(style.paint.wire_interaction_width);
+    padded_edge_bbox_with_screen_width(commands, from, to, zoom, screen_width_px)
+}
+
 pub(super) fn build_edge_spatial_rect_overrides(
     graph: &Graph,
     zoom: f32,
     geom: &CanvasGeometry,
+    interaction: &crate::io::NodeGraphInteractionState,
     style: &NodeGraphStyle,
     edge_types: Option<&crate::ui::NodeGraphEdgeTypes>,
 ) -> Vec<(crate::core::EdgeId, Rect)> {
@@ -577,7 +589,8 @@ pub(super) fn build_edge_spatial_rect_overrides(
         let commands = custom_path
             .map(|path| path.commands.into_boxed_slice())
             .unwrap_or_else(|| edge_commands_for_route(hint.route, p0, p1, zoom));
-        let rect = padded_edge_bbox(&commands, p0, p1, zoom, style, hint.width_mul);
+        let hit_width = effective_edge_hit_width_screen_px(interaction, style, hint.width_mul);
+        let rect = padded_edge_bbox_with_screen_width(&commands, p0, p1, zoom, hit_width);
         out.push((*edge_id, rect));
     }
 
@@ -1074,6 +1087,7 @@ pub(super) fn sync_derived_cache<H: UiHost>(
                     graph_value,
                     zoom,
                     &geom,
+                    interaction_state,
                     style_tokens,
                     edge_types,
                 ) {

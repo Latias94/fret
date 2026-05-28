@@ -46,6 +46,8 @@ use crate::ui::{
 mod cache;
 #[path = "paint_only/diag.rs"]
 mod diag;
+#[path = "paint_only/edge_hit_test.rs"]
+mod edge_hit_test;
 #[path = "paint_only/frame_plan.rs"]
 mod frame_plan;
 #[path = "paint_only/hover_anchor.rs"]
@@ -105,6 +107,8 @@ use self::diag::{
     handle_declarative_diag_key_action_host, handle_declarative_escape_key_action_host,
     handle_declarative_keyboard_zoom_action_host,
 };
+#[cfg(test)]
+use self::edge_hit_test::hit_test_edge_at_canvas_point;
 use self::frame_plan::{PaintOnlyInteractionFrameInputs, plan_paint_only_interaction_frame};
 #[cfg(test)]
 use self::hover_anchor::resolve_hover_tooltip_anchor;

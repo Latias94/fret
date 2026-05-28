@@ -9,36 +9,39 @@ This workstream remains the active lane for making `fret-node` the declarative-f
 controller/binding-first, editor-grade node graph surface for Fret. Recent work closed the retained
 canvas mirror cleanup, concrete declarative overlay/add-on parity gates, and now the first
 store/view-policy hazard found in the 2026-05-28 `fret-node` architecture audit, the first default
-declarative public-extension decision, and the first custom edge path spatial contract slice. The
-current risk is consumer-facing drift where public extension or store surfaces look authoritative
-but bypass the store's contracts or imply unimplemented view-policy parity.
+declarative public-extension decision, and the first custom edge path spatial/hit-test contract
+slices. The current risk is consumer-facing drift where public extension or store surfaces look
+authoritative but bypass the store's contracts or imply unimplemented view-policy parity.
 
 ## Active Task
 
-- Task ID: FNDX-046.
+- Task ID: FNDX-047.
 - Owner: current Codex session.
 - Status: DONE.
-- Claim: custom `NodeGraphEdgeTypes::register_path(...)` output now feeds conservative
-  spatial-index edge candidate rects in the default declarative derived cache; exact path-distance
-  hit-testing, edge label placement, and EdgeToolbar internals remain explicit follow-ups.
+- Claim: custom `NodeGraphEdgeTypes::register_path(...)` output now feeds exact path-distance edge
+  hit filtering after conservative spatial-index candidate lookup; edge label placement and
+  EdgeToolbar internals remain explicit follow-ups.
 - Review: use `review-workstream` before accepting broader lane closure.
 - Evidence:
-  - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs` now includes `edge_types_rev` in
-    the derived geometry key and applies custom path conservative AABBs to `CanvasSpatialDerived`
-    through `update_edge_rect(...)`.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_hit_test.rs` now resolves edge
+    candidates with custom path command-distance filtering.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs` keeps custom path conservative
+    AABBs in `CanvasSpatialDerived` and now pads those rects with the effective edge interaction
+    width.
   - `ecosystem/fret-node/src/surface_policy_tests.rs` now carries
     `default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`.
   - Fresh gates passed:
     `cargo fmt --check`,
     `cargo check -p fret-node --tests`,
-    `cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`,
+    `cargo nextest run -p fret-node custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate`,
+    `cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`,
     `cargo check -p fret-node --all-features --tests`,
     `cargo check -p fret-node --no-default-features`,
     `python3 tools/check_layering.py`,
     `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`,
     `git diff --check`, and
-    `cargo nextest run -p fret-node` (458 tests).
-  - Earlier closeout/package gates for FNDX-010 through FNDX-045 remain recorded in
+    `cargo nextest run -p fret-node` (459 tests).
+  - Earlier closeout/package gates for FNDX-010 through FNDX-046 remain recorded in
     `EVIDENCE_AND_GATES.md`.
 
 ## Decisions Since Last Update
@@ -70,14 +73,16 @@ but bypass the store's contracts or imply unimplemented view-policy parity.
   mixes geometry, labels, context menus, search/insert policy, and rendering hints.
 - FNDX-046 extends the custom edge path contract from paint/culling into conservative spatial-index
   candidate rects, but does not claim exact curve/path distance hit-testing.
+- FNDX-047 extends the custom edge path contract from conservative spatial candidates into exact
+  path-distance filtering, but does not claim edge label placement or EdgeToolbar internals parity.
 
 ## Blockers
 
-- None for FNDX-046.
+- None for FNDX-047.
 
 ## Next Recommended Action
 
 - Pick the next view-policy/public-extension slice with a concrete gate. The strongest candidate is
-  to add exact custom-path distance hit-testing for edge interactions, or split the broad
-  `NodeGraphPresenter` contract into narrower default-path contracts for labels, geometry, menus,
-  and insertion/search policy.
+  to split edge label placement or EdgeToolbar internals into a default-path contract, or split the
+  broad `NodeGraphPresenter` contract into narrower label, geometry, menu, and insertion/search
+  contracts.

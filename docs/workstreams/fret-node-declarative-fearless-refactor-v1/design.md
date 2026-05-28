@@ -64,8 +64,8 @@ Use these surfaces for new app code and new examples.
   - are app-facing extension points only when passed through `NodeGraphSurfaceProps`,
   - must remain UI-only policy and keep graph documents free of serialized edge/chrome view state,
   - currently affect the default declarative edge paint path and conservative edge spatial
-    candidates; exact custom-path distance hit-testing and node/body skin geometry remain follow-up
-    contracts.
+    candidates plus exact custom-path distance hit filtering; edge labels, EdgeToolbar internals,
+    and node/body skin geometry remain follow-up contracts.
 
 ### XYFlow alignment note
 
@@ -454,6 +454,9 @@ Status note (2026-05-28):
 - FNDX-046 feeds custom edge path AABBs into the conservative spatial index candidate set, so the
   first spatial contract follows the visible custom path without claiming exact path-distance
   hit-testing.
+- FNDX-047 feeds the same custom path command stream into exact path-distance hit filtering after
+  spatial candidate lookup, so edge interaction candidates no longer fall back to the default route
+  when a custom path exists.
 
 Why this still matters:
 

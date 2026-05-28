@@ -5,12 +5,21 @@ Last updated: 2026-05-28
 
 ## Current Focus
 
-FNDX-046 feeds custom `NodeGraphEdgeTypes::register_path(...)` output into conservative
-spatial-index candidate rects for the default declarative derived cache. This closes the first
-spatial contract slice after FNDX-045 while still leaving exact custom-path distance hit-testing,
-edge labels, and EdgeToolbar internals as explicit follow-up contracts.
+FNDX-047 feeds custom `NodeGraphEdgeTypes::register_path(...)` output into exact path-distance edge
+hit filtering after conservative spatial candidate lookup. This closes the next spatial contract
+slice after FNDX-046 while still leaving edge label placement and EdgeToolbar internals as explicit
+follow-up contracts.
 
 ## Targeted Iteration Gates
+
+```bash
+cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter
+```
+
+This gate proves the FNDX-047 custom edge path hit-testing contract: `edgeTypes` revisions still
+invalidate derived geometry, custom edge paths still provide conservative spatial-index edge
+candidates, exact path-distance filtering accepts points on the custom path and rejects coarse-AABB
+misses, and source-policy/docs keep the scoped edge-label/toolbar demotion explicit.
 
 ```bash
 cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter
@@ -139,6 +148,7 @@ closeout note must name those failures.
 - `ecosystem/fret-node/src/ui/edge_types.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/edge_hit_test.rs`
 - `ecosystem/fret-node/src/surface_policy_tests.rs`
 - `ecosystem/fret-node/src/runtime/tests.rs`
 - `ecosystem/fret-node/src/ui/binding_store_sync.rs`
@@ -281,5 +291,27 @@ closeout note must name those failures.
   - `git diff --check`: passed; proves the patch has no whitespace errors.
   - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
     green with 458 tests.
+- FNDX-047:
+  - `cargo fmt --check`: passed; proves formatting is clean after the new edge hit-test helper and
+    workstream updates.
+  - `cargo check -p fret-node --tests`: passed; proves UI-enabled test targets compile after the
+    custom-path exact hit filtering helper and spatial padding update.
+  - `cargo nextest run -p fret-node custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate`:
+    passed; proves points on the custom path hit the edge while points inside the conservative
+    custom-path AABB but outside the interaction-width path distance are rejected.
+  - `cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`:
+    passed; proves FNDX-046 spatial candidates, FNDX-047 exact hit filtering, derived invalidation,
+    and source-policy/docs remain aligned.
+  - `cargo check -p fret-node --all-features --tests`: passed; proves optional UI/integration test
+    targets still compile with custom-path hit filtering.
+  - `cargo check -p fret-node --no-default-features`: passed; proves headless/runtime-facing package
+    compilation remains unaffected by the UI-only edge hit-test slice.
+  - `python3 tools/check_layering.py`: passed; proves the slice did not violate workspace layering
+    policy.
+  - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed;
+    proves the workstream metadata remains valid JSON.
+  - `git diff --check`: passed; proves the patch has no whitespace errors.
+  - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
+    green with 459 tests.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

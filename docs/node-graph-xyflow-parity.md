@@ -258,8 +258,9 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       `NodeGraphSurfaceProps.edge_types`.
     - Stage 2 custom edge paths are supported via `NodeGraphEdgeTypes::register_path(...)` (`EdgeCustomPath`).
       The default declarative canvas uses the custom path for painting, paint culling, and
-      conservative spatial-index candidate rects; exact custom-path distance hit-testing, edge
-      labels, and EdgeToolbar internals remain follow-up spatial/overlay contracts.
+      conservative spatial-index candidate rects, then applies exact path-distance hit filtering
+      for edge interaction candidates; edge labels and EdgeToolbar internals remain follow-up
+      spatial/overlay contracts.
 
 - [~] **Per-node/edge view lifecycle + memoization strategy**
   - XyFlow: React memoization + internals updates + DOM handle bounds pipeline
@@ -444,7 +445,8 @@ canonical data flow and invalidation boundaries:
     edge hit slop (`edge_interaction_width`) and the visible wire stroke width (`NodeGraphStyle.wire_width`),
     even if the tuning knobs are reduced.
   - Custom edges (`edgeTypes` Stage 2) may patch conservative edge bounds in the index when a
-    custom path is present (to keep hit-testing and culling consistent).
+    custom path is present, and edge hit-testing filters those candidates with exact path-distance
+    checks against the same command stream used for custom path paint.
   - Implementation: `ecosystem/fret-node/src/ui/canvas/spatial.rs`
 - **Internals snapshot (window space, UI-only)**
   - `NodeGraphInternalsSnapshot` is derived output for overlays/inspectors/a11y:

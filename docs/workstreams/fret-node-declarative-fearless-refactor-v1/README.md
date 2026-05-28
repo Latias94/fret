@@ -161,10 +161,12 @@ update rather than an incidental refactor.
   - FNDX-045 wires `NodeGraphEdgeTypes` and `NodeGraphSkin` into `node_graph_surface(...)` for edge
     hint/custom paint-path and paint-only skin refinement.
   - FNDX-046 feeds custom edge path conservative AABBs into the spatial index candidate set.
+  - FNDX-047 feeds the same custom path command stream into exact path-distance hit filtering for
+    edge interaction candidates.
   - Custom `NodeGraphPresenter` remains advanced/internal on the default path because it still mixes
     geometry, labels, context menus, and insertion/search policy.
-  - Custom edge paths still need exact path-distance hit-testing, edge label placement, and
-    EdgeToolbar internals before claiming full XyFlow edge wrapper parity.
+  - Custom edge paths still need edge label placement and EdgeToolbar internals before claiming full
+    XyFlow edge wrapper parity.
 
 - **Ergonomic API fragmentation**
   - The surface naming is now closed around `NodeGraphSurfaceBinding` (instance-style app-facing
@@ -523,8 +525,7 @@ The remaining blockers should be tracked as concrete public-surface or behavior 
 
 - whether the remaining broad `NodeGraphPresenter` responsibilities should split into narrower
   default-path label/geometry/menu/search contracts, or stay advanced-only,
-- whether custom edge paths need exact path-distance hit-testing before claiming edge interaction
-  parity,
+- whether custom edge labels or EdgeToolbar internals should be the next edge-wrapper parity slice,
 - whether paint/style tokens still leak geometry or hit-testing policy,
 - whether `prepare_surface_frame` should be split further around frame plan, portal measurement,
   a11y/internals publication, and diagnostics.
