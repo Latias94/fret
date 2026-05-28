@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Interaction Runtime Models Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI interaction runtime model helpers split into private element, window, scope,
+and state owners without changing context-menu anchor model creation, long-press signal storage,
+pointer-click modifier storage, lifecycle session storage, active-item per-window storage, float
+window collapsed storage, disabled-scope depth reads, or public interaction runtime surfaces.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/models.rs` is now a private
+  module/re-export index.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/models/element.rs` owns element-scoped model
+  stores for context-menu anchors, long-press signals, pointer-click modifiers, lifecycle
+  sessions, and collapsed float windows.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/models/window.rs` owns the window-scoped
+  active-item store.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/models/scope.rs` owns the disabled-scope
+  depth store.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/models/state.rs` owns the public state
+  shapes for long-press, lifecycle, and active-item models.
+- `tools/gate_imui_workstream_source.py` now checks the new owner files and rejects the old
+  storage/helper bodies from drifting back into the root index.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_press interaction_drag floating popup_hover
+  models_text_lifecycle --no-fail-fast`: pass; 65 interaction/floating/text-lifecycle tests
+  passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Input Text Props Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI input-text props and assistive-semantics assembly split into a private owner

@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 interaction-runtime models owner-split result:
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/models.rs` is now a private module/re-export
+index. `models/element.rs` owns element-scoped context-menu anchor, long-press, pointer-click
+modifier, lifecycle-session, and collapsed-window stores. `models/window.rs` owns the
+window-scoped active-item store. `models/scope.rs` owns disabled-scope depth. `models/state.rs`
+owns the public long-press, lifecycle, and active-item state shapes.
+
 2026-05-28 input-text props owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_controls/input/props.rs` now owns
 `InputTextAssistiveSemantics`, `TextInputProps` construction, built-in/custom insert filters,

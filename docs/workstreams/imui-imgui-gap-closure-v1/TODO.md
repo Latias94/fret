@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI interaction-runtime model helpers into private element, window, scope, and state
+      owners without changing context-menu anchor model creation, long-press signal storage,
+      pointer-click modifier storage, lifecycle session storage, active-item per-window storage,
+      float-window collapsed storage, disabled-scope depth reads, or public interaction runtime
+      surfaces.
+      Result: `interaction_runtime/models.rs` is now a private module/re-export index.
+      `models/element.rs`, `models/window.rs`, `models/scope.rs`, and `models/state.rs` own the
+      respective helper families and state shapes.
 - [x] Split IMUI input-text props and assistive-semantics assembly into a private owner without
       changing model reads, response lifecycle population, select-all-on-focus effect dispatch,
       input filters/custom filter ordering, password mode, accessibility metadata, placeholder/
