@@ -65,8 +65,9 @@ Use these surfaces for new app code and new examples.
   - must remain UI-only policy and keep graph documents free of serialized edge/chrome view state,
   - currently affect the default declarative edge paint path and conservative edge spatial
     candidates, exact custom-path distance hit filtering, and custom path midpoint anchors for
-    edge-center internals consumed by declarative EdgeToolbar composition; full
-    EdgeLabelRenderer-style child labels and node/body skin geometry remain follow-up contracts.
+    edge-center internals consumed by declarative EdgeToolbar and default `EdgeRenderHint.label`
+    child composition; arbitrary EdgeLabelRenderer-style custom child renderers and node/body skin
+    geometry remain follow-up contracts.
 
 ### XYFlow alignment note
 
@@ -462,6 +463,9 @@ Status note (2026-05-28):
   no longer expose a default-route midpoint when a custom edge path exists.
 - FNDX-049 feeds those custom-path-derived edge-center anchors into declarative EdgeToolbar host
   child placement, so toolbar composition no longer falls outside the custom path contract.
+- FNDX-050 feeds default `EdgeRenderHint.label` output into a hit-test-transparent declarative
+  edge-label child layer at the same custom-path-derived anchor, so visible labels now share the
+  default anchor contract without exposing arbitrary custom child renderers yet.
 
 Why this still matters:
 

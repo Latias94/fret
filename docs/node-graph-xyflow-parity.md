@@ -260,8 +260,9 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       The default declarative canvas uses the custom path for painting, paint culling, and
       conservative spatial-index candidate rects, then applies exact path-distance hit filtering
       for edge interaction candidates, uses the custom path midpoint for edge-center anchors, and
-      feeds those anchors into declarative EdgeToolbar child placement; full
-      EdgeLabelRenderer-style child labels remain a follow-up spatial/overlay contract.
+      feeds those anchors into declarative EdgeToolbar and `EdgeRenderHint.label` child placement;
+      arbitrary EdgeLabelRenderer-style custom child renderers remain a follow-up spatial/overlay
+      contract.
 
 - [~] **Per-node/edge view lifecycle + memoization strategy**
   - XyFlow: React memoization + internals updates + DOM handle bounds pipeline
@@ -782,11 +783,13 @@ canonical data flow and invalidation boundaries:
 
 - [~] **Edge labels / edge-center anchors**
   - XyFlow: `EdgeLabelRenderer` component
-  - fret-node: presenter can provide `EdgeRenderHint.label` for edge a11y labels; the declarative
-    internals expose `edge_centers_window` for edge-center anchoring and now use the custom path
-    midpoint when `edgeTypes` supplies a custom path. Declarative EdgeToolbar composition consumes
-    those custom-path anchors for child placement.
-    - full visible EdgeLabelRenderer-style child labels remain TODO
+  - fret-node: presenter can provide `EdgeRenderHint.label` for visible edge label text; the
+    declarative internals expose `edge_centers_window` for edge-center anchoring and now use the
+    custom path midpoint when `edgeTypes` supplies a custom path. Declarative EdgeToolbar
+    composition consumes those custom-path anchors for child placement, and default
+    `EdgeRenderHint.label` output now
+    renders as a screen-space child layer centered on the same anchor.
+    - arbitrary EdgeLabelRenderer-style custom child renderers remain TODO
     - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ## 6.2 Edge selection and context menus
@@ -1080,7 +1083,8 @@ canonical data flow and invalidation boundaries:
       `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
     - Stage 2 (custom paths): implemented via `NodeGraphEdgeTypes::register_path(...)` and
       `paint_only/edge_path_geometry.rs::path_midpoint_and_normal(...)` (edge-center anchor +
-      normal), with declarative EdgeToolbar composition consuming the resulting internals anchor.
+      normal), with declarative EdgeToolbar and edge label composition consuming the resulting
+      internals anchor.
 
 - [~] **Plugin-like extension hooks**
   - XyFlow: store middleware maps for node/edge changes

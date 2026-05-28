@@ -6196,6 +6196,116 @@ fn custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor() {
 }
 
 #[test]
+fn custom_edge_path_feeds_declarative_edge_label_child_layer_anchor() {
+    let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let edge_ref = graph.edges.get(&edge).expect("test edge");
+    let from = geom.port_center(edge_ref.from).expect("from port center");
+    let to = geom.port_center(edge_ref.to).expect("to port center");
+    let detour_y = from.y.0 + 240.0;
+    let custom_points = [
+        from,
+        Point::new(from.x, Px(detour_y)),
+        Point::new(to.x, Px(detour_y)),
+        to,
+    ];
+    let expected_center = polyline_midpoint(&custom_points);
+    let edge_types = Rc::new(
+        NodeGraphEdgeTypes::new()
+            .register(
+                EdgeTypeKey::new("data"),
+                |_graph, _edge, _style, mut hint| {
+                    hint.label = Some(Arc::from("Custom path label"));
+                    hint
+                },
+            )
+            .register_path(
+                EdgeTypeKey::new("data"),
+                move |_graph, _edge_id, _style, _hint, input| {
+                    let detour_y = input.from.y.0 + 240.0;
+                    Some(EdgeCustomPath {
+                        cache_key: 100,
+                        commands: vec![
+                            PathCommand::MoveTo(input.from),
+                            PathCommand::LineTo(Point::new(input.from.x, Px(detour_y))),
+                            PathCommand::LineTo(Point::new(input.to.x, Px(detour_y))),
+                            PathCommand::LineTo(input.to),
+                        ],
+                    })
+                },
+            ),
+    );
+
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            selected_edges: vec![edge],
+            draw_order,
+            ..Default::default()
+        },
+        default_editor_config(),
+    );
+
+    let mut last = None;
+    for _ in 0..4 {
+        let edge_types = edge_types.clone();
+        let snapshot = render_surface_frame_for_binding(
+            &mut ui,
+            &mut host,
+            &mut services,
+            window,
+            bounds,
+            &binding,
+            move |binding| {
+                let mut props = super::NodeGraphSurfaceProps::new(binding.clone());
+                props.edge_types = Some(edge_types);
+                props
+            },
+        );
+        if snapshot
+            .nodes
+            .iter()
+            .any(|node| node.test_id.as_deref() == Some("node_graph.edge_label.0"))
+        {
+            last = Some(snapshot);
+            break;
+        }
+        last = Some(snapshot);
+    }
+    let snapshot = last.expect("at least one frame rendered");
+    let label = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("node_graph.edge_label.0"))
+        .unwrap_or_else(|| {
+            let available = snapshot
+                .nodes
+                .iter()
+                .filter_map(|node| node.test_id.as_deref())
+                .collect::<Vec<_>>();
+            panic!("missing edge label child layer; available={available:?}")
+        });
+
+    assert_eq!(label.label.as_deref(), Some("Custom path label"));
+    assert_point_near(
+        Point::new(
+            Px(label.bounds.origin.x.0 + label.bounds.size.width.0 / 2.0),
+            Px(label.bounds.origin.y.0 + label.bounds.size.height.0 / 2.0),
+        ),
+        expected_center,
+        0.5,
+    );
+}
+
+#[test]
 fn record_portal_measured_node_size_in_state_ignores_epsilon_churn() {
     let mut models = ModelStore::default();
     let state = models.insert(PortalMeasuredGeometryState::default());

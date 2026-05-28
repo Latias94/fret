@@ -387,6 +387,47 @@ Execution companion: `design.md` (surface map + next worktree order).
     - `git diff --check`: passed.
     - `cargo nextest run -p fret-node`: passed.
 
+- [x] FNDX-050 Feed default edge labels into a declarative edge-label child layer.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_labels.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `ecosystem/fret-node/src/ui/edge_types.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_child_layer_anchor`
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_child_layer_anchor custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`
+  - Exit note: default `EdgeRenderHint.label` output now renders through a screen-space declarative
+    child layer centered on the custom-path-derived `edge_centers_window` anchor. The label host
+    remains hit-test transparent by default, matching XyFlow's EdgeLabelRenderer root behavior, and
+    arbitrary EdgeLabelRenderer-style custom child renderers remain a follow-up contract rather
+    than widening the broad `NodeGraphPresenter` default surface.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_labels.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_child_layer_anchor`:
+      passed.
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_child_layer_anchor custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`:
+      passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo fmt --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+
 ## M0 - Decision gates and internal seam map
 
 - [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.

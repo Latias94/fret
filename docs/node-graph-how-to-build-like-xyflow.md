@@ -132,7 +132,9 @@ and custom paint-path builders. The default declarative surface uses custom path
 conservative paint culling, conservative spatial-index candidate rects, and exact path-distance hit
 filtering for edge interaction candidates. It also uses the custom path midpoint for edge-center
 anchors exposed through internals, and the declarative EdgeToolbar host consumes those anchors for
-child placement. A full EdgeLabelRenderer-style child layer remains a follow-up contract.
+child placement. `EdgeRenderHint.label` now renders through the same screen-space child layer at
+the edge-center anchor; arbitrary EdgeLabelRenderer-style custom child renderers remain a follow-up
+contract.
 
 ### Styling (theme tokens + UI-only chrome hints)
 

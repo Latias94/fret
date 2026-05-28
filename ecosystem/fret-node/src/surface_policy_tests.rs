@@ -21,12 +21,16 @@ const UI_CONTROLLER_VIEWPORT_RS: &str = include_str!("ui/controller_viewport.rs"
 const UI_DECLARATIVE_MOD_RS: &str = include_str!("ui/declarative/mod.rs");
 const UI_DECLARATIVE_PAINT_ONLY_RS: &str = include_str!("ui/declarative/paint_only.rs");
 const UI_DECLARATIVE_PAINT_ONLY_CACHE_RS: &str = include_str!("ui/declarative/paint_only/cache.rs");
+const UI_DECLARATIVE_PAINT_ONLY_EDGE_LABELS_RS: &str =
+    include_str!("ui/declarative/paint_only/edge_labels.rs");
 const UI_DECLARATIVE_PAINT_ONLY_EDGE_HIT_TEST_RS: &str =
     include_str!("ui/declarative/paint_only/edge_hit_test.rs");
 const UI_DECLARATIVE_PAINT_ONLY_EDGE_PATH_GEOMETRY_RS: &str =
     include_str!("ui/declarative/paint_only/edge_path_geometry.rs");
 const UI_DECLARATIVE_PAINT_ONLY_SURFACE_FRAME_RS: &str =
     include_str!("ui/declarative/paint_only/surface_frame.rs");
+const UI_DECLARATIVE_PAINT_ONLY_SURFACE_CONTENT_RS: &str =
+    include_str!("ui/declarative/paint_only/surface_content.rs");
 const UI_DECLARATIVE_INTERACTION_HOOKS_RS: &str =
     include_str!("ui/declarative/paint_only/interaction_hooks.rs");
 const UI_MOD_RS: &str = include_str!("ui/mod.rs");
@@ -411,10 +415,12 @@ fn store_public_surface_does_not_expose_raw_view_state_mutation() {
 fn default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter() {
     let surface_source = UI_DECLARATIVE_PAINT_ONLY_RS;
     let cache_source = source_without_tests(UI_DECLARATIVE_PAINT_ONLY_CACHE_RS);
+    let edge_labels_source = source_without_tests(UI_DECLARATIVE_PAINT_ONLY_EDGE_LABELS_RS);
     let edge_hit_source = source_without_tests(UI_DECLARATIVE_PAINT_ONLY_EDGE_HIT_TEST_RS);
     let edge_path_geometry_source =
         source_without_tests(UI_DECLARATIVE_PAINT_ONLY_EDGE_PATH_GEOMETRY_RS);
     let surface_frame_source = source_without_tests(UI_DECLARATIVE_PAINT_ONLY_SURFACE_FRAME_RS);
+    let surface_content_source = source_without_tests(UI_DECLARATIVE_PAINT_ONLY_SURFACE_CONTENT_RS);
 
     assert!(surface_source.contains("pub edge_types: Option<NodeGraphEdgeTypesRef>"));
     assert!(surface_source.contains("pub skin: Option<NodeGraphSkinRef>"));
@@ -442,6 +448,11 @@ fn default_declarative_surface_exposes_edge_types_and_skin_without_custom_presen
     assert!(edge_path_geometry_source.contains("path_midpoint_and_normal("));
     assert!(surface_frame_source.contains("path_midpoint_and_normal(&edge.commands"));
     assert!(surface_frame_source.contains("next.edge_centers_window"));
+    assert!(cache_source.contains("label: hint.label.clone()"));
+    assert!(surface_content_source.contains("push_edge_label_overlays("));
+    assert!(edge_labels_source.contains("edge_centers_window"));
+    assert!(edge_labels_source.contains("cx.set_hit_test_rects([])"));
+    assert!(edge_labels_source.contains("node_graph.edge_label."));
     assert!(cache_source.contains("edge_types_rev"));
     assert!(cache_source.contains("skin_rev"));
 
@@ -453,6 +464,7 @@ fn default_declarative_surface_exposes_edge_types_and_skin_without_custom_presen
         assert!(docs.contains("exact path-distance hit"));
         assert!(docs.contains("custom path midpoint"));
         assert!(docs.contains("declarative EdgeToolbar"));
+        assert!(docs.contains("EdgeRenderHint.label"));
         assert!(docs.contains(
             "Custom `NodeGraphPresenter` is not part of the default declarative surface"
         ));

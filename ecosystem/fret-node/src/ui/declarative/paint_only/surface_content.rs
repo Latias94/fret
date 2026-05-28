@@ -12,7 +12,7 @@ use crate::ui::style::NodeGraphStyle;
 use super::{
     HoverAnchorStore, HoverTooltipOverlayParams, MarqueeDragState, NodeDragState,
     PortalMeasuredGeometryState, apply_pending_fit_to_portals, host_visible_portal_labels,
-    paint_debug_grid_cached, paint_edges_cached, paint_nodes_cached,
+    paint_debug_grid_cached, paint_edges_cached, paint_nodes_cached, push_edge_label_overlays,
     push_hover_tooltip_overlay_if_needed, push_marquee_overlay_if_active,
     push_overlay_layer_if_needed, sync_hover_anchor_store_in_models,
 };
@@ -134,6 +134,14 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
 
     let mut out: Vec<AnyElement> = vec![canvas];
     let mut overlay_children: Vec<AnyElement> = Vec::new();
+    push_edge_label_overlays(
+        cx,
+        &mut overlay_children,
+        &binding,
+        edge_draws.as_deref().map(Vec::as_slice),
+        grid_bounds,
+        &style_tokens,
+    );
     let hovered_portal_hosted = if portal_hosting.enabled && !portals_disabled {
         host_visible_portal_labels(
             cx,

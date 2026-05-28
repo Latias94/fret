@@ -11,8 +11,9 @@
 //! Stage 2: optionally provide a **custom edge path** builder (and still keep the serialized
 //! graph model UI-free). The default declarative surface uses custom paths for paint, conservative
 //! spatial-index candidates, exact path-distance hit filtering, and custom path midpoint anchors
-//! for edge-center internals consumed by declarative EdgeToolbar composition. Full
-//! EdgeLabelRenderer-style child labels remain a separate overlay/component contract.
+//! for edge-center internals consumed by declarative EdgeToolbar and edge-label child composition.
+//! Arbitrary EdgeLabelRenderer-style custom child renderers remain a separate overlay/component
+//! contract.
 
 use std::collections::BTreeMap;
 use std::rc::Rc;

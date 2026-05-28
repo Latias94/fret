@@ -48,6 +48,8 @@ mod cache;
 mod diag;
 #[path = "paint_only/edge_hit_test.rs"]
 mod edge_hit_test;
+#[path = "paint_only/edge_labels.rs"]
+mod edge_labels;
 #[path = "paint_only/edge_path_geometry.rs"]
 mod edge_path_geometry;
 #[path = "paint_only/frame_plan.rs"]
@@ -111,6 +113,7 @@ use self::diag::{
 };
 #[cfg(test)]
 use self::edge_hit_test::hit_test_edge_at_canvas_point;
+use self::edge_labels::push_edge_label_overlays;
 use self::frame_plan::{PaintOnlyInteractionFrameInputs, plan_paint_only_interaction_frame};
 #[cfg(test)]
 use self::hover_anchor::resolve_hover_tooltip_anchor;
