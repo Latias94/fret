@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Debug-Draw Round Path Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI debug-draw round path construction split into circle, ngon, and ellipse
+private owners without changing circle cubic approximation, ngon validation/point generation,
+ellipse default segment fallback/rotation, paint-shape call sites, path tests, or public debug-draw
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/round.rs` is now a private re-export
+  hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/round/circle.rs` owns circle cubic
+  path construction.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/round/ngon.rs` owns regular polygon
+  path validation and point generation.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/round/ellipse.rs` owns ellipse path
+  validation, default segment fallback, and rotation sampling.
+- `tools/gate_imui_workstream_source.py` now rejects these round path bodies from drifting back
+  into `round.rs` and checks the three dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib circle_path_uses_four_cubic_arcs_and_closes ngon_path_requires_three_segments_and_positive_radius ellipse_path_defaults_segments_and_supports_rotation --no-fail-fast`:
+  pass.
+
 ## Debug-Draw Path Sampling Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI debug-draw path sampling helpers split into segment, arc, and Bezier private
@@ -2229,8 +2261,9 @@ Evidence:
   re-export hub.
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/linear.rs` owns polyline, polygon fill,
   triangle, and quad path construction.
-- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/round.rs` owns circle, ngon, and
-  ellipse path construction.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/round.rs` now indexes the round path
+  subowners; the 2026-05-28 follow-up moved circle, ngon, and ellipse construction into
+  `paths/round/{circle,ngon,ellipse}.rs`.
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/beziers.rs` owns quadratic and cubic
   bezier path construction.
 - `tools/gate_imui_workstream_source.py` now rejects linear, round, and bezier path construction

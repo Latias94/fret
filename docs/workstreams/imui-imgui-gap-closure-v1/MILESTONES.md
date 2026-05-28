@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 debug-draw round path owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/round.rs` is now a private re-export
+hub. `round/circle.rs` owns circle cubic path construction, `round/ngon.rs` owns regular polygon
+path construction, and `round/ellipse.rs` owns ellipse path validation and rotation sampling.
+
 2026-05-28 debug-draw path sampling owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/sampling.rs` is now a private re-export
 hub. `sampling/segments.rs` owns default segment fallback, `sampling/arcs.rs` owns circular and
@@ -458,8 +463,9 @@ response assembly.
 2026-05-27 debug-draw path-family owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths.rs` is now a private path-family
 re-export hub. `paths/linear.rs` owns polyline, polygon fill, triangle, and quad path construction;
-`paths/round.rs` owns circle, ngon, and ellipse path construction; `paths/beziers.rs` owns
-quadratic and cubic bezier path construction.
+`paths/round.rs` now indexes circle/ngon/ellipse subowners; `paths/beziers.rs` owns quadratic and
+cubic bezier path construction. The 2026-05-28 follow-up split the round family into
+`paths/round/circle.rs`, `paths/round/ngon.rs`, and `paths/round/ellipse.rs`.
 
 2026-05-27 debug-draw command payload owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs` now owns the private
