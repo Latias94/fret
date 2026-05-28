@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI tooltip runtime layout/placement calculation into a private owner without
+      changing trigger-id validation, event/open model setup, pointer-move open gate installation,
+      interaction update, open model synchronization, overlay request submission, or public tooltip
+      facade behavior.
+      Result: `tooltip_overlay/runtime/layout.rs` owns anchor bounds, measured/estimated panel
+      sizing, and floating bounds calculation. `tooltip_overlay/runtime.rs` keeps trigger gates,
+      interaction updates, open state writeback, and overlay request submission.
 - [x] Split IMUI button-command presentation and enabled gating into a private owner without
       changing public button wrapper methods, focusable-recording behavior, command metadata
       lookup, or action button dispatch.

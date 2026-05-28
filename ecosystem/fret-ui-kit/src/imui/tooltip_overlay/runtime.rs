@@ -4,11 +4,14 @@ use fret_ui::{GlobalElementId, UiHost};
 use crate::declarative::ModelWatchExt;
 use crate::declarative::scheduling;
 use crate::imui::{ImUiFacade, ResponseExt, TooltipOptions, UiWriterImUiFacadeExt};
-use crate::overlay;
 use crate::primitives::tooltip as radix_tooltip;
 
 use super::request::{TooltipOverlayRequestModels, request_tooltip_overlay};
 use super::trigger::install_pointer_move_open_gate_for;
+
+mod layout;
+
+use layout::resolve_tooltip_runtime_layout;
 
 pub(in crate::imui) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -54,29 +57,8 @@ pub(in crate::imui) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
                 &event_models,
             );
 
-            let anchor_bounds =
-                overlay::anchor_bounds_for_element(cx, trigger_id).or(trigger.rect());
-            let panel_size = cx
-                .watch_model(&panel_id)
-                .layout()
-                .copied()
-                .unwrap_or(None)
-                .and_then(|panel_id| cx.last_bounds_for_element(panel_id).map(|rect| rect.size))
-                .unwrap_or(options.estimated_size);
-            let floating_bounds = anchor_bounds.map(|anchor| {
-                let outer = overlay::outer_bounds_with_window_margin_for_environment(
-                    cx,
-                    fret_ui::Invalidation::Layout,
-                    options.window_margin,
-                );
-                crate::primitives::popper::popper_content_layout_sized(
-                    outer,
-                    anchor,
-                    panel_size,
-                    options.placement,
-                )
-                .rect
-            });
+            let tooltip_layout =
+                resolve_tooltip_runtime_layout(cx, trigger_id, trigger.rect(), &panel_id, &options);
 
             let update = radix_tooltip::tooltip_update_interaction(
                 cx,
@@ -84,8 +66,8 @@ pub(in crate::imui) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
                 gates.trigger_focused,
                 gates.force_close,
                 last_pointer.clone(),
-                anchor_bounds,
-                floating_bounds,
+                tooltip_layout.anchor_bounds,
+                tooltip_layout.floating_bounds,
                 radix_tooltip::TooltipInteractionConfig {
                     disable_hoverable_content,
                     open_delay_ticks_override: options.open_delay_frames_override.map(u64::from),
@@ -112,7 +94,7 @@ pub(in crate::imui) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
                 tooltip_id,
                 trigger_id,
                 trigger.rect(),
-                panel_size,
+                tooltip_layout.panel_size,
                 disable_hoverable_content,
                 &options,
                 TooltipOverlayRequestModels {

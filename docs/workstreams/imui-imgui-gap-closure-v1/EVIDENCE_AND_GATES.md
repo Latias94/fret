@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Tooltip Runtime Layout Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI tooltip runtime layout/placement calculation split into a private owner
+without changing trigger-id validation, event/open model setup, pointer-move open gate installation,
+interaction update, open model synchronization, overlay request submission, or public tooltip
+facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` keeps trigger gates, interaction
+  updates, open state writeback, and overlay request submission.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime/layout.rs` owns anchor bounds,
+  measured/estimated panel sizing, and floating bounds calculation.
+- `tools/gate_imui_workstream_source.py` now rejects tooltip layout/placement calculation from
+  drifting back into `runtime.rs` and checks the dedicated layout owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui tooltip --no-fail-fast`: pass; 32 tooltip
+  tests passed.
+
 ## Button-Command Helper Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI button-command presentation and enabled gating split into a private owner

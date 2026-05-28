@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 tooltip runtime layout owner-split result:
+`ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime/layout.rs` now owns anchor bounds,
+measured/estimated panel sizing, and floating bounds calculation. `tooltip_overlay/runtime.rs`
+keeps trigger gates, interaction updates, open state writeback, and overlay request submission.
+
 2026-05-28 button-command helper owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/button_command.rs` now owns command
 presentation lookup and enabled gating. `button_actions.rs` keeps the public button wrappers and
