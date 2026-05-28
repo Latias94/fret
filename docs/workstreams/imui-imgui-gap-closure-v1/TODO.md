@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI button pressable props and a11y assembly into a private owner without changing
+      enabled/focusable projection, variant layout application, button a11y metadata, chrome
+      assembly, activation/keyboard/response dispatch, or public button facade behavior.
+      Result: `button_controls/behavior/props.rs` owns `PressableProps` construction, focusable
+      gating, variant layout, and a11y metadata. `button_controls/behavior.rs` keeps chrome owner
+      dispatch, behavior owner dispatch, response projection dispatch, and visual resolution.
 - [x] Split IMUI button pressable response projection into a private owner without changing
       clicked transient consumption, shared pressable item response population, lifecycle/hover/
       drag response projection, visual assembly, or public button facade behavior.

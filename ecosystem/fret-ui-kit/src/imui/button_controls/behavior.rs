@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use fret_ui::UiHost;
-use fret_ui::element::PressableProps;
 
 use super::super::{ButtonOptions, ResponseExt, UiWriterImUiFacadeExt};
 use super::visual;
@@ -11,6 +10,7 @@ use crate::declarative::chrome::control_chrome_pressable_with_id_props;
 mod action;
 mod activation;
 mod keyboard;
+mod props;
 mod response;
 
 pub(super) use action::ButtonAction;
@@ -30,11 +30,7 @@ pub(super) fn button_pressable<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
             enabled = enabled && cx.action_is_enabled(&action.action);
         }
         let variant = options.variant;
-        let mut props = PressableProps::default();
-        props.enabled = enabled;
-        props.focusable = enabled && options.focusable;
-        visual::apply_button_variant_layout(&mut props, variant);
-        props.a11y = visual::button_a11y(&label, &options, variant);
+        let props = props::button_pressable_props(&label, &options, enabled, variant);
         let activate_shortcut = options.activate_shortcut;
         let shortcut_repeat = options.shortcut_repeat;
 

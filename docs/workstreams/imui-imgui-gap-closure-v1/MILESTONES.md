@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 button pressable props/a11y owner-split result:
+`ecosystem/fret-ui-kit/src/imui/button_controls/behavior/props.rs` now owns `PressableProps`
+construction, focusable gating, variant layout, and button a11y metadata.
+`button_controls/behavior.rs` keeps chrome owner dispatch, behavior owner dispatch, response
+projection dispatch, and visual resolution.
+
 2026-05-28 button pressable response projection owner-split result:
 `ecosystem/fret-ui-kit/src/imui/button_controls/behavior/response.rs` now owns button clicked
 transient consumption and shared `PressableItemResponseInput` projection.
