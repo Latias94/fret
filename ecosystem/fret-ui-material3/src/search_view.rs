@@ -22,7 +22,9 @@ use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::SearchBar;
 use crate::foundation::elevation::shadow_for_elevation_with_color;
-use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
+use crate::foundation::search_motion::{
+    SearchMotionKind, drive_search_motion, search_full_screen_geometry_transform,
+};
 use crate::foundation::test_id::part_test_id;
 use crate::search_bar::SearchBarHeaderTokens;
 use crate::tokens::{dropdown_menu as dropdown_menu_tokens, search_view as search_view_tokens};
@@ -228,7 +230,11 @@ impl SearchView {
                     dropdown_menu_tokens::close_duration_ms(theme),
                 ))
             };
-            let motion = drive_overlay_open_close_motion(cx, is_open, close_grace_frames);
+            let motion_kind = match self.presentation {
+                SearchViewPresentation::Docked => SearchMotionKind::Docked,
+                SearchViewPresentation::FullScreen => SearchMotionKind::FullScreen,
+            };
+            let motion = drive_search_motion(cx, is_open, motion_kind, close_grace_frames);
             let overlay_presence = OverlayPresence {
                 present: motion.present,
                 interactive: is_open,
@@ -244,6 +250,16 @@ impl SearchView {
             };
 
             if self.presentation == SearchViewPresentation::FullScreen {
+                let viewport =
+                    fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+                        cx,
+                        fret_ui::Invalidation::Layout,
+                        Px(0.0),
+                    );
+                let collapsed = fret_ui_kit::overlay::anchor_bounds_for_element(cx, input_id)
+                    .unwrap_or(viewport);
+                let full_screen_transform =
+                    search_full_screen_geometry_transform(motion.progress, viewport, collapsed);
                 let overlay_test_id = self
                     .overlay_test_id
                     .clone()
@@ -381,8 +397,8 @@ impl SearchView {
 
                     fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
                         cx,
-                        motion.alpha,
-                        fret_core::Transform2D::IDENTITY,
+                        motion.content_alpha,
+                        full_screen_transform,
                         overlay_presence.interactive,
                         vec![trapped],
                     )
@@ -420,7 +436,8 @@ impl SearchView {
             );
 
             // Prefer a stable, scrollable max-height over intrinsic measurement for this MVP.
-            let desired = fret_core::Size::new(anchor.size.width, self.max_height);
+            let animated_height = (self.max_height.0 * motion.progress).max(1.0);
+            let desired = fret_core::Size::new(anchor.size.width, Px(animated_height));
 
             let direction = fret_ui_kit::primitives::direction::use_direction_in_scope(cx, None);
             let placement = fret_ui_kit::primitives::popper::PopperContentPlacement::new(
@@ -525,15 +542,8 @@ impl SearchView {
                 },
             );
 
-            let opacity = motion.alpha;
-            let scale = motion.scale;
-            let origin = fret_ui_kit::primitives::popper::popper_content_transform_origin(
-                &layout, anchor, None,
-            );
-            let origin_inv = fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0));
-            let transform = fret_core::Transform2D::translation(origin)
-                * fret_core::Transform2D::scale_uniform(scale)
-                * fret_core::Transform2D::translation(origin_inv);
+            let opacity = motion.content_alpha;
+            let transform = fret_core::Transform2D::IDENTITY;
             let overlay_root =
                 fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
                     cx,

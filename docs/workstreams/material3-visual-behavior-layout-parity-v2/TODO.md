@@ -328,6 +328,29 @@ Task IDs use `M3PV2-*`.
   Handoff: Select motion is now covered by M3PV2-036 + M3PV2-037. Continue M3PV2-020 with
   SearchBar/SearchView, DatePicker, TimePicker, or field-family popup motion classification.
 
+- [x] M3PV2-038 [owner=codex] [deps=M3PV2-033,M3PV2-037] [scope=ecosystem/fret-ui-material3/src/{foundation/search_motion.rs,foundation/mod.rs,search_view.rs},ecosystem/fret-ui-material3/tests/search_view_behavior.rs,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close SearchView fixed-timestep motion by replacing generic overlay scale with
+  Compose-aligned search progress/content-alpha motion for docked and full-screen presentations.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --test search_view_behavior search_view_docked_overlay_fades_and_expands_on_open_close_frames search_view_full_screen_overlay_expands_from_input_geometry`
+  failed because docked first-open height was already full height and full-screen had no
+  collapsed-input expansion transform; green gates:
+  `cargo nextest run -p fret-ui-material3 --test search_view_behavior search_view_docked_overlay_fades_and_expands_on_open_close_frames search_view_full_screen_overlay_expands_from_input_geometry`;
+  `cargo nextest run -p fret-ui-material3 --test search_view_behavior`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_bar_exposes_stable_part_test_ids material3_search_view_exposes_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_bar_suite_goldens_v1 material3_headless_search_view_suite_goldens_v1`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`;
+  workstream JSON/catalog/diff checks.
+  Review: DONE. This found a recipe-level SearchView motion gap and a new helper initialization
+  semantic: initially expanded SearchView must start settled, while state changes animate. Docked
+  overlays now fade and vertically expand/shrink from `SearchMotionFrame::progress`; full-screen
+  overlays now use a collapsed-input-to-viewport transform plus content alpha.
+  Evidence: `artifacts/material3_search_view_motion_packet_v2.md`.
+  Handoff: SearchView motion is now v2-covered for docked/full-screen open-close frames.
+  Standalone SearchBar motion remains open; continue with ordinary SearchBar focus/input motion,
+  DatePicker/TimePicker picker motion, or Autocomplete/ExposedDropdown popup/trigger motion.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]

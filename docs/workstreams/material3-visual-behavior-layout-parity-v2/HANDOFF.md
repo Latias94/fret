@@ -59,6 +59,9 @@ automation. Select chevron and overlay alpha/scale motion remain separate residu
 M3PV2-037 is complete: Select chevron now uses Material `FastSpatial` spring motion and SceneOp
 gates prove first-frame open/close chevron rotation plus Select overlay first-frame fade/scale.
 Together with M3PV2-036, Select motion is now classified as v2-covered.
+M3PV2-038 is complete: SearchView now uses dedicated Material search motion instead of generic
+overlay scale. Docked overlays fade and vertically expand/shrink, full-screen overlays animate from
+collapsed input geometry toward the viewport, and initially open SearchViews start settled.
 
 ## Decisions
 
@@ -70,11 +73,12 @@ Together with M3PV2-036, Select motion is now classified as v2-covered.
 
 ## Next Recommended Action
 
-Continue M3PV2-020 with another field-family packet. Good next candidates are SearchBar/SearchView,
-DatePicker, or TimePicker fixed-timestep motion. Autocomplete/ExposedDropdown already inherit the
-shared TextField field-motion path, but still need their own popup/trigger motion classification
-before their motion axes are closed. Do not mark motion axes complete from settled-geometry
-evidence alone.
+Continue M3PV2-020 with another field-family packet. Good next candidates are standalone SearchBar
+focus/input motion, DatePicker or TimePicker fixed-timestep motion, or Autocomplete/ExposedDropdown
+popup/trigger motion classification. Autocomplete/ExposedDropdown already inherit the shared
+TextField field-motion path, but still need their own popup/trigger motion classification before
+their motion axes are closed. Do not mark motion axes complete from settled-geometry evidence
+alone.
 
 ## Useful Gates
 

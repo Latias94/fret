@@ -341,6 +341,24 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     chevron rotation on first open/close frames, overlay opacity/scale on first open/close frames,
     and settled open half-turn rotation.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_chevron_overlay_motion_packet_v2.md`
+- 2026-05-28: M3PV2-038 closed SearchView docked/full-screen fixed-frame motion.
+  - Sources: Compose Material3 `SearchBarState` owns independent geometry/content progress
+    channels; docked SearchBar uses fade plus vertical expand/shrink; full-screen SearchBar layout
+    lerps collapsed input bounds toward viewport-sized expanded geometry.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --test search_view_behavior search_view_docked_overlay_fades_and_expands_on_open_close_frames search_view_full_screen_overlay_expands_from_input_geometry`
+    failed because docked SearchView first-open height was already full height and full-screen
+    SearchView had no collapsed-input expansion transform.
+  - `cargo nextest run -p fret-ui-material3 --test search_view_behavior search_view_docked_overlay_fades_and_expands_on_open_close_frames search_view_full_screen_overlay_expands_from_input_geometry`
+  - `cargo nextest run -p fret-ui-material3 --test search_view_behavior`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_bar_exposes_stable_part_test_ids material3_search_view_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_bar_suite_goldens_v1 material3_headless_search_view_suite_goldens_v1`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Workstream JSON/catalog/diff checks.
+  - Result: SearchView now routes through `foundation::search_motion`, docked overlays fade and
+    expand/shrink by search progress, full-screen overlays animate from the input geometry toward
+    the viewport, and initially open SearchViews start settled.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_motion_packet_v2.md`
 
 ## Proof Note Template
 
