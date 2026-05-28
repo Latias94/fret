@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw paint helpers into private media, mesh, and rounded-corner owners
+      without changing opacity sanitization, UV validation, rounded-corner projection, triangle
+      mesh filtering, image triangle mesh filtering, raster image scene ops, region scene ops, or
+      debug-draw public APIs.
+      Result: `debug_draw_controls/paint_helpers.rs` is now a private module/re-export index.
+      `paint_helpers/media.rs` owns opacity/UV validation plus raster image scene ops,
+      `paint_helpers/meshes.rs` owns vertex-color and image triangle mesh scene ops, and
+      `paint_helpers/rounded.rs` owns rounded-corner visibility/projection.
 - [x] Split IMUI debug-draw path-builder shape methods into private rect, bezier, and arc owners
       without changing `ImUiDebugDrawPath` method names, path point storage, invalid input
       handling, default segment fallback, rounded-rect sampling, Bezier sampling, arc sampling, or

@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 debug-draw paint-helper owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_helpers.rs` is now a private
+module/re-export index. `paint_helpers/media.rs` owns opacity/UV validation plus raster image scene
+ops, `paint_helpers/meshes.rs` owns vertex-color and image triangle mesh scene ops, and
+`paint_helpers/rounded.rs` owns rounded-corner visibility/projection.
+
 2026-05-28 debug-draw path-builder shape-method owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods.rs` is now a private
 module index. `shape_methods/rects.rs` owns rect and rounded-rect point appending,

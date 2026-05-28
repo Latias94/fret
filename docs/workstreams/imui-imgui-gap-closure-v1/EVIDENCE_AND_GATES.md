@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Debug Draw Paint-Helper Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI debug-draw paint helpers split into private media, mesh, and rounded-corner
+owners without changing opacity sanitization, UV validation, rounded-corner projection, triangle
+mesh filtering, image triangle mesh filtering, raster image scene ops, region scene ops, or public
+debug-draw APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_helpers.rs` is now a private
+  module/re-export index.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_helpers/media.rs` owns opacity/UV
+  validation plus raster image scene ops.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_helpers/meshes.rs` owns vertex-color
+  and image triangle mesh scene ops.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_helpers/rounded.rs` owns rounded-corner
+  visibility/projection.
+- `tools/gate_imui_workstream_source.py` now rejects media/mesh/rounded helper bodies from
+  drifting back into `paint_helpers.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw --no-fail-fast`: pass;
+  38 debug-draw tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug Draw Path-Builder Shape-Method Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI debug-draw path-builder shape methods split into private rect, Bezier, and
