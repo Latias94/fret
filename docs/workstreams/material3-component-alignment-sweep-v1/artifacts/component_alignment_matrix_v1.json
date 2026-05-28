@@ -1135,11 +1135,11 @@
     {
       "id": "top_app_bar",
       "family": "navigation",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_scroll_diagnostics_aligned",
       "wave": "wave1_navigation_indicator",
       "default_owner_bias": "material_recipe",
       "packet_strategy": "scroll_behavior_packet_if_needed",
-      "first_gate_kind": "scroll_diag_or_scene",
+      "first_gate_kind": "scroll_gallery_diag_and_scene",
       "selector_status": "surface_data_display_selector_ready",
       "stable_part_ids": [
         "top_app_bar",
@@ -1147,13 +1147,15 @@
         "top_app_bar.action.chrome"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md",
+        "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/artifacts/top_app_bar_scroll_diagnostics_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe owns app-bar variants, toolbar semantics, action icon button wiring, and scroll behavior state",
         "material_foundation is not needed for current scroll/color/elevation handling beyond token resolution",
-        "test_harness covers toolbar semantics, headless top-app-bar goldens, and root/action selector readiness",
-        "scroll diagnostics remain a follow-on only if gallery evidence shows behavior drift"
+        "test_harness covers toolbar semantics, headless top-app-bar goldens, root/action selector readiness, and the promoted Material3 gallery scroll diagnostics script",
+        "gallery diagnostics passed for pinned, enter-always, enter-always-settle, exit-until-collapsed, and exit-until-collapsed-settle scenarios",
+        "no kit_policy or mechanism gap found"
       ]
     }
   ]

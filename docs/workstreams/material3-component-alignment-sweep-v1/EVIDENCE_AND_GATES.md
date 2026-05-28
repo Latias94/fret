@@ -250,7 +250,7 @@ cargo run -p fretboard -- diag run <script.json> --env FRET_DIAG_FIXED_FRAME_DEL
   - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_top_app_bar_suite_goldens_v1`
   - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_carousel_item_suite_goldens_v1`
   - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_controls_suite_goldens_v1`
-  - `cargo nextest run -p fret-ui-material3 --test radio_alignment top_app_bar_exposes_toolbar_semantics_role`
+  - `cargo nextest run -p fret-ui-material3 --test top_app_bar_alignment top_app_bar_exposes_toolbar_semantics_role`
   - `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_badge_suite_goldens_v1; Remove-Item Env:FRET_UPDATE_GOLDENS`
   - `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_divider_suite_goldens_v1; Remove-Item Env:FRET_UPDATE_GOLDENS`
   - `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_progress_indicator_suite_goldens_v1; Remove-Item Env:FRET_UPDATE_GOLDENS`

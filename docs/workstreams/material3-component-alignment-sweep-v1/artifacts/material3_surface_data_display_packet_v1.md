@@ -44,8 +44,8 @@ Components audited:
   mechanism is justified.
 - Shared state-layer, ripple, and minimum target behavior remain in Material foundation; visual
   surface composition stays in component recipes.
-- TopAppBar scroll behavior remains recipe-owned unless a gallery diagnostic proves broader policy
-  pressure.
+- TopAppBar scroll behavior remains recipe-owned. The later scroll diagnostics packet proved the
+  promoted gallery scroll scenarios without broader policy pressure.
 - Badge TopRight placement requires an explicit anchor-size contract for deterministic geometry.
 
 ## Artifacts
@@ -71,6 +71,8 @@ Components audited:
   and `linear_progress_indicator.active-track` through absolute layout regions.
 - Existing headless suites continue to own the visual/motion evidence for Badge, Divider, FAB, List,
   ProgressIndicator, TopAppBar, CarouselItem, and the broad controls/card/button surface.
+- The promoted TopAppBar scroll gallery script owns pinned, enter-always, enter-always-settle,
+  exit-until-collapsed, and exit-until-collapsed-settle diagnostics.
 
 ## Layer Classification
 
@@ -96,13 +98,15 @@ Components audited:
 - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_top_app_bar_suite_goldens_v1`
 - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_carousel_item_suite_goldens_v1`
 - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_controls_suite_goldens_v1`
-- `cargo nextest run -p fret-ui-material3 --test radio_alignment top_app_bar_exposes_toolbar_semantics_role`
+- `cargo nextest run -p fret-ui-material3 --test top_app_bar_alignment top_app_bar_exposes_toolbar_semantics_role`
+- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-top-app-bar-scroll-screenshots.json --dir target/fret-diag/material3-top-app-bar-scroll-20260528 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3`
 
 ## Residual Risk
 
 - ProgressIndicator circular arcs and indeterminate segments remain canvas paint operations, not
   queryable automation parts.
-- TopAppBar scroll diagnostics are still proportional follow-ons if gallery behavior drifts.
+- TopAppBar scroll diagnostics are closed for current gallery scenarios by
+  `docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/`.
 - Badge text TopRight placement uses the explicit anchor box and token large-size as the stable
   layout contract; text-measured edge alignment can be refined only if a real product surface needs
   it.
