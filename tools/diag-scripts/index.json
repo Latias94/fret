@@ -10494,6 +10494,28 @@
       ]
     },
     {
+      "id": "ui-gallery-material3-dialog-focus-trap-restore",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-dialog-focus-trap-restore.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-dialog-focus-trap-restore"
+      ],
+      "tags": [
+        "barrier",
+        "dialog",
+        "focus_restore",
+        "material3",
+        "modal",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-material3-state-matrix-chip-action-state",
       "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-state-matrix-chip-action-state.json",
       "required_capabilities": [

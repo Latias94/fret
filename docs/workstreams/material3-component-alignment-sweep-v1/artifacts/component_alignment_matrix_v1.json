@@ -372,7 +372,7 @@
     {
       "id": "dialog",
       "family": "overlay_feedback",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_diagnostics_aligned",
       "wave": "wave3_overlay_feedback",
       "default_owner_bias": "kit_policy",
       "packet_strategy": "overlay_packet",
@@ -387,12 +387,13 @@
         "dialog.actions.<name>.chrome"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+        "docs/workstreams/material3-dialog-diagnostics-packet-v1/artifacts/dialog_diagnostics_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe owns dotted scrim/panel/action part ids, panel chrome, and Dialog panel semantics role",
         "kit_policy owns modal overlay request, scrim dismiss, focus trap, and focus restore through existing overlay primitives",
-        "diagnostics/test_harness covers stable dialog automation selectors and focused dismiss/focus gates",
+        "diagnostics/test_harness covers dedicated Material3 gallery panel/scrim selectors, Dialog role, modal/focus barrier roots, Escape dismissal, focus restore, and focused Rust gates",
         "no new mechanism gap found"
       ]
     },
