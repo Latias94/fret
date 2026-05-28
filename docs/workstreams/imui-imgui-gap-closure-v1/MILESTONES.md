@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 button pressable keyboard behavior owner-split result:
+`ecosystem/fret-ui-kit/src/imui/button_controls/behavior/keyboard.rs` now owns focused button
+activate-shortcut handling and keyboard context-menu requests. `button_controls/behavior.rs` keeps
+pressable props/chrome assembly, action activation, response population, and visual assembly.
+
 2026-05-28 debug-draw round path-command dispatch owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands/round.rs` now only
 dispatches to stroked and filled round command owners. `round/stroked.rs` owns circle/ngon/ellipse

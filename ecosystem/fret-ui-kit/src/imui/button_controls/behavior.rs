@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use fret_core::KeyCode;
 use fret_ui::UiHost;
 use fret_ui::action::ActivateReason;
 use fret_ui::element::PressableProps;
@@ -11,6 +10,7 @@ use crate::command::ElementCommandGatingExt as _;
 use crate::declarative::chrome::control_chrome_pressable_with_id_props;
 
 mod action;
+mod keyboard;
 
 pub(super) use action::ButtonAction;
 use action::dispatch_button_action;
@@ -57,49 +57,17 @@ pub(super) fn button_pressable<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                 host.notify(acx);
             }));
 
-            if enabled {
-                let lifecycle_model_for_shortcut = behavior.lifecycle_model.clone();
-                let action_for_shortcut = action.clone();
-                cx.key_on_key_down_for(
-                    id,
-                    Arc::new(move |host, acx, down| {
-                        if let Some(shortcut) = activate_shortcut {
-                            let matches_shortcut =
-                                down.key == shortcut.key && down.modifiers == shortcut.mods;
-                            if matches_shortcut
-                                && (!down.repeat || shortcut_repeat)
-                                && !down.ime_composing
-                            {
-                                super::super::mark_lifecycle_instant_if_inactive(
-                                    host,
-                                    acx,
-                                    &lifecycle_model_for_shortcut,
-                                    false,
-                                );
-                                host.record_transient_event(acx, super::super::KEY_CLICKED);
-                                dispatch_button_action(
-                                    host,
-                                    acx,
-                                    ActivateReason::Keyboard,
-                                    action_for_shortcut.clone(),
-                                );
-                                host.notify(acx);
-                                return true;
-                            }
-                        }
-
-                        let is_menu_key = down.key == KeyCode::ContextMenu;
-                        let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
-                        if !(is_menu_key || is_shift_f10) {
-                            return false;
-                        }
-
-                        host.record_transient_event(acx, super::super::KEY_CONTEXT_MENU_REQUESTED);
-                        host.notify(acx);
-                        true
-                    }),
-                );
-            }
+            keyboard::install_button_keyboard_behavior(
+                cx,
+                id,
+                keyboard::ButtonKeyboardBehaviorInput {
+                    enabled,
+                    activate_shortcut,
+                    shortcut_repeat,
+                    lifecycle_model: behavior.lifecycle_model.clone(),
+                    action: action.clone(),
+                },
+            );
 
             let clicked = cx.take_transient_for(id, super::super::KEY_CLICKED);
             super::super::item_behavior::populate_pressable_item_response(

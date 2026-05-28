@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI button pressable keyboard behavior into a private owner without changing
+      pressable props/chrome assembly, action dispatch, shortcut repeat policy, keyboard lifecycle
+      marking, context-menu key handling, response population, or public button facade behavior.
+      Result: `button_controls/behavior/keyboard.rs` owns focused button activate-shortcut handling
+      and keyboard context-menu requests. `button_controls/behavior.rs` keeps pressable props,
+      action activation, response population, and visual assembly.
 - [x] Split IMUI debug-draw round path-command paint dispatch into stroked and filled private
       owners without changing public draw-list commands, round path paint routing, stroke/fill
       painter calls, command fallthrough, or debug-draw smoke behavior.

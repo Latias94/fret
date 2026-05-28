@@ -499,6 +499,7 @@
     "ecosystem/fret-ui-kit/src/imui/button_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/button_controls/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/button_controls/behavior/action.rs",
+    "ecosystem/fret-ui-kit/src/imui/button_controls/behavior/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs",
     "ecosystem/fret-ui-kit/src/imui/button_controls/visual/a11y.rs",
     "ecosystem/fret-ui-kit/src/imui/button_controls/visual/variant.rs",
