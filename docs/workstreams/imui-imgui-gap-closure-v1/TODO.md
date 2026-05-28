@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI child-region resize stack assembly into a private owner without changing
+      resizable child-region detection, scroll/content construction, resize handle test-id
+      defaults, X/Y resize response writes, stack layout refinement, stack root test-id routing, or
+      public child-region facade/response behavior.
+      Result: `child_region/resize_stack.rs` owns resize handle test-id derivation, X/Y handle
+      creation, stack layout/style projection, children ordering, and resizable root test-id
+      stamping. `child_region.rs` keeps option normalization, scroll owner dispatch, response
+      aggregation, and the non-resizable vs resizable branch.
 - [x] Split IMUI child-region scroll/content/chrome assembly into a private owner without changing
       IMUI child mounting, scroll axis/options forwarding, framed/bare chrome, content/viewport/
       root test-id routing, resize layout override, resize handle assembly, stack root test-id

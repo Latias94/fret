@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 child-region resize-stack owner-split result:
+`ecosystem/fret-ui-kit/src/imui/child_region/resize_stack.rs` now owns resize handle test-id
+derivation, X/Y handle creation, stack layout/style projection, children ordering, and resizable
+root test-id stamping. `child_region.rs` keeps option normalization, scroll owner dispatch,
+response aggregation, and the non-resizable vs resizable branch.
+
 2026-05-28 child-region scroll owner-split result:
 `ecosystem/fret-ui-kit/src/imui/child_region/scroll.rs` now owns scroll-area builder
 construction, content mounting, framed chrome, handle forwarding, viewport test-id routing, and

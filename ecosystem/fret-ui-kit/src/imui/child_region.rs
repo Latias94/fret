@@ -2,17 +2,15 @@
 
 use std::cell::Cell;
 use std::rc::Rc;
-use std::sync::Arc;
 
-use fret_ui::element::{AnyElement, StackProps};
-use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
+use fret_ui::element::AnyElement;
+use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use super::{ChildRegionOptions, ChildRegionResponse, ImUiFacade};
 
 mod resize;
+mod resize_stack;
 mod scroll;
-
-use resize::{child_region_resize_x_handle, child_region_resize_y_handle};
 
 pub(super) fn child_region_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -51,41 +49,18 @@ pub(super) fn child_region_element<H: UiHost>(
         let mut response = ChildRegionResponse::empty();
 
         let element = if has_resize {
-            let resize_x_handle = resize_x.map(|resize_options| {
-                let handle_test_id = resize_options.handle_test_id.clone().or_else(|| {
-                    root_test_id
-                        .as_ref()
-                        .map(|base| Arc::from(format!("{base}.resize-x")))
-                });
-                child_region_resize_x_handle(cx, id, resize_options, handle_test_id, &mut response)
-            });
-            let resize_y_handle = resize_y.map(|resize_options| {
-                let handle_test_id = resize_options.handle_test_id.clone().or_else(|| {
-                    root_test_id
-                        .as_ref()
-                        .map(|base| Arc::from(format!("{base}.resize-y")))
-                });
-                child_region_resize_y_handle(cx, id, resize_options, handle_test_id, &mut response)
-            });
-
-            let mut stack = StackProps::default();
-            stack.layout = crate::declarative::style::layout_style(Theme::global(&*cx.app), layout);
-
-            let stack = cx.stack_props(stack, move |_cx| {
-                let mut children = vec![scroll];
-                if let Some(handle) = resize_x_handle {
-                    children.push(handle);
-                }
-                if let Some(handle) = resize_y_handle {
-                    children.push(handle);
-                }
-                children
-            });
-            if let Some(test_id) = root_test_id {
-                stack.test_id(test_id)
-            } else {
-                stack
-            }
+            resize_stack::child_region_resize_stack_element(
+                cx,
+                resize_stack::ChildRegionResizeStackInput {
+                    id,
+                    scroll,
+                    layout,
+                    root_test_id,
+                    resize_x,
+                    resize_y,
+                    response: &mut response,
+                },
+            )
         } else {
             scroll
         };
