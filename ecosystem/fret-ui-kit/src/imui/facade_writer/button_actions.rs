@@ -1,22 +1,7 @@
 use super::*;
 
-pub(super) fn button_command_with_options<H, W>(
-    ui: &mut W,
-    command: CommandId,
-    options: ButtonOptions,
-) -> ResponseExt
-where
-    H: UiHost,
-    W: UiWriterImUiFacadeExt<H> + ?Sized,
-{
-    let presentation =
-        ui.with_cx_mut(|cx| crate::command::command_presentation_for_window(cx, &command));
-
-    let mut options = options;
-    options.enabled = options.enabled && presentation.enabled;
-
-    button_controls::action_button_with_options(ui, presentation.label, command, options)
-}
+mod button_command;
+pub(super) use button_command::button_command_with_options;
 
 impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
     pub fn button(&mut self, label: impl Into<Arc<str>>) -> ResponseExt {

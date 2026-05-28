@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Button-Command Helper Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI button-command presentation and enabled gating split into a private owner
+without changing public button wrapper methods, focusable-recording behavior, command metadata
+lookup, or action button dispatch.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs` keeps public button wrappers
+  and the private helper re-export.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/button_command.rs` owns command
+  presentation lookup and enabled gating.
+- `tools/gate_imui_workstream_source.py` now rejects command presentation lookup and action-button
+  dispatch from drifting back into `button_actions.rs` and checks the dedicated helper owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui button_command_uses_command_metadata_and_gating --no-fail-fast`:
+  pass; 1 button-command metadata/gating test passed.
+
 ## Pressable Drag State-Machine Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI pressable drag state machine split into a private interaction-runtime owner

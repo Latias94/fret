@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI button-command presentation and enabled gating into a private owner without
+      changing public button wrapper methods, focusable-recording behavior, command metadata
+      lookup, or action button dispatch.
+      Result: `facade_writer/button_actions/button_command.rs` owns command presentation lookup and
+      enabled gating. `button_actions.rs` keeps the public button wrappers and private helper
+      re-export.
 - [x] Split IMUI pressable drag state machine into a private interaction-runtime owner without
       changing drag kind derivation, theme threshold reads, pointer-down active item marking,
       long-press cancellation/arming, thresholded move transitions, drag started/stopped transient

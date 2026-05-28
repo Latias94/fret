@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 button-command helper owner-split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/button_command.rs` now owns command
+presentation lookup and enabled gating. `button_actions.rs` keeps the public button wrappers and
+the private helper re-export.
+
 2026-05-28 pressable drag state-machine owner-split result:
 `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pressable.rs` now owns pressable pointer
 down/move/up drag state transitions, long-press timer coordination, active item cleanup, and

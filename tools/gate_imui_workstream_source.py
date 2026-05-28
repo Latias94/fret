@@ -19126,13 +19126,30 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs"),
             required=[
-                "pub(super) fn button_command_with_options",
-                "crate::command::command_presentation_for_window(cx, &command)",
-                "button_controls::action_button_with_options(ui, presentation.label, command, options)",
+                "mod button_command;",
+                "pub(super) use button_command::button_command_with_options;",
                 "resp.id()",
                 "resp.enabled()",
             ],
             forbidden=[
+                "crate::command::command_presentation_for_window(cx, &command)",
+                "button_controls::action_button_with_options(ui, presentation.label, command, options)",
+                "record_focusable(resp.id,",
+                "resp.enabled)",
+                "resp.enabled;",
+                "resp.enabled,",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/button_command.rs"),
+            required=[
+                "pub(in crate::imui::facade_writer) fn button_command_with_options",
+                "crate::command::command_presentation_for_window(cx, &command)",
+                "button_controls::action_button_with_options(ui, presentation.label, command, options)",
+            ],
+            forbidden=[
+                "mod button_command;",
+                "pub(super) use button_command::button_command_with_options;",
                 "record_focusable(resp.id,",
                 "resp.enabled)",
                 "resp.enabled;",
