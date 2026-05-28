@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI table-column visibility menu-item toggle behavior into a private owner without
+      changing header context-menu trigger selection, menu item group composition, test-id suffix
+      generation, shared visibility state updates, changed/edited response flags, or public
+      visibility helper behavior.
+      Result: `table_column_visibility/menu/item.rs` owns single checkbox item rendering and
+      visibility model mutation. `menu.rs` keeps header context-menu orchestration, item group
+      composition, identity/test-id filtering, and the private item-owner re-export.
 - [x] Split IMUI menubar active-trigger reconciliation into a private owner without changing
       open-menu synchronization, active-trigger installation, close-after-render reconciliation,
       popup close restoration, or begin-menu public behavior.

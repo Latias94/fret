@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 table-column visibility menu-item owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu/item.rs` now owns single checkbox item
+rendering, visible-state reads, model mutation, and changed/edited response flags. `menu.rs` keeps
+header context-menu orchestration, item group composition, identity/test-id filtering, and the
+private item-owner re-export.
+
 2026-05-28 menubar active-trigger reconcile owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger/reconcile.rs`
 now owns close-after-render reconciliation, popup close restoration, and open-menu/group-active

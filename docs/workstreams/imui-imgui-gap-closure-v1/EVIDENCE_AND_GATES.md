@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Table-Column Visibility Menu Item Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI table-column visibility menu-item toggle behavior split into a private owner
+without changing header context-menu trigger selection, menu item group composition, test-id suffix
+generation, shared visibility state updates, changed/edited response flags, or public visibility
+helper behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu.rs` keeps header context-menu
+  orchestration, item group composition, identity/test-id filtering, and the private item-owner
+  re-export.
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu/item.rs` owns single checkbox item
+  rendering, visible-state reads, model mutation, and changed/edited response flags.
+- `tools/gate_imui_workstream_source.py` now rejects checkbox item rendering/state mutation from
+  drifting back into `menu.rs` and checks the dedicated item owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui table_column_visibility --no-fail-fast`: pass; 4 table-column
+  visibility behavior tests passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_column_visibility_helpers_compile --no-fail-fast`:
+  pass; 1 public helper compile smoke passed.
+
 ## Menubar Active-Trigger Reconcile Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI menubar active-trigger reconciliation split into a private owner without
