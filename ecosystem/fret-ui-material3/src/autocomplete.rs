@@ -717,12 +717,17 @@ fn autocomplete_into_element<H: UiHost>(
         );
 
         if overlay_presence.present {
-            let Some(anchor) = fret_ui_kit::overlay::anchor_bounds_for_element(cx, input_id) else {
+            let field_id = runtime.field_element_id.get();
+            let popup_anchor_id = field_id.unwrap_or(input_id);
+            let Some(anchor) =
+                fret_ui_kit::overlay::anchor_bounds_for_element(cx, popup_anchor_id)
+            else {
                 return trigger;
             };
 
-            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_element_root(
                 cx,
+                popup_anchor_id,
                 fret_ui::Invalidation::Layout,
                 Px(0.0),
             );
@@ -836,7 +841,7 @@ fn autocomplete_into_element<H: UiHost>(
             request.root_name = Some(format!("material3.autocomplete.{}", input_id.0));
             request.close_on_window_focus_lost = true;
             request.close_on_window_resize = true;
-            if let Some(field_id) = runtime.field_element_id.get() {
+            if let Some(field_id) = field_id {
                 request = request.add_dismissable_branch(field_id);
             }
 

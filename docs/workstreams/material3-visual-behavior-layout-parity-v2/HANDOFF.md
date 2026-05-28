@@ -16,6 +16,9 @@ chrome test now tracks the current container + active-indicator layer split.
 M3PV2-024 is complete: the Material field text-start inset helper moved from Select into
 `foundation::field`, TextField uses it for leading-icon input padding, floating label, and
 supporting text, and fixed geometry gates now cover idle/focus/populated label positions.
+M3PV2-025 is complete: Autocomplete and ExposedDropdown popup geometry now anchors to the
+TextField chrome element when available, so icon-bearing fields get menu/listbox width parity with
+the full field while the input remains the combobox trigger and keyboard/a11y owner.
 
 ## Decisions
 
@@ -27,10 +30,10 @@ supporting text, and fixed geometry gates now cover idle/focus/populated label p
 
 ## Next Recommended Action
 
-Continue M3PV2-020 with a true style/layout field-family packet. Good next candidates are
-Autocomplete/ExposedDropdown popup width/chrome, Select visual/layout token proof, or a dedicated
-multiline TextField scenario. Do not mark motion axes complete from settled-geometry evidence; the
-TextField motion axis still needs a true fixed-timestep transition packet.
+Continue M3PV2-020 with another field-family packet. Good next candidates are Select visual/layout
+token proof, a dedicated multiline TextField scenario, or true popup surface style/elevation proof
+for Autocomplete/ExposedDropdown. Do not mark motion axes complete from settled-geometry evidence;
+TextField and popup motion still need fixed-timestep transition packets.
 
 ## Useful Gates
 

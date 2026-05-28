@@ -37,6 +37,36 @@ fn live_test_id_exists(
         .any(|m| ui.debug_node_visual_bounds(m.node).is_some())
 }
 
+fn live_test_id_anchor_bounds(
+    ui: &UiTree<TestHost>,
+    app: &TestHost,
+    window: AppWindowId,
+    id: &str,
+) -> Rect {
+    fret_ui::declarative::live_test_id_matches_for_window(app, window, id)
+        .into_iter()
+        .find_map(|m| {
+            ui.debug_node_visual_bounds(m.node)
+                .or_else(|| ui.debug_node_bounds(m.node))
+        })
+        .unwrap_or_else(|| panic!("expected live bounds for test_id {id}"))
+}
+
+fn live_test_id_layout_bounds(
+    ui: &UiTree<TestHost>,
+    app: &TestHost,
+    window: AppWindowId,
+    id: &str,
+) -> Rect {
+    fret_ui::declarative::live_test_id_matches_for_window(app, window, id)
+        .into_iter()
+        .find_map(|m| {
+            ui.debug_node_bounds(m.node)
+                .or_else(|| ui.debug_node_visual_bounds(m.node))
+        })
+        .unwrap_or_else(|| panic!("expected live layout bounds for test_id {id}"))
+}
+
 fn click_semantics_test_id(
     ui: &mut UiTree<TestHost>,
     app: &mut TestHost,
@@ -1250,6 +1280,145 @@ fn material3_autocomplete_exposes_stable_part_test_ids() {
             "expected live Autocomplete popup/item part test_id {id}"
         );
     }
+
+    let chrome_bounds = live_test_id_anchor_bounds(&ui, &app, window, "m3-autocomplete.chrome");
+    let listbox_bounds = live_test_id_layout_bounds(&ui, &app, window, "m3-autocomplete.listbox");
+    let epsilon = 1.0;
+    assert!(
+        (listbox_bounds.origin.x.0 - chrome_bounds.origin.x.0).abs() <= epsilon,
+        "expected Autocomplete popup to align with field chrome x (got {}, want {})",
+        listbox_bounds.origin.x.0,
+        chrome_bounds.origin.x.0
+    );
+    assert!(
+        (listbox_bounds.size.width.0 - chrome_bounds.size.width.0).abs() <= epsilon,
+        "expected Autocomplete popup width to match field chrome width (got {}, want {})",
+        listbox_bounds.size.width.0,
+        chrome_bounds.size.width.0
+    );
+}
+
+#[test]
+fn material3_exposed_dropdown_popup_matches_field_chrome_bounds() {
+    use fret_icons::ids;
+    use fret_ui_material3::{AutocompleteItem, ExposedDropdown};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(360.0)),
+    );
+
+    let selected_value = app.models_mut().insert(None::<Arc<str>>);
+    let query = app.models_mut().insert(String::new());
+    let items: Arc<[AutocompleteItem]> = vec![
+        AutocompleteItem::new("alpha", "Alpha").test_id("m3-exposed-dropdown-alpha"),
+        AutocompleteItem::new("beta", "Beta"),
+    ]
+    .into();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let items = items.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let exposed = ExposedDropdown::new(selected_value.clone())
+                    .query(query.clone())
+                    .a11y_label("Material exposed dropdown")
+                    .label("Assignee")
+                    .placeholder("Choose")
+                    .supporting_text("Pick one")
+                    .leading_icon(ids::ui::SEARCH)
+                    .items(items)
+                    .test_id("m3-exposed-dropdown")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(32.0), exposed)]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    for id in [
+        "m3-exposed-dropdown",
+        "m3-exposed-dropdown.chrome",
+        "m3-exposed-dropdown.label",
+        "m3-exposed-dropdown.supporting-text",
+        "m3-exposed-dropdown.leading-icon",
+        "m3-exposed-dropdown.trailing-icon",
+    ] {
+        assert!(
+            live_test_id_exists(&ui, &app, window, id),
+            "expected live ExposedDropdown field part test_id {id}"
+        );
+    }
+
+    click_semantics_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        "m3-exposed-dropdown.trailing-icon",
+        PointerId(1),
+    );
+
+    for _ in 0..8 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+        if live_test_id_exists(&ui, &app, window, "m3-exposed-dropdown.listbox") {
+            break;
+        }
+    }
+
+    for id in [
+        "m3-exposed-dropdown.listbox",
+        "m3-exposed-dropdown-alpha",
+        "m3-exposed-dropdown-alpha.chrome",
+        "m3-exposed-dropdown.option.beta",
+        "m3-exposed-dropdown.option.beta.chrome",
+    ] {
+        assert!(
+            live_test_id_exists(&ui, &app, window, id),
+            "expected live ExposedDropdown popup/item part test_id {id}"
+        );
+    }
+
+    let chrome_bounds = live_test_id_anchor_bounds(&ui, &app, window, "m3-exposed-dropdown.chrome");
+    let listbox_bounds =
+        live_test_id_layout_bounds(&ui, &app, window, "m3-exposed-dropdown.listbox");
+    let epsilon = 1.0;
+    assert!(
+        (listbox_bounds.origin.x.0 - chrome_bounds.origin.x.0).abs() <= epsilon,
+        "expected ExposedDropdown popup to align with field chrome x (got {}, want {})",
+        listbox_bounds.origin.x.0,
+        chrome_bounds.origin.x.0
+    );
+    assert!(
+        (listbox_bounds.size.width.0 - chrome_bounds.size.width.0).abs() <= epsilon,
+        "expected ExposedDropdown popup width to match field chrome width (got {}, want {})",
+        listbox_bounds.size.width.0,
+        chrome_bounds.size.width.0
+    );
 }
 
 #[test]

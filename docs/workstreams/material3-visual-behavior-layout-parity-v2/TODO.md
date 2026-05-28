@@ -85,6 +85,23 @@ Task IDs use `M3PV2-*`.
   scenario. TextField motion still needs a true fixed-timestep transition packet before closing the
   motion axis.
 
+- [x] M3PV2-025 [owner=codex] [deps=M3PV2-024] [scope=ecosystem/fret-ui-material3/src/autocomplete.rs,ecosystem/fret-ui-material3/tests/automation_surface.rs,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close Autocomplete and ExposedDropdown popup width drift by matching the menu/listbox to
+  the Material field chrome/anchor width while keeping input-owned combobox focus and keyboard
+  behavior unchanged.
+  Validation: `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_autocomplete_exposes_stable_part_test_ids material3_exposed_dropdown_popup_matches_field_chrome_bounds`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_autocomplete_semantics_v1 material3_exposed_dropdown_trailing_icon_toggles_overlay_v1 material3_exposed_dropdown_reverts_query_to_committed_selection_on_blur_v1`;
+  `cargo nextest run -p fret-ui-material3 --lib autocomplete_default_listbox_test_id_uses_dotted_part_contract`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`.
+  Review: DONE. This found a Material recipe layout issue: Autocomplete was using the inner input
+  element as its popup placement/width anchor, which made icon-bearing fields render a narrower
+  popup than the field chrome. Popup geometry now uses the field element when available; the input
+  remains the trigger, focus owner, keyboard handler, and combobox relation source.
+  Evidence: `artifacts/material3_autocomplete_exposed_dropdown_popup_width_packet_v2.md`.
+  Handoff: Continue M3PV2-020 with Select visual/layout token proof, multiline TextField, or a
+  true popup surface style/elevation packet. Autocomplete and ExposedDropdown style and motion axes
+  still need dedicated packets.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]
