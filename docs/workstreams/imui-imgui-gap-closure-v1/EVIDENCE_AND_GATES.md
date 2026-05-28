@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Popup Menu Overlay Request Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI popup-menu overlay request assembly split into a private request owner without
+changing overlay id/root naming, popup open model forwarding, trigger fallback, auto-focus targets,
+focus-outside submenu preservation, menubar close-auto-focus suppression, submenu pointer move
+handler installation, modal flag forwarding, or public popup/menu facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu.rs` keeps overlay id/root creation,
+  popup/menubar policy lookup, panel build orchestration, and request owner dispatch.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/request.rs` owns open model lookup, trigger
+  fallback, initial focus targets, dismiss/close-auto-focus handlers, submenu pointer-move handler
+  installation, modal flag forwarding, and `OverlayController::request(...)` submission.
+- `tools/gate_imui_workstream_source.py` now rejects request assembly and handler logic from
+  drifting back into `menu.rs` and checks the dedicated request owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass; 21 popup/hover tests passed.
+- `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass; 18 menu/submenu/tab
+  tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Text Picker Keyboard Preparation Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI text-picker keyboard preparation split into a private core sub-owner without

@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 popup-menu overlay request owner-split result:
+`ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/request.rs` now owns popup-menu open model
+lookup, trigger fallback, auto-focus target construction, focus-outside submenu preservation,
+menubar close-auto-focus suppression, submenu pointer-move handler installation, modal flag
+forwarding, and final overlay request submission. `menu.rs` keeps overlay id/root creation,
+popup/menubar policy lookup, panel build orchestration, and request owner dispatch.
+
 2026-05-28 text-picker keyboard preparation owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core/keyboard_state.rs` now owns text-picker
 keyboard model creation, enabled/empty/exact-match reconciliation, active source projection,

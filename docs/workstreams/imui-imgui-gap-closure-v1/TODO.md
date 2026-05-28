@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI popup-menu overlay request assembly into a private request owner without changing
+      overlay id/root naming, popup open model forwarding, trigger fallback, auto-focus targets,
+      focus-outside submenu preservation, menubar close-auto-focus suppression, submenu pointer
+      move handler installation, modal flag forwarding, or public popup/menu facade behavior.
+      Result: `popup_overlay/menu/request.rs` owns dismiss/close-auto-focus handlers and
+      `dismissible_menu_request_with_modal_and_dismiss_handler(...)` assembly. `menu.rs` keeps
+      overlay id creation, policy lookup, panel build orchestration, and request owner dispatch.
 - [x] Split IMUI text-picker keyboard preparation into a private core sub-owner without changing
       keyboard model identity, enabled/empty/exact-match reconciliation, pending keyboard pick
       projection, active descendant element projection, input-root forwarding, popup forwarding,

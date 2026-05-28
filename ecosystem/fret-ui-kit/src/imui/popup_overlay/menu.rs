@@ -1,18 +1,16 @@
-use std::sync::Arc;
-
-use fret_ui::action::{DismissReason, OnCloseAutoFocus, OnDismissRequest};
 use fret_ui::{GlobalElementId, UiHost};
 
 use super::super::{ImUiFacade, PopupMenuOptions, UiWriterImUiFacadeExt};
-use crate::primitives::menu::root as menu_root;
-use crate::{OverlayController, OverlayPresence};
+use crate::OverlayController;
 
 mod panel;
 mod policy;
+mod request;
 
 use panel::build_popup_menu;
 use policy::popup_menu_policy_state_for_root;
 pub(in crate::imui) use policy::{ImUiMenuNavState, ImUiPopupMenuPolicyState};
+use request::{PopupMenuOverlayRequestInput, request_popup_menu_overlay};
 
 pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -45,81 +43,20 @@ pub(super) fn begin_popup_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
     };
 
     ui.with_cx_mut(|cx| {
-        let open = super::super::with_popup_store_for_id(cx, id, |st, _app| st.open.clone());
-        let trigger_id = trigger.unwrap_or(overlay_id);
-        let initial_focus = if options.auto_focus {
-            menu_root::MenuInitialFocusTargets::new()
-                .keyboard_entry_focus(built.first_item)
-                .pointer_content_focus(built.content_focus)
-        } else {
-            menu_root::MenuInitialFocusTargets::new()
-        };
-        let on_dismiss_request = if preserve_focus_outside_while_submenu_open {
-            let submenu_models = popup_policy.submenu_models.clone();
-            let open_for_dismiss = open.clone();
-            Some(Arc::new(
-                move |host: &mut dyn fret_ui::action::UiActionHost,
-                      _acx,
-                      req: &mut fret_ui::action::DismissRequestCx| {
-                    if matches!(req.reason, DismissReason::FocusOutside) {
-                        let submenu_open = host
-                            .models_mut()
-                            .read(&submenu_models.open_value, |value| value.clone())
-                            .ok()
-                            .flatten();
-                        if submenu_open.is_some() {
-                            req.prevent_default();
-                            return;
-                        }
-                    }
-                    let _ = host
-                        .models_mut()
-                        .update(&open_for_dismiss, |value| *value = false);
-                },
-            ) as OnDismissRequest)
-        } else {
-            None
-        };
-        let on_close_auto_focus = menubar_policy.as_ref().map(|policy| {
-            let suppress_close_auto_focus = policy.suppress_close_auto_focus_once.clone();
-            Arc::new(
-                move |host: &mut dyn fret_ui::action::UiFocusActionHost,
-                      _acx,
-                      req: &mut fret_ui::action::AutoFocusRequestCx| {
-                    let suppress = host
-                        .models_mut()
-                        .read(&suppress_close_auto_focus, |value| *value)
-                        .ok()
-                        .unwrap_or(false);
-                    if !suppress {
-                        return;
-                    }
-                    let _ = host
-                        .models_mut()
-                        .update(&suppress_close_auto_focus, |value| *value = false);
-                    req.prevent_default();
-                },
-            ) as OnCloseAutoFocus
-        });
-        let req = menu_root::dismissible_menu_request_with_modal_and_dismiss_handler(
+        request_popup_menu_overlay(
             cx,
-            overlay_id,
-            trigger_id,
-            open,
-            OverlayPresence::instant(true),
-            built.children,
-            root_name.clone(),
-            initial_focus,
-            None,
-            on_close_auto_focus,
-            on_dismiss_request,
-            Some(menu_root::submenu_pointer_move_handler(
-                popup_policy.submenu_models.clone(),
-                popup_policy.submenu_cfg,
-            )),
-            options.modal,
+            PopupMenuOverlayRequestInput {
+                id,
+                overlay_id,
+                trigger,
+                root_name,
+                options,
+                popup_policy,
+                menubar_policy,
+                preserve_focus_outside_while_submenu_open,
+                built,
+            },
         );
-        OverlayController::request(cx, req);
     });
 
     true
