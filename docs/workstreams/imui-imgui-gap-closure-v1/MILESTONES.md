@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 hover query delay read owner-split result:
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/read.rs` now owns local hover-delay
+state, transient consumption, shared-delay flag reads, and `HoverQueryDelayRead` projection.
+`interaction_runtime/hover.rs` keeps active-item blocking, hover-change hook installation, timer
+dispatch, shared-delay delegation, and long-press delegation.
+
 2026-05-28 layout sugar scoped/spacer owner-split result:
 `ecosystem/fret-ui-kit/src/imui/layout_sugar/scoped.rs` now owns item-flow, same-line, and indent
 container composition. `ecosystem/fret-ui-kit/src/imui/layout_sugar/spacers.rs` owns dummy/spacing

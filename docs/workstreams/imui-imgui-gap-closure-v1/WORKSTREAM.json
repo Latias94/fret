@@ -607,6 +607,7 @@
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/response.rs",
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs",
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/long_press.rs",
+    "ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/read.rs",
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay.rs",
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/timers.rs",
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/lifecycle.rs",

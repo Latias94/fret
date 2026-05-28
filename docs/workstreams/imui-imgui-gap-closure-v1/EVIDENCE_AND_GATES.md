@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Hover Query Delay Read Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI hover query delay read/projection moved into a private owner without changing
+hover hook installation, stationary/short/normal delay timers, shared-delay timers, long-press
+timer handling, active-item blocking, transient consumption, or `HoverQueryDelayRead` values.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs` keeps active-item blocking,
+  hover-change hook installation, timer dispatch, shared-delay delegation, and long-press
+  delegation.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/read.rs` owns local hover-delay state,
+  transient consumption, shared-delay flag reads, and `HoverQueryDelayRead` projection.
+- `tools/gate_imui_workstream_source.py` now rejects hover delay read/projection bodies from
+  drifting back into `hover.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Layout Sugar Scoped/Spacer Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI porting layout sugar split into private scoped-layout and spacer owners

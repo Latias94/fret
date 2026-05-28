@@ -44,6 +44,15 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI hover query delay read/projection out of
+      `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs` into a private read owner
+      without changing hover hook installation, stationary/short/normal delay timers, shared-delay
+      timers, long-press timer handling, active-item blocking, transient consumption, or
+      `HoverQueryDelayRead` values.
+      Result: `interaction_runtime/hover/read.rs` owns local hover-delay state, transient
+      consumption, shared-delay flag reads, and `HoverQueryDelayRead` projection.
+      `interaction_runtime/hover.rs` keeps active-item blocking, hover-change hook installation,
+      timer dispatch, shared-delay delegation, and long-press delegation.
 - [x] Split IMUI porting layout sugar into private scoped-layout and spacer owners without
       changing `items`, `same_line`, `dummy`, `spacing`, `indent`, layout-token defaults,
       explicit dummy sizing, indent composition, test-id stamping, or public-in-IMUI APIs.
