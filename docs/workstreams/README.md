@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 492
+- Dedicated directories: 493
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2234,6 +2234,7 @@ Rule:
 - `docs/workstreams/material3/` — first 2026-01-22, latest 2026-02-24, 5 markdown docs
 - `docs/workstreams/material3-bottom-sheet-chrome-alias-packet-v1/` — first 2026-05-28, latest 2026-05-28, 7 markdown docs (closed follow-on for Material3 BottomSheet layout-safe `.chrome` aliases using hidden diagnostic anchors; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-checkbox-gallery-diagnostics-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 Checkbox centered-chrome and tri-state gallery diagnostics, including stale script navigation repair; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-chip-visual-diagnostics-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 Assist/Suggestion/Filter/Input chip visual chrome gallery diagnostics; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-expressive-alignment-v1/` — first 2026-02-18, latest 2026-02-18, 4 markdown docs
 - `docs/workstreams/material3-icon-toggle-button-expressive-v1/` — first 2026-02-18, latest 2026-02-18, 3 markdown docs
 - `docs/workstreams/material3-canvas-draw-region-diagnostics-v1/` — first 2026-05-28, latest 2026-05-28, 7 markdown docs (closed follow-on for Material3 ProgressIndicator/Slider canvas draw-region diagnostics, recipe-level rectangular anchors, and named SceneOp mechanism split; includes `WORKSTREAM.json`)

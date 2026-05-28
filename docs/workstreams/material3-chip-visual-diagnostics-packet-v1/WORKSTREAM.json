@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "slug": "material3-chip-visual-diagnostics-packet-v1",
+  "title": "Material 3 Chip Visual Diagnostics Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "diagnostics_follow_on",
+  "problem": "Closed the AssistChip, SuggestionChip, FilterChip, and InputChip visual follow-on by adding a focused gallery diagnostics script that proves representative chip root/chrome geometry and trailing-icon selector readiness.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-chip-visual-diagnostics-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-chip-visual-diagnostics-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-chip-visual-diagnostics-packet-v1/TODO.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-chip-visual-diagnostics-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-chip-visual-diagnostics-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the Material3 State Matrix chip visual chrome diagnostics script against the UI Gallery.",
+    "commands": [
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-chip-visual-chrome.json --dir target/fret-diag/material3-chip-visual-chrome-20260528 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3"
+    ]
+  },
+  "gates": [
+    {
+      "name": "chip-visual-chrome-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-chip-visual-chrome.json --dir target/fret-diag/material3-chip-visual-chrome-20260528 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3"
+    },
+    {
+      "name": "chip-automation-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_segmented_buttons_and_chips_expose_stable_part_test_ids"
+    },
+    {
+      "name": "chip-semantics-and-roving",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment chips_export_checked_state_for_selected_semantics chip_set_roving_treats_trailing_action_focus_as_active_chip"
+    },
+    {
+      "name": "diag-script-registry",
+      "command": "python tools/check_diag_scripts_registry.py"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-material3/src/chip.rs",
+    "ecosystem/fret-ui-material3/src/suggestion_chip.rs",
+    "ecosystem/fret-ui-material3/src/filter_chip.rs",
+    "ecosystem/fret-ui-material3/src/input_chip.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/material3/state_matrix.rs",
+    "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-chip-visual-chrome.json",
+    "tools/diag-scripts/ui-gallery-material3-chip-visual-chrome.json",
+    "tools/diag-scripts/suites/ui-gallery-material3-chip-visual-chrome/suite.json",
+    "docs/workstreams/material3-chip-visual-diagnostics-packet-v1/artifacts/chip_visual_diagnostics_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "return_to_material3_sweep",
+    "notes": "Chip visual chrome diagnostics are closed for representative flat/elevated/selected/trailing-icon gallery states. Keep shared indication and minimum target helpers in Material foundation."
+  }
+}

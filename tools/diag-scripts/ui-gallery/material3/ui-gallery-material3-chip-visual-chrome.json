@@ -1,0 +1,231 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-material3-chip-visual-chrome",
+    "required_capabilities": ["diag.script_v2"],
+    "required_launch_features": ["gallery-material3"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "material3_state_matrix"
+    },
+    "tags": [
+      "ui_gallery",
+      "material3",
+      "chip",
+      "visual_chrome",
+      "minimum_target",
+      "diagnostics"
+    ],
+    "target_hints": [
+      "Starts directly on the Material 3 State Matrix page.",
+      "Verifies representative AssistChip, SuggestionChip, FilterChip, and InputChip root/chrome geometry.",
+      "Locks that chip visual chrome remains centered inside the minimum interactive target."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-material3-state-matrix" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-chip-flat" },
+      "delta_y": -180.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-chip-flat" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-chip-flat" },
+        "min_w_px": 48.0,
+        "min_h_px": 48.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-chip-flat.chrome" },
+        "max_w_px": 240.0,
+        "max_h_px": 80.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "ui-gallery-material3-chip-flat" },
+        "b": { "kind": "test_id", "id": "ui-gallery-material3-chip-flat.chrome" },
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "ui-gallery-material3-chip-elevated" },
+        "b": { "kind": "test_id", "id": "ui-gallery-material3-chip-elevated.chrome" },
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "ui-gallery-material3-suggestion-chip-flat" },
+        "b": { "kind": "test_id", "id": "ui-gallery-material3-suggestion-chip-flat.chrome" },
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "ui-gallery-material3-suggestion-chip-elevated" },
+        "b": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-suggestion-chip-elevated.chrome"
+        },
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-selected" },
+      "delta_y": -180.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-selected" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-selected" },
+        "b": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-selected.chrome" },
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-override" },
+        "b": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-override.chrome" },
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-filter-chip-selected.trailing-icon"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-input-chip-unselected" },
+      "delta_y": -180.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-input-chip-unselected" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "ui-gallery-material3-input-chip-selected" },
+        "b": { "kind": "test_id", "id": "ui-gallery-material3-input-chip-selected.chrome" },
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "ui-gallery-material3-input-chip-unselected" },
+        "b": { "kind": "test_id", "id": "ui-gallery-material3-input-chip-unselected.chrome" },
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-input-chip-unselected.trailing-icon"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-material3-chip-visual-chrome",
+      "max_snapshots": 3
+    }
+  ]
+}

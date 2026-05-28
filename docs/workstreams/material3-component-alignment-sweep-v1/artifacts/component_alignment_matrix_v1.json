@@ -282,24 +282,25 @@
     {
       "id": "chip",
       "family": "choice_control",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_visual_diagnostics_aligned",
       "wave": "wave4_choice_controls",
       "default_owner_bias": "material_recipe",
       "packet_strategy": "choice_chip_packet_or_gallery",
-      "first_gate_kind": "scene_semantics",
+      "first_gate_kind": "chip_visual_chrome_gallery_diag",
       "selector_status": "choice_selector_ready",
       "stable_part_ids": [
         "assist_chip",
         "assist_chip.chrome"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-chip-visual-diagnostics-packet-v1/artifacts/chip_visual_diagnostics_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe owns assist chip label/icon composition, variant chrome, and selectors",
         "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
-        "diagnostics/test_harness covers stable chip-set automation selectors",
-        "follow_on covers chip visual parity only if gallery diagnostics show spacing/elevation drift"
+        "diagnostics/test_harness covers stable chip-set automation selectors and representative chip visual chrome gallery diagnostics",
+        "no new kit_policy or mechanism gap found"
       ]
     },
     {
@@ -500,11 +501,11 @@
     {
       "id": "filter_chip",
       "family": "choice_control",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_visual_diagnostics_aligned",
       "wave": "wave4_choice_controls",
       "default_owner_bias": "material_recipe",
       "packet_strategy": "chip_family_packet",
-      "first_gate_kind": "scene_semantics",
+      "first_gate_kind": "chip_visual_chrome_gallery_diag",
       "selector_status": "choice_selector_ready",
       "stable_part_ids": [
         "filter_chip",
@@ -512,13 +513,14 @@
         "filter_chip.trailing-icon"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-chip-visual-diagnostics-packet-v1/artifacts/chip_visual_diagnostics_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe owns selected semantics, leading selected-check fallback, trailing action composition, and selectors",
         "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
-        "test_harness covers checked-state semantics and trailing-action selector readiness",
-        "follow_on covers visual spacing/elevation drift if gallery diagnostics prove it"
+        "test_harness covers checked-state semantics, trailing-action selector readiness, and representative selected/elevated visual chrome gallery diagnostics",
+        "no new kit_policy or mechanism gap found"
       ]
     },
     {
@@ -549,11 +551,11 @@
     {
       "id": "input_chip",
       "family": "choice_control",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_visual_diagnostics_aligned",
       "wave": "wave4_choice_controls",
       "default_owner_bias": "material_recipe",
       "packet_strategy": "chip_family_packet",
-      "first_gate_kind": "scene_semantics_trailing_action",
+      "first_gate_kind": "chip_visual_chrome_gallery_diag",
       "selector_status": "choice_selector_ready",
       "stable_part_ids": [
         "input_chip",
@@ -561,13 +563,14 @@
         "input_chip.trailing-icon"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-chip-visual-diagnostics-packet-v1/artifacts/chip_visual_diagnostics_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe owns selected semantics, leading/trailing icon composition, trailing action focus routing, and selectors",
         "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
-        "test_harness covers checked-state semantics and trailing-action selector readiness",
-        "follow_on covers visual spacing/elevation drift if gallery diagnostics prove it"
+        "test_harness covers checked-state semantics, trailing-action selector readiness, and representative selected/unselected visual chrome gallery diagnostics",
+        "no new kit_policy or mechanism gap found"
       ]
     },
     {
@@ -950,24 +953,25 @@
     {
       "id": "suggestion_chip",
       "family": "choice_control",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_visual_diagnostics_aligned",
       "wave": "wave4_choice_controls",
       "default_owner_bias": "material_recipe",
       "packet_strategy": "chip_family_packet",
-      "first_gate_kind": "scene_semantics",
+      "first_gate_kind": "chip_visual_chrome_gallery_diag",
       "selector_status": "choice_selector_ready",
       "stable_part_ids": [
         "suggestion_chip",
         "suggestion_chip.chrome"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-chip-visual-diagnostics-packet-v1/artifacts/chip_visual_diagnostics_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe owns suggestion chip label/icon composition, variant chrome, and selectors",
         "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
-        "diagnostics/test_harness covers stable chip-set automation selectors",
-        "follow_on covers chip visual parity only if gallery diagnostics show spacing/elevation drift"
+        "diagnostics/test_harness covers stable chip-set automation selectors and representative flat/elevated visual chrome gallery diagnostics",
+        "no new kit_policy or mechanism gap found"
       ]
     },
     {

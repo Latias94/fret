@@ -145,6 +145,16 @@ cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/u
 The centered-chrome script had a stale navigation target and now opens the dedicated Material3
 Checkbox page. No Checkbox recipe, foundation, kit-policy, or mechanism change was needed.
 
+Additional chip visual diagnostics passed on 2026-05-28:
+
+```powershell
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-chip-visual-chrome.json --dir target/fret-diag/material3-chip-visual-chrome-20260528 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3
+```
+
+The script covers representative AssistChip, SuggestionChip, FilterChip, and InputChip root/chrome
+geometry plus trailing-icon selector readiness. No chip recipe, foundation, kit-policy, or
+mechanism change was needed.
+
 ## Follow-Ons
 
 - `M3CAS-080-F1`: Add exact named `SceneOp` draw-region diagnostics only if a concrete consumer

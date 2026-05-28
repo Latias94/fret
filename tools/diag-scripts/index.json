@@ -10468,6 +10468,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-material3-chip-visual-chrome",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-chip-visual-chrome.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-chip-visual-chrome"
+      ],
+      "tags": [
+        "chip",
+        "diagnostics",
+        "material3",
+        "minimum_target",
+        "ui_gallery",
+        "visual_chrome"
+      ],
+      "target_hints": [
+        "Starts directly on the Material 3 State Matrix page.",
+        "Verifies representative AssistChip, SuggestionChip, FilterChip, and InputChip root/chrome geometry.",
+        "Locks that chip visual chrome remains centered inside the minimum interactive target."
+      ]
+    },
+    {
       "id": "ui-gallery-material3-state-matrix-chip-action-state",
       "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-state-matrix-chip-action-state.json",
       "required_capabilities": [
