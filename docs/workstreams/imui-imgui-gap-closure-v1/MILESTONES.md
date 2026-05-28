@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 debug-draw geometry summary projection owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/geometry.rs` now
+dispatches only across geometry family owners. `geometry/linear.rs`, `geometry/mesh.rs`,
+`geometry/round.rs`, and `geometry/beziers.rs` own the concrete summary point/vertex/index/triangle
+counts for their command families.
+
 2026-05-28 debug-draw stroked linear path painter owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear/line_poly.rs`
 now owns line and polyline stroke painting, and

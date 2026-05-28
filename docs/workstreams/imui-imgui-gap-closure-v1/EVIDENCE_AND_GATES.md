@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Debug-Draw Geometry Summary Projection Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI debug-draw geometry summary projection split into linear, mesh, round, and
+Bezier private owners without changing public command summaries, point/vertex/index/triangle
+counts, clip-state projection, media/text summary projection, or debug-draw smoke behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/geometry.rs`
+  now only dispatches to geometry family owners.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/geometry/linear.rs`
+  owns line/polyline/polygon/rect/quad/triangle summary counts.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/geometry/mesh.rs`
+  owns rect multi-color and triangle-mesh vertex/index/triangle summary counts.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/geometry/round.rs`
+  owns circle/ngon/ellipse summary counts.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/geometry/beziers.rs`
+  owns quadratic/cubic Bezier summary counts.
+- `tools/gate_imui_workstream_source.py` now rejects concrete geometry command summary counts from
+  drifting back into `summary_projection/geometry.rs` and checks each dedicated family owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast`: pass; 39
+  debug-draw tests passed.
+
 ## Debug-Draw Stroked Linear Path Painter Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI debug-draw stroked linear path painters split into line/polyline and

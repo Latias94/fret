@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw geometry summary projection into linear, mesh, round, and Bezier
+      private owners without changing public command summaries, point/vertex/index/triangle counts,
+      clip-state projection, media/text summary projection, or debug-draw smoke behavior.
+      Result: `commands/summary_projection/geometry.rs` now only dispatches to family owners;
+      `geometry/linear.rs`, `geometry/mesh.rs`, `geometry/round.rs`, and `geometry/beziers.rs`
+      own the concrete geometry summary counts.
 - [x] Split IMUI debug-draw stroked linear path painters into line/polyline and rect/quad/triangle
       private owners without changing public draw-list commands, path command generation, shared
       stroke style dispatch, canvas path dispatch, or debug-draw smoke behavior.
