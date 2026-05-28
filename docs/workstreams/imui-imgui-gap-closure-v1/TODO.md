@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI menu-family trigger menubar behavior into a private owner without changing
+      active trigger install/population, click/shortcut activation, menubar trigger-row registry
+      sync, patient-click timer wiring, ArrowDown/ArrowUp open behavior, or public menu facade
+      behavior.
+      Result: `menu_family_controls/trigger/behavior/menubar.rs` owns menubar trigger-row
+      registration, sync, toggle-on-activate, and vertical-arrow open support. `behavior.rs` keeps
+      base active-trigger behavior and response population.
 - [x] Split IMUI disclosure trigger response projection into a private owner without changing
       disclosure pointer/shortcut behavior, context-menu and double-click transient signaling,
       hover-state projection, active-item hover blocking, or public disclosure facade behavior.

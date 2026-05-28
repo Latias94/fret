@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Menu-Family Trigger Menubar Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI menu-family trigger menubar behavior split into a private owner without
+changing active trigger install/population, click/shortcut activation, menubar trigger-row registry
+sync, patient-click timer wiring, ArrowDown/ArrowUp open behavior, or public menu facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior.rs` keeps base
+  active-trigger behavior, shortcut activation, click transient recording, and response
+  population.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior/menubar.rs` owns menubar
+  trigger-row registration, state sync, patient-click timer wiring, toggle-on-activate, and
+  ArrowDown/ArrowUp open support.
+- `tools/gate_imui_workstream_source.py` now rejects menubar trigger-row wiring from drifting back
+  into `behavior.rs` and checks the dedicated menubar owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass; 18 menu/submenu/tab
+  tests passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_family_controls::tests --no-fail-fast`:
+  pass; 1 menu-family visual role test passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Disclosure Trigger Response Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI disclosure trigger response projection split into a private owner without

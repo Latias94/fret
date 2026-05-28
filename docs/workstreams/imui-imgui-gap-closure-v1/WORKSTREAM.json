@@ -551,6 +551,7 @@
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior/menubar.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/policy.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs",

@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 menu-family trigger menubar owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior/menubar.rs` now owns
+menubar trigger-row registration, state sync, patient-click timer wiring, toggle-on-activate, and
+ArrowDown/ArrowUp open support. `behavior.rs` keeps base active-trigger behavior, shortcut
+activation, click transient recording, and active-trigger response population.
+
 2026-05-28 disclosure trigger response owner-split result:
 `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior/response.rs` now owns
 trigger-response projection, hover query hook attachment, active-item hover blocking, and
