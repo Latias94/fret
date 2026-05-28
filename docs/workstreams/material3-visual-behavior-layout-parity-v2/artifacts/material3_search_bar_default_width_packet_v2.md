@@ -62,7 +62,9 @@ cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D
 
 ## Residual Risk
 
-- SearchBar focus affordance and open/focus choreography still need a dedicated behavior packet.
-- SearchBar motion remains open; this packet only proves settled default width.
+- SearchBar indication motion is covered later by `material3_search_bar_motion_packet_v2.md`; this
+  packet only proves settled default width.
+- SearchBar open/focus choreography belongs to SearchView expansion packets, not ordinary default
+  width.
 - Compact-width overflow and adaptive placement should be covered by a future responsive SearchBar
   scenario if Fret adds phone-class examples.

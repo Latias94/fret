@@ -73,13 +73,13 @@ git diff --check
 ## Matrix Impact
 
 - `search_view.motion`: `covered_v2`.
-- `search_bar.motion`: remains `needs_v2_packet`; this packet only covers SearchView-owned
-  transition choreography, not ordinary standalone SearchBar focus/input motion.
+- `search_bar.motion`: covered separately by `material3_search_bar_motion_packet_v2.md`; this
+  packet only covers SearchView-owned transition choreography.
 
 ## Residual Risk
 
 - Predictive-back SearchBar motion is not modeled yet.
 - Full-screen shape morphing is approximated by the geometry transform; there is no dedicated
   corner-radius morph for the overlay surface yet.
-- Ordinary standalone SearchBar still needs a source-backed focus affordance and input-container
-  color motion packet.
+- Ordinary standalone SearchBar indication motion is tracked separately; default container color
+  motion is a no-op because upstream focused/unfocused default container colors match.

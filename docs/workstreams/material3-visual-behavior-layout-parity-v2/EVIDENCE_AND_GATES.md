@@ -359,6 +359,26 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     expand/shrink by search progress, full-screen overlays animate from the input geometry toward
     the viewport, and initially open SearchViews start settled.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_motion_packet_v2.md`
+- 2026-05-28: M3PV2-039 closed standalone SearchBar indication motion.
+  - Sources: Compose Material3 `SearchBarDefaults.InputField` routes `BasicTextField` interaction
+    state into the input-field container indication; default focused/unfocused container colors are
+    both `SearchBarTokens.ContainerColor`, so the visible default standalone motion is hover
+    state-layer fade plus press ripple expansion.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --test search_bar_motion`
+    failed because SearchBar painted state-layer/ripple inside the padded content rect instead of
+    the full rounded chrome and because presses starting over the editable text area did not start
+    a SearchBar ripple.
+  - `cargo nextest run -p fret-ui-material3 --test search_bar_motion`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_bar_exposes_stable_part_test_ids material3_search_view_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_bar_suite_goldens_v1 material3_headless_search_view_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --test search_view_behavior`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Workstream JSON/catalog/diff checks.
+  - Result: SearchBar now splits outer chrome from inner padded content, feeds descendant
+    text-input pointer-down state into the shared Material ink runtime, and fixed-frame gates prove
+    hover alpha interpolation plus press ripple radius expansion.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_bar_motion_packet_v2.md`
 
 ## Proof Note Template
 

@@ -62,6 +62,11 @@ Together with M3PV2-036, Select motion is now classified as v2-covered.
 M3PV2-038 is complete: SearchView now uses dedicated Material search motion instead of generic
 overlay scale. Docked overlays fade and vertically expand/shrink, full-screen overlays animate from
 collapsed input geometry toward the viewport, and initially open SearchViews start settled.
+M3PV2-039 is complete: ordinary standalone SearchBar indication motion is now v2-covered. The
+packet found and fixed a recipe bug where ink was constrained to the padded content box and presses
+starting over the editable text area did not start SearchBar ripple. SearchBar now keeps
+component-local pointer-down interaction state, feeds it into the shared Material ink runtime, and
+separates outer chrome from inner padded content.
 
 ## Decisions
 
@@ -73,12 +78,11 @@ collapsed input geometry toward the viewport, and initially open SearchViews sta
 
 ## Next Recommended Action
 
-Continue M3PV2-020 with another field-family packet. Good next candidates are standalone SearchBar
-focus/input motion, DatePicker or TimePicker fixed-timestep motion, or Autocomplete/ExposedDropdown
-popup/trigger motion classification. Autocomplete/ExposedDropdown already inherit the shared
-TextField field-motion path, but still need their own popup/trigger motion classification before
-their motion axes are closed. Do not mark motion axes complete from settled-geometry evidence
-alone.
+Continue M3PV2-020 with another field-family packet. Good next candidates are DatePicker or
+TimePicker fixed-timestep motion, or Autocomplete/ExposedDropdown popup/trigger motion
+classification. Autocomplete/ExposedDropdown already inherit the shared TextField field-motion path,
+but still need their own popup/trigger motion classification before their motion axes are closed.
+Do not mark motion axes complete from settled-geometry evidence alone.
 
 ## Useful Gates
 

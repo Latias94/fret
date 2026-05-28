@@ -351,6 +351,30 @@ Task IDs use `M3PV2-*`.
   Standalone SearchBar motion remains open; continue with ordinary SearchBar focus/input motion,
   DatePicker/TimePicker picker motion, or Autocomplete/ExposedDropdown popup/trigger motion.
 
+- [x] M3PV2-039 [owner=codex] [deps=M3PV2-032,M3PV2-038] [scope=ecosystem/fret-ui-material3/src/{foundation/indication.rs,search_bar.rs},ecosystem/fret-ui-material3/tests/search_bar_motion.rs,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close ordinary standalone SearchBar indication motion by proving hover state-layer fade
+  and press ripple expansion across the full rounded input container.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --test search_bar_motion`
+  failed because the state layer was inset to the padded content rect and pressing the editable
+  text area did not start a SearchBar ripple; green gate:
+  `cargo nextest run -p fret-ui-material3 --test search_bar_motion`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_bar_exposes_stable_part_test_ids material3_search_view_exposes_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_bar_suite_goldens_v1 material3_headless_search_view_suite_goldens_v1`;
+  `cargo nextest run -p fret-ui-material3 --test search_view_behavior`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`;
+  workstream JSON/catalog/diff checks.
+  Review: DONE. This found a Material recipe implementation bug: SearchBar placed the ink layer
+  inside the padded content box and relied only on pressable state, so the text-input descendant
+  could suppress press ripple. SearchBar now keeps pointer-down interaction state at the component
+  policy layer, feeds the origin into the shared Material ink runtime, and splits outer chrome from
+  inner padded content.
+  Evidence: `artifacts/material3_search_bar_motion_packet_v2.md`.
+  Handoff: Standalone SearchBar motion is now v2-covered. Continue M3PV2-020 with
+  DatePicker/TimePicker fixed-timestep motion or Autocomplete/ExposedDropdown popup/trigger motion
+  classification.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]

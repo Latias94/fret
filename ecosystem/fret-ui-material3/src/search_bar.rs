@@ -9,7 +9,7 @@ use std::sync::Arc;
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole, SvgFit};
 use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
 use fret_runtime::Model;
-use fret_ui::action::{PressablePointerDownResult, UiPointerActionHost};
+use fret_ui::action::{PointerDownCx, PressablePointerDownResult, UiPointerActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, SvgIconProps, TextInputProps,
@@ -20,7 +20,8 @@ use fret_ui::{GlobalElementId, SvgSource, Theme, UiHost};
 use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable_with_last_down,
+    material_pressable_indication_config,
 };
 use crate::foundation::test_id::part_test_id;
 use crate::tokens::search_bar as search_bar_tokens;
@@ -157,6 +158,8 @@ impl SearchBar {
             let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
             let leading_icon_test_id = part_test_ids.as_ref().map(|ids| ids.leading_icon.clone());
             let trailing_icon_test_id = part_test_ids.as_ref().map(|ids| ids.trailing_icon.clone());
+            let pointer_down_state: Rc<Cell<Option<PointerDownCx>>> =
+                cx.slot_state(|| Rc::new(Cell::new(None)), |state| state.clone());
 
             let expanded = self
                 .expanded_model
@@ -168,7 +171,8 @@ impl SearchBar {
                 let enabled = !self.disabled;
 
                 let now_frame = cx.frame_id.0;
-                let pressed = enabled && st.pressed;
+                let pointer_down = pointer_down_state.get();
+                let pressed = enabled && (st.pressed || pointer_down.is_some());
                 let hovered = enabled && st.hovered;
 
                 let (
@@ -262,10 +266,11 @@ impl SearchBar {
                         focus_ring,
                     )
                 };
-                let overlay = material_ink_layer_for_pressable(
+                let overlay = material_ink_layer_for_pressable_with_last_down(
                     cx,
                     pressable_id,
                     now_frame,
+                    pointer_down,
                     corner_radii,
                     RippleClip::Bounded,
                     state_layer_color,
@@ -320,7 +325,46 @@ impl SearchBar {
                     props.layout.size.width = Length::Fill;
                     props.layout.size.height = Length::Fill;
                     cx.pointer_region(props, move |cx| {
-                        cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
+                        let pointer_down_for_down = pointer_down_state.clone();
+                        cx.pointer_region_on_pointer_down(Arc::new(
+                            move |host, action_cx, down| {
+                                pointer_down_for_down.set(Some(down));
+                                host.invalidate(fret_ui::Invalidation::Paint);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                                false
+                            },
+                        ));
+
+                        let pointer_down_for_up = pointer_down_state.clone();
+                        cx.pointer_region_on_pointer_up(Arc::new(move |host, action_cx, up| {
+                            if pointer_down_for_up
+                                .get()
+                                .is_some_and(|down| down.pointer_id == up.pointer_id)
+                            {
+                                pointer_down_for_up.set(None);
+                                host.invalidate(fret_ui::Invalidation::Paint);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            }
+                            false
+                        }));
+
+                        let pointer_down_for_cancel = pointer_down_state.clone();
+                        cx.pointer_region_on_pointer_cancel(Arc::new(
+                            move |host, action_cx, cancel| {
+                                if pointer_down_for_cancel
+                                    .get()
+                                    .is_some_and(|down| down.pointer_id == cancel.pointer_id)
+                                {
+                                    pointer_down_for_cancel.set(None);
+                                    host.invalidate(fret_ui::Invalidation::Paint);
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }
+                                false
+                            },
+                        ));
 
                         let mut row = FlexProps::default();
                         row.layout.size.width = Length::Fill;
@@ -356,24 +400,32 @@ impl SearchBar {
                             children
                         });
 
-                        let mut container = ContainerProps::default();
-                        container.layout.size.width = Length::Fill;
-                        container.layout.size.height = Length::Px(container_height);
-                        container.layout.overflow = Overflow::Visible;
-                        container.padding = Edges {
+                        let mut content_container = ContainerProps::default();
+                        content_container.layout.size.width = Length::Fill;
+                        content_container.layout.size.height = Length::Fill;
+                        content_container.layout.overflow = Overflow::Visible;
+                        content_container.padding = Edges {
                             left: Px(16.0),
                             right: Px(16.0),
                             top: Px(0.0),
                             bottom: Px(0.0),
                         }
                         .into();
+                        let content_layer =
+                            cx.container(content_container, move |_cx| vec![content]);
+
+                        let mut container = ContainerProps::default();
+                        container.layout.size.width = Length::Fill;
+                        container.layout.size.height = Length::Px(container_height);
+                        container.layout.overflow = Overflow::Visible;
                         container.background = Some(container_color);
                         container.shadow = shadow;
                         container.corner_radii = corner_radii;
                         container.focus_within = true;
                         container.focus_ring = Some(focus_ring);
 
-                        let mut chrome = cx.container(container, move |_cx| vec![overlay, content]);
+                        let mut chrome =
+                            cx.container(container, move |_cx| vec![overlay, content_layer]);
                         if let Some(test_id) = chrome_test_id.clone() {
                             chrome = chrome.test_id(test_id);
                         }
