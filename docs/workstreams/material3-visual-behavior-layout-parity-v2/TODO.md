@@ -174,6 +174,25 @@ Task IDs use `M3PV2-*`.
   Handoff: Continue M3PV2-020 with multiline TextField, SearchBar/SearchView field layout, or a
   true fixed-timestep field/picker motion packet. TimePicker motion remains open.
 
+- [x] M3PV2-031 [owner=codex] [deps=M3PV2-029] [scope=ecosystem/fret-ui-material3/src/{search_view.rs,tokens/search_view.rs},ecosystem/fret-ui-material3/tests/{automation_surface.rs,search_view_behavior.rs,radio_alignment.rs},goldens/material3-headless/v1,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close SearchView full-screen header layout drift by restoring the Material 72px header
+  slot, exposing divider/body/header-slot automation surfaces, and proving that full-screen content
+  starts after the 72px header region.
+  Validation: `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_bar_exposes_stable_part_test_ids material3_search_view_exposes_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test search_view_behavior`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_view_suite_goldens_v1`;
+  `cargo nextest run -p fret-ui-material3 --lib search_view`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`.
+  Review: DONE. This found a Material recipe layout gap: full-screen SearchView reused a 56px
+  SearchBar header directly at the overlay top instead of rendering it inside the 72px
+  SearchView header container. The fix stays in SearchView/tokens and does not require kit overlay
+  policy changes.
+  Evidence: `artifacts/material3_search_view_full_screen_header_layout_packet_v2.md`.
+  Handoff: Continue M3PV2-020 with SearchBar width/focus affordance, SearchView a11y relations, or
+  fixed-timestep SearchView transition/predictive-back motion. This packet does not close motion.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]

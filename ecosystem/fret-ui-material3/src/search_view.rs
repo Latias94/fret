@@ -243,9 +243,18 @@ impl SearchView {
                     .overlay_test_id
                     .clone()
                     .or_else(|| root_test_id.as_ref().map(|id| part_test_id(id, "overlay")));
+                let header_slot_test_id = root_test_id
+                    .as_ref()
+                    .map(|id| part_test_id(id, "overlay.header-slot"));
                 let header_test_id = root_test_id
                     .as_ref()
                     .map(|id| part_test_id(id, "overlay.header"));
+                let divider_test_id = root_test_id
+                    .as_ref()
+                    .map(|id| part_test_id(id, "overlay.divider"));
+                let body_test_id = root_test_id
+                    .as_ref()
+                    .map(|id| part_test_id(id, "overlay.body"));
                 let header_input_id_out: Rc<Cell<Option<GlobalElementId>>> =
                     Rc::new(Cell::new(None));
                 let header_input_id_out_for_bar = header_input_id_out.clone();
@@ -267,11 +276,12 @@ impl SearchView {
                 let header = header.into_element(cx);
                 let initial_focus = header_input_id_out.get();
 
-                let (container_color, divider_color) = {
+                let (container_color, divider_color, header_slot_height) = {
                     let theme = Theme::global(&*cx.app);
                     (
                         search_view_tokens::container_color(theme),
                         search_view_tokens::divider_color(theme),
+                        search_view_tokens::full_screen_header_container_height(theme),
                     )
                 };
 
@@ -292,7 +302,23 @@ impl SearchView {
                     column.layout.size.height = Length::Fill;
 
                     let panel = cx.container(panel_container, move |cx| {
-                        let divider = cx.container(
+                        let mut header_slot = ContainerProps::default();
+                        header_slot.layout.size.width = Length::Fill;
+                        header_slot.layout.size.height = Length::Px(header_slot_height);
+                        header_slot.layout.overflow = Overflow::Visible;
+                        header_slot.padding = Edges {
+                            left: Px(0.0),
+                            right: Px(0.0),
+                            top: Px(8.0),
+                            bottom: Px(8.0),
+                        }
+                        .into();
+                        let mut header_slot = cx.container(header_slot, move |_cx| vec![header]);
+                        if let Some(test_id) = header_slot_test_id.clone() {
+                            header_slot = header_slot.test_id(test_id);
+                        }
+
+                        let mut divider = cx.container(
                             ContainerProps {
                                 layout: fret_ui::element::LayoutStyle {
                                     size: fret_ui::element::SizeStyle {
@@ -307,8 +333,11 @@ impl SearchView {
                             },
                             |_cx| Vec::<AnyElement>::new(),
                         );
+                        if let Some(test_id) = divider_test_id.clone() {
+                            divider = divider.test_id(test_id);
+                        }
 
-                        let body = cx.container(
+                        let mut body = cx.container(
                             ContainerProps {
                                 layout: {
                                     let mut layout = fret_ui::element::LayoutStyle::default();
@@ -322,8 +351,11 @@ impl SearchView {
                             },
                             content,
                         );
+                        if let Some(test_id) = body_test_id.clone() {
+                            body = body.test_id(test_id);
+                        }
 
-                        vec![cx.flex(column, move |_cx| vec![header, divider, body])]
+                        vec![cx.flex(column, move |_cx| vec![header_slot, divider, body])]
                     });
 
                     let panel = if let Some(test_id) = overlay_test_id.as_ref() {
@@ -413,6 +445,12 @@ impl SearchView {
                 .overlay_test_id
                 .clone()
                 .or_else(|| root_test_id.as_ref().map(|id| part_test_id(id, "overlay")));
+            let divider_test_id = root_test_id
+                .as_ref()
+                .map(|id| part_test_id(id, "overlay.divider"));
+            let body_test_id = root_test_id
+                .as_ref()
+                .map(|id| part_test_id(id, "overlay.body"));
             let overlay_panel = fret_ui_kit::primitives::popper_content::popper_wrapper_panel_at(
                 cx,
                 overlay_rect,
@@ -428,7 +466,7 @@ impl SearchView {
                     container.shadow = shadow;
 
                     let panel = cx.container(container, move |cx| {
-                        let divider = cx.container(
+                        let mut divider = cx.container(
                             ContainerProps {
                                 layout: fret_ui::element::LayoutStyle {
                                     size: fret_ui::element::SizeStyle {
@@ -443,14 +481,20 @@ impl SearchView {
                             },
                             |_cx| Vec::<AnyElement>::new(),
                         );
+                        if let Some(test_id) = divider_test_id.clone() {
+                            divider = divider.test_id(test_id);
+                        }
 
-                        let body = cx.container(
+                        let mut body = cx.container(
                             ContainerProps {
                                 padding: Edges::all(Px(8.0)).into(),
                                 ..Default::default()
                             },
                             content,
                         );
+                        if let Some(test_id) = body_test_id.clone() {
+                            body = body.test_id(test_id);
+                        }
 
                         vec![divider, body]
                     });

@@ -1864,21 +1864,54 @@ fn material3_search_view_exposes_stable_part_test_ids() {
         "m3-search-view.leading-icon",
         "m3-search-view.trailing-icon",
         "m3-search-view.overlay",
+        "m3-search-view.overlay.divider",
+        "m3-search-view.overlay.body",
         "m3-search-view-full",
         "m3-search-view-full.chrome",
         "m3-search-view-full.leading-icon",
         "m3-search-view-full.trailing-icon",
         "m3-search-view-full.overlay",
+        "m3-search-view-full.overlay.header-slot",
         "m3-search-view-full.overlay.header",
         "m3-search-view-full.overlay.header.chrome",
         "m3-search-view-full.overlay.header.leading-icon",
         "m3-search-view-full.overlay.header.trailing-icon",
+        "m3-search-view-full.overlay.divider",
+        "m3-search-view-full.overlay.body",
     ] {
         assert!(
             live_test_id_exists(&ui, &app, window, id),
             "expected live SearchView part test_id {id}"
         );
     }
+
+    let full_overlay = live_test_id_layout_bounds(&ui, &app, window, "m3-search-view-full.overlay");
+    let full_header_slot =
+        live_test_id_layout_bounds(&ui, &app, window, "m3-search-view-full.overlay.header-slot");
+    let full_divider =
+        live_test_id_layout_bounds(&ui, &app, window, "m3-search-view-full.overlay.divider");
+    let full_body =
+        live_test_id_layout_bounds(&ui, &app, window, "m3-search-view-full.overlay.body");
+    assert_px_close(
+        full_header_slot.origin.y.0 - full_overlay.origin.y.0,
+        0.0,
+        "full-screen SearchView header slot starts at overlay top",
+    );
+    assert_px_close(
+        full_header_slot.size.height.0,
+        72.0,
+        "full-screen SearchView header slot height",
+    );
+    assert_px_close(
+        full_divider.origin.y.0 - full_overlay.origin.y.0,
+        72.0,
+        "full-screen SearchView divider follows header slot",
+    );
+    assert_px_close(
+        full_body.origin.y.0 - (full_divider.origin.y.0 + full_divider.size.height.0),
+        0.0,
+        "full-screen SearchView body follows divider",
+    );
 }
 
 #[test]

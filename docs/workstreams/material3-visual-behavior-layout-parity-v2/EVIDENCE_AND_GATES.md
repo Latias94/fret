@@ -57,6 +57,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_autocomplete_exposed_dropdown_selectable_item_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_date_picker_calendar_grid_layout_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_display_input_layout_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_full_screen_header_layout_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -206,6 +207,26 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     chrome; input mode uses the same fixed separator and 12px period margin with top alignment.
     TimePicker headless goldens were refreshed for the intentional layout shift.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_display_input_layout_packet_v2.md`
+- 2026-05-28: M3PV2-031 closed SearchView full-screen header layout drift.
+  - Sources: Compose Material3 `FullScreenSearchBarLayout` places the input field after
+    `SearchBarVerticalPadding = 8.dp` and the search content after the input field plus another
+    8px bottom padding; Material Web v30 exposes
+    `md.comp.search-view.full-screen.header.container.height = 72`.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_view_exposes_stable_part_test_ids`
+    failed because SearchView did not expose stable `overlay.divider` / `overlay.body` part ids,
+    and the full-screen header had no 72px header slot.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_bar_exposes_stable_part_test_ids material3_search_view_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test search_view_behavior`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_view_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --lib search_view`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: Full-screen SearchView now wraps the overlay header in a token-driven 72px header slot,
+    places the divider and content after that slot, exposes stable header-slot/divider/body part
+    ids for automation, and refreshes SearchView headless goldens for the intentional 16px content
+    shift.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_full_screen_header_layout_packet_v2.md`
 
 ## Proof Note Template
 

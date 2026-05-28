@@ -33,6 +33,10 @@ M3PV2-029 is complete: TimePicker display mode now keeps the period selector in 
 row with the Material 12px margin, uses fixed 96px selector and 24px separator slots, centers the
 clock dial in the picker chrome, and applies the same fixed separator/period-row structure to input
 mode. TimePicker headless goldens were refreshed for the intentional layout shift.
+M3PV2-031 is complete: full-screen SearchView now renders the header inside the Material 72px
+header slot, exposes stable header-slot/divider/body part ids, and places the divider/content after
+that slot. SearchView behavior stayed green and headless goldens were refreshed for the intentional
+full-screen header/content shift.
 
 ## Decisions
 
@@ -45,10 +49,10 @@ mode. TimePicker headless goldens were refreshed for the intentional layout shif
 ## Next Recommended Action
 
 Continue M3PV2-020 with another field-family packet. Good next candidates are a dedicated
-multiline TextField scenario, SearchBar/SearchView field layout and a11y, or fixed-timestep
-popup/field/picker motion. Do not mark motion axes complete from settled-geometry evidence;
-TextField, Select, Autocomplete, ExposedDropdown, DatePicker, and TimePicker still need transition
-packets.
+multiline TextField scenario, SearchBar width/focus affordance, SearchView a11y relations, or
+fixed-timestep popup/field/picker motion. Do not mark motion axes complete from settled-geometry
+evidence; TextField, Select, Autocomplete, ExposedDropdown, DatePicker, TimePicker, and SearchView
+still need transition packets.
 
 ## Useful Gates
 
