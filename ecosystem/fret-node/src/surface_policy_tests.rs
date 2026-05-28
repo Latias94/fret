@@ -424,6 +424,8 @@ fn default_declarative_surface_exposes_edge_types_and_skin_without_custom_presen
     assert!(
         cache_source.contains(".edge_render_hint(graph, *edge_id, style, &hint, false, false)")
     );
+    assert!(cache_source.contains("build_edge_spatial_rect_overrides("));
+    assert!(cache_source.contains("index.update_edge_rect(edge, rect)"));
     assert!(cache_source.contains("edge_types_rev"));
     assert!(cache_source.contains("skin_rev"));
 
@@ -431,6 +433,7 @@ fn default_declarative_surface_exposes_edge_types_and_skin_without_custom_presen
         assert!(docs.contains("Default declarative view policy"));
         assert!(docs.contains("NodeGraphSurfaceProps.edge_types"));
         assert!(docs.contains("NodeGraphSurfaceProps.skin"));
+        assert!(docs.contains("conservative spatial-index candidate rects"));
         assert!(docs.contains(
             "Custom `NodeGraphPresenter` is not part of the default declarative surface"
         ));

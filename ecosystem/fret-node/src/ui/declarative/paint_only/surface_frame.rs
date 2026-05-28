@@ -374,6 +374,8 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         runtime_tuning,
         &style_tokens,
         presenter_rev,
+        edge_types_rev,
+        edge_types.as_deref(),
         measured_geometry.as_ref(),
         geometry_overrides,
         geometry_overrides_rev,

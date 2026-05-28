@@ -5,12 +5,20 @@ Last updated: 2026-05-28
 
 ## Current Focus
 
-FNDX-045 wires the first default declarative public-extension slice: `NodeGraphSurfaceProps` now has
-explicit `edge_types` and `skin` hooks for edge render hints/custom paint paths and paint-only edge
-chrome. The broad `NodeGraphPresenter` contract remains out of the default app-facing surface until
-geometry, labels, context menus, and insertion/search policy are split into narrower contracts.
+FNDX-046 feeds custom `NodeGraphEdgeTypes::register_path(...)` output into conservative
+spatial-index candidate rects for the default declarative derived cache. This closes the first
+spatial contract slice after FNDX-045 while still leaving exact custom-path distance hit-testing,
+edge labels, and EdgeToolbar internals as explicit follow-up contracts.
 
 ## Targeted Iteration Gates
+
+```bash
+cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter
+```
+
+This gate proves the FNDX-046 custom edge path spatial contract: `edgeTypes` revisions invalidate
+derived geometry, custom edge paths provide conservative spatial-index edge candidates, and the
+source-policy/docs keep the scoped spatial claim explicit.
 
 ```bash
 cargo nextest run -p fret-node edges_cache_key_changes_when_edge_types_or_skin_revision_changes declarative_edge_types_feed_default_surface_edge_draws declarative_skin_refines_edge_draw_hints_after_edge_types default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter
@@ -254,5 +262,24 @@ closeout note must name those failures.
   - `git diff --check`: passed; proves the patch has no whitespace errors.
   - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
     green with 456 tests.
+- FNDX-046:
+  - `cargo fmt --check`: passed; proves formatting is clean after the Rust and workstream updates.
+  - `cargo check -p fret-node --tests`: passed; proves the UI-enabled test targets compile after
+    wiring `edgeTypes` custom path spatial rect overrides into the derived cache path.
+  - `cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`:
+    passed; proves `edgeTypes` revisions invalidate derived geometry, custom path conservative
+    AABBs feed the edge spatial candidate set, and source-policy/docs keep the scoped spatial
+    contract explicit.
+  - `cargo check -p fret-node --all-features --tests`: passed; proves optional UI/integration test
+    targets still compile with custom-path spatial candidate wiring.
+  - `cargo check -p fret-node --no-default-features`: passed; proves headless/runtime-facing package
+    compilation remains unaffected by the UI-only spatial candidate slice.
+  - `python3 tools/check_layering.py`: passed; proves the slice did not violate workspace layering
+    policy.
+  - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed;
+    proves the workstream metadata remains valid JSON.
+  - `git diff --check`: passed; proves the patch has no whitespace errors.
+  - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
+    green with 458 tests.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

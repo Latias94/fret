@@ -97,8 +97,8 @@ use self::cache::{
 };
 #[cfg(test)]
 use self::cache::{
-    build_edges_draws_paint_only, derived_geometry_cache_key, edges_cache_key, grid_cache_key,
-    nodes_cache_key,
+    build_edge_spatial_rect_overrides, build_edges_draws_paint_only, derived_geometry_cache_key,
+    edges_cache_key, grid_cache_key, nodes_cache_key,
 };
 use self::diag::{
     DeclarativeDiagKeyAction, DeclarativeKeyboardZoomAction,

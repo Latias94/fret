@@ -9,13 +9,14 @@ pub(super) struct DerivedGeometryCacheState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct DerivedGeometryCacheKeyV2 {
+struct DerivedGeometryCacheKeyV3 {
     graph_rev: u64,
     zoom_q: i32,
     node_origin_x_q: i32,
     node_origin_y_q: i32,
     draw_order_hash: u64,
     presenter_rev: u64,
+    edge_types_rev: u64,
     geometry_tokens_fingerprint: u64,
     geometry_overrides_rev: u64,
     cell_size_screen_bits: u32,
@@ -161,6 +162,7 @@ pub(super) fn derived_geometry_cache_key(
     interaction: &crate::io::NodeGraphInteractionState,
     style: &NodeGraphStyle,
     presenter_rev: u64,
+    edge_types_rev: u64,
     geometry_overrides_rev: u64,
     max_edge_interaction_width_override_px: f32,
 ) -> CanvasKey {
@@ -183,13 +185,14 @@ pub(super) fn derived_geometry_cache_key(
         .max(style.geometry.wire_width)
         .max(0.0);
 
-    let v = DerivedGeometryCacheKeyV2 {
+    let v = DerivedGeometryCacheKeyV3 {
         graph_rev,
         zoom_q: quantize_f32(zoom, 4096.0),
         node_origin_x_q: quantize_f32(origin.x, 4096.0),
         node_origin_y_q: quantize_f32(origin.y, 4096.0),
         draw_order_hash: stable_hash_u64(1, &draw_order),
         presenter_rev,
+        edge_types_rev,
         geometry_tokens_fingerprint: style.geometry.fingerprint(),
         geometry_overrides_rev,
         cell_size_screen_bits: tuning.cell_size_screen_px.to_bits(),
@@ -199,7 +202,7 @@ pub(super) fn derived_geometry_cache_key(
         wire_width_bits: style.geometry.wire_width.to_bits(),
     };
 
-    CanvasKey::from_hash(&("fret-node.derived-geometry.paint-only.v3", v))
+    CanvasKey::from_hash(&("fret-node.derived-geometry.paint-only.v4", v))
 }
 
 fn build_debug_grid_ops(
@@ -523,6 +526,62 @@ fn padded_edge_bbox(
         ),
     );
     bbox
+}
+
+pub(super) fn build_edge_spatial_rect_overrides(
+    graph: &Graph,
+    zoom: f32,
+    geom: &CanvasGeometry,
+    style: &NodeGraphStyle,
+    edge_types: Option<&crate::ui::NodeGraphEdgeTypes>,
+) -> Vec<(crate::core::EdgeId, Rect)> {
+    let Some(edge_types) = edge_types else {
+        return Vec::new();
+    };
+
+    let mut out = Vec::<(crate::core::EdgeId, Rect)>::new();
+    out.reserve(graph.edges.len().min(4096));
+
+    let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0).max(1.0e-6);
+    let presenter = DefaultNodeGraphPresenter::default();
+
+    for (edge_id, edge) in &graph.edges {
+        let Some(p0) = geom.port_center(edge.from) else {
+            continue;
+        };
+        let Some(p1) = geom.port_center(edge.to) else {
+            continue;
+        };
+
+        let hint = edge_types
+            .apply(
+                graph,
+                *edge_id,
+                style,
+                presenter
+                    .edge_render_hint(graph, *edge_id, style)
+                    .normalized(),
+            )
+            .normalized();
+        let custom_path = edge_types.custom_path(
+            graph,
+            *edge_id,
+            style,
+            &hint,
+            EdgePathInput {
+                from: p0,
+                to: p1,
+                zoom,
+            },
+        );
+        let commands = custom_path
+            .map(|path| path.commands.into_boxed_slice())
+            .unwrap_or_else(|| edge_commands_for_route(hint.route, p0, p1, zoom));
+        let rect = padded_edge_bbox(&commands, p0, p1, zoom, style, hint.width_mul);
+        out.push((*edge_id, rect));
+    }
+
+    out
 }
 
 pub(super) fn build_edges_draws_paint_only(
@@ -952,6 +1011,8 @@ pub(super) fn sync_derived_cache<H: UiHost>(
     runtime_tuning: crate::io::NodeGraphRuntimeTuning,
     style_tokens: &NodeGraphStyle,
     presenter_rev: u64,
+    edge_types_rev: u64,
+    edge_types: Option<&crate::ui::NodeGraphEdgeTypes>,
     measured_geometry: Option<&Arc<MeasuredGeometryStore>>,
     geometry_overrides: Option<&dyn crate::ui::geometry_overrides::NodeGraphGeometryOverrides>,
     geometry_overrides_rev: u64,
@@ -969,6 +1030,7 @@ pub(super) fn sync_derived_cache<H: UiHost>(
         interaction_state,
         style_tokens,
         presenter_rev,
+        edge_types_rev,
         geometry_overrides_rev,
         max_edge_interaction_width_override_px,
     );
@@ -1001,13 +1063,22 @@ pub(super) fn sync_derived_cache<H: UiHost>(
                     .max(1.0);
                 let max_hit_pad_canvas = (edge_aabb_pad_screen_px / z).max(0.0);
 
-                let index = CanvasSpatialDerived::build(
+                let mut index = CanvasSpatialDerived::build(
                     graph_value,
                     &geom,
                     zoom,
                     max_hit_pad_canvas,
                     cell_size_canvas,
                 );
+                for (edge, rect) in build_edge_spatial_rect_overrides(
+                    graph_value,
+                    zoom,
+                    &geom,
+                    style_tokens,
+                    edge_types,
+                ) {
+                    index.update_edge_rect(edge, rect);
+                }
 
                 (Arc::new(geom), Arc::new(index))
             })

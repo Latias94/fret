@@ -43,10 +43,10 @@ use super::{
     authoritative_surface_boundary_snapshot, begin_left_pointer_down_action_host,
     begin_pan_pointer_down_action_host, build_click_selection_preview_nodes,
     build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
-    build_edges_draws_paint_only, build_key_down_capture_handler,
-    build_marquee_preview_selected_nodes, build_node_drag_transaction,
-    collect_portal_label_infos_for_visible_subset, commit_graph_transaction,
-    commit_marquee_selection_action_host, commit_node_drag_transaction,
+    build_edge_spatial_rect_overrides, build_edges_draws_paint_only,
+    build_key_down_capture_handler, build_marquee_preview_selected_nodes,
+    build_node_drag_transaction, collect_portal_label_infos_for_visible_subset,
+    commit_graph_transaction, commit_marquee_selection_action_host, commit_node_drag_transaction,
     commit_pending_selection_action_host, complete_left_pointer_release_action_host,
     complete_node_drag_release_action_host, derived_geometry_cache_key, edges_cache_key,
     effective_selected_nodes_for_paint, escape_cancel_declarative_interactions_action_host,
@@ -5753,6 +5753,7 @@ fn derived_geometry_cache_key_changes_when_presenter_revision_changes() {
         &style,
         7,
         0,
+        0,
         0.0,
     );
     let derived_b = derived_geometry_cache_key(
@@ -5764,10 +5765,96 @@ fn derived_geometry_cache_key_changes_when_presenter_revision_changes() {
         &style,
         8,
         0,
+        0,
         0.0,
     );
 
     assert_ne!(derived_a, derived_b);
+}
+
+#[test]
+fn derived_geometry_cache_key_changes_when_edge_types_revision_changes() {
+    let node = NodeId::from_u128(9411);
+    let view_state = NodeGraphViewState {
+        draw_order: vec![node],
+        ..NodeGraphViewState::default()
+    };
+    let editor_config = NodeGraphEditorConfig::default();
+    let interaction = editor_config.resolved_interaction_state();
+    let node_origin = editor_config.interaction.node_origin;
+    let style = crate::ui::style::NodeGraphStyle::default();
+
+    let derived_a = derived_geometry_cache_key(
+        92,
+        view_state.zoom,
+        node_origin,
+        &view_state.draw_order,
+        &interaction,
+        &style,
+        0,
+        7,
+        0,
+        0.0,
+    );
+    let derived_b = derived_geometry_cache_key(
+        92,
+        view_state.zoom,
+        node_origin,
+        &view_state.draw_order,
+        &interaction,
+        &style,
+        0,
+        8,
+        0,
+        0.0,
+    );
+
+    assert_ne!(derived_a, derived_b);
+}
+
+#[test]
+fn custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates() {
+    let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let style = crate::ui::style::NodeGraphStyle::default();
+    let far = Point::new(Px(500.0), Px(500.0));
+    let edge_types = NodeGraphEdgeTypes::new().register_path(
+        EdgeTypeKey::new("data"),
+        move |_graph, _edge_id, _style, _hint, input| {
+            Some(EdgeCustomPath {
+                cache_key: 88,
+                commands: vec![
+                    PathCommand::MoveTo(input.from),
+                    PathCommand::LineTo(far),
+                    PathCommand::LineTo(input.to),
+                ],
+            })
+        },
+    );
+    let overrides =
+        build_edge_spatial_rect_overrides(&graph, 1.0, &geom, &style, Some(&edge_types));
+    assert_eq!(overrides.len(), 1);
+    assert_eq!(overrides[0].0, edge);
+
+    let mut spatial = crate::ui::canvas::CanvasSpatialDerived::build(&graph, &geom, 1.0, 0.0, 64.0);
+    let mut scratch = Vec::new();
+    assert!(
+        !spatial
+            .query_edges_sorted_dedup(far, 1.0, &mut scratch)
+            .contains(&edge),
+        "default Bezier spatial AABB should not include the custom path excursion"
+    );
+
+    for (edge_id, rect) in overrides {
+        spatial.update_edge_rect(edge_id, rect);
+    }
+    scratch.clear();
+    assert!(
+        spatial
+            .query_edges_sorted_dedup(far, 1.0, &mut scratch)
+            .contains(&edge),
+        "custom edge path conservative AABB should feed the spatial index candidate set"
+    );
 }
 
 #[test]
@@ -5932,6 +6019,7 @@ fn edges_cache_key_changes_when_edge_types_or_skin_revision_changes() {
         &view_state.draw_order,
         &interaction,
         &style,
+        0,
         0,
         0,
         0.0,
@@ -6166,6 +6254,7 @@ fn authoritative_selection_changes_keep_paint_cache_keys_stable() {
         &style,
         0,
         0,
+        0,
         0.0,
     );
     let derived_b = derived_geometry_cache_key(
@@ -6175,6 +6264,7 @@ fn authoritative_selection_changes_keep_paint_cache_keys_stable() {
         &selection_only_view.draw_order,
         &interaction_b,
         &style,
+        0,
         0,
         0,
         0.0,
@@ -6250,6 +6340,7 @@ fn authoritative_graph_replacement_invalidates_only_graph_dependent_paint_cache_
         &style,
         0,
         0,
+        0,
         0.0,
     );
     let nodes_before = nodes_cache_key(
@@ -6277,6 +6368,7 @@ fn authoritative_graph_replacement_invalidates_only_graph_dependent_paint_cache_
         &view_state.draw_order,
         &interaction,
         &style,
+        0,
         0,
         0,
         0.0,

@@ -257,9 +257,9 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       overrides are applied by the declarative paint-only surface through
       `NodeGraphSurfaceProps.edge_types`.
     - Stage 2 custom edge paths are supported via `NodeGraphEdgeTypes::register_path(...)` (`EdgeCustomPath`).
-      The default declarative canvas uses the custom path for painting and paint culling; custom
-      path hit-testing, edge labels, and EdgeToolbar internals remain follow-up spatial/overlay
-      contracts.
+      The default declarative canvas uses the custom path for painting, paint culling, and
+      conservative spatial-index candidate rects; exact custom-path distance hit-testing, edge
+      labels, and EdgeToolbar internals remain follow-up spatial/overlay contracts.
 
 - [~] **Per-node/edge view lifecycle + memoization strategy**
   - XyFlow: React memoization + internals updates + DOM handle bounds pipeline
@@ -427,7 +427,7 @@ canonical data flow and invalidation boundaries:
     using `ecosystem/fret-node/src/ui/canvas/geometry/*`
   - Invalidation key (must remain stable and auditable):
     - graph revision + zoom + node-origin + draw order fingerprint + presenter revision +
-      geometry override revision.
+      `NodeGraphSurfaceProps.edge_types` revision + geometry override revision.
     - edge paint caches additionally key on `NodeGraphSurfaceProps.edge_types` and
       `NodeGraphSurfaceProps.skin` revisions.
     - **Pan-only must not invalidate** this cache (it is applied via render transforms).

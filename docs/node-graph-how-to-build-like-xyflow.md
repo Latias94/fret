@@ -128,9 +128,9 @@ buttons, custom controls) while keeping the canvas itself policy-light.
 ### `edgeTypes` / custom edge paths
 
 Use `NodeGraphEdgeTypes` through `NodeGraphSurfaceProps.edge_types` to register edge hint overrides
-and custom paint-path builders. The default declarative surface uses custom paths for painting and
-conservative paint culling; geometry-backed hit-testing stays on the default presenter route until a
-dedicated spatial-index contract exists.
+and custom paint-path builders. The default declarative surface uses custom paths for painting,
+conservative paint culling, and conservative spatial-index candidate rects. Exact custom-path
+distance hit-testing, edge labels, and EdgeToolbar internals remain follow-up contracts.
 
 ### Styling (theme tokens + UI-only chrome hints)
 

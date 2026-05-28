@@ -63,8 +63,9 @@ Use these surfaces for new app code and new examples.
 - `NodeGraphEdgeTypes` / `NodeGraphSkin`
   - are app-facing extension points only when passed through `NodeGraphSurfaceProps`,
   - must remain UI-only policy and keep graph documents free of serialized edge/chrome view state,
-  - currently affect the default declarative edge paint path; custom path hit-testing and node/body
-    skin geometry remain follow-up contracts.
+  - currently affect the default declarative edge paint path and conservative edge spatial
+    candidates; exact custom-path distance hit-testing and node/body skin geometry remain follow-up
+    contracts.
 
 ### XYFlow alignment note
 
@@ -450,6 +451,9 @@ Status note (2026-05-28):
 - FNDX-045 closes the first decision slice: `NodeGraphEdgeTypes` and `NodeGraphSkin` are wired into
   the default declarative edge paint path; custom `NodeGraphPresenter` is explicitly demoted from
   the default app-facing surface until its mixed responsibilities are split.
+- FNDX-046 feeds custom edge path AABBs into the conservative spatial index candidate set, so the
+  first spatial contract follows the visible custom path without claiming exact path-distance
+  hit-testing.
 
 Why this still matters:
 
