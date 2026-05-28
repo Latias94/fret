@@ -588,6 +588,14 @@ impl TextField {
                 .or_else(|| part_test_ids.as_ref().map(|ids| ids.leading_icon.clone()));
             let trailing_icon_test_id = trailing_icon_test_id
                 .or_else(|| part_test_ids.as_ref().map(|ids| ids.trailing_icon.clone()));
+            let label_element_id_out = cx.slot_state(
+                || Rc::new(Cell::new(None::<GlobalElementId>)),
+                |id| id.clone(),
+            );
+            let supporting_text_element_id_out = cx.slot_state(
+                || Rc::new(Cell::new(None::<GlobalElementId>)),
+                |id| id.clone(),
+            );
 
             let mut hover_layout = fret_ui::element::LayoutStyle::default();
             hover_layout.size.width = Length::Fill;
@@ -631,6 +639,12 @@ impl TextField {
                         let mut children: Vec<AnyElement> = Vec::new();
                         let mut float_progress = 0.0f32;
                         let mut active_indicator_el: Option<AnyElement> = None;
+                        if label.is_none() {
+                            label_element_id_out.set(None);
+                        }
+                        if supporting_text.is_none() {
+                            supporting_text_element_id_out.set(None);
+                        }
 
                         let input = cx.named("text_input", |cx| {
                             let populated = cx
@@ -770,6 +784,12 @@ impl TextField {
                                     props.layout.size.width = Length::Fill;
                                     props.layout.size.height = Length::Fill;
                                     props.a11y_label = a11y_label.clone();
+                                    props.labelled_by_element =
+                                        label_element_id_out.get().map(|id| id.0);
+                                    props.described_by_element =
+                                        supporting_text.as_ref().and_then(|_| {
+                                            supporting_text_element_id_out.get().map(|id| id.0)
+                                        });
                                     props.test_id = test_id.clone();
                                     props.placeholder = placeholder.clone();
                                     props.min_height = height;
@@ -1064,6 +1084,12 @@ impl TextField {
                                     props.a11y_label = a11y_label.clone();
                                     props.a11y_role =
                                         Some(a11y_role.unwrap_or(SemanticsRole::TextField));
+                                    props.labelled_by_element =
+                                        label_element_id_out.get().map(|id| id.0);
+                                    props.described_by_element =
+                                        supporting_text.as_ref().and_then(|_| {
+                                            supporting_text_element_id_out.get().map(|id| id.0)
+                                        });
                                     props.test_id = test_id.clone();
                                     props.placeholder = placeholder.clone();
                                     props.active_descendant = active_descendant;
@@ -1448,6 +1474,7 @@ impl TextField {
                                 input_bg,
                                 outline_width_for_notch,
                                 label_test_id.clone(),
+                                label_element_id_out.clone(),
                             ));
                         }
 
@@ -1463,6 +1490,7 @@ impl TextField {
                                 error,
                                 focused,
                                 supporting_text_test_id.clone(),
+                                supporting_text_element_id_out.clone(),
                             ));
                         }
 
@@ -1489,6 +1517,7 @@ fn text_field_label<H: UiHost>(
     input_bg: Color,
     outline_width: Px,
     test_id: Option<Arc<str>>,
+    label_element_id_out: Rc<Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
@@ -1565,6 +1594,7 @@ fn text_field_label<H: UiHost>(
     if let Some(test_id) = test_id {
         label = label.test_id(test_id);
     }
+    label_element_id_out.set(Some(label.id));
     label
 }
 
@@ -1579,6 +1609,7 @@ fn text_field_supporting_text<H: UiHost>(
     error: bool,
     focused: bool,
     test_id: Option<Arc<str>>,
+    supporting_text_element_id_out: Rc<Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
@@ -1616,6 +1647,7 @@ fn text_field_supporting_text<H: UiHost>(
     if let Some(test_id) = test_id {
         supporting_text = supporting_text.test_id(test_id);
     }
+    supporting_text_element_id_out.set(Some(supporting_text.id));
     supporting_text
 }
 

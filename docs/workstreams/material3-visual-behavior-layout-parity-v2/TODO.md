@@ -53,6 +53,20 @@ Task IDs use `M3PV2-*`.
   Handoff: Continue M3PV2-020 with a true style/layout packet for TextField, Autocomplete, or
   ExposedDropdown; do not mark those axes complete based on selector evidence alone.
 
+- [x] M3PV2-023 [owner=codex] [deps=M3PV2-020] [scope=crates/fret-ui/src/{element.rs,declarative/host_widget/semantics.rs,declarative/tests/interactions/text_input.rs},ecosystem/fret-ui-material3/src/text_field.rs,ecosystem/fret-ui-material3/tests/{automation_surface.rs,text_field_hover.rs},docs/adr/IMPLEMENTATION_ALIGNMENT.md,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close TextField label/supporting-text relationship wiring and repair the filled chrome
+  visual harness around the current container + active-indicator layer split.
+  Validation: `cargo fmt --package fret-ui --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui --lib labelled_and_described`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_text_field_exposes_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test text_field_hover`; `git diff --check`.
+  Review: DONE. This found a mechanism gap: text controls had `controls_element` but no
+  `labelled_by_element` / `described_by_element`. The mechanism now lives in `fret-ui`, while
+  Material TextField owns the recipe wiring.
+  Evidence: `artifacts/material3_text_field_semantics_chrome_packet_v2.md`.
+  Handoff: Continue M3PV2-020 with TextField floating-label full-state geometry or popup field
+  width/chrome packets; multiline Material TextField still deserves a dedicated scenario.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]

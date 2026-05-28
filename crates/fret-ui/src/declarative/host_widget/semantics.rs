@@ -183,6 +183,16 @@ impl ElementHostWidget {
                 if let Some(test_id) = props.test_id.as_ref() {
                     cx.set_test_id(test_id.as_ref().to_string());
                 }
+                if let Some(element) = props.labelled_by_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_labelled_by(node);
+                }
+                if let Some(element) = props.described_by_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_described_by(node);
+                }
                 if let Some(expanded) = props.expanded {
                     cx.set_expanded(expanded);
                 }
@@ -227,6 +237,16 @@ impl ElementHostWidget {
                 }
                 if let Some(test_id) = props.test_id.as_ref() {
                     cx.set_test_id(test_id.as_ref().to_string());
+                }
+                if let Some(element) = props.labelled_by_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_labelled_by(node);
+                }
+                if let Some(element) = props.described_by_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_described_by(node);
                 }
                 cx.set_required(props.a11y_required);
                 cx.set_invalid(props.a11y_invalid);

@@ -373,14 +373,35 @@ fn find_filled_text_field_container(quads: &[QuadSig]) -> Option<QuadSig> {
         .iter()
         .copied()
         .filter(|q| {
-            q.border.bottom > 0
-                && q.border.top == 0
-                && q.border.right == 0
-                && q.border.left == 0
+            q.background.a > 0
+                && q.corner_radii.top_left > 0
+                && q.corner_radii.top_right > 0
                 && q.rect.w > 0
                 && q.rect.h > 0
         })
-        .max_by_key(|q| i64::from(q.rect.w) * i64::from(q.rect.h))
+        .max_by_key(|q| {
+            (
+                i64::from(q.rect.w) * i64::from(q.rect.h),
+                i64::from(q.background.a),
+            )
+        })
+}
+
+fn find_filled_active_indicator(quads: &[QuadSig], container: QuadSig) -> Option<QuadSig> {
+    let container_bottom = container.rect.y + container.rect.h;
+    quads.iter().copied().find(|q| {
+        q.rect.x == container.rect.x
+            && q.rect.w == container.rect.w
+            && q.rect.y + q.rect.h == container_bottom
+            && q.rect.h > 0
+            && q.rect.h <= 40
+            && q.background.a > 0
+            && is_zero_edges(q.border)
+            && q.corner_radii.top_left == 0
+            && q.corner_radii.top_right == 0
+            && q.corner_radii.bottom_right == 0
+            && q.corner_radii.bottom_left == 0
+    })
 }
 
 fn is_zero_edges(edges: EdgesSig) -> bool {
@@ -399,7 +420,8 @@ fn rect_inset_by_edges(rect: RectSig, border: EdgesSig) -> RectSig {
 fn find_state_layer_overlay(quads: &[QuadSig], container: QuadSig) -> Option<QuadSig> {
     let expected = rect_inset_by_edges(container.rect, container.border);
     quads.iter().copied().find(|q| {
-        q.rect == expected
+        *q != container
+            && q.rect == expected
             && q.corner_radii == container.corner_radii
             && is_zero_edges(q.border)
             && q.background.a > 0
@@ -548,6 +570,12 @@ fn filled_text_field_hover_uses_state_layer_overlay() {
         let quads0 = scene_quad_signature(&scene0);
         let container0 = find_filled_text_field_container(&quads0)
             .expect("expected filled text field container");
+        let indicator0 = find_filled_active_indicator(&quads0, container0)
+            .expect("expected filled text field active indicator");
+        assert_eq!(
+            indicator0.rect.h, 10,
+            "expected idle indicator thickness ({label})"
+        );
         assert!(
             find_state_layer_overlay(&quads0, container0).is_none(),
             "expected no hover state layer before hover ({label})"
@@ -635,6 +663,12 @@ fn filled_text_field_hover_does_not_show_overlay_when_disabled() {
         let quads0 = scene_quad_signature(&scene0);
         let container0 = find_filled_text_field_container(&quads0)
             .expect("expected filled text field container");
+        let indicator0 = find_filled_active_indicator(&quads0, container0)
+            .expect("expected disabled filled text field active indicator");
+        assert_eq!(
+            indicator0.rect.h, 10,
+            "expected disabled idle indicator thickness ({label})"
+        );
         assert!(
             find_state_layer_overlay(&quads0, container0).is_none(),
             "expected no hover overlay baseline while disabled ({label})"
@@ -780,8 +814,10 @@ fn filled_text_field_focus_uses_focus_indicator_thickness() {
         let quads0 = scene_quad_signature(&scene0);
         let container0 = find_filled_text_field_container(&quads0)
             .expect("expected filled text field container");
+        let indicator0 = find_filled_active_indicator(&quads0, container0)
+            .expect("expected filled text field active indicator");
         assert_eq!(
-            container0.border.bottom, 10,
+            indicator0.rect.h, 10,
             "expected idle indicator thickness ({label})"
         );
 
@@ -812,6 +848,8 @@ fn filled_text_field_focus_uses_focus_indicator_thickness() {
             let quads1 = scene_quad_signature(&scene1);
             let container1 = find_filled_text_field_container(&quads1)
                 .expect("expected filled text field container");
+            let indicator1 = find_filled_active_indicator(&quads1, container1)
+                .expect("expected filled text field active indicator");
 
             if frame < 28 {
                 continue;
@@ -819,11 +857,11 @@ fn filled_text_field_focus_uses_focus_indicator_thickness() {
 
             if let Some(prev) = settled {
                 assert_eq!(
-                    container1.border.bottom, prev,
+                    indicator1.rect.h, prev,
                     "expected focused indicator thickness to be stable after animations settle ({label})"
                 );
             } else {
-                settled = Some(container1.border.bottom);
+                settled = Some(indicator1.rect.h);
             }
         }
 
@@ -871,6 +909,12 @@ fn filled_text_field_error_hover_uses_state_layer_overlay() {
     let quads0 = scene_quad_signature(&scene0);
     let container0 =
         find_filled_text_field_container(&quads0).expect("expected filled text field container");
+    let indicator0 = find_filled_active_indicator(&quads0, container0)
+        .expect("expected error filled text field active indicator");
+    assert_eq!(
+        indicator0.rect.h, 10,
+        "expected error idle indicator thickness"
+    );
     assert!(find_state_layer_overlay(&quads0, container0).is_none());
 
     dispatch_hover(&mut ui, &mut app, &mut services);
@@ -939,6 +983,9 @@ fn filled_text_field_hover_overlay_survives_focus_transition() {
     let quads0 = scene_quad_signature(&scene0);
     let container0 =
         find_filled_text_field_container(&quads0).expect("expected filled text field container");
+    let indicator0 = find_filled_active_indicator(&quads0, container0)
+        .expect("expected filled text field active indicator");
+    assert_eq!(indicator0.rect.h, 10, "expected idle indicator thickness");
 
     dispatch_hover(&mut ui, &mut app, &mut services);
     let _overlay0 = find_filled_hover_overlay_after_frames(
@@ -978,7 +1025,8 @@ fn filled_text_field_hover_overlay_survives_focus_transition() {
             .iter()
             .copied()
             .filter(|q| {
-                is_zero_edges(q.border)
+                *q != container1
+                    && is_zero_edges(q.border)
                     && q.background.a > 0
                     && q.corner_radii == container1.corner_radii
                     && q.rect == rect_inset_by_edges(container1.rect, container1.border)

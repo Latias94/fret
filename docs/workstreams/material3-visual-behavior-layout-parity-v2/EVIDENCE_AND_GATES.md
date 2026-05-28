@@ -50,6 +50,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_parity_axis_matrix_v2.json`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_dotted_listbox_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_autocomplete_exposed_dropdown_listbox_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_semantics_chrome_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -97,6 +98,17 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     ExposedDropdown proves ComboBox/ListBox role and relationship wiring; live Material3 Select
     diagnostics use dotted listbox ids.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_autocomplete_exposed_dropdown_listbox_packet_v2.md`
+- 2026-05-28: M3PV2-023 closed TextField label/supporting-text relation wiring and refreshed the
+  filled chrome harness.
+  - `cargo fmt --package fret-ui --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui --lib labelled_and_described`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_text_field_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test text_field_hover`
+  - `git diff --check`
+  - Result: TextInput/TextArea expose `labelled_by` and `described_by` element relations;
+    Material TextField wires visual label/supporting text to the input; filled TextField chrome
+    tests now assert the container, active-indicator canvas, and hover state-layer split.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_semantics_chrome_packet_v2.md`
 
 ## Proof Note Template
 

@@ -1092,6 +1092,10 @@ fn material3_text_field_exposes_stable_part_test_ids() {
     ui.set_root(root);
     ui.request_semantics_snapshot();
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
     for id in [
         "m3-text-field",
@@ -1107,6 +1111,31 @@ fn material3_text_field_exposes_stable_part_test_ids() {
             "expected live TextField part test_id {id}"
         );
     }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("m3-text-field"))
+        .expect("expected TextField input semantics node");
+    let label = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("m3-text-field.label"))
+        .expect("expected TextField label semantics node");
+    let supporting = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("m3-text-field.supporting-text"))
+        .expect("expected TextField supporting text semantics node");
+    assert!(
+        input.labelled_by.contains(&label.id),
+        "expected TextField input to be labelled by the visual label"
+    );
+    assert!(
+        input.described_by.contains(&supporting.id),
+        "expected TextField input to be described by supporting text"
+    );
 }
 
 #[test]
