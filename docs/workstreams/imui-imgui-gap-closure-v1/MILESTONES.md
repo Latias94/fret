@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 popup-modal dismiss request policy owner-split result:
+`ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/dismiss.rs` now owns modal
+`OnDismissRequest` policy for Escape, optional outside press, and default prevention.
+`popup_overlay/modal.rs` keeps open-state gating, keep-alive writeback, layer/panel assembly,
+overlay request assembly, and focus initialization.
+
 2026-05-28 button pressable props/a11y owner-split result:
 `ecosystem/fret-ui-kit/src/imui/button_controls/behavior/props.rs` now owns `PressableProps`
 construction, focusable gating, variant layout, and button a11y metadata.

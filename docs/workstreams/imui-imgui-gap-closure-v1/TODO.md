@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI popup-modal dismiss request policy into a private owner without changing popup
+      store open state reads, keep-alive generation, modal root naming, backdrop/panel assembly,
+      Escape close behavior, outside-press close option, dismiss prevention, focus initialization,
+      or public popup modal facade behavior.
+      Result: `popup_overlay/modal/dismiss.rs` owns modal `OnDismissRequest` policy for Escape,
+      optional outside press, and default prevention. `popup_overlay/modal.rs` keeps open-state
+      gating, keep-alive writeback, layer/panel assembly, overlay request assembly, and focus
+      initialization.
 - [x] Split IMUI button pressable props and a11y assembly into a private owner without changing
       enabled/focusable projection, variant layout application, button a11y metadata, chrome
       assembly, activation/keyboard/response dispatch, or public button facade behavior.

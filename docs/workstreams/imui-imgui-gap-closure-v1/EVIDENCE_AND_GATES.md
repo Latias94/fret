@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Popup-Modal Dismiss Request Policy Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI popup-modal dismiss request policy split into a private owner without changing
+popup store open state reads, keep-alive generation, modal root naming, backdrop/panel assembly,
+Escape close behavior, outside-press close option, dismiss prevention, focus initialization, or
+public popup modal facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal.rs` keeps open-state gating, keep-alive
+  writeback, layer/panel assembly, overlay request assembly, and focus initialization.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/dismiss.rs` owns modal `OnDismissRequest`
+  policy for Escape, optional outside press, and default prevention.
+- `tools/gate_imui_workstream_source.py` now rejects modal dismiss policy from drifting back into
+  `popup_overlay/modal.rs` and checks the dedicated dismiss owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass; 21 popup/hover tests
+  passed.
+
 ## Button Pressable Props/A11y Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI button pressable props and a11y assembly split into a private owner without

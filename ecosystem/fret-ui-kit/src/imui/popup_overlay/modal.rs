@@ -1,8 +1,6 @@
 use std::cell::Cell;
 use std::rc::Rc;
-use std::sync::Arc;
 
-use fret_ui::action::{DismissReason, DismissRequestCx, OnDismissRequest};
 use fret_ui::element::AnyElement;
 use fret_ui::{GlobalElementId, UiHost};
 
@@ -10,6 +8,7 @@ use super::{ImUiFacade, PopupModalOptions, UiWriterImUiFacadeExt};
 use crate::primitives::dialog;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
+mod dismiss;
 mod layout;
 
 pub(super) fn begin_popup_modal_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
@@ -42,22 +41,8 @@ pub(super) fn begin_popup_modal_with_options<H: UiHost, W: UiWriterImUiFacadeExt
         let panel_layout = layout::centered_panel_layout(cx.bounds, options.size);
 
         let close_on_outside_press = options.close_on_outside_press;
-        let open_for_dismiss = open.clone();
-        let on_dismiss_request: OnDismissRequest = Arc::new(
-            move |host, acx, req: &mut DismissRequestCx| match req.reason {
-                DismissReason::Escape => {
-                    let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
-                    host.notify(acx);
-                }
-                DismissReason::OutsidePress { .. } if close_on_outside_press => {
-                    let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
-                    host.notify(acx);
-                }
-                _ => {
-                    req.prevent_default();
-                }
-            },
-        );
+        let on_dismiss_request =
+            dismiss::modal_dismiss_request(open.clone(), close_on_outside_press);
 
         let focus_state = Rc::new(Cell::new(None::<GlobalElementId>));
         let focus_state_for_build = focus_state.clone();
