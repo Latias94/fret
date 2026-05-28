@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 spacer flow option owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/containers/flow/spacer.rs` is now a private re-export hub.
+`flow/spacer/dummy.rs` owns `DummyOptions`, `flow/spacer/spacing.rs` owns `SpacingOptions`, and
+`flow/spacer/indent.rs` owns `IndentOptions`.
+
 2026-05-28 linear flow option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/containers/flow/linear.rs` is now a private re-export hub.
 `flow/linear/horizontal.rs` owns `HorizontalOptions`, and `flow/linear/vertical.rs` owns
@@ -601,8 +606,9 @@ index. `flow/spacing.rs` owns the IMUI layout-token defaults, `flow/inline.rs` i
 inline option re-export hub, `flow/inline/item_flow.rs` owns item-flow options,
 `flow/inline/same_line.rs` owns same-line options, `flow/linear.rs` is the current linear option
 re-export hub, `flow/linear/horizontal.rs` owns horizontal options, `flow/linear/vertical.rs` owns
-vertical options, `flow/spacer.rs` owns dummy/spacing/indent options, and `flow/grid.rs` owns grid
-options.
+vertical options, `flow/spacer.rs` is the current spacer option re-export hub,
+`flow/spacer/dummy.rs` owns dummy options, `flow/spacer/spacing.rs` owns spacing options,
+`flow/spacer/indent.rs` owns indent options, and `flow/grid.rs` owns grid options.
 
 2026-05-27 popup-menu panel owner-split result:
 `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs` keeps popup open/anchor lifecycle

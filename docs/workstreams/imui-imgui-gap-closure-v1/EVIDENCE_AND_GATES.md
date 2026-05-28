@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Spacer Flow Option Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI spacer flow option records split into dummy, spacing, and indent private
+owners without changing public option type names, default optional size, indent token default,
+`test_id` fields, flow re-exports, container smoke behavior, or porting-sugar behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/spacer.rs` is now a private re-export
+  hub.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/spacer/dummy.rs` owns `DummyOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/spacer/spacing.rs` owns
+  `SpacingOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/spacer/indent.rs` owns `IndentOptions`
+  and its IMUI indent spacing default.
+- `tools/gate_imui_workstream_source.py` now rejects these option bodies from drifting back into
+  `flow/spacer.rs` and checks the three dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib containers::tests --no-fail-fast`:
+  pass.
+- `CARGO_INCREMENTAL=0 cargo nextest run -p fret-imui
+  porting_sugar_items_same_line_spacing_dummy_and_indent_use_imgui_style_layout_tokens
+  --no-fail-fast`: pass.
+
 ## Linear Flow Option Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI linear flow option records split into horizontal and vertical private owners
@@ -3149,8 +3182,12 @@ Evidence:
   `HorizontalOptions`.
 - `ecosystem/fret-ui-kit/src/imui/options/containers/flow/linear/vertical.rs` owns
   `VerticalOptions`.
-- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/spacer.rs` owns `DummyOptions`,
-  `SpacingOptions`, and `IndentOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/spacer.rs` is the current spacer option
+  re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/spacer/dummy.rs` owns `DummyOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/spacer/spacing.rs` owns
+  `SpacingOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/spacer/indent.rs` owns `IndentOptions`.
 - `ecosystem/fret-ui-kit/src/imui/options/containers/flow/grid.rs` owns `GridOptions`.
 - `tools/gate_imui_workstream_source.py` now requires the flow owner split and rejects option
   records or token-default bodies from drifting back into the root flow index.
