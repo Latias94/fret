@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI drag-source payload lifecycle hooks into a private owner without changing
+      drag-source trigger-id gating, enabled/cross-window pointer-down policy, active payload
+      tracking, hovered-target preservation, drop delivery writeback, or public drag/drop response
+      behavior.
+      Result: `drag_drop/source/hooks/payload_lifecycle.rs` owns pointer-move active payload
+      tracking and pointer-up delivery insertion. `drag_drop/source/hooks.rs` keeps enabled gating,
+      cross-window drag upgrade policy, and the private payload-lifecycle delegation.
 - [x] Split IMUI table-column visibility menu-item toggle behavior into a private owner without
       changing header context-menu trigger selection, menu item group composition, test-id suffix
       generation, shared visibility state updates, changed/edited response flags, or public

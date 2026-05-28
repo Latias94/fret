@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Drag-Source Payload Lifecycle Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI drag-source payload lifecycle hooks split into a private owner without
+changing drag-source trigger-id gating, enabled/cross-window pointer-down policy, active payload
+tracking, hovered-target preservation, drop delivery writeback, or public drag/drop response
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks.rs` keeps enabled gating, cross-window
+  pointer-down drag upgrade policy, and delegates payload lifecycle hook installation.
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks/payload_lifecycle.rs` owns pointer-move
+  active payload tracking, hovered-target preservation, and pointer-up delivery insertion.
+- `tools/gate_imui_workstream_source.py` now rejects active payload / delivered payload writeback
+  from drifting back into `drag_drop/source/hooks.rs` and checks the dedicated payload lifecycle
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_drag --no-fail-fast`: pass; 8 drag interaction tests
+  passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_drag_drop_smoke --test imui_drag_preview_smoke --no-fail-fast`:
+  pass; 2 drag/drop API smoke tests passed.
+
 ## Table-Column Visibility Menu Item Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI table-column visibility menu-item toggle behavior split into a private owner
