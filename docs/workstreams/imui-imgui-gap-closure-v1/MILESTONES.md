@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 text-picker keyboard preparation owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/core/keyboard_state.rs` now owns text-picker
+keyboard model creation, enabled/empty/exact-match reconciliation, active source projection,
+pending keyboard pick projection, and active descendant element projection. `core.rs` keeps model
+reads, candidate visibility, input-root mounting, open-policy application, popup rendering, and
+pick response merging.
+
 2026-05-28 child-region resize handle owner-split result:
 `ecosystem/fret-ui-kit/src/imui/child_region/resize/handle.rs` now owns the shared pointer-region
 resize handle, drag-kind setup, drag threshold handling, pointer down/move/up hooks, drag response

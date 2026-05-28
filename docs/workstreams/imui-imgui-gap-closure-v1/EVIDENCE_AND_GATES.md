@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Text Picker Keyboard Preparation Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI text-picker keyboard preparation split into a private core sub-owner without
+changing keyboard model identity, enabled/empty/exact-match reconciliation, pending keyboard pick
+projection, active descendant element projection, input-root forwarding, popup forwarding, or
+public text-picker facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` keeps model reads, candidate
+  visibility, input-root mounting, open-policy application, popup rendering, and pick response
+  merging.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core/keyboard_state.rs` owns keyboard model
+  creation, keyboard state reconciliation, active source projection, pending pick projection, and
+  active element projection.
+- `tools/gate_imui_workstream_source.py` now rejects keyboard model creation/reconciliation state
+  mutation from drifting back into `core.rs` and checks the dedicated keyboard preparation owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass; 6 text-picker facade
+  behavior tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib text_picker --no-fail-fast`: not counted
+  as evidence; the filter matched 0 tests and nextest returned `error: no tests to run`.
+
 ## Child-Region Resize Handle Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI child-region resize pointer-handle behavior split into a private handle owner

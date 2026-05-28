@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI text-picker keyboard preparation into a private core sub-owner without changing
+      keyboard model identity, enabled/empty/exact-match reconciliation, pending keyboard pick
+      projection, active descendant element projection, input-root forwarding, popup forwarding,
+      or public text-picker facade behavior.
+      Result: `text_picker_controls/core/keyboard_state.rs` owns keyboard model creation and
+      snapshot reconciliation. `text_picker_controls/core.rs` keeps model/candidate/input/open/
+      popup/response orchestration.
 - [x] Split IMUI child-region resize pointer-handle behavior into a private owner without changing
       X/Y resize response setup, min/max forwarding, handle layout/axis constants, pointer-region
       drag start/move/up behavior, cursor selection, drag response population, started/stopped edge
