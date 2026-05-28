@@ -135,6 +135,13 @@ fn time_picker_clock_dial_label_test_id(
     part_test_id(dial_test_id, &format!("{kind}.{label:02}"))
 }
 
+// Compose Material3 places 24h hour labels on two rings:
+// outer 00..11 at 101dp / 256dp, inner 12..23 at 69dp / 256dp.
+const CLOCK_DIAL_OUTER_RADIUS_RATIO: f32 = 101.0 / 256.0;
+const CLOCK_DIAL_INNER_RADIUS_RATIO: f32 = 69.0 / 256.0;
+const CLOCK_DIAL_24H_RING_SPLIT_RATIO: f32 = 74.0 / 256.0;
+const CLOCK_DIAL_RING_LABEL_COUNT: usize = 12;
+
 #[derive(Clone)]
 pub struct DockedTimePicker {
     time: Model<Time>,
@@ -1765,10 +1772,24 @@ fn time_selector_field<H: UiHost>(
     })
 }
 
+#[derive(Debug, Clone, Copy)]
+struct DialLabel {
+    label: u32,
+    value: u32,
+    angle_idx: usize,
+    ring: DialRing,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DialRing {
+    Outer,
+    Inner,
+}
+
 #[derive(Debug, Clone)]
 struct DialFaceSnapshot {
     selection: TimePickerSelection,
-    labels: Vec<(u32, u32)>,
+    labels: Vec<DialLabel>,
     selected_idx: usize,
 }
 
@@ -1789,6 +1810,7 @@ struct TimePickerClockDialMotionRuntime {
     is_24h: bool,
     outgoing_face: Option<DialFaceSnapshot>,
     selector_angle: SpringAnimator,
+    selector_radius: SpringAnimator,
     face_alpha: SpringAnimator,
 }
 
@@ -1799,6 +1821,7 @@ impl Default for TimePickerClockDialMotionRuntime {
             is_24h: false,
             outgoing_face: None,
             selector_angle: SpringAnimator::default(),
+            selector_radius: SpringAnimator::default(),
             face_alpha: SpringAnimator::default(),
         }
     }
@@ -1821,9 +1844,10 @@ impl TimePickerClockDialMotionRuntime {
         selection: TimePickerSelection,
         is_24h: bool,
         center: f32,
-        radius: f32,
+        outer_radius: f32,
         handle_size: f32,
         target_angle: f32,
+        target_radius: f32,
         spatial: SpringSpec,
         effects: SpringSpec,
     ) -> TimePickerClockDialMotionState {
@@ -1833,14 +1857,18 @@ impl TimePickerClockDialMotionRuntime {
 
         if !initialized {
             self.selector_angle.reset(now_frame, target_angle);
+            self.selector_radius.reset(now_frame, target_radius);
             self.face_alpha.reset(now_frame, 1.0);
             self.selection = selection;
             self.is_24h = is_24h;
         } else if selection_changed {
             let outgoing = DialFaceSnapshot::new(time_now, self.selection, self.is_24h);
-            let out_angle = dial_label_angle(outgoing.selected_idx, outgoing.labels.len());
+            let out_label = outgoing.labels[outgoing.selected_idx];
+            let out_angle = dial_label_angle(out_label.angle_idx);
+            let out_radius = dial_label_radius(outer_radius, out_label);
             let start_frame = now_frame.saturating_sub(1);
             self.selector_angle.reset(start_frame, out_angle);
+            self.selector_radius.reset(start_frame, out_radius);
             self.outgoing_face = Some(outgoing);
             self.selection = selection;
             self.is_24h = is_24h;
@@ -1850,30 +1878,39 @@ impl TimePickerClockDialMotionRuntime {
         let target_angle = nearest_angle_target(self.selector_angle.value(), target_angle);
         self.selector_angle
             .set_target(now_frame, target_angle, spatial);
+        self.selector_radius
+            .set_target(now_frame, target_radius, spatial);
         self.face_alpha.set_target(now_frame, 1.0, effects);
 
         self.selector_angle.advance(now_frame);
+        self.selector_radius.advance(now_frame);
         self.face_alpha.advance(now_frame);
 
         let face_alpha = self.face_alpha.value().clamp(0.0, 1.0);
         if face_alpha >= 0.995 && !self.face_alpha.is_active() {
             self.outgoing_face = None;
         }
-        let (selector_x, selector_y) =
-            dial_origin_from_angle(center, radius, handle_size, self.selector_angle.value());
+        let (selector_x, selector_y) = dial_origin_from_angle(
+            center,
+            self.selector_radius.value(),
+            handle_size,
+            self.selector_angle.value(),
+        );
 
         TimePickerClockDialMotionState {
             selector_x,
             selector_y,
             face_alpha,
             outgoing_face: self.outgoing_face.clone(),
-            wants_frame: self.selector_angle.is_active() || self.face_alpha.is_active(),
+            wants_frame: self.selector_angle.is_active()
+                || self.selector_radius.is_active()
+                || self.face_alpha.is_active(),
         }
     }
 }
 
-fn dial_label_angle(idx: usize, len: usize) -> f32 {
-    -PI * 0.5 + (idx as f32) * (2.0 * PI / (len.max(1) as f32))
+fn dial_label_angle(angle_idx: usize) -> f32 {
+    -PI * 0.5 + (angle_idx as f32) * (2.0 * PI / CLOCK_DIAL_RING_LABEL_COUNT as f32)
 }
 
 fn nearest_angle_target(current: f32, target: f32) -> f32 {
@@ -1894,14 +1931,27 @@ fn dial_origin_from_angle(center: f32, radius: f32, handle_size: f32, angle: f32
     )
 }
 
+fn dial_label_radius(outer_radius: f32, label: DialLabel) -> f32 {
+    match label.ring {
+        DialRing::Outer => outer_radius,
+        DialRing::Inner => {
+            outer_radius * (CLOCK_DIAL_INNER_RADIUS_RATIO / CLOCK_DIAL_OUTER_RADIUS_RATIO)
+        }
+    }
+}
+
 fn dial_label_origin(
     center: f32,
-    radius: f32,
+    outer_radius: f32,
     handle_size: f32,
-    idx: usize,
-    len: usize,
+    label: DialLabel,
 ) -> (f32, f32) {
-    dial_origin_from_angle(center, radius, handle_size, dial_label_angle(idx, len))
+    dial_origin_from_angle(
+        center,
+        dial_label_radius(outer_radius, label),
+        handle_size,
+        dial_label_angle(label.angle_idx),
+    )
 }
 
 fn time_picker_clock_dial<H: UiHost>(
@@ -1933,15 +1983,11 @@ fn time_picker_clock_dial<H: UiHost>(
 
     let current_face = DialFaceSnapshot::new(time_now, selection, is_24h);
     let center = size.0 * 0.5;
-    let radius = center - (handle_size.0 * 0.5) - 8.0;
-    let (target_x, target_y) = dial_label_origin(
-        center,
-        radius,
-        handle_size.0,
-        current_face.selected_idx,
-        current_face.labels.len(),
-    );
-    let target_angle = dial_label_angle(current_face.selected_idx, current_face.labels.len());
+    let outer_radius = size.0 * CLOCK_DIAL_OUTER_RADIUS_RATIO;
+    let target_label = current_face.labels[current_face.selected_idx];
+    let (target_x, target_y) = dial_label_origin(center, outer_radius, handle_size.0, target_label);
+    let target_angle = dial_label_angle(target_label.angle_idx);
+    let target_radius = dial_label_radius(outer_radius, target_label);
     let (spatial, effects) = {
         let theme = Theme::global(&*cx.app);
         (
@@ -1957,9 +2003,10 @@ fn time_picker_clock_dial<H: UiHost>(
             selection,
             is_24h,
             center,
-            radius,
+            outer_radius,
             handle_size.0,
             target_angle,
+            target_radius,
             spatial,
             effects,
         )
@@ -1986,7 +2033,6 @@ fn time_picker_clock_dial<H: UiHost>(
                     cx,
                     &dial_test_id,
                     center,
-                    radius,
                     handle_size.0,
                     motion_state.selector_x,
                     motion_state.selector_y,
@@ -2002,16 +2048,14 @@ fn time_picker_clock_dial<H: UiHost>(
                                 .labels
                                 .iter()
                                 .enumerate()
-                                .map(|(idx, (label, _value))| {
+                                .map(|(idx, label)| {
                                     dial_label_visual(
                                         cx,
                                         *label,
-                                        idx,
-                                        outgoing_face.labels.len(),
                                         idx == outgoing_face.selected_idx,
                                         outgoing_face.selection,
                                         center,
-                                        radius,
+                                        outer_radius,
                                         handle_size.0,
                                     )
                                 })
@@ -2029,27 +2073,24 @@ fn time_picker_clock_dial<H: UiHost>(
                         .labels
                         .iter()
                         .enumerate()
-                        .map(|(idx, (label, value))| {
+                        .map(|(idx, label)| {
                             let selected = idx == incoming_face.selected_idx;
                             let label_test_id = time_picker_clock_dial_label_test_id(
                                 &dial_test_id,
                                 selection,
-                                *label,
+                                label.label,
                             );
                             dial_label(
                                 cx,
                                 *label,
-                                *value,
                                 label_test_id,
-                                idx,
-                                incoming_face.labels.len(),
                                 selected,
                                 selection,
                                 is_24h,
                                 time_model_for_labels.clone(),
                                 selection_model_for_labels.clone(),
                                 center,
-                                radius,
+                                outer_radius,
                                 handle_size.0,
                             )
                         })
@@ -2079,31 +2120,29 @@ fn time_picker_clock_dial<H: UiHost>(
                             let dx = pos.x.0 - center.x.0;
                             let dy = pos.y.0 - center.y.0;
                             let r2 = dx * dx + dy * dy;
-                            let radius = 0.5 * bounds.size.width.0.min(bounds.size.height.0);
-                            if radius <= 0.0 || r2 <= (radius * 0.25) * (radius * 0.25) {
+                            let dial_size = bounds.size.width.0.min(bounds.size.height.0);
+                            let dial_radius = 0.5 * dial_size;
+                            if dial_radius <= 0.0
+                                || r2 <= (dial_radius * 0.25) * (dial_radius * 0.25)
+                            {
                                 return;
                             }
 
                             let a = dy.atan2(dx);
                             let from_top = (a + PI * 0.5).rem_euclid(2.0 * PI);
 
-                            let time_now = host
-                                .models_mut()
-                                .get_cloned(&time_on_pointer)
-                                .unwrap_or_else(default_time);
                             let selection = host
                                 .models_mut()
                                 .get_cloned(&selection_for_update)
                                 .unwrap_or_default();
 
-                            let (labels, _) = dial_labels(time_now, selection, is_24h);
-                            if labels.is_empty() {
-                                return;
-                            }
-
-                            let step = 2.0 * PI / (labels.len() as f32);
-                            let idx = ((from_top / step + 0.5).floor() as usize) % labels.len();
-                            let value = labels[idx].1;
+                            let value = dial_value_from_pointer(
+                                selection,
+                                is_24h,
+                                from_top,
+                                r2.sqrt(),
+                                dial_size,
+                            );
 
                             let _ = host.models_mut().update(&time_on_pointer, |t: &mut Time| {
                                 *t = match selection {
@@ -2232,7 +2271,6 @@ fn dial_selector_chrome<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     dial_test_id: &Arc<str>,
     center: f32,
-    radius: f32,
     handle_size: f32,
     current_x: f32,
     current_y: f32,
@@ -2265,7 +2303,7 @@ fn dial_selector_chrome<H: UiHost>(
     let dx = selector_center_x - center;
     let dy = selector_center_y - center;
     let angle = dy.atan2(dx);
-    let line_length = (radius - handle_size * 0.5).max(0.0);
+    let line_length = ((dx * dx + dy * dy).sqrt() - handle_size * 0.5).max(0.0);
 
     let mut track_props = ContainerProps::default();
     track_props.layout.position = fret_ui::element::PositionStyle::Absolute;
@@ -2329,16 +2367,14 @@ fn dial_selector_chrome<H: UiHost>(
 
 fn dial_label_visual<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    label: u32,
-    idx: usize,
-    len: usize,
+    label: DialLabel,
     selected: bool,
     selection: TimePickerSelection,
     center: f32,
-    radius: f32,
+    outer_radius: f32,
     handle_size: f32,
 ) -> AnyElement {
-    let (x, y) = dial_label_origin(center, radius, handle_size, idx, len);
+    let (x, y) = dial_label_origin(center, outer_radius, handle_size, label);
 
     let (label_color, label_style) = {
         let theme = Theme::global(&*cx.app);
@@ -2357,9 +2393,9 @@ fn dial_label_visual<H: UiHost>(
     container.layout.overflow = Overflow::Visible;
 
     let label_text = if selection == TimePickerSelection::Minute {
-        cached_minute_dial_label(label)
+        cached_minute_dial_label(label.label)
     } else {
-        cached_decimal_0_59(label)
+        cached_decimal_0_59(label.label)
     };
     let mut tp = TextProps::new(label_text);
     tp.style = Some(label_style);
@@ -2382,21 +2418,18 @@ fn dial_label_visual<H: UiHost>(
 
 fn dial_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    label: u32,
-    value: u32,
+    label: DialLabel,
     test_id: Arc<str>,
-    idx: usize,
-    len: usize,
     selected: bool,
     selection: TimePickerSelection,
     is_24h: bool,
     time_model: Model<Time>,
     selection_model: Model<TimePickerSelection>,
     center: f32,
-    radius: f32,
+    outer_radius: f32,
     handle_size: f32,
 ) -> AnyElement {
-    let (x, y) = dial_label_origin(center, radius, handle_size, idx, len);
+    let (x, y) = dial_label_origin(center, outer_radius, handle_size, label);
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = true;
@@ -2414,11 +2447,11 @@ fn dial_label<H: UiHost>(
                                 let minute = t.minute();
                                 let second = t.second();
                                 if is_24h {
-                                    Time::from_hms(value as u8, minute, second).unwrap_or(*t)
+                                    Time::from_hms(label.value as u8, minute, second).unwrap_or(*t)
                                 } else {
                                     let cur = t.hour();
                                     let is_pm = cur >= 12;
-                                    let base = (value % 12) as u8;
+                                    let base = (label.value % 12) as u8;
                                     let hour24 = if is_pm { (base % 12) + 12 } else { base % 12 };
                                     Time::from_hms(hour24, minute, second).unwrap_or(*t)
                                 }
@@ -2426,7 +2459,8 @@ fn dial_label<H: UiHost>(
                             TimePickerSelection::Minute => {
                                 let hour = t.hour();
                                 let second = t.second();
-                                Time::from_hms(hour, (value.min(59)) as u8, second).unwrap_or(*t)
+                                Time::from_hms(hour, (label.value.min(59)) as u8, second)
+                                    .unwrap_or(*t)
                             }
                         };
                     });
@@ -2450,10 +2484,10 @@ fn dial_label<H: UiHost>(
                 role: Some(SemanticsRole::Button),
                 label: Some(match selection {
                     TimePickerSelection::Hour => {
-                        material_time_picker_hour_value_description(&*cx.app, label, is_24h)
+                        material_time_picker_hour_value_description(&*cx.app, label.label, is_24h)
                     }
                     TimePickerSelection::Minute => {
-                        material_time_picker_minute_value_description(&*cx.app, label)
+                        material_time_picker_minute_value_description(&*cx.app, label.label)
                     }
                 }),
                 test_id: Some(test_id.clone()),
@@ -2496,9 +2530,9 @@ fn dial_label<H: UiHost>(
                 container.layout.overflow = Overflow::Clip;
 
                 let label_text = if selection == TimePickerSelection::Minute {
-                    cached_minute_dial_label(label)
+                    cached_minute_dial_label(label.label)
                 } else {
-                    cached_decimal_0_59(label)
+                    cached_decimal_0_59(label.label)
                 };
                 let mut tp = TextProps::new(label_text);
                 tp.style = Some(label_style);
@@ -3249,23 +3283,45 @@ fn dial_labels(
     time_now: Time,
     selection: TimePickerSelection,
     is_24h: bool,
-) -> (Vec<(u32, u32)>, usize) {
+) -> (Vec<DialLabel>, usize) {
     match selection {
         TimePickerSelection::Hour => {
             if is_24h {
                 let hour = time_now.hour() as usize;
-                let labels: Vec<(u32, u32)> = (0..24).map(|h| (h as u32, h as u32)).collect();
+                let mut labels: Vec<DialLabel> = Vec::with_capacity(24);
+                for h in 0..12 {
+                    labels.push(DialLabel {
+                        label: h as u32,
+                        value: h as u32,
+                        angle_idx: h,
+                        ring: DialRing::Outer,
+                    });
+                }
+                for h in 12..24 {
+                    labels.push(DialLabel {
+                        label: h as u32,
+                        value: h as u32,
+                        angle_idx: h - 12,
+                        ring: DialRing::Inner,
+                    });
+                }
                 (labels, hour.min(23))
             } else {
                 let hour = time_now.hour() % 12;
                 let hour = if hour == 0 { 12 } else { hour };
-                let labels: Vec<(u32, u32)> = [12u32, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+                let labels: Vec<DialLabel> = [12u32, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
                     .into_iter()
-                    .map(|h| (h, h))
+                    .enumerate()
+                    .map(|(angle_idx, h)| DialLabel {
+                        label: h,
+                        value: h,
+                        angle_idx,
+                        ring: DialRing::Outer,
+                    })
                     .collect();
                 let idx = labels
                     .iter()
-                    .position(|(l, _)| *l == hour as u32)
+                    .position(|l| l.label == hour as u32)
                     .unwrap_or(0);
                 (labels, idx)
             }
@@ -3274,9 +3330,49 @@ fn dial_labels(
             let minute = time_now.minute();
             let snapped = ((minute as u32 + 2) / 5) * 5;
             let snapped = snapped.min(55);
-            let labels: Vec<(u32, u32)> = (0..12).map(|i| (i * 5, i * 5)).collect();
-            let idx = labels.iter().position(|(l, _)| *l == snapped).unwrap_or(0);
+            let labels: Vec<DialLabel> = (0..12)
+                .map(|i| DialLabel {
+                    label: i * 5,
+                    value: i * 5,
+                    angle_idx: i as usize,
+                    ring: DialRing::Outer,
+                })
+                .collect();
+            let idx = labels.iter().position(|l| l.label == snapped).unwrap_or(0);
             (labels, idx)
+        }
+    }
+}
+
+fn nearest_clock_index(from_top: f32, divisions: usize) -> usize {
+    let step = 2.0 * PI / divisions.max(1) as f32;
+    ((from_top / step + 0.5).floor() as usize) % divisions.max(1)
+}
+
+fn dial_value_from_pointer(
+    selection: TimePickerSelection,
+    is_24h: bool,
+    from_top: f32,
+    distance_from_center: f32,
+    dial_size: f32,
+) -> u32 {
+    match selection {
+        TimePickerSelection::Hour if is_24h => {
+            let base = nearest_clock_index(from_top, CLOCK_DIAL_RING_LABEL_COUNT) as u32;
+            let split = dial_size * CLOCK_DIAL_24H_RING_SPLIT_RATIO;
+            if distance_from_center < split {
+                base + 12
+            } else {
+                base
+            }
+        }
+        TimePickerSelection::Hour => {
+            let idx = nearest_clock_index(from_top, CLOCK_DIAL_RING_LABEL_COUNT);
+            if idx == 0 { 12 } else { idx as u32 }
+        }
+        TimePickerSelection::Minute => {
+            let idx = nearest_clock_index(from_top, CLOCK_DIAL_RING_LABEL_COUNT);
+            (idx as u32) * 5
         }
     }
 }

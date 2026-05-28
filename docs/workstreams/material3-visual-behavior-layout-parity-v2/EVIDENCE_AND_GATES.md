@@ -452,6 +452,24 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     and incoming face values, and keeps the selected label hitboxes stable under a separate selector
     chrome layer. The TimePicker motion axis is now v2-covered.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_clock_face_motion_packet_v2.md`
+- 2026-05-29: M3PV2-045 closed TimePicker 24h clock-face ring layout.
+  - Sources: Compose Material3 renders `00..11` on the outer hour ring, `12..23` on an inner ring,
+    and uses pointer distance from center to choose AM vs PM hours in 24h mode.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --test time_picker_clock_face`
+    failed because `01` and `13` were not same-angle inner/outer labels and the intended `13`
+    inner-ring pointer selected `02`.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --test time_picker_clock_face`
+  - `cargo nextest run -p fret-ui-material3 --test time_picker_motion`
+  - `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_time_picker_suite_goldens_v1; Remove-Item Env:\\FRET_UPDATE_GOLDENS`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_clock_dial_drag_updates_time time_picker_selector_keyboard_arrows_step_time time_picker_time_input_replaces_and_auto_advances_hour time_picker_time_input_rejects_invalid_values_and_recovers material3_headless_time_picker_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_exposes_stable_part_test_ids material3_time_picker_uses_compose_aligned_accessibility_labels material3_time_picker_uses_material_string_registry`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Workstream JSON, matrix JSON, catalog, and `git diff --check` gates passed.
+  - Result: 24h hour labels now render as two 12-position rings, selector radius participates in
+    spatial motion, and pointer-driven 24h hour selection uses the Compose ring split.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_24h_clock_face_layout_packet_v2.md`
 
 ## Proof Note Template
 

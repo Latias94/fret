@@ -84,6 +84,10 @@ an angle spring, a face-alpha crossfade, and a separate selector chrome layer. T
 now v2-covered, and the headless TimePicker suite was refreshed for the intentional selector chrome
 split.
 
+M3PV2-045 is complete: TimePicker 24h hour mode now renders Compose-aligned outer `00..11` and
+inner `12..23` rings, uses the Compose ring split for pointer selection, and keeps selector radius
+in the spatial motion runtime. TimePicker layout remains v2-covered with the 24h ring gap closed.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.

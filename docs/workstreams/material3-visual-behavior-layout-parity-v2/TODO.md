@@ -462,7 +462,30 @@ Task IDs use `M3PV2-*`.
   face-alpha spring for hour/minute crossfade, and a separate selector chrome layer built from the
   Material selector center/track tokens.
   Evidence: `artifacts/material3_time_picker_clock_face_motion_packet_v2.md`.
-  Handoff: Continue M3PV2-020 with the next uncovered TimePicker or adjacent Material packet.
+  Handoff: The 24h inner/outer ring layout residual is covered by M3PV2-045.
+
+- [x] M3PV2-045 [owner=codex] [deps=M3PV2-044] [scope=ecosystem/fret-ui-material3/src/time_picker.rs,ecosystem/fret-ui-material3/tests/time_picker_clock_face.rs,goldens/material3-headless/v1/material3-time-picker.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close the TimePicker 24h clock-face layout/selection gap by matching Compose's outer
+  `00..11` and inner `12..23` hour rings, including pointer distance selection for PM hours.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --test time_picker_clock_face`
+  failed because `01` and `13` were rendered on a single ring and pressing the intended `13`
+  inner-ring position selected `02`; green gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --test time_picker_clock_face`;
+  `cargo nextest run -p fret-ui-material3 --test time_picker_motion`;
+  `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_time_picker_suite_goldens_v1; Remove-Item Env:\\FRET_UPDATE_GOLDENS`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_clock_dial_drag_updates_time time_picker_selector_keyboard_arrows_step_time time_picker_time_input_replaces_and_auto_advances_hour time_picker_time_input_rejects_invalid_values_and_recovers material3_headless_time_picker_suite_goldens_v1`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_exposes_stable_part_test_ids material3_time_picker_uses_compose_aligned_accessibility_labels material3_time_picker_uses_material_string_registry`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`;
+  docs/catalog gates: `python -m json.tool` for the workstream and matrix JSON,
+  `python tools/check_workstream_catalog.py`, and `git diff --check`.
+  Review: DONE. TimePicker dial labels now carry ring/angle/value metadata, 24h hour mode renders
+  two 12-position rings, selector radius participates in spatial motion, and pointer selection uses
+  the Compose ring-split ratio.
+  Evidence: `artifacts/material3_time_picker_24h_clock_face_layout_packet_v2.md`.
+  Handoff: Continue M3PV2-020 with the next uncovered Material3 packet.
 
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 

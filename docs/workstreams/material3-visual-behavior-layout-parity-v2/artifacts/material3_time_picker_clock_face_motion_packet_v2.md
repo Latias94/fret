@@ -72,7 +72,5 @@ git diff --check
 
 ## Residual Risk
 
-- This packet covers 12-hour dial mode. The existing Fret implementation still represents the
-  24-hour clock face as a single 24-item ring rather than Compose's inner/outer hour rings; that is
-  a future layout/style parity packet, not a blocker for the current selector/crossfade motion
-  closure.
+- This packet covers selector/crossfade motion. The 24-hour inner/outer ring layout gap noted when
+  this packet landed is covered separately by M3PV2-045.
