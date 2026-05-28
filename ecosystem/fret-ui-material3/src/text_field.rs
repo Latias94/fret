@@ -29,7 +29,9 @@ use fret_ui_kit::{
     resolve_override_slot_with,
 };
 
-use crate::foundation::field::material_field_active_indicator_layer;
+use crate::foundation::field::{
+    material_field_active_indicator_layer, material_field_text_start_inset_x,
+};
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -639,6 +641,7 @@ impl TextField {
                         let mut children: Vec<AnyElement> = Vec::new();
                         let mut float_progress = 0.0f32;
                         let mut active_indicator_el: Option<AnyElement> = None;
+                        let mut leading_icon_content_size: Option<Px> = None;
                         if label.is_none() {
                             label_element_id_out.set(None);
                         }
@@ -714,18 +717,47 @@ impl TextField {
                                         chrome
                                     };
 
-                                    let (leading_icon_hit_width, trailing_icon_hit_width) = {
+                                    let (
+                                        leading_icon_hit_width,
+                                        trailing_icon_hit_width,
+                                        next_leading_icon_content_size,
+                                    ) = {
                                         let theme = Theme::global(&*cx.app);
                                         let min_touch_target = minimum_interactive_size(theme);
                                         let leading =
                                             leading_icon.is_some().then_some(min_touch_target);
                                         let trailing =
                                             trailing_icon.is_some().then_some(min_touch_target);
-                                        (leading.unwrap_or(Px(0.0)), trailing.unwrap_or(Px(0.0)))
+                                        let leading_size =
+                                            leading_icon.as_ref().map(|_| match token_namespace {
+                                                TextFieldTokenNamespace::TextField => {
+                                                    text_field_tokens::leading_icon_size(
+                                                        theme,
+                                                        variant_for_children,
+                                                    )
+                                                }
+                                                TextFieldTokenNamespace::Autocomplete => {
+                                                    autocomplete_tokens::leading_icon_size(
+                                                        theme,
+                                                        variant_for_children,
+                                                    )
+                                                }
+                                            });
+                                        (
+                                            leading.unwrap_or(Px(0.0)),
+                                            trailing.unwrap_or(Px(0.0)),
+                                            leading_size,
+                                        )
                                     };
+                                    leading_icon_content_size = next_leading_icon_content_size;
                                     if leading_icon_hit_width.0 > 0.0 {
-                                        chrome.padding.left =
-                                            Px(chrome.padding.left.0.max(leading_icon_hit_width.0));
+                                        chrome.padding.left = Px(chrome.padding.left.0.max(
+                                            material_field_text_start_inset_x(
+                                                leading_icon_hit_width,
+                                                next_leading_icon_content_size,
+                                            )
+                                            .0,
+                                        ));
                                     }
                                     if trailing_icon_hit_width.0 > 0.0 {
                                         chrome.padding.right = Px(chrome
@@ -735,11 +767,16 @@ impl TextField {
                                             .max(trailing_icon_hit_width.0));
                                     }
 
-                                    let should_float = focused || populated;
+                                    let expanded_for_float = expanded.unwrap_or(false);
+                                    let should_float = focused || expanded_for_float || populated;
                                     float_progress = if should_float { 1.0 } else { 0.0 };
 
                                     let placeholder_opacity: f32 = if label.is_some() {
-                                        if focused && !populated { 1.0 } else { 0.0 }
+                                        if (focused || expanded_for_float) && !populated {
+                                            1.0
+                                        } else {
+                                            0.0
+                                        }
                                     } else {
                                         1.0
                                     };
@@ -873,18 +910,47 @@ impl TextField {
                                         (chrome, spatial, fast_effects, slow_effects)
                                     };
 
-                                    let (leading_icon_hit_width, trailing_icon_hit_width) = {
+                                    let (
+                                        leading_icon_hit_width,
+                                        trailing_icon_hit_width,
+                                        next_leading_icon_content_size,
+                                    ) = {
                                         let theme = Theme::global(&*cx.app);
                                         let min_touch_target = minimum_interactive_size(theme);
                                         let leading =
                                             leading_icon.is_some().then_some(min_touch_target);
                                         let trailing =
                                             trailing_icon.is_some().then_some(min_touch_target);
-                                        (leading.unwrap_or(Px(0.0)), trailing.unwrap_or(Px(0.0)))
+                                        let leading_size =
+                                            leading_icon.as_ref().map(|_| match token_namespace {
+                                                TextFieldTokenNamespace::TextField => {
+                                                    text_field_tokens::leading_icon_size(
+                                                        theme,
+                                                        variant_for_children,
+                                                    )
+                                                }
+                                                TextFieldTokenNamespace::Autocomplete => {
+                                                    autocomplete_tokens::leading_icon_size(
+                                                        theme,
+                                                        variant_for_children,
+                                                    )
+                                                }
+                                            });
+                                        (
+                                            leading.unwrap_or(Px(0.0)),
+                                            trailing.unwrap_or(Px(0.0)),
+                                            leading_size,
+                                        )
                                     };
+                                    leading_icon_content_size = next_leading_icon_content_size;
                                     if leading_icon_hit_width.0 > 0.0 {
-                                        chrome.padding.left =
-                                            Px(chrome.padding.left.0.max(leading_icon_hit_width.0));
+                                        chrome.padding.left = Px(chrome.padding.left.0.max(
+                                            material_field_text_start_inset_x(
+                                                leading_icon_hit_width,
+                                                next_leading_icon_content_size,
+                                            )
+                                            .0,
+                                        ));
                                     }
                                     if trailing_icon_hit_width.0 > 0.0 {
                                         chrome.padding.right = Px(chrome
@@ -894,7 +960,8 @@ impl TextField {
                                             .max(trailing_icon_hit_width.0));
                                     }
 
-                                    let should_float = focused || populated;
+                                    let expanded_for_float = expanded.unwrap_or(false);
+                                    let should_float = focused || expanded_for_float || populated;
                                     let input_phase = if focused {
                                         TextFieldInputPhase::Focused
                                     } else if populated {
@@ -904,7 +971,11 @@ impl TextField {
                                     };
 
                                     let placeholder_target_opacity = if label.is_some() {
-                                        if focused && !populated { 1.0 } else { 0.0 }
+                                        if (focused || expanded_for_float) && !populated {
+                                            1.0
+                                        } else {
+                                            0.0
+                                        }
                                     } else {
                                         1.0
                                     };
@@ -1474,6 +1545,7 @@ impl TextField {
                                 input_bg,
                                 outline_width_for_notch,
                                 label_test_id.clone(),
+                                leading_icon_content_size,
                                 label_element_id_out.clone(),
                             ));
                         }
@@ -1490,6 +1562,7 @@ impl TextField {
                                 error,
                                 focused,
                                 supporting_text_test_id.clone(),
+                                leading_icon_content_size,
                                 supporting_text_element_id_out.clone(),
                             ));
                         }
@@ -1517,6 +1590,7 @@ fn text_field_label<H: UiHost>(
     input_bg: Color,
     outline_width: Px,
     test_id: Option<Arc<str>>,
+    leading_icon_size: Option<Px>,
     label_element_id_out: Rc<Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
     let (style, color) = {
@@ -1536,6 +1610,7 @@ fn text_field_label<H: UiHost>(
     };
 
     let (x, y) = floating_label::material_floating_label_offsets(progress);
+    let x = material_field_text_start_inset_x(x, leading_icon_size);
 
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.position = fret_ui::element::PositionStyle::Absolute;
@@ -1609,6 +1684,7 @@ fn text_field_supporting_text<H: UiHost>(
     error: bool,
     focused: bool,
     test_id: Option<Arc<str>>,
+    leading_icon_size: Option<Px>,
     supporting_text_element_id_out: Rc<Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
     let (style, color) = {
@@ -1631,7 +1707,10 @@ fn text_field_supporting_text<H: UiHost>(
     };
 
     let mut layout = fret_ui::element::LayoutStyle::default();
-    layout.margin.left = fret_ui::element::MarginEdge::Px(Px(16.0));
+    layout.margin.left = fret_ui::element::MarginEdge::Px(material_field_text_start_inset_x(
+        Px(16.0),
+        leading_icon_size,
+    ));
     layout.margin.right = fret_ui::element::MarginEdge::Px(Px(16.0));
 
     let mut supporting_text = cx.text_props(TextProps {

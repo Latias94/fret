@@ -67,6 +67,24 @@ Task IDs use `M3PV2-*`.
   Handoff: Continue M3PV2-020 with TextField floating-label full-state geometry or popup field
   width/chrome packets; multiline Material TextField still deserves a dedicated scenario.
 
+- [x] M3PV2-024 [owner=codex] [deps=M3PV2-023] [scope=ecosystem/fret-ui-material3/src/{foundation/field.rs,text_field.rs,select.rs},ecosystem/fret-ui-material3/tests/text_field_hover.rs,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close TextField floating-label and leading-icon field geometry drift, and move the
+  select-only Material field text-start helper into shared Material field foundation.
+  Validation: `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --test text_field_hover text_field_leading_icon_offsets_label_and_supporting_text`;
+  `cargo nextest run -p fret-ui-material3 --test text_field_hover text_field_floating_label_geometry_tracks_idle_focus_and_populated_states`;
+  `cargo nextest run -p fret-ui-material3 --test text_field_hover`;
+  `cargo nextest run -p fret-ui-material3 --test select_behavior`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_text_field_exposes_stable_part_test_ids material3_select_exposes_stable_part_test_ids`.
+  Review: DONE. This found a Material foundation locality issue: Select had the right leading-icon
+  text-start inset rule, but TextField could not reuse it. The helper now lives in
+  `foundation::field`, TextField uses it for input padding, label, and supporting text, and
+  `expanded` participates in floating-label/placeholder state.
+  Evidence: `artifacts/material3_text_field_floating_label_geometry_packet_v2.md`.
+  Handoff: Continue M3PV2-020 with popup field width/chrome or a dedicated multiline TextField
+  scenario. TextField motion still needs a true fixed-timestep transition packet before closing the
+  motion axis.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]

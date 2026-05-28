@@ -37,7 +37,9 @@ use fret_ui_kit::{
 };
 
 use crate::foundation::arc_str::empty_arc_str;
-use crate::foundation::field::material_field_active_indicator_layer;
+use crate::foundation::field::{
+    material_field_active_indicator_layer, material_field_text_start_inset_x,
+};
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -1443,16 +1445,6 @@ fn select_trigger_label<H: UiHost>(
             ink_overflow: Default::default(),
         })]
     })
-}
-
-fn material_field_text_start_inset_x(default: Px, leading_icon_size: Option<Px>) -> Px {
-    // Align with Material Web field layout:
-    // - with-leading-icon leading space: 12px
-    // - icon-content space: 16px
-    // (see `tokens/_md-comp-(outlined|filled)-text-field.scss` in `repo-ref/material-web`)
-    leading_icon_size
-        .map(|icon_size| Px(12.0 + icon_size.0 + 16.0))
-        .unwrap_or(default)
 }
 
 fn select_supporting_text<H: UiHost>(

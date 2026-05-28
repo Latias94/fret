@@ -47,3 +47,10 @@ pub(crate) fn material_field_active_indicator_layer<H: UiHost>(
 
     indicator
 }
+
+pub(crate) fn material_field_text_start_inset_x(default: Px, leading_icon_size: Option<Px>) -> Px {
+    // Material field layouts use a 12px leading slot inset plus a 16px icon-content gap.
+    leading_icon_size
+        .map(|icon_size| Px(12.0 + icon_size.0 + 16.0))
+        .unwrap_or(default)
+}

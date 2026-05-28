@@ -51,6 +51,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_dotted_listbox_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_autocomplete_exposed_dropdown_listbox_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_semantics_chrome_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_floating_label_geometry_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -109,6 +110,18 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     Material TextField wires visual label/supporting text to the input; filled TextField chrome
     tests now assert the container, active-indicator canvas, and hover state-layer split.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_semantics_chrome_packet_v2.md`
+- 2026-05-28: M3PV2-024 closed TextField leading-icon floating-label/supporting-text geometry and
+  promoted the select-only field text-start helper into shared Material field foundation.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --test text_field_hover text_field_leading_icon_offsets_label_and_supporting_text`
+  - `cargo nextest run -p fret-ui-material3 --test text_field_hover text_field_floating_label_geometry_tracks_idle_focus_and_populated_states`
+  - `cargo nextest run -p fret-ui-material3 --test text_field_hover`
+  - `cargo nextest run -p fret-ui-material3 --test select_behavior`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_text_field_exposes_stable_part_test_ids material3_select_exposes_stable_part_test_ids`
+  - Result: TextField now aligns input padding, floating label, and supporting text to the same
+    Material leading-icon text start; idle/focus/populated floating-label settled geometry is
+    covered; Select reuses the shared helper.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_floating_label_geometry_packet_v2.md`
 
 ## Proof Note Template
 

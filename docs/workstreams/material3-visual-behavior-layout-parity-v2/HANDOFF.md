@@ -13,6 +13,9 @@ combobox/listbox wiring through composition, and live Material3 Select diagnosti
 to the dotted ids. M3PV2-023 is complete: TextInput/TextArea gained labelled/described relation
 targets, Material TextField wires visual label/supporting text into those relations, and the filled
 chrome test now tracks the current container + active-indicator layer split.
+M3PV2-024 is complete: the Material field text-start inset helper moved from Select into
+`foundation::field`, TextField uses it for leading-icon input padding, floating label, and
+supporting text, and fixed geometry gates now cover idle/focus/populated label positions.
 
 ## Decisions
 
@@ -25,9 +28,9 @@ chrome test now tracks the current container + active-indicator layer split.
 ## Next Recommended Action
 
 Continue M3PV2-020 with a true style/layout field-family packet. Good next candidates are
-TextField floating-label full-state geometry, Autocomplete/ExposedDropdown popup width/chrome, or
-Select visual/layout token proof. Multiline TextField should get a dedicated Material scenario.
-Do not mark style/layout/motion axes complete from selector or semantics evidence alone.
+Autocomplete/ExposedDropdown popup width/chrome, Select visual/layout token proof, or a dedicated
+multiline TextField scenario. Do not mark motion axes complete from settled-geometry evidence; the
+TextField motion axis still needs a true fixed-timestep transition packet.
 
 ## Useful Gates
 
