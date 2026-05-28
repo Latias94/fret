@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Button Pressable Response Projection Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI button pressable response projection split into a private owner without
+changing clicked transient consumption, shared pressable item response population, lifecycle/hover/
+drag response projection, visual assembly, or public button facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/button_controls/behavior.rs` keeps pressable props/chrome
+  assembly, activation/keyboard owner dispatch, and visual assembly.
+- `ecosystem/fret-ui-kit/src/imui/button_controls/behavior/response.rs` owns button clicked
+  transient consumption and shared `PressableItemResponseInput` projection.
+- `tools/gate_imui_workstream_source.py` now rejects button response projection from drifting back
+  into `button_controls/behavior.rs` and checks the dedicated response owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_shortcuts --no-fail-fast`: pass; 10 shortcut tests
+  passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --no-fail-fast`:
+  pass; 1 button API smoke test passed.
+
 ## Button Pressable Activation Behavior Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI button pressable activation behavior split into a private owner without

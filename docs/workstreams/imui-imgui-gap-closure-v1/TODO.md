@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI button pressable response projection into a private owner without changing
+      clicked transient consumption, shared pressable item response population, lifecycle/hover/
+      drag response projection, visual assembly, or public button facade behavior.
+      Result: `button_controls/behavior/response.rs` owns button clicked transient consumption and
+      shared `PressableItemResponseInput` projection. `button_controls/behavior.rs` keeps
+      pressable props/chrome assembly, activation/keyboard owner dispatch, and visual assembly.
 - [x] Split IMUI button pressable activation behavior into a private owner without changing
       pressable props/chrome assembly, keyboard lifecycle marking, clicked transient recording,
       action dispatch, response population, or public button facade behavior.

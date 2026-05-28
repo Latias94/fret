@@ -11,6 +11,7 @@ use crate::declarative::chrome::control_chrome_pressable_with_id_props;
 mod action;
 mod activation;
 mod keyboard;
+mod response;
 
 pub(super) use action::ButtonAction;
 
@@ -59,19 +60,8 @@ pub(super) fn button_pressable<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                 },
             );
 
-            let clicked = cx.take_transient_for(id, super::super::KEY_CLICKED);
-            super::super::item_behavior::populate_pressable_item_response(
-                cx,
-                id,
-                state,
-                &behavior,
-                super::super::item_behavior::PressableItemResponseInput {
-                    enabled,
-                    clicked,
-                    changed: false,
-                    lifecycle_edited: false,
-                },
-                response,
+            response::populate_button_pressable_response(
+                cx, id, state, &behavior, enabled, response,
             );
 
             let (chrome, visual_content) =
