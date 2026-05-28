@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Child-Region Resize Handle Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI child-region resize pointer-handle behavior split into a private handle owner
+without changing X/Y resize response setup, min/max forwarding, handle layout/axis constants,
+pointer-region drag start/move/up behavior, cursor selection, drag response population, started/
+stopped edge synthesis, or handle test-id stamping.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/child_region/resize.rs` keeps X/Y resize entry points and
+  response option/min/max wiring.
+- `ecosystem/fret-ui-kit/src/imui/child_region/resize/handle.rs` owns the shared pointer-region
+  handle, drag-kind setup, drag threshold handling, pointer down/move/up hooks, drag response
+  projection, edge synthesis, and handle test-id stamping.
+- `ecosystem/fret-ui-kit/src/imui/child_region/resize/axis.rs` remains the axis layout/cursor owner.
+- `tools/gate_imui_workstream_source.py` now rejects pointer/drag handle behavior from drifting
+  back into `resize.rs` and checks the dedicated handle owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui layout_collections --no-fail-fast`: pass; 28 layout/collection
+  tests passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib child_region --no-fail-fast`: pass; 2
+  child-region resize response tests passed. Initial parallel attempt timed out while waiting on
+  Cargo locks; the single rerun passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Submenu State Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI submenu state mutation split into private clear/select owners without

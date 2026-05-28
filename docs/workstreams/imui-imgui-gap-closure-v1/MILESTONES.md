@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 child-region resize handle owner-split result:
+`ecosystem/fret-ui-kit/src/imui/child_region/resize/handle.rs` now owns the shared pointer-region
+resize handle, drag-kind setup, drag threshold handling, pointer down/move/up hooks, drag response
+projection, started/stopped edge synthesis, and handle test-id stamping. `resize.rs` keeps X/Y
+entry points and response option/min/max wiring, while `resize/axis.rs` remains the layout/cursor
+owner.
+
 2026-05-28 submenu state owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state.rs` is now a private
 module/re-export index. `submenu_state/clear.rs` owns submenu clear behavior, including pending

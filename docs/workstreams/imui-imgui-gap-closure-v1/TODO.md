@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI child-region resize pointer-handle behavior into a private owner without changing
+      X/Y resize response setup, min/max forwarding, handle layout/axis constants, pointer-region
+      drag start/move/up behavior, cursor selection, drag response population, started/stopped edge
+      synthesis, or handle test-id stamping.
+      Result: `child_region/resize/handle.rs` owns the shared pointer-region resize handle and drag
+      response projection. `resize.rs` keeps X/Y entry points and response option/min/max wiring.
 - [x] Split IMUI submenu state mutation into private clear/select owners without changing submenu
       open-value updates, trigger updates, geometry clearing, pending-open cleanup, pointer-grace
       timer cleanup, close/focus/open timer cleanup, focus retry reset, or submenu selection writes.
