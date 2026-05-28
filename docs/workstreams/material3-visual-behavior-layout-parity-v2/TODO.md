@@ -27,6 +27,16 @@ Task IDs use `M3PV2-*`.
   Handoff: Do not change width/flex defaults until each candidate is classified as intrinsic or
   caller-owned.
 
+- [x] M3PV2-021 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/select.rs,ecosystem/fret-ui-material3/tests/{select_behavior.rs,automation_surface.rs},tools/diag-scripts/ui-gallery/{overlay,resizable},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close the first Select v2 automation-surface gap by replacing the legacy `<base>-listbox`
+  derived id with the current field-family `<base>.listbox` part-id convention.
+  Validation: `cargo fmt --package fret-ui-material3`; `cargo nextest run -p fret-ui-material3 --test select_behavior`; `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_select_exposes_stable_part_test_ids`; `cargo nextest run -p fret-ui-material3 --lib select`; touched diag-script JSON validation.
+  Review: DONE. This was a Material recipe automation-surface repair; no foundation, kit, or core
+  mechanism change was justified.
+  Evidence: `artifacts/material3_select_dotted_listbox_packet_v2.md`.
+  Handoff: Continue M3PV2-020 with Select visual/layout token proof or move to Autocomplete /
+  ExposedDropdown popup choreography.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]

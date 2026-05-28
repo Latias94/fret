@@ -6,7 +6,8 @@ Last updated: 2026-05-28
 ## Current State
 
 The lane is open. M3PV2-010 is complete: the v2 parity-axis matrix exists and covers all 39
-components from the closed Material3 component sweep. No code has been refactored in this lane yet.
+components from the closed Material3 component sweep. M3PV2-021 is complete: Material3 Select now
+uses dotted `<base>.listbox` ids for the listbox automation surface.
 
 ## Decisions
 
@@ -18,9 +19,9 @@ components from the closed Material3 component sweep. No code has been refactore
 
 ## Next Recommended Action
 
-Start M3PV2-020. Pick one field-family axis packet and write the proof note before editing code.
-Recommended first slice: Select/Autocomplete/ExposedDropdown popup choreography because it has a
-mature shadcn Select exemplar, existing Material tests, and good diagnostics entry points.
+Continue M3PV2-020. The first Select automation-surface slice is done; next pick either Select
+visual/layout token proof or Autocomplete/ExposedDropdown popup choreography. Write the proof note
+before editing code.
 
 ## Useful Gates
 

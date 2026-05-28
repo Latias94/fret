@@ -395,13 +395,13 @@ fn material3_select_exposes_stable_part_test_ids() {
             false,
             |ui, app, services| render(ui, app, services),
         );
-        if live_test_id_exists(&ui, &app, window, "m3-select-listbox") {
+        if live_test_id_exists(&ui, &app, window, "m3-select.listbox") {
             break;
         }
     }
 
     for id in [
-        "m3-select-listbox",
+        "m3-select.listbox",
         "m3-select-item-alpha",
         "m3-select-item-alpha.chrome",
         "m3-select-item-alpha.leading-icon",

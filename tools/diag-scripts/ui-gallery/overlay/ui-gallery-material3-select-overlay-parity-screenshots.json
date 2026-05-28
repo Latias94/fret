@@ -108,7 +108,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-select-listbox"
+          "id": "ui-gallery-material3-select.listbox"
         }
       },
       "timeout_frames": 600
@@ -131,7 +131,7 @@
         "kind": "not_exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-select-listbox"
+          "id": "ui-gallery-material3-select.listbox"
         }
       },
       "timeout_frames": 600

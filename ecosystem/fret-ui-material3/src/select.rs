@@ -54,7 +54,7 @@ use crate::tokens::select as select_tokens;
 
 fn default_select_listbox_test_id() -> Arc<str> {
     static ID: OnceLock<Arc<str>> = OnceLock::new();
-    ID.get_or_init(|| Arc::<str>::from("material3-select-listbox"))
+    ID.get_or_init(|| Arc::<str>::from("material3-select.listbox"))
         .clone()
 }
 
@@ -1937,10 +1937,7 @@ fn select_listbox_panel<H: UiHost>(
     let listbox_test_id = cx.slot_state(DerivedTestIds::default, |st| {
         if st.base.as_deref() != test_id.as_deref() {
             st.base = test_id.clone();
-            st.listbox = st
-                .base
-                .as_ref()
-                .map(|id| Arc::<str>::from(format!("{}-listbox", id.as_ref())));
+            st.listbox = st.base.as_ref().map(|id| part_test_id(id, "listbox"));
         }
         st.listbox.clone()
     });

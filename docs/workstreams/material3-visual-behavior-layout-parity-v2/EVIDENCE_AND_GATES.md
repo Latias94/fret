@@ -48,6 +48,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/DESIGN.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/TODO.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_parity_axis_matrix_v2.json`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_dotted_listbox_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -71,6 +72,17 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
   - `python tools/check_workstream_catalog.py`
   - Result: the v2 matrix covers all 39 Material3 components from the closed sweep and assigns
     style/layout/behavior/accessibility/motion axis state plus a first v2 gate.
+- 2026-05-28: M3PV2-021 closed the first Select v2 automation-surface gap.
+  - `cargo fmt --package fret-ui-material3`
+  - Touched JSON scripts under `tools/diag-scripts/ui-gallery/{overlay,resizable}` validated with
+    `python -m json.tool`.
+  - `cargo nextest run -p fret-ui-material3 --test select_behavior`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_select_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --lib select`
+  - Result: Select now derives listbox ids with the dotted `<base>.listbox` convention and the
+    fallback id is `material3-select.listbox`. Select behavior, automation surface, and lib Select
+    gates passed.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_dotted_listbox_packet_v2.md`
 
 ## Proof Note Template
 

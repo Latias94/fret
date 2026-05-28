@@ -714,10 +714,10 @@ fn select_roving_scrolls_focused_option_into_view() {
         .semantics_snapshot()
         .and_then(|snapshot| {
             snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("select-trigger-listbox")).then_some(node.id)
+                (node.test_id.as_deref() == Some("select-trigger.listbox")).then_some(node.id)
             })
         })
-        .expect("expected select-trigger-listbox in semantics snapshot");
+        .expect("expected select-trigger.listbox in semantics snapshot");
     let listbox_bounds = ui
         .debug_node_visual_bounds(listbox_node)
         .expect("expected listbox bounds");
@@ -844,10 +844,10 @@ fn select_open_scrolls_selected_option_into_view() {
         .semantics_snapshot()
         .and_then(|snapshot| {
             snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("select-trigger-listbox")).then_some(node.id)
+                (node.test_id.as_deref() == Some("select-trigger.listbox")).then_some(node.id)
             })
         })
-        .expect("expected select-trigger-listbox in semantics snapshot");
+        .expect("expected select-trigger.listbox in semantics snapshot");
     let listbox_bounds = ui
         .debug_node_visual_bounds(listbox_node)
         .expect("expected listbox bounds");
@@ -1015,9 +1015,9 @@ fn select_menu_matches_anchor_width_and_clamps_height_to_available_space() {
         .nodes
         .iter()
         .find_map(|node| {
-            (node.test_id.as_deref() == Some("select-trigger-listbox")).then_some(node.id)
+            (node.test_id.as_deref() == Some("select-trigger.listbox")).then_some(node.id)
         })
-        .expect("expected select-trigger-listbox in semantics snapshot");
+        .expect("expected select-trigger.listbox in semantics snapshot");
     let listbox_bounds = ui
         .debug_node_visual_bounds(listbox_node)
         .expect("expected listbox bounds");
@@ -1191,7 +1191,7 @@ fn select_exposes_combobox_controls_and_listbox_labelled_by_relations() {
     let listbox = snap
         .nodes
         .iter()
-        .find(|n| n.test_id.as_deref() == Some("select-trigger-listbox"))
+        .find(|n| n.test_id.as_deref() == Some("select-trigger.listbox"))
         .expect("select listbox semantics node");
 
     assert!(
