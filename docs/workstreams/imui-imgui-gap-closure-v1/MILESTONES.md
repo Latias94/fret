@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 debug-draw stroked linear path painter owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear/line_poly.rs`
+now owns line and polyline stroke painting, and
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear/rect_quad_triangle.rs`
+owns rect, quad, and triangle stroke painting. `stroked/linear.rs` keeps private re-exports.
+
 2026-05-28 debug-draw list summary classification owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/list/classification.rs` now owns
 command-kind to list summary class mapping. `summaries/list.rs` keeps aggregate counters, public

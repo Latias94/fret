@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Debug-Draw Stroked Linear Path Painter Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI debug-draw stroked linear path painters split into line/polyline and
+rect/quad/triangle private owners without changing public draw-list commands, path command
+generation, shared stroke style dispatch, canvas path dispatch, or debug-draw smoke behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear.rs` keeps
+  private re-exports.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear/line_poly.rs`
+  owns line and polyline stroke painting.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear/rect_quad_triangle.rs`
+  owns rect, quad, and triangle stroke painting.
+- `tools/gate_imui_workstream_source.py` now rejects stroked linear path painter bodies from
+  drifting back into `stroked/linear.rs` and checks the dedicated line/poly and
+  rect/quad/triangle owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast`: pass; 39
+  debug-draw tests passed.
+
 ## Debug-Draw List Summary Classification Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI debug-draw list summary command-kind classification split into a private owner

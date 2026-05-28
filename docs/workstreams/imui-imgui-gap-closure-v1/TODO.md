@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw stroked linear path painters into line/polyline and rect/quad/triangle
+      private owners without changing public draw-list commands, path command generation, shared
+      stroke style dispatch, canvas path dispatch, or debug-draw smoke behavior.
+      Result: `paint_shapes/paths/stroked/linear/line_poly.rs` owns line and polyline stroke
+      painting, and `paint_shapes/paths/stroked/linear/rect_quad_triangle.rs` owns rect, quad, and
+      triangle stroke painting. `stroked/linear.rs` keeps private re-exports.
 - [x] Split IMUI debug-draw list summary command-kind classification into a private owner without
       changing public summary accessors, aggregate counts, clip-stack depth accounting, command
       summary shape, or debug-draw smoke behavior.
