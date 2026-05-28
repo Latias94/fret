@@ -166,6 +166,17 @@ cargo nextest run -p fret-ui-material3 --test radio_alignment switch_ripple_orig
 The existing Switch adapter report remains 5/5 `pass_known`; fresh diagnostics found no Switch
 recipe, foundation, kit-policy, or mechanism change.
 
+Additional IconButton centered-chrome diagnostics passed on 2026-05-28:
+
+```powershell
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-icon-button-centered-chrome.json --dir target/fret-diag/material3-icon-button-centered-chrome-20260528 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3
+cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_choice_controls_expose_stable_part_test_ids
+cargo nextest run -p fret-ui-material3 --test radio_alignment icon_button_pressed_scene_structure_is_stable
+```
+
+The centered-chrome script now opens the dedicated Material3 Icon Button page. No IconButton
+recipe, foundation, kit-policy, or mechanism change was needed.
+
 ## Follow-Ons
 
 - `M3CAS-080-F1`: Add exact named `SceneOp` draw-region diagnostics only if a concrete consumer

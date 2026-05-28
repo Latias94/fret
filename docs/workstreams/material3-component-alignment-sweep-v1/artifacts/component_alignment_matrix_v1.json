@@ -526,11 +526,11 @@
     {
       "id": "icon_button",
       "family": "surface_action",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_diagnostics_aligned",
       "wave": "wave4_choice_controls",
       "default_owner_bias": "material_foundation",
       "packet_strategy": "choice_surface_consumer",
-      "first_gate_kind": "scene_state_layer",
+      "first_gate_kind": "centered_chrome_diag_and_pressed_scene",
       "selector_status": "choice_selector_ready",
       "stable_part_ids": [
         "icon_button",
@@ -539,13 +539,15 @@
         "icon_toggle_button.chrome"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-icon-button-diagnostics-packet-v1/artifacts/icon_button_diagnostics_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe owns icon-button variants, toggle semantics, expressive selected/pressed shape morphing, and selectors",
         "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
-        "test_harness covers pressed scene stability and selector readiness",
-        "no new mechanism gap found"
+        "test_harness covers pressed scene stability, selector readiness, and centered chrome gallery diagnostics",
+        "diagnostics repaired stale centered-chrome navigation from the aggregate Material3 gallery page to the dedicated Icon Button page",
+        "no new kit_policy or mechanism gap found"
       ]
     },
     {
