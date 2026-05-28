@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw linear path-command paint dispatch into stroked and filled private
+      owners without changing public draw-list commands, path paint routing, stroke/fill painter
+      calls, command fallthrough, or debug-draw smoke behavior.
+      Result: `paint_shapes/path_commands/linear.rs` now only dispatches to
+      `linear/stroked.rs` and `linear/filled.rs`; those owners handle stroked line/poly/rect/quad/
+      triangle commands and filled polygon/quad/triangle commands respectively.
 - [x] Split IMUI debug-draw geometry summary projection into linear, mesh, round, and Bezier
       private owners without changing public command summaries, point/vertex/index/triangle counts,
       clip-state projection, media/text summary projection, or debug-draw smoke behavior.

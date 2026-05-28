@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Debug-Draw Linear Path-Command Dispatch Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI debug-draw linear path-command paint dispatch split into stroked and filled
+private owners without changing public draw-list commands, path paint routing, stroke/fill painter
+calls, command fallthrough, or debug-draw smoke behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands/linear.rs` now
+  only dispatches to stroked and filled linear command owners.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands/linear/stroked.rs`
+  owns line, polyline, rect, quad, and triangle stroke paint routing.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands/linear/filled.rs`
+  owns convex/concave polygon, quad-fill, and triangle-fill routing.
+- `tools/gate_imui_workstream_source.py` now rejects concrete linear command paint routing from
+  drifting back into `path_commands/linear.rs` and checks the dedicated stroked/filled owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast`: pass; 39
+  debug-draw tests passed.
+
 ## Debug-Draw Geometry Summary Projection Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI debug-draw geometry summary projection split into linear, mesh, round, and

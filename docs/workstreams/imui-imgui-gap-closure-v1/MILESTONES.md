@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 debug-draw linear path-command dispatch owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands/linear.rs` now only
+dispatches to stroked and filled linear command owners. `linear/stroked.rs` owns line/polyline/rect/
+quad/triangle stroke paint routing, and `linear/filled.rs` owns convex/concave polygon, quad-fill,
+and triangle-fill routing.
+
 2026-05-28 debug-draw geometry summary projection owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/geometry.rs` now
 dispatches only across geometry family owners. `geometry/linear.rs`, `geometry/mesh.rs`,

@@ -812,6 +812,8 @@
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands/beziers.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands/linear.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands/linear/filled.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands/linear/stroked.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands/round.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/polygons.rs",
