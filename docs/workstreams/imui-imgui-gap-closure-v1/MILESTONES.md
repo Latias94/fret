@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 text-picker popup item owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/item.rs` now owns selectable candidate
+rows, item test-id derivation, active element writeback, model update, popup close, and click pick
+result. `popup.rs` keeps popup lifetime, keyboard handler installation, and aggregate pick result
+merging.
+
 2026-05-28 table header resize grip visual owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/header/resize/visual.rs` now owns resize grip color,
 disabled alpha, and visual dimensions. `header/resize.rs` keeps pointer-region drag setup, cursor

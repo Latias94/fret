@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI text-picker popup item rendering and pick commit into a private owner without
+      changing popup lifecycle, keyboard handler installation, candidate filtering, selectable row
+      presentation, active-descendant writeback, model update, popup close, or public picker
+      response behavior.
+      Result: `text_picker_controls/popup/item.rs` owns selectable candidate rows, item test-id
+      derivation, active element writeback, model update, popup close, and click pick result.
+      `popup.rs` keeps popup lifetime, keyboard handler installation, and aggregate pick result
+      merging.
 - [x] Split IMUI table header resize grip visual into a private owner without changing pointer
       region hit width, resize drag lifecycle hooks, cursor behavior, drag response edge merging,
       resize test-id attachment, or table column resize public behavior.

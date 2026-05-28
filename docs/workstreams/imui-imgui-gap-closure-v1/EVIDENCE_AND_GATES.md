@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Text-Picker Popup Item Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI text-picker popup item rendering and pick commit split into a private owner
+without changing popup lifecycle, keyboard handler installation, candidate filtering, selectable
+row presentation, active-descendant writeback, model update, popup close, or public picker response
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup.rs` keeps popup lifetime, keyboard
+  handler installation, and aggregate pick result merging.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/item.rs` owns selectable candidate
+  rows, item test-id derivation, active element writeback, model update, popup close, and click
+  pick result.
+- `tools/gate_imui_workstream_source.py` now rejects selectable row/model update bodies from
+  drifting back into `popup.rs` and checks the dedicated item owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass; 6 text-picker popup
+  and keyboard tests passed.
+
 ## Table Header Resize Grip Visual Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI table header resize grip visual split into a private owner without changing
