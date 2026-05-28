@@ -56,6 +56,9 @@ M3PV2-036 is complete: Select trigger field motion now shares the Material field
 with TextField. Initially populated Select labels mount at floated geometry, focused Select labels
 animate through an intermediate first frame, and Select now exposes `<base>.label` for stable
 automation. Select chevron and overlay alpha/scale motion remain separate residual probes.
+M3PV2-037 is complete: Select chevron now uses Material `FastSpatial` spring motion and SceneOp
+gates prove first-frame open/close chevron rotation plus Select overlay first-frame fade/scale.
+Together with M3PV2-036, Select motion is now classified as v2-covered.
 
 ## Decisions
 
@@ -67,11 +70,11 @@ automation. Select chevron and overlay alpha/scale motion remain separate residu
 
 ## Next Recommended Action
 
-Continue M3PV2-020 with another field-family packet. Good next candidates are Select
-chevron/overlay motion, SearchBar/SearchView, DatePicker, or TimePicker fixed-timestep motion.
-Autocomplete/ExposedDropdown already inherit the shared TextField field-motion path, but still need
-their own popup/trigger motion classification before their motion axes are closed. Do not mark
-motion axes complete from settled-geometry evidence alone.
+Continue M3PV2-020 with another field-family packet. Good next candidates are SearchBar/SearchView,
+DatePicker, or TimePicker fixed-timestep motion. Autocomplete/ExposedDropdown already inherit the
+shared TextField field-motion path, but still need their own popup/trigger motion classification
+before their motion axes are closed. Do not mark motion axes complete from settled-geometry
+evidence alone.
 
 ## Useful Gates
 

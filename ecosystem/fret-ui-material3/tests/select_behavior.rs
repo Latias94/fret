@@ -2,7 +2,9 @@
 
 use std::sync::Arc;
 
-use fret_core::{AppWindowId, KeyCode, NodeId, Point, PointerId, Px, Rect, Size, UiServices};
+use fret_core::{
+    AppWindowId, KeyCode, NodeId, Point, PointerId, Px, Rect, Scene, SceneOp, Size, UiServices,
+};
 use fret_runtime::{ModelHost, PlatformCapabilities};
 use fret_ui::UiTree;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -12,7 +14,7 @@ mod interaction_harness;
 mod support;
 
 use support::events::{key_down, key_up, pointer_down, pointer_up};
-use support::goldens::run_overlay_frame;
+use support::goldens::{run_overlay_frame, run_overlay_frame_with_scene_scaled};
 use support::host::{FakeUiServices, TestHost};
 use support::theme::apply_material_theme;
 
@@ -231,6 +233,193 @@ fn select_focus_floating_label_animates_between_idle_and_focused() {
             "expected {label} Select floating label to animate instead of snapping to the focused endpoint: first={first_focus_y}, settled={settled_y}"
         );
     }
+}
+
+fn scene_has_intermediate_rotation(scene: &Scene) -> bool {
+    scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            SceneOp::PushTransform { transform }
+                if transform.b.abs() > 0.01 || transform.c.abs() > 0.01
+        )
+    })
+}
+
+fn scene_has_half_turn_rotation(scene: &Scene) -> bool {
+    scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            SceneOp::PushTransform { transform }
+                if transform.a < -0.9 && transform.d < -0.9
+        )
+    })
+}
+
+fn scene_has_intermediate_overlay_motion(scene: &Scene) -> bool {
+    let has_alpha = scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            SceneOp::PushOpacity { opacity } if *opacity > 0.01 && *opacity < 0.99
+        )
+    });
+    let has_scale = scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            SceneOp::PushTransform { transform }
+                if transform.b.abs() < 0.001
+                    && transform.c.abs() < 0.001
+                    && transform.a > 0.8
+                    && transform.a < 1.0
+                    && transform.d > 0.8
+                    && transform.d < 1.0
+        )
+    });
+    has_alpha && has_scale
+}
+
+#[test]
+fn select_chevron_rotates_on_first_open_frame() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Select, SelectItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(420.0)),
+    );
+
+    let selected = app.models_mut().insert(None::<Arc<str>>);
+    let items: Arc<[SelectItem]> = vec![
+        SelectItem::new("alpha", "Alpha"),
+        SelectItem::new("beta", "Beta"),
+    ]
+    .into();
+
+    let selected_model = selected.clone();
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let selected_model = selected_model.clone();
+            let items = items.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                vec![
+                    Select::new(selected_model)
+                        .a11y_label("select")
+                        .label("Choice")
+                        .placeholder("Pick one")
+                        .items(items)
+                        .test_id("select-trigger")
+                        .into_element(cx),
+                ]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
+            })
+        })
+        .expect("expected select-trigger in semantics snapshot");
+    let trigger_bounds = ui
+        .debug_node_visual_bounds(trigger_node)
+        .expect("expected select-trigger bounds");
+    let click_at = Point::new(
+        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), click_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+
+    let first_open_scene = run_overlay_frame_with_scene_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        false,
+        |ui, app, services| render(ui, app, services),
+    );
+    let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+    assert!(
+        stack
+            .stack
+            .iter()
+            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open),
+        "expected Select overlay to open"
+    );
+    assert!(
+        scene_has_intermediate_rotation(&first_open_scene),
+        "expected Select chevron to rotate on the first open frame"
+    );
+    assert!(
+        scene_has_intermediate_overlay_motion(&first_open_scene),
+        "expected Select overlay to fade and scale on the first open frame"
+    );
+
+    let mut settled_scene = first_open_scene;
+    for _ in 0..64 {
+        settled_scene = run_overlay_frame_with_scene_scaled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            1.0,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+    assert!(
+        scene_has_half_turn_rotation(&settled_scene),
+        "expected open Select chevron to settle at a half-turn rotation"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Escape));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Escape));
+
+    let first_close_scene = run_overlay_frame_with_scene_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        false,
+        |ui, app, services| render(ui, app, services),
+    );
+    assert!(
+        scene_has_intermediate_rotation(&first_close_scene),
+        "expected Select chevron to rotate on the first close frame"
+    );
+    assert!(
+        scene_has_intermediate_overlay_motion(&first_close_scene),
+        "expected Select overlay to fade and scale on the first close frame"
+    );
 }
 
 #[test]

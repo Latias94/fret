@@ -87,6 +87,7 @@
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_multiline_line_limits_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_motion_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_trigger_motion_packet_v2.md",
+    "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_chevron_overlay_motion_packet_v2.md",
     "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md",
     "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json",
     "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_parity_suite_report_v1.json",

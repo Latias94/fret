@@ -306,6 +306,28 @@ Task IDs use `M3PV2-*`.
   overlay alpha/scale remain residual motion probes for a future overlay/trigger packet; do not
   treat this as full Select overlay motion closure.
 
+- [x] M3PV2-037 [owner=codex] [deps=M3PV2-036] [scope=ecosystem/fret-ui-material3/src/select.rs,ecosystem/fret-ui-material3/tests/select_behavior.rs,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close Select chevron and overlay open/close motion by adding fixed-frame SceneOp probes
+  for the remaining Select motion pieces.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --test select_behavior select_chevron_rotates_on_first_open_frame`
+  failed because the first open frame had no chevron rotation; green gate:
+  `cargo nextest run -p fret-ui-material3 --test select_behavior select_chevron_rotates_on_first_open_frame`;
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --test select_behavior`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test select_behavior`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`;
+  workstream JSON/catalog/diff checks.
+  Review: DONE. This found one Select component bug and one already-correct shared-helper path.
+  The chevron used the legacy `StateLayerAnimator`, delaying first-frame rotation; switching it to
+  `SpringAnimator` with `FastSpatial` makes open/close continuous. Select overlay alpha/scale was
+  already driven by `foundation::overlay_motion`, and the new SceneOp gate now proves first-frame
+  enter/exit opacity and scale.
+  Evidence: `artifacts/material3_select_chevron_overlay_motion_packet_v2.md`.
+  Handoff: Select motion is now covered by M3PV2-036 + M3PV2-037. Continue M3PV2-020 with
+  SearchBar/SearchView, DatePicker, TimePicker, or field-family popup motion classification.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]

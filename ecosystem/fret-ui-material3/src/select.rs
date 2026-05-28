@@ -50,8 +50,7 @@ use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{chrome_part_test_id, part_test_id};
-use crate::interaction::state_layer::StateLayerAnimator;
-use crate::motion::ms_to_frames;
+use crate::motion::{SpringAnimator, ms_to_frames};
 use crate::tokens::dropdown_menu as dropdown_menu_tokens;
 use crate::tokens::list as list_tokens;
 use crate::tokens::select as select_tokens;
@@ -824,9 +823,6 @@ fn select_trigger_element<H: UiHost>(
             spatial,
             fast_effects,
             slow_effects,
-            open_duration_ms,
-            close_duration_ms,
-            open_easing,
             placeholder_color,
             input_text_style_fallback,
         ) = {
@@ -918,10 +914,6 @@ fn select_trigger_element<H: UiHost>(
             let fast_effects = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastEffects);
             let slow_effects = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::SlowEffects);
 
-            let open_duration_ms = dropdown_menu_tokens::open_duration_ms(theme);
-            let close_duration_ms = dropdown_menu_tokens::close_duration_ms(theme);
-            let open_easing = dropdown_menu_tokens::easing(theme);
-
             let placeholder_color =
                 select_tokens::placeholder_color(theme, variant, !enabled, error);
             let input_text_style_fallback = select_tokens::input_text_style(theme, variant);
@@ -945,9 +937,6 @@ fn select_trigger_element<H: UiHost>(
                 spatial,
                 fast_effects,
                 slow_effects,
-                open_duration_ms,
-                close_duration_ms,
-                open_easing,
                 placeholder_color,
                 input_text_style_fallback,
             )
@@ -1057,18 +1046,13 @@ fn select_trigger_element<H: UiHost>(
 
                 let (chevron_progress, chevron_want_frames) =
                     cx.slot_state(SelectChevronRuntime::default, |rt| {
-                        if rt.target_open != open {
+                        if !rt.anim.is_initialized() {
                             rt.target_open = open;
-                            rt.anim.set_target(
-                                now_frame,
-                                if open { 1.0 } else { 0.0 },
-                                if open {
-                                    open_duration_ms
-                                } else {
-                                    close_duration_ms
-                                },
-                                open_easing,
-                            );
+                            rt.anim.reset(now_frame, if open { 1.0 } else { 0.0 });
+                        } else if rt.target_open != open {
+                            rt.target_open = open;
+                            rt.anim
+                                .set_target(now_frame, if open { 1.0 } else { 0.0 }, spatial);
                         }
                         rt.anim.advance(now_frame);
                         (rt.anim.value(), rt.anim.is_active())
@@ -1381,7 +1365,7 @@ fn select_menu_item_icon<H: UiHost>(
 #[derive(Debug, Default)]
 struct SelectChevronRuntime {
     target_open: bool,
-    anim: StateLayerAnimator,
+    anim: SpringAnimator,
 }
 
 fn select_trigger_label<H: UiHost>(

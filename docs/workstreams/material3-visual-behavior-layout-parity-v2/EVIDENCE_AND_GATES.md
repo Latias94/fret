@@ -331,6 +331,16 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     same label/placeholder/border/indicator motion targets, initially populated Select labels mount
     floated, and focused Select labels show an intermediate first frame instead of a snap/delay.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_trigger_motion_packet_v2.md`
+- 2026-05-28: M3PV2-037 closed Select chevron and overlay open/close motion.
+  - Sources: Base UI Select demos use open-state icon rotation; Fret Material3
+    `foundation::overlay_motion` owns menu-like overlay alpha/scale motion via Material springs.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --test select_behavior select_chevron_rotates_on_first_open_frame`
+    failed because the first open frame had no chevron rotation.
+  - `cargo nextest run -p fret-ui-material3 --test select_behavior select_chevron_rotates_on_first_open_frame`
+  - Result: Select chevron now uses `SpringAnimator` with `FastSpatial`; the SceneOp gate proves
+    chevron rotation on first open/close frames, overlay opacity/scale on first open/close frames,
+    and settled open half-turn rotation.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_chevron_overlay_motion_packet_v2.md`
 
 ## Proof Note Template
 
