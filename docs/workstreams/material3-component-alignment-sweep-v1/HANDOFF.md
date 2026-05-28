@@ -1,12 +1,20 @@
 # Material 3 Component Alignment Sweep v1 - Handoff
 
 Status: Closed
-Last updated: 2026-05-27
+Last updated: 2026-05-28
+
+Status note (2026-05-28): the broad sweep remains closed, and the post-sweep follow-ons tracked in
+the component matrix have now been closed by dedicated packets. Start from
+`artifacts/material3_follow_on_closure_audit_v1.md` and
+`artifacts/component_alignment_matrix_v1.json` for the current state. The older "Next Recommended
+Action" list below is historical and should only be used when fresh evidence reopens one of those
+scopes.
 
 ## Current State
 
 The workstream is closed. The previous Material 3 parity harness lane is also closed and provides
-seed evidence for Button, Select, and Switch. M3CAS-020 through M3CAS-120 are complete.
+seed evidence for Button, Select, and Switch. M3CAS-020 through M3CAS-120 are complete, and the
+2026-05-28 follow-on closure audit records no remaining `packet_done_known_follow_ons` rows.
 
 ## Closeout Result
 
@@ -14,9 +22,9 @@ seed evidence for Button, Select, and Switch. M3CAS-020 through M3CAS-120 are co
 - The matrix has no rows missing `selector_status`, `first_gate_kind`, or `layer_classification`.
 - ModalNavigationDrawer now exposes dotted root/scrim/scrim.chrome/panel part IDs and has
   automation-surface proof.
-- NavigationDrawer and ModalNavigationDrawer are explicit follow-on rows for visual/overlay packet
-  evidence and stale navigation-golden classification.
-- The broad sweep should not be reopened for the remaining narrow follow-ons.
+- The 2026-05-28 follow-on closure audit records no remaining matrix residual queue.
+- The broad sweep should not be reopened for historical follow-on scopes; start a new narrow lane
+  only from fresh product evidence, source-backed drift, or release-readiness gates.
 
 ## Key Decisions
 

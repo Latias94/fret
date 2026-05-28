@@ -1,7 +1,13 @@
 # Material 3 Component Alignment Sweep v1 - TODO
 
 Status: Closed
-Last updated: 2026-05-27
+Last updated: 2026-05-28
+
+Status note (2026-05-28): the task reviews below preserve the historical 2026-05-27 sweep state.
+The current follow-on state is superseded by
+`docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`:
+the matrix now has no `packet_done_known_follow_ons` rows and no rows missing `packet_artifacts`,
+`layer_classification`, or `first_gate_kind`.
 
 Task IDs use `M3CAS-*`.
 

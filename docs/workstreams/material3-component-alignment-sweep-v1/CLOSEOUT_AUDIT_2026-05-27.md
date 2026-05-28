@@ -3,6 +3,14 @@
 Status: Closed
 Last updated: 2026-05-27
 
+Status note (2026-05-28): this closeout records the broad sweep state as of 2026-05-27. The
+current post-follow-on closure state lives in
+`docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`.
+As of 2026-05-28, `component_alignment_matrix_v1.json` has 39 classified rows, no
+`packet_done_known_follow_ons` rows, and no rows missing `packet_artifacts`,
+`layer_classification`, or `first_gate_kind`. The matrix summary and follow-on list below should be
+read as historical 2026-05-27 closeout context.
+
 ## Verdict
 
 This lane is closed with narrow follow-ons.

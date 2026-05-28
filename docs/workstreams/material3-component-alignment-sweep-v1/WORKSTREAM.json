@@ -3,7 +3,7 @@
   "slug": "material3-component-alignment-sweep-v1",
   "title": "Material 3 Component Alignment Sweep v1",
   "status": "closed",
-  "updated": "2026-05-27",
+  "updated": "2026-05-28",
   "scope_kind": "closeout",
   "problem": "Closed lane that applied the Material 3 parity harness loop across every fret-ui-material3 component, classified each finding by layer, refactored shared foundation/policy only when component packet evidence supported it, and split remaining work into narrow follow-ons.",
   "authoritative_docs": [
@@ -30,6 +30,10 @@
     {
       "role": "handoff",
       "path": "docs/workstreams/material3-component-alignment-sweep-v1/HANDOFF.md"
+    },
+    {
+      "role": "follow_on_closure",
+      "path": "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md"
     }
   ],
   "repro": {
@@ -85,6 +89,7 @@
     "docs/workstreams/material3-component-alignment-sweep-v1/CLOSEOUT_AUDIT_2026-05-27.md",
     "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json",
     "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_sweep_closeout_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md",
     "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_coverage_inventory_v1.json",
     "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_parity_suite_report_v1.json",
     "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_test_id_contract_v1.md",
@@ -113,6 +118,6 @@
   ],
   "continue_policy": {
     "default_action": "start_follow_on",
-    "notes": "This broad sweep lane is closed. Start a narrow follow-on for NavigationDrawer/ModalNavigationDrawer visual packet and stale navigation golden classification, named canvas draw-region diagnostics for ProgressIndicator or Slider, SearchView full behavior, picker accessibility depth, rich tooltip interactivity, bottom-sheet chrome aliases, or further one-family-at-a-time radio_alignment.rs splits."
+    "notes": "This broad sweep lane is closed, and the 2026-05-28 follow-on closure audit records no remaining matrix rows in packet_done_known_follow_ons. Start a new narrow follow-on only from fresh product evidence, source-backed drift, release-readiness gates, or future one-family-at-a-time test splits."
   }
 }

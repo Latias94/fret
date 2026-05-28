@@ -1,7 +1,13 @@
 # Material 3 Component Alignment Sweep v1 - Evidence And Gates
 
 Status: Closed
-Last updated: 2026-05-27
+Last updated: 2026-05-28
+
+Status note (2026-05-28): the current post-follow-on closure proof is
+`docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`.
+Historical packet logs below remain useful as evidence, but the matrix now has no
+`packet_done_known_follow_ons` rows and no rows missing `packet_artifacts`,
+`layer_classification`, or `first_gate_kind`.
 
 ## Smallest Current Repro
 
@@ -79,6 +85,7 @@ cargo run -p fretboard -- diag run <script.json> --env FRET_DIAG_FIXED_FRAME_DEL
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_foundation_consolidation_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_test_modularization_v1.md`
+- `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_coverage_inventory_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_test_id_contract_v1.md`
@@ -311,6 +318,19 @@ cargo run -p fretboard -- diag run <script.json> --env FRET_DIAG_FIXED_FRAME_DEL
   - Matrix result: all 39 rows are classified, and no row is missing `selector_status`, `first_gate_kind`, or `layer_classification`.
   - Diff check result: passed with only the known CRLF warning for `ecosystem/fret-ui-material3/tests/radio_alignment.rs`.
   - Evidence notes: `docs/workstreams/material3-component-alignment-sweep-v1/CLOSEOUT_AUDIT_2026-05-27.md`; `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_sweep_closeout_v1.md`
+- 2026-05-28: Follow-on closure audit after dedicated Material3 packets.
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_bar_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_bar_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_choice_controls_expose_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment radio_selected_dot_is_centered_in_outline radio_ripple_origin_tracks_pointer_down_position radio_pressed_scene_structure_is_stable`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_segmented_buttons_and_chips_expose_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment chip_set_roving_treats_trailing_action_focus_as_active_chip`
+  - `python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/WORKSTREAM.json`
+  - `python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
+  - `python tools/check_workstream_catalog.py`
+  - Result: current matrix covers 39 components, has no `packet_done_known_follow_ons`, no missing
+    `packet_artifacts`, no missing `layer_classification`, and no missing `first_gate_kind`.
+  - Evidence note: `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 
 ## Proof Note Template
 
