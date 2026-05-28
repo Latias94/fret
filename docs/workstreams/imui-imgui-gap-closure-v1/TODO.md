@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI button pressable activation behavior into a private owner without changing
+      pressable props/chrome assembly, keyboard lifecycle marking, clicked transient recording,
+      action dispatch, response population, or public button facade behavior.
+      Result: `button_controls/behavior/activation.rs` owns pressable activate-hook installation,
+      keyboard activation lifecycle marking, clicked transient recording, action dispatch, and
+      notify. `button_controls/behavior.rs` keeps pressable props/chrome assembly, keyboard owner
+      dispatch, response population, and visual assembly.
 - [x] Split IMUI button pressable keyboard behavior into a private owner without changing
       pressable props/chrome assembly, action dispatch, shortcut repeat policy, keyboard lifecycle
       marking, context-menu key handling, response population, or public button facade behavior.

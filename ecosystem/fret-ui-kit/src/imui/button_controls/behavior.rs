@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use fret_ui::UiHost;
-use fret_ui::action::ActivateReason;
 use fret_ui::element::PressableProps;
 
 use super::super::{ButtonOptions, ResponseExt, UiWriterImUiFacadeExt};
@@ -10,10 +9,10 @@ use crate::command::ElementCommandGatingExt as _;
 use crate::declarative::chrome::control_chrome_pressable_with_id_props;
 
 mod action;
+mod activation;
 mod keyboard;
 
 pub(super) use action::ButtonAction;
-use action::dispatch_button_action;
 
 pub(super) fn button_pressable<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -40,22 +39,13 @@ pub(super) fn button_pressable<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
 
         control_chrome_pressable_with_id_props(cx, move |cx, state, id| {
             let behavior = super::super::item_behavior::install_pressable_item_behavior(cx, id);
-            let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
-
-            let action_for_activate = action.clone();
-            cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
-                if reason == ActivateReason::Keyboard {
-                    super::super::mark_lifecycle_instant_if_inactive(
-                        host,
-                        acx,
-                        &lifecycle_model_for_activate,
-                        false,
-                    );
-                }
-                host.record_transient_event(acx, super::super::KEY_CLICKED);
-                dispatch_button_action(host, acx, reason, action_for_activate.clone());
-                host.notify(acx);
-            }));
+            activation::install_button_activation_behavior(
+                cx,
+                activation::ButtonActivationBehaviorInput {
+                    lifecycle_model: behavior.lifecycle_model.clone(),
+                    action: action.clone(),
+                },
+            );
 
             keyboard::install_button_keyboard_behavior(
                 cx,

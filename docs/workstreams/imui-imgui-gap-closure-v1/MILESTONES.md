@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 button pressable activation behavior owner-split result:
+`ecosystem/fret-ui-kit/src/imui/button_controls/behavior/activation.rs` now owns pressable
+activate-hook installation, keyboard activation lifecycle marking, clicked transient recording,
+action dispatch, and notify. `button_controls/behavior.rs` keeps pressable props/chrome assembly,
+keyboard owner dispatch, response population, and visual assembly.
+
 2026-05-28 button pressable keyboard behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/button_controls/behavior/keyboard.rs` now owns focused button
 activate-shortcut handling and keyboard context-menu requests. `button_controls/behavior.rs` keeps
