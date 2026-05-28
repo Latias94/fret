@@ -1088,6 +1088,8 @@
     "ecosystem/fret-imui/src/tests/label_identity/mod.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/builder.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls/builder/cell_methods.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls/builder/row_methods.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/builder/test_ids.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/body.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/cell.rs",

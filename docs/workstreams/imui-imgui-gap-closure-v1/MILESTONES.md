@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 table builder row/cell owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/builder/row_methods.rs` now owns `row` /
+`row_with_options` row collection and keyed row scopes, while
+`ecosystem/fret-ui-kit/src/imui/table_controls/builder/cell_methods.rs` owns `cell` /
+`cell_with_options` / `cell_text` / `cell_text_with_options` child mounting and cell packing.
+`table_controls/builder.rs` keeps built row/cell data shapes and `build_table_rows`.
+
 2026-05-28 child-region resize-stack owner-split result:
 `ecosystem/fret-ui-kit/src/imui/child_region/resize_stack.rs` now owns resize handle test-id
 derivation, X/Y handle creation, stack layout/style projection, children ordering, and resizable

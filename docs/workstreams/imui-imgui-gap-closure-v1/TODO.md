@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI table builder row and cell methods into private owners without changing
+      `ImUiTable` / `ImUiTableRow` public methods, row key scopes, row/cell test-id derivation,
+      child IMUI mounting, cell packing, text-cell rendering, or table facade behavior.
+      Result: `table_controls/builder/row_methods.rs` owns `row` / `row_with_options` row
+      collection and keyed row scopes; `table_controls/builder/cell_methods.rs` owns `cell` /
+      `cell_with_options` / `cell_text` / `cell_text_with_options` child mounting and cell
+      packing. `table_controls/builder.rs` keeps built row/cell data shapes and `build_table_rows`.
 - [x] Split IMUI child-region resize stack assembly into a private owner without changing
       resizable child-region detection, scroll/content construction, resize handle test-id
       defaults, X/Y resize response writes, stack layout refinement, stack root test-id routing, or

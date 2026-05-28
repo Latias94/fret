@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Table Builder Row/Cell Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI table builder row and cell methods split into private owners without changing
+`ImUiTable` / `ImUiTableRow` public methods, row key scopes, row/cell test-id derivation, child
+IMUI mounting, cell packing, text-cell rendering, or table facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/builder.rs` keeps built row/cell data shapes and
+  `build_table_rows`.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/builder/row_methods.rs` owns `row` /
+  `row_with_options` row collection and keyed row scopes.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/builder/cell_methods.rs` owns `cell` /
+  `cell_with_options` / `cell_text` / `cell_text_with_options` child mounting and cell packing.
+- `tools/gate_imui_workstream_source.py` now rejects row/cell method bodies from drifting back into
+  `builder.rs` and checks the dedicated row/cell owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`:
+  pass; 9 table smoke tests passed.
+- `cargo nextest run -p fret-ui-kit --features imui "imui::table_controls::tests"
+  --no-fail-fast`: pass; 4 table control tests passed.
+
 ## Child-Region Resize-Stack Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI child-region resize stack assembly split into a private owner without
