@@ -1,4 +1,8 @@
-use super::{DebugDrawCommandKind, DebugDrawCommandSummary};
+use super::DebugDrawCommandSummary;
+
+mod classification;
+
+use classification::{DebugDrawListSummaryClass, classify_debug_draw_summary_kind};
 
 /// Aggregate source-level metadata for an IMUI debug draw list.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -102,39 +106,13 @@ impl DebugDrawListSummary {
         self.triangle_count += command.triangle_count;
         self.max_clip_depth = self.max_clip_depth.max(command.clip_depth);
 
-        match command.kind {
-            DebugDrawCommandKind::PushClipRect => self.clip_push_count += 1,
-            DebugDrawCommandKind::PopClipRect => self.clip_pop_count += 1,
-            DebugDrawCommandKind::Image
-            | DebugDrawCommandKind::ImageRegion
-            | DebugDrawCommandKind::ImageQuad
-            | DebugDrawCommandKind::ImageRounded
-            | DebugDrawCommandKind::ImageRegionRounded
-            | DebugDrawCommandKind::ImageTriangleMesh => self.image_command_count += 1,
-            DebugDrawCommandKind::SvgImage | DebugDrawCommandKind::SvgMaskIcon => {
-                self.svg_command_count += 1;
-            }
-            DebugDrawCommandKind::Text => self.text_command_count += 1,
-            DebugDrawCommandKind::Line
-            | DebugDrawCommandKind::Polyline
-            | DebugDrawCommandKind::ConvexPolyFilled
-            | DebugDrawCommandKind::ConcavePolyFilled
-            | DebugDrawCommandKind::Rect
-            | DebugDrawCommandKind::RectFilled
-            | DebugDrawCommandKind::RectFilledMultiColor
-            | DebugDrawCommandKind::Quad
-            | DebugDrawCommandKind::QuadFilled
-            | DebugDrawCommandKind::Triangle
-            | DebugDrawCommandKind::TriangleFilled
-            | DebugDrawCommandKind::TriangleMesh
-            | DebugDrawCommandKind::Circle
-            | DebugDrawCommandKind::CircleFilled
-            | DebugDrawCommandKind::Ngon
-            | DebugDrawCommandKind::NgonFilled
-            | DebugDrawCommandKind::Ellipse
-            | DebugDrawCommandKind::EllipseFilled
-            | DebugDrawCommandKind::BezierQuadratic
-            | DebugDrawCommandKind::BezierCubic => {}
+        match classify_debug_draw_summary_kind(command.kind) {
+            DebugDrawListSummaryClass::ClipPush => self.clip_push_count += 1,
+            DebugDrawListSummaryClass::ClipPop => self.clip_pop_count += 1,
+            DebugDrawListSummaryClass::Image => self.image_command_count += 1,
+            DebugDrawListSummaryClass::Svg => self.svg_command_count += 1,
+            DebugDrawListSummaryClass::Text => self.text_command_count += 1,
+            DebugDrawListSummaryClass::Geometry => {}
         }
     }
 }

@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 debug-draw list summary classification owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/list/classification.rs` now owns
+command-kind to list summary class mapping. `summaries/list.rs` keeps aggregate counters, public
+accessors, final clip-depth writeback, and include-time counter updates.
+
 2026-05-28 text-picker popup item owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/item.rs` now owns selectable candidate
 rows, item test-id derivation, active element writeback, model update, popup close, and click pick

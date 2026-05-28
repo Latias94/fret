@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw list summary command-kind classification into a private owner without
+      changing public summary accessors, aggregate counts, clip-stack depth accounting, command
+      summary shape, or debug-draw smoke behavior.
+      Result: `debug_draw_controls/summaries/list/classification.rs` owns command-kind to list
+      summary class mapping. `summaries/list.rs` keeps aggregate counters, public accessors,
+      final clip-depth writeback, and include-time counter updates.
 - [x] Split IMUI text-picker popup item rendering and pick commit into a private owner without
       changing popup lifecycle, keyboard handler installation, candidate filtering, selectable row
       presentation, active-descendant writeback, model update, popup close, or public picker

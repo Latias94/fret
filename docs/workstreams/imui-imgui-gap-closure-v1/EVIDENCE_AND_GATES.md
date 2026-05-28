@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Debug-Draw List Summary Classification Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI debug-draw list summary command-kind classification split into a private owner
+without changing public summary accessors, aggregate counts, clip-stack depth accounting, command
+summary shape, or debug-draw smoke behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/list.rs` keeps aggregate counters,
+  public accessors, final clip-depth writeback, and include-time counter updates.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/list/classification.rs` owns
+  command-kind to list summary class mapping.
+- `tools/gate_imui_workstream_source.py` now rejects the command-kind classification table from
+  drifting back into `summaries/list.rs` and checks the dedicated classification owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui summaries --no-fail-fast`: pass; 4
+  debug-draw summary tests passed.
+
 ## Text-Picker Popup Item Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI text-picker popup item rendering and pick commit split into a private owner
