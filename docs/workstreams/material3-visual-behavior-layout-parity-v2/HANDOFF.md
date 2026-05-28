@@ -43,6 +43,11 @@ SearchBar/SearchView automation, SearchView behavior, and both headless golden s
 M3PV2-033 is complete: SearchView now wires docked inputs to their overlay panel and full-screen
 header inputs to their dialog through Fret's existing `controls` relation, while each overlay is
 labelled by its controlling input. The gap was recipe wiring, not a core or kit mechanism issue.
+M3PV2-034 is complete: multiline TextField now exposes Compose-aligned `min_lines`, `max_lines`,
+and `line_limits` builders and maps visible line limits to Material chrome height. This packet also
+closed a `fret-ui` TextArea mechanism gap by adding max-height support and measuring bound model
+text during declarative layout. TextField headless goldens were refreshed for the intentional
+active-indicator layer representation used by the current implementation.
 
 ## Decisions
 
@@ -54,9 +59,9 @@ labelled by its controlling input. The gap was recipe wiring, not a core or kit 
 
 ## Next Recommended Action
 
-Continue M3PV2-020 with another field-family packet. Good next candidates are a dedicated
-multiline TextField scenario or fixed-timestep popup/field/picker/search motion. Do not mark
-motion axes complete from settled-geometry evidence; TextField, Select,
+Continue M3PV2-020 with another field-family packet. Good next candidates are fixed-timestep
+popup/field/picker/search motion or another high-priority field-family residual from the matrix.
+Do not mark motion axes complete from settled-geometry evidence; TextField, Select,
 Autocomplete, ExposedDropdown, DatePicker, TimePicker, SearchBar, and SearchView still need
 transition packets.
 

@@ -232,6 +232,7 @@ impl ElementHostWidget {
                 area.set_style(props.chrome);
                 area.set_text_style(props.text_style);
                 area.set_min_height(props.min_height);
+                area.set_max_height(props.max_height);
                 if let Some(label) = props.a11y_label.as_ref() {
                     cx.set_label(label.as_ref().to_string());
                 }

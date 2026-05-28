@@ -278,14 +278,35 @@ struct FakeUiServices;
 impl fret_core::TextService for FakeUiServices {
     fn prepare(
         &mut self,
-        _input: &fret_core::TextInput,
+        input: &fret_core::TextInput,
         _constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+        let line_height = match input {
+            fret_core::TextInput::Plain { style, .. } => style
+                .line_height
+                .or_else(|| style.line_height_em.map(|em| Px(style.size.0 * em)))
+                .unwrap_or(style.size),
+            fret_core::TextInput::Attributed { base, .. } => base
+                .line_height
+                .or_else(|| base.line_height_em.map(|em| Px(base.size.0 * em)))
+                .unwrap_or(base.size),
+            _ => Px(10.0),
+        };
+        let line_height = Px(line_height.0.max(10.0));
+        let line_count = input.text().split('\n').count().max(1) as f32;
+        let width = input
+            .text()
+            .split('\n')
+            .map(|line| line.chars().count())
+            .max()
+            .unwrap_or(1)
+            .max(1) as f32
+            * 10.0;
         (
             fret_core::TextBlobId::default(),
             fret_core::TextMetrics {
-                size: Size::new(Px(10.0), Px(10.0)),
-                baseline: Px(8.0),
+                size: Size::new(Px(width), Px(line_height.0 * line_count)),
+                baseline: Px((line_height.0 * 0.8).max(0.0)),
             },
         )
     }
@@ -557,6 +578,78 @@ fn assert_close_px(actual: f32, expected: f32, label: &str) {
         (actual - expected).abs() <= 0.1,
         "expected {label} to be {expected}px, got {actual}px"
     );
+}
+
+fn text_field_chrome_height(
+    configure: impl Fn(fret_ui_material3::TextField) -> fret_ui_material3::TextField + Copy,
+) -> f32 {
+    text_field_chrome_height_with_value(String::new(), configure)
+}
+
+fn text_field_chrome_height_with_value(
+    value_text: impl Into<String>,
+    configure: impl Fn(fret_ui_material3::TextField) -> fret_ui_material3::TextField + Copy,
+) -> f32 {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(220.0)),
+    );
+    let value = app.models_mut().insert(value_text.into());
+    let value_model = value.clone();
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        let value = value_model.clone();
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let field = configure(fret_ui_material3::TextField::new(value).test_id("tf"));
+            let mut fixed = ContainerProps::default();
+            fixed.layout.size.width = Length::Px(Px(240.0));
+            vec![cx.container(fixed, move |cx| vec![field.into_element(cx)])]
+        })
+    };
+
+    for _ in 0..2 {
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        layout_and_paint(&mut ui, &mut app, &mut services, bounds);
+    }
+
+    visual_bounds_by_test_id(&ui, "tf.chrome").size.height.0
+}
+
+#[test]
+fn text_field_multiline_min_lines_expands_container_height() {
+    let height = text_field_chrome_height(|field| {
+        field
+            .variant(fret_ui_material3::TextFieldVariant::Filled)
+            .label("Message")
+            .placeholder("Write a message")
+            .multiline(true)
+            .min_lines(3)
+    });
+
+    assert_close_px(height, 104.0, "filled multiline text field chrome height");
+}
+
+#[test]
+fn text_field_multiline_max_lines_clamps_container_height() {
+    let height = text_field_chrome_height_with_value("one\ntwo\nthree\nfour\nfive\nsix", |field| {
+        field
+            .variant(fret_ui_material3::TextFieldVariant::Filled)
+            .label("Message")
+            .placeholder("Write a message")
+            .multiline(true)
+            .max_lines(3)
+    });
+
+    assert_close_px(height, 104.0, "filled multiline max-lines chrome height");
 }
 
 fn text_field_label_offsets(

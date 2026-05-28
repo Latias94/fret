@@ -60,6 +60,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_full_screen_header_layout_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_bar_default_width_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_a11y_relations_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_multiline_line_limits_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -266,6 +267,30 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     the header input. Existing SearchView behavior, automation, headless golden, lib, check, and
     clippy gates stayed green.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_a11y_relations_packet_v2.md`
+- 2026-05-28: M3PV2-034 closed multiline TextField line-limit layout drift.
+  - Sources: Compose Material3 `TextField` exposes `singleLine`, `maxLines`, and `minLines`,
+    forwards them to `BasicTextField`, and applies `TextFieldDefaults.MinHeight = 56.dp`;
+    Fret Material type scale gives `body-large` a 24px line height.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --test text_field_hover text_field_multiline_min_lines_expands_container_height`
+    failed because a multiline filled TextField with `min_lines(3)` still measured the chrome at
+    `56px` instead of the expected `104px`.
+  - `cargo fmt --package fret-ui --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --test text_field_hover text_field_multiline_min_lines_expands_container_height text_field_multiline_max_lines_clamps_container_height`
+  - `cargo nextest run -p fret-ui-material3 --test text_field_hover`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_text_field_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_text_field_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui --lib text_area_semantics_labelled_and_described_elements_are_exposed`
+  - `cargo nextest run -p fret-ui --lib declarative_text_area_updates_model_on_text_input`
+  - Cold Windows relink rerun used `CARGO_PROFILE_TEST_DEBUG=0` for the same two `fret-ui` lib-test
+    filters after a timed-out standard-profile relink left corrupted incremental artifacts.
+  - `cargo check -p fret-ui --lib`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: TextArea can now clamp max height and measures bound model text for declarative layout;
+    Material TextField exposes `min_lines`, `max_lines`, and `line_limits`, maps visible line
+    limits to chrome min/max height, and refreshes TextField headless goldens for the existing
+    active-indicator layer split.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_multiline_line_limits_packet_v2.md`
 
 ## Proof Note Template
 

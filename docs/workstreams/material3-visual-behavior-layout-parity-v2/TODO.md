@@ -229,6 +229,33 @@ Task IDs use `M3PV2-*`.
   Handoff: Continue M3PV2-020 with multiline TextField or fixed-timestep field/picker/search
   motion. SearchView motion remains open.
 
+- [x] M3PV2-034 [owner=codex] [deps=M3PV2-033] [scope=crates/fret-ui/src/{element.rs,declarative/host_widget*,text/area/*},ecosystem/fret-ui-material3/src/text_field.rs,ecosystem/fret-ui-material3/tests/{text_field_hover.rs,automation_surface.rs,radio_alignment.rs},goldens/material3-headless/v1,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close multiline TextField line-limit layout drift by mapping Compose Material3
+  `minLines` / `maxLines` semantics onto Fret Material TextField chrome height and adding the
+  needed TextArea max-height / bound-text measurement mechanism.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --test text_field_hover text_field_multiline_min_lines_expands_container_height`
+  failed with multiline filled chrome height stuck at `56px` instead of `104px`;
+  `cargo fmt --package fret-ui --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --test text_field_hover text_field_multiline_min_lines_expands_container_height text_field_multiline_max_lines_clamps_container_height`;
+  `cargo nextest run -p fret-ui-material3 --test text_field_hover`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_text_field_exposes_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_text_field_suite_goldens_v1`;
+  `cargo nextest run -p fret-ui --lib text_area_semantics_labelled_and_described_elements_are_exposed`;
+  `cargo nextest run -p fret-ui --lib declarative_text_area_updates_model_on_text_input`;
+  `cargo check -p fret-ui --lib`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`;
+  workstream JSON/catalog/diff checks.
+  Review: DONE. This found both a core mechanism gap and a Material recipe gap. Declarative
+  TextArea could not clamp height and measured a placeholder line rather than the bound model
+  text; Material TextField had no Compose-aligned `minLines` / `maxLines` API or chrome-height
+  mapping.
+  Evidence: `artifacts/material3_text_field_multiline_line_limits_packet_v2.md`.
+  Handoff: Continue M3PV2-020 with fixed-timestep field/picker/search motion or move to the next
+  highest-priority field-family residual. TextField motion remains open, and soft-wrap-derived
+  multiline line counts are a future TextArea intrinsic-measurement refinement.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]

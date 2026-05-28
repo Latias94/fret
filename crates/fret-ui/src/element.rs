@@ -2172,6 +2172,7 @@ pub struct TextAreaProps {
     pub focus_ring_always_paint: bool,
     pub text_style: TextStyle,
     pub min_height: Px,
+    pub max_height: Option<Px>,
 }
 
 impl TextAreaProps {
@@ -2194,6 +2195,7 @@ impl TextAreaProps {
             focus_ring_always_paint: false,
             text_style: TextStyle::default(),
             min_height: Px(80.0),
+            max_height: None,
         }
     }
 }
@@ -2219,6 +2221,7 @@ impl std::fmt::Debug for TextAreaProps {
             .field("focus_ring_always_paint", &self.focus_ring_always_paint)
             .field("text_style", &self.text_style)
             .field("min_height", &self.min_height)
+            .field("max_height", &self.max_height)
             .finish()
     }
 }

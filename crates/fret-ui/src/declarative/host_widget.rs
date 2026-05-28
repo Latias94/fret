@@ -520,6 +520,7 @@ impl<H: UiHost + 'static> Widget<H> for ElementHostWidget {
                 area.set_style(props.chrome);
                 area.set_text_style(props.text_style);
                 area.set_min_height(props.min_height);
+                area.set_max_height(props.max_height);
                 <crate::text_area::BoundTextArea as Widget<H>>::command(area, cx, command)
             }
             ElementInstance::FocusScope(props) if props.trap_focus => {

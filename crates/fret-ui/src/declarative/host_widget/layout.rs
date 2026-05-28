@@ -1520,6 +1520,7 @@ impl ElementHostWidget {
                 area.set_text_style(props.text_style);
                 area.set_placeholder(props.placeholder);
                 area.set_min_height(props.min_height);
+                area.set_max_height(props.max_height);
 
                 let desired = area.layout(cx);
                 clamp_to_constraints_with_overflow_context(

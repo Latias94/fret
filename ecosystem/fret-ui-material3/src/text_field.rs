@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use fret_core::{
     Axis, Color, Corners, Edges, NodeId, Point, Px, SemanticsRole, SvgFit, TextOverflow,
-    TextStrutStyle, TextWrap, Transform2D,
+    TextStrutStyle, TextStyle, TextWrap, Transform2D,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -236,6 +236,45 @@ fn maybe_force_strut_from_style(mut style: fret_core::TextStyle) -> fret_core::T
     style
 }
 
+fn material_text_field_input_text_style<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    multiline: bool,
+    stable_line_boxes: bool,
+) -> TextStyle {
+    let base_style = crate::foundation::context::inherited_text_style(cx).unwrap_or_else(|| {
+        let theme = Theme::global(&*cx.app);
+        theme
+            .text_style_by_key("md.sys.typescale.body-large")
+            .unwrap_or_default()
+    });
+
+    if multiline && !stable_line_boxes {
+        return typography::with_intent(base_style, TextIntent::Content);
+    }
+
+    let style = typography::with_intent(base_style, TextIntent::Control);
+    if multiline {
+        maybe_force_strut_from_style(style)
+    } else {
+        style
+    }
+}
+
+fn text_style_line_height(style: &TextStyle) -> Px {
+    if let Some(line_height) = style.line_height {
+        return line_height;
+    }
+    if let Some(line_height_em) = style.line_height_em {
+        return Px((style.size.0 * line_height_em).max(style.size.0));
+    }
+    style.size
+}
+
+fn multiline_line_limit_container_height(base_height: Px, line_height: Px, lines: usize) -> Px {
+    let extra_lines = lines.saturating_sub(1) as f32;
+    Px(base_height.0 + line_height.0.max(0.0) * extra_lines)
+}
+
 fn text_area_style_from_text_input_style(input: fret_ui::TextInputStyle) -> TextAreaStyle {
     let mut preedit_bg_color = input.selection_color;
     preedit_bg_color.a = (preedit_bg_color.a * 0.35).clamp(0.0, 1.0);
@@ -288,6 +327,8 @@ pub struct TextField {
     input_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
     multiline: bool,
     stable_line_boxes: bool,
+    multiline_min_lines: usize,
+    multiline_max_lines: Option<usize>,
     multiline_min_height: Option<Px>,
     token_namespace: TextFieldTokenNamespace,
 }
@@ -347,6 +388,8 @@ impl TextField {
             input_id_out: None,
             multiline: false,
             stable_line_boxes: true,
+            multiline_min_lines: 1,
+            multiline_max_lines: None,
             multiline_min_height: None,
             token_namespace: TextFieldTokenNamespace::TextField,
         }
@@ -392,6 +435,26 @@ impl TextField {
     /// ink clipping for tall fallback glyphs.
     pub fn stable_line_boxes(mut self, stable: bool) -> Self {
         self.stable_line_boxes = stable;
+        self
+    }
+
+    /// Minimum number of visible text lines in multiline mode.
+    pub fn min_lines(mut self, min_lines: usize) -> Self {
+        self.multiline_min_lines = min_lines.max(1);
+        self
+    }
+
+    /// Maximum number of visible text lines in multiline mode.
+    pub fn max_lines(mut self, max_lines: usize) -> Self {
+        self.multiline_max_lines = Some(max_lines.max(1));
+        self
+    }
+
+    /// Visible line bounds for multiline mode.
+    pub fn line_limits(mut self, min_lines: usize, max_lines: usize) -> Self {
+        let min_lines = min_lines.max(1);
+        self.multiline_min_lines = min_lines;
+        self.multiline_max_lines = Some(max_lines.max(min_lines));
         self
     }
 
@@ -556,6 +619,8 @@ impl TextField {
                 input_id_out,
                 multiline,
                 stable_line_boxes,
+                multiline_min_lines,
+                multiline_max_lines,
                 multiline_min_height,
                 token_namespace,
             } = self;
@@ -577,6 +642,45 @@ impl TextField {
             } else {
                 height
             };
+            let input_text_style =
+                material_text_field_input_text_style(cx, multiline, stable_line_boxes);
+            let multiline_min_lines = multiline_min_lines.max(1);
+            let multiline_max_lines = multiline_max_lines.map(|lines| lines.max(1));
+            let multiline_max_lines =
+                multiline_max_lines.map(|lines| lines.max(multiline_min_lines));
+            let multiline_content_lines = if multiline {
+                cx.read_model_ref(&model, Invalidation::Layout, |value| {
+                    value.split('\n').count().max(1)
+                })
+                .ok()
+                .unwrap_or(1)
+            } else {
+                1
+            };
+            let multiline_line_height = text_style_line_height(&input_text_style);
+            let multiline_min_container_height = multiline.then(|| {
+                multiline_line_limit_container_height(
+                    height,
+                    multiline_line_height,
+                    multiline_min_lines,
+                )
+            });
+            let multiline_max_container_height = multiline_max_lines.map(|lines| {
+                let line_limit_height =
+                    multiline_line_limit_container_height(height, multiline_line_height, lines);
+                if let Some(min_height) = multiline_min_container_height {
+                    Px(line_limit_height.0.max(min_height.0))
+                } else {
+                    line_limit_height
+                }
+            });
+            let multiline_container_height = multiline.then(|| {
+                let visible_lines = multiline_content_lines.max(multiline_min_lines);
+                let visible_lines = multiline_max_lines
+                    .map(|max_lines| visible_lines.min(max_lines))
+                    .unwrap_or(visible_lines);
+                multiline_line_limit_container_height(height, multiline_line_height, visible_lines)
+            });
             let part_test_ids = test_id.as_ref().map(TextFieldPartTestIds::from_base);
             let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
             let active_indicator_test_id = part_test_ids
@@ -654,6 +758,7 @@ impl TextField {
                                 .read_model_ref(&model, Invalidation::Layout, |v| !v.is_empty())
                                 .ok()
                                 .unwrap_or(false);
+                            let input_text_style = input_text_style.clone();
 
                             let mut container = ContainerProps::default();
                             container.layout.size.width = Length::Fill;
@@ -806,6 +911,13 @@ impl TextField {
                                     container.corner_radii = chrome.corner_radii;
                                     container.border = container_border;
                                     container.border_color = Some(chrome.border_color);
+                                    if let Some(min_height) = multiline_container_height {
+                                        container.layout.size.height = Length::Auto;
+                                        container.layout.size.min_height =
+                                            Some(Length::Px(min_height));
+                                        container.layout.size.max_height =
+                                            multiline_max_container_height.map(Length::Px);
+                                    }
 
                                     chrome.background = Color::TRANSPARENT;
                                     chrome.border = Edges::all(Px(0.0));
@@ -830,26 +942,13 @@ impl TextField {
                                     props.test_id = test_id.clone();
                                     props.placeholder = placeholder.clone();
                                     props.min_height = height;
+                                    if let Some(min_height) = multiline_container_height {
+                                        props.layout.size.height = Length::Auto;
+                                        props.min_height = min_height;
+                                        props.max_height = multiline_max_container_height;
+                                    }
                                     props.chrome = text_area_style_from_text_input_style(chrome);
-
-                                    let base_style =
-                                        crate::foundation::context::inherited_text_style(cx)
-                                            .unwrap_or_else(|| {
-                                                let theme = Theme::global(&*cx.app);
-                                                theme
-                                                    .text_style_by_key(
-                                                        "md.sys.typescale.body-large",
-                                                    )
-                                                    .unwrap_or_default()
-                                            });
-                                    props.text_style = if stable_line_boxes {
-                                        maybe_force_strut_from_style(typography::with_intent(
-                                            base_style,
-                                            TextIntent::Control,
-                                        ))
-                                    } else {
-                                        typography::with_intent(base_style, TextIntent::Content)
-                                    };
+                                    props.text_style = input_text_style;
 
                                     props
                                 })
@@ -1168,18 +1267,7 @@ impl TextField {
                                     props.controls_element = controls_element;
                                     props.expanded = expanded;
                                     props.chrome = chrome;
-                                    let base_style =
-                                        crate::foundation::context::inherited_text_style(cx)
-                                            .unwrap_or_else(|| {
-                                                let theme = Theme::global(&*cx.app);
-                                                theme
-                                                    .text_style_by_key(
-                                                        "md.sys.typescale.body-large",
-                                                    )
-                                                    .unwrap_or_default()
-                                            });
-                                    props.text_style =
-                                        typography::with_intent(base_style, TextIntent::Control);
+                                    props.text_style = input_text_style;
 
                                     props
                                 })
