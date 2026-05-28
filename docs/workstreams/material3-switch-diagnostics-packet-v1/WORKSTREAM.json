@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "slug": "material3-switch-diagnostics-packet-v1",
+  "title": "Material 3 Switch Diagnostics Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "diagnostics_follow_on",
+  "problem": "Closed the Switch matrix residual by combining the existing Material3 Switch adapter report with fresh UI Gallery switch icon state-matrix diagnostics and focused Rust gates.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-switch-diagnostics-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-switch-diagnostics-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-switch-diagnostics-packet-v1/TODO.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-switch-diagnostics-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-switch-diagnostics-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the Material3 Switch icons state-matrix screenshots script against the UI Gallery.",
+    "commands": [
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-icons-state-matrix-screenshots.json --dir target/fret-diag/material3-switch-icons-state-matrix-20260528 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3"
+    ]
+  },
+  "gates": [
+    {
+      "name": "switch-icons-state-matrix-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-icons-state-matrix-screenshots.json --dir target/fret-diag/material3-switch-icons-state-matrix-20260528 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3"
+    },
+    {
+      "name": "switch-automation-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_switch_exposes_stable_part_test_ids"
+    },
+    {
+      "name": "switch-ripple-focused",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment switch_ripple_origin_tracks_pointer_down_position switch_ripple_holds_for_minimum_press_duration_before_fade"
+    },
+    {
+      "name": "switch-adapter-report-json",
+      "command": "python -m json.tool docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_switch_adapter_report_v1.json"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-material3/src/switch.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/material3/switch.rs",
+    "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-icons-state-matrix-screenshots.json",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_switch_adapter_report_v1.json",
+    "docs/workstreams/material3-switch-diagnostics-packet-v1/artifacts/switch_diagnostics_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "return_to_material3_sweep",
+    "notes": "Switch is closed for selector, semantics, ripple, icon state-matrix, and existing adapter-report evidence. Keep track/handle/icon animation recipe-owned and indication/minimum target behavior foundation-owned."
+  }
+}

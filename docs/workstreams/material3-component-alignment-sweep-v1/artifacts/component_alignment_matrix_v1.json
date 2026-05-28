@@ -977,11 +977,11 @@
     {
       "id": "switch",
       "family": "choice_control",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_diagnostics_aligned",
       "wave": "wave4_choice_controls",
       "default_owner_bias": "material_foundation",
       "packet_strategy": "seed_choice_anchor",
-      "first_gate_kind": "existing_packet_and_automation_surface",
+      "first_gate_kind": "switch_adapter_report_and_icons_state_matrix_diag",
       "selector_status": "choice_selector_ready",
       "stable_part_ids": [
         "switch",
@@ -992,13 +992,15 @@
         "switch.icon-off"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-switch-diagnostics-packet-v1/artifacts/switch_diagnostics_packet_v1.md",
+        "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_switch_adapter_report_v1.json"
       ],
       "layer_classification": [
         "material_recipe owns switch track/handle/icon composition, selection animation, and selectors",
         "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
-        "test_harness covers selector readiness, pointer/keyboard ripple origins, minimum press duration, and pressed scene stability",
-        "no new mechanism gap found"
+        "test_harness covers selector readiness, pointer/keyboard ripple origins, minimum press duration, pressed scene stability, adapter-report parts, and the promoted icons state-matrix gallery diagnostics",
+        "no new kit_policy or mechanism gap found"
       ]
     },
     {
