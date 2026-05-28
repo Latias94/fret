@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI table builder row/cell test-id derivation into a private owner without changing
+      public `ImUiTable` / `ImUiTableRow` methods, row option explicit test-id override behavior,
+      default row/cell test-id strings, child `ImUiFacade` mounting, or table render behavior.
+      Result: `table_controls/builder/test_ids.rs` owns row/cell test-id derivation. `builder.rs`
+      keeps row/cell collection, keyed row scopes, child mounting, and public table-builder
+      methods.
 - [x] Split IMUI selectable popup-menu keyboard navigation into a private owner without changing
       selectable shortcut activation, popup close-on-shortcut, context-menu key handling, inherited
       popup menu item registration, Arrow/Home/End focus movement, or public selectable/menu-item

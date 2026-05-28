@@ -7,6 +7,8 @@ use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use super::cell;
+mod test_ids;
+
 use crate::imui::{
     ImUiFacade, TableCellOptions, TableRowOptions, containers::build_imui_children_with_focus,
 };
@@ -75,11 +77,8 @@ impl<'cx, 'a, H: UiHost> ImUiTable<'cx, 'a, H> {
     ) {
         let key = key.into();
         let row_index = self.rows.len();
-        let default_test_id = self
-            .root_test_id
-            .as_ref()
-            .map(|base| Arc::from(format!("{base}.row.{row_index}")));
-        let row_test_id = options.test_id.or(default_test_id);
+        let row_test_id =
+            test_ids::row_test_id(options.test_id, self.root_test_id.as_ref(), row_index);
         let mut cells = Vec::new();
         let build_focus = self.build_focus.clone();
         self.cx.keyed(key.clone(), |cx| {
@@ -114,10 +113,7 @@ impl<'cx, 'a, H: UiHost> ImUiTableRow<'cx, 'a, H> {
         let mut out = Vec::new();
         build_imui_children_with_focus(self.cx, &mut out, self.build_focus.clone(), f);
         let content = cell::pack_cell_children(self.cx, out);
-        let test_id = self
-            .row_test_id
-            .as_ref()
-            .map(|base| Arc::from(format!("{base}.cell.{cell_index}")));
+        let test_id = test_ids::cell_test_id(self.row_test_id.as_ref(), cell_index);
         self.cells.push(BuiltTableCell {
             test_id,
             explicit_test_id: options.test_id,

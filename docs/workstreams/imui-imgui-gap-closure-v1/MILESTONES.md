@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 table builder test-id owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/builder/test_ids.rs` now owns row/cell test-id
+derivation, including explicit row test-id override fallback and default `.row.*` / `.cell.*`
+strings. `builder.rs` keeps public `ImUiTable` / `ImUiTableRow` methods, row/cell collection,
+keyed row scopes, child mounting, and table render handoff.
+
 2026-05-28 selectable popup-nav owner-split result:
 `ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard/popup_nav.rs` now owns inherited
 popup menu nav item registration plus Arrow/Up/Home/End focus movement. `keyboard.rs` keeps

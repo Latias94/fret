@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Table Builder Test-Id Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI table builder row/cell test-id derivation split into a private owner without
+changing public `ImUiTable` / `ImUiTableRow` methods, explicit row test-id override behavior,
+default row/cell test-id strings, child `ImUiFacade` mounting, or table render behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/builder.rs` keeps row/cell collection, keyed row
+  scopes, child mounting, `cell::pack_cell_children(...)`, `text_table_cell(...)`, and the public
+  table-builder method surface.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/builder/test_ids.rs` owns explicit row test-id
+  fallback and default `.row.*` / `.cell.*` test-id derivation.
+- `tools/gate_imui_workstream_source.py` now rejects inline row/cell test-id format strings from
+  drifting back into `builder.rs` and checks the dedicated test-id owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib imui::table_controls::tests --no-fail-fast`:
+  pass; 4 table-control lib tests passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`:
+  pass; 9 table smoke tests passed.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_controls --no-fail-fast`: first run
+  timed out at 124 seconds and is not counted as evidence; rerun with a longer timeout passed 7
+  matched tests, then the precise `imui::table_controls::tests` filter above was used as evidence.
+
 ## Selectable Popup-Nav Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI selectable popup-menu keyboard navigation split into a private owner without
