@@ -431,8 +431,27 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
   - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
   - Workstream JSON, matrix JSON, catalog, and `git diff --check` gates passed.
   - Result: TimePickerDialog now uses `foundation::modal_motion` for dial and input initial modes.
-    The broader TimePicker motion axis remains open for clock-face selector/crossfade motion.
+    This modal-only packet left clock-face selector/crossfade motion to a follow-up.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_modal_motion_packet_v2.md`
+- 2026-05-28: M3PV2-044 closed TimePicker clock-face selector/crossfade motion.
+  - Sources: Compose Material3 `ClockDialModifier` uses `DefaultSpatial`; `ClockFace` wraps the
+    hour/minute value sets in `Crossfade` with `DefaultEffects`; `drawSelector` paints the selector
+    as independent handle/track/center chrome.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --test time_picker_motion docked_time_picker_clock_face_crossfades_and_moves_selector_on_selection_change`
+    failed because the first post-selection frame still snapped.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --test time_picker_motion`
+  - `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_time_picker_suite_goldens_v1; Remove-Item Env:\\FRET_UPDATE_GOLDENS`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_clock_dial_drag_updates_time time_picker_selector_keyboard_arrows_step_time time_picker_time_input_replaces_and_auto_advances_hour time_picker_time_input_rejects_invalid_values_and_recovers material3_headless_time_picker_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_exposes_stable_part_test_ids material3_time_picker_uses_compose_aligned_accessibility_labels material3_time_picker_uses_material_string_registry`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Workstream JSON, matrix JSON, catalog, and `git diff --check` gates passed.
+  - Result: TimePicker dial now animates selector motion with an angle spring, crossfades outgoing
+    and incoming face values, and keeps the selected label hitboxes stable under a separate selector
+    chrome layer. The TimePicker motion axis is now v2-covered.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_clock_face_motion_packet_v2.md`
 
 ## Proof Note Template
 

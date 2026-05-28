@@ -76,8 +76,13 @@ M3PV2-042 is complete: DatePicker modal motion is now v2-covered for the current
 recipe surface. The packet extracted `foundation::modal_motion`, kept Dialog on the same modal
 fade/rise/scale transform, and moved DatePickerDialog off its old pure-scale panel animation.
 M3PV2-043 is complete: TimePickerDialog modal motion now uses the same shared modal helper for
-both initial dial and input modes. TimePicker's overall motion axis remains open because the clock
-face selector movement and hour/minute crossfade still snap instead of using Compose motion.
+both initial dial and input modes. That packet left the clock-face selector movement and
+hour/minute crossfade as a separate motion gap.
+
+M3PV2-044 is complete: TimePicker clock-face motion now models Compose's analog dial behavior with
+an angle spring, a face-alpha crossfade, and a separate selector chrome layer. The motion axis is
+now v2-covered, and the headless TimePicker suite was refreshed for the intentional selector chrome
+split.
 
 ## Decisions
 
@@ -89,7 +94,7 @@ face selector movement and hour/minute crossfade still snap instead of using Com
 
 ## Next Recommended Action
 
-Continue M3PV2-020 with TimePicker clock-face selector/crossfade fixed-timestep motion.
+Continue M3PV2-020 with the next uncovered Material3 packet.
 
 ## Useful Gates
 

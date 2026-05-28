@@ -105,91 +105,27 @@
           "kind": "push_clip_r_rect"
         },
         {
-          "kind": "push_clip_r_rect"
+          "kind": "push_transform"
         },
         {
-          "kind": "text",
+          "kind": "quad",
           "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "pop_clip"
         },
         {
-          "kind": "push_clip_r_rect"
+          "kind": "pop_transform"
         },
         {
-          "kind": "text",
+          "kind": "quad",
           "order": 0
         },
         {
-          "kind": "pop_clip"
-        },
-        {
           "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
         },
         {
           "kind": "pop_clip"
@@ -202,6 +138,12 @@
           "kind": "push_clip_r_rect"
         },
         {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "text",
           "order": 0
         },
@@ -209,7 +151,7 @@
           "kind": "pop_clip"
         },
         {
-          "kind": "push_clip_r_rect"
+          "kind": "push_clip_rect"
         },
         {
           "kind": "text",
@@ -219,7 +161,97 @@
           "kind": "pop_clip"
         },
         {
-          "kind": "push_clip_r_rect"
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
         },
         {
           "kind": "text",
@@ -396,6 +428,60 @@
             1280,
             1280,
             1280
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            2080,
+            3350,
+            720,
+            20
+          ],
+          "background": [
+            130,
+            91,
+            275,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            10,
+            10,
+            10,
+            10
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            2040,
+            3320,
+            80,
+            80
+          ],
+          "background": [
+            130,
+            91,
+            275,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            40,
+            40,
+            40,
+            40
           ]
         },
         {
@@ -788,91 +874,27 @@
           "kind": "push_clip_r_rect"
         },
         {
-          "kind": "push_clip_r_rect"
+          "kind": "push_transform"
         },
         {
-          "kind": "text",
+          "kind": "quad",
           "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "pop_clip"
         },
         {
-          "kind": "push_clip_r_rect"
+          "kind": "pop_transform"
         },
         {
-          "kind": "text",
+          "kind": "quad",
           "order": 0
         },
         {
-          "kind": "pop_clip"
-        },
-        {
           "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
         },
         {
           "kind": "pop_clip"
@@ -885,6 +907,12 @@
           "kind": "push_clip_r_rect"
         },
         {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "text",
           "order": 0
         },
@@ -892,7 +920,7 @@
           "kind": "pop_clip"
         },
         {
-          "kind": "push_clip_r_rect"
+          "kind": "push_clip_rect"
         },
         {
           "kind": "text",
@@ -902,7 +930,97 @@
           "kind": "pop_clip"
         },
         {
-          "kind": "push_clip_r_rect"
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_rect"
         },
         {
           "kind": "text",
@@ -1156,6 +1274,60 @@
             1280,
             1280,
             1280
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            4304,
+            3790,
+            720,
+            20
+          ],
+          "background": [
+            130,
+            91,
+            275,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            10,
+            10,
+            10,
+            10
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            4264,
+            3760,
+            80,
+            80
+          ],
+          "background": [
+            130,
+            91,
+            275,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            40,
+            40,
+            40,
+            40
           ]
         },
         {
