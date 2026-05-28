@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Menu Keyboard Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI menu-item keyboard behavior split into private popup-menu and menubar owners
+without changing popup item nav registration, Arrow/Home/End focus movement, shortcut activation,
+popup-close-on-key activation, lifecycle instant marking, menubar horizontal-arrow suppression, or
+menubar primitive wiring.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard.rs` is now a private module/re-export
+  index.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard/popup.rs` owns popup-menu item
+  registration, menu-item shortcut activation, popup close on keyboard activation, and popup item
+  focus movement.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard/menubar.rs` owns menubar horizontal-arrow
+  close-focus suppression and primitive trigger-row horizontal switching wiring.
+- `tools/gate_imui_workstream_source.py` now checks popup/menubar keyboard owners separately and
+  rejects keyboard behavior bodies from drifting back into the root index.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs popup_hover --no-fail-fast`: pass; 39
+  menu/submenu/popup-hover tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Interaction Runtime Models Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI interaction runtime model helpers split into private element, window, scope,

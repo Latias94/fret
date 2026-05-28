@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 menu keyboard owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard.rs` is now a private module/re-export index.
+`keyboard/popup.rs` owns popup menu item registration, keyboard shortcut activation,
+popup-close-on-key activation, and Arrow/Home/End item focus movement. `keyboard/menubar.rs` owns
+menubar horizontal-arrow close-focus suppression and primitive trigger-row horizontal switching
+wiring.
+
 2026-05-28 interaction-runtime models owner-split result:
 `ecosystem/fret-ui-kit/src/imui/interaction_runtime/models.rs` is now a private module/re-export
 index. `models/element.rs` owns element-scoped context-menu anchor, long-press, pointer-click

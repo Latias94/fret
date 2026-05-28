@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI menu-item keyboard behavior into private popup-menu and menubar owners without
+      changing popup item nav registration, Arrow/Home/End focus movement, shortcut activation,
+      popup-close-on-key activation, lifecycle instant marking, menubar horizontal-arrow
+      suppression, or menubar primitive wiring.
+      Result: `menu_controls/keyboard.rs` is now a private module/re-export index.
+      `keyboard/popup.rs` owns popup menu keyboard behavior, and `keyboard/menubar.rs` owns menubar
+      horizontal switching support.
 - [x] Split IMUI interaction-runtime model helpers into private element, window, scope, and state
       owners without changing context-menu anchor model creation, long-press signal storage,
       pointer-click modifier storage, lifecycle session storage, active-item per-window storage,
