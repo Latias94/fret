@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 ## Worktree Convergence - 2026-05-26
 
@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI input-text-picker option records into filter and options private owners without
+      changing public option type names, filter matching, default popup/input/options, root
+      re-exports, picker smoke behavior, or fret-imui picker behavior.
+      Result: `options/controls/text/picker.rs` is now a public re-export hub.
+      `picker/filter.rs` owns `InputTextPickerFilter`, and `picker/options.rs` owns
+      `InputTextPickerOptions`.
 - [x] Split IMUI textarea option records into submit-key and options private owners without
       changing public option type names, multiline submit/cancel defaults, stable-line-box default,
       root re-exports, textarea smoke behavior, or fret-imui textarea model behavior.
@@ -1103,10 +1109,11 @@ Last updated: 2026-05-28
       changing option type names, fields, defaults, or re-export paths.
       Result: `text/filters.rs` owns named/custom input filters, `text/input.rs` is the current
       input-text option re-export hub, `input/mode.rs` owns `InputTextMode`, `input/options.rs`
-      owns `InputTextOptions`, `text/picker.rs` owns picker filter/default popup options, and
-      `text/textarea.rs` is the current textarea option re-export hub, `textarea/submit_key.rs`
-      owns textarea submit-key policy, and `textarea/options.rs` owns textarea defaults. The root
-      `text.rs` file is now a thin module/re-export index.
+      owns `InputTextOptions`, `text/picker.rs` is the current picker option re-export hub,
+      `picker/filter.rs` owns picker filter matching, `picker/options.rs` owns picker default
+      popup/options, and `text/textarea.rs` is the current textarea option re-export hub,
+      `textarea/submit_key.rs` owns textarea submit-key policy, and `textarea/options.rs` owns
+      textarea defaults. The root `text.rs` file is now a thin module/re-export index.
 - [x] Split IMUI collection option types out of
       `ecosystem/fret-ui-kit/src/imui/options/collections.rs` into private owner modules without
       changing table, table-column, or virtual-list option type names and defaults.

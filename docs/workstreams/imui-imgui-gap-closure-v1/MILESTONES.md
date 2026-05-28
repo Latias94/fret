@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 ## M6 - Continuing IMUI Owner-Split Pressure
 
@@ -11,6 +11,11 @@ Exit criteria:
 - Keep public IMUI facade method names, options, responses, and behavior stable.
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
+
+2026-05-29 input-text-picker option owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/controls/text/picker.rs` is now a public re-export hub.
+`picker/filter.rs` owns `InputTextPickerFilter`, including matching policy, and
+`picker/options.rs` owns `InputTextPickerOptions`, including default popup sizing and picker flags.
 
 2026-05-28 textarea option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/text/textarea.rs` is now a public re-export hub.
