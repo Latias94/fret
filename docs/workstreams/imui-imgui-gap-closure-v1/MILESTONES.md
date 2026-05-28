@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 disclosure trigger response owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior/response.rs` now owns
+trigger-response projection, hover query hook attachment, active-item hover blocking, and
+response sanitization. `behavior.rs` keeps pressable/key/pointer hook installation and delegates
+the projection to the dedicated response owner.
+
 2026-05-28 slider pointer value-update owner-split result:
 `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/pointer/value_update.rs` now owns
 pointer-to-value projection, clamp/snap, and changed-detection writes. `pointer.rs` keeps

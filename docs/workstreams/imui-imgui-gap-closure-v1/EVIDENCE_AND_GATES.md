@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Disclosure Trigger Response Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI disclosure trigger response projection split into a private owner without
+changing disclosure pointer/shortcut behavior, context-menu and double-click transient signaling,
+hover-state projection, active-item hover blocking, or public disclosure facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior.rs` keeps pressable/key/
+  pointer hook installation and delegates response projection.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior/response.rs` owns trigger
+  response population, hover query hook attachment, active-item hover blocking, and response
+  sanitization.
+- `tools/gate_imui_workstream_source.py` now rejects response projection from drifting back into
+  `behavior.rs` and checks the dedicated response owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib disclosure_controls::tests --no-fail-fast`:
+  pass; 6 disclosure behavior tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::tabs --no-fail-fast`: timed out while
+  waiting on Cargo build locks; not used as evidence.
+
 ## Slider Pointer Value-Update Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI slider pointer value-update logic split into a private owner without changing

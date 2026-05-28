@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI disclosure trigger response projection into a private owner without changing
+      disclosure pointer/shortcut behavior, context-menu and double-click transient signaling,
+      hover-state projection, active-item hover blocking, or public disclosure facade behavior.
+      Result: `disclosure_controls/trigger/behavior/response.rs` owns trigger response
+      population. `behavior.rs` keeps pressable/key/pointer hook installation and delegates the
+      response projection to the new owner.
 - [x] Split IMUI slider pointer value-update logic into a private owner without changing pointer
       down/move/up capture, active-item mutation, lifecycle activation/deactivation, changed
       response emission, or slider pointer behavior.
