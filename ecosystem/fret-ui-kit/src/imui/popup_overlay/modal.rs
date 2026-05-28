@@ -6,6 +6,7 @@ use crate::{OverlayController, OverlayPresence, OverlayRequest};
 mod dismiss;
 mod layer;
 mod layout;
+mod state;
 
 pub(super) fn begin_popup_modal_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -15,18 +16,12 @@ pub(super) fn begin_popup_modal_with_options<H: UiHost, W: UiWriterImUiFacadeExt
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> bool {
     ui.with_cx_mut(|cx| {
-        let open = super::super::with_popup_store_for_id(cx, id, |st, _app| st.open.clone());
-        let is_open = cx
-            .read_model(&open, fret_ui::Invalidation::Paint, |_app, v| *v)
-            .unwrap_or(false);
-        if !is_open {
+        let open = state::popup_modal_open_model(cx, id);
+        if !state::popup_modal_is_open(cx, &open) {
             return false;
         }
 
-        let keep_alive_generation = super::super::popup_render_generation_for_window(cx);
-        super::super::with_popup_store_for_id(cx, id, move |st, _app| {
-            st.keep_alive_generation = Some(keep_alive_generation);
-        });
+        state::refresh_popup_modal_keep_alive(cx, id);
 
         let overlay_key = format!("fret-ui-kit.imui.popup_modal.overlay.{id}");
         let overlay_id = cx.named(overlay_key.as_str(), |cx| cx.root_id());
