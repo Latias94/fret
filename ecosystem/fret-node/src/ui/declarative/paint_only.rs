@@ -48,6 +48,8 @@ mod cache;
 mod diag;
 #[path = "paint_only/edge_hit_test.rs"]
 mod edge_hit_test;
+#[path = "paint_only/edge_path_geometry.rs"]
+mod edge_path_geometry;
 #[path = "paint_only/frame_plan.rs"]
 mod frame_plan;
 #[path = "paint_only/hover_anchor.rs"]

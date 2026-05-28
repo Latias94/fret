@@ -5946,6 +5946,124 @@ fn custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate
     );
 }
 
+fn polyline_midpoint(points: &[Point]) -> Point {
+    let mut total = 0.0f32;
+    for window in points.windows(2) {
+        let dx = window[1].x.0 - window[0].x.0;
+        let dy = window[1].y.0 - window[0].y.0;
+        total += (dx * dx + dy * dy).sqrt();
+    }
+
+    let mut remaining = total * 0.5;
+    for window in points.windows(2) {
+        let from = window[0];
+        let to = window[1];
+        let dx = to.x.0 - from.x.0;
+        let dy = to.y.0 - from.y.0;
+        let len = (dx * dx + dy * dy).sqrt();
+        if len <= 1.0e-6 {
+            continue;
+        }
+        if remaining <= len {
+            let t = (remaining / len).clamp(0.0, 1.0);
+            return Point::new(Px(from.x.0 + dx * t), Px(from.y.0 + dy * t));
+        }
+        remaining -= len;
+    }
+
+    *points
+        .last()
+        .expect("polyline should contain at least one point")
+}
+
+fn assert_point_near(actual: Point, expected: Point, epsilon: f32) {
+    assert!(
+        (actual.x.0 - expected.x.0).abs() <= epsilon
+            && (actual.y.0 - expected.y.0).abs() <= epsilon,
+        "expected point near ({:.3}, {:.3}), got ({:.3}, {:.3})",
+        expected.x.0,
+        expected.y.0,
+        actual.x.0,
+        actual.y.0
+    );
+}
+
+#[test]
+fn custom_edge_path_feeds_default_declarative_edge_center_anchor() {
+    let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let edge_ref = graph.edges.get(&edge).expect("test edge");
+    let from = geom.port_center(edge_ref.from).expect("from port center");
+    let to = geom.port_center(edge_ref.to).expect("to port center");
+    let detour_y = from.y.0 + 240.0;
+    let custom_points = [
+        from,
+        Point::new(from.x, Px(detour_y)),
+        Point::new(to.x, Px(detour_y)),
+        to,
+    ];
+    let expected_center = polyline_midpoint(&custom_points);
+    let edge_types = Rc::new(NodeGraphEdgeTypes::new().register_path(
+        EdgeTypeKey::new("data"),
+        move |_graph, _edge_id, _style, _hint, input| {
+            let detour_y = input.from.y.0 + 240.0;
+            Some(EdgeCustomPath {
+                cache_key: 98,
+                commands: vec![
+                    PathCommand::MoveTo(input.from),
+                    PathCommand::LineTo(Point::new(input.from.x, Px(detour_y))),
+                    PathCommand::LineTo(Point::new(input.to.x, Px(detour_y))),
+                    PathCommand::LineTo(input.to),
+                ],
+            })
+        },
+    ));
+
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            selected_edges: vec![edge],
+            draw_order,
+            ..Default::default()
+        },
+        default_editor_config(),
+    );
+
+    for _ in 0..2 {
+        let edge_types = edge_types.clone();
+        let _ = render_surface_frame_for_binding(
+            &mut ui,
+            &mut host,
+            &mut services,
+            window,
+            bounds,
+            &binding,
+            move |binding| {
+                let mut props = super::NodeGraphSurfaceProps::new(binding.clone());
+                props.edge_types = Some(edge_types);
+                props
+            },
+        );
+    }
+
+    let snapshot = binding.internals_store().snapshot();
+    let center = snapshot
+        .edge_centers_window
+        .get(&edge)
+        .copied()
+        .expect("edge center anchor");
+
+    assert_point_near(center, expected_center, 0.5);
+}
+
 #[test]
 fn record_portal_measured_node_size_in_state_ignores_epsilon_churn() {
     let mut models = ModelStore::default();

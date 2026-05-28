@@ -312,6 +312,44 @@ Execution companion: `design.md` (surface map + next worktree order).
     - `git diff --check`: passed.
     - `cargo nextest run -p fret-node`: passed.
 
+- [x] FNDX-048 Feed custom edge paths into default edge-center anchors.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_path_geometry.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/edge_types.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_default_declarative_edge_center_anchor`
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`
+  - Exit note: default declarative edge-center internals now compute the anchor from the same
+    custom path command stream used for paint, culling, spatial candidates, and exact hit filtering.
+    This closes the custom path midpoint/normal anchor slice, but full EdgeLabelRenderer-style child
+    labels and EdgeToolbar composition internals remain follow-up contracts.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_path_geometry.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_default_declarative_edge_center_anchor`:
+      passed.
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`:
+      passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo fmt --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+
 ## M0 - Decision gates and internal seam map
 
 - [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.

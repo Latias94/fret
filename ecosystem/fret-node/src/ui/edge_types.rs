@@ -10,7 +10,8 @@
 //!
 //! Stage 2: optionally provide a **custom edge path** builder (and still keep the serialized
 //! graph model UI-free). The default declarative surface uses custom paths for paint, conservative
-//! spatial-index candidates, and exact path-distance hit filtering. Edge labels and EdgeToolbar
+//! spatial-index candidates, exact path-distance hit filtering, and custom path midpoint anchors
+//! for edge-center internals. Full EdgeLabelRenderer-style child labels and EdgeToolbar composition
 //! internals remain separate overlay/component contracts.
 
 use std::collections::BTreeMap;

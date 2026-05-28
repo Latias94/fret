@@ -5,12 +5,21 @@ Last updated: 2026-05-28
 
 ## Current Focus
 
-FNDX-047 feeds custom `NodeGraphEdgeTypes::register_path(...)` output into exact path-distance edge
-hit filtering after conservative spatial candidate lookup. This closes the next spatial contract
-slice after FNDX-046 while still leaving edge label placement and EdgeToolbar internals as explicit
-follow-up contracts.
+FNDX-048 feeds custom `NodeGraphEdgeTypes::register_path(...)` output into default declarative
+edge-center anchors by computing the midpoint/normal from the custom path command stream. This
+closes the next custom-path spatial contract after FNDX-047 while still leaving full
+EdgeLabelRenderer-style child labels and EdgeToolbar composition internals as explicit follow-up
+contracts.
 
 ## Targeted Iteration Gates
+
+```bash
+cargo nextest run -p fret-node custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter
+```
+
+This gate proves the FNDX-048 custom edge path anchor contract: default declarative internals expose
+`edge_centers_window` using the custom path midpoint instead of the default presenter route center,
+and source-policy/docs keep the scoped EdgeLabelRenderer/EdgeToolbar demotion explicit.
 
 ```bash
 cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter
@@ -149,6 +158,8 @@ closeout note must name those failures.
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_hit_test.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/edge_path_geometry.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
 - `ecosystem/fret-node/src/surface_policy_tests.rs`
 - `ecosystem/fret-node/src/runtime/tests.rs`
 - `ecosystem/fret-node/src/ui/binding_store_sync.rs`
@@ -158,7 +169,6 @@ closeout note must name those failures.
 - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/hover_anchor.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/overlay_elements.rs`
-- `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/transactions.rs`
 - `ecosystem/fret-node/src/ui/portal_commands.rs`
 - `ecosystem/fret-node/src/ui/overlays/blackboard_declarative.rs`
@@ -313,5 +323,26 @@ closeout note must name those failures.
   - `git diff --check`: passed; proves the patch has no whitespace errors.
   - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
     green with 459 tests.
+- FNDX-048:
+  - `cargo nextest run -p fret-node custom_edge_path_feeds_default_declarative_edge_center_anchor`:
+    passed; proves default declarative internals use the custom path midpoint for
+    `edge_centers_window` instead of the default cubic route midpoint.
+  - `cargo nextest run -p fret-node custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`:
+    passed; proves the custom path anchor behavior and source-policy/docs are aligned while full
+    EdgeLabelRenderer-style labels and EdgeToolbar composition internals remain scoped follow-ups.
+  - `cargo check -p fret-node --tests`: passed; proves UI-enabled test targets compile with the
+    new edge path geometry helper.
+  - `cargo check -p fret-node --all-features --tests`: passed; proves optional UI/integration test
+    targets compile with the custom path anchor helper.
+  - `cargo check -p fret-node --no-default-features`: passed; proves headless/runtime-facing package
+    compilation remains unaffected by the UI-only anchor slice.
+  - `cargo fmt --check`: passed; proves formatting remains clean.
+  - `python3 tools/check_layering.py`: passed; proves the slice did not violate workspace layering
+    policy.
+  - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed;
+    proves the workstream metadata remains valid JSON.
+  - `git diff --check`: passed; proves the patch has no whitespace errors.
+  - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
+    green with 460 tests.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

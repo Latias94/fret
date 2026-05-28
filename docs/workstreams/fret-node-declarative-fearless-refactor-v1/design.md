@@ -64,8 +64,9 @@ Use these surfaces for new app code and new examples.
   - are app-facing extension points only when passed through `NodeGraphSurfaceProps`,
   - must remain UI-only policy and keep graph documents free of serialized edge/chrome view state,
   - currently affect the default declarative edge paint path and conservative edge spatial
-    candidates plus exact custom-path distance hit filtering; edge labels, EdgeToolbar internals,
-    and node/body skin geometry remain follow-up contracts.
+    candidates, exact custom-path distance hit filtering, and custom path midpoint anchors for
+    edge-center internals; full EdgeLabelRenderer-style child labels, EdgeToolbar composition
+    internals, and node/body skin geometry remain follow-up contracts.
 
 ### XYFlow alignment note
 
@@ -457,6 +458,8 @@ Status note (2026-05-28):
 - FNDX-047 feeds the same custom path command stream into exact path-distance hit filtering after
   spatial candidate lookup, so edge interaction candidates no longer fall back to the default route
   when a custom path exists.
+- FNDX-048 feeds the same custom path command stream into default edge-center anchors, so internals
+  no longer expose a default-route midpoint when a custom edge path exists.
 
 Why this still matters:
 

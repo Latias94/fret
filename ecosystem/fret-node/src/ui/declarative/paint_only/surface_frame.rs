@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use fret_canvas::view::PanZoom2D;
-use fret_canvas::wires as canvas_wires;
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 
 use crate::core::{EdgeId, NodeId, PortId};
@@ -14,6 +13,8 @@ use crate::ui::{
     NodeGraphInternalsSnapshot, NodeGraphSkinRef,
 };
 
+use super::cache::edge_commands_for_route;
+use super::edge_path_geometry::{EDGE_PATH_ANCHOR_STEPS, path_midpoint_and_normal};
 use super::surface_support::{
     read_authoritative_interaction_config_in_models, read_authoritative_runtime_tuning_in_models,
 };
@@ -141,10 +142,16 @@ fn sync_binding_internals_for_surface(
     let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
     if let Some(edge_draws) = edges_cache.draws.as_deref() {
         for edge in edge_draws.iter() {
-            if let (Some(from), Some(to)) = (geom.port_center(edge.from), geom.port_center(edge.to))
-            {
-                let (ctrl1, ctrl2) = canvas_wires::wire_ctrl_points(from, to, zoom);
-                let center = canvas_wires::cubic_bezier(from, ctrl1, ctrl2, to, 0.5);
+            let center = path_midpoint_and_normal(&edge.commands, EDGE_PATH_ANCHOR_STEPS)
+                .map(|(center, _normal)| center)
+                .or_else(|| {
+                    let from = geom.port_center(edge.from)?;
+                    let to = geom.port_center(edge.to)?;
+                    let commands = edge_commands_for_route(edge.route, from, to, zoom);
+                    path_midpoint_and_normal(&commands, EDGE_PATH_ANCHOR_STEPS)
+                        .map(|(center, _normal)| center)
+                });
+            if let Some(center) = center {
                 next.edge_centers_window
                     .insert(edge.edge, transform.canvas_point_to_window(center));
             }

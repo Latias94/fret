@@ -259,8 +259,9 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - Stage 2 custom edge paths are supported via `NodeGraphEdgeTypes::register_path(...)` (`EdgeCustomPath`).
       The default declarative canvas uses the custom path for painting, paint culling, and
       conservative spatial-index candidate rects, then applies exact path-distance hit filtering
-      for edge interaction candidates; edge labels and EdgeToolbar internals remain follow-up
-      spatial/overlay contracts.
+      for edge interaction candidates and uses the custom path midpoint for edge-center anchors;
+      full EdgeLabelRenderer-style child labels and EdgeToolbar composition internals remain
+      follow-up spatial/overlay contracts.
 
 - [~] **Per-node/edge view lifecycle + memoization strategy**
   - XyFlow: React memoization + internals updates + DOM handle bounds pipeline
@@ -774,10 +775,12 @@ canonical data flow and invalidation boundaries:
   - XyFlow: `interactionWidth` on edges (`components/EdgeWrapper/index.tsx`)
   - fret-node: `edge_interaction_width` in `NodeGraphStyle`
 
-- [x] **Edge labels**
+- [~] **Edge labels / edge-center anchors**
   - XyFlow: `EdgeLabelRenderer` component
-  - fret-node: presenter can provide `EdgeRenderHint.label`; labels render on the canvas near the edge midpoint (non-interactive)
-    - per-edge label border override: `EdgeRenderHint.color`
+  - fret-node: presenter can provide `EdgeRenderHint.label` for edge a11y labels; the declarative
+    internals expose `edge_centers_window` for edge-center anchoring and now use the custom path
+    midpoint when `edgeTypes` supplies a custom path.
+    - full visible EdgeLabelRenderer-style child labels remain TODO
     - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ## 6.2 Edge selection and context menus
@@ -1070,7 +1073,8 @@ canonical data flow and invalidation boundaries:
     - Stage 1 (hint overrides): `ecosystem/fret-node/src/ui/edge_types.rs` +
       `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
     - Stage 2 (custom paths): implemented via `NodeGraphEdgeTypes::register_path(...)` and
-      `wire_math::path_midpoint_and_normal(...)` (label anchor + normal).
+      `paint_only/edge_path_geometry.rs::path_midpoint_and_normal(...)` (edge-center anchor +
+      normal).
 
 - [~] **Plugin-like extension hooks**
   - XyFlow: store middleware maps for node/edge changes

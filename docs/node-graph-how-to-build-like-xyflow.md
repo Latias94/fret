@@ -130,8 +130,9 @@ buttons, custom controls) while keeping the canvas itself policy-light.
 Use `NodeGraphEdgeTypes` through `NodeGraphSurfaceProps.edge_types` to register edge hint overrides
 and custom paint-path builders. The default declarative surface uses custom paths for painting,
 conservative paint culling, conservative spatial-index candidate rects, and exact path-distance hit
-filtering for edge interaction candidates. Edge labels and EdgeToolbar internals remain follow-up
-contracts.
+filtering for edge interaction candidates. It also uses the custom path midpoint for edge-center
+anchors exposed through internals. A full EdgeLabelRenderer-style child layer and EdgeToolbar
+composition internals remain follow-up contracts.
 
 ### Styling (theme tokens + UI-only chrome hints)
 

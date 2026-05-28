@@ -10,38 +10,43 @@ controller/binding-first, editor-grade node graph surface for Fret. Recent work 
 canvas mirror cleanup, concrete declarative overlay/add-on parity gates, and now the first
 store/view-policy hazard found in the 2026-05-28 `fret-node` architecture audit, the first default
 declarative public-extension decision, and the first custom edge path spatial/hit-test contract
-slices. The current risk is consumer-facing drift where public extension or store surfaces look
-authoritative but bypass the store's contracts or imply unimplemented view-policy parity.
+slices plus the default edge-center anchor slice. The current risk is consumer-facing drift where
+public extension or store surfaces look authoritative but bypass the store's contracts or imply
+unimplemented view-policy parity.
 
 ## Active Task
 
-- Task ID: FNDX-047.
+- Task ID: FNDX-048.
 - Owner: current Codex session.
 - Status: DONE.
-- Claim: custom `NodeGraphEdgeTypes::register_path(...)` output now feeds exact path-distance edge
-  hit filtering after conservative spatial-index candidate lookup; edge label placement and
-  EdgeToolbar internals remain explicit follow-ups.
+- Claim: custom `NodeGraphEdgeTypes::register_path(...)` output now feeds default declarative
+  `edge_centers_window` anchors via custom path midpoint/normal calculation; full
+  EdgeLabelRenderer-style child labels and EdgeToolbar composition internals remain explicit
+  follow-ups.
 - Review: use `review-workstream` before accepting broader lane closure.
 - Evidence:
-  - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_hit_test.rs` now resolves edge
-    candidates with custom path command-distance filtering.
-  - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs` keeps custom path conservative
-    AABBs in `CanvasSpatialDerived` and now pads those rects with the effective edge interaction
-    width.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_path_geometry.rs` now computes
+    midpoint/normal anchors from `PathCommand` streams.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs` now populates
+    `NodeGraphInternalsSnapshot.edge_centers_window` from edge draw commands instead of rebuilding
+    the default cubic route center.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs` carries
+    `custom_edge_path_feeds_default_declarative_edge_center_anchor`.
   - `ecosystem/fret-node/src/surface_policy_tests.rs` now carries
     `default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`.
   - Fresh gates passed:
-    `cargo fmt --check`,
+    `cargo nextest run -p fret-node custom_edge_path_feeds_default_declarative_edge_center_anchor`
+    and
+    `cargo nextest run -p fret-node custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`,
     `cargo check -p fret-node --tests`,
-    `cargo nextest run -p fret-node custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate`,
-    `cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`,
     `cargo check -p fret-node --all-features --tests`,
     `cargo check -p fret-node --no-default-features`,
+    `cargo fmt --check`,
     `python3 tools/check_layering.py`,
     `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`,
     `git diff --check`, and
-    `cargo nextest run -p fret-node` (459 tests).
-  - Earlier closeout/package gates for FNDX-010 through FNDX-046 remain recorded in
+    `cargo nextest run -p fret-node` (460 tests).
+  - Earlier closeout/package gates for FNDX-010 through FNDX-047 remain recorded in
     `EVIDENCE_AND_GATES.md`.
 
 ## Decisions Since Last Update
@@ -75,14 +80,17 @@ authoritative but bypass the store's contracts or imply unimplemented view-polic
   candidate rects, but does not claim exact curve/path distance hit-testing.
 - FNDX-047 extends the custom edge path contract from conservative spatial candidates into exact
   path-distance filtering, but does not claim edge label placement or EdgeToolbar internals parity.
+- FNDX-048 extends the custom edge path contract from hit filtering into default edge-center
+  anchors, but does not claim full EdgeLabelRenderer-style child labels or EdgeToolbar composition
+  internals parity.
 
 ## Blockers
 
-- None for FNDX-047.
+- None for FNDX-048.
 
 ## Next Recommended Action
 
 - Pick the next view-policy/public-extension slice with a concrete gate. The strongest candidate is
-  to split edge label placement or EdgeToolbar internals into a default-path contract, or split the
-  broad `NodeGraphPresenter` contract into narrower label, geometry, menu, and insertion/search
+  now either a full EdgeLabelRenderer-style child-label contract, EdgeToolbar composition internals,
+  or the broad `NodeGraphPresenter` split into narrower label, geometry, menu, and insertion/search
   contracts.
