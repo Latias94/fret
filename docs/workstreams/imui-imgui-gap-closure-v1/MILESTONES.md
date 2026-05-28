@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 text-picker core input-root owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/core/input_root.rs` now owns prepared
+input-root request construction, root mounting, response extraction, and popup item test-id base
+forwarding. `text_picker_controls/core.rs` keeps model/candidate/keyboard/open-policy/popup/
+response orchestration.
+
 2026-05-28 facade-core disabled-scope owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core/disabled_scope.rs` now owns
 `ImUiFacade::disabled_scope` behavior. `facade_writer/facade_core.rs` keeps the facade storage

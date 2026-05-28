@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI text-picker core input-root phase into a private owner without changing model
+      reads, candidate filtering, keyboard snapshot preparation, popup snapshot reads, expanded
+      semantics, input-root request construction, keyboard-handler installation, popup open
+      policy, pick response merge, or public text-picker facade behavior.
+      Result: `text_picker_controls/core/input_root.rs` owns prepared input-root request
+      construction, root mounting, response extraction, and popup item test-id base forwarding.
+      `text_picker_controls/core.rs` keeps model/candidate/keyboard/open-policy/popup/response
+      orchestration.
 - [x] Split IMUI facade-core disabled-scope behavior into a private owner without changing
       `ImUiFacade` storage, keyed id helpers, `UiWriter` implementation, disabled-depth handling,
       pointer event swallowing, opacity dimming, focus traversal gating, scoped runtime

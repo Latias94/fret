@@ -2,16 +2,13 @@ use std::sync::Arc;
 
 use fret_ui::UiHost;
 
+mod input_root;
 mod keyboard_state;
 
 use keyboard_state::prepare_text_picker_keyboard;
 
 use super::super::{InputTextPickerOptions, InputTextPickerResponse, UiWriterImUiFacadeExt};
 use super::candidates::resolve_text_picker_candidates;
-use super::input::{
-    InputTextPickerInputRootRequest, prepare_text_picker_input_options,
-    render_text_picker_input_root,
-};
 use super::open_policy::{
     TextPickerOpenPolicyInput, apply_text_picker_open_policy, read_text_picker_popup_snapshot,
     text_picker_expanded,
@@ -36,8 +33,6 @@ pub(in crate::imui) fn input_text_picker_model_with_options<
         .unwrap_or_default()
     });
 
-    let prepared_input = prepare_text_picker_input_options(&options);
-
     let candidate_visibility = resolve_text_picker_candidates(&current, candidates, &options);
     let visible_candidates = candidate_visibility.visible_candidates;
     let hide_for_exact_match = candidate_visibility.hide_for_exact_match;
@@ -60,27 +55,24 @@ pub(in crate::imui) fn input_text_picker_model_with_options<
         picker_candidate_visible,
         hide_for_exact_match,
     );
-    let input_root = ui.with_cx_mut(|cx| {
-        render_text_picker_input_root(
-            cx,
-            InputTextPickerInputRootRequest {
-                model: model.clone(),
-                input_options: prepared_input.options,
-                popup_open: popup_open.clone(),
-                keyboard_state: keyboard.state.clone(),
-                visible_candidates: &visible_candidates,
-                keyboard_navigation: options.keyboard_navigation,
-                keyboard_repeat: options.keyboard_repeat,
-                picker_candidate_visible,
-                hide_for_exact_match,
-                picker_expanded,
-                active_element: keyboard.active_element,
-                popup_panel_id: popup_snapshot.panel_id,
-            },
-        )
-    });
-    let mut input = input_root.response;
-    ui.add(input_root.root);
+    let input_root = input_root::build_text_picker_input_root(
+        ui,
+        input_root::TextPickerInputRootInput {
+            model: model.clone(),
+            options: &options,
+            popup_open: popup_open.clone(),
+            keyboard_state: keyboard.state.clone(),
+            visible_candidates: &visible_candidates,
+            keyboard_navigation: options.keyboard_navigation,
+            keyboard_repeat: options.keyboard_repeat,
+            picker_candidate_visible,
+            hide_for_exact_match,
+            picker_expanded,
+            active_element: keyboard.active_element,
+            popup_panel_id: popup_snapshot.panel_id,
+        },
+    );
+    let mut input = input_root.input;
     let enabled = input.enabled();
     let input_focused = input.focused();
 
@@ -111,7 +103,7 @@ pub(in crate::imui) fn input_text_picker_model_with_options<
             selected_value: current.clone(),
             active_source_index: keyboard.active_source_index,
             pending_keyboard_pick: keyboard.pending_keyboard_pick,
-            item_test_id_base: prepared_input.test_id.clone(),
+            item_test_id_base: input_root.item_test_id_base,
             install_keyboard_handler: enabled
                 && options.keyboard_navigation
                 && input_focused

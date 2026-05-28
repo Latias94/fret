@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Text-Picker Core Input-Root Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI text-picker core input-root phase split into a private owner without changing
+model reads, candidate filtering, keyboard snapshot preparation, popup snapshot reads, expanded
+semantics, input-root request construction, keyboard-handler installation, popup open policy, pick
+response merge, or public text-picker facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` keeps model/candidate/keyboard/
+  open-policy/popup/response orchestration.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core/input_root.rs` owns prepared
+  input-root request construction, root mounting, response extraction, and popup item test-id base
+  forwarding.
+- `tools/gate_imui_workstream_source.py` now rejects input-root request construction from drifting
+  back into `text_picker_controls/core.rs` and checks the dedicated input-root owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass; 6 text-picker tests
+  passed.
+
 ## Facade-Core Disabled-Scope Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI facade-core disabled-scope behavior split into a private owner without
