@@ -1,11 +1,11 @@
 use fret_ui::{GlobalElementId, UiHost};
 
 use super::{ImUiFacade, PopupModalOptions, UiWriterImUiFacadeExt};
-use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 mod dismiss;
 mod layer;
 mod layout;
+mod request;
 mod state;
 
 pub(super) fn begin_popup_modal_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
@@ -23,10 +23,7 @@ pub(super) fn begin_popup_modal_with_options<H: UiHost, W: UiWriterImUiFacadeExt
 
         state::refresh_popup_modal_keep_alive(cx, id);
 
-        let overlay_key = format!("fret-ui-kit.imui.popup_modal.overlay.{id}");
-        let overlay_id = cx.named(overlay_key.as_str(), |cx| cx.root_id());
-
-        let root_name = OverlayController::modal_root_name(overlay_id);
+        let target = request::popup_modal_overlay_target(cx, id);
 
         let palette = layout::popup_modal_palette(fret_ui::Theme::global(&*cx.app));
         let panel_layout = layout::centered_panel_layout(cx.bounds, options.size);
@@ -42,7 +39,7 @@ pub(super) fn begin_popup_modal_with_options<H: UiHost, W: UiWriterImUiFacadeExt
             cx,
             layer::PopupModalLayerInput {
                 id,
-                root_name: root_name.as_str(),
+                root_name: target.root_name.as_str(),
                 open: open.clone(),
                 palette,
                 panel_layout,
@@ -53,17 +50,17 @@ pub(super) fn begin_popup_modal_with_options<H: UiHost, W: UiWriterImUiFacadeExt
             },
         );
 
-        let mut req = OverlayRequest::modal(
-            overlay_id,
-            trigger,
-            open.clone(),
-            OverlayPresence::instant(true),
-            vec![built_layer.layer],
+        request::request_popup_modal_overlay(
+            cx,
+            request::PopupModalOverlayRequestInput {
+                target,
+                trigger,
+                open: open.clone(),
+                on_dismiss_request,
+                layer: built_layer.layer,
+                initial_focus: focus_state.get().or(built_layer.panel_id_for_focus),
+            },
         );
-        req.root_name = Some(root_name);
-        req.dismissible_on_dismiss_request = Some(on_dismiss_request);
-        req.initial_focus = focus_state.get().or(built_layer.panel_id_for_focus);
-        OverlayController::request(cx, req);
 
         true
     })

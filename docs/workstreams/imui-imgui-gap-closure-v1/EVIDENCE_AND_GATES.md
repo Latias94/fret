@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Popup-Modal Request Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI popup-modal overlay identity and request submission split into a private
+owner without changing overlay id naming, modal root naming, trigger forwarding, open-model
+forwarding, instant modal presence, layer children, dismiss request forwarding, initial focus
+handoff, or public popup modal facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal.rs` keeps open-state gating,
+  layout/dismiss/layer owner dispatch, and final request input assembly.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/request.rs` owns modal overlay id/root-name
+  construction and `OverlayRequest::modal` submission.
+- `tools/gate_imui_workstream_source.py` now rejects modal overlay identity and request submission
+  from drifting back into `popup_overlay/modal.rs` and checks the dedicated request owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass; 21 popup/hover tests
+  passed.
+
 ## Popup-Modal State Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI popup-modal open and keep-alive state handling split into a private owner

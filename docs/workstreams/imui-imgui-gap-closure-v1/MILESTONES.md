@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 popup-modal request owner-split result:
+`ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/request.rs` now owns modal overlay id/root-name
+construction and `OverlayRequest::modal` submission. `popup_overlay/modal.rs` keeps open-state
+gating, layout/dismiss/layer owner dispatch, and the final request input assembly.
+
 2026-05-28 popup-modal state owner-split result:
 `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/state.rs` now owns modal open-model lookup,
 is-open reads, and keep-alive generation writeback. `popup_overlay/modal.rs` keeps dismiss policy

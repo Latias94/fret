@@ -571,6 +571,7 @@
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/dismiss.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layout.rs",
+    "ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/request.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/state.rs",
     "ecosystem/fret-ui-kit/tests/imui_perf_guard_smoke.rs",
     "ecosystem/fret-ui-kit/src/imui/containers.rs",

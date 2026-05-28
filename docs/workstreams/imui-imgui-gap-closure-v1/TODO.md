@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI popup-modal overlay identity and request submission into a private owner without
+      changing overlay id naming, modal root naming, trigger forwarding, open-model forwarding,
+      instant modal presence, layer children, dismiss request forwarding, initial focus handoff, or
+      public popup modal facade behavior.
+      Result: `popup_overlay/modal/request.rs` owns modal overlay id/root-name construction and
+      `OverlayRequest::modal` submission. `popup_overlay/modal.rs` keeps open-state gating,
+      layout/dismiss/layer owner dispatch, and the final request input assembly.
 - [x] Split IMUI popup-modal open and keep-alive state handling into a private owner without
       changing popup store model identity, closed-modal render gating, keep-alive generation
       writeback, modal root naming, dismiss policy, layer assembly, focus initialization, overlay
