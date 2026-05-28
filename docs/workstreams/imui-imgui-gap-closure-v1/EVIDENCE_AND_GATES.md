@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-29
 
+## Floating Area Option/Context Owner-Split Evidence - 2026-05-29
+
+Claim verified: IMUI floating-area option/context records split into options and opaque context
+private owners without changing public option/context names, area defaults, accessor-first context
+shape, root re-exports, floating-area smoke behavior, or fret-imui floating behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_options/area.rs` is now a public re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/floating_options/area/options.rs` owns
+  `FloatingAreaOptions`, including test-id prefix, explicit test-id, pass-through, and no-inputs
+  defaults.
+- `ecosystem/fret-ui-kit/src/imui/floating_options/area/context.rs` owns opaque
+  `FloatingAreaContext` storage and read-only accessors.
+- `ecosystem/fret-ui-kit/tests/imui_floating_area_options_smoke.rs` freezes area defaults,
+  pass-through/no-inputs overrides, and the public `FloatingAreaContext` re-export surface.
+- `tools/gate_imui_workstream_source.py` now follows the opaque context check to
+  `floating_options/area/context.rs`, rejects area option/context bodies from drifting back into
+  `floating_options/area.rs`, and checks the dedicated owners plus smoke test.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_area_options_smoke
+  --no-fail-fast`: pass.
+- `CARGO_INCREMENTAL=0 cargo nextest run -p fret-imui floating --no-fail-fast`: pass
+  (25 passed, 161 skipped).
+
 ## Floating Window Option Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI floating-window option records split into behavior, resize, and root window

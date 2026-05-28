@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-29 floating-area option/context owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_options/area.rs` is now a public re-export hub.
+`floating_options/area/options.rs` owns `FloatingAreaOptions`, and
+`floating_options/area/context.rs` owns opaque `FloatingAreaContext` storage and accessors.
+
 2026-05-29 floating-window option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/floating_options/window.rs` is now a public re-export hub.
 `floating_options/window/behavior.rs` owns `FloatingWindowOptions`,

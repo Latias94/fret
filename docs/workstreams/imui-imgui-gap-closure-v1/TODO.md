@@ -44,6 +44,12 @@ Last updated: 2026-05-29
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI floating-area option/context records into options and opaque context private
+      owners without changing public option/context names, area defaults, accessor-first context
+      shape, root re-exports, floating-area smoke behavior, or fret-imui floating behavior.
+      Result: `floating_options/area.rs` is now a public re-export hub.
+      `floating_options/area/options.rs` owns `FloatingAreaOptions`, while
+      `floating_options/area/context.rs` owns `FloatingAreaContext` storage and accessors.
 - [x] Split IMUI floating-window option records into behavior, resize, and root window option
       private owners without changing public option names, defaults, builder methods, root
       re-exports, floating-window smoke behavior, or fret-imui floating behavior.
