@@ -519,6 +519,7 @@
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior/response.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header.rs",
+    "ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header/metrics.rs",
     "ecosystem/fret-ui-kit/src/imui/slider_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/slider_controls/a11y.rs",
     "ecosystem/fret-ui-kit/src/imui/slider_controls/interaction.rs",

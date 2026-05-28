@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI disclosure header indicator, padding, and border metrics into a private owner
+      without changing header row composition, palette resolution, indicator glyph text role, tree
+      row label text role, or tree-node/collapsing-header public behavior.
+      Result: `disclosure_controls/visual/header/metrics.rs` owns indicator glyph selection,
+      tree indentation padding, and header border edges. `visual/header.rs` keeps palette lookup,
+      row element composition, glyph/text rendering, and spacer layout.
 - [x] Split IMUI menu-item command presentation, shortcut defaulting, and enabled gating into a
       private owner without changing public menu item wrapper methods, focusable-recording
       behavior, command metadata lookup, shortcut propagation, or action menu item dispatch.

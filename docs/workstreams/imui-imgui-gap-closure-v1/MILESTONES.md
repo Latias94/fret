@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 disclosure header metrics owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header/metrics.rs` now owns indicator
+glyph selection, tree indentation padding, and header border edges. `visual/header.rs` keeps
+palette lookup, row element composition, glyph/text rendering, and spacer layout.
+
 2026-05-28 menu-item command helper owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items/command.rs` now owns command presentation
 lookup, enabled gating, and shortcut fallback for menu command items. `menu_items.rs` keeps the
