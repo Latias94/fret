@@ -63,7 +63,10 @@ copy.
   `Node` / `Edge`, so structural port edits and endpoint rewires stay on explicit transactions.
 - Treat `NodeGraphController::new(binding.store_model())` as the explicit lower-level escape hatch
   for controller-only helpers or custom declarative wiring.
-- When you already own explicit graph/view/editor-config mirrors plus controller state, use
+- Projection model handles are observation/sync targets, not mutation authority. Graph/view/config
+  mutations must still flow through binding helpers, `NodeGraphController`, or `NodeGraphStore`;
+  direct projection-model edits can be overwritten by `sync_from_store`.
+- When you already own explicit graph/view/editor-config projection models plus controller state, use
   `NodeGraphSurfaceBinding::from_models_and_controller(...)`; this is an advanced constructor, not
   the default teaching path.
 - Expect transient paint-only interaction sessions to stay local to the surface: marquee preview,
@@ -148,7 +151,7 @@ impl NodeGraphGestureCallbacks for ControlledGraph {}
   - it sanitizes selection against the new graph,
   - it applies the provided view state against the new graph,
   - it clears undo/redo history,
-  - it re-syncs the external graph/view mirrors,
+  - it re-syncs the store-derived graph/view projection models,
   - it emits one `NodeGraphStoreEvent::DocumentReplaced` event,
   - it clears declarative local transient sessions on the next frame so preview/hover state cannot
     bleed across document swaps,

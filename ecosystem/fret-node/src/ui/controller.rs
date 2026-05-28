@@ -629,7 +629,7 @@ mod tests {
     }
 
     #[test]
-    fn controller_replace_view_state_and_sync_model_action_host_updates_bound_view_model() {
+    fn controller_replace_view_state_and_sync_model_action_host_updates_view_projection_model() {
         let mut host = TestUiHostImpl::default();
         let (graph_value, _node_a, _node_b) = make_test_graph_two_nodes();
         let view = host.models.insert(NodeGraphViewState::default());
@@ -659,7 +659,7 @@ mod tests {
     }
 
     #[test]
-    fn controller_set_selection_and_sync_view_model_action_host_updates_bound_view_model() {
+    fn controller_set_selection_and_sync_view_model_action_host_updates_view_projection_model() {
         let mut host = TestUiHostImpl::default();
         let (mut graph, node_a, a_out, node_b, b_in) = make_test_graph_two_nodes_with_ports();
         let edge = EdgeId::new();

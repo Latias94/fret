@@ -34,6 +34,12 @@ const FRETBOARD_NATIVE_RS: &str = include_str!("../../../apps/fretboard/src/dev/
 const FRET_NODE_README_MD: &str = include_str!("../README.md");
 const NODE_GRAPH_XYFLOW_GUIDE_MD: &str =
     include_str!("../../../docs/node-graph-how-to-build-like-xyflow.md");
+const XYFLOW_GAP_ANALYSIS_MD: &str =
+    include_str!("../../../docs/workstreams/standalone/xyflow-gap-analysis.md");
+const ADR_0128_CANVAS_WIDGETS_MD: &str =
+    include_str!("../../../docs/adr/0128-canvas-widgets-and-interactive-surfaces.md");
+const ADR_0135_NODE_GRAPH_CANVAS_MIDDLEWARE_MD: &str =
+    include_str!("../../../docs/adr/0135-node-graph-canvas-middleware.md");
 const NODE_GRAPH_CONTROLLED_MODE_MD: &str =
     include_str!("../../../docs/node-graph-controlled-mode.md");
 const NODE_GRAPH_DEMO_RS: &str = include_str!("../../../apps/fret-examples/src/node_graph_demo.rs");
@@ -228,6 +234,42 @@ fn public_node_graph_guides_teach_binding_first_surface() {
 }
 
 #[test]
+fn retained_node_graph_current_guidance_stays_declarative() {
+    assert!(XYFLOW_GAP_ANALYSIS_MD.contains("Status note (2026-05-28)"));
+    assert!(XYFLOW_GAP_ANALYSIS_MD.contains("NodeGraphSurfaceBinding"));
+    assert!(XYFLOW_GAP_ANALYSIS_MD.contains("node_graph_surface(...)"));
+    assert!(XYFLOW_GAP_ANALYSIS_MD.contains("NodeGraphController"));
+
+    for forbidden in [
+        "prefer `fret-node::NodeGraphCanvas`",
+        "Use `fret-node::NodeGraphCanvas` as the engine",
+        "`ecosystem/fret-node/src/ui/canvas/widget.rs`: retained `NodeGraphCanvas` widget",
+    ] {
+        assert!(
+            !XYFLOW_GAP_ANALYSIS_MD.contains(forbidden),
+            "standalone XyFlow gap analysis must not teach deleted retained guidance: {forbidden}"
+        );
+    }
+
+    assert!(ADR_0135_NODE_GRAPH_CANVAS_MIDDLEWARE_MD.contains("Status: Superseded"));
+    assert!(ADR_0135_NODE_GRAPH_CANVAS_MIDDLEWARE_MD.contains("NodeGraphSurfaceBinding"));
+    assert!(ADR_0135_NODE_GRAPH_CANVAS_MIDDLEWARE_MD.contains("NodeGraphStore"));
+    assert!(
+        ADR_0135_NODE_GRAPH_CANVAS_MIDDLEWARE_MD
+            .contains("Do not implement this ADR by reviving `NodeGraphCanvasMiddleware`.")
+    );
+
+    assert!(ADR_0128_CANVAS_WIDGETS_MD.contains("Status note (2026-05-28)"));
+    assert!(ADR_0128_CANVAS_WIDGETS_MD.contains("node_graph_surface(...)"));
+    assert!(!ADR_0128_CANVAS_WIDGETS_MD.contains(
+        "`fret-node`: `NodeGraphCanvas` (pan/zoom, large-scene drawing, spatial hit testing)."
+    ));
+    assert!(!ADR_0128_CANVAS_WIDGETS_MD.contains(
+        "Node graph pan/zoom via `render_transform`: `ecosystem/fret-node/src/ui/canvas/widget.rs`"
+    ));
+}
+
+#[test]
 fn raw_transport_surface_stays_removed() {
     assert!(!UI_MOD_RS.contains("mod compat_transport;"));
     assert!(!UI_MOD_RS.contains("pub mod advanced;"));
@@ -284,11 +326,16 @@ fn binding_surface_covers_instance_style_viewport_helpers() {
 fn binding_surface_covers_instance_style_sync_and_history_helpers() {
     let binding_surface = binding_surface();
     assert!(binding_surface.contains(
-        "struct NodeGraphSurfaceMirrors {\n    graph: Model<Graph>,\n    view_state: Model<NodeGraphViewState>,\n    editor_config: Model<NodeGraphEditorConfig>,\n}"
+        "struct NodeGraphSurfaceProjections {\n    graph: Model<Graph>,\n    view_state: Model<NodeGraphViewState>,\n    editor_config: Model<NodeGraphEditorConfig>,\n}"
     ));
     assert!(binding_surface.contains(
-        "pub struct NodeGraphSurfaceBinding {\n    mirrors: NodeGraphSurfaceMirrors,\n    store: Model<NodeGraphStore>,\n    internals: Arc<NodeGraphInternalsStore>,\n}"
+        "pub struct NodeGraphSurfaceBinding {\n    projections: NodeGraphSurfaceProjections,\n    store: Model<NodeGraphStore>,\n    internals: Arc<NodeGraphInternalsStore>,\n}"
     ));
+    assert!(binding_surface.contains("store-derived projection models"));
+    assert!(
+        binding_surface
+            .contains("This model exists for observation and explicit advanced sync seams.")
+    );
     assert!(binding_surface.contains("pub fn from_models_and_controller("));
     assert!(!binding_surface.contains("pub fn from_models_and_controller_with_editor_config("));
     assert!(!binding_surface.contains("pub fn from_models("));
@@ -313,6 +360,27 @@ fn binding_surface_covers_instance_style_sync_and_history_helpers() {
     assert!(binding_surface.contains("pub fn set_selection_action_host("));
     assert!(binding_surface.contains("pub fn undo_action_host("));
     assert!(binding_surface.contains("pub fn redo_action_host("));
+}
+
+#[test]
+fn binding_guides_keep_projection_models_out_of_the_authority_story() {
+    assert!(NODE_GRAPH_XYFLOW_GUIDE_MD.contains("one authoritative store"));
+    assert!(NODE_GRAPH_XYFLOW_GUIDE_MD.contains("store-derived projection models"));
+    assert!(
+        !NODE_GRAPH_XYFLOW_GUIDE_MD.contains("store/controller mirrors as one app-facing bundle")
+    );
+    assert!(
+        NODE_GRAPH_CONTROLLED_MODE_MD
+            .contains("Projection model handles are observation/sync targets")
+    );
+    assert!(
+        NODE_GRAPH_CONTROLLED_MODE_MD
+            .contains("mutations must still flow through binding helpers, `NodeGraphController`, or `NodeGraphStore`")
+    );
+    assert!(
+        !NODE_GRAPH_CONTROLLED_MODE_MD
+            .contains("explicit graph/view/editor-config mirrors plus controller state")
+    );
 }
 
 #[test]

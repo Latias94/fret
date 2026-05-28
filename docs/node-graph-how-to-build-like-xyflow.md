@@ -26,7 +26,8 @@ This is the closest match to “useReactFlow + built-ins”:
 
 - Authoritative state lives in `runtime::store::NodeGraphStore`.
 - App code usually starts with `NodeGraphSurfaceBinding::new(...)`, which creates the graph,
-  view-state, editor-config, and store/controller mirrors as one app-facing bundle.
+  view-state, editor-config, one authoritative store, and store-derived projection models as one
+  app-facing bundle.
 - The declarative surface renders through `node_graph_surface(cx, surface.surface_props())`.
 - App actions should prefer the binding helpers (`dispatch_transaction*`, `set_viewport*`,
   `fit_view_nodes_in_bounds*`, `update_node*`, `update_edge*`, `undo*`, `redo*`) before dropping to

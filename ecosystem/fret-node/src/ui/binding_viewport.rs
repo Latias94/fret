@@ -231,7 +231,7 @@ impl NodeGraphSurfaceBinding {
         if applied {
             let _ = self
                 .controller()
-                .sync_view_state_model_from_store(host, &self.mirrors.view_state);
+                .sync_view_state_model_from_store(host, &self.projections.view_state);
         }
         applied
     }
@@ -244,7 +244,7 @@ impl NodeGraphSurfaceBinding {
         if applied {
             let _ = self
                 .controller()
-                .sync_view_state_model_from_store_action_host(host, &self.mirrors.view_state);
+                .sync_view_state_model_from_store_action_host(host, &self.projections.view_state);
         }
         applied
     }

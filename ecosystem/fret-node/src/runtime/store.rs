@@ -92,6 +92,11 @@ struct SelectorSubscription {
     last: Box<dyn std::any::Any>,
 }
 
+enum DispatchProfile<'a> {
+    StoreProfile,
+    External(&'a mut dyn GraphProfile),
+}
+
 impl std::fmt::Debug for NodeGraphStore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("NodeGraphStore")
@@ -512,66 +517,8 @@ impl NodeGraphStore {
         &mut self,
         tx: &GraphTransaction,
     ) -> Result<DispatchOutcome, DispatchError> {
-        let mut tx = crate::ops::normalize_transaction(tx.clone());
-        if tx.is_empty() {
-            return Ok(DispatchOutcome::from_committed(tx));
-        }
-        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&tx) {
-            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
-        }
-        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&tx) {
-            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
-        }
-
-        if let Some(middleware) = self.middleware.as_deref_mut() {
-            let snapshot = NodeGraphStoreSnapshot {
-                graph: &self.graph,
-                graph_revision: self.graph_revision,
-                view_state: &self.view_state,
-                interaction: &self.interaction,
-                runtime_tuning: &self.runtime_tuning,
-                history: &self.history,
-            };
-            middleware.before_dispatch(snapshot, &mut tx)?;
-        }
-        tx = crate::ops::normalize_transaction(tx);
-        if tx.is_empty() {
-            return Ok(DispatchOutcome::from_committed(tx));
-        }
-        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&tx) {
-            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
-        }
-        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&tx) {
-            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
-        }
-
-        let mut scratch = self.graph.clone();
-        let committed = self.apply_to_graph(&mut scratch, &tx)?;
-        let committed = crate::ops::normalize_transaction(committed);
-        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&committed) {
-            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
-        }
-        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&committed) {
-            return Err(DispatchError::Apply(Self::reject_tx(key, message)));
-        }
-        let node_edge_changes = self.install_committed_graph_state(scratch, &committed);
-        self.history.record(committed.clone());
-        let patch = NodeGraphPatch::new(committed);
-
-        if let Some(middleware) = self.middleware.as_deref_mut() {
-            let snapshot = NodeGraphStoreSnapshot {
-                graph: &self.graph,
-                graph_revision: self.graph_revision,
-                view_state: &self.view_state,
-                interaction: &self.interaction,
-                runtime_tuning: &self.runtime_tuning,
-                history: &self.history,
-            };
-            middleware.after_dispatch(snapshot, &patch, &node_edge_changes);
-        }
-
-        self.publish_graph_commit(&patch, &node_edge_changes);
-        Ok(DispatchOutcome::new(patch, node_edge_changes))
+        self.dispatch_transaction_impl(tx, DispatchProfile::StoreProfile)
+            .map_err(DispatchError::Apply)
     }
 
     /// Dispatches a transaction using an externally-owned profile pipeline.
@@ -582,52 +529,52 @@ impl NodeGraphStore {
         tx: &GraphTransaction,
         profile: &mut dyn GraphProfile,
     ) -> Result<DispatchOutcome, ApplyPipelineError> {
+        self.dispatch_transaction_impl(tx, DispatchProfile::External(profile))
+    }
+
+    fn dispatch_transaction_impl(
+        &mut self,
+        tx: &GraphTransaction,
+        dispatch_profile: DispatchProfile<'_>,
+    ) -> Result<DispatchOutcome, ApplyPipelineError> {
         let mut tx = crate::ops::normalize_transaction(tx.clone());
         if tx.is_empty() {
             return Ok(DispatchOutcome::from_committed(tx));
         }
-        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&tx) {
-            return Err(Self::reject_tx(key, message));
-        }
-        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&tx) {
-            return Err(Self::reject_tx(key, message));
-        }
+        Self::validate_dispatch_transaction(&tx)?;
 
-        if let Some(middleware) = self.middleware.as_deref_mut() {
-            let snapshot = NodeGraphStoreSnapshot {
-                graph: &self.graph,
-                graph_revision: self.graph_revision,
-                view_state: &self.view_state,
-                interaction: &self.interaction,
-                runtime_tuning: &self.runtime_tuning,
-                history: &self.history,
-            };
-            middleware.before_dispatch(snapshot, &mut tx)?;
-        }
+        self.run_before_dispatch_middleware(&mut tx)?;
         tx = crate::ops::normalize_transaction(tx);
         if tx.is_empty() {
             return Ok(DispatchOutcome::from_committed(tx));
         }
-        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&tx) {
-            return Err(Self::reject_tx(key, message));
-        }
-        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&tx) {
-            return Err(Self::reject_tx(key, message));
-        }
+        Self::validate_dispatch_transaction(&tx)?;
 
         let mut scratch = self.graph.clone();
-        let committed = apply_transaction_with_profile(&mut scratch, profile, &tx)?;
+        let committed = match dispatch_profile {
+            DispatchProfile::StoreProfile => self.apply_to_graph(&mut scratch, &tx)?,
+            DispatchProfile::External(profile) => {
+                apply_transaction_with_profile(&mut scratch, profile, &tx)?
+            }
+        };
         let committed = crate::ops::normalize_transaction(committed);
-        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&committed) {
-            return Err(Self::reject_tx(key, message));
-        }
-        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&committed) {
-            return Err(Self::reject_tx(key, message));
-        }
-        let node_edge_changes = self.install_committed_graph_state(scratch, &committed);
+        Self::validate_dispatch_transaction(&committed)?;
+        Ok(self.commit_dispatch(scratch, committed))
+    }
+
+    fn commit_dispatch(&mut self, graph: Graph, committed: GraphTransaction) -> DispatchOutcome {
+        let node_edge_changes = self.install_committed_graph_state(graph, &committed);
         self.history.record(committed.clone());
         let patch = NodeGraphPatch::new(committed);
+        self.run_after_dispatch_middleware(&patch, &node_edge_changes);
+        self.publish_graph_commit(&patch, &node_edge_changes);
+        DispatchOutcome::new(patch, node_edge_changes)
+    }
 
+    fn run_before_dispatch_middleware(
+        &mut self,
+        tx: &mut GraphTransaction,
+    ) -> Result<(), ApplyPipelineError> {
         if let Some(middleware) = self.middleware.as_deref_mut() {
             let snapshot = NodeGraphStoreSnapshot {
                 graph: &self.graph,
@@ -637,11 +584,37 @@ impl NodeGraphStore {
                 runtime_tuning: &self.runtime_tuning,
                 history: &self.history,
             };
-            middleware.after_dispatch(snapshot, &patch, &node_edge_changes);
+            middleware.before_dispatch(snapshot, tx)?;
         }
+        Ok(())
+    }
 
-        self.publish_graph_commit(&patch, &node_edge_changes);
-        Ok(DispatchOutcome::new(patch, node_edge_changes))
+    fn run_after_dispatch_middleware(
+        &mut self,
+        patch: &NodeGraphPatch,
+        node_edge_changes: &NodeGraphChanges,
+    ) {
+        if let Some(middleware) = self.middleware.as_deref_mut() {
+            let snapshot = NodeGraphStoreSnapshot {
+                graph: &self.graph,
+                graph_revision: self.graph_revision,
+                view_state: &self.view_state,
+                interaction: &self.interaction,
+                runtime_tuning: &self.runtime_tuning,
+                history: &self.history,
+            };
+            middleware.after_dispatch(snapshot, patch, node_edge_changes);
+        }
+    }
+
+    fn validate_dispatch_transaction(tx: &GraphTransaction) -> Result<(), ApplyPipelineError> {
+        if let Some((key, message)) = crate::ops::find_non_finite_in_tx(tx) {
+            return Err(Self::reject_tx(key, message));
+        }
+        if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(tx) {
+            return Err(Self::reject_tx(key, message));
+        }
+        Ok(())
     }
 
     /// Applies XyFlow-style changes by converting them to a reversible transaction.

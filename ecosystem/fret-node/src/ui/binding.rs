@@ -27,7 +27,7 @@ mod binding_store_sync;
 mod binding_viewport;
 
 #[derive(Debug, Clone)]
-struct NodeGraphSurfaceMirrors {
+struct NodeGraphSurfaceProjections {
     graph: Model<Graph>,
     view_state: Model<NodeGraphViewState>,
     editor_config: Model<NodeGraphEditorConfig>,
@@ -35,17 +35,18 @@ struct NodeGraphSurfaceMirrors {
 
 /// Canonical app-facing binding bundle for the declarative node-graph surface.
 ///
-/// This keeps the controller-first public story explicit while avoiding repeated
-/// `graph + view_state + controller` triplets in app code.
+/// The authoritative graph state lives in `NodeGraphStore`. The graph/view/config models in this
+/// binding are store-derived projections for observation and surface invalidation; app code should
+/// mutate graph/view/config through binding helpers, `NodeGraphController`, or the store.
 #[derive(Debug, Clone)]
 pub struct NodeGraphSurfaceBinding {
-    mirrors: NodeGraphSurfaceMirrors,
+    projections: NodeGraphSurfaceProjections,
     store: Model<NodeGraphStore>,
     internals: Arc<NodeGraphInternalsStore>,
 }
 
 impl NodeGraphSurfaceBinding {
-    /// Creates a store-backed binding with an explicit editor configuration payload.
+    /// Creates a store-backed binding and seeds its store-derived projection models.
     pub fn new(
         models: &mut ModelStore,
         graph: Graph,
@@ -64,7 +65,7 @@ impl NodeGraphSurfaceBinding {
         )
     }
 
-    /// Creates a declarative surface binding from an already-configured store.
+    /// Creates a declarative surface binding from an already-configured authoritative store.
     pub fn from_store(models: &mut ModelStore, store: NodeGraphStore) -> Self {
         let graph = store.graph().clone();
         let view_state = store.view_state().clone();
@@ -81,7 +82,11 @@ impl NodeGraphSurfaceBinding {
         )
     }
 
-    /// Advanced seam for callers that already own explicit graph/view mirrors and controller state.
+    /// Advanced seam for callers that already own explicit store-derived projection models and
+    /// controller state.
+    ///
+    /// These models are projection targets, not a second authority. Graph/view/config mutations
+    /// should still go through the controller/store path and then sync projections from the store.
     pub fn from_models_and_controller(
         graph: Model<Graph>,
         view_state: Model<NodeGraphViewState>,
@@ -89,7 +94,7 @@ impl NodeGraphSurfaceBinding {
         controller: NodeGraphController,
     ) -> Self {
         Self {
-            mirrors: NodeGraphSurfaceMirrors {
+            projections: NodeGraphSurfaceProjections {
                 graph,
                 view_state,
                 editor_config,
@@ -99,16 +104,30 @@ impl NodeGraphSurfaceBinding {
         }
     }
 
+    /// Returns the store-derived graph projection model.
+    ///
+    /// This model exists for observation and explicit advanced sync seams. It is not the
+    /// authoritative graph; mutate graph state through binding helpers, `NodeGraphController`, or
+    /// `NodeGraphStore`.
     pub fn graph_model(&self) -> Model<Graph> {
-        self.mirrors.graph.clone()
+        self.projections.graph.clone()
     }
 
+    /// Returns the store-derived view-state projection model.
+    ///
+    /// This model exists for observation and explicit advanced sync seams. It is not the
+    /// authoritative viewport/selection state; mutate view state through binding helpers,
+    /// `NodeGraphController`, or `NodeGraphStore`.
     pub fn view_state_model(&self) -> Model<NodeGraphViewState> {
-        self.mirrors.view_state.clone()
+        self.projections.view_state.clone()
     }
 
+    /// Returns the store-derived editor-config projection model.
+    ///
+    /// This model exists for observation and explicit advanced sync seams. It is not the
+    /// authoritative editor configuration; mutate config through binding/controller/store helpers.
     pub fn editor_config_model(&self) -> Model<NodeGraphEditorConfig> {
-        self.mirrors.editor_config.clone()
+        self.projections.editor_config.clone()
     }
 
     /// Advanced lower-level seam for callers that need explicit controller ownership.
@@ -136,20 +155,20 @@ impl NodeGraphSurfaceBinding {
         NodeGraphController::new(self.store.clone())
     }
 
-    /// Observes the external graph/view mirrors that the declarative surface keeps in sync.
+    /// Observes the store-derived projection models that the declarative surface keeps in sync.
     pub fn observe<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) {
         self.observe_in(cx);
     }
 
-    /// Observes the external graph/view mirrors through a capability-first render lane.
+    /// Observes the store-derived projection models through a capability-first render lane.
     pub fn observe_in<'a, H: UiHost + 'a, Cx>(&self, cx: &mut Cx)
     where
         Cx: ElementContextAccess<'a, H>,
     {
         let cx = cx.elements();
-        cx.observe_model(&self.mirrors.graph, Invalidation::Paint);
-        cx.observe_model(&self.mirrors.view_state, Invalidation::Paint);
-        cx.observe_model(&self.mirrors.editor_config, Invalidation::Paint);
+        cx.observe_model(&self.projections.graph, Invalidation::Paint);
+        cx.observe_model(&self.projections.view_state, Invalidation::Paint);
+        cx.observe_model(&self.projections.editor_config, Invalidation::Paint);
     }
 }
 
@@ -599,7 +618,7 @@ mod tests {
     }
 
     #[test]
-    fn replace_view_state_action_host_syncs_bound_view_model() {
+    fn replace_view_state_action_host_syncs_view_projection_model() {
         let mut host = TestActionHost::default();
         let binding = NodeGraphSurfaceBinding::new(
             &mut host.models,
@@ -627,7 +646,7 @@ mod tests {
     }
 
     #[test]
-    fn replace_document_action_host_preserves_explicit_editor_config_mirror() {
+    fn replace_document_action_host_preserves_explicit_editor_config_projection() {
         let mut host = TestActionHost::default();
         let mut editor_config = NodeGraphEditorConfig::default();
         editor_config.interaction.selection_on_drag = true;
@@ -671,6 +690,44 @@ mod tests {
         assert_eq!(graph_id, next_graph.graph_id);
         assert_eq!(pan, next_view_state.pan);
         assert_eq!(zoom, next_view_state.zoom);
+    }
+
+    #[test]
+    fn graph_projection_model_is_not_the_authoritative_store_graph() {
+        let mut host = TestActionHost::default();
+        let authoritative_graph_id = GraphId::from_u128(0x9011);
+        let stale_projection_graph_id = GraphId::from_u128(0x9012);
+        let binding = NodeGraphSurfaceBinding::new(
+            &mut host.models,
+            Graph::new(authoritative_graph_id),
+            NodeGraphViewState::default(),
+            NodeGraphEditorConfig::default(),
+        );
+
+        host.models
+            .update(&binding.graph_model(), |graph| {
+                graph.graph_id = stale_projection_graph_id;
+            })
+            .expect("projection graph model update");
+
+        let store_snapshot = binding
+            .graph_snapshot(&host)
+            .expect("authoritative store graph snapshot");
+        assert_eq!(store_snapshot.graph_id, authoritative_graph_id);
+        assert_eq!(
+            host.models
+                .read(&binding.graph_model(), |graph| graph.graph_id)
+                .expect("projection graph model readable"),
+            stale_projection_graph_id
+        );
+
+        assert!(binding.sync_from_store_action_host(&mut host));
+        assert_eq!(
+            host.models
+                .read(&binding.graph_model(), |graph| graph.graph_id)
+                .expect("projection graph model readable"),
+            authoritative_graph_id
+        );
     }
 
     #[test]
@@ -720,7 +777,7 @@ mod tests {
     }
 
     #[test]
-    fn set_viewport_action_host_syncs_bound_view_model() {
+    fn set_viewport_action_host_syncs_view_projection_model() {
         let mut host = TestActionHost::default();
         let binding = NodeGraphSurfaceBinding::new(
             &mut host.models,
@@ -744,7 +801,7 @@ mod tests {
     }
 
     #[test]
-    fn set_center_in_bounds_action_host_syncs_bound_view_model() {
+    fn set_center_in_bounds_action_host_syncs_view_projection_model() {
         let mut host = TestActionHost::default();
         let binding = NodeGraphSurfaceBinding::new(
             &mut host.models,
@@ -772,7 +829,7 @@ mod tests {
     }
 
     #[test]
-    fn fit_view_nodes_in_bounds_action_host_syncs_bound_view_model() {
+    fn fit_view_nodes_in_bounds_action_host_syncs_view_projection_model() {
         let mut host = TestActionHost::default();
         let mut graph = Graph::new(GraphId::from_u128(0x900d));
         let node_a = NodeId::from_u128(0x900e);
@@ -851,7 +908,7 @@ mod tests {
     }
 
     #[test]
-    fn fit_canvas_rect_in_bounds_action_host_syncs_bound_view_model() {
+    fn fit_canvas_rect_in_bounds_action_host_syncs_view_projection_model() {
         let mut host = TestActionHost::default();
         let binding = NodeGraphSurfaceBinding::new(
             &mut host.models,

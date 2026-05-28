@@ -1,29 +1,32 @@
 use super::*;
 impl NodeGraphSurfaceBinding {
-    /// Re-syncs the graph/view mirrors from the authoritative store.
+    /// Re-syncs the store-derived projection models from the authoritative store.
     pub fn sync_from_store<H: UiHost>(&self, host: &mut H) -> bool {
         let controller = self.controller();
-        let graph_view_synced =
-            controller.sync_models_from_store(host, &self.mirrors.graph, &self.mirrors.view_state);
+        let graph_view_synced = controller.sync_models_from_store(
+            host,
+            &self.projections.graph,
+            &self.projections.view_state,
+        );
         let config_synced =
-            controller.sync_editor_config_model_from_store(host, &self.mirrors.editor_config);
+            controller.sync_editor_config_model_from_store(host, &self.projections.editor_config);
         graph_view_synced && config_synced
     }
 
-    /// Re-syncs the graph/view mirrors from the authoritative store.
+    /// Re-syncs the store-derived projection models from the authoritative store.
     pub fn sync_from_store_action_host(&self, host: &mut dyn UiActionHost) -> bool {
         let controller = self.controller();
         let graph_view_synced = controller.sync_models_from_store_action_host(
             host,
-            &self.mirrors.graph,
-            &self.mirrors.view_state,
+            &self.projections.graph,
+            &self.projections.view_state,
         );
         let config_synced = controller
-            .sync_editor_config_model_from_store_action_host(host, &self.mirrors.editor_config);
+            .sync_editor_config_model_from_store_action_host(host, &self.projections.editor_config);
         graph_view_synced && config_synced
     }
 
-    /// Dispatches a transaction and keeps the external graph/view mirrors in sync.
+    /// Dispatches a transaction and keeps store-derived projection models in sync.
     pub fn dispatch_transaction<H: UiHost>(
         &self,
         host: &mut H,
@@ -34,8 +37,8 @@ impl NodeGraphSurfaceBinding {
         Ok(outcome)
     }
 
-    /// Dispatches a transaction from an object-safe action hook and keeps the external graph/view
-    /// mirrors in sync.
+    /// Dispatches a transaction from an object-safe action hook and keeps store-derived projection
+    /// models in sync.
     pub fn dispatch_transaction_action_host(
         &self,
         host: &mut dyn UiActionHost,
@@ -48,7 +51,7 @@ impl NodeGraphSurfaceBinding {
         Ok(outcome)
     }
 
-    /// Submits a transaction and keeps the external graph/view mirrors in sync.
+    /// Submits a transaction and keeps store-derived projection models in sync.
     pub fn submit_transaction<H: UiHost>(
         &self,
         host: &mut H,
@@ -59,8 +62,8 @@ impl NodeGraphSurfaceBinding {
         Ok(())
     }
 
-    /// Submits a transaction from an object-safe action hook and keeps the external graph/view
-    /// mirrors in sync.
+    /// Submits a transaction from an object-safe action hook and keeps store-derived projection
+    /// models in sync.
     pub fn submit_transaction_action_host(
         &self,
         host: &mut dyn UiActionHost,
@@ -71,7 +74,7 @@ impl NodeGraphSurfaceBinding {
         Ok(())
     }
 
-    /// Replaces the authoritative graph and keeps the external graph/view mirrors in sync.
+    /// Replaces the authoritative graph and keeps store-derived projection models in sync.
     pub fn replace_graph<H: UiHost>(
         &self,
         host: &mut H,
@@ -83,7 +86,7 @@ impl NodeGraphSurfaceBinding {
     }
 
     /// Replaces the authoritative graph from an object-safe action hook and keeps the external
-    /// graph/view mirrors in sync.
+    /// projection models in sync.
     pub fn replace_graph_action_host(
         &self,
         host: &mut dyn UiActionHost,
@@ -94,8 +97,8 @@ impl NodeGraphSurfaceBinding {
         Ok(())
     }
 
-    /// Replaces the entire document snapshot (graph + view state), clears history, and keeps the
-    /// external graph/view mirrors in sync.
+    /// Replaces the entire document snapshot (graph + view state), clears history, and keeps
+    /// store-derived projection models in sync.
     pub fn replace_document<H: UiHost>(
         &self,
         host: &mut H,
@@ -103,7 +106,7 @@ impl NodeGraphSurfaceBinding {
         view_state: NodeGraphViewState,
     ) -> Result<(), NodeGraphControllerError> {
         let editor_config = self
-            .mirrors
+            .projections
             .editor_config
             .read_ref(host, |config| config.clone())
             .expect("binding editor-config model must stay readable");
@@ -118,7 +121,7 @@ impl NodeGraphSurfaceBinding {
     }
 
     /// Replaces the entire document snapshot from an object-safe action hook, clears history, and
-    /// keeps the external graph/view mirrors in sync.
+    /// keeps store-derived projection models in sync.
     pub fn replace_document_action_host(
         &self,
         host: &mut dyn UiActionHost,
@@ -127,7 +130,7 @@ impl NodeGraphSurfaceBinding {
     ) -> Result<(), NodeGraphControllerError> {
         let editor_config = host
             .models_mut()
-            .read(&self.mirrors.editor_config, |config| config.clone())
+            .read(&self.projections.editor_config, |config| config.clone())
             .expect("binding editor-config model must stay readable");
         self.controller()
             .replace_document_with_editor_config_action_host(
@@ -140,7 +143,7 @@ impl NodeGraphSurfaceBinding {
         Ok(())
     }
 
-    /// Replaces the authoritative view state and keeps the external view model in sync.
+    /// Replaces the authoritative view state and keeps the view projection model in sync.
     pub fn replace_view_state<H: UiHost>(
         &self,
         host: &mut H,
@@ -152,7 +155,7 @@ impl NodeGraphSurfaceBinding {
     }
 
     /// Replaces the authoritative view state from an object-safe action hook and keeps the
-    /// external view model in sync.
+    /// view projection model in sync.
     pub fn replace_view_state_action_host(
         &self,
         host: &mut dyn UiActionHost,
@@ -164,7 +167,7 @@ impl NodeGraphSurfaceBinding {
         Ok(())
     }
 
-    /// Replaces the authoritative selection and keeps the external view model in sync.
+    /// Replaces the authoritative selection and keeps the view projection model in sync.
     pub fn set_selection<H: UiHost>(
         &self,
         host: &mut H,
@@ -178,8 +181,8 @@ impl NodeGraphSurfaceBinding {
         Ok(())
     }
 
-    /// Replaces the authoritative selection from an object-safe action hook and keeps the external
-    /// view model in sync.
+    /// Replaces the authoritative selection from an object-safe action hook and keeps the view
+    /// projection model in sync.
     pub fn set_selection_action_host(
         &self,
         host: &mut dyn UiActionHost,
@@ -193,7 +196,7 @@ impl NodeGraphSurfaceBinding {
         Ok(())
     }
 
-    /// Undoes the last committed transaction and keeps the external graph/view mirrors in sync.
+    /// Undoes the last committed transaction and keeps store-derived projection models in sync.
     pub fn undo<H: UiHost>(
         &self,
         host: &mut H,
@@ -206,7 +209,7 @@ impl NodeGraphSurfaceBinding {
     }
 
     /// Undoes the last committed transaction from an object-safe action hook and keeps the external
-    /// graph/view mirrors in sync.
+    /// projection models in sync.
     pub fn undo_action_host(
         &self,
         host: &mut dyn UiActionHost,
@@ -218,7 +221,7 @@ impl NodeGraphSurfaceBinding {
         Ok(outcome)
     }
 
-    /// Redoes the last undone transaction and keeps the external graph/view mirrors in sync.
+    /// Redoes the last undone transaction and keeps store-derived projection models in sync.
     pub fn redo<H: UiHost>(
         &self,
         host: &mut H,
@@ -231,7 +234,7 @@ impl NodeGraphSurfaceBinding {
     }
 
     /// Redoes the last undone transaction from an object-safe action hook and keeps the external
-    /// graph/view mirrors in sync.
+    /// projection models in sync.
     pub fn redo_action_host(
         &self,
         host: &mut dyn UiActionHost,
@@ -243,7 +246,7 @@ impl NodeGraphSurfaceBinding {
         Ok(outcome)
     }
 
-    /// Applies a non-structural node update and keeps the external graph/view mirrors in sync.
+    /// Applies a non-structural node update and keeps store-derived projection models in sync.
     pub fn update_node<H: UiHost, F>(
         &self,
         host: &mut H,
@@ -259,7 +262,7 @@ impl NodeGraphSurfaceBinding {
     }
 
     /// Applies a non-structural node update from an object-safe action hook and keeps the external
-    /// graph/view mirrors in sync.
+    /// projection models in sync.
     pub fn update_node_action_host<F>(
         &self,
         host: &mut dyn UiActionHost,
@@ -276,7 +279,7 @@ impl NodeGraphSurfaceBinding {
         Ok(outcome)
     }
 
-    /// Applies an edge update and keeps the external graph/view mirrors in sync.
+    /// Applies an edge update and keeps store-derived projection models in sync.
     pub fn update_edge<H: UiHost, F>(
         &self,
         host: &mut H,
@@ -291,8 +294,8 @@ impl NodeGraphSurfaceBinding {
         Ok(outcome)
     }
 
-    /// Applies an edge update from an object-safe action hook and keeps the external graph/view
-    /// mirrors in sync.
+    /// Applies an edge update from an object-safe action hook and keeps store-derived projection
+    /// models in sync.
     pub fn update_edge_action_host<F>(
         &self,
         host: &mut dyn UiActionHost,

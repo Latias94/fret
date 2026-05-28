@@ -1,12 +1,21 @@
 # ADR 0135: Node Graph Canvas Middleware (Tx Gate + Input Interception)
 
-Status: Proposed
+Status: Superseded
 Scope: Ecosystem (`ecosystem/fret-node`) UI integration contract and guidance.
+
+Status note (2026-05-28): this ADR is superseded by the retained node graph canvas exit and the
+store-first/declarative-first surface. The retained `NodeGraphCanvas` and `NodeGraphCanvasMiddleware`
+names below describe deleted historical design direction, not a current API. Current graph commit
+interception lives in `NodeGraphStore` middleware/callbacks; any future UI interaction interception
+must be designed as a declarative surface hook under
+`docs/workstreams/fret-node-declarative-contract-closure-v1/`.
 
 ## Context
 
-`ecosystem/fret-node` provides a retained `NodeGraphCanvas` widget that already hosts a large
-interaction surface (selection, panning/zooming, dragging, context menus/searchers, etc.).
+Historically, `ecosystem/fret-node` provided a retained `NodeGraphCanvas` widget that hosted a large
+interaction surface (selection, panning/zooming, dragging, context menus/searchers, etc.). That
+widget has since been deleted. The supported app-facing surface is now
+`NodeGraphSurfaceBinding` + `node_graph_surface(...)` + `NodeGraphController`.
 
 As the editor surface grows, we need a **single, non-bypassable gate** for all graph edits, and a
 clean extension point for tool-mode and shortcut interception, without pushing editor policy into
@@ -28,7 +37,18 @@ Non-goals:
 - Define a universal "canvas middleware" for all Fret canvases.
 - Encode graph/domain rules inside `fret-canvas` or `crates/fret-ui`.
 
-## Decision
+## Supersession Decision
+
+Do not implement this ADR by reviving `NodeGraphCanvasMiddleware`.
+
+The replacement direction is:
+
+- Keep graph commit validation, normalization, history, and callbacks under `NodeGraphStore`.
+- Keep declarative UI event/command interception behind a new explicit hook contract.
+- Require any UI hook that commits graph edits to go through the store dispatch path.
+- Treat retained middleware references below as historical design context only.
+
+## Historical Decision (Superseded)
 
 ### 1) Introduce a `NodeGraphCanvasMiddleware` extension point (ecosystem)
 
