@@ -1,16 +1,32 @@
 # `fret-node` Fearless Refactor (v1) - Evidence And Gates
 
 Status: Active
-Last updated: 2026-05-27
+Last updated: 2026-05-28
 
 ## Current Focus
 
-FNDX-043 is the fourth concrete declarative overlay/add-on parity/conformance follow-up after the
-overlay/menu/toolbar policy-placement closure. It promotes an existing mounted rename overlay gate:
-Escape closes the declarative text-input overlay without a graph transaction and restores focus to
-the graph surface target.
+FNDX-045 wires the first default declarative public-extension slice: `NodeGraphSurfaceProps` now has
+explicit `edge_types` and `skin` hooks for edge render hints/custom paint paths and paint-only edge
+chrome. The broad `NodeGraphPresenter` contract remains out of the default app-facing surface until
+geometry, labels, context menus, and insertion/search policy are split into narrower contracts.
 
 ## Targeted Iteration Gates
+
+```bash
+cargo nextest run -p fret-node edges_cache_key_changes_when_edge_types_or_skin_revision_changes declarative_edge_types_feed_default_surface_edge_draws declarative_skin_refines_edge_draw_hints_after_edge_types default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter
+```
+
+This gate proves the FNDX-045 default declarative extension decision: edge paint cache invalidation
+observes `edgeTypes`/skin revisions, `edgeTypes` feeds draw hints/custom paint paths, skin refines
+edge hints after `edgeTypes`, and the source-policy docs keep custom `NodeGraphPresenter` out of the
+default surface.
+
+```bash
+cargo nextest run -p fret-node store_public_surface_does_not_expose_raw_view_state_mutation
+```
+
+This gate proves `NodeGraphStore` does not expose a public raw mutable view-state reference and
+keeps public view-state mutation on the notifying/sanitizing helper paths.
 
 ```bash
 cargo nextest run -p fret-node public_node_graph_guides_teach_binding_first_surface
@@ -34,19 +50,18 @@ This gate proves the controlled runtime path still supports app-owned graph stat
 `NodeChange` / `EdgeChange` callbacks with `apply_*_changes`.
 
 ```bash
-cargo nextest run -p fret-node --features compat-retained-canvas overlay_menu_toolbar_policy_ownership_stays_on_named_seams
+cargo nextest run -p fret-node overlay_menu_toolbar_policy_ownership_stays_on_named_seams
 ```
 
 This gate proves the FNDX-030 placement decision: toolbar public policy types stay on the toolbar
-policy seam, menu/searcher policy enums stay on the state overlay-policy seam, and retained
-menu/searcher lifecycle writes go through named overlay helpers.
+policy seam, and declarative toolbar composition consumes that seam instead of owning it inline.
 
 ```bash
-cargo nextest run -p fret-node --features compat-retained-canvas overlay_policy_modules_compile_without_retained_canvas_compat default_overlay_policy_surfaces_stay_off_retained_bridge
+cargo nextest run -p fret-node retained_compatibility_surface_is_removed
 ```
 
-This gate keeps the nearby overlay policy modules compiling outside the retained compatibility
-feature and verifies default overlay policy surfaces remain retained-bridge-free.
+This gate proves the old retained compatibility surface stays deleted from the current public
+surface instead of being revived under a new name.
 
 ```bash
 cargo nextest run -p fret-node --no-default-features runtime
@@ -87,20 +102,20 @@ graph transaction and restores focus to the graph surface target.
 
 ```bash
 cargo check -p fret-node --no-default-features
-cargo check -p fret-node --features compat-retained-canvas
+cargo check -p fret-node --all-features --tests
 python3 tools/check_layering.py
 ```
 
 Use the no-default-features check when changing headless/runtime docs or exports. Use the
-compat-retained check when touching retained compatibility boundaries. Use layering checks when
-moving mechanisms across `fret-node`, `fret-canvas`, or core crates.
+all-features test-target check when touching UI-enabled or optional integration boundaries. Use
+layering checks when moving mechanisms across `fret-node`, `fret-canvas`, or core crates.
 
 ## Closeout Gates
 
 ```bash
 cargo fmt --check
 cargo nextest run -p fret-node
-cargo check -p fret-node --features compat-retained-canvas --tests
+cargo check -p fret-node --all-features --tests
 ```
 
 Closeout should use narrower gates only when the workspace is blocked by unrelated failures, and the
@@ -109,8 +124,13 @@ closeout note must name those failures.
 ## Evidence Anchors
 
 - `docs/node-graph-how-to-build-like-xyflow.md`
+- `docs/node-graph-xyflow-parity.md`
 - `docs/node-graph-controlled-mode.md`
 - `ecosystem/fret-node/README.md`
+- `ecosystem/fret-node/src/runtime/store.rs`
+- `ecosystem/fret-node/src/ui/edge_types.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
 - `ecosystem/fret-node/src/surface_policy_tests.rs`
 - `ecosystem/fret-node/src/runtime/tests.rs`
 - `ecosystem/fret-node/src/ui/binding_store_sync.rs`
@@ -120,18 +140,20 @@ closeout note must name those failures.
 - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/hover_anchor.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/overlay_elements.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/transactions.rs`
+- `ecosystem/fret-node/src/ui/portal_commands.rs`
+- `ecosystem/fret-node/src/ui/overlays/blackboard_declarative.rs`
+- `ecosystem/fret-node/src/ui/overlays/controls_declarative.rs`
+- `ecosystem/fret-node/src/ui/overlays/minimap_declarative.rs`
 - `ecosystem/fret-node/src/ui/overlays/rename_command.rs`
 - `ecosystem/fret-node/src/ui/overlays/rename_declarative.rs`
 - `ecosystem/fret-node/src/ui/overlays/rename_lifecycle.rs`
-- `ecosystem/fret-node/src/ui/canvas/state/state_overlay_policy.rs`
-- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/overlay.rs`
-- `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`
-- `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/overlay.rs`
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/README.md`
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/design.md`
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/todo.md`
 
-## Fresh Evidence - 2026-05-27
+## Historical Evidence - 2026-05-27
 
 - `cargo nextest run -p fret-node controlled_sync_public_surface_stays_full_replace_first_until_workload_proves_diff_helper`: passed; proves controlled sync docs and public binding/controller sync sources stay full-replace-first and do not expose diff-first helpers.
 - `cargo nextest run -p fret-node controlled_graph_can_apply_store_changes_via_callbacks`: passed; proves the current controlled callback/apply path still mirrors store changes into app-owned graph state.
@@ -195,5 +217,42 @@ closeout note must name those failures.
 - Review/package follow-up after FNDX-043:
   - `cargo nextest run -p fret-node`: passed; proves the full package test suite remains green with
     the mounted declarative rename overlay dismissal/focus-return parity gate.
+
+## Fresh Evidence - 2026-05-28
+
+- FNDX-044:
+  - `cargo nextest run -p fret-node store_public_surface_does_not_expose_raw_view_state_mutation`:
+    passed; proves `NodeGraphStore` no longer exposes public raw mutable view-state access and
+    keeps writes on notifying/sanitizing helper paths.
+  - `cargo fmt --check`: passed; proves formatting is clean after the source-policy and workstream
+    updates.
+  - `cargo check -p fret-node --no-default-features`: passed; proves the headless/runtime-facing
+    package still compiles after the store API removal.
+  - `cargo nextest run -p fret-node --no-default-features runtime`: passed; proves headless runtime
+    store/change behavior remains green without default UI features.
+  - `cargo check -p fret-node --all-features --tests`: passed; proves optional UI/integration test
+    targets still compile after the public store surface change.
+  - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
+    green with 452 tests.
+  - `python3 tools/check_layering.py`: passed; proves the slice did not violate workspace layering
+    policy.
+- FNDX-045:
+  - `cargo fmt --check`: passed; proves formatting is clean after the Rust and workstream updates.
+  - `cargo check -p fret-node --tests`: passed; proves the UI-enabled test targets compile after
+    wiring `NodeGraphSurfaceProps.edge_types` / `NodeGraphSurfaceProps.skin` into the declarative
+    frame/cache path.
+  - `cargo nextest run -p fret-node edges_cache_key_changes_when_edge_types_or_skin_revision_changes declarative_edge_types_feed_default_surface_edge_draws declarative_skin_refines_edge_draw_hints_after_edge_types default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`:
+    passed; proves edge paint caches key on `edgeTypes`/skin revisions, `edgeTypes` supplies default
+    declarative edge draw hints/custom paint paths, skin refines edge hints after `edgeTypes`, and
+    source-policy/docs keep custom `NodeGraphPresenter` deferred from the default surface.
+  - `cargo check -p fret-node --all-features --tests`: passed; proves optional UI/integration test
+    targets still compile with the new default-surface extension props.
+  - `cargo check -p fret-node --no-default-features`: passed; proves headless/runtime-facing package
+    compilation remains unaffected by the UI-only extension slice.
+  - `python3 tools/check_layering.py`: passed; proves the slice did not violate workspace layering
+    policy.
+  - `git diff --check`: passed; proves the patch has no whitespace errors.
+  - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
+    green with 456 tests.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

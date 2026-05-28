@@ -181,6 +181,67 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Fresh gates:
     - `cargo nextest run -p fret-node rename_managed_host_escape_closes_without_transaction_and_restores_focus`: passed.
 
+- [x] FNDX-044 Remove the public raw `NodeGraphStore::view_state_mut` mutation path.
+  - Scope:
+    - `ecosystem/fret-node/src/runtime/store.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - standard workstream continuation docs in this folder
+  - Validation:
+    - `cargo nextest run -p fret-node store_public_surface_does_not_expose_raw_view_state_mutation`
+    - `cargo check -p fret-node --no-default-features`
+    - `cargo nextest run -p fret-node --no-default-features runtime`
+    - `cargo check -p fret-node --all-features --tests`
+    - `python3 tools/check_layering.py`
+  - Exit note: `NodeGraphStore` keeps read access through `view_state()` and mutations through
+    `replace_view_state(...)` / `update_view_state(...)`, so sanitization, view-change events, and
+    selector notifications cannot be bypassed by a public mutable reference.
+  - Evidence:
+    - `ecosystem/fret-node/src/runtime/store.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node store_public_surface_does_not_expose_raw_view_state_mutation`: passed.
+    - `cargo fmt --check`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo nextest run -p fret-node --no-default-features runtime`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+    - `python3 tools/check_layering.py`: passed.
+
+- [x] FNDX-045 Decide and wire the first default declarative public-extension surface slice.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/edge_types.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node edges_cache_key_changes_when_edge_types_or_skin_revision_changes declarative_edge_types_feed_default_surface_edge_draws declarative_skin_refines_edge_draw_hints_after_edge_types default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`
+    - `cargo check -p fret-node --tests`
+  - Exit note: the default declarative surface now exposes narrow `NodeGraphSurfaceProps.edge_types`
+    and `NodeGraphSurfaceProps.skin` hooks for edge hint/custom paint-path and paint-only skin
+    policy. It deliberately does not expose the broad `NodeGraphPresenter` contract as an app-facing
+    default prop until geometry, labels, context menus, and insertion/search policy are split.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo fmt --check`: passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo nextest run -p fret-node edges_cache_key_changes_when_edge_types_or_skin_revision_changes declarative_edge_types_feed_default_surface_edge_draws declarative_skin_refines_edge_draw_hints_after_edge_types default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `git diff --check`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+
 ## M0 - Decision gates and internal seam map
 
 - [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.

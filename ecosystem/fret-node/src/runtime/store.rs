@@ -336,10 +336,6 @@ impl NodeGraphStore {
         &self.view_state
     }
 
-    pub fn view_state_mut(&mut self) -> &mut NodeGraphViewState {
-        &mut self.view_state
-    }
-
     pub fn interaction(&self) -> &NodeGraphInteractionConfig {
         &self.interaction
     }

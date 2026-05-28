@@ -9,10 +9,12 @@
 //! and keeps hit-testing consistent by sharing the same hint source.
 //!
 //! Stage 2: optionally provide a **custom edge path** builder (and still keep the serialized
-//! graph model UI-free). The canvas widget uses the custom path for painting and hit-testing,
-//! and derives conservative AABBs for culling + spatial indexing.
+//! graph model UI-free). The default declarative surface uses custom paths for paint/culling only;
+//! geometry-backed hit-testing stays on the conservative presenter route until the path contract is
+//! split into an explicit spatial-index input.
 
 use std::collections::BTreeMap;
+use std::rc::Rc;
 
 use crate::core::{EdgeId, EdgeKind, Graph};
 use crate::ui::presenter::EdgeRenderHint;
@@ -66,6 +68,8 @@ pub struct NodeGraphEdgeTypes {
     fallback: Option<Box<EdgeTypeStyler>>,
     fallback_path: Option<Box<EdgeTypePathBuilder>>,
 }
+
+pub type NodeGraphEdgeTypesRef = Rc<NodeGraphEdgeTypes>;
 
 impl Default for NodeGraphEdgeTypes {
     fn default() -> Self {

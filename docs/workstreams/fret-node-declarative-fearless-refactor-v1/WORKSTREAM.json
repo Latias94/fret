@@ -3,7 +3,7 @@
   "slug": "fret-node-declarative-fearless-refactor-v1",
   "title": "`fret-node` Fearless Refactor (v1)",
   "status": "active",
-  "updated": "2026-05-27",
+  "updated": "2026-05-28",
   "scope_kind": "execution",
   "problem": "`fret-node` must converge on a declarative-first, controller/binding-first public consumer surface without leaking retained compatibility internals as the taught default.",
   "authoritative_docs": [
@@ -36,15 +36,22 @@
     "cargo nextest run -p fret-node declarative_hover_tooltip_overlay_tracks_dragged_anchor_when_portals_disabled",
     "cargo nextest run -p fret-node declarative_portal_text_cancel_returns_focus_to_surface_without_graph_commit",
     "cargo nextest run -p fret-node rename_managed_host_escape_closes_without_transaction_and_restores_focus",
+    "cargo nextest run -p fret-node store_public_surface_does_not_expose_raw_view_state_mutation",
+    "cargo nextest run -p fret-node edges_cache_key_changes_when_edge_types_or_skin_revision_changes declarative_edge_types_feed_default_surface_edge_draws declarative_skin_refines_edge_draw_hints_after_edge_types default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter",
     "cargo nextest run -p fret-node --no-default-features runtime",
-    "cargo check -p fret-node --features compat-retained-canvas --tests",
+    "cargo check -p fret-node --all-features --tests",
     "python3 tools/check_layering.py"
   ],
   "evidence": [
     "docs/node-graph-how-to-build-like-xyflow.md",
     "docs/node-graph-xyflow-parity.md",
     "ecosystem/fret-node/README.md",
+    "ecosystem/fret-node/src/runtime/store.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs",
     "ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs",
+    "ecosystem/fret-node/src/ui/edge_types.rs",
     "ecosystem/fret-node/src/ui/declarative/paint_only/hover_anchor.rs",
     "ecosystem/fret-node/src/ui/editors/portal_text.rs",
     "ecosystem/fret-node/src/ui/overlays/rename_command.rs",
@@ -59,6 +66,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane while the public story remains declarative-first and controller/binding-first. FNDX-010/FNDX-020/FNDX-030 are closeout-verified, and FNDX-040/FNDX-041/FNDX-042/FNDX-043 have concrete declarative overlay/add-on parity gates; future tasks should keep choosing one observable overlay behavior plus one narrow gate."
+    "notes": "Continue this lane while the public story remains declarative-first and controller/binding-first. FNDX-010/FNDX-020/FNDX-030 are closeout-verified, FNDX-040/FNDX-041/FNDX-042/FNDX-043 have concrete declarative overlay/add-on parity gates, FNDX-044 removes the raw public view-state mutation bypass, and FNDX-045 wires edgeTypes/skin into the default declarative edge paint path while deferring the broad presenter surface; future tasks should keep choosing one observable behavior or public-surface hazard plus one narrow gate."
   }
 }

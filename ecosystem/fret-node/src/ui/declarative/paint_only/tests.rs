@@ -6,11 +6,12 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use fret_canvas::view::PanZoom2D;
+use fret_core::scene::DashPatternV1;
 use fret_core::{
-    AppWindowId, MaterialDescriptor, MaterialId, MaterialRegistrationError, Modifiers, MouseButton,
-    MouseButtons, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, Point,
-    PointerId, PointerType, Px, Rect, SemanticsRole, Size, SvgId, SvgService, TextConstraints,
-    TextMetrics, TextService,
+    AppWindowId, Color, MaterialDescriptor, MaterialId, MaterialRegistrationError, Modifiers,
+    MouseButton, MouseButtons, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
+    PathStyle, Point, PointerId, PointerType, Px, Rect, SemanticsRole, Size, SvgId, SvgService,
+    TextConstraints, TextMetrics, TextService,
 };
 use fret_runtime::{
     ClipboardToken, CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession, Effect,
@@ -42,9 +43,10 @@ use super::{
     authoritative_surface_boundary_snapshot, begin_left_pointer_down_action_host,
     begin_pan_pointer_down_action_host, build_click_selection_preview_nodes,
     build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
-    build_key_down_capture_handler, build_marquee_preview_selected_nodes,
-    build_node_drag_transaction, collect_portal_label_infos_for_visible_subset,
-    commit_graph_transaction, commit_marquee_selection_action_host, commit_node_drag_transaction,
+    build_edges_draws_paint_only, build_key_down_capture_handler,
+    build_marquee_preview_selected_nodes, build_node_drag_transaction,
+    collect_portal_label_infos_for_visible_subset, commit_graph_transaction,
+    commit_marquee_selection_action_host, commit_node_drag_transaction,
     commit_pending_selection_action_host, complete_left_pointer_release_action_host,
     complete_node_drag_release_action_host, derived_geometry_cache_key, edges_cache_key,
     effective_selected_nodes_for_paint, escape_cancel_declarative_interactions_action_host,
@@ -76,11 +78,12 @@ use crate::runtime::store::NodeGraphStore;
 use crate::ui::measured::MEASURED_GEOMETRY_EPSILON_PX;
 use crate::ui::paint_overrides::{NodeGraphPaintOverrides, NodeGraphPaintOverridesMap};
 use crate::ui::{
-    MeasuredGeometryStore, NodeGraphController, NodeGraphDeclarativePortalCommandHandler,
-    NodeGraphNodeTypes, NodeGraphSurfaceBinding, PortalCommandOutcome, PortalNumberEditHandler,
-    PortalNumberEditSpec, PortalNumberEditSubmit, PortalTextCommand, PortalTextEditHandler,
-    PortalTextEditSpec, PortalTextEditSubmit, PortalTextStepMode, node_graph_surface,
-    node_graph_surface_with_portal_renderer, portal_cancel_text_command,
+    EdgeChromeHint, EdgeCustomPath, EdgeRouteKind, EdgeTypeKey, MeasuredGeometryStore,
+    NodeGraphController, NodeGraphDeclarativePortalCommandHandler, NodeGraphEdgeTypes,
+    NodeGraphNodeTypes, NodeGraphSkin, NodeGraphSurfaceBinding, PortalCommandOutcome,
+    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalTextCommand,
+    PortalTextEditHandler, PortalTextEditSpec, PortalTextEditSubmit, PortalTextStepMode,
+    node_graph_surface, node_graph_surface_with_portal_renderer, portal_cancel_text_command,
     portal_step_text_command_with_mode, portal_submit_text_command,
 };
 use serde_json::Value;
@@ -1098,6 +1101,40 @@ fn make_graph_two_nodes_with_ports() -> (Graph, NodeId, PortId, PortId, NodeId, 
     );
 
     (graph, a, a_in, a_out, b, b_in)
+}
+
+fn make_graph_two_nodes_with_edge() -> (Graph, Vec<NodeId>, EdgeId) {
+    let (mut graph, a, _a_in, a_out, b, b_in) = make_graph_two_nodes_with_ports();
+    let edge = EdgeId::from_u128(0xA130);
+    graph.edges.insert(
+        edge,
+        Edge {
+            kind: EdgeKind::Data,
+            from: a_out,
+            to: b_in,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
+        },
+    );
+    (graph, vec![a, b], edge)
+}
+
+fn build_test_canvas_geometry(
+    graph: &Graph,
+    draw_order: &[NodeId],
+) -> crate::ui::canvas::CanvasGeometry {
+    let style = crate::ui::style::NodeGraphStyle::default();
+    let mut presenter = crate::ui::DefaultNodeGraphPresenter::default();
+    crate::ui::canvas::CanvasGeometry::build_with_presenter(
+        graph,
+        draw_order,
+        &style,
+        1.0,
+        crate::io::NodeGraphNodeOrigin::default(),
+        &mut presenter,
+        None,
+    )
 }
 
 fn render_surface_semantics_snapshot(
@@ -5877,6 +5914,216 @@ fn flush_portal_measured_geometry_state_keeps_growth_only_and_removes_missing_no
 }
 
 #[test]
+fn edges_cache_key_changes_when_edge_types_or_skin_revision_changes() {
+    let node = NodeId::from_u128(9013);
+    let view_state = NodeGraphViewState {
+        zoom: 1.25,
+        draw_order: vec![node],
+        ..NodeGraphViewState::default()
+    };
+    let editor_config = NodeGraphEditorConfig::default();
+    let interaction = editor_config.resolved_interaction_state();
+    let node_origin = editor_config.interaction.node_origin;
+    let style = crate::ui::style::NodeGraphStyle::default();
+    let derived = derived_geometry_cache_key(
+        39,
+        view_state.zoom,
+        node_origin,
+        &view_state.draw_order,
+        &interaction,
+        &style,
+        0,
+        0,
+        0.0,
+    );
+    let draw_order_hash = stable_hash_u64(2, &view_state.draw_order);
+
+    let base = edges_cache_key(
+        39,
+        view_state.zoom,
+        node_origin,
+        draw_order_hash,
+        derived.0,
+        0,
+        0,
+    );
+    let edge_types_changed = edges_cache_key(
+        39,
+        view_state.zoom,
+        node_origin,
+        draw_order_hash,
+        derived.0,
+        1,
+        0,
+    );
+    let skin_changed = edges_cache_key(
+        39,
+        view_state.zoom,
+        node_origin,
+        draw_order_hash,
+        derived.0,
+        0,
+        1,
+    );
+
+    assert_ne!(base, edge_types_changed);
+    assert_ne!(base, skin_changed);
+}
+
+#[test]
+fn declarative_edge_types_feed_default_surface_edge_draws() {
+    let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let style = crate::ui::style::NodeGraphStyle::default();
+    let color = Color {
+        r: 0.9,
+        g: 0.1,
+        b: 0.2,
+        a: 1.0,
+    };
+    let dash = DashPatternV1::new(Px(8.0), Px(4.0), Px(0.0));
+    let edge_types = NodeGraphEdgeTypes::new()
+        .register(
+            EdgeTypeKey::new("data"),
+            move |_graph, edge_id, _style, mut hint| {
+                assert_eq!(edge_id, edge);
+                hint.color = Some(color);
+                hint.width_mul = 2.0;
+                hint.route = EdgeRouteKind::Straight;
+                hint.dash = Some(dash);
+                hint
+            },
+        )
+        .register_path(
+            EdgeTypeKey::new("data"),
+            |_graph, _edge_id, _style, _hint, input| {
+                Some(EdgeCustomPath {
+                    cache_key: 77,
+                    commands: vec![
+                        PathCommand::MoveTo(input.from),
+                        PathCommand::LineTo(Point::new(input.to.x, input.from.y)),
+                        PathCommand::LineTo(input.to),
+                    ],
+                })
+            },
+        );
+
+    let draws = build_edges_draws_paint_only(
+        &graph,
+        7,
+        1.0,
+        &geom,
+        &style,
+        edge_types.revision(),
+        0,
+        Some(&edge_types),
+        None,
+    );
+
+    assert_eq!(draws.len(), 1);
+    let draw = &draws[0];
+    assert_eq!(draw.edge, edge);
+    assert_eq!(draw.color, color);
+    assert_eq!(draw.width_mul, 2.0);
+    assert_eq!(draw.route, EdgeRouteKind::Straight);
+    assert_eq!(draw.dash, Some(dash));
+    assert!(matches!(
+        draw.commands.as_ref(),
+        [
+            PathCommand::MoveTo(_),
+            PathCommand::LineTo(_),
+            PathCommand::LineTo(_)
+        ]
+    ));
+}
+
+#[derive(Debug)]
+struct TestEdgeSkin {
+    rev: u64,
+    color: Color,
+    width_mul: f32,
+    dash: DashPatternV1,
+}
+
+impl NodeGraphSkin for TestEdgeSkin {
+    fn revision(&self) -> u64 {
+        self.rev
+    }
+
+    fn edge_chrome_hint(
+        &self,
+        _graph: &Graph,
+        _edge: EdgeId,
+        _style: &crate::ui::NodeGraphStyle,
+        _selected: bool,
+        _hovered: bool,
+    ) -> EdgeChromeHint {
+        EdgeChromeHint {
+            color: Some(self.color),
+            width_mul: Some(self.width_mul),
+            dash: Some(self.dash),
+            ..EdgeChromeHint::default()
+        }
+    }
+}
+
+#[test]
+fn declarative_skin_refines_edge_draw_hints_after_edge_types() {
+    let (graph, draw_order, _edge) = make_graph_two_nodes_with_edge();
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let style = crate::ui::style::NodeGraphStyle::default();
+    let edge_types_color = Color {
+        r: 1.0,
+        g: 0.0,
+        b: 0.0,
+        a: 1.0,
+    };
+    let skin_color = Color {
+        r: 0.0,
+        g: 0.45,
+        b: 1.0,
+        a: 1.0,
+    };
+    let skin_dash = DashPatternV1::new(Px(6.0), Px(2.0), Px(1.0));
+    let edge_types =
+        NodeGraphEdgeTypes::new().with_fallback(move |_graph, _edge, _style, mut hint| {
+            hint.color = Some(edge_types_color);
+            hint.width_mul = 1.25;
+            hint.route = EdgeRouteKind::Step;
+            hint
+        });
+    let skin = TestEdgeSkin {
+        rev: 5,
+        color: skin_color,
+        width_mul: 3.0,
+        dash: skin_dash,
+    };
+
+    let draws = build_edges_draws_paint_only(
+        &graph,
+        8,
+        1.0,
+        &geom,
+        &style,
+        edge_types.revision(),
+        skin.revision(),
+        Some(&edge_types),
+        Some(&skin),
+    );
+
+    assert_eq!(draws.len(), 1);
+    let draw = &draws[0];
+    assert_eq!(draw.color, skin_color);
+    assert_eq!(draw.width_mul, 3.0);
+    assert_eq!(draw.dash, Some(skin_dash));
+    assert_eq!(
+        draw.route,
+        EdgeRouteKind::Step,
+        "skin refinements must not erase the edgeTypes route"
+    );
+}
+
+#[test]
 fn authoritative_selection_changes_keep_paint_cache_keys_stable() {
     let node_a = NodeId::from_u128(9014);
     let node_b = NodeId::from_u128(9015);
@@ -5954,6 +6201,8 @@ fn authoritative_selection_changes_keep_paint_cache_keys_stable() {
         node_origin,
         draw_order_hash_a,
         derived_a.0,
+        0,
+        0,
     );
     let edges_b = edges_cache_key(
         graph_rev,
@@ -5961,6 +6210,8 @@ fn authoritative_selection_changes_keep_paint_cache_keys_stable() {
         node_origin,
         draw_order_hash_b,
         derived_b.0,
+        0,
+        0,
     );
 
     assert_eq!(grid_a, grid_b);
@@ -6014,6 +6265,8 @@ fn authoritative_graph_replacement_invalidates_only_graph_dependent_paint_cache_
         node_origin,
         draw_order_hash,
         derived_before.0,
+        0,
+        0,
     );
 
     let grid_after = grid_cache_key(bounds, view_from_state(&view_state), &style);
@@ -6041,6 +6294,8 @@ fn authoritative_graph_replacement_invalidates_only_graph_dependent_paint_cache_
         node_origin,
         draw_order_hash,
         derived_after.0,
+        0,
+        0,
     );
 
     assert_eq!(grid_before, grid_after);

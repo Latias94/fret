@@ -9,7 +9,10 @@ use crate::ui::geometry_overrides::NodeGraphGeometryOverridesRef;
 use crate::ui::paint_overrides::{NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef};
 use crate::ui::presenter::{DefaultNodeGraphPresenter, NodeGraphPresenter};
 use crate::ui::style::NodeGraphStyle;
-use crate::ui::{MeasuredGeometryStore, NodeGraphCanvasTransform, NodeGraphInternalsSnapshot};
+use crate::ui::{
+    MeasuredGeometryStore, NodeGraphCanvasTransform, NodeGraphEdgeTypesRef,
+    NodeGraphInternalsSnapshot, NodeGraphSkinRef,
+};
 
 use super::surface_support::{
     read_authoritative_interaction_config_in_models, read_authoritative_runtime_tuning_in_models,
@@ -195,6 +198,8 @@ pub(super) struct PrepareSurfaceFrameParams<'a> {
     pub(super) surface_models: &'a PaintOnlySurfaceModels,
     pub(super) geometry_overrides: Option<NodeGraphGeometryOverridesRef>,
     pub(super) paint_overrides: Option<NodeGraphPaintOverridesRef>,
+    pub(super) edge_types: Option<NodeGraphEdgeTypesRef>,
+    pub(super) skin: Option<NodeGraphSkinRef>,
     pub(super) measured_geometry: Option<Arc<MeasuredGeometryStore>>,
     pub(super) diagnostics: super::NodeGraphDiagnosticsConfig,
     pub(super) cull_margin_screen_px: f32,
@@ -210,6 +215,8 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         surface_models,
         geometry_overrides,
         paint_overrides,
+        edge_types,
+        skin,
         measured_geometry,
         diagnostics,
         cull_margin_screen_px,
@@ -306,6 +313,11 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         .as_deref()
         .map(|overrides| overrides.revision())
         .unwrap_or(0);
+    let edge_types_rev = edge_types
+        .as_ref()
+        .map(|edge_types| edge_types.revision())
+        .unwrap_or(0);
+    let skin_rev = skin.as_ref().map(|skin| skin.revision()).unwrap_or(0);
 
     let draw_order_hash = stable_hash_u64(2, &view_value.draw_order);
     let interaction_config =
@@ -391,6 +403,10 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         node_origin,
         draw_order_hash,
         &style_tokens,
+        edge_types_rev,
+        skin_rev,
+        edge_types.as_deref(),
+        skin.as_deref(),
     );
     let edges_cached = edges_cache_value.draws.is_some();
 

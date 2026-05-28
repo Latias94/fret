@@ -1,6 +1,6 @@
 # Workstream: `fret-node` Fearless Refactor (v1)
 
-Status: Reframed and active (last updated 2026-05-27)
+Status: Reframed and active (last updated 2026-05-28)
 Quick navigation:
 
 - `design.md` - current surface map + next worktree order
@@ -16,6 +16,10 @@ Historical note:
   "paint-only declarative" slice.
 - The workstream now covers the full landing plan for `fret-node` as a **declarative-first,
   editor-grade reference surface** for the Fret ecosystem.
+- Current code has removed the old retained compatibility feature and widget surface. Older
+  retained/compatibility references below are retained as historical context until the long-form
+  README is normalized; use `design.md`, `todo.md`, `EVIDENCE_AND_GATES.md`, and `HANDOFF.md` as the
+  current execution authority.
 
 ## Intent
 
@@ -23,7 +27,7 @@ Make `ecosystem/fret-node` the canonical example of how Fret should ship a compl
 
 - **headless asset model first** (`Graph`, `GraphTransaction`, rules, profiles, diagnostics),
 - **declarative-first public authoring** for ecosystem and app code,
-- **retained semantics in the runtime** without leaking retained authoring into long-term APIs,
+- **editor-grade runtime semantics** without leaking obsolete retained authoring into long-term APIs,
 - **transaction-safe editor interactions** instead of ad-hoc graph mutations,
 - **clear mechanism vs policy boundaries** so `fret-node` teaches the right layering habits.
 
@@ -69,9 +73,11 @@ update rather than an incidental refactor.
    - Retained implementation details may remain internally for a time, but must not be the taught
      default.
 
-2. **Retained remains a compatibility strategy, not the public design center.**
-   - `compat-retained-canvas` is allowed as an escape hatch.
-   - It is not the default feature posture and should stay delete-planned.
+2. **Retained compatibility has exited the current public surface.**
+   - The current source-policy gates require the retained compatibility feature, raw queues, and
+     retained widget authoring surface to stay removed.
+   - Any future fallback must be reintroduced through an explicit task/ADR instead of by reviving
+     stale compatibility APIs.
 
 3. **Editor-grade graph edits must converge on transactions/store, not direct `Graph` mutation.**
    - The authoritative editor commit path is `GraphTransaction` / `NodeGraphStore`.
@@ -102,15 +108,19 @@ update rather than an incidental refactor.
   - `GraphOp`, `GraphTransaction`, `GraphHistory`.
   - `rules`, `profile`, diagnostics, typed connection planning.
 
-- **Retained interaction engine**
-  - `NodeGraphCanvas` remains the most complete editor-grade interaction path today.
-  - Store integration, edit/view queues, overlays, and portal host all exist around this path.
+- **Store-first declarative interaction surface**
+  - `NodeGraphSurfaceBinding`, `NodeGraphController`, and `NodeGraphStore` are the current public
+    teaching surfaces.
+  - Source-policy gates now keep raw retained compatibility terms, queue transport, and direct
+    retained widget authoring out of supported UI sources.
 
 - **Declarative-first direction is already visible**
   - `node_graph_surface` is the default lightweight declarative demo path.
-  - `node_graph_surface_compat_retained` already proves that retained can be hidden behind a
-    declarative entry surface.
-  - The retained bridge is already opt-in only.
+  - Declarative overlays, portals, minimap, controls, blackboard, and rename flows now carry focused
+    gates without depending on a retained compatibility feature.
+  - `NodeGraphSurfaceProps.edge_types` and `NodeGraphSurfaceProps.skin` now wire narrow UI-only
+    edge view policy into the default declarative paint path without exposing the broad presenter
+    trait.
 
 ### Still unresolved
 
@@ -140,16 +150,20 @@ update rather than an incidental refactor.
     interaction config, runtime tuning) without emitting misleading empty `ViewChanged` events.
   - Persistence ownership is now explicit: `NodeGraphEditorStateFile` writes pure view-state in
     `view_state`, with interaction policy and runtime tuning grouped under `editor_config`.
-  - Example surfaces now follow that split too: retained canvas mirrors an explicit
-    `NodeGraphEditorConfig`, tuning/controls overlays consume the editor-config seam from their
-    constructor boundary, and
-    view-state persistence saves the wrapper payload instead of mutating `NodeGraphViewState`.
-  - The last test-only compatibility bridge is now removed: retained/declarative tests bind
-    explicit editor-config seams instead of mirroring editor config back into `NodeGraphViewState`.
-  - Retained compatibility surfaces now also teach explicit editor-config ownership at their public
-    constructor boundary: `NodeGraphCanvas::new(...)`, `NodeGraphCanvas::new_with_middleware(...)`,
-    `NodeGraphSurfaceCompatRetainedProps::new(...)`, and `NodeGraphControlsOverlay::new(...)` all
-    require an editor-config model instead of manufacturing one internally.
+  - Example surfaces now follow that split too: declarative controls consume the editor-config seam,
+    and view-state persistence saves the wrapper payload instead of mutating `NodeGraphViewState`.
+  - The old test-only compatibility bridge is removed: tests bind explicit editor-config seams
+    instead of mirroring editor config back into `NodeGraphViewState`.
+  - FNDX-044 removes the public `NodeGraphStore::view_state_mut` bypass, so store view-state writes
+    must flow through the notifying/sanitizing helper paths.
+
+- **Default view-policy surface**
+  - FNDX-045 wires `NodeGraphEdgeTypes` and `NodeGraphSkin` into `node_graph_surface(...)` for edge
+    hint/custom paint-path and paint-only skin refinement.
+  - Custom `NodeGraphPresenter` remains advanced/internal on the default path because it still mixes
+    geometry, labels, context menus, and insertion/search policy.
+  - Custom edge paths are currently default declarative paint/culling policy; geometry-backed
+    hit-testing needs a later explicit spatial-index contract.
 
 - **Ergonomic API fragmentation**
   - The surface naming is now closed around `NodeGraphSurfaceBinding` (instance-style app-facing
@@ -178,22 +192,22 @@ convergence slices.
   - `ecosystem/fret-node/src/ui/controller.rs`
   - `ecosystem/fret-node/src/ui/declarative/paint_only.rs` focused controller/store-backed tests
 
-### H2. Retained compatibility surfaces must keep teaching explicit editor-config ownership
+### H2. Store and editor-config surfaces must keep explicit ownership
 
 - Release/runtime `NodeGraphViewState` is now pure view state, and the old `cfg(test)` mirror
-  bridge is gone. The remaining hazard is API-story drift on retained compatibility surfaces.
-- If retained constructors or first-party demos reintroduce implicit `NodeGraphEditorConfig`
-  fallbacks, downstream authors will relearn the wrong seam even though the runtime split is
-  already correct.
+  bridge is gone. The remaining hazard is API-story drift where public surfaces bypass the
+  store/editor-config contracts.
+- If first-party demos or public helpers reintroduce implicit `NodeGraphEditorConfig` fallbacks or
+  raw mutable view-state access, downstream authors will relearn the wrong seam even though the
+  runtime split is already correct.
 - Evidence:
   - `ecosystem/fret-node/src/io/mod.rs` (`NodeGraphViewState`, `NodeGraphInteractionConfig`,
     `NodeGraphRuntimeTuning`, `NodeGraphInteractionState`)
   - `ecosystem/fret-node/src/runtime/store.rs`
   - `ecosystem/fret-node/src/ui/controller_store_sync.rs`
-  - `ecosystem/fret-node/src/ui/canvas/widget/view_state/sync.rs`
-  - `ecosystem/fret-node/src/ui/canvas/widget/widget_surface.rs`
-  - `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
-  - `ecosystem/fret-node/src/ui/overlays/controls.rs`
+  - `ecosystem/fret-node/src/ui/binding_store_sync.rs`
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/transactions.rs`
+  - `ecosystem/fret-node/src/ui/overlays/controls_declarative.rs`
   - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/milestones.md` (`M2`)
 
 ### H3. `NodeGraphController` is landed, but not yet fully closed as the teaching surface
@@ -284,28 +298,18 @@ A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs
   transaction commit, selection commit, keyboard zoom, diagnostics presets, pointer release/move
   flows, and fit-to-portals viewport updates, so internal declarative orchestration starts from the
   same binding-first contract taught to apps,
-- the workflow gallery retained subtree now keeps an explicit controller beside the binding instead
-  of routing retained composition through a hidden binding escape hatch, so first-party teaching
-  code keeps that advanced retained seam visible rather than smuggling it through the binding helper,
-- retained rename / portal / blackboard / compatibility glue now also prefers controller-owned
-  transaction submission when a controller/store exists,
-- the retained legacy demo now routes its canvas / rename overlay / blackboard / portal / minimap
-  glue through the same controller-first surface,
+- declarative rename, portal command, blackboard, controls, minimap, and toolbar paths now have
+  focused controller/binding-facing gates,
 - the default declarative demo now uses it.
 
 This is intentionally not the final shape yet. Richer viewport commands, callback layering, and
 broader declarative closure are still open, but the public naming/ownership story is now closed
 around `NodeGraphSurfaceBinding` plus `NodeGraphController`. `edit_queue` is no longer a public
-teaching surface; it is a crate-internal transport/compatibility seam.
+teaching surface, and source-policy tests now require retained compatibility terms and raw queue
+transport to stay out of supported UI sources.
 
-For retained composition, the preferred teaching posture is now controller-first:
-`compat_retained` takes a controller binding at the declarative boundary, while the public retained
-widget posture is `new(...)` plus optional `with_controller(...)`. Raw queue binding on retained
-widgets now stay crate-internal for compatibility harnesses, focused retained tests, and temporary
-migration glue.
-Source-policy tests now lock that posture across retained canvas / portal / rename overlay /
-blackboard / minimap surfaces, and the workflow gallery now constructs its retained controller from
-`binding.store_model()` instead of teaching a hidden controller escape hatch on the binding.
+Source-policy tests now lock that posture across declarative surfaces, first-party demos, workflow
+gallery snippets, and public docs.
 The explicit advanced binding constructor is now named
 `NodeGraphSurfaceBinding::from_models_and_controller(...)`, and it now requires explicit
 `graph + view_state + editor_config + controller` ownership, so mirror-owned/controller-owned
@@ -322,11 +326,8 @@ fit_canvas_rect_in_bounds*, screen_to_canvas, canvas_to_screen}` family or the l
 fit_canvas_rect_in_bounds*, screen_to_canvas, canvas_to_screen}` surface, while declarative
 action hooks should prefer the matching `NodeGraphSurfaceBinding::*_action_host(...)` helpers over
 owning raw transport queues.
-The remaining raw edit queue transport now lives under `ui/compat_transport.rs`, making it an
-explicit retained compatibility detail rather than a root `fret_node::ui::*` concept.
-The remaining raw viewport queue transport now lives under
-`ui/canvas/widget/view_queue.rs`, making it retained-canvas-local compatibility plumbing instead of
-something rooted at `fret_node::ui::*`.
+Raw edit/view queue transport is no longer a current public concept in this crate; new helper work
+should stay on binding/controller/store APIs.
 
 `fret_node::ui::advanced::*` is now deleted, and root `fret_node::ui::*` no longer exposes the raw
 queue/helper surfaces. First-party demos stay controller/binding-first, while retained/test callers
@@ -459,17 +460,15 @@ This is the part downstream authors should be able to follow without reading the
 
 ### Recommended today for shipping editor-grade workflows
 
-Use a **declarative root surface**, but allow the internal engine to remain retained-backed where
-full interaction parity is still only available there.
+Use a **declarative root surface** backed by the authoritative store/controller/binding surfaces.
 
 Concretely:
 
 - prefer declarative composition at the app boundary,
 - prefer binding-first declarative integration (`NodeGraphSurfaceBinding` + `node_graph_surface(...)`),
-- prefer controller-driven commands and treat raw edit/view queues as crate-internal transport or
-  compatibility seams,
-- do not author directly against retained `NodeGraphCanvas` unless you are working inside
-  `fret-node` internals, tests, or temporary compatibility harnesses.
+- prefer controller-driven commands and store-backed transactions,
+- do not add new public escape hatches that expose raw mutable graph/view-state ownership or stale
+  retained compatibility transport.
 
 ### Golden path for new app code
 
@@ -501,38 +500,32 @@ as a later optimization rather than the starting contract.
 Ship a declarative editor-grade surface whose committed edits flow through transactions/store and
 whose node content progressively moves toward portal-based declarative composition.
 
-### Temporary compatibility posture
+### Removed compatibility posture
 
-`node_graph_surface_compat_retained` is acceptable as the transition path when the fully
-declarative editor-grade surface is not yet ready.
+The old retained compatibility feature and widget surface are no longer current public targets for
+this workstream. Remaining retained/compatibility references in the long-form history should be read
+as historical evidence, not as implementation guidance.
 
-Until then, the compatibility path should stay bounded to:
+Current requirements:
 
-- the legacy demo as a compatibility harness,
-- focused retained conformance tests,
-- temporary parity investigations where declarative evidence is still missing.
-- even there, the declarative boundary should still pass explicit controller/editor-config seams
-  into the retained subtree rather than letting retained widgets synthesize policy defaults.
+- `NodeGraphSurfaceBinding` + `node_graph_surface(...)` remains the default documented app-facing
+  path,
+- committed declarative edits and viewport changes stay transaction-safe and controller/store-driven,
+- declarative gates cover editor-grade overlay, portal, minimap, controls, blackboard, and rename
+  flows without requiring a retained compatibility feature,
+- no new public app-facing APIs depend on retained widget types, raw queue ownership, or raw mutable
+  view-state references.
 
-### Exit criteria for `compat-retained-canvas`
+### Current follow-up blockers
 
-The compatibility path can be deleted or permanently demoted only when all of the following are
-true:
+The remaining blockers should be tracked as concrete public-surface or behavior gates:
 
-- `NodeGraphSurfaceBinding` + `node_graph_surface(...)` is the default documented app-facing path,
-- committed declarative edits and viewport changes stay transaction-safe and controller-driven,
-- declarative gates cover the editor-grade flows that still justify retained today,
-- no new public app-facing APIs depend on retained widget types or raw queue ownership,
-- the legacy demo remains only a harness and is no longer needed to teach the recommended posture.
-
-### Current deprecation blockers
-
-The remaining blockers should be tracked explicitly rather than hand-waved as "retained for now":
-
-- declarative parity evidence for retained-backed editor chrome flows,
-- declarative parity evidence for portal/overlay lifecycle flows that still rely on retained
-  conformance coverage,
-- a stable review checklist comparing the flows that matter most for editor-grade usage.
+- whether the remaining broad `NodeGraphPresenter` responsibilities should split into narrower
+  default-path label/geometry/menu/search contracts, or stay advanced-only,
+- whether custom edge paths need an explicit spatial-index input before claiming hit-testing parity,
+- whether paint/style tokens still leak geometry or hit-testing policy,
+- whether `prepare_surface_frame` should be split further around frame plan, portal measurement,
+  a11y/internals publication, and diagnostics.
 
 ### Comparison checklist: declarative vs compatibility retained
 
@@ -564,25 +557,23 @@ Any new retained-only addition should document:
 A reviewer should be able to answer "yes" to all of these in under five minutes.
 
 - Is the recommended **today** posture clear: declarative root surface first, controller/store
-  integration first, retained hidden behind compatibility only when needed?
+  integration first, with no public retained compatibility escape hatch?
 - Is the **target** posture clear: declarative editor-grade surface with transaction-safe commits and
   progressively more declarative node content?
-- Does the change avoid treating direct retained `NodeGraphCanvas` authoring as the default
-  downstream story?
+- Does the change avoid reintroducing direct retained widget authoring, raw queue transport, or raw
+  mutable store access as a downstream story?
 - If a declarative gesture commits graph or view-state data, does it route through
   controller/store/transaction entry points instead of mutating `Graph` directly?
 - Does the change avoid pushing more interaction policy or runtime tuning into
   `NodeGraphViewState`?
-- Do examples/docs keep retained surfaces explicitly labeled as internal, IMUI-specific, test-only,
-  or temporary compatibility?
+- Do examples/docs keep the binding-first declarative surface as the only recommended downstream
+  entrypoint?
 
 ## Wording audit snapshot
 
 - `docs/workstreams/xyflow-gap-analysis.md` is aligned with this workstream's public recommendation.
-- `apps/fret-examples/src/imui_node_graph_demo.rs` remains intentionally retained-bridge specific
-  and should stay scoped as a compatibility/example surface, not the default downstream recipe.
-- No other in-tree workstream docs currently recommend direct retained `NodeGraphCanvas` authoring as
-  the normal downstream entrypoint.
+- First-party examples and source-policy tests keep direct retained widget authoring out of the
+  recommended downstream recipe.
 
 ## Deliverables expected from this workstream
 
@@ -625,14 +616,13 @@ This workstream is complete only when it leaves behind:
 - `ecosystem/fret-node/src/runtime/store.rs`
 - `ecosystem/fret-node/src/runtime/changes.rs`
 - `ecosystem/fret-node/src/runtime/lookups.rs`
+- `ecosystem/fret-node/src/surface_policy_tests.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
-- `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
-- `ecosystem/fret-node/src/ui/canvas/widget.rs`
-- `ecosystem/fret-node/src/ui/portal.rs`
-- `ecosystem/fret-node/src/ui/overlays/blackboard.rs`
-- `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_blackboard_conformance.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/transactions.rs`
+- `ecosystem/fret-node/src/ui/portal_commands.rs`
+- `ecosystem/fret-node/src/ui/overlays/blackboard_declarative.rs`
 - `apps/fret-examples/src/node_graph_demo.rs`
-- `apps/fret-examples/src/node_graph_legacy_demo.rs`
 - `tools/diag-scripts/node-graph/`
 
 ## Minimal runnable targets and gates
@@ -640,14 +630,15 @@ This workstream is complete only when it leaves behind:
 Canonical runnable targets:
 
 - default declarative demo: `cargo run -p fretboard-dev -- dev native --bin node_graph_demo`
-- compatibility harness: `cargo run -p fret-demo --features node-graph-demos-legacy --bin node_graph_legacy_demo`
 
 ### Compact gate matrix
 
 | Gate | Command | Why it stays |
 | --- | --- | --- |
-| declarative + compat conformance | `cargo nextest run -p fret-node --features compat-retained-canvas` | keeps declarative reducers and retained compatibility closure from drifting apart while deprecation is still blocked |
-| example wiring smoke | `cargo check -p fret-examples` | keeps `node_graph_demo` and the legacy compatibility harness compiling against the current public teaching surface |
+| package conformance | `cargo nextest run -p fret-node` | keeps the public node-graph substrate, declarative surface, and source-policy gates green together |
+| headless runtime | `cargo nextest run -p fret-node --no-default-features runtime` | protects store/change/history behavior without default UI features |
+| optional integration compile | `cargo check -p fret-node --all-features --tests` | keeps UI-enabled and optional integration test targets compiling against the current public surface |
+| example wiring smoke | `cargo check -p fret-examples` | keeps `node_graph_demo` compiling against the current public teaching surface |
 | paint-only diagnostics | `cargo run -p fretboard-dev -- diag suite fret-examples-node-graph-paint-only --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos` | protects cache, portal-bounds, hover-anchor, and paint-only scripted regressions |
 | layering | `python tools/check_layering.py` | catches accidental boundary drift while the surface is still moving |
 

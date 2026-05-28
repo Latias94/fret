@@ -237,17 +237,29 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 ## 0.3 View registry (NodeTypes / EdgeTypes) and interaction policies
 
+- **Default declarative view policy**
+  - `NodeGraphSurfaceProps.edge_types` is the default-path hook for ReactFlow-style edge hint
+    overrides and custom paint paths.
+  - `NodeGraphSurfaceProps.skin` is the default-path hook for paint-only chrome; today the
+    declarative surface applies it to edge render hints.
+  - Custom `NodeGraphPresenter` is not part of the default declarative surface. It remains an
+    advanced baseline until geometry, labels, context menus, and insertion/search policy are split
+    into explicit contracts.
+
 - [~] **Pluggable view layer for nodes and edges**
   - XyFlow: `nodeTypes`, `edgeTypes` + wrappers (`repo-ref/xyflow/packages/react/src/components/*`)
   - fret-node:
-    - portal mechanism: `ecosystem/fret-node/src/ui/portal.rs` (`NodeGraphPortalHost`)
+    - declarative portal renderer: `NodeGraphNodeTypes` / `node_graph_surface_with_portal_renderer(...)`
     - `nodeTypes` registry (portal-based): `ecosystem/fret-node/src/ui/registry.rs` (`NodeGraphNodeTypes`)
     - `edgeTypes` registry (hint overrides): `ecosystem/fret-node/src/ui/edge_types.rs` (`NodeGraphEdgeTypes`)
   - Notes:
-    - `NodeGraphPresenter::edge_render_hint` remains the baseline; `NodeGraphEdgeTypes`
-      overrides are applied by the declarative paint-only surface.
+    - `DefaultNodeGraphPresenter::edge_render_hint` remains the baseline; `NodeGraphEdgeTypes`
+      overrides are applied by the declarative paint-only surface through
+      `NodeGraphSurfaceProps.edge_types`.
     - Stage 2 custom edge paths are supported via `NodeGraphEdgeTypes::register_path(...)` (`EdgeCustomPath`).
-      The canvas uses the custom path for painting, hit-testing, edge labels, and EdgeToolbar internals.
+      The default declarative canvas uses the custom path for painting and paint culling; custom
+      path hit-testing, edge labels, and EdgeToolbar internals remain follow-up spatial/overlay
+      contracts.
 
 - [~] **Per-node/edge view lifecycle + memoization strategy**
   - XyFlow: React memoization + internals updates + DOM handle bounds pipeline
@@ -404,7 +416,8 @@ canonical data flow and invalidation boundaries:
   - Graph semantics: `Graph` (`Node.pos`, ports, edges, selection flags, etc.).
   - View semantics: `NodeGraphViewState` (`pan`, `zoom`, draw order).
   - Interaction tuning: `NodeGraphInteractionState` (hit slop, spatial index tuning, etc.).
-  - Presentation: `NodeGraphPresenter` + `NodeGraphStyle` + optional `NodeGraphEdgeTypes` overrides.
+  - Presentation: `NodeGraphStyle` + default presenter baseline + optional
+    `NodeGraphSurfaceProps.edge_types` / `NodeGraphSurfaceProps.skin` view policy.
 - **Derived geometry (canvas space)**
   - `CanvasGeometry` (nodes, ports, edge routing hints) is the single source of truth for:
     - painting coordinates,
@@ -413,7 +426,10 @@ canonical data flow and invalidation boundaries:
   - Built and cached by: `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
     using `ecosystem/fret-node/src/ui/canvas/geometry/*`
   - Invalidation key (must remain stable and auditable):
-    - graph revision + zoom + node-origin + draw order fingerprint + presenter revision + edgeTypes revision.
+    - graph revision + zoom + node-origin + draw order fingerprint + presenter revision +
+      geometry override revision.
+    - edge paint caches additionally key on `NodeGraphSurfaceProps.edge_types` and
+      `NodeGraphSurfaceProps.skin` revisions.
     - **Pan-only must not invalidate** this cache (it is applied via render transforms).
     - Evidence: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
     - Rebuilds are keyed by `DerivedGeometryCacheState` / `derived_geometry_cache_key(...)`

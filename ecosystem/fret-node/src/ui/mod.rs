@@ -47,7 +47,9 @@ pub use declarative::{
     parse_portal_text_command, portal_cancel_text_command, portal_step_text_command,
     portal_step_text_command_with_mode, portal_submit_text_command,
 };
-pub use edge_types::{EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes};
+pub use edge_types::{
+    EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes, NodeGraphEdgeTypesRef,
+};
 pub use editors::{
     PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
     PortalTextEditHandler, PortalTextEditSpec, PortalTextEditSubmit, PortalTextEditor,

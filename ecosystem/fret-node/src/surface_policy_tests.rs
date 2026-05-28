@@ -19,6 +19,8 @@ const UI_CONTROLLER_STORE_SYNC_RS: &str = include_str!("ui/controller_store_sync
 const UI_CONTROLLER_UPDATES_RS: &str = include_str!("ui/controller_updates.rs");
 const UI_CONTROLLER_VIEWPORT_RS: &str = include_str!("ui/controller_viewport.rs");
 const UI_DECLARATIVE_MOD_RS: &str = include_str!("ui/declarative/mod.rs");
+const UI_DECLARATIVE_PAINT_ONLY_RS: &str = include_str!("ui/declarative/paint_only.rs");
+const UI_DECLARATIVE_PAINT_ONLY_CACHE_RS: &str = include_str!("ui/declarative/paint_only/cache.rs");
 const UI_DECLARATIVE_INTERACTION_HOOKS_RS: &str =
     include_str!("ui/declarative/paint_only/interaction_hooks.rs");
 const UI_MOD_RS: &str = include_str!("ui/mod.rs");
@@ -36,6 +38,7 @@ const FRETBOARD_NATIVE_RS: &str = include_str!("../../../apps/fretboard/src/dev/
 const FRET_NODE_README_MD: &str = include_str!("../README.md");
 const NODE_GRAPH_XYFLOW_GUIDE_MD: &str =
     include_str!("../../../docs/node-graph-how-to-build-like-xyflow.md");
+const NODE_GRAPH_XYFLOW_PARITY_MD: &str = include_str!("../../../docs/node-graph-xyflow-parity.md");
 const XYFLOW_GAP_ANALYSIS_MD: &str =
     include_str!("../../../docs/workstreams/standalone/xyflow-gap-analysis.md");
 const ADR_0128_CANVAS_WIDGETS_MD: &str =
@@ -51,6 +54,7 @@ const UI_GALLERY_NODE_GRAPH_CULL_TORTURE_RS: &str = include_str!(
 );
 const WORKFLOW_NODE_GRAPH_DEMO_RS: &str =
     include_str!("../../../apps/fret-ui-gallery/src/ui/snippets/ai/workflow_node_graph_demo.rs");
+const RUNTIME_STORE_RS: &str = include_str!("runtime/store.rs");
 
 fn public_surface() -> &'static str {
     LIB_RS.split("#[cfg(test)]").next().unwrap_or(LIB_RS)
@@ -383,6 +387,54 @@ fn binding_guides_keep_projection_models_out_of_the_authority_story() {
         !NODE_GRAPH_CONTROLLED_MODE_MD
             .contains("explicit graph/view/editor-config mirrors plus controller state")
     );
+}
+
+#[test]
+fn store_public_surface_does_not_expose_raw_view_state_mutation() {
+    let store_source = source_without_tests(RUNTIME_STORE_RS);
+    assert!(store_source.contains("pub fn view_state(&self) -> &NodeGraphViewState"));
+    assert!(store_source.contains("pub fn replace_view_state("));
+    assert!(store_source.contains("pub fn update_view_state("));
+    assert!(
+        !store_source.contains("pub fn view_state_mut("),
+        "NodeGraphStore must route view-state mutation through notifying, sanitizing helpers"
+    );
+}
+
+#[test]
+fn default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter() {
+    let surface_source = UI_DECLARATIVE_PAINT_ONLY_RS;
+    let cache_source = source_without_tests(UI_DECLARATIVE_PAINT_ONLY_CACHE_RS);
+
+    assert!(surface_source.contains("pub edge_types: Option<NodeGraphEdgeTypesRef>"));
+    assert!(surface_source.contains("pub skin: Option<NodeGraphSkinRef>"));
+    assert!(surface_source.contains("edge_types: None"));
+    assert!(surface_source.contains("skin: None"));
+    assert!(
+        !surface_source.contains("pub presenter:"),
+        "default declarative props must not expose the broad NodeGraphPresenter contract"
+    );
+    assert!(
+        !surface_source.contains("NodeGraphPresenterRef"),
+        "custom presenter remains deferred until the geometry/label/menu policy contract is split"
+    );
+
+    assert!(cache_source.contains("edge_types.apply("));
+    assert!(cache_source.contains("edge_types.custom_path("));
+    assert!(
+        cache_source.contains(".edge_render_hint(graph, *edge_id, style, &hint, false, false)")
+    );
+    assert!(cache_source.contains("edge_types_rev"));
+    assert!(cache_source.contains("skin_rev"));
+
+    for docs in [NODE_GRAPH_XYFLOW_GUIDE_MD, NODE_GRAPH_XYFLOW_PARITY_MD] {
+        assert!(docs.contains("Default declarative view policy"));
+        assert!(docs.contains("NodeGraphSurfaceProps.edge_types"));
+        assert!(docs.contains("NodeGraphSurfaceProps.skin"));
+        assert!(docs.contains(
+            "Custom `NodeGraphPresenter` is not part of the default declarative surface"
+        ));
+    }
 }
 
 #[test]

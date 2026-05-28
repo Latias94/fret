@@ -34,11 +34,12 @@ pub use crate::ui::portal_commands::{
     portal_cancel_text_command, portal_step_text_command, portal_step_text_command_with_mode,
     portal_submit_text_command,
 };
-use crate::ui::presenter::DefaultNodeGraphPresenter;
+use crate::ui::presenter::{DefaultNodeGraphPresenter, EdgeRouteKind};
 use crate::ui::style::NodeGraphStyle;
 use crate::ui::{
-    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphInternalsStore,
-    NodeGraphPortalNodeLayout, NodeGraphPresenter, NodeGraphSurfaceBinding,
+    EdgePathInput, MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphEdgeTypesRef,
+    NodeGraphInternalsStore, NodeGraphPortalNodeLayout, NodeGraphPresenter, NodeGraphSkinRef,
+    NodeGraphSurfaceBinding,
 };
 
 #[path = "paint_only/cache.rs"]
@@ -95,7 +96,10 @@ use self::cache::{
     sync_nodes_cache,
 };
 #[cfg(test)]
-use self::cache::{derived_geometry_cache_key, edges_cache_key, grid_cache_key, nodes_cache_key};
+use self::cache::{
+    build_edges_draws_paint_only, derived_geometry_cache_key, edges_cache_key, grid_cache_key,
+    nodes_cache_key,
+};
 use self::diag::{
     DeclarativeDiagKeyAction, DeclarativeKeyboardZoomAction,
     handle_declarative_diag_key_action_host, handle_declarative_escape_key_action_host,
@@ -288,6 +292,18 @@ pub struct NodeGraphSurfaceProps {
     /// Changes must bump `revision()` on the provider (see `ui/paint_overrides.rs`).
     pub paint_overrides: Option<NodeGraphPaintOverridesRef>,
 
+    /// Optional ReactFlow-style edgeTypes registry for declarative edge rendering.
+    ///
+    /// The default surface applies hint overrides and custom paint paths without serializing UI
+    /// policy into the graph document. Custom presenter geometry remains out of the default surface.
+    pub edge_types: Option<NodeGraphEdgeTypesRef>,
+
+    /// Optional paint-only skin for declarative edge rendering.
+    ///
+    /// This is currently applied to edge render hints; node/body chrome should continue to use
+    /// `paint_overrides` until the node skin contract is split from geometry-affecting policy.
+    pub skin: Option<NodeGraphSkinRef>,
+
     /// Optional measured geometry store shared with declarative portal subtrees.
     ///
     /// When present, derived geometry is built through `MeasuredNodeGraphPresenter`, and hosted
@@ -335,6 +351,8 @@ impl NodeGraphSurfaceProps {
             canvas: CanvasProps::default(),
             geometry_overrides: None,
             paint_overrides: None,
+            edge_types: None,
+            skin: None,
             measured_geometry: None,
             a11y_internals,
             portal_hosting: NodeGraphVisibleSubsetPortalConfig::default(),
@@ -397,6 +415,8 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
         canvas,
         geometry_overrides,
         paint_overrides,
+        edge_types,
+        skin,
         measured_geometry,
         a11y_internals,
         portal_hosting,
@@ -457,6 +477,8 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
             },
             geometry_overrides: geometry_overrides.clone(),
             paint_overrides: paint_overrides.clone(),
+            edge_types: edge_types.clone(),
+            skin: skin.clone(),
             measured_geometry: measured_geometry.clone(),
             diagnostics,
             cull_margin_screen_px,

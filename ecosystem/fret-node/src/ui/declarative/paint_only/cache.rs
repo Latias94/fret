@@ -33,13 +33,15 @@ pub(super) struct EdgePaintCacheState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct EdgePaintCacheKeyV3 {
+struct EdgePaintCacheKeyV4 {
     graph_rev: u64,
     zoom_q: i32,
     node_origin_x_q: i32,
     node_origin_y_q: i32,
     draw_order_hash: u64,
     derived_geometry_key: u64,
+    edge_types_rev: u64,
+    skin_rev: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -51,6 +53,9 @@ pub(super) struct EdgePathDraw {
     pub(super) commands: Box<[PathCommand]>,
     pub(super) bbox: Rect,
     pub(super) color: Color,
+    pub(super) route: EdgeRouteKind,
+    pub(super) width_mul: f32,
+    pub(super) dash: Option<DashPatternV1>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -331,18 +336,22 @@ pub(super) fn edges_cache_key(
     node_origin: crate::io::NodeGraphNodeOrigin,
     draw_order_hash: u64,
     derived_geometry_key: u64,
+    edge_types_rev: u64,
+    skin_rev: u64,
 ) -> CanvasKey {
     let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0);
     let origin = node_origin.normalized();
-    let v = EdgePaintCacheKeyV3 {
+    let v = EdgePaintCacheKeyV4 {
         graph_rev,
         zoom_q: quantize_f32(zoom, 4096.0),
         node_origin_x_q: quantize_f32(origin.x, 4096.0),
         node_origin_y_q: quantize_f32(origin.y, 4096.0),
         draw_order_hash,
         derived_geometry_key,
+        edge_types_rev,
+        skin_rev,
     };
-    CanvasKey::from_hash(&("fret-node.edges.paint-only.v3", v))
+    CanvasKey::from_hash(&("fret-node.edges.paint-only.v4", v))
 }
 
 pub(super) fn nodes_cache_key(
@@ -403,17 +412,135 @@ pub(super) fn canvas_viewport_rect(
     ))
 }
 
-fn build_edges_draws_paint_only(
+fn edge_commands_for_route(
+    route: EdgeRouteKind,
+    from: Point,
+    to: Point,
+    zoom: f32,
+) -> Box<[PathCommand]> {
+    match route {
+        EdgeRouteKind::Bezier => {
+            let (ctrl1, ctrl2) = canvas_wires::wire_ctrl_points(from, to, zoom);
+            vec![
+                PathCommand::MoveTo(from),
+                PathCommand::CubicTo { ctrl1, ctrl2, to },
+            ]
+            .into_boxed_slice()
+        }
+        EdgeRouteKind::Straight => {
+            vec![PathCommand::MoveTo(from), PathCommand::LineTo(to)].into_boxed_slice()
+        }
+        EdgeRouteKind::Step => {
+            let mid_x = (from.x.0 + to.x.0) * 0.5;
+            vec![
+                PathCommand::MoveTo(from),
+                PathCommand::LineTo(Point::new(Px(mid_x), from.y)),
+                PathCommand::LineTo(Point::new(Px(mid_x), to.y)),
+                PathCommand::LineTo(to),
+            ]
+            .into_boxed_slice()
+        }
+    }
+}
+
+fn include_path_point(bounds: &mut Option<(f32, f32, f32, f32)>, point: Point) {
+    if !point.x.0.is_finite() || !point.y.0.is_finite() {
+        return;
+    }
+    match bounds {
+        Some((min_x, min_y, max_x, max_y)) => {
+            *min_x = min_x.min(point.x.0);
+            *min_y = min_y.min(point.y.0);
+            *max_x = max_x.max(point.x.0);
+            *max_y = max_y.max(point.y.0);
+        }
+        None => {
+            *bounds = Some((point.x.0, point.y.0, point.x.0, point.y.0));
+        }
+    }
+}
+
+fn edge_commands_bbox(commands: &[PathCommand], fallback_from: Point, fallback_to: Point) -> Rect {
+    let mut bounds = None;
+    include_path_point(&mut bounds, fallback_from);
+    include_path_point(&mut bounds, fallback_to);
+
+    for command in commands {
+        match *command {
+            PathCommand::MoveTo(point) | PathCommand::LineTo(point) => {
+                include_path_point(&mut bounds, point);
+            }
+            PathCommand::QuadTo { ctrl, to } => {
+                include_path_point(&mut bounds, ctrl);
+                include_path_point(&mut bounds, to);
+            }
+            PathCommand::CubicTo { ctrl1, ctrl2, to } => {
+                include_path_point(&mut bounds, ctrl1);
+                include_path_point(&mut bounds, ctrl2);
+                include_path_point(&mut bounds, to);
+            }
+            PathCommand::Close => {}
+        }
+    }
+
+    let Some((min_x, min_y, max_x, max_y)) = bounds else {
+        return Rect::new(
+            Point::new(
+                Px(fallback_from.x.0.min(fallback_to.x.0)),
+                Px(fallback_from.y.0.min(fallback_to.y.0)),
+            ),
+            fret_core::Size::new(
+                Px((fallback_from.x.0 - fallback_to.x.0).abs()),
+                Px((fallback_from.y.0 - fallback_to.y.0).abs()),
+            ),
+        );
+    };
+
+    Rect::new(
+        Point::new(Px(min_x), Px(min_y)),
+        fret_core::Size::new(Px((max_x - min_x).max(0.0)), Px((max_y - min_y).max(0.0))),
+    )
+}
+
+fn padded_edge_bbox(
+    commands: &[PathCommand],
+    from: Point,
+    to: Point,
+    zoom: f32,
+    style: &NodeGraphStyle,
+    width_mul: f32,
+) -> Rect {
+    let mut bbox = edge_commands_bbox(commands, from, to);
+    let pad = (style.geometry.wire_width * width_mul.max(1.0))
+        .max(style.paint.wire_interaction_width)
+        / zoom;
+    let pad = pad.max(0.0);
+    bbox = Rect::new(
+        Point::new(Px(bbox.origin.x.0 - pad), Px(bbox.origin.y.0 - pad)),
+        fret_core::Size::new(
+            Px((bbox.size.width.0 + 2.0 * pad).max(0.0)),
+            Px((bbox.size.height.0 + 2.0 * pad).max(0.0)),
+        ),
+    );
+    bbox
+}
+
+pub(super) fn build_edges_draws_paint_only(
     graph: &Graph,
     graph_rev: u64,
     zoom: f32,
     geom: &CanvasGeometry,
     style: &NodeGraphStyle,
+    edge_types_rev: u64,
+    skin_rev: u64,
+    edge_types: Option<&crate::ui::NodeGraphEdgeTypes>,
+    skin: Option<&dyn crate::ui::NodeGraphSkin>,
 ) -> Arc<Vec<EdgePathDraw>> {
     let mut out = Vec::<EdgePathDraw>::new();
     out.reserve(graph.edges.len().min(4096));
 
     let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0).max(1.0e-6);
+    let presenter = DefaultNodeGraphPresenter::default();
 
     for (edge_id, edge) in &graph.edges {
         let Some(p0) = geom.port_center(edge.from) else {
@@ -423,45 +550,50 @@ fn build_edges_draws_paint_only(
             continue;
         };
 
-        let (ctrl1, ctrl2) = canvas_wires::wire_ctrl_points(p0, p1, zoom);
+        let mut hint = presenter
+            .edge_render_hint(graph, *edge_id, style)
+            .normalized();
+        if let Some(edge_types) = edge_types {
+            hint = edge_types.apply(graph, *edge_id, style, hint).normalized();
+        }
+        if let Some(skin) = skin {
+            hint = skin
+                .edge_render_hint(graph, *edge_id, style, &hint, false, false)
+                .normalized();
+        }
 
-        let min_x = p0.x.0.min(p1.x.0).min(ctrl1.x.0).min(ctrl2.x.0);
-        let max_x = p0.x.0.max(p1.x.0).max(ctrl1.x.0).max(ctrl2.x.0);
-        let min_y = p0.y.0.min(p1.y.0).min(ctrl1.y.0).min(ctrl2.y.0);
-        let max_y = p0.y.0.max(p1.y.0).max(ctrl1.y.0).max(ctrl2.y.0);
-        let mut bbox = Rect::new(
-            Point::new(Px(min_x), Px(min_y)),
-            fret_core::Size::new(Px((max_x - min_x).max(0.0)), Px((max_y - min_y).max(0.0))),
-        );
-        let pad = style
-            .geometry
-            .wire_width
-            .max(style.paint.wire_interaction_width)
-            / zoom;
-        let pad = pad.max(0.0);
-        bbox = Rect::new(
-            Point::new(Px(bbox.origin.x.0 - pad), Px(bbox.origin.y.0 - pad)),
-            fret_core::Size::new(
-                Px((bbox.size.width.0 + 2.0 * pad).max(0.0)),
-                Px((bbox.size.height.0 + 2.0 * pad).max(0.0)),
-            ),
-        );
+        let custom_path = edge_types.and_then(|edge_types| {
+            edge_types.custom_path(
+                graph,
+                *edge_id,
+                style,
+                &hint,
+                EdgePathInput {
+                    from: p0,
+                    to: p1,
+                    zoom,
+                },
+            )
+        });
+        let custom_path_key = custom_path.as_ref().map(|path| path.cache_key).unwrap_or(0);
+        let commands = custom_path
+            .map(|path| path.commands.into_boxed_slice())
+            .unwrap_or_else(|| edge_commands_for_route(hint.route, p0, p1, zoom));
+        let bbox = padded_edge_bbox(&commands, p0, p1, zoom, style, hint.width_mul);
 
-        let commands: Box<[PathCommand]> = vec![
-            PathCommand::MoveTo(p0),
-            PathCommand::CubicTo {
-                ctrl1,
-                ctrl2,
-                to: p1,
-            },
-        ]
-        .into_boxed_slice();
-
-        let path_key = CanvasKey::from_hash(&("fret-node.edge-path.v1", graph_rev, edge_id)).0;
-        let color = match edge.kind {
-            crate::core::EdgeKind::Data => style.paint.wire_color_data,
-            crate::core::EdgeKind::Exec => style.paint.wire_color_exec,
-        };
+        let path_key = CanvasKey::from_hash(&(
+            "fret-node.edge-path.v2",
+            graph_rev,
+            edge_id,
+            edge_types_rev,
+            skin_rev,
+            hint.route,
+            custom_path_key,
+        ))
+        .0;
+        let color = hint
+            .color
+            .unwrap_or_else(|| presenter.edge_color(graph, *edge_id, style));
 
         out.push(EdgePathDraw {
             edge: *edge_id,
@@ -471,6 +603,9 @@ fn build_edges_draws_paint_only(
             commands,
             bbox,
             color,
+            route: hint.route,
+            width_mul: hint.width_mul,
+            dash: hint.dash,
         });
     }
 
@@ -532,8 +667,10 @@ pub(super) fn paint_edges_cached(
 
         for d in draws.iter() {
             let mut paint: PaintBindingV1 = d.color.into();
-            let mut stroke_width_mul = 1.0_f32;
-            let mut dash: Option<DashPatternV1> = None;
+            let mut stroke_width_mul = d.width_mul;
+            let mut dash = d
+                .dash
+                .and_then(|p| scale_dash_pattern_screen_px_to_canvas_units(p, zoom));
 
             if let Some(o) = paint_overrides
                 .and_then(|p| p.edge_paint_override(d.edge))
@@ -545,9 +682,9 @@ pub(super) fn paint_edges_cached(
                 {
                     stroke_width_mul = m;
                 }
-                dash = o
-                    .dash
-                    .and_then(|p| scale_dash_pattern_screen_px_to_canvas_units(p, zoom));
+                if let Some(dash_override) = o.dash {
+                    dash = scale_dash_pattern_screen_px_to_canvas_units(dash_override, zoom);
+                }
                 if let Some(paint_override) = o.stroke_paint {
                     paint = paint_override;
                 }
@@ -591,41 +728,8 @@ pub(super) fn paint_edges_cached(
                     p1 = Point::new(Px(p1.x.0 + ddx), Px(p1.y.0 + ddy));
                 }
 
-                let (ctrl1, ctrl2) = canvas_wires::wire_ctrl_points(p0, p1, zoom);
-                let commands: Box<[PathCommand]> = vec![
-                    PathCommand::MoveTo(p0),
-                    PathCommand::CubicTo {
-                        ctrl1,
-                        ctrl2,
-                        to: p1,
-                    },
-                ]
-                .into_boxed_slice();
-
-                let min_x = p0.x.0.min(p1.x.0).min(ctrl1.x.0).min(ctrl2.x.0);
-                let max_x = p0.x.0.max(p1.x.0).max(ctrl1.x.0).max(ctrl2.x.0);
-                let min_y = p0.y.0.min(p1.y.0).min(ctrl1.y.0).min(ctrl2.y.0);
-                let max_y = p0.y.0.max(p1.y.0).max(ctrl1.y.0).max(ctrl2.y.0);
-                let mut bbox = Rect::new(
-                    Point::new(Px(min_x), Px(min_y)),
-                    fret_core::Size::new(
-                        Px((max_x - min_x).max(0.0)),
-                        Px((max_y - min_y).max(0.0)),
-                    ),
-                );
-                let pad = style_tokens
-                    .geometry
-                    .wire_width
-                    .max(style_tokens.paint.wire_interaction_width)
-                    / zoom;
-                let pad = pad.max(0.0);
-                bbox = Rect::new(
-                    Point::new(Px(bbox.origin.x.0 - pad), Px(bbox.origin.y.0 - pad)),
-                    fret_core::Size::new(
-                        Px((bbox.size.width.0 + 2.0 * pad).max(0.0)),
-                        Px((bbox.size.height.0 + 2.0 * pad).max(0.0)),
-                    ),
-                );
+                let commands = edge_commands_for_route(d.route, p0, p1, zoom);
+                let bbox = padded_edge_bbox(&commands, p0, p1, zoom, style_tokens, d.width_mul);
 
                 if !rects_intersect(cull, bbox) {
                     continue;
@@ -633,6 +737,7 @@ pub(super) fn paint_edges_cached(
 
                 let key = CanvasKey::from_hash(&(
                     "fret-node.edge-path.drag.v1",
+                    d.key,
                     d.edge,
                     quantize_f32(ddx, 1024.0),
                     quantize_f32(ddy, 1024.0),
@@ -994,6 +1099,10 @@ pub(super) fn sync_edges_cache<H: UiHost>(
     node_origin: crate::io::NodeGraphNodeOrigin,
     draw_order_hash: u64,
     style_tokens: &NodeGraphStyle,
+    edge_types_rev: u64,
+    skin_rev: u64,
+    edge_types: Option<&crate::ui::NodeGraphEdgeTypes>,
+    skin: Option<&dyn crate::ui::NodeGraphSkin>,
 ) -> EdgePaintCacheState {
     let mut edges_cache_value = cx
         .get_model_cloned(edges_cache, Invalidation::Paint)
@@ -1006,6 +1115,8 @@ pub(super) fn sync_edges_cache<H: UiHost>(
         node_origin,
         draw_order_hash,
         derived_geometry_key,
+        edge_types_rev,
+        skin_rev,
     );
     if edges_cache_value.key != Some(key) {
         let geom_for_edges = derived_cache_value
@@ -1020,6 +1131,10 @@ pub(super) fn sync_edges_cache<H: UiHost>(
                     view_for_paint.zoom,
                     &geom_for_edges,
                     style_tokens,
+                    edge_types_rev,
+                    skin_rev,
+                    edge_types,
+                    skin,
                 )
             })
             .unwrap_or_else(|| Arc::new(Vec::new()));

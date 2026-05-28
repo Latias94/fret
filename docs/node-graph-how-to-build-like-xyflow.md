@@ -97,7 +97,21 @@ transaction-explicit until a real workload proves the helper belongs in the publ
 
 ## Extension points
 
-### Presenter (UI policy + derived labels)
+### Default declarative view policy
+
+The default `node_graph_surface(...)` path deliberately exposes a narrower view-policy surface than
+the full presenter trait:
+
+- `NodeGraphNodeTypes` owns portal-rendered per-node UI.
+- `NodeGraphSurfaceProps.edge_types` owns ReactFlow-style edge hint and custom paint-path policy.
+- `NodeGraphSurfaceProps.skin` owns paint-only node/edge/port chrome; the default surface currently
+  applies it to edge render hints.
+
+Custom `NodeGraphPresenter` is not part of the default declarative surface. It remains an advanced
+internal baseline until geometry, labels, context menus, and insertion/search policy are split into
+separate default-path contracts.
+
+### Presenter (advanced UI policy + derived labels)
 
 Use a `NodeGraphPresenter` to control:
 
@@ -113,7 +127,10 @@ buttons, custom controls) while keeping the canvas itself policy-light.
 
 ### `edgeTypes` / custom edge paths
 
-Use `NodeGraphEdgeTypes` to register custom edge path builders and keep hit-testing deterministic.
+Use `NodeGraphEdgeTypes` through `NodeGraphSurfaceProps.edge_types` to register edge hint overrides
+and custom paint-path builders. The default declarative surface uses custom paths for painting and
+conservative paint culling; geometry-backed hit-testing stays on the default presenter route until a
+dedicated spatial-index contract exists.
 
 ### Styling (theme tokens + UI-only chrome hints)
 
