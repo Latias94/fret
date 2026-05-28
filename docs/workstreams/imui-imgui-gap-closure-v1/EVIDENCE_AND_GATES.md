@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Input-Text Option Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI input-text option records split into mode and options private owners without
+changing public option type names, text-field semantics default, command-policy defaults, filter
+fields, root re-exports, input-text option smoke behavior, or fret-imui text-model behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/input.rs` is now a public re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/input/mode.rs` owns `InputTextMode`.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/input/options.rs` owns `InputTextOptions`,
+  including text-field semantics and command-policy defaults.
+- `ecosystem/fret-ui-kit/tests/imui_input_text_options_smoke.rs` freezes input text option defaults
+  and password mode construction.
+- `tools/gate_imui_workstream_source.py` now rejects these option bodies from drifting back into
+  `input.rs` and checks the two dedicated owners plus smoke test.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_input_text_options_smoke
+  --no-fail-fast`: pass.
+- `CARGO_INCREMENTAL=0 cargo nextest run -p fret-imui models_text_modes models_text_commands
+  models_text_filters --no-fail-fast`: pass.
+
 ## Popup Option Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI popup option records split into popup-menu and popup-modal private owners
@@ -6098,8 +6129,11 @@ Evidence:
 
 - `ecosystem/fret-ui-kit/src/imui/options/controls/text/filters.rs` now owns `InputTextFilters`,
   named filter helpers, decimal/scientific character policy, and `InputTextCustomFilter`.
-- `ecosystem/fret-ui-kit/src/imui/options/controls/text/input.rs` now owns `InputTextMode` and
-  `InputTextOptions`, including text-field semantics and command-policy defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/input.rs` is the current input-text option
+  re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/input/mode.rs` owns `InputTextMode`.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/input/options.rs` owns `InputTextOptions`,
+  including text-field semantics and command-policy defaults.
 - `ecosystem/fret-ui-kit/src/imui/options/controls/text/picker.rs` now owns
   `InputTextPickerFilter` and `InputTextPickerOptions`, including default popup sizing and picker
   behavior flags.

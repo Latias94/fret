@@ -44,6 +44,11 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI input-text option records into mode and options private owners without changing
+      public option type names, text-field semantics default, command-policy defaults, filter
+      fields, root re-exports, input-text option smoke behavior, or fret-imui text-model behavior.
+      Result: `options/controls/text/input.rs` is now a public re-export hub. `input/mode.rs` owns
+      `InputTextMode`, and `input/options.rs` owns `InputTextOptions`.
 - [x] Split IMUI popup option records into popup-menu and popup-modal private owners without
       changing public option type names, popup placement defaults, menu size/modal/auto-focus
       defaults, modal size/outside-press defaults, root re-exports, popup smoke behavior, or
@@ -1090,10 +1095,11 @@ Last updated: 2026-05-28
 - [x] Split IMUI text-control option types out of
       `ecosystem/fret-ui-kit/src/imui/options/controls/text.rs` into private owner modules without
       changing option type names, fields, defaults, or re-export paths.
-      Result: `text/filters.rs` owns named/custom input filters, `text/input.rs` owns
-      `InputTextMode` and `InputTextOptions`, `text/picker.rs` owns picker filter/default popup
-      options, and `text/textarea.rs` owns textarea submit-key policy and defaults. The root
-      `text.rs` file is now a thin module/re-export index.
+      Result: `text/filters.rs` owns named/custom input filters, `text/input.rs` is the current
+      input-text option re-export hub, `input/mode.rs` owns `InputTextMode`, `input/options.rs`
+      owns `InputTextOptions`, `text/picker.rs` owns picker filter/default popup options, and
+      `text/textarea.rs` owns textarea submit-key policy and defaults. The root `text.rs` file is
+      now a thin module/re-export index.
 - [x] Split IMUI collection option types out of
       `ecosystem/fret-ui-kit/src/imui/options/collections.rs` into private owner modules without
       changing table, table-column, or virtual-list option type names and defaults.

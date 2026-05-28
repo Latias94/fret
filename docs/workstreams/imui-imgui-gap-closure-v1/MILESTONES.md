@@ -12,6 +12,10 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 input-text option owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/controls/text/input.rs` is now a public re-export hub.
+`input/mode.rs` owns `InputTextMode`, and `input/options.rs` owns `InputTextOptions`.
+
 2026-05-28 popup option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/menus/popup.rs` is now a public re-export hub.
 `popup/menu.rs` owns `PopupMenuOptions`, and `popup/modal.rs` owns `PopupModalOptions`.
