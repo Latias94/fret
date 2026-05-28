@@ -5799,7 +5799,7 @@
         "ui_gallery"
       ],
       "target_hints": [
-        "Starts directly on the Checkbox page.",
+        "Starts directly on the Checkbox page's Disabled section.",
         "Verifies that a disabled Checkbox exposes disabled=true, suppresses invoke, and does not mutate checked state through control or label activation."
       ]
     },
@@ -5915,7 +5915,7 @@
         "ui_gallery"
       ],
       "target_hints": [
-        "Starts directly on the Checkbox page.",
+        "Starts directly on the Checkbox page's Table section.",
         "Verifies that the table select-all checkbox exports explicit mixed/true checked-state semantics while keeping invoke enabled through row and select-all mutations."
       ]
     },
@@ -9738,12 +9738,21 @@
     {
       "id": "ui-gallery-input-group-addon-after-control-tab-focus",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-addon-after-control-tab-focus.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
-      "tags": [],
+      "tags": [
+        "focus",
+        "input_group",
+        "keyboard",
+        "shadcn",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
@@ -9827,12 +9836,21 @@
     {
       "id": "ui-gallery-input-group-text-non-overlap",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-text-non-overlap.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
-      "tags": [],
+      "tags": [
+        "input_group",
+        "layout",
+        "shadcn",
+        "text",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
@@ -12470,7 +12488,7 @@
       ],
       "target_hints": [
         "Navigates to the Slider page via the left nav search.",
-        "Captures the docs-path sections first (`Demo` through `API Reference`) so docs-surface parity stays reviewable."
+        "Captures current docs-path sections (`Demo`, `Usage`) plus Base/Radix and Fret follow-ups through `API Reference` so docs-surface parity stays reviewable."
       ]
     },
     {
@@ -12552,7 +12570,7 @@
       ],
       "target_hints": [
         "Navigates to the Sonner page via the left nav search.",
-        "Captures the docs-path sections first (`Demo` through `API Reference`) so docs-surface parity stays reviewable."
+        "Captures the current docs-path sections first (`Demo` through `Changelog`) before Fret follow-ups so docs-surface parity stays reviewable."
       ]
     },
     {

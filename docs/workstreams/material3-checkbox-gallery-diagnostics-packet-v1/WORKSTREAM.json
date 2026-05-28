@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "slug": "material3-checkbox-gallery-diagnostics-packet-v1",
+  "title": "Material 3 Checkbox Gallery Diagnostics Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "diagnostics_follow_on",
+  "problem": "Closed the Checkbox gallery diagnostics follow-on by repairing the stale centered-chrome script target and proving centered visual chrome plus tri-state gallery behavior with promoted diagnostics.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-checkbox-gallery-diagnostics-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-checkbox-gallery-diagnostics-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-checkbox-gallery-diagnostics-packet-v1/TODO.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-checkbox-gallery-diagnostics-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-checkbox-gallery-diagnostics-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the repaired Checkbox centered-chrome script and the existing tri-state screenshots script against the Material3 UI Gallery.",
+    "commands": [
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-checkbox-centered-chrome.json --dir target/fret-diag/material3-checkbox-centered-chrome-20260528-fixed --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3",
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-checkbox-tristate-screenshots.json --dir target/fret-diag/material3-checkbox-tristate-20260528 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3"
+    ]
+  },
+  "gates": [
+    {
+      "name": "checkbox-centered-chrome-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-checkbox-centered-chrome.json --dir target/fret-diag/material3-checkbox-centered-chrome-20260528-fixed --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3"
+    },
+    {
+      "name": "checkbox-tristate-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-checkbox-tristate-screenshots.json --dir target/fret-diag/material3-checkbox-tristate-20260528 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3"
+    },
+    {
+      "name": "checkbox-focused-tests",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment checkbox_pressed_scene_structure_is_stable checkbox_tristate_semantics_and_toggle_outcomes"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-material3/src/checkbox.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/material3/checkbox.rs",
+    "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-checkbox-centered-chrome.json",
+    "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-checkbox-tristate-screenshots.json",
+    "docs/workstreams/material3-checkbox-gallery-diagnostics-packet-v1/artifacts/checkbox_gallery_diagnostics_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "return_to_material3_sweep",
+    "notes": "Checkbox is closed for centered chrome, minimum interactive target, and tri-state gallery diagnostics. Keep shared indication and minimum target helpers in Material foundation."
+  }
+}

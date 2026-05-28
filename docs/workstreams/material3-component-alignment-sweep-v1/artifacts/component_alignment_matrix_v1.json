@@ -257,23 +257,25 @@
     {
       "id": "checkbox",
       "family": "choice_control",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_gallery_diagnostics_aligned",
       "wave": "wave4_choice_controls",
       "default_owner_bias": "material_foundation",
       "packet_strategy": "choice_after_switch",
-      "first_gate_kind": "scene_semantics_state_layer",
+      "first_gate_kind": "centered_chrome_and_tristate_gallery_diag",
       "selector_status": "choice_selector_ready",
       "stable_part_ids": [
         "checkbox",
         "checkbox.chrome"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-checkbox-gallery-diagnostics-packet-v1/artifacts/checkbox_gallery_diagnostics_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe owns bool/optional model mapping, tri-state toggle outcomes, checkbox semantics, and chrome assembly",
         "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
-        "test_harness covers stable root/chrome selectors, pressed scene stability, and tri-state semantics",
+        "test_harness covers stable root/chrome selectors, pressed scene stability, tri-state semantics, centered chrome diagnostics, and tri-state gallery screenshots",
+        "diagnostics repaired stale centered-chrome navigation from the aggregate Material3 gallery page to the dedicated Checkbox page",
         "no new kit_policy or mechanism gap found"
       ]
     },

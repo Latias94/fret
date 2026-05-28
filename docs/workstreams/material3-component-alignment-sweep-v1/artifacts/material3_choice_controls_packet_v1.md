@@ -135,6 +135,16 @@ cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless
 cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_slider_suite_goldens_v1
 ```
 
+Additional Checkbox gallery diagnostics passed on 2026-05-28:
+
+```powershell
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-checkbox-centered-chrome.json --dir target/fret-diag/material3-checkbox-centered-chrome-20260528-fixed --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-checkbox-tristate-screenshots.json --dir target/fret-diag/material3-checkbox-tristate-20260528 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3
+```
+
+The centered-chrome script had a stale navigation target and now opens the dedicated Material3
+Checkbox page. No Checkbox recipe, foundation, kit-policy, or mechanism change was needed.
+
 ## Follow-Ons
 
 - `M3CAS-080-F1`: Add exact named `SceneOp` draw-region diagnostics only if a concrete consumer
