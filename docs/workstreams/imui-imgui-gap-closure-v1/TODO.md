@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI menu-item command presentation, shortcut defaulting, and enabled gating into a
+      private owner without changing public menu item wrapper methods, focusable-recording
+      behavior, command metadata lookup, shortcut propagation, or action menu item dispatch.
+      Result: `facade_writer/menu_items/command.rs` owns command presentation lookup, enabled
+      gating, and shortcut fallback. `menu_items.rs` keeps public menu item wrappers and the
+      private helper re-export.
 - [x] Split IMUI tooltip runtime layout/placement calculation into a private owner without
       changing trigger-id validation, event/open model setup, pointer-move open gate installation,
       interaction update, open model synchronization, overlay request submission, or public tooltip

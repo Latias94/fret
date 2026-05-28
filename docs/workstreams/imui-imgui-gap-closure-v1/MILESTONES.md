@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 menu-item command helper owner-split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items/command.rs` now owns command presentation
+lookup, enabled gating, and shortcut fallback for menu command items. `menu_items.rs` keeps the
+public menu item wrappers, focusable recording, and the private helper re-export.
+
 2026-05-28 tooltip runtime layout owner-split result:
 `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime/layout.rs` now owns anchor bounds,
 measured/estimated panel sizing, and floating bounds calculation. `tooltip_overlay/runtime.rs`

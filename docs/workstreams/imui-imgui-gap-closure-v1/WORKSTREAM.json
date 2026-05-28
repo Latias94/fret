@@ -457,6 +457,7 @@
     "ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/button_command.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items/command.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/disclosure.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/text_models.rs",
