@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 table header resize grip visual owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/header/resize/visual.rs` now owns resize grip color,
+disabled alpha, and visual dimensions. `header/resize.rs` keeps pointer-region drag setup, cursor
+behavior, response writeback, drag response edge merging, and test-id attachment.
+
 2026-05-28 debug-draw filled path painter owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/polygons.rs` now owns
 convex/concave/quad/triangle fill painting, and `paint_shapes/paths/filled/round.rs` owns

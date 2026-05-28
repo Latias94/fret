@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Table Header Resize Grip Visual Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI table header resize grip visual split into a private owner without changing
+pointer region hit width, resize drag lifecycle hooks, cursor behavior, drag response edge merging,
+resize test-id attachment, or table column resize public behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/resize.rs` keeps pointer-region drag setup,
+  cursor behavior, response writeback, drag response edge merging, and test-id attachment.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/resize/visual.rs` owns resize grip color,
+  disabled alpha, and visual dimensions.
+- `tools/gate_imui_workstream_source.py` now rejects grip visual bodies from drifting back into
+  `header/resize.rs` and checks the dedicated visual owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui table_resizable_header_reports_drag_response --no-fail-fast`:
+  pass; 1 table resize drag response test passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_resizable_column_api_compiles --no-fail-fast`:
+  pass; 1 table resize API smoke test passed.
+
 ## Debug-Draw Filled Path Painter Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI debug-draw filled path painters split into polygon-fill and round-fill private

@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI table header resize grip visual into a private owner without changing pointer
+      region hit width, resize drag lifecycle hooks, cursor behavior, drag response edge merging,
+      resize test-id attachment, or table column resize public behavior.
+      Result: `table_controls/header/resize/visual.rs` owns resize grip color, disabled alpha, and
+      visual dimensions. `header/resize.rs` keeps pointer-region drag setup, response writeback,
+      and test-id attachment.
 - [x] Split IMUI debug-draw filled path painters into polygon-fill and round-fill private owners
       without changing public draw-list commands, path command generation, shared fill style,
       canvas path dispatch, summaries, or debug-draw smoke behavior.
