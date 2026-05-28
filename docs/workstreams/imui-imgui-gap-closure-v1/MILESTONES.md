@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 debug-draw linear path owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/linear.rs` is now a private re-export
+hub. `linear/polyline.rs` owns stroke point requirements and polyline commands, `linear/fills.rs`
+owns convex/concave fill forwarding, and `linear/primitives.rs` owns triangle/quad path
+construction.
+
 2026-05-28 debug-draw round path owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/round.rs` is now a private re-export
 hub. `round/circle.rs` owns circle cubic path construction, `round/ngon.rs` owns regular polygon
@@ -462,10 +468,11 @@ response assembly.
 
 2026-05-27 debug-draw path-family owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths.rs` is now a private path-family
-re-export hub. `paths/linear.rs` owns polyline, polygon fill, triangle, and quad path construction;
-`paths/round.rs` now indexes circle/ngon/ellipse subowners; `paths/beziers.rs` owns quadratic and
-cubic bezier path construction. The 2026-05-28 follow-up split the round family into
-`paths/round/circle.rs`, `paths/round/ngon.rs`, and `paths/round/ellipse.rs`.
+re-export hub. `paths/linear.rs` now indexes polyline/fill/primitive subowners; `paths/round.rs`
+now indexes circle/ngon/ellipse subowners; `paths/beziers.rs` owns quadratic and cubic bezier path
+construction. The 2026-05-28 follow-ups split the linear and round families into
+`paths/linear/{polyline,fills,primitives}.rs` and
+`paths/round/{circle,ngon,ellipse}.rs`.
 
 2026-05-27 debug-draw command payload owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs` now owns the private

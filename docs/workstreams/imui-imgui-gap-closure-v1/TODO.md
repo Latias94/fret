@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw linear path construction into polyline, polygon fill, and primitive
+      private owners without changing open/closed stroke point requirements, polyline command
+      ordering, convex/concave fill forwarding, triangle/quad closure, paint-shape call sites, path
+      tests, or public debug-draw behavior.
+      Result: `debug_draw_controls/paths/linear.rs` is now a private re-export hub.
+      `linear/polyline.rs` owns stroke point requirements and polyline commands,
+      `linear/fills.rs` owns convex/concave fill forwarding, and `linear/primitives.rs` owns
+      triangle/quad path construction.
 - [x] Split IMUI debug-draw round path construction into circle, ngon, and ellipse private owners
       without changing circle cubic approximation, ngon validation/point generation, ellipse
       default segment fallback/rotation, paint-shape call sites, path tests, or public debug-draw
@@ -583,10 +591,12 @@ Last updated: 2026-05-28
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths.rs` into private linear, round,
       and bezier owner modules without changing path helper names, validation behavior, sampling
       helpers, rect path construction, paint dispatch, or debug-draw tests.
-      Result: `paths.rs` is now a private path-family re-export hub; `paths/linear.rs` owns
-      polyline, polygon fill, triangle, and quad path construction; `paths/round.rs` now indexes
-      circle/ngon/ellipse subowners; `paths/beziers.rs` owns quadratic and cubic bezier path
-      construction.
+      Result: `paths.rs` is now a private path-family re-export hub; `paths/linear.rs` now indexes
+      polyline/fill/primitive subowners; `paths/round.rs` now indexes circle/ngon/ellipse
+      subowners; `paths/beziers.rs` owns quadratic and cubic bezier path construction.
+      2026-05-28 follow-up: `paths/linear.rs` is now itself a private re-export hub; polyline,
+      fill, and primitive construction live in
+      `paths/linear/{polyline,fills,primitives}.rs`.
       2026-05-28 follow-up: `paths/round.rs` is now itself a private re-export hub; circle, ngon,
       and ellipse construction live in `paths/round/{circle,ngon,ellipse}.rs`.
 - [x] Split IMUI debug-draw command payload variants out of

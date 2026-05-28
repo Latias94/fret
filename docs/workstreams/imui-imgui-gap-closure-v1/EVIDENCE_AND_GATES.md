@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Debug-Draw Linear Path Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI debug-draw linear path construction split into polyline, polygon fill, and
+primitive private owners without changing open/closed stroke point requirements, polyline command
+ordering, convex/concave fill forwarding, triangle/quad closure, paint-shape call sites, path
+tests, or public debug-draw behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/linear.rs` is now a private re-export
+  hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/linear/polyline.rs` owns stroke point
+  requirements and polyline command construction.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/linear/fills.rs` owns convex/concave
+  fill forwarding to closed polyline construction.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/linear/primitives.rs` owns triangle
+  and quad path construction.
+- `tools/gate_imui_workstream_source.py` now rejects these linear path bodies from drifting back
+  into `linear.rs` and checks the three dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib polyline_path_requires_enough_points_and_closes_when_requested convex_poly_fill_path_requires_three_points_and_closes concave_poly_fill_path_requires_three_points_and_closes triangle_path_closes_and_degenerate_triangles_are_detected quad_path_closes_four_ordered_points --no-fail-fast`:
+  pass.
+
 ## Debug-Draw Round Path Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI debug-draw round path construction split into circle, ngon, and ellipse
@@ -2259,8 +2291,9 @@ Evidence:
 
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths.rs` is now a private path-family
   re-export hub.
-- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/linear.rs` owns polyline, polygon fill,
-  triangle, and quad path construction.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/linear.rs` now indexes the linear path
+  subowners; the 2026-05-28 follow-up moved polyline, fill, and primitive construction into
+  `paths/linear/{polyline,fills,primitives}.rs`.
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/round.rs` now indexes the round path
   subowners; the 2026-05-28 follow-up moved circle, ngon, and ellipse construction into
   `paths/round/{circle,ngon,ellipse}.rs`.
