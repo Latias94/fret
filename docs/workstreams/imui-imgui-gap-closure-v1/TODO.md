@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI textarea option records into submit-key and options private owners without
+      changing public option type names, multiline submit/cancel defaults, stable-line-box default,
+      root re-exports, textarea smoke behavior, or fret-imui textarea model behavior.
+      Result: `options/controls/text/textarea.rs` is now a public re-export hub.
+      `textarea/submit_key.rs` owns `TextAreaSubmitKey`, and `textarea/options.rs` owns
+      `TextAreaOptions`.
 - [x] Split IMUI input-text option records into mode and options private owners without changing
       public option type names, text-field semantics default, command-policy defaults, filter
       fields, root re-exports, input-text option smoke behavior, or fret-imui text-model behavior.
@@ -1098,8 +1104,9 @@ Last updated: 2026-05-28
       Result: `text/filters.rs` owns named/custom input filters, `text/input.rs` is the current
       input-text option re-export hub, `input/mode.rs` owns `InputTextMode`, `input/options.rs`
       owns `InputTextOptions`, `text/picker.rs` owns picker filter/default popup options, and
-      `text/textarea.rs` owns textarea submit-key policy and defaults. The root `text.rs` file is
-      now a thin module/re-export index.
+      `text/textarea.rs` is the current textarea option re-export hub, `textarea/submit_key.rs`
+      owns textarea submit-key policy, and `textarea/options.rs` owns textarea defaults. The root
+      `text.rs` file is now a thin module/re-export index.
 - [x] Split IMUI collection option types out of
       `ecosystem/fret-ui-kit/src/imui/options/collections.rs` into private owner modules without
       changing table, table-column, or virtual-list option type names and defaults.

@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 textarea option owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/controls/text/textarea.rs` is now a public re-export hub.
+`textarea/submit_key.rs` owns `TextAreaSubmitKey`, and `textarea/options.rs` owns
+`TextAreaOptions`.
+
 2026-05-28 input-text option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/text/input.rs` is now a public re-export hub.
 `input/mode.rs` owns `InputTextMode`, and `input/options.rs` owns `InputTextOptions`.

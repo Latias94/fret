@@ -791,6 +791,8 @@
     "ecosystem/fret-ui-kit/tests/imui_input_text_options_smoke.rs",
     "ecosystem/fret-ui-kit/src/imui/options/controls/text/picker.rs",
     "ecosystem/fret-ui-kit/src/imui/options/controls/text/textarea.rs",
+    "ecosystem/fret-ui-kit/src/imui/options/controls/text/textarea/options.rs",
+    "ecosystem/fret-ui-kit/src/imui/options/controls/text/textarea/submit_key.rs",
     "ecosystem/fret-ui-editor/src/imui.rs",
     "ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs",
     "ecosystem/fret-ui-editor/src/primitives/input_group.rs",
