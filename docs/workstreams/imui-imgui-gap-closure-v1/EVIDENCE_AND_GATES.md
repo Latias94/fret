@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Disclosure Control Option Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI disclosure control option types split into collapsing-header and tree-node
+private owners without changing public option type names, default values, shortcut fields,
+hierarchy metadata defaults, facade imports, disclosure smoke behavior, or disclosure-control
+tests.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/controls/disclosure.rs` is now a public re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/disclosure/collapsing_header.rs` owns
+  `CollapsingHeaderOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/disclosure/tree_node.rs` owns
+  `TreeNodeOptions`.
+- `tools/gate_imui_workstream_source.py` now rejects these option bodies from drifting back into
+  `disclosure.rs` and checks the two dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_disclosure_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib collapsing_header_default_open_mounts_body tree_node_default_options_start_at_level_one tree_node_leaf_uses_tree_item_semantics --no-fail-fast`:
+  pass.
+
 ## Button/Image Control Option Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI button/image control option types split into button and image-item private

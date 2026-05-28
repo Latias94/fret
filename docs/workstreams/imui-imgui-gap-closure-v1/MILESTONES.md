@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 disclosure control option owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/controls/disclosure.rs` is now a public re-export hub.
+`disclosure/collapsing_header.rs` owns `CollapsingHeaderOptions`, and
+`disclosure/tree_node.rs` owns `TreeNodeOptions`.
+
 2026-05-28 button/image control option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/button_image.rs` is now a public re-export hub.
 `button_image/button.rs` owns button direction/variant/options and `button_image/image.rs` owns

@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI disclosure control option types into collapsing-header and tree-node private
+      owners without changing public option type names, default values, shortcut fields, hierarchy
+      metadata defaults, facade imports, disclosure smoke behavior, or disclosure-control tests.
+      Result: `options/controls/disclosure.rs` is now a public re-export hub.
+      `disclosure/collapsing_header.rs` owns `CollapsingHeaderOptions`, and
+      `disclosure/tree_node.rs` owns `TreeNodeOptions`.
 - [x] Split IMUI button/image control option types into button and image-item private owners
       without changing public option type names, default values, image-item builder methods,
       shortcut fields, facade imports, button smoke behavior, or image-item smoke behavior.
