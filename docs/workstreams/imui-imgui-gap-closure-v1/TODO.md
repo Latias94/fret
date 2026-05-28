@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI submenu state mutation into private clear/select owners without changing submenu
+      open-value updates, trigger updates, geometry clearing, pending-open cleanup, pointer-grace
+      timer cleanup, close/focus/open timer cleanup, focus retry reset, or submenu selection writes.
+      Result: `menu_family_controls/submenu_state.rs` is now a private module/re-export index.
+      `submenu_state/clear.rs` owns clear/reset behavior, and `submenu_state/select.rs` owns
+      selection writes.
 - [x] Split IMUI menu-item keyboard behavior into private popup-menu and menubar owners without
       changing popup item nav registration, Arrow/Home/End focus movement, shortcut activation,
       popup-close-on-key activation, lifecycle instant marking, menubar horizontal-arrow

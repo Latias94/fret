@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Submenu State Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI submenu state mutation split into private clear/select owners without
+changing submenu open-value updates, trigger updates, geometry clearing, pending-open cleanup,
+pointer-grace timer cleanup, close/focus/open timer cleanup, focus retry reset, or submenu
+selection writes.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state.rs` is now a private
+  module/re-export index.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state/clear.rs` owns submenu clear
+  behavior, including open/trigger matching, optional geometry clearing, pending-open cleanup,
+  pointer-grace cleanup, close/focus/open timer cleanup, and focus retry reset.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state/select.rs` owns submenu
+  selection writes and pending/open-timer cleanup.
+- `tools/gate_imui_workstream_source.py` now checks clear/select owners separately and rejects
+  submenu state bodies from drifting back into the root index.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass; 18 menu/submenu/tab
+  tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Menu Keyboard Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI menu-item keyboard behavior split into private popup-menu and menubar owners
