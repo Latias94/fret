@@ -858,11 +858,11 @@
     {
       "id": "segmented_button",
       "family": "choice_control",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_diagnostics_aligned",
       "wave": "wave4_choice_controls",
       "default_owner_bias": "kit_policy",
       "packet_strategy": "group_semantics_packet",
-      "first_gate_kind": "semantics_scene",
+      "first_gate_kind": "diag_roving_semantics_scene",
       "selector_status": "choice_selector_ready",
       "stable_part_ids": [
         "segmented_button",
@@ -870,13 +870,14 @@
         "segmented_button.item.<value>.chrome"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/artifacts/segmented_button_diagnostics_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe owns single/multi selection, group/item roles, checked state, per-segment chrome, and selectors",
         "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
-        "test_harness covers semantics role parity, selector readiness, and segmented headless goldens",
-        "kit_policy follow-on only if roving policy is needed outside Material"
+        "diagnostics/test_harness covers promoted gallery roving semantics, selector readiness, semantics role parity, and segmented headless goldens",
+        "no kit_policy or mechanism gap found"
       ]
     },
     {

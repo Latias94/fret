@@ -10553,6 +10553,30 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-material3-segmented-button-roving-semantics-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-segmented-button-roving-semantics-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-segmented-button-roving-semantics-screenshots"
+      ],
+      "tags": [
+        "expressive",
+        "material3",
+        "roving_focus",
+        "screenshots",
+        "segmented_button",
+        "semantics",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-material3-state-matrix-chip-action-state",
       "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-state-matrix-chip-action-state.json",
       "required_capabilities": [
