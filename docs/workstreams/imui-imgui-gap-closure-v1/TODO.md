@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI linear flow option records into horizontal and vertical private owners without
+      changing public option type names, default gaps, default center/stretch item alignment,
+      `test_id` fields, flow re-exports, container smoke behavior, or porting-sugar behavior.
+      Result: `options/containers/flow/linear.rs` is now a private re-export hub.
+      `flow/linear/horizontal.rs` owns `HorizontalOptions`, and `flow/linear/vertical.rs` owns
+      `VerticalOptions`.
 - [x] Split IMUI inline flow option records into item-flow and same-line private owners without
       changing public option type names, default gaps, default alignment/stretch behavior,
       `test_id` fields, flow re-exports, container smoke behavior, or porting-sugar behavior.
@@ -1122,9 +1128,10 @@ Last updated: 2026-05-28
       Result: `containers/flow.rs` is now a private module/re-export index,
       `flow/spacing.rs` owns the IMUI layout-token defaults, `flow/inline.rs` is the current
       inline option re-export hub, `flow/inline/item_flow.rs` owns item-flow options,
-      `flow/inline/same_line.rs` owns same-line options, `flow/linear.rs` owns horizontal and
-      vertical options, `flow/spacer.rs` owns dummy/spacing/indent options, and `flow/grid.rs` owns
-      grid options.
+      `flow/inline/same_line.rs` owns same-line options, `flow/linear.rs` is the current linear
+      option re-export hub, `flow/linear/horizontal.rs` owns horizontal options,
+      `flow/linear/vertical.rs` owns vertical options, `flow/spacer.rs` owns dummy/spacing/indent
+      options, and `flow/grid.rs` owns grid options.
 - [x] Split IMUI floating-surface drag-kind and state ownership out of
       `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` into private owner modules without
       changing floating-area, floating-window, drag, resize, activation, or collapse behavior.
