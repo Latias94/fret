@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Popup-Modal Layer Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI popup-modal layer and panel assembly split into a private owner without
+changing popup store open state reads, keep-alive generation, modal root naming, backdrop barrier
+behavior, centered panel layout, facade child mounting, focus initialization, overlay request
+assembly, or public popup modal facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal.rs` keeps open-state gating, keep-alive
+  writeback, dismiss policy creation, overlay request assembly, and final focus target selection.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer.rs` owns modal layer/root mounting,
+  barrier construction, panel semantics mounting, facade child rendering, focus-state
+  construction, and panel focus handoff.
+- `tools/gate_imui_workstream_source.py` now rejects modal layer/panel assembly from drifting
+  back into `popup_overlay/modal.rs` and checks the dedicated layer owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass; 21 popup/hover tests
+  passed.
+
 ## Popup-Modal Dismiss Request Policy Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI popup-modal dismiss request policy split into a private owner without changing

@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI popup-modal layer and panel assembly into a private owner without changing popup
+      store open state reads, keep-alive generation, modal root naming, backdrop barrier behavior,
+      centered panel layout, facade child mounting, focus initialization, overlay request assembly,
+      or public popup modal facade behavior.
+      Result: `popup_overlay/modal/layer.rs` owns modal layer/root mounting, barrier construction,
+      panel semantics mounting, facade child rendering, focus-state construction, and panel focus
+      handoff. `popup_overlay/modal.rs` keeps open-state gating, keep-alive writeback, dismiss
+      policy creation, overlay request assembly, and final focus target selection.
 - [x] Split IMUI popup-modal dismiss request policy into a private owner without changing popup
       store open state reads, keep-alive generation, modal root naming, backdrop/panel assembly,
       Escape close behavior, outside-press close option, dismiss prevention, focus initialization,
