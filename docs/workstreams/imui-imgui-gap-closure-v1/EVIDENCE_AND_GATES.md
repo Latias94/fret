@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Text Policy Command Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI text-control policy command installation split into private input and textarea
+owners without changing input completion/history/undo/redo key handling, repeat gating, IME/Alt/Meta
+guards, textarea Enter/CtrlEnter/Escape capture policy, repeat-consume semantics, or public text
+control surfaces.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands.rs` is now a private
+  module/re-export index.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/input.rs` owns input text
+  completion/history/undo/redo key-down command dispatch.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/textarea.rs` owns textarea
+  submit/cancel key-down capture command dispatch.
+- `tools/gate_imui_workstream_source.py` now rejects input/textarea command bodies from drifting
+  back into the root policy index and checks each owner independently.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib text_controls::tests
+  --no-fail-fast`: pass; 3 text-control tests passed.
+- `cargo nextest run -p fret-imui models_text_area models_text_picker models_text_filters
+  --no-fail-fast`: pass; 17 text model/picker/filter tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Table Column Visibility State Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI table-column visibility state methods split into private override, snapshot-IO,

@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 text policy command owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands.rs` is now a private module/re-export
+index. `policy_commands/input.rs` owns input completion/history/undo/redo key-down dispatch, and
+`policy_commands/textarea.rs` owns textarea submit/cancel key-down capture dispatch. Input and
+textarea model assembly still call the same internal policy helpers through the unchanged text
+control module surface.
+
 2026-05-28 table-column visibility state owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state.rs` now owns only the state/override
 storage shape and public snapshot re-export. `state/overrides.rs` owns runtime override

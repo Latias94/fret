@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI text-control policy command installation into private input and textarea owners
+      without changing completion/history/undo/redo key handling, repeat gating, IME/Alt/Meta
+      guards, textarea Enter/CtrlEnter/Escape capture policy, repeat-consume semantics, or public
+      text-control surfaces.
+      Result: `text_controls/policy_commands.rs` is now a private module/re-export index.
+      `policy_commands/input.rs` owns input key-down command dispatch, and
+      `policy_commands/textarea.rs` owns textarea submit/cancel capture dispatch.
 - [x] Split IMUI table-column visibility state methods into private override, snapshot-IO, and
       column-application owners without changing public state constructors/accessors, empty-id
       filtering, last-entry-wins behavior, snapshot roundtrips, table-column visibility application,
