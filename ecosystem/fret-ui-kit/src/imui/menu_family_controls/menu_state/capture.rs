@@ -7,6 +7,10 @@ use crate::imui::UiWriterImUiFacadeExt;
 
 use super::super::ImUiMenubarPolicyState;
 
+mod read;
+
+pub(in crate::imui::menu_family_controls) use read::{read_bool_model, read_open_menu_model};
+
 pub(in crate::imui::menu_family_controls) struct BeginMenuState {
     pub(in crate::imui::menu_family_controls) menubar_policy: Option<ImUiMenubarPolicyState>,
     pub(in crate::imui::menu_family_controls) popup_open: Model<bool>,
@@ -106,34 +110,4 @@ pub(in crate::imui::menu_family_controls) fn record_render_state<
     });
 
     MenuRenderState { popup_open_after }
-}
-
-pub(in crate::imui::menu_family_controls) fn read_bool_model<
-    H: UiHost,
-    W: UiWriterImUiFacadeExt<H> + ?Sized,
->(
-    ui: &mut W,
-    model: &Model<bool>,
-) -> bool {
-    ui.with_cx_mut(|cx| {
-        cx.read_model(model, fret_ui::Invalidation::Paint, |_app, value| *value)
-            .unwrap_or(false)
-    })
-}
-
-pub(in crate::imui::menu_family_controls) fn read_open_menu_model<
-    H: UiHost,
-    W: UiWriterImUiFacadeExt<H> + ?Sized,
->(
-    ui: &mut W,
-    policy: &ImUiMenubarPolicyState,
-) -> Option<Arc<str>> {
-    ui.with_cx_mut(|cx| {
-        cx.read_model(
-            &policy.open_menu,
-            fret_ui::Invalidation::Paint,
-            |_app, value| value.clone(),
-        )
-        .unwrap_or(None)
-    })
 }

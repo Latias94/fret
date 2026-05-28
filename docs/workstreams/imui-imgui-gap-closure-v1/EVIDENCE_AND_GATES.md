@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Begin Menu Capture Read Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI begin-menu capture read helpers split into a private owner without changing
+row/popup/was-open model identity, open-menu model reads, render-state writeback, or menubar
+open-policy behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/capture.rs` keeps
+  `BeginMenuState`, `MenuRenderState`, row/popup/was-open model identity, render-state writeback,
+  and read facade methods.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/capture/read.rs` owns bool and
+  open-menu model reads for begin-menu capture/open-policy.
+- `tools/gate_imui_workstream_source.py` now rejects direct `read_model` / `Invalidation::Paint`
+  reads from drifting back into `capture.rs` and checks the dedicated read owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass; 18
+  menu/submenu/tab tests passed.
+
 ## Table Builder Test-Id Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI table builder row/cell test-id derivation split into a private owner without

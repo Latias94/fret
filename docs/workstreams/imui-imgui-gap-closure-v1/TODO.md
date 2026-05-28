@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI begin-menu capture read helpers into a private owner without changing
+      row/popup/was-open model identity, open-menu model reads, render-state writeback, or menubar
+      open-policy behavior.
+      Result: `menu_family_controls/menu_state/capture/read.rs` owns bool/open-menu model reads.
+      `capture.rs` keeps `BeginMenuState`, `MenuRenderState`, model capture, render-state
+      writeback, and read facade methods.
 - [x] Split IMUI table builder row/cell test-id derivation into a private owner without changing
       public `ImUiTable` / `ImUiTableRow` methods, row option explicit test-id override behavior,
       default row/cell test-id strings, child `ImUiFacade` mounting, or table render behavior.

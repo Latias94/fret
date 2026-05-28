@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 begin-menu capture read owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/capture/read.rs` now owns bool and
+open-menu model reads for begin-menu capture/open-policy. `capture.rs` keeps `BeginMenuState`,
+`MenuRenderState`, row/popup/was-open model identity, render-state writeback, and read facade
+methods.
+
 2026-05-28 table builder test-id owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/builder/test_ids.rs` now owns row/cell test-id
 derivation, including explicit row test-id override fallback and default `.row.*` / `.cell.*`
