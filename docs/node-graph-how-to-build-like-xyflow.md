@@ -131,8 +131,8 @@ Use `NodeGraphEdgeTypes` through `NodeGraphSurfaceProps.edge_types` to register 
 and custom paint-path builders. The default declarative surface uses custom paths for painting,
 conservative paint culling, conservative spatial-index candidate rects, and exact path-distance hit
 filtering for edge interaction candidates. It also uses the custom path midpoint for edge-center
-anchors exposed through internals. A full EdgeLabelRenderer-style child layer and EdgeToolbar
-composition internals remain follow-up contracts.
+anchors exposed through internals, and the declarative EdgeToolbar host consumes those anchors for
+child placement. A full EdgeLabelRenderer-style child layer remains a follow-up contract.
 
 ### Styling (theme tokens + UI-only chrome hints)
 
@@ -152,10 +152,9 @@ Contract / guidance:
 
 ## Built-in add-ons (UI overlays)
 
-- Panels composition: `ui::NodeGraphPanel` (XyFlow `<Panel />` equivalent)
-- Controls overlay: `ui::NodeGraphControlsOverlay`
-- MiniMap overlay: `ui::NodeGraphMiniMapOverlay`
-- Toolbars: `ui::NodeGraphNodeToolbar`, `ui::NodeGraphEdgeToolbar`
+- Panels, controls, minimap, and toolbar composition are crate-internal declarative overlay
+  primitives today; public recipes should stay binding/controller-first instead of depending on
+  retained widget names.
 
 Stable contract:
 

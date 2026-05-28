@@ -259,9 +259,9 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - Stage 2 custom edge paths are supported via `NodeGraphEdgeTypes::register_path(...)` (`EdgeCustomPath`).
       The default declarative canvas uses the custom path for painting, paint culling, and
       conservative spatial-index candidate rects, then applies exact path-distance hit filtering
-      for edge interaction candidates and uses the custom path midpoint for edge-center anchors;
-      full EdgeLabelRenderer-style child labels and EdgeToolbar composition internals remain
-      follow-up spatial/overlay contracts.
+      for edge interaction candidates, uses the custom path midpoint for edge-center anchors, and
+      feeds those anchors into declarative EdgeToolbar child placement; full
+      EdgeLabelRenderer-style child labels remain a follow-up spatial/overlay contract.
 
 - [~] **Per-node/edge view lifecycle + memoization strategy**
   - XyFlow: React memoization + internals updates + DOM handle bounds pipeline
@@ -302,17 +302,22 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 - [x] **NodeToolbar**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/NodeToolbar/NodeToolbar.tsx`
-  - fret-node: `NodeGraphNodeToolbar` (`ecosystem/fret-node/src/ui/overlays/toolbars.rs`) + re-export from `ecosystem/fret-node/src/ui/mod.rs`
+  - fret-node: crate-internal declarative toolbar host in
+    `ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs`, resolved from
+    `NodeGraphInternalsSnapshot.nodes_window`.
 
 - [x] **EdgeToolbar**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/EdgeToolbar/EdgeToolbar.tsx`
-  - fret-node: `NodeGraphEdgeToolbar` (`ecosystem/fret-node/src/ui/overlays/toolbars.rs`) + `NodeGraphInternalsSnapshot.edge_centers_window` (`ecosystem/fret-node/src/ui/internals/snapshot.rs`) + re-export from `ecosystem/fret-node/src/ui/mod.rs`
+  - fret-node: crate-internal declarative toolbar host in
+    `ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs`, resolved from
+    `NodeGraphInternalsSnapshot.edge_centers_window`
+    (`ecosystem/fret-node/src/ui/internals/snapshot.rs`).
 
 - [x] **Panels / toolbars / overlays composition API**
   - XyFlow: `<Panel />` composition patterns
   - fret-node:
-    - `NodeGraphPanel` provides window-space anchored overlay composition: `ecosystem/fret-node/src/ui/panel.rs`
-    - `NodeGraphControlsOverlay::in_panel_bounds` + `NodeGraphMiniMapOverlay::in_panel_bounds` support panel-based placement
+    - controls, minimap, toolbar, and panel-like placement live as crate-internal declarative
+      overlay modules under `ecosystem/fret-node/src/ui/overlays/`.
     - demo usage: `apps/fret-examples/src/node_graph_demo.rs`
     - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
@@ -779,7 +784,8 @@ canonical data flow and invalidation boundaries:
   - XyFlow: `EdgeLabelRenderer` component
   - fret-node: presenter can provide `EdgeRenderHint.label` for edge a11y labels; the declarative
     internals expose `edge_centers_window` for edge-center anchoring and now use the custom path
-    midpoint when `edgeTypes` supplies a custom path.
+    midpoint when `edgeTypes` supplies a custom path. Declarative EdgeToolbar composition consumes
+    those custom-path anchors for child placement.
     - full visible EdgeLabelRenderer-style child labels remain TODO
     - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
@@ -1074,7 +1080,7 @@ canonical data flow and invalidation boundaries:
       `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
     - Stage 2 (custom paths): implemented via `NodeGraphEdgeTypes::register_path(...)` and
       `paint_only/edge_path_geometry.rs::path_midpoint_and_normal(...)` (edge-center anchor +
-      normal).
+      normal), with declarative EdgeToolbar composition consuming the resulting internals anchor.
 
 - [~] **Plugin-like extension hooks**
   - XyFlow: store middleware maps for node/edge changes

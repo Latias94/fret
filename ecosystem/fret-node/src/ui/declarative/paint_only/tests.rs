@@ -19,7 +19,7 @@ use fret_runtime::{
     ModelsHost, ShareSheetToken, TickId, TimeHost, TimerToken,
 };
 use fret_ui::action::UiActionHost;
-use fret_ui::element::{LayoutStyle, Length, PointerRegionProps, SizeStyle};
+use fret_ui::element::{ContainerProps, LayoutStyle, Length, PointerRegionProps, SizeStyle};
 
 use super::hover_anchor::{HoverTooltipAnchorSource, hovered_canvas_anchor_rect_for_surface};
 
@@ -5988,6 +5988,19 @@ fn assert_point_near(actual: Point, expected: Point, epsilon: f32) {
     );
 }
 
+fn assert_rect_near(actual: Rect, expected: Rect, epsilon: f32) {
+    assert_point_near(actual.origin, expected.origin, epsilon);
+    assert!(
+        (actual.size.width.0 - expected.size.width.0).abs() <= epsilon
+            && (actual.size.height.0 - expected.size.height.0).abs() <= epsilon,
+        "expected rect size near ({:.3}, {:.3}), got ({:.3}, {:.3})",
+        expected.size.width.0,
+        expected.size.height.0,
+        actual.size.width.0,
+        actual.size.height.0
+    );
+}
+
 #[test]
 fn custom_edge_path_feeds_default_declarative_edge_center_anchor() {
     let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
@@ -6062,6 +6075,124 @@ fn custom_edge_path_feeds_default_declarative_edge_center_anchor() {
         .expect("edge center anchor");
 
     assert_point_near(center, expected_center, 0.5);
+}
+
+#[test]
+fn custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor() {
+    let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let edge_ref = graph.edges.get(&edge).expect("test edge");
+    let from = geom.port_center(edge_ref.from).expect("from port center");
+    let to = geom.port_center(edge_ref.to).expect("to port center");
+    let detour_y = from.y.0 + 240.0;
+    let custom_points = [
+        from,
+        Point::new(from.x, Px(detour_y)),
+        Point::new(to.x, Px(detour_y)),
+        to,
+    ];
+    let expected_center = polyline_midpoint(&custom_points);
+    let edge_types = Rc::new(NodeGraphEdgeTypes::new().register_path(
+        EdgeTypeKey::new("data"),
+        move |_graph, _edge_id, _style, _hint, input| {
+            let detour_y = input.from.y.0 + 240.0;
+            Some(EdgeCustomPath {
+                cache_key: 99,
+                commands: vec![
+                    PathCommand::MoveTo(input.from),
+                    PathCommand::LineTo(Point::new(input.from.x, Px(detour_y))),
+                    PathCommand::LineTo(Point::new(input.to.x, Px(detour_y))),
+                    PathCommand::LineTo(input.to),
+                ],
+            })
+        },
+    ));
+
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            selected_edges: vec![edge],
+            draw_order,
+            ..Default::default()
+        },
+        default_editor_config(),
+    );
+
+    for _ in 0..2 {
+        let edge_types = edge_types.clone();
+        let _ = render_surface_frame_for_binding(
+            &mut ui,
+            &mut host,
+            &mut services,
+            window,
+            bounds,
+            &binding,
+            move |binding| {
+                let mut props = super::NodeGraphSurfaceProps::new(binding.clone());
+                props.edge_types = Some(edge_types);
+                props
+            },
+        );
+    }
+
+    let toolbar_size = Size::new(Px(44.0), Px(18.0));
+    let view_state = binding.view_state_model();
+    let internals = binding.internals_store();
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        "edge-toolbar-custom-path-host",
+        |cx| {
+            vec![
+                crate::ui::overlays::node_graph_edge_toolbar_host_for_internals_test(
+                    cx,
+                    crate::ui::overlays::NodeGraphEdgeToolbarInternalsHostTestProps {
+                        view_state,
+                        requested_edge: None,
+                        internals: internals.clone(),
+                        bounds,
+                        size: toolbar_size,
+                        label: Arc::from("Edge toolbar"),
+                        test_id: Arc::from("node_graph.edge_toolbar"),
+                    },
+                    |cx| {
+                        let mut child = ContainerProps::default();
+                        child.layout.size.width = Length::Px(toolbar_size.width);
+                        child.layout.size.height = Length::Px(toolbar_size.height);
+                        vec![cx.container(child, |_| Vec::new())]
+                    },
+                ),
+            ]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut host, &mut services, bounds, 1.0);
+
+    let toolbar = ui.children(root)[0];
+    let child = ui.children(toolbar)[0];
+    let child_bounds = ui
+        .debug_node_bounds(child)
+        .expect("edge toolbar child should be laid out");
+    let expected_child_bounds = Rect::new(
+        Point::new(
+            Px(expected_center.x.0 - toolbar_size.width.0 / 2.0),
+            Px(expected_center.y.0 - toolbar_size.height.0 / 2.0),
+        ),
+        toolbar_size,
+    );
+
+    assert_rect_near(child_bounds, expected_child_bounds, 0.5);
 }
 
 #[test]

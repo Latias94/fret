@@ -33,6 +33,49 @@ mod toolbar_layout_policy;
 mod toolbar_policy;
 mod toolbars_declarative;
 
+#[cfg(test)]
+#[derive(Clone)]
+pub(crate) struct NodeGraphEdgeToolbarInternalsHostTestProps {
+    pub(crate) view_state: fret_runtime::Model<crate::io::NodeGraphViewState>,
+    pub(crate) requested_edge: Option<crate::core::EdgeId>,
+    pub(crate) internals: std::sync::Arc<crate::ui::NodeGraphInternalsStore>,
+    pub(crate) bounds: fret_core::Rect,
+    pub(crate) size: fret_core::Size,
+    pub(crate) label: std::sync::Arc<str>,
+    pub(crate) test_id: std::sync::Arc<str>,
+}
+
+#[cfg(test)]
+pub(crate) fn node_graph_edge_toolbar_host_for_internals_test<H: fret_ui::UiHost + 'static>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    props: NodeGraphEdgeToolbarInternalsHostTestProps,
+    children: impl FnOnce(&mut fret_ui::ElementContext<'_, H>) -> Vec<fret_ui::element::AnyElement>,
+) -> fret_ui::element::AnyElement {
+    let target = toolbars_declarative::resolve_edge_toolbar_declarative_target(
+        &props.view_state,
+        props.requested_edge,
+        props.internals.as_ref(),
+        cx.app,
+    );
+
+    toolbars_declarative::node_graph_edge_toolbar_host_element(
+        cx,
+        toolbars_declarative::NodeGraphEdgeToolbarHostElementProps {
+            bounds: props.bounds,
+            target,
+            visibility: toolbar_policy::NodeGraphToolbarVisibility::WhenSelected,
+            align_x: toolbar_policy::NodeGraphToolbarAlign::Center,
+            align_y: toolbar_policy::NodeGraphToolbarAlign::Center,
+            size: toolbar_policy::NodeGraphToolbarSize::Fixed(props.size),
+            offset: fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            label: props.label,
+            test_id: props.test_id,
+            focus_fallback: None,
+        },
+        children,
+    )
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum OverlayPlacement {
     /// Positions itself within the canvas bounds (legacy / backwards-compatible).

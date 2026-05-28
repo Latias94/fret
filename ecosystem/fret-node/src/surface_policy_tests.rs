@@ -452,6 +452,7 @@ fn default_declarative_surface_exposes_edge_types_and_skin_without_custom_presen
         assert!(docs.contains("conservative spatial-index candidate rects"));
         assert!(docs.contains("exact path-distance hit"));
         assert!(docs.contains("custom path midpoint"));
+        assert!(docs.contains("declarative EdgeToolbar"));
         assert!(docs.contains(
             "Custom `NodeGraphPresenter` is not part of the default declarative surface"
         ));

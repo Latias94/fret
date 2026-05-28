@@ -5,13 +5,21 @@ Last updated: 2026-05-28
 
 ## Current Focus
 
-FNDX-048 feeds custom `NodeGraphEdgeTypes::register_path(...)` output into default declarative
-edge-center anchors by computing the midpoint/normal from the custom path command stream. This
-closes the next custom-path spatial contract after FNDX-047 while still leaving full
-EdgeLabelRenderer-style child labels and EdgeToolbar composition internals as explicit follow-up
-contracts.
+FNDX-049 feeds custom `NodeGraphEdgeTypes::register_path(...)` output through the default
+declarative edge-center internals and into declarative EdgeToolbar host composition. This closes the
+next custom-path overlay contract after FNDX-048 while still leaving full EdgeLabelRenderer-style
+child labels as an explicit follow-up contract.
 
 ## Targeted Iteration Gates
+
+```bash
+cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter
+```
+
+This gate proves the FNDX-049 custom edge path toolbar contract: default declarative internals expose
+`edge_centers_window` using the custom path midpoint, the declarative EdgeToolbar host consumes that
+anchor for child placement, and source-policy/docs keep the scoped EdgeLabelRenderer demotion
+explicit.
 
 ```bash
 cargo nextest run -p fret-node custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter
@@ -160,6 +168,8 @@ closeout note must name those failures.
 - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_hit_test.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_path_geometry.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+- `ecosystem/fret-node/src/ui/overlays/mod.rs`
+- `ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs`
 - `ecosystem/fret-node/src/surface_policy_tests.rs`
 - `ecosystem/fret-node/src/runtime/tests.rs`
 - `ecosystem/fret-node/src/ui/binding_store_sync.rs`
@@ -344,5 +354,26 @@ closeout note must name those failures.
   - `git diff --check`: passed; proves the patch has no whitespace errors.
   - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
     green with 460 tests.
+- FNDX-049:
+  - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor`:
+    passed; proves declarative EdgeToolbar host child placement consumes the custom-path-derived
+    edge-center internals produced by the default surface.
+  - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`:
+    passed; proves the toolbar composition gate, the FNDX-048 edge-center anchor gate, and the
+    source-policy/docs demotion of full EdgeLabelRenderer-style labels stay aligned.
+  - `cargo check -p fret-node --tests`: passed; proves UI-enabled test targets compile with the
+    test-only EdgeToolbar internals bridge.
+  - `cargo check -p fret-node --all-features --tests`: passed; proves optional UI/integration test
+    targets compile with the new toolbar composition gate.
+  - `cargo check -p fret-node --no-default-features`: passed; proves headless/runtime-facing package
+    compilation remains unaffected by the UI-only toolbar composition slice.
+  - `cargo fmt --check`: passed; proves formatting remains clean.
+  - `python3 tools/check_layering.py`: passed; proves the slice did not violate workspace layering
+    policy.
+  - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed;
+    proves the workstream metadata remains valid JSON.
+  - `git diff --check`: passed; proves the patch has no whitespace errors.
+  - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
+    green with 461 tests.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

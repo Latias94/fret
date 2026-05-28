@@ -41,6 +41,7 @@
     "cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter",
     "cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter",
     "cargo nextest run -p fret-node custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter",
+    "cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter",
     "cargo nextest run -p fret-node --no-default-features runtime",
     "cargo check -p fret-node --all-features --tests",
     "python3 tools/check_layering.py"
@@ -56,6 +57,8 @@
     "ecosystem/fret-node/src/ui/declarative/paint_only/edge_path_geometry.rs",
     "ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs",
     "ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs",
+    "ecosystem/fret-node/src/ui/overlays/mod.rs",
+    "ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs",
     "ecosystem/fret-node/src/ui/edge_types.rs",
     "ecosystem/fret-node/src/ui/declarative/paint_only/hover_anchor.rs",
     "ecosystem/fret-node/src/ui/editors/portal_text.rs",
@@ -71,6 +74,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane while the public story remains declarative-first and controller/binding-first. FNDX-010/FNDX-020/FNDX-030 are closeout-verified, FNDX-040/FNDX-041/FNDX-042/FNDX-043 have concrete declarative overlay/add-on parity gates, FNDX-044 removes the raw public view-state mutation bypass, FNDX-045 wires edgeTypes/skin into the default declarative edge paint path while deferring the broad presenter surface, FNDX-046 feeds custom edge paths into conservative spatial-index candidates, FNDX-047 feeds custom edge paths into exact path-distance hit filtering, and FNDX-048 feeds custom edge paths into default edge-center anchors; future tasks should keep choosing one observable behavior or public-surface hazard plus one narrow gate."
+    "notes": "Continue this lane while the public story remains declarative-first and controller/binding-first. FNDX-010/FNDX-020/FNDX-030 are closeout-verified, FNDX-040/FNDX-041/FNDX-042/FNDX-043 have concrete declarative overlay/add-on parity gates, FNDX-044 removes the raw public view-state mutation bypass, FNDX-045 wires edgeTypes/skin into the default declarative edge paint path while deferring the broad presenter surface, FNDX-046 feeds custom edge paths into conservative spatial-index candidates, FNDX-047 feeds custom edge paths into exact path-distance hit filtering, FNDX-048 feeds custom edge paths into default edge-center anchors, and FNDX-049 feeds those anchors into declarative EdgeToolbar composition; future tasks should keep choosing one observable behavior or public-surface hazard plus one narrow gate."
   }
 }
