@@ -44,7 +44,7 @@ use crate::tokens::dropdown_menu as dropdown_menu_tokens;
 
 fn default_autocomplete_listbox_test_id() -> Arc<str> {
     static ID: OnceLock<Arc<str>> = OnceLock::new();
-    ID.get_or_init(|| Arc::<str>::from("material3-autocomplete-listbox"))
+    ID.get_or_init(|| Arc::<str>::from("material3-autocomplete.listbox"))
         .clone()
 }
 
@@ -1387,6 +1387,14 @@ mod tests {
     use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 
     use super::*;
+
+    #[test]
+    fn autocomplete_default_listbox_test_id_uses_dotted_part_contract() {
+        assert_eq!(
+            default_autocomplete_listbox_test_id().as_ref(),
+            "material3-autocomplete.listbox"
+        );
+    }
 
     fn bounds() -> Rect {
         Rect::new(

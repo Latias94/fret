@@ -37,6 +37,22 @@ Task IDs use `M3PV2-*`.
   Handoff: Continue M3PV2-020 with Select visual/layout token proof or move to Autocomplete /
   ExposedDropdown popup choreography.
 
+- [x] M3PV2-022 [owner=codex] [deps=M3PV2-021] [scope=ecosystem/fret-ui-material3/src/autocomplete.rs,ecosystem/fret-ui-material3/tests/{radio_alignment.rs,automation_surface.rs},tools/diag-scripts/ui-gallery/{material3,overlay},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close the field-family listbox selector continuity gap for Autocomplete and
+  ExposedDropdown, then sweep live Material3 Select diagnostics that still referenced stale
+  `<base>-listbox` ids.
+  Validation: `cargo fmt --package fret-ui-material3`; touched Material3 Select diag-script JSON
+  validation; `cargo nextest run -p fret-ui-material3 --lib autocomplete_default_listbox_test_id_uses_dotted_part_contract`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_autocomplete_exposes_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_autocomplete_semantics_v1 material3_exposed_dropdown_trailing_icon_toggles_overlay_v1 material3_exposed_dropdown_reverts_query_to_committed_selection_on_blur_v1`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_select_exposes_stable_part_test_ids`.
+  Review: DONE. The fix stayed in the Material recipe/automation layer: Autocomplete fallback ids
+  now match dotted part ids, ExposedDropdown proves combobox/listbox wiring, and live Material3
+  Select diagnostics now target dotted listbox ids.
+  Evidence: `artifacts/material3_autocomplete_exposed_dropdown_listbox_packet_v2.md`.
+  Handoff: Continue M3PV2-020 with a true style/layout packet for TextField, Autocomplete, or
+  ExposedDropdown; do not mark those axes complete based on selector evidence alone.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]

@@ -171,7 +171,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-select-overridden-listbox"
+          "id": "ui-gallery-material3-select-overridden.listbox"
         }
       },
       "timeout_frames": 600
@@ -194,7 +194,7 @@
         "kind": "not_exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-select-overridden-listbox"
+          "id": "ui-gallery-material3-select-overridden.listbox"
         }
       },
       "timeout_frames": 600
@@ -234,7 +234,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-select-rich-listbox"
+          "id": "ui-gallery-material3-select-rich.listbox"
         }
       },
       "timeout_frames": 600
@@ -257,7 +257,7 @@
         "kind": "not_exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-select-rich-listbox"
+          "id": "ui-gallery-material3-select-rich.listbox"
         }
       },
       "timeout_frames": 600
@@ -303,7 +303,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-select-transformed-listbox"
+          "id": "ui-gallery-material3-select-transformed.listbox"
         }
       },
       "timeout_frames": 600
@@ -326,7 +326,7 @@
         "kind": "not_exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-select-transformed-listbox"
+          "id": "ui-gallery-material3-select-transformed.listbox"
         }
       },
       "timeout_frames": 600
@@ -366,7 +366,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-select-unclamped-listbox"
+          "id": "ui-gallery-material3-select-unclamped.listbox"
         }
       },
       "timeout_frames": 600
@@ -389,7 +389,7 @@
         "kind": "not_exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-select-unclamped-listbox"
+          "id": "ui-gallery-material3-select-unclamped.listbox"
         }
       },
       "timeout_frames": 600
@@ -444,7 +444,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-select-unclamped-listbox"
+          "id": "ui-gallery-material3-select-unclamped.listbox"
         }
       },
       "timeout_frames": 600
@@ -467,7 +467,7 @@
         "kind": "not_exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-select-unclamped-listbox"
+          "id": "ui-gallery-material3-select-unclamped.listbox"
         }
       },
       "timeout_frames": 600

@@ -7,7 +7,10 @@ Last updated: 2026-05-28
 
 The lane is open. M3PV2-010 is complete: the v2 parity-axis matrix exists and covers all 39
 components from the closed Material3 component sweep. M3PV2-021 is complete: Material3 Select now
-uses dotted `<base>.listbox` ids for the listbox automation surface.
+uses dotted `<base>.listbox` ids for the listbox automation surface. M3PV2-022 is complete:
+Autocomplete fallback ids now use the same dotted listbox contract, ExposedDropdown proves
+combobox/listbox wiring through composition, and live Material3 Select diagnostics have been swept
+to the dotted ids.
 
 ## Decisions
 
@@ -19,9 +22,10 @@ uses dotted `<base>.listbox` ids for the listbox automation surface.
 
 ## Next Recommended Action
 
-Continue M3PV2-020. The first Select automation-surface slice is done; next pick either Select
-visual/layout token proof or Autocomplete/ExposedDropdown popup choreography. Write the proof note
-before editing code.
+Continue M3PV2-020 with a true style/layout field-family packet. Good next candidates are
+TextField floating-label full-state geometry, Autocomplete/ExposedDropdown popup width/chrome, or
+Select visual/layout token proof. Do not mark style/layout/motion axes complete from selector or
+semantics evidence alone.
 
 ## Useful Gates
 

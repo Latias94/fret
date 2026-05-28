@@ -5,7 +5,7 @@ use std::{
 
 use fret_core::{
     AppWindowId, DrawOrder, Edges, Event, KeyCode, Modifiers, NodeId, Point, PointerId, Px, Rect,
-    Scene, SceneOp, SemanticsInvalid, SemanticsLive, Size, Transform2D, UiServices,
+    Scene, SceneOp, SemanticsInvalid, SemanticsLive, SemanticsRole, Size, Transform2D, UiServices,
 };
 use fret_runtime::{Effect, Model, ModelHost, PlatformCapabilities};
 use fret_ui::element::{AnyElement, ContainerProps};
@@ -9753,6 +9753,33 @@ fn material3_exposed_dropdown_trailing_icon_toggles_overlay_v1() {
             entry.kind == OverlayStackEntryKind::Popover && entry.open && entry.visible
         }),
         "expected popover overlay to be open after clicking the trailing icon"
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("material3-exposed-dropdown"))
+        .expect("expected exposed dropdown input node");
+    assert_eq!(input.role, SemanticsRole::ComboBox);
+    assert!(
+        input.flags.expanded,
+        "exposed dropdown input should report expanded=true while open"
+    );
+
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("material3-exposed-dropdown.listbox"))
+        .expect("expected exposed dropdown listbox node");
+    assert_eq!(listbox.role, SemanticsRole::ListBox);
+    assert!(
+        input.controls.contains(&listbox.id),
+        "exposed dropdown input should control its listbox"
+    );
+    assert!(
+        listbox.labelled_by.contains(&input.id),
+        "exposed dropdown listbox should be labelled by its input"
     );
 
     ui.dispatch_event(

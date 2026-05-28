@@ -112,7 +112,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-dialog-select-bottom-listbox"
+          "id": "ui-gallery-material3-dialog-select-bottom.listbox"
         }
       },
       "timeout_frames": 600
