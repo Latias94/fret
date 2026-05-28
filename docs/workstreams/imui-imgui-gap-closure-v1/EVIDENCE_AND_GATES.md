@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-29
 
+## Leaf Control Option Owner-Split Evidence - 2026-05-29
+
+Claim verified: IMUI leaf control option records split into selection, tab-item, and slider private
+owners without changing public option type names, fields, defaults, root re-exports, selectable
+smoke behavior, tab/menu behavior, or slider model behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/controls/selection.rs` is now a public re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/selection/options.rs` owns
+  `SelectableOptions`, including highlighted row, popup-close model, a11y role, shortcut fields,
+  and defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/tab.rs` is now a public re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/tab/options.rs` owns `TabItemOptions`,
+  including default-selection, panel test-id, shortcut fields, and defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/value.rs` is now a public re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/value/slider.rs` owns `SliderOptions`,
+  including min/max/step defaults.
+- `ecosystem/fret-ui-kit/tests/imui_leaf_control_options_smoke.rs` freezes selectable, tab-item,
+  and slider option defaults.
+- `tools/gate_imui_workstream_source.py` now rejects these option bodies from drifting back into
+  the leaf hub files and checks the three dedicated owners plus smoke test.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_leaf_control_options_smoke
+  --test imui_selectable_smoke --no-fail-fast`: pass.
+- `CARGO_INCREMENTAL=0 cargo nextest run -p fret-imui models_controls::slider
+  interaction_menu_tabs::tabs --no-fail-fast`: pass.
+
 ## Input-Text Picker Option Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI input-text-picker option records split into filter and options private owners

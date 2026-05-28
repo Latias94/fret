@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-29 leaf control option owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/controls/selection.rs`,
+`ecosystem/fret-ui-kit/src/imui/options/controls/tab.rs`, and
+`ecosystem/fret-ui-kit/src/imui/options/controls/value.rs` are now public re-export hubs.
+`selection/options.rs` owns `SelectableOptions`, `tab/options.rs` owns `TabItemOptions`, and
+`value/slider.rs` owns `SliderOptions`.
+
 2026-05-29 input-text-picker option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/text/picker.rs` is now a public re-export hub.
 `picker/filter.rs` owns `InputTextPickerFilter`, including matching policy, and

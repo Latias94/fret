@@ -44,6 +44,13 @@ Last updated: 2026-05-29
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI leaf control option records into selection, tab-item, and slider private owners
+      without changing public option type names, fields, defaults, root re-exports, selectable
+      smoke behavior, tab/menu behavior, or slider model behavior.
+      Result: `options/controls/selection.rs`, `options/controls/tab.rs`, and
+      `options/controls/value.rs` are now public re-export hubs. `selection/options.rs` owns
+      `SelectableOptions`, `tab/options.rs` owns `TabItemOptions`, and `value/slider.rs` owns
+      `SliderOptions`.
 - [x] Split IMUI input-text-picker option records into filter and options private owners without
       changing public option type names, filter matching, default popup/input/options, root
       re-exports, picker smoke behavior, or fret-imui picker behavior.
