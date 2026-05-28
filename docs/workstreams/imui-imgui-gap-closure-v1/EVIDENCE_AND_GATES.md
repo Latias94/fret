@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Debug-Draw Path Sampling Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI debug-draw path sampling helpers split into segment, arc, and Bezier private
+owners without changing default segment fallback, arc/elliptical arc point generation, Bezier point
+interpolation, path-builder command output, or public debug-draw behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/sampling.rs` is now a private
+  re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/sampling/segments.rs` owns default
+  segment fallback for arc, Bezier, and elliptical arc commands.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/sampling/arcs.rs` owns circular and
+  elliptical arc point sampling.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/sampling/beziers.rs` owns quadratic and
+  cubic Bezier point interpolation.
+- `tools/gate_imui_workstream_source.py` now rejects these helper bodies from drifting back into
+  `sampling.rs` and checks the three dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_path_builder_appends_arc_samples debug_draw_path_builder_arc_helpers_handle_fast_default_and_degenerate_inputs debug_draw_path_builder_appends_elliptical_arc_samples debug_draw_path_builder_elliptical_arc_handles_rotation_default_and_invalid_inputs debug_draw_path_builder_appends_bezier_curve_samples debug_draw_path_builder_bezier_helpers_require_a_start_point_and_default_segments --no-fail-fast`:
+  pass.
+
 ## Debug-Draw Geometry Helper Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI debug-draw geometry helpers split into finite, rectangle, and triangle private

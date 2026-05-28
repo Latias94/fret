@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 debug-draw path sampling owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/sampling.rs` is now a private re-export
+hub. `sampling/segments.rs` owns default segment fallback, `sampling/arcs.rs` owns circular and
+elliptical arc point sampling, and `sampling/beziers.rs` owns quadratic/cubic Bezier point
+interpolation.
+
 2026-05-28 debug-draw geometry helper owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/geometry.rs` is now a private re-export hub.
 `geometry/finite.rs` owns point/UV/vertex finite checks, `geometry/rects.rs` owns rect checks and

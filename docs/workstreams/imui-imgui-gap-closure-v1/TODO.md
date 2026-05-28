@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw path sampling helpers into segment, arc, and Bezier private owners
+      without changing default segment fallback, arc/elliptical arc point generation, Bezier point
+      interpolation, path-builder command output, or public debug-draw behavior.
+      Result: `debug_draw_controls/paths/sampling.rs` is now a private re-export hub.
+      `sampling/segments.rs` owns default segment fallback, `sampling/arcs.rs` owns circular and
+      elliptical arc point sampling, and `sampling/beziers.rs` owns quadratic/cubic Bezier point
+      interpolation.
 - [x] Split IMUI debug-draw geometry helpers into finite, rectangle, and triangle private owners
       without changing finite checks, rect emptiness/finite checks, rect quad point generation,
       effective rounding clamp rules, triangle degeneracy checks, indexed triangle lookup,
