@@ -163,6 +163,8 @@ impl SearchBar {
 
                 let (
                     container_height,
+                    container_min_width,
+                    container_max_width,
                     corner_radii,
                     state_layer_target,
                     state_layer_color,
@@ -179,6 +181,8 @@ impl SearchBar {
                     let theme = Theme::global(&*cx.app);
 
                     let container_height = search_bar_tokens::container_height(theme);
+                    let container_min_width = search_bar_tokens::container_min_width(theme);
+                    let container_max_width = search_bar_tokens::container_max_width(theme);
                     let corner_radii = search_bar_tokens::container_shape(theme);
 
                     let state_layer_target = if pressed {
@@ -232,6 +236,8 @@ impl SearchBar {
 
                     (
                         container_height,
+                        container_min_width,
+                        container_max_width,
                         corner_radii,
                         state_layer_target,
                         state_layer_color,
@@ -375,6 +381,10 @@ impl SearchBar {
                         layout.overflow = Overflow::Visible;
                         layout.size.width = Length::Fill;
                         layout.size.height = Length::Px(container_height);
+                        if matches!(self.header_tokens, SearchBarHeaderTokens::SearchBar) {
+                            layout.size.min_width = Some(Length::Px(container_min_width));
+                            layout.size.max_width = Some(Length::Px(container_max_width));
+                        }
                         layout
                     },
                     ..Default::default()

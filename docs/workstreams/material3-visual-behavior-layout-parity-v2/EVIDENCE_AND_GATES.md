@@ -58,6 +58,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_date_picker_calendar_grid_layout_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_display_input_layout_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_full_screen_header_layout_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_bar_default_width_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -227,6 +228,24 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     ids for automation, and refreshes SearchView headless goldens for the intentional 16px content
     shift.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_full_screen_header_layout_packet_v2.md`
+- 2026-05-28: M3PV2-032 closed ordinary SearchBar default width drift.
+  - Sources: Compose Material3 `SearchBarDefaults.InputField` applies `sizeIn(minWidth =
+    SearchBarMinWidth, maxWidth = SearchBarMaxWidth, minHeight = InputFieldHeight)`, where
+    `SearchBarMinWidth = 360.dp`, `SearchBarMaxWidth = 720.dp`, and `InputFieldHeight = 56.dp`.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_bar_exposes_stable_part_test_ids`
+    failed because ordinary SearchBar chrome expanded to `916px` in a wide parent instead of
+    clamping to `720px`.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_bar_exposes_stable_part_test_ids material3_search_view_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_bar_suite_goldens_v1 material3_headless_search_view_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --test search_view_behavior`
+  - `cargo nextest run -p fret-ui-material3 --lib search_bar search_view`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: Ordinary SearchBar now applies 360..720px default width constraints, while
+    SearchView-owned headers remain full-width and continue to pass SearchView automation,
+    behavior, and headless golden gates.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_bar_default_width_packet_v2.md`
 
 ## Proof Note Template
 

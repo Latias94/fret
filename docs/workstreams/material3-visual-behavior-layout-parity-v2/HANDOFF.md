@@ -37,6 +37,9 @@ M3PV2-031 is complete: full-screen SearchView now renders the header inside the 
 header slot, exposes stable header-slot/divider/body part ids, and places the divider/content after
 that slot. SearchView behavior stayed green and headless goldens were refreshed for the intentional
 full-screen header/content shift.
+M3PV2-032 is complete: ordinary SearchBar now applies Compose's 360..720px default width
+constraint while SearchView-controlled headers remain full-width under SearchView overlay layout.
+SearchBar/SearchView automation, SearchView behavior, and both headless golden suites stayed green.
 
 ## Decisions
 
@@ -49,10 +52,10 @@ full-screen header/content shift.
 ## Next Recommended Action
 
 Continue M3PV2-020 with another field-family packet. Good next candidates are a dedicated
-multiline TextField scenario, SearchBar width/focus affordance, SearchView a11y relations, or
-fixed-timestep popup/field/picker motion. Do not mark motion axes complete from settled-geometry
-evidence; TextField, Select, Autocomplete, ExposedDropdown, DatePicker, TimePicker, and SearchView
-still need transition packets.
+multiline TextField scenario, SearchView a11y relations, or fixed-timestep popup/field/picker/search
+motion. Do not mark motion axes complete from settled-geometry evidence; TextField, Select,
+Autocomplete, ExposedDropdown, DatePicker, TimePicker, SearchBar, and SearchView still need
+transition packets.
 
 ## Useful Gates
 

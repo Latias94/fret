@@ -1735,7 +1735,7 @@ fn material3_search_bar_exposes_stable_part_test_ids() {
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(520.0), Px(180.0)),
+        Size::new(Px(980.0), Px(180.0)),
     );
 
     let query = app.models_mut().insert(String::new());
@@ -1769,6 +1769,10 @@ fn material3_search_bar_exposes_stable_part_test_ids() {
             "expected live SearchBar part test_id {id}"
         );
     }
+
+    let chrome = live_test_id_layout_bounds(&ui, &app, window, "m3-search-bar.chrome");
+    assert_px_close(chrome.size.height.0, 56.0, "SearchBar chrome height");
+    assert_px_close(chrome.size.width.0, 720.0, "SearchBar chrome max width");
 }
 
 #[test]

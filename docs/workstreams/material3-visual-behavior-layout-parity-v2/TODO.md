@@ -193,6 +193,24 @@ Task IDs use `M3PV2-*`.
   Handoff: Continue M3PV2-020 with SearchBar width/focus affordance, SearchView a11y relations, or
   fixed-timestep SearchView transition/predictive-back motion. This packet does not close motion.
 
+- [x] M3PV2-032 [owner=codex] [deps=M3PV2-031] [scope=ecosystem/fret-ui-material3/src/{search_bar.rs,tokens/search_bar.rs},ecosystem/fret-ui-material3/tests/{automation_surface.rs,radio_alignment.rs,search_view_behavior.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close ordinary SearchBar default width drift by applying Compose's 360..720dp InputField
+  width constraint to SearchBar while keeping SearchView-controlled headers full-width.
+  Validation: `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_bar_exposes_stable_part_test_ids material3_search_view_exposes_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_bar_suite_goldens_v1 material3_headless_search_view_suite_goldens_v1`;
+  `cargo nextest run -p fret-ui-material3 --test search_view_behavior`;
+  `cargo nextest run -p fret-ui-material3 --lib search_bar search_view`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`.
+  Review: DONE. This found a Material recipe layout gap: ordinary SearchBar filled wide parents
+  past Compose's default max width. The fix adds SearchBar-only min/max width token accessors and
+  deliberately excludes SearchView headers because their width is owned by SearchView overlay
+  layout.
+  Evidence: `artifacts/material3_search_bar_default_width_packet_v2.md`.
+  Handoff: Continue M3PV2-020 with SearchView a11y relations, multiline TextField, or
+  fixed-timestep field/picker/search motion. SearchBar motion still needs a dedicated packet.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]
