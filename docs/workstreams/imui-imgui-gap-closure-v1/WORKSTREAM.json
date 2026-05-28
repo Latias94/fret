@@ -821,6 +821,8 @@
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/linear/polyline.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/linear/primitives.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/rects.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/rects/plain.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/rects/rounded.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/round.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/round/circle.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/round/ellipse.rs",

@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw rect path construction into plain-rect and rounded-rect private owners
+      without changing clockwise rect command ordering, rounded-rect effective rounding clamp,
+      per-corner sampling, fallback square points, path-builder call sites, path tests, or public
+      debug-draw behavior.
+      Result: `debug_draw_controls/paths/rects.rs` is now a private re-export hub.
+      `rects/plain.rs` owns plain closed rect path commands and `rects/rounded.rs` owns
+      rounded-rect point generation plus corner arc sampling.
 - [x] Split IMUI debug-draw linear path construction into polyline, polygon fill, and primitive
       private owners without changing open/closed stroke point requirements, polyline command
       ordering, convex/concave fill forwarding, triangle/quad closure, paint-shape call sites, path

@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 debug-draw rect path owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/rects.rs` is now a private re-export
+hub. `rects/plain.rs` owns plain closed rect path commands and `rects/rounded.rs` owns rounded-rect
+point generation plus corner arc sampling.
+
 2026-05-28 debug-draw linear path owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/linear.rs` is now a private re-export
 hub. `linear/polyline.rs` owns stroke point requirements and polyline commands, `linear/fills.rs`

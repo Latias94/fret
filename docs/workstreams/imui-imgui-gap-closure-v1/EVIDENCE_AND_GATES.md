@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Debug-Draw Rect Path Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI debug-draw rect path construction split into plain-rect and rounded-rect
+private owners without changing clockwise rect command ordering, rounded-rect effective rounding
+clamp, per-corner sampling, fallback square points, path-builder call sites, path tests, or public
+debug-draw behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/rects.rs` is now a private re-export
+  hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/rects/plain.rs` owns plain closed rect
+  path commands.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/rects/rounded.rs` owns rounded-rect
+  point generation and corner arc sampling.
+- `tools/gate_imui_workstream_source.py` now rejects rect path bodies from drifting back into
+  `rects.rs` and checks the two dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib rect_path_closes_clockwise_edges debug_draw_path_builder_appends_rounded_rect_corner_samples --no-fail-fast`:
+  pass.
+
 ## Debug-Draw Linear Path Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI debug-draw linear path construction split into polyline, polygon fill, and
