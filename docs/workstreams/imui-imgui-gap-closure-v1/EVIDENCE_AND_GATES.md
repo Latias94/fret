@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Misc Option Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI misc option records split into drag-source, drop-target, separator-text, and
+bullet-text private owners without changing public option type names, default enabled/cross-window
+behavior, `test_id` fields, root re-exports, drag/drop smoke behavior, separator/bullet smoke
+behavior, or fret-imui composition/drag behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/misc.rs` is now a public re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/options/misc/drag_source.rs` owns `DragSourceOptions` and its
+  default enabled/cross-window policy.
+- `ecosystem/fret-ui-kit/src/imui/options/misc/drop_target.rs` owns `DropTargetOptions` and its
+  default enabled policy.
+- `ecosystem/fret-ui-kit/src/imui/options/misc/separator_text.rs` owns `SeparatorTextOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/misc/bullet_text.rs` owns `BulletTextOptions`.
+- `tools/gate_imui_workstream_source.py` now rejects these option bodies from drifting back into
+  `misc.rs` and checks the four dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_drag_drop_smoke --test
+  imui_drag_preview_smoke --test imui_separator_text_smoke --test imui_bullet_text_smoke
+  --no-fail-fast`: pass.
+- `CARGO_INCREMENTAL=0 cargo nextest run -p fret-imui composition separator_text bullet_text
+  --no-fail-fast`: pass.
+- `CARGO_INCREMENTAL=0 cargo nextest run -p fret-imui interaction_drag --no-fail-fast`: pass.
+
 ## Spacer Flow Option Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI spacer flow option records split into dummy, spacing, and indent private

@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI misc option records into drag-source, drop-target, separator-text, and bullet-text
+      private owners without changing public option type names, default enabled/cross-window
+      behavior, `test_id` fields, root re-exports, drag/drop smoke behavior, separator/bullet smoke
+      behavior, or fret-imui composition/drag behavior.
+      Result: `options/misc.rs` is now a public re-export hub. `misc/drag_source.rs` owns
+      `DragSourceOptions`, `misc/drop_target.rs` owns `DropTargetOptions`,
+      `misc/separator_text.rs` owns `SeparatorTextOptions`, and `misc/bullet_text.rs` owns
+      `BulletTextOptions`.
 - [x] Split IMUI spacer flow option records into dummy, spacing, and indent private owners without
       changing public option type names, default optional size, indent token default, `test_id`
       fields, flow re-exports, container smoke behavior, or porting-sugar behavior.
