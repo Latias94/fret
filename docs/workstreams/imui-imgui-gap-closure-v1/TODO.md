@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI child-region resize responses into private X/Y response owners without changing
+      public `ChildRegionResizeXResponse` / `ChildRegionResizeYResponse` re-exports, enabled/min/
+      max accessors, drag edge accessors, drag delta/total projection, clamp-from-start helpers, or
+      opaque response fields.
+      Result: `response/widgets/child_region/resize.rs` is now a private module/re-export index.
+      `resize/x.rs` owns width-axis response projection and tests, while `resize/y.rs` owns
+      height-axis response projection and tests.
 - [x] Split IMUI input-text filter options into private built-in and custom-filter owners without
       changing `InputTextFilters` constructors, public filter flags, character filtering,
       uppercase/no-blank behavior, `InputTextCustomFilter` closure storage, debug output, or public

@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 child-region resize response owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize.rs` is now a private
+module/re-export index. `resize/x.rs` owns width-axis response projection and tests, while
+`resize/y.rs` owns height-axis response projection and tests. `ChildRegionResponse` still re-exports
+both public response types from the same public IMUI surface.
+
 2026-05-28 input-text filter owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/text/filters.rs` is now a private
 module/re-export index. `filters/builtin.rs` owns `InputTextFilters` plus

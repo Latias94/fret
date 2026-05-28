@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Child-Region Resize Response Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI child-region resize responses split into private X/Y response owners without
+changing public `ChildRegionResizeXResponse` / `ChildRegionResizeYResponse` re-exports, enabled/
+min/max accessors, drag edge accessors, drag delta/total projection, clamp-from-start helpers, or
+opaque response fields.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize.rs` is now a private
+  module/re-export index.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize/x.rs` owns width-axis
+  response projection and clamp tests.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize/y.rs` owns height-axis
+  response projection and clamp tests.
+- `tools/gate_imui_workstream_source.py` now checks the opaque X/Y response structs in their
+  dedicated owner files and rejects response bodies from drifting back into `resize.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib child_region_resize --no-fail-fast`:
+  pass; 2 response clamp tests passed.
+- `cargo nextest run -p fret-imui layout_collections table_headers --no-fail-fast`: pass; 31
+  composition/table-header tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Input Text Filter Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI input-text filter options split into private built-in and custom-filter owners
