@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 selectable popup-nav owner-split result:
+`ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard/popup_nav.rs` now owns inherited
+popup menu nav item registration plus Arrow/Up/Home/End focus movement. `keyboard.rs` keeps
+selectable shortcut activation, popup close-on-shortcut, and context-menu key handling.
+
 2026-05-28 menu-family trigger menubar owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior/menubar.rs` now owns
 menubar trigger-row registration, state sync, patient-click timer wiring, toggle-on-activate, and

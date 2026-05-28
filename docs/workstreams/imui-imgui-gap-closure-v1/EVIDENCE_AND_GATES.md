@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Selectable Popup-Nav Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI selectable popup-menu keyboard navigation split into a private owner without
+changing selectable shortcut activation, popup close-on-shortcut, context-menu key handling,
+inherited popup menu item registration, Arrow/Home/End focus movement, or public selectable/menu
+item behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard.rs` keeps shortcut activation,
+  popup close-on-shortcut, and context-menu key handling.
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard/popup_nav.rs` owns inherited popup
+  menu nav item registration and Arrow/Up/Home/End focus movement.
+- `tools/gate_imui_workstream_source.py` now rejects popup nav store/focus movement from drifting
+  back into `keyboard.rs` and checks the dedicated popup-nav owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass; 18 menu/submenu/tab
+  tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib selectable_controls::keyboard --no-fail-fast`:
+  not counted as evidence; the filter matched 0 tests and nextest returned `error: no tests to run`.
+
 ## Menu-Family Trigger Menubar Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI menu-family trigger menubar behavior split into a private owner without

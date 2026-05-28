@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI selectable popup-menu keyboard navigation into a private owner without changing
+      selectable shortcut activation, popup close-on-shortcut, context-menu key handling, inherited
+      popup menu item registration, Arrow/Home/End focus movement, or public selectable/menu-item
+      behavior.
+      Result: `selectable_controls/keyboard/popup_nav.rs` owns inherited popup menu nav item
+      registration and focus movement. `keyboard.rs` keeps shortcut and context-menu key handling.
 - [x] Split IMUI menu-family trigger menubar behavior into a private owner without changing
       active trigger install/population, click/shortcut activation, menubar trigger-row registry
       sync, patient-click timer wiring, ArrowDown/ArrowUp open behavior, or public menu facade
