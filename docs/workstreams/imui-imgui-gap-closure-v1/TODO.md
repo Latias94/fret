@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw round path-command paint dispatch into stroked and filled private
+      owners without changing public draw-list commands, round path paint routing, stroke/fill
+      painter calls, command fallthrough, or debug-draw smoke behavior.
+      Result: `paint_shapes/path_commands/round.rs` now only dispatches to `round/stroked.rs` and
+      `round/filled.rs`; those owners handle stroked circle/ngon/ellipse commands and filled
+      circle/ngon/ellipse commands respectively.
 - [x] Split IMUI debug-draw linear path-command paint dispatch into stroked and filled private
       owners without changing public draw-list commands, path paint routing, stroke/fill painter
       calls, command fallthrough, or debug-draw smoke behavior.

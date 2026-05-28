@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 debug-draw round path-command dispatch owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands/round.rs` now only
+dispatches to stroked and filled round command owners. `round/stroked.rs` owns circle/ngon/ellipse
+stroke paint routing, and `round/filled.rs` owns circle/ngon/ellipse fill routing.
+
 2026-05-28 debug-draw linear path-command dispatch owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands/linear.rs` now only
 dispatches to stroked and filled linear command owners. `linear/stroked.rs` owns line/polyline/rect/
