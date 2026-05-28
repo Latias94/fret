@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Child-Region Option Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI child-region option records split into chrome, body options, and resize
+private owners without changing public option type names, default chrome, scroll/layout fields,
+resize defaults, resize builder methods, root re-exports, child-region smoke behavior, or
+composition behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/containers/child_region.rs` is now a public re-export
+  hub.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/child_region/chrome.rs` owns
+  `ChildRegionChrome`.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/child_region/options.rs` owns
+  `ChildRegionOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/child_region/resize.rs` owns
+  `ChildRegionResizeXOptions`, `ChildRegionResizeYOptions`, and their builder methods.
+- `tools/gate_imui_workstream_source.py` now rejects these option bodies from drifting back into
+  `child_region.rs` and checks the three dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_child_region_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui composition child_region --no-fail-fast`:
+  pass.
+
 ## Table Option Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI table/row/cell option records split into private owners without changing
@@ -5803,8 +5837,9 @@ Evidence:
 - `ecosystem/fret-ui-kit/src/imui/options/containers/scroll.rs` now owns `ScrollOptions`.
 - `ecosystem/fret-ui-kit/src/imui/options/containers/list_box.rs` now owns `ListBoxOptions`,
   keeping list-box policy as layout/scroll/diagnostics semantics only.
-- `ecosystem/fret-ui-kit/src/imui/options/containers/child_region.rs` now owns
-  `ChildRegionChrome`, `ChildRegionOptions`, `ChildRegionResizeXOptions`, and
+- `ecosystem/fret-ui-kit/src/imui/options/containers/child_region.rs` is the child-region option
+  re-export hub. The 2026-05-28 child-region option owner split records the current child owners
+  for `ChildRegionChrome`, `ChildRegionOptions`, `ChildRegionResizeXOptions`, and
   `ChildRegionResizeYOptions`.
 - `ecosystem/fret-ui-kit/src/imui/options/containers.rs` is now a module/re-export index,
   preserving the existing public paths through `imui::options` and the root `imui` facade exports.

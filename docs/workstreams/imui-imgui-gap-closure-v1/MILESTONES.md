@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 child-region option owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/containers/child_region.rs` is now a public re-export hub.
+`child_region/chrome.rs` owns `ChildRegionChrome`, `child_region/options.rs` owns
+`ChildRegionOptions`, and `child_region/resize.rs` owns `ChildRegionResizeXOptions` /
+`ChildRegionResizeYOptions`.
+
 2026-05-28 table option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/collections/table.rs` is now a public re-export hub.
 `table/root.rs` owns `TableOptions`, `table/row.rs` owns `TableRowOptions`, and `table/cell.rs`

@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI child-region option records into chrome, body options, and resize private owners
+      without changing public option type names, default chrome, scroll/layout fields, resize
+      defaults, resize builder methods, root re-exports, child-region smoke behavior, or
+      composition behavior.
+      Result: `options/containers/child_region.rs` is now a public re-export hub.
+      `child_region/chrome.rs` owns `ChildRegionChrome`, `child_region/options.rs` owns
+      `ChildRegionOptions`, and `child_region/resize.rs` owns `ChildRegionResizeXOptions` and
+      `ChildRegionResizeYOptions`.
 - [x] Split IMUI table/row/cell option records into private owners without changing public option
       type names, default values, `TableOptions` debug formatting, horizontal-scroll defaults,
       row/cell background seams, root re-exports, table smoke behavior, or table composition
@@ -1098,8 +1106,8 @@ Last updated: 2026-05-28
       changing option type names, fields, defaults, or re-export paths.
       Result: `containers/flow.rs` owns item-flow/same-line/spacing/indent/grid options and the
       IMUI layout-token defaults, `containers/scroll.rs` owns scroll options,
-      `containers/list_box.rs` owns list-box options, and `containers/child_region.rs` owns
-      child-region chrome and resize option records. The root `containers.rs` file is now a thin
+      `containers/list_box.rs` owns list-box options, and `containers/child_region.rs` is the
+      current child-region option re-export hub. The root `containers.rs` file is now a thin
       module/re-export index. The 2026-05-27 flow-option owner split below further divides the
       flow owner.
 - [x] Split IMUI flow option defaults and records out of
