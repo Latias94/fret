@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 button/image control option owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/controls/button_image.rs` is now a public re-export hub.
+`button_image/button.rs` owns button direction/variant/options and `button_image/image.rs` owns
+image-item variant/options plus builder methods.
+
 2026-05-28 debug-draw rect path owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/rects.rs` is now a private re-export
 hub. `rects/plain.rs` owns plain closed rect path commands and `rects/rounded.rs` owns rounded-rect

@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI button/image control option types into button and image-item private owners
+      without changing public option type names, default values, image-item builder methods,
+      shortcut fields, facade imports, button smoke behavior, or image-item smoke behavior.
+      Result: `options/controls/button_image.rs` is now a public re-export hub.
+      `button_image/button.rs` owns `ButtonArrowDirection`, `ButtonVariant`, and `ButtonOptions`;
+      `button_image/image.rs` owns `ImageItemVariant` and `ImageItemOptions`.
 - [x] Split IMUI debug-draw rect path construction into plain-rect and rounded-rect private owners
       without changing clockwise rect command ordering, rounded-rect effective rounding clamp,
       per-corner sampling, fallback square points, path-builder call sites, path tests, or public

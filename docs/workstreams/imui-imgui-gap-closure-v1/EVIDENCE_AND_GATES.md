@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Button/Image Control Option Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI button/image control option types split into button and image-item private
+owners without changing public option type names, default values, image-item builder methods,
+shortcut fields, facade imports, button smoke behavior, or image-item smoke behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/controls/button_image.rs` is now a public re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/button_image/button.rs` owns
+  `ButtonArrowDirection`, `ButtonVariant`, and `ButtonOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/button_image/image.rs` owns `ImageItemVariant`
+  and `ImageItemOptions`.
+- `tools/gate_imui_workstream_source.py` now rejects these option bodies from drifting back into
+  `button_image.rs` and checks the two dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_image_item_smoke --no-fail-fast`:
+  pass.
+
 ## Debug-Draw Rect Path Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI debug-draw rect path construction split into plain-rect and rounded-rect
