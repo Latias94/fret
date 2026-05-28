@@ -454,6 +454,8 @@
     "ecosystem/fret-ui-kit/src/imui.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/basic_items.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core/disabled_scope.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/button_command.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs",

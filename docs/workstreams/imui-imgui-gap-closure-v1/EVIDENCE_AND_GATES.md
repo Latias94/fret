@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Facade-Core Disabled-Scope Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI facade-core disabled-scope behavior split into a private owner without
+changing `ImUiFacade` storage, keyed id helpers, `UiWriter` implementation, disabled-depth
+handling, pointer event swallowing, opacity dimming, focus traversal gating, scoped runtime
+preparation, or public facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core.rs` keeps the facade storage shape,
+  focus recording, keyed id helpers, and `UiWriter` implementation.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core/disabled_scope.rs` owns
+  `ImUiFacade::disabled_scope` behavior.
+- `tools/gate_imui_workstream_source.py` now rejects disabled-scope behavior from drifting back
+  into `facade_core.rs` and checks the dedicated disabled-scope owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui disabled_scope --no-fail-fast`: pass; disabled-scope hover
+  behavior test passed.
+- `cargo nextest run -p fret-imui control_disabled_state_changes_keep_outer_bounds_stable
+  --no-fail-fast`: pass; disabled control-geometry test passed.
+
 ## Table Builder Row/Cell Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI table builder row and cell methods split into private owners without changing

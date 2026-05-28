@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI facade-core disabled-scope behavior into a private owner without changing
+      `ImUiFacade` storage, keyed id helpers, `UiWriter` implementation, disabled-depth handling,
+      pointer event swallowing, opacity dimming, focus traversal gating, scoped runtime
+      preparation, or public facade behavior.
+      Result: `facade_writer/facade_core/disabled_scope.rs` owns `ImUiFacade::disabled_scope`
+      behavior. `facade_writer/facade_core.rs` keeps the facade storage shape, focus recording,
+      keyed id helpers, and `UiWriter` implementation.
 - [x] Split IMUI table builder row and cell methods into private owners without changing
       `ImUiTable` / `ImUiTableRow` public methods, row key scopes, row/cell test-id derivation,
       child IMUI mounting, cell packing, text-cell rendering, or table facade behavior.

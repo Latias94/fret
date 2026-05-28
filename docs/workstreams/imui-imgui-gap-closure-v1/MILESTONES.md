@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 facade-core disabled-scope owner-split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core/disabled_scope.rs` now owns
+`ImUiFacade::disabled_scope` behavior. `facade_writer/facade_core.rs` keeps the facade storage
+shape, focus recording, keyed id helpers, and `UiWriter` implementation.
+
 2026-05-28 table builder row/cell owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/builder/row_methods.rs` now owns `row` /
 `row_with_options` row collection and keyed row scopes, while
