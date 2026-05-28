@@ -10516,6 +10516,21 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-material3-exposed-dropdown-filtering",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-exposed-dropdown-filtering.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-exposed-dropdown-filtering"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-material3-menu-focus-dismiss",
       "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-menu-focus-dismiss.json",
       "required_capabilities": [

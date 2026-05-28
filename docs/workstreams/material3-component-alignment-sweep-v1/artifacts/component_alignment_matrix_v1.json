@@ -447,11 +447,11 @@
     {
       "id": "exposed_dropdown",
       "family": "field",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_diagnostics_aligned",
       "wave": "wave2_field_family",
       "default_owner_bias": "material_recipe",
       "packet_strategy": "field_follow_on_packet",
-      "first_gate_kind": "diag_filtering_popup",
+      "first_gate_kind": "diag_filtering_popup_promoted",
       "selector_status": "inherits_autocomplete_selector_surface",
       "selector_artifact": "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
       "stable_part_ids": [
@@ -468,12 +468,13 @@
       ],
       "packet_artifacts": [
         "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md",
+        "docs/workstreams/material3-exposed-dropdown-diagnostics-packet-v1/artifacts/exposed_dropdown_diagnostics_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe owns committed selection, editable query, trailing icon toggle, and blur revert",
         "material_foundation is inherited through Autocomplete/TextField field chrome",
-        "diagnostics/test_harness owned stale trailing-icon/listbox/option selector drift repaired by this packet",
+        "diagnostics/test_harness covers promoted gallery filtering popup, listbox bounds, option selector presence/absence, and focused state-model gates",
         "no mechanism gap found"
       ]
     },
