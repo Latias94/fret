@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI combo trigger visual props/a11y/chrome assembly into a private owner without
+      changing ComboBox semantics, trigger activation behavior, open/close toggling, shortcut
+      handling, preview/label rendering, or public combo facade behavior.
+      Result: `combo_controls/trigger/visual.rs` owns the trigger props, chrome, children, and
+      a11y label helper. `combo_controls/trigger.rs` keeps the behavior installation and visual
+      owner dispatch.
 - [x] Split IMUI popup-menu overlay request assembly into a private request owner without changing
       overlay id/root naming, popup open model forwarding, trigger fallback, auto-focus targets,
       focus-outside submenu preservation, menubar close-auto-focus suppression, submenu pointer

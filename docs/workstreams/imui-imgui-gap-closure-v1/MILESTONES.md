@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 combo trigger visual owner-split result:
+`ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/visual.rs` now owns ComboBox trigger props,
+field chrome lookup, visual children assembly, and the a11y label helper. `trigger.rs` keeps
+behavior installation and visual-owner dispatch, while public combo behavior remains unchanged.
+
 2026-05-28 popup-menu overlay request owner-split result:
 `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/request.rs` now owns popup-menu open model
 lookup, trigger fallback, auto-focus target construction, focus-outside submenu preservation,

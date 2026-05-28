@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Combo Trigger Visual Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI combo trigger visual props, chrome, and children assembly split into a
+private visual owner without changing ComboBox semantics, trigger activation behavior,
+open/close toggling, shortcut handling, preview/label rendering, or public combo facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger.rs` keeps trigger behavior installation
+  and visual-owner dispatch.
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/visual.rs` owns trigger props, field
+  chrome lookup, visual children assembly, and the a11y label helper.
+- `tools/gate_imui_workstream_source.py` now rejects trigger props/chrome/children assembly from
+  drifting back into `trigger.rs` and checks the dedicated visual owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib combo_trigger_a11y_label --no-fail-fast`:
+  pass; 2 combo trigger a11y tests passed.
+- `cargo nextest run -p fret-imui models_combo --no-fail-fast`: pass; 11 combo facade behavior
+  tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Popup Menu Overlay Request Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI popup-menu overlay request assembly split into a private request owner without
