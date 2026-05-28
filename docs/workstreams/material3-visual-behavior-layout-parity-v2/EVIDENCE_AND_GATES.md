@@ -61,6 +61,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_bar_default_width_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_a11y_relations_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_multiline_line_limits_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_motion_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -291,6 +292,23 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     limits to chrome min/max height, and refreshes TextField headless goldens for the existing
     active-indicator layer split.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_multiline_line_limits_packet_v2.md`
+- 2026-05-28: M3PV2-035 closed TextField first-frame floating-label motion drift.
+  - Sources: Compose Material3 `TextFieldTransitionScope` uses `updateTransition(inputState)` and
+    `MotionSchemeKeyTokens.FastSpatial` for `LabelProgress`; active indicator width/color use
+    `FastSpatial` / `FastEffects` token specs.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --test text_field_hover text_field_floating_label_animates_between_idle_and_focused`
+    failed because outlined TextField label y jumped from `18px` idle to the `6px` focused endpoint
+    on the first focus frame.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --test text_field_hover text_field_floating_label_animates_between_idle_and_focused filled_text_field_focus_uses_focus_indicator_thickness`
+  - `cargo nextest run -p fret-ui-material3 --test text_field_hover`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: TextField now initializes floating-label spring state on the idle frame, first-focus
+    label samples land between idle and focused geometry for outlined/filled plus single-line and
+    multiline branches, and filled active-indicator thickness is proven to animate between `1px`
+    and `2px` before settling.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_motion_packet_v2.md`
 
 ## Proof Note Template
 

@@ -48,6 +48,10 @@ and `line_limits` builders and maps visible line limits to Material chrome heigh
 closed a `fret-ui` TextArea mechanism gap by adding max-height support and measuring bound model
 text during declarative layout. TextField headless goldens were refreshed for the intentional
 active-indicator layer representation used by the current implementation.
+M3PV2-035 is complete: TextField floating-label motion now initializes on the idle frame rather
+than snapping on first focus. A shared TextField motion-frame helper drives single-line and
+multiline branches, and fixed-frame tests now prove first-frame label movement plus active-indicator
+thickness interpolation before settle.
 
 ## Decisions
 
@@ -59,11 +63,9 @@ active-indicator layer representation used by the current implementation.
 
 ## Next Recommended Action
 
-Continue M3PV2-020 with another field-family packet. Good next candidates are fixed-timestep
-popup/field/picker/search motion or another high-priority field-family residual from the matrix.
-Do not mark motion axes complete from settled-geometry evidence; TextField, Select,
-Autocomplete, ExposedDropdown, DatePicker, TimePicker, SearchBar, and SearchView still need
-transition packets.
+Continue M3PV2-020 with another field-family packet. Good next candidates are Select,
+Autocomplete/ExposedDropdown, SearchBar/SearchView, DatePicker, or TimePicker fixed-timestep
+motion. Do not mark those motion axes complete from settled-geometry evidence alone.
 
 ## Useful Gates
 

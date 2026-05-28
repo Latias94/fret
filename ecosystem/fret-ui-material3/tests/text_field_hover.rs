@@ -768,6 +768,75 @@ fn settled_text_field_label_y(
     label.origin.y.0 - chrome.origin.y.0
 }
 
+fn text_field_focus_label_y_samples(
+    variant: fret_ui_material3::TextFieldVariant,
+    multiline: bool,
+) -> Vec<f32> {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let value = app.models_mut().insert(String::new());
+    let value_model = value.clone();
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        let value = value_model.clone();
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let mut field = fret_ui_material3::TextField::new(value)
+                .variant(variant)
+                .label("Email")
+                .placeholder("name@example.com")
+                .test_id("tf");
+            if multiline {
+                field = field.multiline(true).min_lines(3);
+            }
+            let field = field.into_element(cx);
+
+            let mut fixed = ContainerProps::default();
+            fixed.layout.size.width = Length::Px(Px(240.0));
+            fixed.layout.size.height = if multiline {
+                Length::Px(Px(104.0))
+            } else {
+                Length::Px(Px(56.0))
+            };
+            vec![cx.container(fixed, move |_cx| vec![field])]
+        })
+    };
+
+    let mut samples = Vec::new();
+    let root0 = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root0);
+    layout_and_paint(&mut ui, &mut app, &mut services, bounds);
+    let chrome0 = visual_bounds_by_test_id(&ui, "tf.chrome");
+    let label0 = visual_bounds_by_test_id(&ui, "tf.label");
+    samples.push(label0.origin.y.0 - chrome0.origin.y.0);
+
+    let text_field_node = semantics_node_id_by_test_id(&ui, "tf");
+    ui.set_focus(Some(text_field_node));
+
+    for _ in 0..64 {
+        app.advance_frame();
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        layout_and_paint(&mut ui, &mut app, &mut services, bounds);
+
+        let chrome = visual_bounds_by_test_id(&ui, "tf.chrome");
+        let label = visual_bounds_by_test_id(&ui, "tf.label");
+        samples.push(label.origin.y.0 - chrome.origin.y.0);
+    }
+
+    samples
+}
+
 #[test]
 fn text_field_leading_icon_offsets_label_and_supporting_text() {
     for (variant, label) in [
@@ -808,6 +877,50 @@ fn text_field_floating_label_geometry_tracks_idle_focus_and_populated_states() {
         assert!(
             focused_y < idle_y && populated_y < idle_y,
             "expected {label} floating label to move upward from idle"
+        );
+    }
+}
+
+#[test]
+fn text_field_floating_label_animates_between_idle_and_focused() {
+    for (variant, multiline, label) in [
+        (
+            fret_ui_material3::TextFieldVariant::Outlined,
+            false,
+            "outlined single-line",
+        ),
+        (
+            fret_ui_material3::TextFieldVariant::Filled,
+            false,
+            "filled single-line",
+        ),
+        (
+            fret_ui_material3::TextFieldVariant::Outlined,
+            true,
+            "outlined multiline",
+        ),
+        (
+            fret_ui_material3::TextFieldVariant::Filled,
+            true,
+            "filled multiline",
+        ),
+    ] {
+        let samples = text_field_focus_label_y_samples(variant, multiline);
+        let idle_y = samples[0];
+        let first_focus_y = samples[1];
+        let settled_y = *samples.last().expect("expected focus samples");
+
+        assert!(
+            settled_y < idle_y - 0.5,
+            "expected {label} floating label to settle above idle: idle={idle_y}, settled={settled_y}"
+        );
+        assert!(
+            first_focus_y < idle_y - 0.1,
+            "expected {label} floating label to start moving on the first focus frame: idle={idle_y}, first={first_focus_y}"
+        );
+        assert!(
+            first_focus_y > settled_y + 0.5,
+            "expected {label} floating label to animate instead of snapping to the focused endpoint: first={first_focus_y}, settled={settled_y}"
         );
     }
 }
@@ -1124,6 +1237,7 @@ fn filled_text_field_focus_uses_focus_indicator_thickness() {
         ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
         ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
 
+        let mut first_focus_indicator_height: Option<i32> = None;
         let mut settled: Option<i32> = None;
         for frame in 0..64 {
             app.advance_frame();
@@ -1141,6 +1255,10 @@ fn filled_text_field_focus_uses_focus_indicator_thickness() {
             let indicator1 = find_filled_active_indicator(&quads1, container1)
                 .expect("expected filled text field active indicator");
 
+            if first_focus_indicator_height.is_none() {
+                first_focus_indicator_height = Some(indicator1.rect.h);
+            }
+
             if frame < 28 {
                 continue;
             }
@@ -1155,6 +1273,12 @@ fn filled_text_field_focus_uses_focus_indicator_thickness() {
             }
         }
 
+        let first_focus_indicator_height =
+            first_focus_indicator_height.expect("expected first focus indicator frame");
+        assert!(
+            first_focus_indicator_height > 10 && first_focus_indicator_height < 20,
+            "expected focused indicator to animate between idle and focused thickness ({label}), got {first_focus_indicator_height}"
+        );
         assert_eq!(
             settled.expect("expected focused indicator thickness after animations settle"),
             20,

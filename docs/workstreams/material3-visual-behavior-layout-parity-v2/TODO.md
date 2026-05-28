@@ -256,6 +256,28 @@ Task IDs use `M3PV2-*`.
   highest-priority field-family residual. TextField motion remains open, and soft-wrap-derived
   multiline line counts are a future TextArea intrinsic-measurement refinement.
 
+- [x] M3PV2-035 [owner=codex] [deps=M3PV2-034] [scope=ecosystem/fret-ui-material3/src/text_field.rs,ecosystem/fret-ui-material3/tests/text_field_hover.rs,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close TextField floating-label/indicator motion drift by proving first-frame fixed-clock
+  transition behavior for focused TextFields instead of only settled geometry.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --test text_field_hover text_field_floating_label_animates_between_idle_and_focused`
+  failed because the outlined label snapped from `18px` idle y to the `6px` focused endpoint on the
+  first focus frame; `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --test text_field_hover text_field_floating_label_animates_between_idle_and_focused filled_text_field_focus_uses_focus_indicator_thickness`;
+  `cargo nextest run -p fret-ui-material3 --test text_field_hover`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`;
+  workstream JSON/catalog/diff checks.
+  Review: DONE. This found a Material recipe motion-state initialization gap: the border and
+  placeholder animators initialized on the idle frame, but the floating-label spring was only
+  initialized when its target changed. First focus therefore reset the label to the target instead
+  of animating. The fix extracts a shared TextField motion frame helper and uses it for both
+  single-line and multiline TextField branches.
+  Evidence: `artifacts/material3_text_field_motion_packet_v2.md`.
+  Handoff: TextField motion now has a v2 fixed-frame proof for label movement and active-indicator
+  thickness. Continue M3PV2-020 with Select/Autocomplete/Search/picker motion, or move to the next
+  highest-priority component family.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]
