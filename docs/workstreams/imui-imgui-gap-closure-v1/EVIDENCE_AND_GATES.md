@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Facade Button-Action Inherent Wrapper Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI facade button action inherent wrappers split into a private owner without
+changing plain button wrappers, command button forwarding, action dispatch, payload action dispatch,
+focusable recording, response projection, or public facade method names.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs` keeps ordinary button inherent
+  wrappers and command button wiring.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/action_methods.rs` owns
+  `action_button`, `action_button_with_options`, `action_payload_button`, and
+  `action_payload_button_with_options` inherent wrappers.
+- `tools/gate_imui_workstream_source.py` now rejects action/payload wrappers from drifting back
+  into `button_actions.rs` and checks the dedicated action-method owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui button_command button_shortcuts --no-fail-fast`: pass; 3
+  button/command shortcut tests passed.
+
 ## Text-Picker Core Input-Root Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI text-picker core input-root phase split into a private owner without changing

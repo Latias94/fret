@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI facade button action inherent wrappers into a private owner without changing plain
+      button wrappers, command button forwarding, action dispatch, payload action dispatch,
+      focusable recording, response projection, or public facade method names.
+      Result: `facade_writer/button_actions/action_methods.rs` owns `action_button`,
+      `action_button_with_options`, `action_payload_button`, and
+      `action_payload_button_with_options` inherent wrappers. `facade_writer/button_actions.rs`
+      keeps ordinary button wrappers and command button wiring.
 - [x] Split IMUI text-picker core input-root phase into a private owner without changing model
       reads, candidate filtering, keyboard snapshot preparation, popup snapshot reads, expanded
       semantics, input-root request construction, keyboard-handler installation, popup open

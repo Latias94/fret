@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 facade button-action inherent wrapper owner-split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/action_methods.rs` now owns
+`action_button`, `action_button_with_options`, `action_payload_button`, and
+`action_payload_button_with_options` inherent wrappers. `facade_writer/button_actions.rs` keeps
+ordinary button wrappers and command button wiring.
+
 2026-05-28 text-picker core input-root owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core/input_root.rs` now owns prepared
 input-root request construction, root mounting, response extraction, and popup item test-id base
