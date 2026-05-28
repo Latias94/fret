@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "slug": "material3-chip-set-roving-packet-v1",
+  "title": "Material 3 ChipSet Roving Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "follow_on",
+  "problem": "Closed the ChipSet matrix residual by recording direct root-selector, group semantics, roving focus, trailing-action focus handoff, and chip visual diagnostics evidence without moving the policy into kit or changing crates/*.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-chip-set-roving-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-chip-set-roving-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-chip-set-roving-packet-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-chip-set-roving-packet-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-chip-set-roving-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-chip-set-roving-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the focused ChipSet selector and roving-focus gates.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_segmented_buttons_and_chips_expose_stable_part_test_ids",
+      "cargo nextest run -p fret-ui-material3 --test radio_alignment chip_set_roving_treats_trailing_action_focus_as_active_chip"
+    ]
+  },
+  "gates": [
+    {
+      "name": "chip-set-selector-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_segmented_buttons_and_chips_expose_stable_part_test_ids"
+    },
+    {
+      "name": "chip-set-roving-trailing-action",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment chip_set_roving_treats_trailing_action_focus_as_active_chip"
+    },
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-chip-set-roving-packet-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "component-matrix-json",
+      "command": "python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-material3/src/chip_set.rs",
+    "ecosystem/fret-ui-material3/src/chip.rs",
+    "ecosystem/fret-ui-material3/src/filter_chip.rs",
+    "ecosystem/fret-ui-material3/src/input_chip.rs",
+    "ecosystem/fret-ui-material3/src/suggestion_chip.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "ecosystem/fret-ui-material3/tests/radio_alignment.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/material3/state_matrix.rs",
+    "docs/workstreams/material3-chip-visual-diagnostics-packet-v1/artifacts/chip_visual_diagnostics_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+    "docs/workstreams/material3-chip-set-roving-packet-v1/artifacts/chip_set_roving_packet_v1.md",
+    "repo-ref/compose-multiplatform-core/compose/material3/material3/samples/src/main/java/androidx/compose/material3/samples/ChipSamples.kt",
+    "repo-ref/base-ui/packages/react/src/toolbar/root/ToolbarRoot.tsx",
+    "repo-ref/base-ui/packages/react/src/internals/composite/root/useCompositeRoot.ts"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "return_to_material3_sweep",
+    "notes": "ChipSet is closed for current root selector, group semantics, roving focus, and trailing-action handoff evidence. Extract to fret-ui-kit only after another design-system consumer proves the same policy should be shared."
+  }
+}

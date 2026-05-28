@@ -306,9 +306,9 @@
     {
       "id": "chip_set",
       "family": "choice_control",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_roving_semantics_aligned",
       "wave": "wave4_choice_controls",
-      "default_owner_bias": "kit_policy",
+      "default_owner_bias": "material_recipe",
       "packet_strategy": "group_semantics_packet",
       "first_gate_kind": "semantics_roving_focus",
       "selector_status": "choice_selector_ready",
@@ -316,12 +316,13 @@
         "chip_set"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-chip-set-roving-packet-v1/artifacts/chip_set_roving_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe owns chip-set group semantics, gap/wrap defaults, roving focus, and chip tab-stop delegation",
-        "test_harness covers roving behavior where trailing-action focus still counts as the active chip",
-        "kit_policy follow-on only if another design system needs the same chip-set roving policy",
+        "diagnostics/test_harness covers the stable root selector, chip visual gallery surface, and roving behavior where trailing-action focus still counts as the active chip",
+        "kit_policy follow-on only if another design-system consumer needs the same chip-set roving policy",
         "no mechanism gap found"
       ]
     },
