@@ -75,6 +75,9 @@ goldens were refreshed for the current active-indicator and selectable option ro
 M3PV2-042 is complete: DatePicker modal motion is now v2-covered for the current docked/modal
 recipe surface. The packet extracted `foundation::modal_motion`, kept Dialog on the same modal
 fade/rise/scale transform, and moved DatePickerDialog off its old pure-scale panel animation.
+M3PV2-043 is complete: TimePickerDialog modal motion now uses the same shared modal helper for
+both initial dial and input modes. TimePicker's overall motion axis remains open because the clock
+face selector movement and hour/minute crossfade still snap instead of using Compose motion.
 
 ## Decisions
 
@@ -86,8 +89,7 @@ fade/rise/scale transform, and moved DatePickerDialog off its old pure-scale pan
 
 ## Next Recommended Action
 
-Continue M3PV2-020 with TimePicker fixed-timestep motion. TimePickerDialog still has component-local
-modal panel motion and should likely reuse `foundation::modal_motion`.
+Continue M3PV2-020 with TimePicker clock-face selector/crossfade fixed-timestep motion.
 
 ## Useful Gates
 

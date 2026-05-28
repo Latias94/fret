@@ -423,6 +423,26 @@ Task IDs use `M3PV2-*`.
   Handoff: DatePicker motion is now v2-covered for the current docked/modal recipe surface.
   Continue M3PV2-020 with TimePicker modal/input/dial fixed-timestep motion.
 
+- [x] M3PV2-043 [owner=codex] [deps=M3PV2-029,M3PV2-042] [scope=ecosystem/fret-ui-material3/src/time_picker.rs,ecosystem/fret-ui-material3/tests/time_picker_motion.rs,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close TimePickerDialog modal panel drift for dial and input initial modes by reusing the
+  shared Material modal fade/rise/scale transform.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --test time_picker_motion`
+  failed because the dial-mode modal faded but did not rise on the first open frame; green gates:
+  `cargo nextest run -p fret-ui-material3 --test time_picker_motion`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_exposes_stable_part_test_ids material3_time_picker_uses_compose_aligned_accessibility_labels material3_time_picker_uses_material_string_registry`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_clock_dial_drag_updates_time time_picker_selector_keyboard_arrows_step_time time_picker_time_input_replaces_and_auto_advances_hour time_picker_time_input_rejects_invalid_values_and_recovers material3_headless_time_picker_suite_goldens_v1`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`;
+  docs/catalog gates: `python -m json.tool` for the workstream and matrix JSON,
+  `python tools/check_workstream_catalog.py`, and `git diff --check`.
+  Review: DONE. This removes the TimePickerDialog copy of the old pure `0.95 -> 1.0` scale and
+  routes modal panel motion through `foundation::modal_motion` for both initial display modes.
+  `time_picker.motion` remains open because Compose's clock-face selector motion and hour/minute
+  crossfade are still not modeled.
+  Evidence: `artifacts/material3_time_picker_modal_motion_packet_v2.md`.
+  Handoff: Continue M3PV2-020 with TimePicker clock-face selector/crossfade fixed-frame motion.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]

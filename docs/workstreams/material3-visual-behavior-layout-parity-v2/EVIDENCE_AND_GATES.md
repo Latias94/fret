@@ -418,6 +418,21 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     transform, Dialog reuses it without golden drift, and DatePickerDialog uses it instead of the
     old component-local pure scale.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_date_picker_modal_motion_packet_v2.md`
+- 2026-05-28: M3PV2-043 closed TimePickerDialog modal motion.
+  - Sources: Compose Material3 TimePickerDialog is a modal dialog surface; Compose TimePicker still
+    defines separate clock-face selector spatial motion and hour/minute crossfade.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --test time_picker_motion`
+    failed because TimePickerDialog faded but did not rise on the first open frame.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --test time_picker_motion`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_exposes_stable_part_test_ids material3_time_picker_uses_compose_aligned_accessibility_labels material3_time_picker_uses_material_string_registry`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_clock_dial_drag_updates_time time_picker_selector_keyboard_arrows_step_time time_picker_time_input_replaces_and_auto_advances_hour time_picker_time_input_rejects_invalid_values_and_recovers material3_headless_time_picker_suite_goldens_v1`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Workstream JSON, matrix JSON, catalog, and `git diff --check` gates passed.
+  - Result: TimePickerDialog now uses `foundation::modal_motion` for dial and input initial modes.
+    The broader TimePicker motion axis remains open for clock-face selector/crossfade motion.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_modal_motion_packet_v2.md`
 
 ## Proof Note Template
 

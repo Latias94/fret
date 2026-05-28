@@ -72,5 +72,6 @@ git diff --check
 
 - Future DatePicker display-mode and year-picker UI should wire Compose-style spatial/effects
   transitions when those surfaces exist in Fret. They are not part of the current public recipe.
-- TimePickerDialog still uses its own modal panel motion and should move to the shared helper in a
-  follow-on TimePicker motion packet.
+- TimePickerDialog modal motion is covered later by
+  `material3_time_picker_modal_motion_packet_v2.md`; its clock-face selector/crossfade motion still
+  needs a dedicated packet.

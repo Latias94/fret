@@ -77,7 +77,9 @@ cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D
 
 ## Residual Risk
 
-- TimePicker motion remains open; this packet only proves settled display/input/dial geometry.
+- TimePicker modal open/close motion is covered later by
+  `material3_time_picker_modal_motion_packet_v2.md`; clock-face selector/crossfade motion remains
+  open. This packet only proves settled display/input/dial geometry.
 - Horizontal landscape TimePicker layout is not separately proven by this vertical/default packet.
 - Touch target and dial label behavior were already covered by existing automation/a11y gates; this
   packet does not add a new pointer interaction matrix.

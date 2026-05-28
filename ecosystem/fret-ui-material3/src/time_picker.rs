@@ -39,6 +39,7 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
+use crate::foundation::modal_motion::material_modal_panel_transform;
 use crate::foundation::strings::{
     material_time_picker_cancel_label, material_time_picker_confirm_label,
     material_time_picker_dismiss_label, material_time_picker_hour_selection_label,
@@ -646,8 +647,8 @@ impl TimePickerDialog {
                             let stacked = cx.flex(align, move |_cx| vec![trapped]);
 
                             let opacity = transition.progress;
-                            let scale = 0.95 + 0.05 * transition.progress;
-                            let transform = fret_core::Transform2D::scale_uniform(scale);
+                            let transform =
+                                material_modal_panel_transform(cx.bounds, transition.progress);
                             let panel = fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
                                 cx,
                                 opacity,
