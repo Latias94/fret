@@ -56,6 +56,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_selected_item_style_layout_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_autocomplete_exposed_dropdown_selectable_item_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_date_picker_calendar_grid_layout_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_display_input_layout_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -186,6 +187,25 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     centered through the shared Material interactive-size foundation, and DatePicker headless
     goldens were refreshed for the intentional layout shift.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_date_picker_calendar_grid_layout_packet_v2.md`
+- 2026-05-28: M3PV2-029 closed TimePicker display/input/dial layout drift.
+  - Sources: Compose Material3 `TimePicker.kt` uses `96x80` time selector containers, a fixed
+    `24x80` display separator slot, a vertical period selector sized `52x80` with
+    `PeriodToggleMargin = 12.dp`, a `256dp` clock dial centered under the display row, and
+    `TimeInput` fields sized `96x72` with a `52x72` period selector.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_exposes_stable_part_test_ids`
+    failed because the period selector was beside the dial (`y = 304px`) instead of aligned to the
+    display row (`y = 120px`).
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_exposes_stable_part_test_ids material3_time_picker_uses_compose_aligned_accessibility_labels material3_time_picker_uses_material_string_registry`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_time_picker_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --lib time_picker`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: TimePicker now renders display mode as fixed hour selector, fixed separator, fixed
+    minute selector, 12px margin, and period selector in one row; the clock dial is centered in the
+    chrome; input mode uses the same fixed separator and 12px period margin with top alignment.
+    TimePicker headless goldens were refreshed for the intentional layout shift.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_display_input_layout_packet_v2.md`
 
 ## Proof Note Template
 

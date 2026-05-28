@@ -29,6 +29,10 @@ M3PV2-028 is complete: DatePicker calendar content now uses the Material 12px ho
 48px interactive weekday/date slots, with visual date chrome centered through the shared
 `foundation::interactive_size` helper. Docked and modal automation gates prove weekday/date-cell
 column alignment, and DatePicker headless goldens were refreshed for the intentional layout shift.
+M3PV2-029 is complete: TimePicker display mode now keeps the period selector in the time display
+row with the Material 12px margin, uses fixed 96px selector and 24px separator slots, centers the
+clock dial in the picker chrome, and applies the same fixed separator/period-row structure to input
+mode. TimePicker headless goldens were refreshed for the intentional layout shift.
 
 ## Decisions
 
@@ -41,9 +45,10 @@ column alignment, and DatePicker headless goldens were refreshed for the intenti
 ## Next Recommended Action
 
 Continue M3PV2-020 with another field-family packet. Good next candidates are a dedicated
-TimePicker dial/input layout packet, a dedicated multiline TextField scenario, or fixed-timestep
-popup/field motion. Do not mark motion axes complete from settled-geometry evidence; TextField,
-Select, Autocomplete, ExposedDropdown, DatePicker, and TimePicker still need transition packets.
+multiline TextField scenario, SearchBar/SearchView field layout and a11y, or fixed-timestep
+popup/field/picker motion. Do not mark motion axes complete from settled-geometry evidence;
+TextField, Select, Autocomplete, ExposedDropdown, DatePicker, and TimePicker still need transition
+packets.
 
 ## Useful Gates
 

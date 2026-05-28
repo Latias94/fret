@@ -171,6 +171,12 @@ pub(crate) fn time_selector_separator_color(theme: &Theme) -> Color {
     )
 }
 
+pub(crate) fn display_separator_width(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.sys.fret.material.time-picker.display-separator.width")
+        .unwrap_or(Px(24.0))
+}
+
 pub(crate) fn time_selector_label_color(
     theme: &Theme,
     selected: bool,

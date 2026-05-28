@@ -71,140 +71,6 @@
           "kind": "push_clip_r_rect"
         },
         {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "quad",
-          "order": 0
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "quad",
-          "order": 0
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
           "kind": "quad",
           "order": 0
         },
@@ -220,6 +86,140 @@
         },
         {
           "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "text",
@@ -266,7 +266,7 @@
         {
           "order": 0,
           "rect": [
-            480,
+            680,
             1120,
             960,
             800
@@ -293,7 +293,7 @@
         {
           "order": 0,
           "rect": [
-            1700,
+            1880,
             1120,
             960,
             800
@@ -320,7 +320,61 @@
         {
           "order": 0,
           "rect": [
-            480,
+            2960,
+            1120,
+            520,
+            800
+          ],
+          "background": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            80,
+            80,
+            80,
+            80
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            2970,
+            1130,
+            500,
+            390
+          ],
+          "background": [
+            100,
+            44,
+            136,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            800,
             2080,
             2560,
             2560
@@ -347,7 +401,7 @@
         {
           "order": 0,
           "rect": [
-            560,
+            880,
             3120,
             480,
             480
@@ -369,60 +423,6 @@
             240,
             240,
             240
-          ]
-        },
-        {
-          "order": 0,
-          "rect": [
-            3160,
-            2960,
-            520,
-            800
-          ],
-          "background": [
-            0,
-            0,
-            0,
-            0
-          ],
-          "border": [
-            10,
-            10,
-            10,
-            10
-          ],
-          "corner_radii": [
-            80,
-            80,
-            80,
-            80
-          ]
-        },
-        {
-          "order": 0,
-          "rect": [
-            3170,
-            2970,
-            500,
-            390
-          ],
-          "background": [
-            100,
-            44,
-            136,
-            1000
-          ],
-          "border": [
-            0,
-            0,
-            0,
-            0
-          ],
-          "corner_radii": [
-            0,
-            0,
-            0,
-            0
           ]
         }
       ]
@@ -582,7 +582,7 @@
         {
           "order": 0,
           "rect": [
-            1700,
+            1680,
             1120,
             960,
             720
@@ -609,8 +609,8 @@
         {
           "order": 0,
           "rect": [
-            2740,
-            1190,
+            2760,
+            1120,
             520,
             720
           ],
@@ -636,8 +636,8 @@
         {
           "order": 0,
           "rect": [
-            2750,
-            1200,
+            2770,
+            1130,
             500,
             350
           ],
@@ -754,140 +754,6 @@
           "kind": "push_clip_r_rect"
         },
         {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "quad",
-          "order": 0
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
-          "kind": "text",
-          "order": 0
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "pop_clip"
-        },
-        {
-          "kind": "quad",
-          "order": 0
-        },
-        {
-          "kind": "push_clip_r_rect"
-        },
-        {
           "kind": "quad",
           "order": 0
         },
@@ -903,6 +769,140 @@
         },
         {
           "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "text",
@@ -1026,7 +1026,7 @@
         {
           "order": 0,
           "rect": [
-            2700,
+            2900,
             1560,
             960,
             800
@@ -1053,7 +1053,7 @@
         {
           "order": 0,
           "rect": [
-            3920,
+            4100,
             1560,
             960,
             800
@@ -1080,7 +1080,61 @@
         {
           "order": 0,
           "rect": [
-            2700,
+            5180,
+            1560,
+            520,
+            800
+          ],
+          "background": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            80,
+            80,
+            80,
+            80
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            5190,
+            1570,
+            500,
+            390
+          ],
+          "background": [
+            100,
+            44,
+            136,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            3020,
             2520,
             2560,
             2560
@@ -1107,7 +1161,7 @@
         {
           "order": 0,
           "rect": [
-            2780,
+            3100,
             3560,
             480,
             480
@@ -1129,60 +1183,6 @@
             240,
             240,
             240
-          ]
-        },
-        {
-          "order": 0,
-          "rect": [
-            5380,
-            3400,
-            520,
-            800
-          ],
-          "background": [
-            0,
-            0,
-            0,
-            0
-          ],
-          "border": [
-            10,
-            10,
-            10,
-            10
-          ],
-          "corner_radii": [
-            80,
-            80,
-            80,
-            80
-          ]
-        },
-        {
-          "order": 0,
-          "rect": [
-            5390,
-            3410,
-            500,
-            390
-          ],
-          "background": [
-            100,
-            44,
-            136,
-            1000
-          ],
-          "border": [
-            0,
-            0,
-            0,
-            0
-          ],
-          "corner_radii": [
-            0,
-            0,
-            0,
-            0
           ]
         }
       ]
@@ -1440,7 +1440,7 @@
         {
           "order": 0,
           "rect": [
-            3920,
+            3900,
             1560,
             960,
             720
@@ -1467,8 +1467,8 @@
         {
           "order": 0,
           "rect": [
-            4960,
-            1630,
+            4980,
+            1560,
             520,
             720
           ],
@@ -1494,8 +1494,8 @@
         {
           "order": 0,
           "rect": [
-            4970,
-            1640,
+            4990,
+            1570,
             500,
             350
           ],

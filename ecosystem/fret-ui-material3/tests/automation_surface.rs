@@ -2592,6 +2592,7 @@ fn material3_time_picker_exposes_stable_part_test_ids() {
             "m3-time-picker.mode-toggle",
             "m3-time-picker.hour-selector",
             "m3-time-picker.hour-selector.chrome",
+            "m3-time-picker.separator",
             "m3-time-picker.minute-selector",
             "m3-time-picker.minute-selector.chrome",
             "m3-time-picker.clock-dial",
@@ -2625,6 +2626,63 @@ fn material3_time_picker_exposes_stable_part_test_ids() {
                 "expected live TimePicker hour dial label test_id {id}"
             );
         }
+
+        let chrome = live_test_id_layout_bounds(&ui, &app, window, "m3-time-picker.chrome");
+        let hour_bounds =
+            live_test_id_layout_bounds(&ui, &app, window, "m3-time-picker.hour-selector");
+        let separator_bounds =
+            live_test_id_layout_bounds(&ui, &app, window, "m3-time-picker.separator");
+        let minute_bounds =
+            live_test_id_layout_bounds(&ui, &app, window, "m3-time-picker.minute-selector");
+        let period_bounds = live_test_id_layout_bounds(&ui, &app, window, "m3-time-picker.period");
+        let dial_bounds =
+            live_test_id_layout_bounds(&ui, &app, window, "m3-time-picker.clock-dial");
+        assert_px_close(
+            hour_bounds.size.width.0,
+            96.0,
+            "time picker hour selector width",
+        );
+        assert_px_close(
+            hour_bounds.size.height.0,
+            80.0,
+            "time picker hour selector height",
+        );
+        assert_px_close(
+            separator_bounds.size.width.0,
+            24.0,
+            "time picker display separator width",
+        );
+        assert_px_close(
+            separator_bounds.size.height.0,
+            80.0,
+            "time picker display separator height",
+        );
+        assert_px_close(
+            separator_bounds.origin.x.0 - (hour_bounds.origin.x.0 + hour_bounds.size.width.0),
+            0.0,
+            "time picker display separator follows hour selector",
+        );
+        assert_px_close(
+            minute_bounds.origin.x.0
+                - (separator_bounds.origin.x.0 + separator_bounds.size.width.0),
+            0.0,
+            "time picker minute selector follows display separator",
+        );
+        assert_px_close(
+            period_bounds.origin.y.0,
+            hour_bounds.origin.y.0,
+            "time picker period selector aligns with display row",
+        );
+        assert_px_close(
+            period_bounds.origin.x.0 - (minute_bounds.origin.x.0 + minute_bounds.size.width.0),
+            12.0,
+            "time picker period selector display-row margin",
+        );
+        assert_px_close(
+            rect_center_x(dial_bounds),
+            rect_center_x(chrome),
+            "time picker clock dial is centered in container",
+        );
 
         let minute_selector = semantics_node_id_by_test_id(&ui, "m3-time-picker.minute-selector")
             .expect("expected TimePicker minute selector semantics node");
@@ -2707,6 +2765,7 @@ fn material3_time_picker_exposes_stable_part_test_ids() {
             "m3-time-picker-input.input.hour",
             "m3-time-picker-input.input.hour.chrome",
             "m3-time-picker-input.input.hour.supporting-text",
+            "m3-time-picker-input.input.separator",
             "m3-time-picker-input.input.minute",
             "m3-time-picker-input.input.minute.chrome",
             "m3-time-picker-input.input.minute.supporting-text",
@@ -2719,6 +2778,51 @@ fn material3_time_picker_exposes_stable_part_test_ids() {
                 "expected live TimePicker input part test_id {id}"
             );
         }
+
+        let input_hour =
+            live_test_id_layout_bounds(&ui, &app, window, "m3-time-picker-input.input.hour");
+        let input_separator =
+            live_test_id_layout_bounds(&ui, &app, window, "m3-time-picker-input.input.separator");
+        let input_minute =
+            live_test_id_layout_bounds(&ui, &app, window, "m3-time-picker-input.input.minute");
+        let input_period =
+            live_test_id_layout_bounds(&ui, &app, window, "m3-time-picker-input.input.period");
+        assert_px_close(input_hour.size.width.0, 96.0, "time input hour field width");
+        assert_px_close(
+            input_hour.size.height.0,
+            72.0,
+            "time input hour field height",
+        );
+        assert_px_close(
+            input_separator.size.width.0,
+            24.0,
+            "time input separator width",
+        );
+        assert_px_close(
+            input_separator.size.height.0,
+            72.0,
+            "time input separator height",
+        );
+        assert_px_close(
+            input_separator.origin.x.0 - (input_hour.origin.x.0 + input_hour.size.width.0),
+            0.0,
+            "time input separator follows hour field",
+        );
+        assert_px_close(
+            input_minute.origin.x.0 - (input_separator.origin.x.0 + input_separator.size.width.0),
+            0.0,
+            "time input minute field follows separator",
+        );
+        assert_px_close(
+            input_period.origin.y.0,
+            input_hour.origin.y.0,
+            "time input period selector aligns to field top",
+        );
+        assert_px_close(
+            input_period.origin.x.0 - (input_minute.origin.x.0 + input_minute.size.width.0),
+            12.0,
+            "time input period selector field-row margin",
+        );
     }
 
     {

@@ -893,30 +893,8 @@ fn time_picker_contents<H: UiHost>(
                     test_id.clone(),
                 );
 
-                let period = (!is_24h).then(|| {
-                    time_picker_period_selector(cx, time_now, time_model.clone(), test_id.clone())
-                });
-
-                let dial_and_period = cx.flex(
-                    FlexProps {
-                        direction: Axis::Horizontal,
-                        justify: MainAlign::Start,
-                        align: CrossAlign::Center,
-                        wrap: false,
-                        gap: Px(12.0).into(),
-                        ..Default::default()
-                    },
-                    move |_cx| {
-                        let mut out = vec![dial];
-                        if let Some(p) = period {
-                            out.push(p);
-                        }
-                        out
-                    },
-                );
-
                 out.push(display);
-                out.push(dial_and_period);
+                out.push(centered_full_width(cx, dial));
             }
             TimePickerDisplayMode::Input => {
                 out.push(time_picker_time_input(
@@ -945,6 +923,48 @@ fn time_picker_contents<H: UiHost>(
     })
 }
 
+fn centered_full_width<H: UiHost>(cx: &mut ElementContext<'_, H>, child: AnyElement) -> AnyElement {
+    let mut props = FlexProps::default();
+    props.direction = Axis::Horizontal;
+    props.justify = MainAlign::Center;
+    props.align = CrossAlign::Center;
+    props.wrap = false;
+    props.layout.size.width = Length::Fill;
+    cx.flex(props, move |_cx| vec![child])
+}
+
+fn padded_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    padding: Edges,
+    child: AnyElement,
+) -> AnyElement {
+    let mut props = ContainerProps::default();
+    props.padding = padding.into();
+    cx.container(props, move |_cx| vec![child])
+}
+
+fn fixed_centered_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    props: TextProps,
+    width: Px,
+    height: Px,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    let text = cx.text_props(props);
+    let mut center = FlexProps::default();
+    center.direction = Axis::Horizontal;
+    center.justify = MainAlign::Center;
+    center.align = CrossAlign::Center;
+    center.wrap = false;
+    center.layout.size.width = Length::Px(width);
+    center.layout.size.height = Length::Px(height);
+    let mut element = cx.flex(center, move |_cx| vec![text]);
+    if let Some(test_id) = test_id {
+        element = element.test_id(test_id);
+    }
+    element
+}
+
 fn time_picker_display<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     time_now: Time,
@@ -960,16 +980,19 @@ fn time_picker_display<H: UiHost>(
 
     let mut props = FlexProps::default();
     props.direction = Axis::Horizontal;
-    props.justify = MainAlign::Start;
+    props.justify = MainAlign::Center;
     props.align = CrossAlign::Center;
     props.wrap = false;
-    props.gap = Px(8.0).into();
+    props.gap = Px(0.0).into();
+    props.layout.size.width = Length::Fill;
 
     cx.flex(props, move |cx| {
         let hour_test_id = time_picker_part_test_id(&test_id, "hour-selector")
             .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.hour-selector"));
         let minute_test_id = time_picker_part_test_id(&test_id, "minute-selector")
             .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.minute-selector"));
+        let separator_test_id = time_picker_part_test_id(&test_id, "separator")
+            .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.separator"));
         let hour_el = time_selector_field(
             cx,
             material_time_picker_hour_selection_label(&*cx.app),
@@ -982,11 +1005,13 @@ fn time_picker_display<H: UiHost>(
             TimePickerSelection::Hour,
         );
 
-        let (sep_style, sep_color) = {
+        let (sep_style, sep_color, sep_width, sep_height) = {
             let theme = Theme::global(&*cx.app);
             (
                 time_tokens::time_selector_separator_style(theme),
                 time_tokens::time_selector_separator_color(theme),
+                time_tokens::display_separator_width(theme),
+                time_tokens::period_selector_container_height(theme),
             )
         };
         let mut sep = TextProps::new(time_picker_separator_text());
@@ -994,7 +1019,7 @@ fn time_picker_display<H: UiHost>(
         sep.color = Some(sep_color);
         sep.wrap = TextWrap::None;
         sep.overflow = TextOverflow::Clip;
-        let sep_el = cx.text_props(sep);
+        let sep_el = fixed_centered_text(cx, sep, sep_width, sep_height, Some(separator_test_id));
 
         let minute_el = time_selector_field(
             cx,
@@ -1008,7 +1033,25 @@ fn time_picker_display<H: UiHost>(
             TimePickerSelection::Minute,
         );
 
-        vec![hour_el, sep_el, minute_el]
+        let period = (!is_24h).then(|| {
+            let period = time_picker_period_selector(cx, time_now, time_model.clone(), test_id);
+            padded_element(
+                cx,
+                Edges {
+                    top: Px(0.0),
+                    right: Px(0.0),
+                    bottom: Px(0.0),
+                    left: Px(12.0),
+                },
+                period,
+            )
+        });
+
+        let mut out = vec![hour_el, sep_el, minute_el];
+        if let Some(period) = period {
+            out.push(period);
+        }
+        out
     })
 }
 
@@ -1069,11 +1112,13 @@ fn time_picker_time_input<H: UiHost>(
         is_24h,
     );
 
-    let (sep_style, sep_color) = {
+    let (sep_style, sep_color, sep_width, sep_height) = {
         let theme = Theme::global(&*cx.app);
         (
             time_input_tokens::time_input_field_separator_style(theme),
             time_input_tokens::time_input_field_separator_color(theme),
+            time_tokens::display_separator_width(theme),
+            time_input_tokens::period_selector_container_height(theme),
         )
     };
     let mut sep = TextProps::new(Arc::<str>::from(":"));
@@ -1081,17 +1126,37 @@ fn time_picker_time_input<H: UiHost>(
     sep.color = Some(sep_color);
     sep.wrap = TextWrap::None;
     sep.overflow = TextOverflow::Clip;
-    let sep_el = cx.text_props(sep);
+    let sep_el = fixed_centered_text(
+        cx,
+        sep,
+        sep_width,
+        sep_height,
+        Some(
+            time_picker_part_test_id(&test_id, "input.separator")
+                .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.input.separator")),
+        ),
+    );
 
-    let period = (!is_24h)
-        .then(|| time_input_period_selector(cx, time_now, time_model.clone(), test_id.clone()));
+    let period = (!is_24h).then(|| {
+        let period = time_input_period_selector(cx, time_now, time_model.clone(), test_id.clone());
+        padded_element(
+            cx,
+            Edges {
+                top: Px(0.0),
+                right: Px(0.0),
+                bottom: Px(0.0),
+                left: Px(12.0),
+            },
+            period,
+        )
+    });
 
     let mut row = FlexProps::default();
     row.direction = Axis::Horizontal;
     row.justify = MainAlign::Start;
-    row.align = CrossAlign::Center;
+    row.align = CrossAlign::Start;
     row.wrap = false;
-    row.gap = Px(8.0).into();
+    row.gap = Px(0.0).into();
 
     cx.flex(row, move |_cx| {
         let mut out = vec![hour_column, sep_el, minute_column];

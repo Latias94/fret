@@ -155,6 +155,25 @@ Task IDs use `M3PV2-*`.
   packet. DatePicker motion remains seeded; year-selection/input-mode layout is not closed by this
   calendar-grid packet.
 
+- [x] M3PV2-029 [owner=codex] [deps=M3PV2-028] [scope=ecosystem/fret-ui-material3/src/{time_picker.rs,tokens/time_picker.rs},ecosystem/fret-ui-material3/tests/automation_surface.rs,goldens/material3-headless/v1,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close TimePicker dial/display/input layout drift against Compose Material3 by keeping the
+  period selector in the time display/input rows, proving fixed hour/minute selector sizes, using
+  the 24px display separator slot, applying the 12px period margin, and centering the clock dial in
+  the picker chrome.
+  Validation: `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_exposes_stable_part_test_ids material3_time_picker_uses_compose_aligned_accessibility_labels material3_time_picker_uses_material_string_registry`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_time_picker_suite_goldens_v1`;
+  `cargo nextest run -p fret-ui-material3 --lib time_picker`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`.
+  Review: DONE. This found a Material recipe layout gap, not a core or kit mechanism gap. The
+  TimePicker display row now matches Compose's selector/separator/period row structure, input mode
+  uses top-aligned fixed field/separator/period slots, and the dial is centered independently from
+  the period selector.
+  Evidence: `artifacts/material3_time_picker_display_input_layout_packet_v2.md`.
+  Handoff: Continue M3PV2-020 with multiline TextField, SearchBar/SearchView field layout, or a
+  true fixed-timestep field/picker motion packet. TimePicker motion remains open.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]
