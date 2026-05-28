@@ -776,7 +776,7 @@
     {
       "id": "radio",
       "family": "choice_control",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_scene_semantics_aligned",
       "wave": "wave4_choice_controls",
       "default_owner_bias": "material_foundation",
       "packet_strategy": "choice_after_switch",
@@ -788,13 +788,15 @@
         "radio.chrome"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-radio-scene-semantics-packet-v1/artifacts/radio_scene_semantics_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe owns radio group semantics, item selection, dot geometry, typeahead/roving wiring, and selectors",
         "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
-        "test_harness covers selected-dot centering, pointer-origin ripple, and selector readiness",
-        "kit_policy follow-on only if another design-system consumer needs the same group roving/typeahead policy"
+        "test_harness covers selected-dot centering, pointer-origin ripple, pressed scene stability, and selector readiness",
+        "kit_policy follow-on only if another design-system consumer needs the same group roving/typeahead policy",
+        "no mechanism gap found"
       ]
     },
     {
