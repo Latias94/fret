@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI slider pointer value-update logic into a private owner without changing pointer
+      down/move/up capture, active-item mutation, lifecycle activation/deactivation, changed
+      response emission, or slider pointer behavior.
+      Result: `slider_controls/interaction/pointer/value_update.rs` owns pointer-to-value
+      projection, clamp/snap, and value write detection. `pointer.rs` keeps pointer hook
+      installation, active-item updates, capture, and lifecycle edit emission.
 - [x] Split IMUI combo trigger visual props/a11y/chrome assembly into a private owner without
       changing ComboBox semantics, trigger activation behavior, open/close toggling, shortcut
       handling, preview/label rendering, or public combo facade behavior.

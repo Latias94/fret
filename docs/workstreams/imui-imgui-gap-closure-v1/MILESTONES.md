@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 slider pointer value-update owner-split result:
+`ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/pointer/value_update.rs` now owns
+pointer-to-value projection, clamp/snap, and changed-detection writes. `pointer.rs` keeps
+pointer hook installation, active-item updates, capture/release, focus, lifecycle activation/
+deactivation, and transient change emission.
+
 2026-05-28 combo trigger visual owner-split result:
 `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/visual.rs` now owns ComboBox trigger props,
 field chrome lookup, visual children assembly, and the a11y label helper. `trigger.rs` keeps

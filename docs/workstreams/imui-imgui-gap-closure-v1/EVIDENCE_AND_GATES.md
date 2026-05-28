@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Slider Pointer Value-Update Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI slider pointer value-update logic split into a private owner without changing
+pointer down/move/up capture, active-item mutation, lifecycle activation/deactivation, changed
+response emission, or slider pointer behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/pointer.rs` keeps pointer hook
+  installation, active-item updates, capture/release, focus, lifecycle activation/deactivation,
+  and transient change emission.
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/pointer/value_update.rs` owns
+  pointer-to-value projection, clamp/snap, and changed-detection writes.
+- `tools/gate_imui_workstream_source.py` now rejects pointer value-update math/write logic from
+  drifting back into `pointer.rs` and checks the dedicated value-update owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_controls::slider --no-fail-fast`: pass; 2 slider behavior
+  tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Combo Trigger Visual Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI combo trigger visual props, chrome, and children assembly split into a

@@ -10,9 +10,10 @@ use super::SliderInteractionRange;
 use crate::imui::interaction_runtime::{ImUiActiveItemState, ImUiLifecycleSessionState};
 use crate::imui::{
     KEY_CHANGED, mark_lifecycle_activated_on_left_pointer_down,
-    mark_lifecycle_deactivated_on_left_pointer_up, mark_lifecycle_edit, slider_clamp_and_snap,
-    slider_value_from_pointer,
+    mark_lifecycle_deactivated_on_left_pointer_up,
 };
+
+mod value_update;
 
 pub(super) fn install_slider_pointer_handlers<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -47,23 +48,14 @@ pub(super) fn install_slider_pointer_handlers<H: UiHost>(
         host.capture_pointer();
         host.request_focus(acx.target);
 
-        let next = slider_value_from_pointer(
-            host.bounds(),
+        let changed = value_update::apply_slider_pointer_value_update(
+            host,
+            &model_for_down,
+            range,
             down.position,
-            range.min,
-            range.max,
-            range.step,
         );
-        let mut changed = false;
-        let _ = host.update_model(&model_for_down, |value: &mut f32| {
-            let current = slider_clamp_and_snap(*value, range.min, range.max, range.step);
-            if (current - next).abs() > f32::EPSILON {
-                *value = next;
-                changed = true;
-            }
-        });
         if changed {
-            mark_lifecycle_edit(host, acx, &lifecycle_model_for_down);
+            crate::imui::mark_lifecycle_edit(host, acx, &lifecycle_model_for_down);
             host.record_transient_event(acx, KEY_CHANGED);
             host.notify(acx);
         }
@@ -89,18 +81,14 @@ pub(super) fn install_slider_pointer_handlers<H: UiHost>(
             return false;
         }
 
-        let next =
-            slider_value_from_pointer(host.bounds(), mv.position, range.min, range.max, range.step);
-        let mut changed = false;
-        let _ = host.update_model(&model_for_move, |value: &mut f32| {
-            let current = slider_clamp_and_snap(*value, range.min, range.max, range.step);
-            if (current - next).abs() > f32::EPSILON {
-                *value = next;
-                changed = true;
-            }
-        });
+        let changed = value_update::apply_slider_pointer_value_update(
+            host,
+            &model_for_move,
+            range,
+            mv.position,
+        );
         if changed {
-            mark_lifecycle_edit(host, acx, &lifecycle_model_for_move);
+            crate::imui::mark_lifecycle_edit(host, acx, &lifecycle_model_for_move);
             host.record_transient_event(acx, KEY_CHANGED);
             host.notify(acx);
         }
