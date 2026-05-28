@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 table-column visibility state owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_column_visibility/state.rs` now owns only the state/override
+storage shape and public snapshot re-export. `state/overrides.rs` owns runtime override
+mutation/query, `state/snapshot_io.rs` owns snapshot conversion/restoration, and
+`state/columns.rs` owns `TableColumn` application.
+
 2026-05-28 child-region resize response owner-split result:
 `ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize.rs` is now a private
 module/re-export index. `resize/x.rs` owns width-axis response projection and tests, while

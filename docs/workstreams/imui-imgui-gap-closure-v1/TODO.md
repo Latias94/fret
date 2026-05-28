@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI table-column visibility state methods into private override, snapshot-IO, and
+      column-application owners without changing public state constructors/accessors, empty-id
+      filtering, last-entry-wins behavior, snapshot roundtrips, table-column visibility application,
+      or opaque state storage.
+      Result: `table_column_visibility/state.rs` now owns only the state/override storage shape and
+      public snapshot re-export. `state/overrides.rs` owns runtime override mutation/query,
+      `state/snapshot_io.rs` owns snapshot conversion/restoration, and `state/columns.rs` owns
+      `TableColumn` application.
 - [x] Split IMUI child-region resize responses into private X/Y response owners without changing
       public `ChildRegionResizeXResponse` / `ChildRegionResizeYResponse` re-exports, enabled/min/
       max accessors, drag edge accessors, drag delta/total projection, clamp-from-start helpers, or

@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Table Column Visibility State Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI table-column visibility state methods split into private override, snapshot-IO,
+and column-application owners without changing public state constructors/accessors, empty-id
+filtering, last-entry-wins behavior, snapshot roundtrips, table-column visibility application, or
+opaque state storage.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state.rs` now owns only the
+  state/override storage shape and public snapshot re-export.
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/overrides.rs` owns runtime
+  override construction, mutation, query, toggle, removal, and clear behavior.
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/snapshot_io.rs` owns snapshot
+  conversion and restoration.
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/columns.rs` owns `TableColumn`
+  application.
+- `tools/gate_imui_workstream_source.py` now rejects override/snapshot/column-application bodies
+  from drifting back into `state.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_column_visibility
+  --no-fail-fast`: pass; 7 table-column visibility tests passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke
+  table_column_visibility --no-fail-fast`: pass; 4 table smoke tests passed.
+- `cargo nextest run -p fret-imui layout_collections table_column_visibility --no-fail-fast`:
+  pass; 28 composition tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Child-Region Resize Response Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI child-region resize responses split into private X/Y response owners without
