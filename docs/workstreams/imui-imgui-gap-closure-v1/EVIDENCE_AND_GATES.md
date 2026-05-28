@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-29
 
+## Tab-Bar Item Method Owner-Split Evidence - 2026-05-29
+
+Claim verified: IMUI tab-bar item builder methods split out of
+`ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs` into a private owner without changing
+public `ImUiTabBar` method names, label identity parsing, panel test-id fallback, focused-child
+capture, tab smoke behavior, or fret-imui tab behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs` keeps `ImUiTabBar` storage and
+  `tab_bar_element` assembly.
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/item_methods.rs` owns `tab_item`,
+  `tab_item_with_options`, `begin_tab_item`, and `begin_tab_item_with_options`, including label
+  identity parsing, panel test-id fallback, focused-child capture, and `BuiltTabItem` population.
+- `tools/gate_imui_workstream_source.py` now rejects item-builder bodies from drifting back into
+  `tab_family_controls.rs` and checks the dedicated item-method owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui imui::tab_family_controls::tests
+  --no-fail-fast`: pass.
+- `CARGO_INCREMENTAL=0 cargo nextest run -p fret-imui interaction_menu_tabs::tabs
+  --no-fail-fast`: pass (3 passed, 183 skipped).
+
 ## Floating Area Option/Context Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI floating-area option/context records split into options and opaque context

@@ -44,6 +44,13 @@ Last updated: 2026-05-29
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI tab-bar item builder methods out of
+      `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs` into a private owner without
+      changing public `ImUiTabBar` method names, label identity parsing, panel test-id fallback,
+      focused-child capture, tab smoke behavior, or fret-imui tab behavior.
+      Result: `tab_family_controls/item_methods.rs` owns `tab_item`,
+      `tab_item_with_options`, `begin_tab_item`, and `begin_tab_item_with_options`; the root file
+      keeps `ImUiTabBar` storage and `tab_bar_element` assembly.
 - [x] Split IMUI floating-area option/context records into options and opaque context private
       owners without changing public option/context names, area defaults, accessor-first context
       shape, root re-exports, floating-area smoke behavior, or fret-imui floating behavior.

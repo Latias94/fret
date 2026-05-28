@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-29 tab-bar item-method owner-split result:
+`ecosystem/fret-ui-kit/src/imui/tab_family_controls/item_methods.rs` now owns `ImUiTabBar`
+`tab_item`, `tab_item_with_options`, `begin_tab_item`, and `begin_tab_item_with_options`
+builder methods. `tab_family_controls.rs` keeps `ImUiTabBar` storage and `tab_bar_element`
+assembly.
+
 2026-05-29 floating-area option/context owner-split result:
 `ecosystem/fret-ui-kit/src/imui/floating_options/area.rs` is now a public re-export hub.
 `floating_options/area/options.rs` owns `FloatingAreaOptions`, and
