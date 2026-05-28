@@ -539,6 +539,8 @@
     "ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/core.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/entries.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/entries/action.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/entries/checked.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/routing/identity.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/routing/mount.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/tests.rs",

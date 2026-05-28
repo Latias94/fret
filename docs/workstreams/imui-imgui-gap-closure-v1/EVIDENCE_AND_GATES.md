@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Menu Dispatch Entry Variant Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI menu dispatch checked/action entry variants split into private owners without
+changing plain menu-item routing, pressable-hook entry routing, checkbox/radio semantics, action
+dispatch forwarding, label identity handling, mount routing, or public facade menu item behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/entries.rs` keeps plain
+  menu-item entry routing, shared implementation forwarding, pressable-hook entry routing, and
+  private re-exports.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/entries/checked.rs` owns
+  checkbox/radio entry wrappers and checked-state semantics.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/entries/action.rs` owns action
+  entry forwarding to the shared menu item implementation.
+- `tools/gate_imui_workstream_source.py` now rejects checked/action entry variants from drifting
+  back into `dispatch/entries.rs` and checks the dedicated variant owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `$env:CARGO_INCREMENTAL='0'; cargo nextest run -p fret-imui menu_item_checkbox --no-fail-fast`:
+  pass; 1 checkbox semantics test passed.
+- `$env:CARGO_INCREMENTAL='0'; cargo nextest run -p fret-imui menu_item_activate_shortcut begin_menu_helper_toggles --no-fail-fast`:
+  pass; 3 menu action/shortcut tests passed.
+
 ## Facade Button-Action Inherent Wrapper Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI facade button action inherent wrappers split into a private owner without

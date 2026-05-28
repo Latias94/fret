@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use fret_core::SemanticsRole;
-use fret_runtime::ActionId;
 use fret_ui::UiHost;
 use fret_ui::element::PressableState;
 use fret_ui::elements::GlobalElementId;
@@ -9,6 +8,12 @@ use fret_ui::elements::GlobalElementId;
 use crate::imui::{MenuItemOptions, ResponseExt, UiWriterImUiFacadeExt};
 
 use super::core;
+
+mod action;
+mod checked;
+
+pub(in crate::imui) use action::menu_item_action_with_options;
+pub(in crate::imui) use checked::{menu_item_checkbox_with_options, menu_item_radio_with_options};
 
 pub(in crate::imui) fn menu_item_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -23,70 +28,13 @@ pub(in crate::imui) fn menu_item_with_options<H: UiHost, W: UiWriterImUiFacadeEx
     )
 }
 
-pub(in crate::imui) fn menu_item_checkbox_with_options<
-    H: UiHost,
-    W: UiWriterImUiFacadeExt<H> + ?Sized,
->(
-    ui: &mut W,
-    label: Arc<str>,
-    checked: bool,
-    options: MenuItemOptions,
-) -> ResponseExt {
-    menu_item_impl(
-        ui,
-        label,
-        options,
-        SemanticsRole::MenuItemCheckbox,
-        Some(checked),
-        None,
-    )
-}
-
-pub(in crate::imui) fn menu_item_radio_with_options<
-    H: UiHost,
-    W: UiWriterImUiFacadeExt<H> + ?Sized,
->(
-    ui: &mut W,
-    label: Arc<str>,
-    checked: bool,
-    options: MenuItemOptions,
-) -> ResponseExt {
-    menu_item_impl(
-        ui,
-        label,
-        options,
-        SemanticsRole::MenuItemRadio,
-        Some(checked),
-        None,
-    )
-}
-
-pub(in crate::imui) fn menu_item_action_with_options<
-    H: UiHost,
-    W: UiWriterImUiFacadeExt<H> + ?Sized,
->(
-    ui: &mut W,
-    label: Arc<str>,
-    action: ActionId,
-    options: MenuItemOptions,
-) -> ResponseExt {
-    menu_item_impl(
-        ui,
-        label,
-        options,
-        SemanticsRole::MenuItem,
-        None,
-        Some(action),
-    )
-}
-
 fn menu_item_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     label: Arc<str>,
     options: MenuItemOptions,
     role: SemanticsRole,
     checked: Option<bool>,
-    action: Option<ActionId>,
+    action: Option<fret_runtime::ActionId>,
 ) -> ResponseExt {
     core::menu_item_impl_with_pressable_hook(
         ui,

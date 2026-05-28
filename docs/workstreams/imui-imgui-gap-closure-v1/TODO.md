@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI menu dispatch checked/action entry variants into private owners without changing
+      plain menu-item routing, pressable-hook entry routing, checkbox/radio semantics, action
+      dispatch forwarding, label identity handling, mount routing, or public facade menu item
+      behavior.
+      Result: `menu_controls/routing/dispatch/entries/checked.rs` owns checkbox/radio entry
+      wrappers and checked-state semantics; `entries/action.rs` owns action entry forwarding.
+      `dispatch/entries.rs` keeps plain entry routing, shared implementation forwarding,
+      pressable-hook entry routing, and private re-exports.
 - [x] Split IMUI facade button action inherent wrappers into a private owner without changing plain
       button wrappers, command button forwarding, action dispatch, payload action dispatch,
       focusable recording, response projection, or public facade method names.

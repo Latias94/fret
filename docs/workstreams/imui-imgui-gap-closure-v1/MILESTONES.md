@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 menu dispatch entry variant owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/entries/checked.rs` now owns
+checkbox/radio entry wrappers and checked-state semantics, while
+`ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/entries/action.rs` owns action
+entry forwarding. `dispatch/entries.rs` keeps plain menu-item routing, shared implementation
+forwarding, pressable-hook entry routing, and private re-exports.
+
 2026-05-28 facade button-action inherent wrapper owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/action_methods.rs` now owns
 `action_button`, `action_button_with_options`, `action_payload_button`, and
