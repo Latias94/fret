@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Debug-Draw Geometry Helper Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI debug-draw geometry helpers split into finite, rectangle, and triangle private
+owners without changing finite checks, rect emptiness/finite checks, rect quad point generation,
+effective rounding clamp rules, triangle degeneracy checks, indexed triangle lookup, sequential
+index generation, or public debug-draw behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/geometry.rs` is now a private re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/geometry/finite.rs` owns point, UV, and
+  debug-draw vertex finite checks.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/geometry/rects.rs` owns rect checks, quad
+  point generation, and effective rounding clamp rules.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/geometry/triangles.rs` owns triangle
+  degeneracy/drawability checks, indexed triangle lookup, and sequential index generation.
+- `tools/gate_imui_workstream_source.py` now rejects these helper bodies from drifting back into
+  `geometry.rs` and checks the three dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_path_builder_rect_rounding_clamps_and_handles_invalid_inputs debug_draw_list_records_triangle_mesh_commands debug_draw_list_reports_command_summaries_in_merge_order --no-fail-fast`:
+  pass.
+
 ## Facade Menu-Item Inherent Wrapper Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI facade menu-item inherent wrappers split into a private owner without changing

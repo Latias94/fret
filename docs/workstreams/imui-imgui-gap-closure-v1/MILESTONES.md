@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 debug-draw geometry helper owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/geometry.rs` is now a private re-export hub.
+`geometry/finite.rs` owns point/UV/vertex finite checks, `geometry/rects.rs` owns rect checks and
+rounding clamp rules, and `geometry/triangles.rs` owns triangle degeneracy/drawability, indexed
+triangle lookup, and sequential index generation.
+
 2026-05-28 facade menu-item inherent wrapper owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items/item_methods.rs` now owns plain,
 checkbox/radio, and action menu item inherent wrappers. `facade_writer/menu_items.rs` keeps

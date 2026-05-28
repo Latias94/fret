@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw geometry helpers into finite, rectangle, and triangle private owners
+      without changing finite checks, rect emptiness/finite checks, rect quad point generation,
+      effective rounding clamp rules, triangle degeneracy checks, indexed triangle lookup,
+      sequential index generation, or public debug-draw behavior.
+      Result: `debug_draw_controls/geometry.rs` is now a private re-export hub.
+      `geometry/finite.rs` owns point/UV/vertex finite checks; `geometry/rects.rs` owns rect
+      checks and rounding clamp rules; `geometry/triangles.rs` owns triangle degeneracy/
+      drawability, indexed triangle lookup, and sequential index generation.
 - [x] Split IMUI facade menu-item inherent wrappers into a private owner without changing plain
       menu-item wrappers, checkbox/radio wrappers, action menu item wrappers, focusable recording,
       begin-menu/submenu wrappers, command presentation forwarding, or public facade method names.
