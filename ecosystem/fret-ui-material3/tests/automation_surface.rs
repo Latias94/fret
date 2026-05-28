@@ -436,12 +436,31 @@ fn material3_select_exposes_stable_part_test_ids() {
         "m3-select-item-alpha.chrome",
         "m3-select-item-alpha.leading-icon",
         "m3-select-item-alpha.trailing-icon",
+        "m3-select-item-beta",
+        "m3-select-item-beta.chrome",
     ] {
         assert!(
             live_test_id_exists(&ui, &app, window, id),
             "expected live Select popup/item part test_id {id}"
         );
     }
+
+    let listbox_bounds = live_test_id_layout_bounds(&ui, &app, window, "m3-select.listbox");
+    let selected_bounds =
+        live_test_id_layout_bounds(&ui, &app, window, "m3-select-item-beta.chrome");
+    let epsilon = 0.5;
+    assert!(
+        (selected_bounds.origin.x.0 - (listbox_bounds.origin.x.0 + 4.0)).abs() <= epsilon,
+        "expected selected Select item chrome to use Material selectable-item horizontal inset; listbox_x={}, selected_x={}",
+        listbox_bounds.origin.x.0,
+        selected_bounds.origin.x.0
+    );
+    assert!(
+        (selected_bounds.size.width.0 - (listbox_bounds.size.width.0 - 8.0)).abs() <= epsilon,
+        "expected selected Select item chrome width to account for both horizontal insets; listbox_width={}, selected_width={}",
+        listbox_bounds.size.width.0,
+        selected_bounds.size.width.0
+    );
 }
 
 #[test]

@@ -19,6 +19,9 @@ supporting text, and fixed geometry gates now cover idle/focus/populated label p
 M3PV2-025 is complete: Autocomplete and ExposedDropdown popup geometry now anchors to the
 TextField chrome element when available, so icon-bearing fields get menu/listbox width parity with
 the full field while the input remains the combobox trigger and keyboard/a11y owner.
+M3PV2-026 is complete: Select selected menu items now use selected content colors for label,
+leading icon, and trailing icon, and the visible item chrome uses the Material selectable-item inset
+inside the listbox while the pressable row keeps the existing behavior contract.
 
 ## Decisions
 
@@ -30,10 +33,10 @@ the full field while the input remains the combobox trigger and keyboard/a11y ow
 
 ## Next Recommended Action
 
-Continue M3PV2-020 with another field-family packet. Good next candidates are Select visual/layout
-token proof, a dedicated multiline TextField scenario, or true popup surface style/elevation proof
-for Autocomplete/ExposedDropdown. Do not mark motion axes complete from settled-geometry evidence;
-TextField and popup motion still need fixed-timestep transition packets.
+Continue M3PV2-020 with another field-family packet. Good next candidates are a dedicated
+multiline TextField scenario, true popup surface style/elevation proof for Autocomplete/
+ExposedDropdown, or fixed-timestep popup/field motion. Do not mark motion axes complete from
+settled-geometry evidence; TextField, Select, and popup motion still need transition packets.
 
 ## Useful Gates
 

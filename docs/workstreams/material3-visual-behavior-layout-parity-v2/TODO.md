@@ -102,6 +102,22 @@ Task IDs use `M3PV2-*`.
   true popup surface style/elevation packet. Autocomplete and ExposedDropdown style and motion axes
   still need dedicated packets.
 
+- [x] M3PV2-026 [owner=codex] [deps=M3PV2-025] [scope=ecosystem/fret-ui-material3/src/{select.rs,tokens/select.rs},ecosystem/fret-ui-material3/tests/automation_surface.rs,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close Select selected menu item style/layout drift against Material selectable menu item
+  outcomes without changing Select behavior ownership.
+  Validation: `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --lib select_menu_selected_item_uses_selected_content_colors`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_select_exposes_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test select_behavior`;
+  `cargo nextest run -p fret-ui-material3 --lib select::item_text_tests`.
+  Review: DONE. This found a Material recipe gap: selected Select menu items used the selected
+  container background but normal item content colors, and the visible chrome filled the listbox
+  width instead of using Material selectable-item inset. The fix stays in Select/tokens and uses the
+  resolved popup width to size the inset chrome explicitly.
+  Evidence: `artifacts/material3_select_selected_item_style_layout_packet_v2.md`.
+  Handoff: Continue M3PV2-020 with multiline TextField, popup surface style/elevation, or fixed
+  timestep popup/field motion. Select motion still needs a dedicated packet before closing motion.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]

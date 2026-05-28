@@ -53,6 +53,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_semantics_chrome_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_floating_label_geometry_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_autocomplete_exposed_dropdown_popup_width_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_selected_item_style_layout_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -135,6 +136,20 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     when available, while the input remains the combobox trigger, keyboard owner, and a11y
     relation source.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_autocomplete_exposed_dropdown_popup_width_packet_v2.md`
+- 2026-05-28: M3PV2-026 closed Select selected item style/layout drift.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --lib select_menu_selected_item_uses_selected_content_colors`
+    failed because selected label/icon content still used normal menu item colors.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_select_exposes_stable_part_test_ids`
+    failed because selected item chrome did not use the Material selectable-item horizontal inset.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --lib select_menu_selected_item_uses_selected_content_colors`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_select_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test select_behavior`
+  - `cargo nextest run -p fret-ui-material3 --lib select::item_text_tests`
+  - Result: Select selected menu item label/leading/trailing icon colors now use selected content
+    outcomes, and selected item chrome is inset `4px` from both listbox edges while the pressable row
+    keeps existing behavior ownership.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_selected_item_style_layout_packet_v2.md`
 
 ## Proof Note Template
 

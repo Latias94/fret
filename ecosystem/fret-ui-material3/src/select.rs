@@ -642,6 +642,7 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
                         Some(anchor_id.0),
                         initial_focus_id_for_list,
                         listbox_element_id_out,
+                        layout.rect.size.width,
                         runtime.scroll_handle.clone(),
                         typeahead_delay_ms,
                         style.clone(),
@@ -1529,9 +1530,13 @@ fn estimate_select_menu_content_width<H: UiHost>(
     items: &[SelectItem],
 ) -> Px {
     let theme = Theme::global(&*cx.app);
-    let padding_left = Px(12.0);
-    let padding_right = Px(12.0);
-    let gap = Px(8.0);
+    let outer_horizontal_padding =
+        select_tokens::menu_selectable_item_outer_horizontal_padding(theme, variant);
+    let content_horizontal_padding =
+        select_tokens::menu_list_item_content_horizontal_padding(theme, variant);
+    let padding_left = Px(outer_horizontal_padding.0 + content_horizontal_padding.0);
+    let padding_right = Px(outer_horizontal_padding.0 + content_horizontal_padding.0);
+    let gap = select_tokens::menu_list_item_icon_text_gap(theme, variant);
 
     let label_style = select_tokens::menu_list_item_label_text_style(theme, variant)
         .unwrap_or_else(|| fret_core::TextStyle {
@@ -1612,6 +1617,21 @@ mod item_text_tests {
                 .iter()
                 .find_map(|child| find_text_by_content(child, text)),
         }
+    }
+
+    fn collect_svg_icon_colors(el: &AnyElement, out: &mut Vec<Color>) {
+        if let ElementKind::SvgIcon(props) = &el.kind {
+            out.push(props.color);
+        }
+        for child in &el.children {
+            collect_svg_icon_colors(child, out);
+        }
+    }
+
+    fn apply_test_theme(app: &mut App) {
+        let cfg =
+            crate::tokens::v30::theme_config(crate::tokens::v30::TypographyOptions::default());
+        Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
     }
 
     #[test]
@@ -1744,6 +1764,7 @@ mod item_text_tests {
                     open.clone(),
                     None,
                     Color::TRANSPARENT,
+                    bounds().size.width,
                     true,
                     0,
                     1,
@@ -1759,6 +1780,66 @@ mod item_text_tests {
         assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(label.layout.flex.grow, 1.0);
         assert_eq!(label.layout.flex.basis, Length::Px(Px(0.0)));
+    }
+
+    #[test]
+    fn select_menu_selected_item_uses_selected_content_colors() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        apply_test_theme(&mut app);
+
+        let selected_value = Arc::<str>::from("beta");
+        let model = app.models_mut().insert(Some(selected_value.clone()));
+        let open = app.models_mut().insert(true);
+        let initial_focus = Rc::new(Cell::new(None));
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-select-selected-item",
+            |cx| {
+                select_list_item(
+                    cx,
+                    SelectVariant::Outlined,
+                    SelectItem::new(selected_value.clone(), "Beta")
+                        .leading_icon(ids::ui::SEARCH)
+                        .trailing_icon(ids::ui::CHECK),
+                    false,
+                    model.clone(),
+                    open.clone(),
+                    Some(selected_value.clone()),
+                    Color::TRANSPARENT,
+                    bounds().size.width,
+                    true,
+                    0,
+                    1,
+                    initial_focus.clone(),
+                )
+            },
+        );
+
+        let theme = Theme::global(&app);
+        let (expected_label, expected_icon, _, _) = list_tokens::item_outcomes(
+            theme,
+            true,
+            true,
+            list_tokens::ListItemInteraction::Default,
+        );
+
+        let label = find_text_by_content(&el, "Beta").expect("selected select menu item label");
+        assert_eq!(label.color, Some(expected_label));
+
+        let mut icon_colors = Vec::new();
+        collect_svg_icon_colors(&el, &mut icon_colors);
+        assert!(
+            icon_colors.len() >= 2,
+            "expected selected Select item leading and trailing icons"
+        );
+        assert!(
+            icon_colors.iter().all(|color| *color == expected_icon),
+            "expected selected Select item icons to use selected content color; got {icon_colors:?}"
+        );
     }
 
     #[test]
@@ -1794,6 +1875,7 @@ mod item_text_tests {
                     open.clone(),
                     None,
                     Color::TRANSPARENT,
+                    bounds().size.width,
                     true,
                     0,
                     1,
@@ -1916,6 +1998,7 @@ fn select_listbox_panel<H: UiHost>(
     labelled_by_element: Option<u64>,
     initial_focus_id_out: Rc<Cell<Option<GlobalElementId>>>,
     listbox_element_id_out: Rc<Cell<Option<GlobalElementId>>>,
+    listbox_width: Px,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     typeahead_delay_ms: u32,
     style: Arc<SelectStyle>,
@@ -2150,6 +2233,7 @@ fn select_listbox_panel<H: UiHost>(
                                             open.clone(),
                                             selected.clone(),
                                             selected_bg,
+                                            listbox_width,
                                             tab_stop,
                                             idx,
                                             count,
@@ -2176,6 +2260,7 @@ fn select_list_item<H: UiHost>(
     open: Model<bool>,
     selected: Option<Arc<str>>,
     selected_bg: Color,
+    listbox_width: Px,
     tab_stop: bool,
     idx: usize,
     set_size: usize,
@@ -2283,6 +2368,11 @@ fn select_list_item<H: UiHost>(
                     leading_icon_size,
                     trailing_icon_color,
                     trailing_icon_size,
+                    selectable_outer_horizontal_padding,
+                    selectable_outer_vertical_padding,
+                    content_horizontal_padding,
+                    icon_text_gap,
+                    item_container_shape,
                 ) = {
                     let theme = Theme::global(&*cx.app);
                     let state_layer_color = theme
@@ -2300,8 +2390,12 @@ fn select_list_item<H: UiHost>(
                     let ripple_base_opacity = pressed_opacity;
                     let config = material_pressable_indication_config(theme, None);
 
-                    let label_color =
-                        select_tokens::menu_list_item_label_text_color(theme, variant);
+                    let label_color = select_tokens::menu_list_item_label_text_color(
+                        theme,
+                        variant,
+                        enabled,
+                        is_selected,
+                    );
                     let label_style =
                         select_tokens::menu_list_item_label_text_style(theme, variant)
                             .map(|style| typography::with_intent(style, TextIntent::Control));
@@ -2319,14 +2413,37 @@ fn select_list_item<H: UiHost>(
                         list_tokens::trailing_supporting_text_style(theme, is_selected)
                             .map(|style| typography::with_intent(style, TextIntent::Control));
 
-                    let leading_icon_color =
-                        select_tokens::menu_list_item_leading_icon_color(theme, variant);
+                    let leading_icon_color = select_tokens::menu_list_item_leading_icon_color(
+                        theme,
+                        variant,
+                        enabled,
+                        is_selected,
+                    );
                     let leading_icon_size =
                         select_tokens::menu_list_item_leading_icon_size(theme, variant);
-                    let trailing_icon_color =
-                        select_tokens::menu_list_item_trailing_icon_color(theme, variant);
+                    let trailing_icon_color = select_tokens::menu_list_item_trailing_icon_color(
+                        theme,
+                        variant,
+                        enabled,
+                        is_selected,
+                    );
                     let trailing_icon_size =
                         select_tokens::menu_list_item_trailing_icon_size(theme, variant);
+                    let selectable_outer_horizontal_padding =
+                        select_tokens::menu_selectable_item_outer_horizontal_padding(
+                            theme, variant,
+                        );
+                    let selectable_outer_vertical_padding =
+                        select_tokens::menu_selectable_item_outer_vertical_padding(
+                            theme,
+                            variant,
+                            has_secondary_text,
+                        );
+                    let content_horizontal_padding =
+                        select_tokens::menu_list_item_content_horizontal_padding(theme, variant);
+                    let icon_text_gap = select_tokens::menu_list_item_icon_text_gap(theme, variant);
+                    let item_container_shape =
+                        select_tokens::menu_list_item_container_shape(theme, variant, is_selected);
 
                     (
                         state_layer_color,
@@ -2347,6 +2464,11 @@ fn select_list_item<H: UiHost>(
                         leading_icon_size,
                         trailing_icon_color,
                         trailing_icon_size,
+                        selectable_outer_horizontal_padding,
+                        selectable_outer_vertical_padding,
+                        content_horizontal_padding,
+                        icon_text_gap,
+                        item_container_shape,
                     )
                 };
 
@@ -2376,15 +2498,18 @@ fn select_list_item<H: UiHost>(
                 );
 
                 let bg = if is_selected { Some(selected_bg) } else { None };
+                let chrome_width =
+                    Px((listbox_width.0 - selectable_outer_horizontal_padding.0 * 2.0).max(0.0));
                 let mut chrome = ContainerProps::default();
                 chrome.background = bg;
-                chrome.layout.size.width = Length::Fill;
-                chrome.layout.size.height = Length::Px(height);
+                chrome.corner_radii = item_container_shape;
+                chrome.layout.size.width = Length::Px(chrome_width);
+                chrome.layout.size.height = Length::Fill;
                 chrome.layout.overflow = Overflow::Clip;
 
                 let mut row = FlexProps::default();
                 row.layout.size.width = Length::Fill;
-                row.layout.size.height = Length::Px(height);
+                row.layout.size.height = Length::Fill;
                 row.layout.overflow = Overflow::Clip;
                 row.direction = Axis::Horizontal;
                 row.justify = MainAlign::Start;
@@ -2393,10 +2518,10 @@ fn select_list_item<H: UiHost>(
                 } else {
                     CrossAlign::Center
                 };
-                row.gap = Px(8.0).into();
+                row.gap = icon_text_gap.into();
                 row.padding = Edges {
-                    left: Px(12.0),
-                    right: Px(12.0),
+                    left: content_horizontal_padding,
+                    right: content_horizontal_padding,
                     top: if has_secondary_text {
                         item_top_space
                     } else {
@@ -2568,7 +2693,22 @@ fn select_list_item<H: UiHost>(
                 if let Some(test_id) = chrome_test_id.clone() {
                     chrome = chrome.test_id(test_id);
                 }
-                vec![chrome]
+
+                let mut inset = FlexProps::default();
+                inset.direction = Axis::Horizontal;
+                inset.justify = MainAlign::Start;
+                inset.align = CrossAlign::Stretch;
+                inset.layout.size.width = Length::Fill;
+                inset.layout.size.height = Length::Px(height);
+                inset.layout.overflow = Overflow::Visible;
+                inset.padding = Edges {
+                    left: selectable_outer_horizontal_padding,
+                    right: selectable_outer_horizontal_padding,
+                    top: selectable_outer_vertical_padding,
+                    bottom: selectable_outer_vertical_padding,
+                }
+                .into();
+                vec![cx.flex(inset, move |_cx| vec![chrome])]
             })
         });
 

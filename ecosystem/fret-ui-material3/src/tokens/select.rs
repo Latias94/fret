@@ -6,6 +6,7 @@ use fret_ui::Theme;
 use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::select::SelectVariant;
+use crate::tokens::list as list_tokens;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -880,6 +881,50 @@ pub(crate) fn menu_list_item_height(theme: &Theme, variant: SelectVariant) -> Px
     theme.metric_by_key(key).unwrap_or(Px(48.0))
 }
 
+pub(crate) fn menu_selectable_item_outer_horizontal_padding(
+    _theme: &Theme,
+    _variant: SelectVariant,
+) -> Px {
+    Px(4.0)
+}
+
+pub(crate) fn menu_selectable_item_outer_vertical_padding(
+    _theme: &Theme,
+    _variant: SelectVariant,
+    has_secondary_text: bool,
+) -> Px {
+    if has_secondary_text { Px(2.0) } else { Px(0.0) }
+}
+
+pub(crate) fn menu_list_item_content_horizontal_padding(
+    _theme: &Theme,
+    _variant: SelectVariant,
+) -> Px {
+    Px(12.0)
+}
+
+pub(crate) fn menu_list_item_icon_text_gap(_theme: &Theme, _variant: SelectVariant) -> Px {
+    Px(8.0)
+}
+
+pub(crate) fn menu_list_item_container_shape(
+    theme: &Theme,
+    _variant: SelectVariant,
+    selected: bool,
+) -> Corners {
+    if selected {
+        theme
+            .corners_by_key("md.comp.menu.list-item.selected.container.shape")
+            .or_else(|| theme.corners_by_key("md.sys.shape.corner.medium"))
+            .unwrap_or_else(|| Corners::all(Px(12.0)))
+    } else {
+        theme
+            .corners_by_key("md.comp.menu.list-item.container.shape")
+            .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
+            .unwrap_or_else(|| Corners::all(Px(4.0)))
+    }
+}
+
 pub(crate) fn menu_list_item_label_text_style(
     theme: &Theme,
     variant: SelectVariant,
@@ -892,7 +937,22 @@ pub(crate) fn menu_list_item_label_text_style(
         .map(|style| typography::with_intent(style, TextIntent::Control))
 }
 
-pub(crate) fn menu_list_item_label_text_color(theme: &Theme, variant: SelectVariant) -> Color {
+pub(crate) fn menu_list_item_label_text_color(
+    theme: &Theme,
+    variant: SelectVariant,
+    enabled: bool,
+    selected: bool,
+) -> Color {
+    if selected || !enabled {
+        let (label, _, _, _) = list_tokens::item_outcomes(
+            theme,
+            selected,
+            enabled,
+            list_tokens::ListItemInteraction::Default,
+        );
+        return label;
+    }
+
     let key = match variant {
         SelectVariant::Outlined => "md.comp.outlined-select.menu.list-item.label-text.color",
         SelectVariant::Filled => "md.comp.filled-select.menu.list-item.label-text.color",
@@ -915,7 +975,22 @@ pub(crate) fn menu_list_item_leading_icon_size(theme: &Theme, variant: SelectVar
     theme.metric_by_key(key).unwrap_or(Px(24.0))
 }
 
-pub(crate) fn menu_list_item_leading_icon_color(theme: &Theme, variant: SelectVariant) -> Color {
+pub(crate) fn menu_list_item_leading_icon_color(
+    theme: &Theme,
+    variant: SelectVariant,
+    enabled: bool,
+    selected: bool,
+) -> Color {
+    if selected || !enabled {
+        let (_, icon, _, _) = list_tokens::item_outcomes(
+            theme,
+            selected,
+            enabled,
+            list_tokens::ListItemInteraction::Default,
+        );
+        return icon;
+    }
+
     let key = match variant {
         SelectVariant::Outlined => {
             "md.comp.outlined-select.menu.list-item.with-leading-icon.leading-icon.color"
@@ -942,7 +1017,22 @@ pub(crate) fn menu_list_item_trailing_icon_size(theme: &Theme, variant: SelectVa
     theme.metric_by_key(key).unwrap_or(Px(24.0))
 }
 
-pub(crate) fn menu_list_item_trailing_icon_color(theme: &Theme, variant: SelectVariant) -> Color {
+pub(crate) fn menu_list_item_trailing_icon_color(
+    theme: &Theme,
+    variant: SelectVariant,
+    enabled: bool,
+    selected: bool,
+) -> Color {
+    if selected || !enabled {
+        let (_, icon, _, _) = list_tokens::item_outcomes(
+            theme,
+            selected,
+            enabled,
+            list_tokens::ListItemInteraction::Default,
+        );
+        return icon;
+    }
+
     let key = match variant {
         SelectVariant::Outlined => {
             "md.comp.outlined-select.menu.list-item.with-trailing-icon.trailing-icon.color"
