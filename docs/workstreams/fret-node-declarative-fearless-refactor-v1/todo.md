@@ -428,6 +428,56 @@ Execution companion: `design.md` (surface map + next worktree order).
     - `git diff --check`: passed.
     - `cargo nextest run -p fret-node`: passed.
 
+- [x] FNDX-051 Add the first custom edge-label child renderer contract.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_labels.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/mod.rs`
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `ecosystem/fret-node/src/ui/edge_types.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor`
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor custom_edge_path_feeds_declarative_edge_label_child_layer_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`
+  - Exit note: `node_graph_surface_with_edge_label_renderer(...)` and
+    `NodeGraphDeclarativeEdgeLabelRenderer` now provide the first default-path custom edge-label
+    child renderer contract. The renderer receives `NodeGraphEdgeLabelLayout` with the same
+    custom-path-derived `edge_centers_window` anchor and can render a non-interactive custom child
+    even when `EdgeRenderHint.label` is absent. `NodeGraphDeclarativeSurfaceRenderers` keeps this
+    composable with custom node portal renderers. Pointer-interactive edge label controls remain a
+    follow-up contract, and broad `NodeGraphPresenter` stays out of the default surface.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_labels.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/mod.rs`
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor`:
+      passed.
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor custom_edge_path_feeds_declarative_edge_label_child_layer_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`:
+      passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo fmt --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+
 ## M0 - Decision gates and internal seam map
 
 - [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.

@@ -35,18 +35,19 @@ use super::{
     Invalidation, KeyHandlerParams, LeftPointerDownOutcome, LeftPointerDownSnapshot,
     LeftPointerReleaseOutcome, MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase,
     NodeDragPointerMoveOutcome, NodeDragReleaseOutcome, NodeDragState,
-    NodeGraphDeclarativeInteractionContext, NodeGraphDeclarativeInteractionHook,
-    NodeGraphDeclarativeInteractionOutcome, NodeGraphDeclarativePortalRenderer,
-    NodeGraphDiagnosticsConfig, NodeGraphVisibleSubsetPortalConfig, NodeRectDraw,
-    PaintOnlyInteractionFrameInputs, PendingSelectionState, PortalBoundsStore, PortalDebugFlags,
-    PortalMeasuredGeometryState, apply_declarative_diag_view_preset_action_host,
-    authoritative_surface_boundary_snapshot, begin_left_pointer_down_action_host,
-    begin_pan_pointer_down_action_host, build_click_selection_preview_nodes,
-    build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
-    build_edge_spatial_rect_overrides, build_edges_draws_paint_only,
-    build_key_down_capture_handler, build_marquee_preview_selected_nodes,
-    build_node_drag_transaction, collect_portal_label_infos_for_visible_subset,
-    commit_graph_transaction, commit_marquee_selection_action_host, commit_node_drag_transaction,
+    NodeGraphDeclarativeEdgeLabelRenderer, NodeGraphDeclarativeInteractionContext,
+    NodeGraphDeclarativeInteractionHook, NodeGraphDeclarativeInteractionOutcome,
+    NodeGraphDeclarativePortalRenderer, NodeGraphDiagnosticsConfig, NodeGraphEdgeLabelLayout,
+    NodeGraphVisibleSubsetPortalConfig, NodeRectDraw, PaintOnlyInteractionFrameInputs,
+    PendingSelectionState, PortalBoundsStore, PortalDebugFlags, PortalMeasuredGeometryState,
+    apply_declarative_diag_view_preset_action_host, authoritative_surface_boundary_snapshot,
+    begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
+    build_click_selection_preview_nodes, build_diag_normalize_visible_node_transaction,
+    build_diag_nudge_visible_node_transaction, build_edge_spatial_rect_overrides,
+    build_edges_draws_paint_only, build_key_down_capture_handler,
+    build_marquee_preview_selected_nodes, build_node_drag_transaction,
+    collect_portal_label_infos_for_visible_subset, commit_graph_transaction,
+    commit_marquee_selection_action_host, commit_node_drag_transaction,
     commit_pending_selection_action_host, complete_left_pointer_release_action_host,
     complete_node_drag_release_action_host, derived_geometry_cache_key, edges_cache_key,
     effective_selected_nodes_for_paint, escape_cancel_declarative_interactions_action_host,
@@ -83,7 +84,8 @@ use crate::ui::{
     NodeGraphNodeTypes, NodeGraphSkin, NodeGraphSurfaceBinding, PortalCommandOutcome,
     PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalTextCommand,
     PortalTextEditHandler, PortalTextEditSpec, PortalTextEditSubmit, PortalTextStepMode,
-    node_graph_surface, node_graph_surface_with_portal_renderer, portal_cancel_text_command,
+    node_graph_surface, node_graph_surface_with_edge_label_renderer,
+    node_graph_surface_with_portal_renderer, portal_cancel_text_command,
     portal_step_text_command_with_mode, portal_submit_text_command,
 };
 use serde_json::Value;
@@ -1292,6 +1294,43 @@ fn render_surface_frame_with_portal_renderer_for_binding(
                 cx,
                 props,
                 portal_renderer,
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(host, services, bounds, 1.0);
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(host, services, bounds, &mut scene, 1.0);
+    host.frame_id = fret_runtime::FrameId(host.frame_id.0.saturating_add(1));
+    ui.semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot")
+}
+
+fn render_surface_frame_with_edge_label_renderer_for_binding(
+    ui: &mut fret_ui::UiTree<TestActionHostImpl>,
+    host: &mut TestActionHostImpl,
+    services: &mut FakeUiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    binding: &NodeGraphSurfaceBinding,
+    props_for_binding: impl FnOnce(&NodeGraphSurfaceBinding) -> super::NodeGraphSurfaceProps,
+    edge_label_renderer: &mut dyn NodeGraphDeclarativeEdgeLabelRenderer<TestActionHostImpl>,
+) -> fret_core::SemanticsSnapshot {
+    let root = fret_ui::declarative::render_root(
+        ui,
+        host,
+        services,
+        window,
+        bounds,
+        "node-graph-surface-edge-label-renderer-frame",
+        |cx| {
+            let props = props_for_binding(binding);
+            vec![node_graph_surface_with_edge_label_renderer(
+                cx,
+                props,
+                edge_label_renderer,
             )]
         },
     );
@@ -6303,6 +6342,169 @@ fn custom_edge_path_feeds_declarative_edge_label_child_layer_anchor() {
         expected_center,
         0.5,
     );
+}
+
+#[derive(Default)]
+struct RecordingEdgeLabelRenderer {
+    calls: Rc<RefCell<Vec<NodeGraphEdgeLabelLayout>>>,
+}
+
+impl NodeGraphDeclarativeEdgeLabelRenderer<TestActionHostImpl> for RecordingEdgeLabelRenderer {
+    fn render_edge_label(
+        &mut self,
+        cx: &mut fret_ui::ElementContext<'_, TestActionHostImpl>,
+        graph: &Graph,
+        layout: NodeGraphEdgeLabelLayout,
+    ) -> fret_ui::element::Elements {
+        if !graph.edges.contains_key(&layout.edge) {
+            return Vec::new().into();
+        }
+        self.calls.borrow_mut().push(layout.clone());
+
+        let mut props = fret_ui::element::SemanticsProps {
+            label: Some(Arc::<str>::from("Custom edge label child")),
+            value: Some(Arc::<str>::from(format!(
+                "edge={}; center_x={:.1}; center_y={:.1}; zoom={:.1}; label={:?}",
+                layout.edge.0,
+                layout.edge_center_window.x.0,
+                layout.edge_center_window.y.0,
+                layout.zoom,
+                layout.label.as_deref(),
+            ))),
+            ..Default::default()
+        };
+        props.layout.size.width = Length::Px(Px(96.0));
+        props.layout.size.height = Length::Px(Px(24.0));
+
+        vec![cx.semantics(props, |_cx| Vec::new()).attach_semantics(
+            fret_ui::element::SemanticsDecoration::default().test_id(Arc::<str>::from(format!(
+                "node_graph.edge_label.custom.{}",
+                layout.edge.0
+            ))),
+        )]
+        .into()
+    }
+}
+
+#[test]
+fn custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor() {
+    let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let edge_ref = graph.edges.get(&edge).expect("test edge");
+    let from = geom.port_center(edge_ref.from).expect("from port center");
+    let to = geom.port_center(edge_ref.to).expect("to port center");
+    let detour_y = from.y.0 + 240.0;
+    let custom_points = [
+        from,
+        Point::new(from.x, Px(detour_y)),
+        Point::new(to.x, Px(detour_y)),
+        to,
+    ];
+    let expected_center = polyline_midpoint(&custom_points);
+    let edge_types = Rc::new(NodeGraphEdgeTypes::new().register_path(
+        EdgeTypeKey::new("data"),
+        move |_graph, _edge_id, _style, _hint, input| {
+            let detour_y = input.from.y.0 + 240.0;
+            Some(EdgeCustomPath {
+                cache_key: 101,
+                commands: vec![
+                    PathCommand::MoveTo(input.from),
+                    PathCommand::LineTo(Point::new(input.from.x, Px(detour_y))),
+                    PathCommand::LineTo(Point::new(input.to.x, Px(detour_y))),
+                    PathCommand::LineTo(input.to),
+                ],
+            })
+        },
+    ));
+
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order,
+            ..Default::default()
+        },
+        default_editor_config(),
+    );
+
+    let calls = Rc::new(RefCell::new(Vec::<NodeGraphEdgeLabelLayout>::new()));
+    let mut renderer = RecordingEdgeLabelRenderer {
+        calls: calls.clone(),
+    };
+    let custom_test_id = format!("node_graph.edge_label.custom.{}", edge.0);
+    let mut last = None;
+    for _ in 0..4 {
+        let edge_types = edge_types.clone();
+        let snapshot = render_surface_frame_with_edge_label_renderer_for_binding(
+            &mut ui,
+            &mut host,
+            &mut services,
+            window,
+            bounds,
+            &binding,
+            move |binding| {
+                let mut props = super::NodeGraphSurfaceProps::new(binding.clone());
+                props.edge_types = Some(edge_types);
+                props
+            },
+            &mut renderer,
+        );
+        if snapshot
+            .nodes
+            .iter()
+            .any(|node| node.test_id.as_deref() == Some(custom_test_id.as_str()))
+        {
+            last = Some(snapshot);
+            break;
+        }
+        last = Some(snapshot);
+    }
+    let snapshot = last.expect("at least one frame rendered");
+    let custom = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some(custom_test_id.as_str()))
+        .unwrap_or_else(|| {
+            let available = snapshot
+                .nodes
+                .iter()
+                .filter_map(|node| node.test_id.as_deref())
+                .collect::<Vec<_>>();
+            panic!("missing custom edge label child renderer output; available={available:?}")
+        });
+
+    assert_eq!(custom.label.as_deref(), Some("Custom edge label child"));
+    assert_point_near(
+        Point::new(
+            Px(custom.bounds.origin.x.0 + custom.bounds.size.width.0 / 2.0),
+            Px(custom.bounds.origin.y.0 + custom.bounds.size.height.0 / 2.0),
+        ),
+        expected_center,
+        0.5,
+    );
+    assert!(
+        snapshot
+            .nodes
+            .iter()
+            .all(|node| node.test_id.as_deref() != Some("node_graph.edge_label.0")),
+        "custom renderer without a default label must not synthesize the default label child"
+    );
+
+    let calls = calls.borrow();
+    let call = calls
+        .iter()
+        .find(|call| call.edge == edge)
+        .expect("custom edge label renderer should be called for the edge");
+    assert_eq!(call.label, None);
+    assert_eq!(call.zoom, 1.0);
+    assert_point_near(call.edge_center_window, expected_center, 0.5);
 }
 
 #[test]

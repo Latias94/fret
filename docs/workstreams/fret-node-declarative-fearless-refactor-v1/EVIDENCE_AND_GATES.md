@@ -5,13 +5,23 @@ Last updated: 2026-05-28
 
 ## Current Focus
 
-FNDX-050 feeds default `EdgeRenderHint.label` output through a screen-space declarative edge-label
-child layer centered on the same custom-path-derived `edge_centers_window` anchor used by
-declarative EdgeToolbar composition. This closes the first visible edge-label child-layer contract
-while still leaving arbitrary EdgeLabelRenderer-style custom child renderers as an explicit
-follow-up contract.
+FNDX-051 adds the first non-interactive `NodeGraphDeclarativeEdgeLabelRenderer` child contract on
+the default declarative surface. Custom renderer output consumes the same custom-path-derived
+`edge_centers_window` anchor as declarative EdgeToolbar and default `EdgeRenderHint.label` output,
+and `NodeGraphDeclarativeSurfaceRenderers` keeps edge-label and node-portal renderers composable,
+while pointer-interactive edge label controls remain an explicit follow-up contract.
 
 ## Targeted Iteration Gates
+
+```bash
+cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor custom_edge_path_feeds_declarative_edge_label_child_layer_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter
+```
+
+This gate proves the FNDX-051 custom edge label renderer contract: app-provided edge-label children
+can render without a default `EdgeRenderHint.label`, receive `NodeGraphEdgeLabelLayout` with the
+custom-path-derived edge-center anchor, layout at that anchor, and source-policy/docs keep
+`NodeGraphPresenter` out of the default surface while naming pointer-interactive label controls as
+follow-up work.
 
 ```bash
 cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_child_layer_anchor custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter
@@ -20,8 +30,7 @@ cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_chi
 This gate proves the FNDX-050 custom edge path label contract: default declarative internals expose
 `edge_centers_window` using the custom path midpoint, the declarative edge-label child layer consumes
 that anchor for visible `EdgeRenderHint.label` placement, the label host remains hit-test
-transparent, and source-policy/docs keep arbitrary EdgeLabelRenderer-style custom child renderers
-deferred.
+transparent, and source-policy/docs keep pointer-interactive edge label controls deferred.
 
 ```bash
 cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter
@@ -148,12 +157,14 @@ graph transaction and restores focus to the graph surface target.
 ```bash
 cargo check -p fret-node --no-default-features
 cargo check -p fret-node --all-features --tests
+cargo clippy -p fret-node --all-targets --all-features -- -D warnings
 python3 tools/check_layering.py
 ```
 
 Use the no-default-features check when changing headless/runtime docs or exports. Use the
 all-features test-target check when touching UI-enabled or optional integration boundaries. Use
-layering checks when moving mechanisms across `fret-node`, `fret-canvas`, or core crates.
+the clippy gate when changing public API, traits, or cross-crate integration surfaces. Use layering
+checks when moving mechanisms across `fret-node`, `fret-canvas`, or core crates.
 
 ## Closeout Gates
 
@@ -181,6 +192,9 @@ closeout note must name those failures.
 - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_path_geometry.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+- `ecosystem/fret-node/src/ui/declarative/mod.rs`
+- `ecosystem/fret-node/src/ui/mod.rs`
 - `ecosystem/fret-node/src/ui/overlays/mod.rs`
 - `ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs`
 - `ecosystem/fret-node/src/surface_policy_tests.rs`
@@ -394,7 +408,7 @@ closeout note must name those failures.
     child layer centered on the custom-path-derived edge-center internals.
   - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_child_layer_anchor custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`:
     passed; proves the label child-layer gate, toolbar composition gate, and source-policy/docs
-    demotion of arbitrary EdgeLabelRenderer-style custom child renderers stay aligned.
+    demotion of pointer-interactive edge label controls stay aligned.
   - `cargo check -p fret-node --tests`: passed; proves UI-enabled test targets compile with the new
     edge-label overlay child layer.
   - `cargo check -p fret-node --all-features --tests`: passed; proves optional UI/integration test
@@ -409,5 +423,28 @@ closeout note must name those failures.
   - `git diff --check`: passed; proves the patch has no whitespace errors.
   - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
     green with the new edge-label child-layer gate.
+- FNDX-051:
+  - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor`:
+    passed; proves an app-provided edge-label renderer can render a custom child at the
+    custom-path-derived edge-center anchor even when `EdgeRenderHint.label` is absent.
+  - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor custom_edge_path_feeds_declarative_edge_label_child_layer_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`:
+    passed; proves the custom renderer gate, default label gate, and source-policy/docs stay aligned
+    without exposing broad `NodeGraphPresenter` on the default surface.
+  - `cargo check -p fret-node --tests`: passed; proves UI-enabled test targets compile with the new
+    edge-label renderer entrypoint and re-exports.
+  - `cargo check -p fret-node --all-features --tests`: passed; proves optional UI/integration test
+    targets compile with the renderer contract.
+  - `cargo check -p fret-node --no-default-features`: passed; proves headless/runtime-facing package
+    compilation remains unaffected by the UI-only renderer slice.
+  - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed; proves the
+    new public renderer trait/helper surface and its UI dependency path are lint-clean.
+  - `cargo fmt --check`: passed; proves formatting remains clean.
+  - `python3 tools/check_layering.py`: passed; proves the slice did not violate workspace layering
+    policy.
+  - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed;
+    proves the workstream metadata remains valid JSON.
+  - `git diff --check`: passed; proves the patch has no whitespace errors.
+  - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
+    green with the new custom edge-label renderer gate.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

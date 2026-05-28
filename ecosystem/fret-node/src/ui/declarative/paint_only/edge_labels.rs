@@ -8,17 +8,19 @@ use fret_ui::element::{
 use fret_ui::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use fret_ui::{ElementContext, UiHost};
 
-use crate::core::EdgeId;
+use crate::core::{EdgeId, Graph};
 use crate::ui::NodeGraphSurfaceBinding;
 use crate::ui::style::NodeGraphStyle;
 
 use super::cache::EdgePathDraw;
+use super::surface_support::read_authoritative_graph_in_models;
+use super::{NodeGraphDeclarativeEdgeLabelRenderer, NodeGraphEdgeLabelLayout};
 
 #[derive(Debug, Clone)]
 struct EdgeLabelInfo {
     edge: EdgeId,
     center: Point,
-    label: Arc<str>,
+    label: Option<Arc<str>>,
 }
 
 pub(super) fn push_edge_label_overlays<H: UiHost + 'static>(
@@ -27,7 +29,9 @@ pub(super) fn push_edge_label_overlays<H: UiHost + 'static>(
     binding: &NodeGraphSurfaceBinding,
     edge_draws: Option<&[EdgePathDraw]>,
     bounds: Rect,
+    zoom: f32,
     style_tokens: &NodeGraphStyle,
+    mut edge_label_renderer: Option<&mut dyn NodeGraphDeclarativeEdgeLabelRenderer<H>>,
 ) {
     let Some(edge_draws) = edge_draws else {
         return;
@@ -41,14 +45,50 @@ pub(super) fn push_edge_label_overlays<H: UiHost + 'static>(
     }
 
     let internals = binding.internals_store().snapshot();
+    let custom_renderer_enabled = edge_label_renderer.is_some();
+    let graph_snapshot = if custom_renderer_enabled {
+        read_authoritative_graph_in_models(cx.app.models_mut(), binding, Clone::clone)
+            .unwrap_or_default()
+    } else {
+        Graph::default()
+    };
     for (ordinal, info) in edge_draws
         .iter()
-        .filter_map(|draw| edge_label_info(draw, &internals.edge_centers_window, bounds))
+        .filter_map(|draw| {
+            edge_label_info(
+                draw,
+                &internals.edge_centers_window,
+                bounds,
+                custom_renderer_enabled,
+            )
+        })
         .enumerate()
     {
         let style_tokens = style_tokens.clone();
-        overlay_children.push(cx.keyed(("fret-node.edge-label.v1", info.edge), move |cx| {
-            edge_label_host_element(cx, bounds, info, ordinal, style_tokens)
+        let graph_snapshot = graph_snapshot.clone();
+        overlay_children.push(cx.keyed(("fret-node.edge-label.v1", info.edge), |cx| {
+            let custom_children = if let Some(renderer) = edge_label_renderer.as_deref_mut() {
+                let layout = NodeGraphEdgeLabelLayout {
+                    edge: info.edge,
+                    edge_center_window: info.center,
+                    label: info.label.clone(),
+                    zoom,
+                };
+                renderer
+                    .render_edge_label(cx, &graph_snapshot, layout)
+                    .into_vec()
+            } else {
+                Vec::new()
+            };
+
+            edge_label_host_element(
+                cx,
+                bounds,
+                info.clone(),
+                ordinal,
+                style_tokens.clone(),
+                custom_children,
+            )
         }));
     }
 }
@@ -57,8 +97,12 @@ fn edge_label_info(
     draw: &EdgePathDraw,
     centers: &std::collections::BTreeMap<EdgeId, Point>,
     bounds: Rect,
+    custom_renderer_enabled: bool,
 ) -> Option<EdgeLabelInfo> {
-    let label = draw.label.clone()?;
+    let label = draw.label.clone();
+    if label.is_none() && !custom_renderer_enabled {
+        return None;
+    }
     let center = centers.get(&draw.edge).copied()?;
     if !center.x.0.is_finite()
         || !center.y.0.is_finite()
@@ -83,6 +127,7 @@ fn edge_label_host_element<H: UiHost + 'static>(
     info: EdgeLabelInfo,
     ordinal: usize,
     style_tokens: NodeGraphStyle,
+    custom_children: Vec<AnyElement>,
 ) -> AnyElement {
     let center = info.center;
     let mut surface = fret_ui::element::ManagedSurfaceProps::default();
@@ -125,13 +170,40 @@ fn edge_label_host_element<H: UiHost + 'static>(
                 }
             }
         },
-        move |cx| vec![edge_label_child(cx, info, ordinal, &style_tokens)],
+        move |cx| {
+            if !custom_children.is_empty() {
+                return edge_label_custom_children(cx, custom_children);
+            }
+
+            match info.label.clone() {
+                Some(label) => vec![edge_label_child(
+                    cx,
+                    info.edge,
+                    label,
+                    ordinal,
+                    &style_tokens,
+                )],
+                None => Vec::new(),
+            }
+        },
     )
+}
+
+fn edge_label_custom_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    children: Vec<AnyElement>,
+) -> Vec<AnyElement> {
+    if children.len() == 1 {
+        return children;
+    }
+
+    vec![cx.container(ContainerProps::default(), move |_cx| children)]
 }
 
 fn edge_label_child<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    info: EdgeLabelInfo,
+    edge: EdgeId,
+    label: Arc<str>,
     ordinal: usize,
     style_tokens: &NodeGraphStyle,
 ) -> AnyElement {
@@ -149,7 +221,6 @@ fn edge_label_child<H: UiHost>(
         fret_core::Edges::all(Px(style_tokens.paint.edge_label_border_width.max(0.0)));
     container.border_color = Some(style_tokens.paint.edge_label_border);
 
-    let label = info.label.clone();
     let mut text = TextProps::new(label.clone());
     text.style = Some(style_tokens.paint.edge_label_text_style.clone());
     text.color = Some(style_tokens.paint.edge_label_text);
@@ -164,6 +235,6 @@ fn edge_label_child<H: UiHost>(
                 .role(SemanticsRole::Generic)
                 .label(label)
                 .test_id(Arc::<str>::from(format!("node_graph.edge_label.{ordinal}")))
-                .value(Arc::<str>::from(format!("edge_id={}", info.edge.0))),
+                .value(Arc::<str>::from(format!("edge_id={}", edge.0))),
         )
 }

@@ -169,10 +169,13 @@ update rather than an incidental refactor.
     child placement.
   - FNDX-050 feeds default `EdgeRenderHint.label` output into a screen-space declarative edge-label
     child layer centered on the same custom-path-derived edge-center anchors.
+  - FNDX-051 adds `NodeGraphDeclarativeEdgeLabelRenderer` for non-interactive custom edge-label
+    children on that same anchor, plus a combined renderers bag for composing it with node portal
+    renderers.
   - Custom `NodeGraphPresenter` remains advanced/internal on the default path because it still mixes
     geometry, labels, context menus, and insertion/search policy.
-  - Arbitrary EdgeLabelRenderer-style custom child renderers remain follow-up work before claiming
-    full XyFlow edge wrapper parity.
+  - Pointer-interactive edge label controls remain follow-up work before claiming full XyFlow edge
+    wrapper parity.
 
 - **Ergonomic API fragmentation**
   - The surface naming is now closed around `NodeGraphSurfaceBinding` (instance-style app-facing
@@ -531,8 +534,7 @@ The remaining blockers should be tracked as concrete public-surface or behavior 
 
 - whether the remaining broad `NodeGraphPresenter` responsibilities should split into narrower
   default-path label/geometry/menu/search contracts, or stay advanced-only,
-- whether arbitrary EdgeLabelRenderer-style custom child renderers should be the next edge-wrapper
-  parity slice,
+- whether pointer-interactive edge label controls should be the next edge-wrapper parity slice,
 - whether paint/style tokens still leak geometry or hit-testing policy,
 - whether `prepare_surface_frame` should be split further around frame plan, portal measurement,
   a11y/internals publication, and diagnostics.

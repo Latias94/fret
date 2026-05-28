@@ -66,8 +66,9 @@ Use these surfaces for new app code and new examples.
   - currently affect the default declarative edge paint path and conservative edge spatial
     candidates, exact custom-path distance hit filtering, and custom path midpoint anchors for
     edge-center internals consumed by declarative EdgeToolbar and default `EdgeRenderHint.label`
-    child composition; arbitrary EdgeLabelRenderer-style custom child renderers and node/body skin
-    geometry remain follow-up contracts.
+    child composition, plus non-interactive `NodeGraphDeclarativeEdgeLabelRenderer` custom child
+    composition; pointer-interactive edge label controls and node/body skin geometry remain
+    follow-up contracts.
 
 ### XYFlow alignment note
 
@@ -466,6 +467,10 @@ Status note (2026-05-28):
 - FNDX-050 feeds default `EdgeRenderHint.label` output into a hit-test-transparent declarative
   edge-label child layer at the same custom-path-derived anchor, so visible labels now share the
   default anchor contract without exposing arbitrary custom child renderers yet.
+- FNDX-051 adds `NodeGraphDeclarativeEdgeLabelRenderer` for non-interactive custom child placement
+  at the same custom-path-derived anchor, so apps can supply EdgeLabelRenderer-style visual content
+  without widening the broad presenter surface, and can combine it with node portal rendering
+  through `NodeGraphDeclarativeSurfaceRenderers`.
 
 Why this still matters:
 

@@ -20,7 +20,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, ElementContextAccess, GlobalElementId, Invalidation, UiHost};
 
-use crate::core::Graph;
+use crate::core::{EdgeId, Graph};
 use crate::io::NodeGraphViewState;
 use crate::ops::GraphTransaction;
 use crate::ui::canvas::{CanvasGeometry, CanvasSpatialDerived};
@@ -266,6 +266,48 @@ pub trait NodeGraphDeclarativePortalRenderer<H: UiHost> {
     ) -> Elements;
 }
 
+/// Screen-space layout passed to a declarative edge-label child renderer.
+#[derive(Debug, Clone)]
+pub struct NodeGraphEdgeLabelLayout {
+    pub edge: EdgeId,
+    pub edge_center_window: Point,
+    pub label: Option<Arc<str>>,
+    pub zoom: f32,
+}
+
+/// Per-edge child renderer for the declarative edge-label layer.
+///
+/// This is the default-path replacement for XyFlow-style `EdgeLabelRenderer` children. It receives
+/// the authoritative graph snapshot plus the screen-space edge-center anchor and returns regular
+/// declarative elements. Returning an empty list falls back to the built-in text label when
+/// `EdgeRenderHint.label` is present.
+pub trait NodeGraphDeclarativeEdgeLabelRenderer<H: UiHost> {
+    fn render_edge_label(
+        &mut self,
+        cx: &mut ElementContext<'_, H>,
+        graph: &Graph,
+        layout: NodeGraphEdgeLabelLayout,
+    ) -> Elements;
+}
+
+/// Optional custom renderers for declarative node-graph subtrees.
+///
+/// Keep these renderers as composition-time hooks instead of fields on `NodeGraphSurfaceProps`, so
+/// the props type stays cloneable and the broad presenter surface does not grow UI-subtree policy.
+pub struct NodeGraphDeclarativeSurfaceRenderers<'a, H: UiHost> {
+    pub portal_renderer: Option<&'a mut dyn NodeGraphDeclarativePortalRenderer<H>>,
+    pub edge_label_renderer: Option<&'a mut dyn NodeGraphDeclarativeEdgeLabelRenderer<H>>,
+}
+
+impl<'a, H: UiHost> NodeGraphDeclarativeSurfaceRenderers<'a, H> {
+    pub fn empty() -> Self {
+        Self {
+            portal_renderer: None,
+            edge_label_renderer: None,
+        }
+    }
+}
+
 /// Command adapter for declarative portal subtrees.
 ///
 /// This is the default-path replacement for the retained `NodeGraphPortalHost::command` adapter.
@@ -395,7 +437,7 @@ pub fn node_graph_surface<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     props: NodeGraphSurfaceProps,
 ) -> AnyElement {
-    node_graph_surface_impl(cx, props, None)
+    node_graph_surface_impl(cx, props, NodeGraphDeclarativeSurfaceRenderers::empty())
 }
 
 /// Declarative node-graph surface with custom visible-subset portal subtree hosting.
@@ -410,14 +452,59 @@ pub fn node_graph_surface_with_portal_renderer<H: UiHost + 'static>(
     props: NodeGraphSurfaceProps,
     portal_renderer: &mut dyn NodeGraphDeclarativePortalRenderer<H>,
 ) -> AnyElement {
-    node_graph_surface_impl(cx, props, Some(portal_renderer))
+    node_graph_surface_with_renderers(
+        cx,
+        props,
+        NodeGraphDeclarativeSurfaceRenderers {
+            portal_renderer: Some(portal_renderer),
+            edge_label_renderer: None,
+        },
+    )
 }
 
-fn node_graph_surface_impl<H: UiHost + 'static>(
+/// Declarative node-graph surface with custom edge-label subtree hosting.
+///
+/// The renderer is invoked for edges that have a default declarative edge-center anchor. Its output
+/// is mounted through the same screen-space edge-label layer as built-in `EdgeRenderHint.label`
+/// text, keyed by edge id so local element state follows the edge identity.
+#[track_caller]
+pub fn node_graph_surface_with_edge_label_renderer<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     props: NodeGraphSurfaceProps,
-    portal_renderer: Option<&mut dyn NodeGraphDeclarativePortalRenderer<H>>,
+    edge_label_renderer: &mut dyn NodeGraphDeclarativeEdgeLabelRenderer<H>,
 ) -> AnyElement {
+    node_graph_surface_with_renderers(
+        cx,
+        props,
+        NodeGraphDeclarativeSurfaceRenderers {
+            portal_renderer: None,
+            edge_label_renderer: Some(edge_label_renderer),
+        },
+    )
+}
+
+/// Declarative node-graph surface with multiple custom subtree renderers.
+///
+/// Use this when an app needs to combine visible-subset node portal rendering with custom edge-label
+/// children. The specialized `*_with_*_renderer` helpers remain convenience wrappers.
+#[track_caller]
+pub fn node_graph_surface_with_renderers<'a, H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    props: NodeGraphSurfaceProps,
+    renderers: NodeGraphDeclarativeSurfaceRenderers<'a, H>,
+) -> AnyElement {
+    node_graph_surface_impl(cx, props, renderers)
+}
+
+fn node_graph_surface_impl<'a, H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    props: NodeGraphSurfaceProps,
+    renderers: NodeGraphDeclarativeSurfaceRenderers<'a, H>,
+) -> AnyElement {
+    let NodeGraphDeclarativeSurfaceRenderers {
+        portal_renderer,
+        edge_label_renderer,
+    } = renderers;
     let NodeGraphSurfaceProps {
         binding,
         pointer_region,
@@ -620,6 +707,7 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
                     wheel_zoom,
                     pinch_zoom_speed,
                     portal_renderer,
+                    edge_label_renderer,
                     surface_models: PaintOnlySurfaceModels {
                         drag: drag.clone(),
                         marquee_drag: marquee_drag.clone(),
@@ -681,20 +769,20 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum NodeGraphA11yDescendantKey {
-    FocusedPort,
-    FocusedEdge,
-    FocusedNode,
+    Port,
+    Edge,
+    Node,
 }
 
 fn active_descendant_key_from_a11y(
     snapshot: &crate::ui::internals::NodeGraphA11ySnapshot,
 ) -> Option<NodeGraphA11yDescendantKey> {
     if snapshot.focused_port.is_some() {
-        Some(NodeGraphA11yDescendantKey::FocusedPort)
+        Some(NodeGraphA11yDescendantKey::Port)
     } else if snapshot.focused_edge.is_some() {
-        Some(NodeGraphA11yDescendantKey::FocusedEdge)
+        Some(NodeGraphA11yDescendantKey::Edge)
     } else if snapshot.focused_node.is_some() {
-        Some(NodeGraphA11yDescendantKey::FocusedNode)
+        Some(NodeGraphA11yDescendantKey::Node)
     } else {
         None
     }
@@ -726,21 +814,21 @@ fn build_a11y_descendant_semantics<H: UiHost + 'static>(
 ) -> Vec<AnyElement> {
     [
         (
-            NodeGraphA11yDescendantKey::FocusedPort,
+            NodeGraphA11yDescendantKey::Port,
             a11y.focused_port_label.clone().or_else(|| {
                 a11y.focused_port
                     .map(|port| format!("Focused port {port:?}"))
             }),
         ),
         (
-            NodeGraphA11yDescendantKey::FocusedEdge,
+            NodeGraphA11yDescendantKey::Edge,
             a11y.focused_edge_label.clone().or_else(|| {
                 a11y.focused_edge
                     .map(|edge| format!("Focused edge {edge:?}"))
             }),
         ),
         (
-            NodeGraphA11yDescendantKey::FocusedNode,
+            NodeGraphA11yDescendantKey::Node,
             a11y.focused_node_label.clone().or_else(|| {
                 a11y.focused_node
                     .map(|node| format!("Focused node {node:?}"))
@@ -799,4 +887,30 @@ where
     Cx: ElementContextAccess<'a, H>,
 {
     node_graph_surface_with_portal_renderer(cx.elements(), props, portal_renderer)
+}
+
+/// Capability-first adapter for [`node_graph_surface_with_edge_label_renderer`].
+#[track_caller]
+pub fn node_graph_surface_with_edge_label_renderer_in<'a, H: UiHost + 'static + 'a, Cx>(
+    cx: &mut Cx,
+    props: NodeGraphSurfaceProps,
+    edge_label_renderer: &mut dyn NodeGraphDeclarativeEdgeLabelRenderer<H>,
+) -> AnyElement
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    node_graph_surface_with_edge_label_renderer(cx.elements(), props, edge_label_renderer)
+}
+
+/// Capability-first adapter for [`node_graph_surface_with_renderers`].
+#[track_caller]
+pub fn node_graph_surface_with_renderers_in<'a, H: UiHost + 'static + 'a, Cx>(
+    cx: &mut Cx,
+    props: NodeGraphSurfaceProps,
+    renderers: NodeGraphDeclarativeSurfaceRenderers<'a, H>,
+) -> AnyElement
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    node_graph_surface_with_renderers(cx.elements(), props, renderers)
 }

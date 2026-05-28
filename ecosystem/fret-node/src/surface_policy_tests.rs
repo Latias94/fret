@@ -413,6 +413,8 @@ fn store_public_surface_does_not_expose_raw_view_state_mutation() {
 
 #[test]
 fn default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter() {
+    let ui_mod_source = source_without_tests(UI_MOD_RS);
+    let declarative_mod_source = source_without_tests(UI_DECLARATIVE_MOD_RS);
     let surface_source = UI_DECLARATIVE_PAINT_ONLY_RS;
     let cache_source = source_without_tests(UI_DECLARATIVE_PAINT_ONLY_CACHE_RS);
     let edge_labels_source = source_without_tests(UI_DECLARATIVE_PAINT_ONLY_EDGE_LABELS_RS);
@@ -424,6 +426,19 @@ fn default_declarative_surface_exposes_edge_types_and_skin_without_custom_presen
 
     assert!(surface_source.contains("pub edge_types: Option<NodeGraphEdgeTypesRef>"));
     assert!(surface_source.contains("pub skin: Option<NodeGraphSkinRef>"));
+    assert!(surface_source.contains("pub struct NodeGraphEdgeLabelLayout"));
+    assert!(surface_source.contains("pub trait NodeGraphDeclarativeEdgeLabelRenderer"));
+    assert!(surface_source.contains("pub struct NodeGraphDeclarativeSurfaceRenderers"));
+    assert!(surface_source.contains("node_graph_surface_with_edge_label_renderer"));
+    assert!(surface_source.contains("node_graph_surface_with_renderers"));
+    assert!(declarative_mod_source.contains("NodeGraphDeclarativeEdgeLabelRenderer"));
+    assert!(declarative_mod_source.contains("NodeGraphDeclarativeSurfaceRenderers"));
+    assert!(declarative_mod_source.contains("node_graph_surface_with_edge_label_renderer"));
+    assert!(declarative_mod_source.contains("node_graph_surface_with_renderers"));
+    assert!(ui_mod_source.contains("NodeGraphDeclarativeEdgeLabelRenderer"));
+    assert!(ui_mod_source.contains("NodeGraphDeclarativeSurfaceRenderers"));
+    assert!(ui_mod_source.contains("node_graph_surface_with_edge_label_renderer"));
+    assert!(ui_mod_source.contains("node_graph_surface_with_renderers"));
     assert!(surface_source.contains("edge_types: None"));
     assert!(surface_source.contains("skin: None"));
     assert!(
@@ -451,6 +466,8 @@ fn default_declarative_surface_exposes_edge_types_and_skin_without_custom_presen
     assert!(cache_source.contains("label: hint.label.clone()"));
     assert!(surface_content_source.contains("push_edge_label_overlays("));
     assert!(edge_labels_source.contains("edge_centers_window"));
+    assert!(edge_labels_source.contains("render_edge_label("));
+    assert!(edge_labels_source.contains("custom_renderer_enabled"));
     assert!(edge_labels_source.contains("cx.set_hit_test_rects([])"));
     assert!(edge_labels_source.contains("node_graph.edge_label."));
     assert!(cache_source.contains("edge_types_rev"));
@@ -465,6 +482,9 @@ fn default_declarative_surface_exposes_edge_types_and_skin_without_custom_presen
         assert!(docs.contains("custom path midpoint"));
         assert!(docs.contains("declarative EdgeToolbar"));
         assert!(docs.contains("EdgeRenderHint.label"));
+        assert!(docs.contains("node_graph_surface_with_edge_label_renderer"));
+        assert!(docs.contains("node_graph_surface_with_renderers"));
+        assert!(docs.contains("NodeGraphDeclarativeEdgeLabelRenderer"));
         assert!(docs.contains(
             "Custom `NodeGraphPresenter` is not part of the default declarative surface"
         ));

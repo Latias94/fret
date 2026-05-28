@@ -12,13 +12,16 @@ mod paint_only;
 mod view_reducer;
 pub use super::binding::NodeGraphSurfaceBinding;
 pub use paint_only::{
-    NodeGraphDeclarativeInteractionContext, NodeGraphDeclarativeInteractionHook,
-    NodeGraphDeclarativeInteractionHookRef, NodeGraphDeclarativeInteractionOutcome,
-    NodeGraphDeclarativePortalCommandHandler, NodeGraphDeclarativePortalCommandHandlerRef,
-    NodeGraphDeclarativePortalRenderer, NodeGraphDiagnosticsConfig, NodeGraphSurfaceProps,
-    NodeGraphVisibleSubsetPortalConfig, PortalCommandOutcome, PortalTextCommand,
-    PortalTextStepMode, node_graph_surface, node_graph_surface_in,
+    NodeGraphDeclarativeEdgeLabelRenderer, NodeGraphDeclarativeInteractionContext,
+    NodeGraphDeclarativeInteractionHook, NodeGraphDeclarativeInteractionHookRef,
+    NodeGraphDeclarativeInteractionOutcome, NodeGraphDeclarativePortalCommandHandler,
+    NodeGraphDeclarativePortalCommandHandlerRef, NodeGraphDeclarativePortalRenderer,
+    NodeGraphDeclarativeSurfaceRenderers, NodeGraphDiagnosticsConfig, NodeGraphEdgeLabelLayout,
+    NodeGraphSurfaceProps, NodeGraphVisibleSubsetPortalConfig, PortalCommandOutcome,
+    PortalTextCommand, PortalTextStepMode, node_graph_surface, node_graph_surface_in,
+    node_graph_surface_with_edge_label_renderer, node_graph_surface_with_edge_label_renderer_in,
     node_graph_surface_with_portal_renderer, node_graph_surface_with_portal_renderer_in,
+    node_graph_surface_with_renderers, node_graph_surface_with_renderers_in,
     parse_portal_text_command, portal_cancel_text_command, portal_step_text_command,
     portal_step_text_command_with_mode, portal_submit_text_command,
 };

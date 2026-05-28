@@ -133,8 +133,12 @@ conservative paint culling, conservative spatial-index candidate rects, and exac
 filtering for edge interaction candidates. It also uses the custom path midpoint for edge-center
 anchors exposed through internals, and the declarative EdgeToolbar host consumes those anchors for
 child placement. `EdgeRenderHint.label` now renders through the same screen-space child layer at
-the edge-center anchor; arbitrary EdgeLabelRenderer-style custom child renderers remain a follow-up
-contract.
+the edge-center anchor. For arbitrary non-interactive edge label children, use
+`node_graph_surface_with_edge_label_renderer(...)` and `NodeGraphDeclarativeEdgeLabelRenderer`; the
+renderer receives `NodeGraphEdgeLabelLayout` with the same screen-space anchor. Use
+`node_graph_surface_with_renderers(...)` when combining custom node portal and edge-label
+renderers. Pointer-interactive edge label controls remain a follow-up contract; use declarative
+EdgeToolbar for interactive edge actions today.
 
 ### Styling (theme tokens + UI-only chrome hints)
 

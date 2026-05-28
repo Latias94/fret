@@ -3,8 +3,6 @@
 //! This backend is feature-gated (`fret-canvas/rstar`) so ecosystem crates can opt in after
 //! evaluating performance characteristics on real workloads.
 
-#![cfg(feature = "rstar")]
-
 use std::collections::HashMap;
 use std::hash::Hash;
 

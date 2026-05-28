@@ -6,18 +6,13 @@ use crate::io::NodeGraphViewState;
 use crate::ui::NodeGraphInternalsStore;
 use crate::ui::screen_space_placement::{AdjacentPosition, AxisAlign};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum NodeGraphToolbarVisibility {
     /// Show only when the target node or edge is selected.
+    #[default]
     WhenSelected,
     /// Show whenever the target node or edge exists.
     Always,
-}
-
-impl Default for NodeGraphToolbarVisibility {
-    fn default() -> Self {
-        Self::WhenSelected
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

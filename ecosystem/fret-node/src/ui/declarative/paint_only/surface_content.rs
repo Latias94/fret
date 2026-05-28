@@ -31,6 +31,8 @@ pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
     pub(super) diagnostics: super::NodeGraphDiagnosticsConfig,
     pub(super) portals_disabled: bool,
     pub(super) portal_renderer: Option<&'a mut dyn super::NodeGraphDeclarativePortalRenderer<H>>,
+    pub(super) edge_label_renderer:
+        Option<&'a mut dyn super::NodeGraphDeclarativeEdgeLabelRenderer<H>>,
     pub(super) cull_margin_screen_px: f32,
     pub(super) min_zoom: f32,
     pub(super) max_zoom: f32,
@@ -70,6 +72,7 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         diagnostics,
         portals_disabled,
         portal_renderer,
+        edge_label_renderer,
         cull_margin_screen_px,
         min_zoom,
         max_zoom,
@@ -140,7 +143,9 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         &binding,
         edge_draws.as_deref().map(Vec::as_slice),
         grid_bounds,
+        view_for_paint.zoom,
         &style_tokens,
+        edge_label_renderer,
     );
     let hovered_portal_hosted = if portal_hosting.enabled && !portals_disabled {
         host_visible_portal_labels(
