@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI inline flow option records into item-flow and same-line private owners without
+      changing public option type names, default gaps, default alignment/stretch behavior,
+      `test_id` fields, flow re-exports, container smoke behavior, or porting-sugar behavior.
+      Result: `options/containers/flow/inline.rs` is now a private re-export hub.
+      `flow/inline/item_flow.rs` owns `ItemFlowOptions`, and `flow/inline/same_line.rs` owns
+      `SameLineOptions`.
 - [x] Split IMUI child-region option records into chrome, body options, and resize private owners
       without changing public option type names, default chrome, scroll/layout fields, resize
       defaults, resize builder methods, root re-exports, child-region smoke behavior, or
@@ -1114,9 +1120,11 @@ Last updated: 2026-05-28
       `ecosystem/fret-ui-kit/src/imui/options/containers/flow.rs` into private owner modules
       without changing option type names, fields, defaults, token keys, or public re-export paths.
       Result: `containers/flow.rs` is now a private module/re-export index,
-      `flow/spacing.rs` owns the IMUI layout-token defaults, `flow/inline.rs` owns item-flow and
-      same-line options, `flow/linear.rs` owns horizontal and vertical options, `flow/spacer.rs`
-      owns dummy/spacing/indent options, and `flow/grid.rs` owns grid options.
+      `flow/spacing.rs` owns the IMUI layout-token defaults, `flow/inline.rs` is the current
+      inline option re-export hub, `flow/inline/item_flow.rs` owns item-flow options,
+      `flow/inline/same_line.rs` owns same-line options, `flow/linear.rs` owns horizontal and
+      vertical options, `flow/spacer.rs` owns dummy/spacing/indent options, and `flow/grid.rs` owns
+      grid options.
 - [x] Split IMUI floating-surface drag-kind and state ownership out of
       `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` into private owner modules without
       changing floating-area, floating-window, drag, resize, activation, or collapse behavior.

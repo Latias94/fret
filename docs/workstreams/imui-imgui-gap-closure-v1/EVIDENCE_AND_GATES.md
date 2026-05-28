@@ -3,6 +3,47 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Inline Flow Option Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI inline flow option records split into item-flow and same-line private owners
+without changing public option type names, default gaps, default alignment/stretch behavior,
+`test_id` fields, flow re-exports, container smoke behavior, or porting-sugar behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/inline.rs` is now a private re-export
+  hub.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/inline/item_flow.rs` owns
+  `ItemFlowOptions` and its IMUI vertical item spacing default.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/inline/same_line.rs` owns
+  `SameLineOptions` and its IMUI horizontal item spacing default.
+- `tools/gate_imui_workstream_source.py` now rejects these option bodies from drifting back into
+  `flow/inline.rs` and checks the two dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib containers::tests --no-fail-fast`:
+  pass.
+- `CARGO_INCREMENTAL=0 cargo nextest run -p fret-imui
+  porting_sugar_items_same_line_spacing_dummy_and_indent_use_imgui_style_layout_tokens
+  --no-fail-fast`: pass.
+
+Notes:
+
+- The broader `cargo nextest run -p fret-ui-kit --features imui --lib containers --no-fail-fast`
+  filter timed out before returning test results, so the focused `containers::tests` gate above was
+  used for this narrow option-owner split.
+- A first `fret-imui` rerun after stopping a timed-out `rustc` process failed during MSVC linking
+  with unresolved externals. `cargo clean -p fret-imui` removed the interrupted test artifacts, and
+  the non-incremental focused rerun above passed.
+
 ## Child-Region Option Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI child-region option records split into chrome, body options, and resize
@@ -3064,7 +3105,11 @@ Evidence:
   index.
 - `ecosystem/fret-ui-kit/src/imui/options/containers/flow/spacing.rs` owns the IMUI layout-token
   defaults.
-- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/inline.rs` owns `ItemFlowOptions` and
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/inline.rs` is the current inline option
+  re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/inline/item_flow.rs` owns
+  `ItemFlowOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/inline/same_line.rs` owns
   `SameLineOptions`.
 - `ecosystem/fret-ui-kit/src/imui/options/containers/flow/linear.rs` owns `HorizontalOptions` and
   `VerticalOptions`.

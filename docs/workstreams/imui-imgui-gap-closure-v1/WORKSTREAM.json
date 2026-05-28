@@ -740,6 +740,8 @@
     "ecosystem/fret-ui-kit/src/imui/options/containers/flow.rs",
     "ecosystem/fret-ui-kit/src/imui/options/containers/flow/grid.rs",
     "ecosystem/fret-ui-kit/src/imui/options/containers/flow/inline.rs",
+    "ecosystem/fret-ui-kit/src/imui/options/containers/flow/inline/item_flow.rs",
+    "ecosystem/fret-ui-kit/src/imui/options/containers/flow/inline/same_line.rs",
     "ecosystem/fret-ui-kit/src/imui/options/containers/flow/linear.rs",
     "ecosystem/fret-ui-kit/src/imui/options/containers/flow/spacer.rs",
     "ecosystem/fret-ui-kit/src/imui/options/containers/flow/spacing.rs",
