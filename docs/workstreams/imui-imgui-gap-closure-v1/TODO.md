@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI input-text filter options into private built-in and custom-filter owners without
+      changing `InputTextFilters` constructors, public filter flags, character filtering,
+      uppercase/no-blank behavior, `InputTextCustomFilter` closure storage, debug output, or public
+      text option exports.
+      Result: `options/controls/text/filters.rs` is now a private module/re-export index.
+      `filters/builtin.rs` owns `InputTextFilters` plus decimal/scientific/hex/uppercase/no-blank
+      character filtering, and `filters/custom.rs` owns `InputTextCustomFilter`.
 - [x] Split IMUI debug-draw draw-list image authoring into private mesh, raster, and rounded-image
       owners without changing `ImUiDebugDrawList` image method names, default option forwarding,
       command payload variants, vertex/index collection, image-region/quad recording, rounded

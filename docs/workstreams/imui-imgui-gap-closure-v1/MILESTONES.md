@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 input-text filter owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/controls/text/filters.rs` is now a private
+module/re-export index. `filters/builtin.rs` owns `InputTextFilters` plus
+decimal/scientific/hex/uppercase/no-blank character filtering, and `filters/custom.rs` owns
+`InputTextCustomFilter` closure storage and debug output.
+
 2026-05-28 debug-draw draw-list image-authoring owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list/images.rs` is now a private module
 index. `images/mesh.rs` owns image triangle-mesh command recording, `images/raster.rs` owns image,

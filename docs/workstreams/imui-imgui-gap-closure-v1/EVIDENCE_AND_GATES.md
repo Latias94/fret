@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Input Text Filter Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI input-text filter options split into private built-in and custom-filter owners
+without changing `InputTextFilters` constructors, public filter flags, character filtering,
+uppercase/no-blank behavior, `InputTextCustomFilter` closure storage, debug output, or public text
+option exports.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/filters.rs` is now a private
+  module/re-export index.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/filters/builtin.rs` owns
+  `InputTextFilters` plus decimal/scientific/hex/uppercase/no-blank character filtering.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/filters/custom.rs` owns
+  `InputTextCustomFilter` closure storage and debug output.
+- `tools/gate_imui_workstream_source.py` now rejects built-in/custom filter bodies from drifting
+  back into `filters.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_text_filters --no-fail-fast`: pass; 3 text-filter tests
+  passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug Draw Draw-List Image-Authoring Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI debug-draw draw-list image authoring split into private mesh, raster, and
