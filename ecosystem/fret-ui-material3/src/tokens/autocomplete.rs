@@ -8,6 +8,7 @@ use fret_ui::{TextInputStyle, Theme};
 use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::text_field::TextFieldVariant;
+use crate::tokens::selectable_menu_item as selectable_item_tokens;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -709,6 +710,36 @@ pub(crate) fn menu_list_item_height(theme: &Theme, variant: TextFieldVariant) ->
     theme.metric_by_key(key).unwrap_or(Px(48.0))
 }
 
+pub(crate) fn menu_selectable_item_outer_horizontal_padding(
+    theme: &Theme,
+    _variant: TextFieldVariant,
+) -> Px {
+    selectable_item_tokens::outer_horizontal_padding(theme)
+}
+
+pub(crate) fn menu_selectable_item_outer_vertical_padding(
+    theme: &Theme,
+    _variant: TextFieldVariant,
+    has_secondary_text: bool,
+) -> Px {
+    selectable_item_tokens::outer_vertical_padding(theme, has_secondary_text)
+}
+
+pub(crate) fn menu_list_item_content_horizontal_padding(
+    theme: &Theme,
+    _variant: TextFieldVariant,
+) -> Px {
+    selectable_item_tokens::content_horizontal_padding(theme)
+}
+
+pub(crate) fn menu_list_item_container_shape(
+    theme: &Theme,
+    _variant: TextFieldVariant,
+    selected: bool,
+) -> Corners {
+    selectable_item_tokens::container_shape(theme, selected)
+}
+
 pub(crate) fn menu_list_item_label_text_style(
     theme: &Theme,
     _variant: TextFieldVariant,
@@ -718,7 +749,18 @@ pub(crate) fn menu_list_item_label_text_style(
         .map(|style| typography::with_intent(style, TextIntent::Control))
 }
 
-pub(crate) fn menu_list_item_label_text_color(theme: &Theme, variant: TextFieldVariant) -> Color {
+pub(crate) fn menu_list_item_label_text_color(
+    theme: &Theme,
+    variant: TextFieldVariant,
+    enabled: bool,
+    selected: bool,
+) -> Color {
+    if let Some(label) =
+        selectable_item_tokens::selected_or_disabled_label_color(theme, selected, enabled)
+    {
+        return label;
+    }
+
     let key = match variant {
         TextFieldVariant::Outlined => {
             "md.comp.outlined-autocomplete.menu.list-item.label-text.color"

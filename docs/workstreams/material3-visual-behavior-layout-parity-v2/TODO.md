@@ -118,6 +118,23 @@ Task IDs use `M3PV2-*`.
   Handoff: Continue M3PV2-020 with multiline TextField, popup surface style/elevation, or fixed
   timestep popup/field motion. Select motion still needs a dedicated packet before closing motion.
 
+- [x] M3PV2-027 [owner=codex] [deps=M3PV2-026] [scope=ecosystem/fret-ui-material3/src/{autocomplete.rs,tokens/{autocomplete.rs,select.rs,selectable_menu_item.rs,mod.rs}},ecosystem/fret-ui-material3/tests/automation_surface.rs,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close Autocomplete and ExposedDropdown option item style/layout drift using the same
+  Material selectable menu item rule proven for Select.
+  Validation: `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --lib autocomplete_selected_item_uses_selected_label_color select_menu_selected_item_uses_selected_content_colors`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_autocomplete_exposes_stable_part_test_ids material3_exposed_dropdown_popup_matches_field_chrome_bounds material3_select_exposes_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_autocomplete_semantics_v1 material3_exposed_dropdown_trailing_icon_toggles_overlay_v1 material3_exposed_dropdown_reverts_query_to_committed_selection_on_blur_v1`;
+  `cargo nextest run -p fret-ui-material3 --test select_behavior`;
+  `cargo nextest run -p fret-ui-material3 --lib autocomplete::tests select::item_text_tests`.
+  Review: DONE. This found shared recipe duplication: Autocomplete put horizontal spacing on the
+  listbox container and computed item label color once for all states. The fix extracts shared
+  selectable item token outcomes, applies per-option inset chrome, and keeps ExposedDropdown covered
+  through its Autocomplete composition.
+  Evidence: `artifacts/material3_autocomplete_exposed_dropdown_selectable_item_packet_v2.md`.
+  Handoff: Continue M3PV2-020 with multiline TextField or fixed-timestep popup/field motion.
+  Autocomplete, ExposedDropdown, and Select still need motion packets before closing motion axes.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]

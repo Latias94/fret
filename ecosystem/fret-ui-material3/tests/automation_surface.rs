@@ -1207,17 +1207,21 @@ fn material3_autocomplete_exposes_stable_part_test_ids() {
     );
 
     let query = app.models_mut().insert(String::new());
+    let selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
     let items: Arc<[AutocompleteItem]> = vec![
         AutocompleteItem::new("alpha", "Alpha").test_id("m3-autocomplete-alpha"),
         AutocompleteItem::new("beta", "Beta"),
     ]
     .into();
 
+    let selected_model = selected.clone();
     let render =
         move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
             let items = items.clone();
+            let selected_model = selected_model.clone();
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
                 let autocomplete = Autocomplete::new(query.clone())
+                    .selected_value(selected_model)
                     .a11y_label("Material autocomplete")
                     .label("Search")
                     .placeholder("Type")
@@ -1314,6 +1318,21 @@ fn material3_autocomplete_exposes_stable_part_test_ids() {
         "expected Autocomplete popup width to match field chrome width (got {}, want {})",
         listbox_bounds.size.width.0,
         chrome_bounds.size.width.0
+    );
+
+    let selected_bounds =
+        live_test_id_layout_bounds(&ui, &app, window, "m3-autocomplete.option.beta.chrome");
+    assert!(
+        (selected_bounds.origin.x.0 - (listbox_bounds.origin.x.0 + 4.0)).abs() <= epsilon,
+        "expected Autocomplete selected item chrome to use Material selectable-item horizontal inset; listbox_x={}, selected_x={}",
+        listbox_bounds.origin.x.0,
+        selected_bounds.origin.x.0
+    );
+    assert!(
+        (selected_bounds.size.width.0 - (listbox_bounds.size.width.0 - 8.0)).abs() <= epsilon,
+        "expected Autocomplete selected item chrome width to account for both horizontal insets; listbox_width={}, selected_width={}",
+        listbox_bounds.size.width.0,
+        selected_bounds.size.width.0
     );
 }
 
@@ -1437,6 +1456,21 @@ fn material3_exposed_dropdown_popup_matches_field_chrome_bounds() {
         "expected ExposedDropdown popup width to match field chrome width (got {}, want {})",
         listbox_bounds.size.width.0,
         chrome_bounds.size.width.0
+    );
+
+    let selected_bounds =
+        live_test_id_layout_bounds(&ui, &app, window, "m3-exposed-dropdown.option.beta.chrome");
+    assert!(
+        (selected_bounds.origin.x.0 - (listbox_bounds.origin.x.0 + 4.0)).abs() <= epsilon,
+        "expected ExposedDropdown option chrome to use Material selectable-item horizontal inset; listbox_x={}, option_x={}",
+        listbox_bounds.origin.x.0,
+        selected_bounds.origin.x.0
+    );
+    assert!(
+        (selected_bounds.size.width.0 - (listbox_bounds.size.width.0 - 8.0)).abs() <= epsilon,
+        "expected ExposedDropdown option chrome width to account for both horizontal insets; listbox_width={}, option_width={}",
+        listbox_bounds.size.width.0,
+        selected_bounds.size.width.0
     );
 }
 

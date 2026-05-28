@@ -22,6 +22,9 @@ the full field while the input remains the combobox trigger and keyboard/a11y ow
 M3PV2-026 is complete: Select selected menu items now use selected content colors for label,
 leading icon, and trailing icon, and the visible item chrome uses the Material selectable-item inset
 inside the listbox while the pressable row keeps the existing behavior contract.
+M3PV2-027 is complete: Autocomplete and ExposedDropdown option rows now use the same shared
+Material selectable menu item token outcomes as Select, including `4px` option chrome inset and
+selected label color.
 
 ## Decisions
 
@@ -34,9 +37,9 @@ inside the listbox while the pressable row keeps the existing behavior contract.
 ## Next Recommended Action
 
 Continue M3PV2-020 with another field-family packet. Good next candidates are a dedicated
-multiline TextField scenario, true popup surface style/elevation proof for Autocomplete/
-ExposedDropdown, or fixed-timestep popup/field motion. Do not mark motion axes complete from
-settled-geometry evidence; TextField, Select, and popup motion still need transition packets.
+multiline TextField scenario or fixed-timestep popup/field motion. Do not mark motion axes complete
+from settled-geometry evidence; TextField, Select, Autocomplete, and ExposedDropdown still need
+transition packets.
 
 ## Useful Gates
 

@@ -6,7 +6,7 @@ use fret_ui::Theme;
 use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::select::SelectVariant;
-use crate::tokens::list as list_tokens;
+use crate::tokens::selectable_menu_item as selectable_item_tokens;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -885,7 +885,7 @@ pub(crate) fn menu_selectable_item_outer_horizontal_padding(
     _theme: &Theme,
     _variant: SelectVariant,
 ) -> Px {
-    Px(4.0)
+    selectable_item_tokens::outer_horizontal_padding(_theme)
 }
 
 pub(crate) fn menu_selectable_item_outer_vertical_padding(
@@ -893,18 +893,18 @@ pub(crate) fn menu_selectable_item_outer_vertical_padding(
     _variant: SelectVariant,
     has_secondary_text: bool,
 ) -> Px {
-    if has_secondary_text { Px(2.0) } else { Px(0.0) }
+    selectable_item_tokens::outer_vertical_padding(_theme, has_secondary_text)
 }
 
 pub(crate) fn menu_list_item_content_horizontal_padding(
     _theme: &Theme,
     _variant: SelectVariant,
 ) -> Px {
-    Px(12.0)
+    selectable_item_tokens::content_horizontal_padding(_theme)
 }
 
-pub(crate) fn menu_list_item_icon_text_gap(_theme: &Theme, _variant: SelectVariant) -> Px {
-    Px(8.0)
+pub(crate) fn menu_list_item_icon_text_gap(theme: &Theme, _variant: SelectVariant) -> Px {
+    selectable_item_tokens::icon_text_gap(theme)
 }
 
 pub(crate) fn menu_list_item_container_shape(
@@ -912,17 +912,7 @@ pub(crate) fn menu_list_item_container_shape(
     _variant: SelectVariant,
     selected: bool,
 ) -> Corners {
-    if selected {
-        theme
-            .corners_by_key("md.comp.menu.list-item.selected.container.shape")
-            .or_else(|| theme.corners_by_key("md.sys.shape.corner.medium"))
-            .unwrap_or_else(|| Corners::all(Px(12.0)))
-    } else {
-        theme
-            .corners_by_key("md.comp.menu.list-item.container.shape")
-            .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
-            .unwrap_or_else(|| Corners::all(Px(4.0)))
-    }
+    selectable_item_tokens::container_shape(theme, selected)
 }
 
 pub(crate) fn menu_list_item_label_text_style(
@@ -943,13 +933,9 @@ pub(crate) fn menu_list_item_label_text_color(
     enabled: bool,
     selected: bool,
 ) -> Color {
-    if selected || !enabled {
-        let (label, _, _, _) = list_tokens::item_outcomes(
-            theme,
-            selected,
-            enabled,
-            list_tokens::ListItemInteraction::Default,
-        );
+    if let Some(label) =
+        selectable_item_tokens::selected_or_disabled_label_color(theme, selected, enabled)
+    {
         return label;
     }
 
@@ -981,13 +967,9 @@ pub(crate) fn menu_list_item_leading_icon_color(
     enabled: bool,
     selected: bool,
 ) -> Color {
-    if selected || !enabled {
-        let (_, icon, _, _) = list_tokens::item_outcomes(
-            theme,
-            selected,
-            enabled,
-            list_tokens::ListItemInteraction::Default,
-        );
+    if let Some(icon) =
+        selectable_item_tokens::selected_or_disabled_icon_color(theme, selected, enabled)
+    {
         return icon;
     }
 
@@ -1023,13 +1005,9 @@ pub(crate) fn menu_list_item_trailing_icon_color(
     enabled: bool,
     selected: bool,
 ) -> Color {
-    if selected || !enabled {
-        let (_, icon, _, _) = list_tokens::item_outcomes(
-            theme,
-            selected,
-            enabled,
-            list_tokens::ListItemInteraction::Default,
-        );
+    if let Some(icon) =
+        selectable_item_tokens::selected_or_disabled_icon_color(theme, selected, enabled)
+    {
         return icon;
     }
 
