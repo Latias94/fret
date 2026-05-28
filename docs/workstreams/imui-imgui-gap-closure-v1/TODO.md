@@ -44,6 +44,13 @@ Last updated: 2026-05-29
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI floating-window option records into behavior, resize, and root window option
+      private owners without changing public option names, defaults, builder methods, root
+      re-exports, floating-window smoke behavior, or fret-imui floating behavior.
+      Result: `floating_options/window.rs` is now a public re-export hub.
+      `floating_options/window/behavior.rs` owns `FloatingWindowOptions`,
+      `floating_options/window/resize.rs` owns `FloatingWindowResizeOptions`, and
+      `floating_options/window/options.rs` owns `WindowOptions` and its builder methods.
 - [x] Split editor-owned IMUI style/theme preset picker option records into a private owner
       without changing public control names, option fields/defaults, controls re-exports, IMUI
       adapter callsite, listbox semantics, selected-state behavior, or reversible preset replay.

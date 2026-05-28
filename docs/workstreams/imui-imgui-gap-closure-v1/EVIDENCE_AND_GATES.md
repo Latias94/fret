@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-29
 
+## Floating Window Option Owner-Split Evidence - 2026-05-29
+
+Claim verified: IMUI floating-window option records split into behavior, resize, and root window
+option private owners without changing public option names, defaults, builder methods, root
+re-exports, floating-window smoke behavior, or fret-imui floating behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_options/window.rs` is now a public re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/floating_options/window/behavior.rs` owns
+  `FloatingWindowOptions` behavior flags and defaults.
+- `ecosystem/fret-ui-kit/src/imui/floating_options/window/resize.rs` owns
+  `FloatingWindowResizeOptions` min/max size defaults.
+- `ecosystem/fret-ui-kit/src/imui/floating_options/window/options.rs` owns `WindowOptions`,
+  including the `open`, `size`, `resize`, `behavior` fields and builder methods.
+- `ecosystem/fret-ui-kit/tests/imui_floating_window_options_smoke.rs` freezes behavior defaults,
+  resize defaults, and the window option builder API through the public IMUI re-export surface.
+- `tools/gate_imui_workstream_source.py` now rejects these option bodies from drifting back into
+  `floating_options/window.rs` and checks the three dedicated owners plus smoke test.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke
+  --no-fail-fast`: pass.
+- `CARGO_INCREMENTAL=0 cargo nextest run -p fret-imui floating --no-fail-fast`: pass
+  (25 passed, 161 skipped).
+
 ## Editor Theme Preset Picker Option Owner-Split Evidence - 2026-05-29
 
 Claim verified: editor-owned IMUI style/theme preset picker option records split into a private

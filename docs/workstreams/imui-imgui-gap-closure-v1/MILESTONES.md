@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-29 floating-window option owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_options/window.rs` is now a public re-export hub.
+`floating_options/window/behavior.rs` owns `FloatingWindowOptions`,
+`floating_options/window/resize.rs` owns `FloatingWindowResizeOptions`, and
+`floating_options/window/options.rs` owns `WindowOptions` defaults and builder methods.
+
 2026-05-29 editor theme preset picker option owner-split result:
 `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs` keeps picker rendering and
 behavior. `editor_theme_preset_picker/options.rs` owns `EditorThemePresetPickerOptions` defaults
