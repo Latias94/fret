@@ -10516,6 +10516,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-material3-menu-focus-dismiss",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-menu-focus-dismiss.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-menu-focus-dismiss"
+      ],
+      "tags": [
+        "dismiss",
+        "dropdown_menu",
+        "focus_restore",
+        "material3",
+        "menu",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-material3-state-matrix-chip-action-state",
       "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-state-matrix-chip-action-state.json",
       "required_capabilities": [

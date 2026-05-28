@@ -421,7 +421,7 @@
     {
       "id": "dropdown_menu",
       "family": "overlay_feedback",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_diagnostics_aligned",
       "wave": "wave3_overlay_feedback",
       "default_owner_bias": "kit_policy",
       "packet_strategy": "menu_overlay_packet",
@@ -434,12 +434,13 @@
         "dropdown_menu.item.<value>.chrome"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+        "docs/workstreams/material3-menu-dropdown-diagnostics-packet-v1/artifacts/menu_dropdown_diagnostics_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe owns Material menu surface/item chrome and stable part ids",
         "kit_policy owns dismissible menu outside-press, Escape, non-click-through overlay, and focus restore",
-        "test_harness owned the stale outside-press probe placement that was repaired in this packet",
+        "diagnostics/test_harness covers dedicated Material3 gallery Menu role, item focus, Escape dismiss/focus restore, item chrome fill, and focused Rust gates",
         "no new mechanism gap found"
       ]
     },
@@ -603,7 +604,7 @@
     {
       "id": "menu",
       "family": "overlay_feedback",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_diagnostics_aligned",
       "wave": "wave3_overlay_feedback",
       "default_owner_bias": "kit_policy",
       "packet_strategy": "menu_overlay_packet",
@@ -616,12 +617,13 @@
         "menu.item.<value>.chrome"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+        "docs/workstreams/material3-menu-dropdown-diagnostics-packet-v1/artifacts/menu_dropdown_diagnostics_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe owns Material menu surface/item chrome and stable part ids",
         "recipe-local focus and typeahead remain acceptable until another consumer proves a shared kit abstraction",
-        "test_harness covers stable menu automation selectors and pressed-scene golden coverage",
+        "diagnostics/test_harness covers dedicated Material3 gallery Menu role, item focus, Escape dismiss/focus restore, item chrome fill, and focused Rust gates",
         "no new mechanism gap found"
       ]
     },
