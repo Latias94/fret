@@ -689,6 +689,7 @@
     "ecosystem/fret-ui-kit/src/imui/child_region/resize.rs",
     "ecosystem/fret-ui-kit/src/imui/child_region/resize/axis.rs",
     "ecosystem/fret-ui-kit/src/imui/child_region/resize/handle.rs",
+    "ecosystem/fret-ui-kit/src/imui/child_region/scroll.rs",
     "ecosystem/fret-ui-kit/src/imui/tooltip_overlay.rs",
     "ecosystem/fret-ui-kit/src/imui/tooltip_overlay/panel.rs",
     "ecosystem/fret-ui-kit/src/imui/tooltip_overlay/request.rs",

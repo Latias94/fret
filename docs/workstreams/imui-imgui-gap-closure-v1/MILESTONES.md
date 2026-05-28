@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 child-region scroll owner-split result:
+`ecosystem/fret-ui-kit/src/imui/child_region/scroll.rs` now owns scroll-area builder
+construction, content mounting, framed chrome, handle forwarding, viewport test-id routing, and
+non-resizable root test-id stamping. `child_region.rs` keeps resize option detection, resize handle
+assembly, stack layout/test-id routing, and response aggregation.
+
 2026-05-28 popup-modal request owner-split result:
 `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/request.rs` now owns modal overlay id/root-name
 construction and `OverlayRequest::modal` submission. `popup_overlay/modal.rs` keeps open-state

@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Child-Region Scroll Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI child-region scroll/content/chrome assembly split into a private owner without
+changing IMUI child mounting, scroll axis/options forwarding, framed/bare chrome, content/viewport/
+root test-id routing, resize layout override, resize handle assembly, stack root test-id routing,
+or public child-region facade/response behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/child_region.rs` keeps resize option detection, resize handle
+  assembly, stack layout/test-id routing, and response aggregation.
+- `ecosystem/fret-ui-kit/src/imui/child_region/scroll.rs` owns scroll-area builder construction,
+  content mounting, framed chrome, handle forwarding, viewport test-id routing, and non-resizable
+  root test-id stamping.
+- `tools/gate_imui_workstream_source.py` now rejects scroll/content/chrome construction from
+  drifting back into `child_region.rs` and checks the dedicated scroll owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_child_region_smoke
+  --no-fail-fast`: pass; 3 child-region smoke tests passed.
+- `cargo nextest run -p fret-imui child_region --no-fail-fast`: pass; 6 child-region composition
+  tests passed.
+
 ## Popup-Modal Request Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI popup-modal overlay identity and request submission split into a private

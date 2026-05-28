@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI child-region scroll/content/chrome assembly into a private owner without changing
+      IMUI child mounting, scroll axis/options forwarding, framed/bare chrome, content/viewport/
+      root test-id routing, resize layout override, resize handle assembly, stack root test-id
+      routing, or public child-region facade/response behavior.
+      Result: `child_region/scroll.rs` owns scroll-area builder construction, content mounting,
+      framed chrome, handle forwarding, viewport test-id routing, and non-resizable root test-id
+      stamping. `child_region.rs` keeps resize option detection, resize handle assembly, stack
+      layout/test-id routing, and response aggregation.
 - [x] Split IMUI popup-modal overlay identity and request submission into a private owner without
       changing overlay id naming, modal root naming, trigger forwarding, open-model forwarding,
       instant modal presence, layer children, dismiss request forwarding, initial focus handoff, or
