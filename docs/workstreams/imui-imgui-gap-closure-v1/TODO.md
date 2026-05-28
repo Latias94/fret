@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI shared hover-delay state/store/model lookup out of
+      `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay.rs` into a private
+      state owner without changing window-scoped shared-delay model allocation, short/normal delay
+      flags, hover-enter timer scheduling, hover-leave clear timer scheduling, clear-timer
+      cancellation, or shared delay reads.
+      Result: `interaction_runtime/hover/shared_delay/state.rs` owns
+      `ImUiSharedHoverDelayState`, `ImUiSharedHoverDelayStore`, `model_for_window`, and
+      `delay_flags`. `hover/shared_delay.rs` keeps hover/timer event policy.
 - [x] Split IMUI hover query delay read/projection out of
       `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs` into a private read owner
       without changing hover hook installation, stationary/short/normal delay timers, shared-delay

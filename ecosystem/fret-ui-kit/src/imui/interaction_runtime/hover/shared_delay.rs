@@ -1,46 +1,10 @@
-use std::collections::HashMap;
 use std::time::Duration;
 
-use fret_core::AppWindowId;
-use fret_ui::{ElementContext, UiHost};
+mod state;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub(super) struct ImUiSharedHoverDelayState {
-    delay_short_met: bool,
-    delay_normal_met: bool,
-    short_timer: Option<fret_runtime::TimerToken>,
-    normal_timer: Option<fret_runtime::TimerToken>,
-    clear_timer: Option<fret_runtime::TimerToken>,
-}
-
-impl ImUiSharedHoverDelayState {
-    pub(super) fn delay_flags(self) -> (bool, bool) {
-        (self.delay_short_met, self.delay_normal_met)
-    }
-}
-
-#[derive(Default)]
-struct ImUiSharedHoverDelayStore {
-    by_window: HashMap<AppWindowId, fret_runtime::Model<ImUiSharedHoverDelayState>>,
-}
+pub(super) use state::{ImUiSharedHoverDelayState, model_for_window};
 
 const SHARED_HOVER_CLEAR_DELAY: Duration = Duration::from_millis(250);
-
-pub(super) fn model_for_window<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> fret_runtime::Model<ImUiSharedHoverDelayState> {
-    let window = cx.window;
-    cx.app
-        .with_global_mut_untracked(ImUiSharedHoverDelayStore::default, |st, app| {
-            st.by_window
-                .entry(window)
-                .or_insert_with(|| {
-                    app.models_mut()
-                        .insert(ImUiSharedHoverDelayState::default())
-                })
-                .clone()
-        })
-}
 
 pub(super) fn on_hover_change(
     host: &mut dyn fret_ui::action::UiActionHost,

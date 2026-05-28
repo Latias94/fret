@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Shared Hover-Delay State Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI shared hover-delay state/store/model lookup moved into a private owner without
+changing window-scoped shared-delay model allocation, short/normal delay flags, hover-enter timer
+scheduling, hover-leave clear timer scheduling, clear-timer cancellation, or shared delay reads.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay.rs` keeps hover-enter/
+  leave shared timer policy and clear-timer handling.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay/state.rs` owns
+  `ImUiSharedHoverDelayState`, `ImUiSharedHoverDelayStore`, `model_for_window`, and `delay_flags`.
+- `tools/gate_imui_workstream_source.py` now rejects shared hover-delay state/store/model lookup
+  bodies from drifting back into `shared_delay.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Hover Query Delay Read Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI hover query delay read/projection moved into a private owner without changing

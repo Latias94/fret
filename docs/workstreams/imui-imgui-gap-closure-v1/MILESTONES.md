@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 shared hover-delay state owner-split result:
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay/state.rs` now owns
+`ImUiSharedHoverDelayState`, `ImUiSharedHoverDelayStore`, `model_for_window`, and `delay_flags`.
+`hover/shared_delay.rs` keeps hover-enter/leave shared timer policy and clear-timer handling.
+
 2026-05-28 hover query delay read owner-split result:
 `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/read.rs` now owns local hover-delay
 state, transient consumption, shared-delay flag reads, and `HoverQueryDelayRead` projection.
