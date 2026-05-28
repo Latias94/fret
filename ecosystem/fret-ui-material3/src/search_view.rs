@@ -11,8 +11,7 @@ use fret_core::{Axis, Edges, Px, SemanticsRole};
 use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
-    SemanticsDecoration,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow, SemanticsProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, Theme, UiHost};
@@ -171,6 +170,10 @@ impl SearchView {
             let root_test_id = self.test_id.clone();
             let input_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
             let input_id_out_for_bar = input_id_out.clone();
+            let controlled_element_id: Rc<Cell<Option<GlobalElementId>>> = cx.slot_state(
+                || Rc::new(Cell::new(None::<GlobalElementId>)),
+                |id| id.clone(),
+            );
 
             // Keep the input surface in the underlay so:
             // - focus stays on the text input while the overlay is open (Compose-like),
@@ -182,7 +185,8 @@ impl SearchView {
                 .test_id_opt(root_test_id.clone())
                 .expanded_model(self.open.clone())
                 .header_tokens(SearchBarHeaderTokens::SearchView)
-                .input_id_out(input_id_out_for_bar);
+                .input_id_out(input_id_out_for_bar)
+                .controls_element_id(controlled_element_id.clone());
             if let Some(icon) = self.leading_icon.as_ref() {
                 bar = bar.leading_icon(icon.clone());
             }
@@ -231,6 +235,7 @@ impl SearchView {
             };
 
             if !overlay_presence.present {
+                controlled_element_id.set(None);
                 return bar;
             }
 
@@ -266,7 +271,8 @@ impl SearchView {
                     .test_id_opt(header_test_id)
                     .expanded_model(self.open.clone())
                     .header_tokens(SearchBarHeaderTokens::SearchView)
-                    .input_id_out(header_input_id_out_for_bar);
+                    .input_id_out(header_input_id_out_for_bar)
+                    .controls_element_id(controlled_element_id.clone());
                 if let Some(icon) = self.leading_icon.as_ref() {
                     header = header.leading_icon(icon.clone());
                 }
@@ -275,6 +281,7 @@ impl SearchView {
                 }
                 let header = header.into_element(cx);
                 let initial_focus = header_input_id_out.get();
+                let labelled_by_element = initial_focus.map(|id| id.0);
 
                 let (container_color, divider_color, header_slot_height) = {
                     let theme = Theme::global(&*cx.app);
@@ -285,6 +292,7 @@ impl SearchView {
                     )
                 };
 
+                let controlled_element_id_out = controlled_element_id.clone();
                 let overlay_root = cx.named("full_screen_overlay", move |cx| {
                     let mut panel_container = ContainerProps::default();
                     panel_container.layout.size.width = Length::Fill;
@@ -358,15 +366,16 @@ impl SearchView {
                         vec![cx.flex(column, move |_cx| vec![header_slot, divider, body])]
                     });
 
-                    let panel = if let Some(test_id) = overlay_test_id.as_ref() {
-                        panel.attach_semantics(
-                            SemanticsDecoration::default()
-                                .role(SemanticsRole::Dialog)
-                                .test_id(test_id.clone()),
-                        )
-                    } else {
-                        panel
+                    let sem = SemanticsProps {
+                        role: SemanticsRole::Dialog,
+                        test_id: overlay_test_id.clone(),
+                        labelled_by_element,
+                        ..Default::default()
                     };
+                    let panel = cx.semantics_with_id(sem, move |_cx, panel_id| {
+                        controlled_element_id_out.set(Some(panel_id));
+                        vec![panel]
+                    });
 
                     let trapped = focus_scope_prim::focus_trap(cx, move |_cx| vec![panel]);
 
@@ -451,6 +460,8 @@ impl SearchView {
             let body_test_id = root_test_id
                 .as_ref()
                 .map(|id| part_test_id(id, "overlay.body"));
+            let labelled_by_element = Some(input_id.0);
+            let controlled_element_id_out = controlled_element_id.clone();
             let overlay_panel = fret_ui_kit::primitives::popper_content::popper_wrapper_panel_at(
                 cx,
                 overlay_rect,
@@ -499,15 +510,16 @@ impl SearchView {
                         vec![divider, body]
                     });
 
-                    let panel = if let Some(test_id) = overlay_test_id.as_ref() {
-                        panel.attach_semantics(
-                            SemanticsDecoration::default()
-                                .role(SemanticsRole::Panel)
-                                .test_id(test_id.clone()),
-                        )
-                    } else {
-                        panel
+                    let sem = SemanticsProps {
+                        role: SemanticsRole::Panel,
+                        test_id: overlay_test_id.clone(),
+                        labelled_by_element,
+                        ..Default::default()
                     };
+                    let panel = cx.semantics_with_id(sem, move |_cx, panel_id| {
+                        controlled_element_id_out.set(Some(panel_id));
+                        vec![panel]
+                    });
 
                     vec![panel]
                 },

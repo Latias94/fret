@@ -60,6 +60,7 @@ pub struct SearchBar {
     trailing_icon: Option<IconId>,
     test_id: Option<Arc<str>>,
     input_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    controls_element_id: Option<Rc<Cell<Option<GlobalElementId>>>>,
     expanded_model: Option<Model<bool>>,
     header_tokens: SearchBarHeaderTokens,
 }
@@ -75,6 +76,7 @@ impl SearchBar {
             trailing_icon: None,
             test_id: None,
             input_id_out: None,
+            controls_element_id: None,
             expanded_model: None,
             header_tokens: SearchBarHeaderTokens::default(),
         }
@@ -127,6 +129,14 @@ impl SearchBar {
 
     pub fn input_id_out(mut self, input_id_out: Rc<Cell<Option<GlobalElementId>>>) -> Self {
         self.input_id_out = Some(input_id_out);
+        self
+    }
+
+    pub(crate) fn controls_element_id(
+        mut self,
+        controls_element_id: Rc<Cell<Option<GlobalElementId>>>,
+    ) -> Self {
+        self.controls_element_id = Some(controls_element_id);
         self
     }
 
@@ -278,6 +288,10 @@ impl SearchBar {
                     props.test_id = self.test_id.clone();
                     props.placeholder = self.placeholder.clone();
                     props.expanded = Some(expanded);
+                    props.controls_element = self
+                        .controls_element_id
+                        .as_ref()
+                        .and_then(|id| id.get().map(|id| id.0));
                     props.text_style = input_text_style;
                     props.chrome = input_chrome;
                     props.layout.size.width = Length::Fill;

@@ -59,6 +59,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_display_input_layout_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_full_screen_header_layout_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_bar_default_width_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_a11y_relations_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -246,6 +247,25 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     SearchView-owned headers remain full-width and continue to pass SearchView automation,
     behavior, and headless golden gates.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_bar_default_width_packet_v2.md`
+- 2026-05-28: M3PV2-033 closed SearchView input-to-overlay accessibility relation drift.
+  - Sources: Compose Material3 `SearchBarDefaults.InputField` publishes expanded search semantics
+    and full-screen SearchBar moves focus into the overlay header input; Fret Select and
+    Autocomplete already use input `controls` plus overlay `labelled_by` relations for popup
+    ownership.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --test search_view_behavior search_view_inputs_control_overlay_semantics`
+    failed because the docked SearchView input did not control the overlay panel.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --test search_view_behavior`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_view_exposes_stable_part_test_ids material3_search_bar_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_view_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --lib search_view search_bar`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: Docked SearchView inputs now control their overlay panel and that panel is labelled by
+    the input; full-screen overlay headers now control the dialog and that dialog is labelled by
+    the header input. Existing SearchView behavior, automation, headless golden, lib, check, and
+    clippy gates stayed green.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_a11y_relations_packet_v2.md`
 
 ## Proof Note Template
 

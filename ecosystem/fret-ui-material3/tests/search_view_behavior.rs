@@ -1,6 +1,6 @@
 //! Focused interaction regression tests for Material 3 SearchView.
 
-use fret_core::{AppWindowId, KeyCode, NodeId, Px, Rect, Size, UiServices};
+use fret_core::{AppWindowId, KeyCode, NodeId, Px, Rect, SemanticsRole, Size, UiServices};
 use fret_runtime::{ModelHost, PlatformCapabilities};
 use fret_ui::UiTree;
 use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
@@ -132,4 +132,170 @@ fn search_view_full_screen_uses_modal_overlay_and_closes_on_escape() {
         Some(false),
         "expected Escape to collapse the SearchView open model"
     );
+}
+
+#[test]
+fn search_view_inputs_control_overlay_semantics() {
+    {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(560.0), Px(420.0)),
+        );
+
+        let open = app.models_mut().insert(true);
+        let query = app.models_mut().insert(String::from("alpha"));
+        let open_model = open.clone();
+        let query_model = query.clone();
+
+        let render =
+            move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                let open = open_model.clone();
+                let query = query_model.clone();
+                fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "root",
+                    move |cx| {
+                        vec![
+                            SearchView::new(open, query)
+                                .test_id("m3-search-view")
+                                .placeholder("Search")
+                                .into_element(cx, |cx| vec![cx.text("Result alpha")]),
+                        ]
+                    },
+                )
+            };
+
+        for capture in [false, false, true] {
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                capture,
+                |ui, app, services| render(ui, app, services),
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let input = snap
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("m3-search-view"))
+            .expect("docked SearchView input node");
+        let overlay = snap
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("m3-search-view.overlay"))
+            .expect("docked SearchView overlay node");
+
+        assert_eq!(overlay.role, SemanticsRole::Panel);
+        assert!(
+            input.flags.expanded,
+            "docked SearchView input should report expanded=true while open"
+        );
+        assert!(
+            input.controls.contains(&overlay.id),
+            "docked SearchView input should control the overlay panel"
+        );
+        assert!(
+            overlay.labelled_by.contains(&input.id),
+            "docked SearchView overlay should be labelled by the input"
+        );
+    }
+
+    {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(320.0)),
+        );
+
+        let open = app.models_mut().insert(true);
+        let query = app.models_mut().insert(String::from("alpha"));
+        let open_model = open.clone();
+        let query_model = query.clone();
+
+        let render =
+            move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                let open = open_model.clone();
+                let query = query_model.clone();
+                fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "root",
+                    move |cx| {
+                        vec![
+                            SearchView::new(open, query)
+                                .test_id("m3-search-view")
+                                .placeholder("Search")
+                                .presentation(SearchViewPresentation::FullScreen)
+                                .into_element(cx, |cx| vec![cx.text("Result alpha")]),
+                        ]
+                    },
+                )
+            };
+
+        for capture in [false, false, true] {
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                capture,
+                |ui, app, services| render(ui, app, services),
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let header = snap
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("m3-search-view.overlay.header"))
+            .expect("full-screen SearchView header input node");
+        let overlay = snap
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("m3-search-view.overlay"))
+            .expect("full-screen SearchView overlay node");
+
+        assert_eq!(overlay.role, SemanticsRole::Dialog);
+        assert!(
+            header.flags.expanded,
+            "full-screen SearchView header should report expanded=true while open"
+        );
+        assert!(
+            header.controls.contains(&overlay.id),
+            "full-screen SearchView header should control the dialog"
+        );
+        assert!(
+            overlay.labelled_by.contains(&header.id),
+            "full-screen SearchView dialog should be labelled by the header input"
+        );
+    }
 }

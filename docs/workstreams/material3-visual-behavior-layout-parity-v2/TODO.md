@@ -211,6 +211,24 @@ Task IDs use `M3PV2-*`.
   Handoff: Continue M3PV2-020 with SearchView a11y relations, multiline TextField, or
   fixed-timestep field/picker/search motion. SearchBar motion still needs a dedicated packet.
 
+- [x] M3PV2-033 [owner=codex] [deps=M3PV2-032] [scope=ecosystem/fret-ui-material3/src/{search_bar.rs,search_view.rs},ecosystem/fret-ui-material3/tests/{search_view_behavior.rs,automation_surface.rs,radio_alignment.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close SearchView accessibility relation drift by wiring SearchView inputs to their overlay
+  panel/dialog through controls relations and labelling the overlay from the controlling input.
+  Validation: `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --test search_view_behavior`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_view_exposes_stable_part_test_ids material3_search_bar_exposes_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_view_suite_goldens_v1`;
+  `cargo nextest run -p fret-ui-material3 --lib search_view search_bar`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`.
+  Review: DONE. This found recipe wiring drift, not a mechanism gap: `fret-ui` already supports
+  `expanded`, `controls_element`, and `labelled_by_element`. SearchView now publishes the overlay
+  panel/dialog element to its SearchBar inputs and wraps overlay surfaces with labelled-by
+  semantics.
+  Evidence: `artifacts/material3_search_view_a11y_relations_packet_v2.md`.
+  Handoff: Continue M3PV2-020 with multiline TextField or fixed-timestep field/picker/search
+  motion. SearchView motion remains open.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]
