@@ -67,6 +67,18 @@ fn live_test_id_layout_bounds(
         .unwrap_or_else(|| panic!("expected live layout bounds for test_id {id}"))
 }
 
+fn rect_center_x(bounds: Rect) -> f32 {
+    bounds.origin.x.0 + bounds.size.width.0 * 0.5
+}
+
+fn assert_px_close(actual: f32, expected: f32, context: &str) {
+    let delta = (actual - expected).abs();
+    assert!(
+        delta <= 0.5,
+        "{context}: expected {expected}px, got {actual}px (delta {delta}px)"
+    );
+}
+
 fn click_semantics_test_id(
     ui: &mut UiTree<TestHost>,
     app: &mut TestHost,
@@ -1936,6 +1948,39 @@ fn material3_date_picker_exposes_stable_part_test_ids() {
                 "expected live DatePicker part test_id {id}"
             );
         }
+
+        let chrome = live_test_id_layout_bounds(&ui, &app, window, "m3-date-picker.chrome");
+        let weekday0 =
+            live_test_id_layout_bounds(&ui, &app, window, "m3-date-picker.docked.weekday.0");
+        let weekday6 =
+            live_test_id_layout_bounds(&ui, &app, window, "m3-date-picker.docked.weekday.6");
+        let cell00 = live_test_id_layout_bounds(&ui, &app, window, "m3-date-picker.cell.0.0");
+        let cell06 = live_test_id_layout_bounds(&ui, &app, window, "m3-date-picker.cell.0.6");
+
+        for (name, bounds) in [
+            ("docked weekday 0", weekday0),
+            ("docked weekday 6", weekday6),
+            ("docked date cell 0,0", cell00),
+            ("docked date cell 0,6", cell06),
+        ] {
+            assert_px_close(bounds.size.width.0, 48.0, &format!("{name} width"));
+            assert_px_close(bounds.size.height.0, 48.0, &format!("{name} height"));
+        }
+        assert_px_close(
+            weekday0.origin.x.0 - chrome.origin.x.0,
+            12.0,
+            "docked calendar horizontal padding",
+        );
+        assert_px_close(
+            rect_center_x(weekday0),
+            rect_center_x(cell00),
+            "docked first weekday/cell center",
+        );
+        assert_px_close(
+            rect_center_x(weekday6),
+            rect_center_x(cell06),
+            "docked last weekday/cell center",
+        );
     }
 
     {
@@ -2013,6 +2058,39 @@ fn material3_date_picker_exposes_stable_part_test_ids() {
                 "expected live DatePicker dialog part test_id {id}"
             );
         }
+
+        let panel = live_test_id_layout_bounds(&ui, &app, window, "m3-date-picker-modal.panel");
+        let weekday0 =
+            live_test_id_layout_bounds(&ui, &app, window, "m3-date-picker-modal.modal.weekday.0");
+        let weekday6 =
+            live_test_id_layout_bounds(&ui, &app, window, "m3-date-picker-modal.modal.weekday.6");
+        let cell00 = live_test_id_layout_bounds(&ui, &app, window, "m3-date-picker-modal.cell.0.0");
+        let cell06 = live_test_id_layout_bounds(&ui, &app, window, "m3-date-picker-modal.cell.0.6");
+
+        for (name, bounds) in [
+            ("modal weekday 0", weekday0),
+            ("modal weekday 6", weekday6),
+            ("modal date cell 0,0", cell00),
+            ("modal date cell 0,6", cell06),
+        ] {
+            assert_px_close(bounds.size.width.0, 48.0, &format!("{name} width"));
+            assert_px_close(bounds.size.height.0, 48.0, &format!("{name} height"));
+        }
+        assert_px_close(
+            weekday0.origin.x.0 - panel.origin.x.0,
+            12.0,
+            "modal calendar horizontal padding",
+        );
+        assert_px_close(
+            rect_center_x(weekday0),
+            rect_center_x(cell00),
+            "modal first weekday/cell center",
+        );
+        assert_px_close(
+            rect_center_x(weekday6),
+            rect_center_x(cell06),
+            "modal last weekday/cell center",
+        );
     }
 }
 

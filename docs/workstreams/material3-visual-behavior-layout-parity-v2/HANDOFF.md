@@ -25,6 +25,10 @@ inside the listbox while the pressable row keeps the existing behavior contract.
 M3PV2-027 is complete: Autocomplete and ExposedDropdown option rows now use the same shared
 Material selectable menu item token outcomes as Select, including `4px` option chrome inset and
 selected label color.
+M3PV2-028 is complete: DatePicker calendar content now uses the Material 12px horizontal inset and
+48px interactive weekday/date slots, with visual date chrome centered through the shared
+`foundation::interactive_size` helper. Docked and modal automation gates prove weekday/date-cell
+column alignment, and DatePicker headless goldens were refreshed for the intentional layout shift.
 
 ## Decisions
 
@@ -37,9 +41,9 @@ selected label color.
 ## Next Recommended Action
 
 Continue M3PV2-020 with another field-family packet. Good next candidates are a dedicated
-multiline TextField scenario or fixed-timestep popup/field motion. Do not mark motion axes complete
-from settled-geometry evidence; TextField, Select, Autocomplete, and ExposedDropdown still need
-transition packets.
+TimePicker dial/input layout packet, a dedicated multiline TextField scenario, or fixed-timestep
+popup/field motion. Do not mark motion axes complete from settled-geometry evidence; TextField,
+Select, Autocomplete, ExposedDropdown, DatePicker, and TimePicker still need transition packets.
 
 ## Useful Gates
 

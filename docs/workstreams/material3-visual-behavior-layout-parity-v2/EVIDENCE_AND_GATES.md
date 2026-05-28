@@ -55,6 +55,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_autocomplete_exposed_dropdown_popup_width_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_selected_item_style_layout_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_autocomplete_exposed_dropdown_selectable_item_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_date_picker_calendar_grid_layout_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -166,6 +167,25 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
   - Result: Select, Autocomplete, and ExposedDropdown now share Material selectable item density
     and selected content outcomes while their existing behavior gates remain green.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_autocomplete_exposed_dropdown_selectable_item_packet_v2.md`
+- 2026-05-28: M3PV2-028 closed DatePicker calendar grid layout drift.
+  - Sources: Compose Material3 `DatePicker.kt` uses `DatePickerHorizontalPadding = 12.dp`,
+    `RecommendedSizeForAccessibility = 48.dp`, weekday boxes sized to the minimum interactive
+    component size, and month rows arranged evenly; `DatePickerModalTokens.kt` keeps the date
+    visual container at `40.dp` for modal.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_exposes_stable_part_test_ids`
+    failed because docked weekday slot bounds were intrinsic text bounds (`10px` wide) instead of
+    Material's 48px slot.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_exposes_stable_part_test_ids material3_date_picker_month_label_is_polite_live_region material3_date_picker_uses_material_string_registry_and_date_descriptions material3_date_picker_respects_selectable_dates`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_date_picker_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --lib date_picker`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: DatePicker weekday and date-cell row/column test ids now resolve to 48px layout slots,
+    docked and modal calendar content starts 12px from the container edge, visual date chrome is
+    centered through the shared Material interactive-size foundation, and DatePicker headless
+    goldens were refreshed for the intentional layout shift.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_date_picker_calendar_grid_layout_packet_v2.md`
 
 ## Proof Note Template
 

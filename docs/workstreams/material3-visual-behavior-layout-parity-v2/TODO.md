@@ -135,6 +135,26 @@ Task IDs use `M3PV2-*`.
   Handoff: Continue M3PV2-020 with multiline TextField or fixed-timestep popup/field motion.
   Autocomplete, ExposedDropdown, and Select still need motion packets before closing motion axes.
 
+- [x] M3PV2-028 [owner=codex] [deps=M3PV2-027] [scope=ecosystem/fret-ui-material3/src/{date_picker.rs,tokens/date_picker.rs},ecosystem/fret-ui-material3/tests/automation_surface.rs,goldens/material3-headless/v1,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close DatePicker calendar grid layout drift against Compose Material3 by separating the
+  48px interactive slot from the token-driven date visual, applying the 12px calendar content
+  inset, and proving weekday/date-cell column alignment for docked and modal surfaces.
+  Validation: `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_exposes_stable_part_test_ids material3_date_picker_month_label_is_polite_live_region material3_date_picker_uses_material_string_registry_and_date_descriptions material3_date_picker_respects_selectable_dates`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_date_picker_suite_goldens_v1`;
+  `cargo nextest run -p fret-ui-material3 --lib date_picker`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`.
+  Review: DONE. This found a Material recipe/foundation wiring gap: weekday test ids were stamped
+  on intrinsic text nodes, modal date cells had no 48px interaction slot, and the modal panel's
+  blanket padding prevented the calendar content from using Material's 12px inset. DatePicker now
+  reuses `foundation::interactive_size`, centers the visual date chrome inside a fixed slot, and
+  refreshes the DatePicker headless goldens for the intentional layout shift.
+  Evidence: `artifacts/material3_date_picker_calendar_grid_layout_packet_v2.md`.
+  Handoff: Continue M3PV2-020 with TimePicker dial/input layout or a true fixed-timestep motion
+  packet. DatePicker motion remains seeded; year-selection/input-mode layout is not closed by this
+  calendar-grid packet.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]

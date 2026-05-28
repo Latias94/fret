@@ -25,6 +25,7 @@ use fret_ui_kit::{OverlayController, OverlayPresence};
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{Button, ButtonVariant};
+use crate::foundation::interactive_size::{centered_fill, minimum_interactive_size};
 use crate::foundation::strings::{
     material_date_picker_cancel_label, material_date_picker_confirm_label,
     material_date_picker_day_description, material_date_picker_dismiss_label,
@@ -56,6 +57,16 @@ fn date_picker_date_cell_test_id(base: &Arc<str>, date: Date) -> Arc<str> {
         date.year(),
         date.day()
     ))
+}
+
+fn date_picker_slot_size(theme: &Theme, variant: DatePickerTokenVariant) -> (Px, Px) {
+    let min = minimum_interactive_size(theme);
+    let width = date_tokens::date_cell_width(theme, variant);
+    let height = date_tokens::date_cell_height(theme, variant);
+    (
+        if width.0 >= min.0 { width } else { min },
+        if height.0 >= min.0 { height } else { min },
+    )
 }
 
 /// Date-level selection policy for Material date picker grids.
@@ -747,22 +758,49 @@ fn date_picker_modal_panel<H: UiHost>(
     };
 
     let test_id_for_body = content_test_id.clone();
+    let title = padded_element(
+        cx,
+        Edges {
+            top: Px(16.0),
+            right: Px(12.0),
+            bottom: Px(0.0),
+            left: Px(24.0),
+        },
+        title,
+    );
+
     let body = cx.flex(
         FlexProps {
             direction: Axis::Vertical,
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
             wrap: false,
-            gap: Px(12.0).into(),
+            gap: Px(0.0).into(),
             layout: {
                 let mut l = LayoutStyle::default();
                 l.size.width = Length::Fill;
                 l.size.height = Length::Fill;
                 l
             },
-            padding: Edges::all(Px(16.0)).into(),
+            padding: Edges::all(Px(0.0)).into(),
         },
         move |cx| {
+            let action_row = date_picker_actions(
+                cx,
+                content_test_id.clone(),
+                on_cancel.clone(),
+                on_confirm.clone(),
+            );
+            let actions = padded_element(
+                cx,
+                Edges {
+                    top: Px(0.0),
+                    right: Px(6.0),
+                    bottom: Px(8.0),
+                    left: Px(0.0),
+                },
+                action_row,
+            );
             vec![
                 title,
                 date_picker_body(
@@ -777,12 +815,7 @@ fn date_picker_modal_panel<H: UiHost>(
                     selectable_dates.clone(),
                     test_id_for_body.clone(),
                 ),
-                date_picker_actions(
-                    cx,
-                    content_test_id.clone(),
-                    on_cancel.clone(),
-                    on_confirm.clone(),
-                ),
+                actions,
             ]
         },
     );
@@ -795,6 +828,17 @@ fn date_picker_modal_panel<H: UiHost>(
         },
         move |cx| vec![cx.container(container, move |_cx| vec![body])],
     )
+}
+
+fn padded_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    padding: Edges,
+    child: AnyElement,
+) -> AnyElement {
+    let mut props = ContainerProps::default();
+    props.layout.size.width = Length::Fill;
+    props.padding = padding.into();
+    cx.container(props, move |_cx| vec![child])
 }
 
 fn date_picker_actions<H: UiHost>(
@@ -847,19 +891,24 @@ fn date_picker_body<H: UiHost>(
     selectable_dates: Option<DateSelectablePredicate>,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
+    let horizontal_padding = {
+        let theme = Theme::global(&*cx.app);
+        date_tokens::calendar_horizontal_padding(theme, token_variant)
+    };
+
     cx.flex(
         FlexProps {
             direction: Axis::Vertical,
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
             wrap: false,
-            gap: Px(8.0).into(),
+            gap: Px(0.0).into(),
             layout: {
                 let mut l = LayoutStyle::default();
                 l.size.width = Length::Fill;
                 l
             },
-            ..Default::default()
+            padding: Edges::symmetric(horizontal_padding, Px(0.0)).into(),
         },
         move |cx| {
             vec![
@@ -988,17 +1037,18 @@ fn weekdays_row<H: UiHost>(
 ) -> AnyElement {
     let mut row = FlexProps::default();
     row.direction = Axis::Horizontal;
-    row.justify = MainAlign::SpaceBetween;
+    row.justify = MainAlign::SpaceEvenly;
     row.align = CrossAlign::Center;
     row.wrap = false;
     row.layout.size.width = Length::Fill;
     row.gap = Px(0.0).into();
 
-    let (style, color) = {
+    let (style, color, slot_w, slot_h) = {
         let theme = Theme::global(&*cx.app);
         let style = date_tokens::weekdays_label_text_style(theme, token_variant);
         let color = date_tokens::weekdays_label_text_color(theme, token_variant);
-        (style, color)
+        let (slot_w, slot_h) = date_picker_slot_size(theme, token_variant);
+        (style, color, slot_w, slot_h)
     };
 
     let weekdays = weekdays_from_start(week_start);
@@ -1020,7 +1070,14 @@ fn weekdays_row<H: UiHost>(
                 props.color = Some(color);
                 props.wrap = TextWrap::None;
                 props.overflow = TextOverflow::Clip;
-                cx.text_props(props).a11y(
+                let mut slot = FlexProps::default();
+                slot.direction = Axis::Horizontal;
+                slot.justify = MainAlign::Center;
+                slot.align = CrossAlign::Center;
+                slot.wrap = false;
+                slot.layout.size.width = Length::Px(slot_w);
+                slot.layout.size.height = Length::Px(slot_h);
+                cx.flex(slot, move |cx| vec![cx.text_props(props)]).a11y(
                     SemanticsDecoration::default()
                         .test_id(test_id)
                         .label(a11y_label),
@@ -1047,6 +1104,8 @@ fn dates_grid<H: UiHost>(
     let (
         cell_w,
         cell_h,
+        slot_w,
+        slot_h,
         cell_shape,
         label_style,
         unselected_color,
@@ -1058,9 +1117,12 @@ fn dates_grid<H: UiHost>(
         disabled_opacity,
     ) = {
         let theme = Theme::global(&*cx.app);
+        let (slot_w, slot_h) = date_picker_slot_size(theme, token_variant);
         (
             date_tokens::date_cell_width(theme, token_variant),
             date_tokens::date_cell_height(theme, token_variant),
+            slot_w,
+            slot_h,
             date_tokens::date_cell_shape(theme, token_variant),
             date_tokens::date_label_text_style(theme, token_variant),
             date_tokens::date_unselected_label_text_color(theme, token_variant),
@@ -1091,7 +1153,7 @@ fn dates_grid<H: UiHost>(
     grid.justify = MainAlign::Start;
     grid.align = CrossAlign::Stretch;
     grid.wrap = false;
-    grid.gap = Px(4.0).into();
+    grid.gap = Px(0.0).into();
     grid.layout.size.width = Length::Fill;
 
     cx.flex(grid, move |cx| {
@@ -1105,7 +1167,7 @@ fn dates_grid<H: UiHost>(
             let selectable_dates = selectable_dates.clone();
             let mut row = FlexProps::default();
             row.direction = Axis::Horizontal;
-            row.justify = MainAlign::SpaceBetween;
+            row.justify = MainAlign::SpaceEvenly;
             row.align = CrossAlign::Center;
             row.wrap = false;
             row.gap = Px(0.0).into();
@@ -1164,6 +1226,10 @@ fn dates_grid<H: UiHost>(
                         let date_description =
                             material_date_picker_day_description(&*cx.app, date, is_today);
 
+                        let mut pressable_layout = LayoutStyle::default();
+                        pressable_layout.size.width = Length::Px(slot_w);
+                        pressable_layout.size.height = Length::Px(slot_h);
+
                         let on_activate: OnActivate = {
                             let selected_model = selected_model.clone();
                             let month_model = month_model.clone();
@@ -1181,6 +1247,7 @@ fn dates_grid<H: UiHost>(
 
                         cx.pressable(
                             PressableProps {
+                                layout: pressable_layout,
                                 enabled: is_selectable,
                                 focusable: is_selectable,
                                 a11y: PressableA11y {
@@ -1194,7 +1261,7 @@ fn dates_grid<H: UiHost>(
                             },
                             move |cx, _st| {
                                 cx.pressable_on_activate(on_activate.clone());
-                                vec![cx.container(props, move |cx| {
+                                let chrome = cx.container(props, move |cx| {
                                     vec![
                                         cx.text_props(label_props),
                                         diagnostic_anchor(
@@ -1208,7 +1275,8 @@ fn dates_grid<H: UiHost>(
                                             ),
                                         ),
                                     ]
-                                })]
+                                });
+                                vec![centered_fill(cx, chrome)]
                             },
                         )
                     })
