@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Debug Draw Path-Builder Shape-Method Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI debug-draw path-builder shape methods split into private rect, Bezier, and
+arc owners without changing `ImUiDebugDrawPath` method names, path point storage, invalid input
+handling, default segment fallback, rounded-rect sampling, Bezier sampling, arc sampling, or public
+debug-draw APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods.rs` is now a
+  private module index.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods/rects.rs` owns
+  rect and rounded-rect point appending.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods/beziers.rs` owns
+  quadratic/cubic Bezier sampling.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods/arcs.rs` owns
+  circular, fast 12-step, and elliptical arc sampling.
+- `tools/gate_imui_workstream_source.py` now rejects rect/Bezier/arc shape-method bodies from
+  drifting back into `shape_methods.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_path_builder
+  --no-fail-fast`: pass; 12 path-builder tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Shared Hover-Delay State Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI shared hover-delay state/store/model lookup moved into a private owner without

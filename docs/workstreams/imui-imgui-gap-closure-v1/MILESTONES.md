@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 debug-draw path-builder shape-method owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods.rs` is now a private
+module index. `shape_methods/rects.rs` owns rect and rounded-rect point appending,
+`shape_methods/beziers.rs` owns quadratic/cubic Bezier sampling, and `shape_methods/arcs.rs` owns
+circular, fast 12-step, and elliptical arc sampling. `path_builder.rs` still owns path authoring
+storage plus stroke/fill dispatch.
+
 2026-05-28 shared hover-delay state owner-split result:
 `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay/state.rs` now owns
 `ImUiSharedHoverDelayState`, `ImUiSharedHoverDelayStore`, `model_for_window`, and `delay_flags`.

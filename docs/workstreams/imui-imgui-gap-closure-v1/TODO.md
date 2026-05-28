@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw path-builder shape methods into private rect, bezier, and arc owners
+      without changing `ImUiDebugDrawPath` method names, path point storage, invalid input
+      handling, default segment fallback, rounded-rect sampling, Bezier sampling, arc sampling, or
+      public debug-draw APIs.
+      Result: `debug_draw_controls/path_builder/shape_methods.rs` is now a private module index.
+      `shape_methods/rects.rs` owns rect and rounded-rect point appending,
+      `shape_methods/beziers.rs` owns quadratic/cubic Bezier sampling, and
+      `shape_methods/arcs.rs` owns circular, fast 12-step, and elliptical arc sampling.
 - [x] Split IMUI shared hover-delay state/store/model lookup out of
       `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay.rs` into a private
       state owner without changing window-scoped shared-delay model allocation, short/normal delay
