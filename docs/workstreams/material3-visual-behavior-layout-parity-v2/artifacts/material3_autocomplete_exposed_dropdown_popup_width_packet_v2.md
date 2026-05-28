@@ -75,11 +75,13 @@ Results:
 - `exposed_dropdown.layout`: `covered_v2`.
 - `autocomplete.style` and `exposed_dropdown.style` remain `needs_v2_packet`; this packet did not
   prove surface color, shape, elevation, shadow, or state-layer styling.
-- Motion remains seeded; this packet only verifies settled geometry, not transition timing.
+- Motion is covered later by `material3_autocomplete_exposed_dropdown_motion_packet_v2.md`; this
+  packet only verifies settled geometry, not transition timing.
 
 ## Residual Risk
 
 - Popup surface style/elevation still needs a dedicated token/chrome packet.
-- Popup open/close motion still needs a fixed-timestep diagnostics gate.
+- Popup open/close motion is covered later by
+  `material3_autocomplete_exposed_dropdown_motion_packet_v2.md`.
 - Multiline/TextArea-like field anchoring remains a separate TextField scenario rather than an
   Autocomplete/ExposedDropdown contract.

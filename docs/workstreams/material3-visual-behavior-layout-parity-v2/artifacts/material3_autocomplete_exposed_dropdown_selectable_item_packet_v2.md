@@ -58,5 +58,6 @@ This was a shared Material recipe issue.
 
 ## Residual Risk
 
-Motion remains seeded. This packet covers settled option chrome and selected label colors, not
-fixed-timestep popup enter/exit or ripple timing.
+Popup/chevron motion is covered later by
+`material3_autocomplete_exposed_dropdown_motion_packet_v2.md`. This packet covers settled option
+chrome and selected label colors, not option ripple timing.

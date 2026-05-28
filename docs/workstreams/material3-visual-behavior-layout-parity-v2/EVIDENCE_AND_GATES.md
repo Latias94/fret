@@ -379,6 +379,27 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     text-input pointer-down state into the shared Material ink runtime, and fixed-frame gates prove
     hover alpha interpolation plus press ripple radius expansion.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_bar_motion_packet_v2.md`
+- 2026-05-28: M3PV2-041 closed Autocomplete and ExposedDropdown popup/trigger motion.
+  - Sources: Compose Material3 `ExposedDropdownMenu` keeps popup content mounted through
+    `MutableTransitionState`, delegates to `DropdownMenuContent` for scale/alpha motion, and
+    rotates `ExposedDropdownMenuDefaults.TrailingIcon` to 180 degrees when expanded.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --test autocomplete_motion`
+    failed because both Autocomplete and ExposedDropdown opened with popup alpha/scale motion but
+    their chevrons did not rotate on the first open frame.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --test autocomplete_motion`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_autocomplete_exposes_stable_part_test_ids material3_exposed_dropdown_popup_matches_field_chrome_bounds`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_autocomplete_semantics_v1 material3_exposed_dropdown_trailing_icon_toggles_overlay_v1 material3_exposed_dropdown_reverts_query_to_committed_selection_on_blur_v1`
+  - Autocomplete headless goldens refreshed with `FRET_UPDATE_GOLDENS=1`, then re-run:
+    `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_autocomplete_suite_goldens_v1`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Workstream JSON, matrix JSON, catalog, and `git diff --check` gates passed.
+  - Result: Autocomplete chevron motion now uses the scoped Material `FastSpatial` spring like
+    Select, ExposedDropdown inherits the fix through composition, and fixed-frame gates prove
+    popup alpha/scale plus chevron rotation for first open/close frames. The Autocomplete headless
+    baseline now records the current active-indicator and selectable option row clip signatures.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_autocomplete_exposed_dropdown_motion_packet_v2.md`
 
 ## Proof Note Template
 

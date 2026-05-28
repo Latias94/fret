@@ -375,6 +375,32 @@ Task IDs use `M3PV2-*`.
   DatePicker/TimePicker fixed-timestep motion or Autocomplete/ExposedDropdown popup/trigger motion
   classification.
 
+- [x] M3PV2-041 [owner=codex] [deps=M3PV2-025,M3PV2-027,M3PV2-037] [scope=ecosystem/fret-ui-material3/src/{autocomplete.rs,tokens/dropdown_menu.rs},ecosystem/fret-ui-material3/tests/autocomplete_motion.rs,goldens/material3-headless/v1/material3-autocomplete.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close Autocomplete and ExposedDropdown popup/trigger motion by proving popup alpha/scale
+  and trailing chevron rotation on first open/close frames.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --test autocomplete_motion`
+  failed because both components opened the popup with alpha/scale motion but no first-frame
+  chevron rotation; green gate:
+  `cargo nextest run -p fret-ui-material3 --test autocomplete_motion`;
+  diagnostics: `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_autocomplete_exposes_stable_part_test_ids material3_exposed_dropdown_popup_matches_field_chrome_bounds`;
+  behavior/semantics: `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_autocomplete_semantics_v1 material3_exposed_dropdown_trailing_icon_toggles_overlay_v1 material3_exposed_dropdown_reverts_query_to_committed_selection_on_blur_v1`;
+  headless: Autocomplete suite refreshed with `FRET_UPDATE_GOLDENS=1` and re-run via
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_autocomplete_suite_goldens_v1`;
+  crate gates: `cargo check -p fret-ui-material3 --features diagnostics --tests` and
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`;
+  docs/catalog gates: `python -m json.tool` for the workstream and matrix JSON,
+  `python tools/check_workstream_catalog.py`, and `git diff --check`.
+  Review: DONE. Popup alpha/scale was already covered by `foundation::overlay_motion`; the
+  component bug was Autocomplete's old duration/easing `StateLayerAnimator` for chevron progress.
+  Autocomplete now uses scoped Material `FastSpatial` spring motion like Select, and
+  ExposedDropdown inherits it through composition. Autocomplete headless goldens were refreshed for
+  the intentional current field chrome and selectable option row signatures. The old dropdown-menu
+  duration/easing helpers were removed as dead crate-private code.
+  Evidence: `artifacts/material3_autocomplete_exposed_dropdown_motion_packet_v2.md`.
+  Handoff: Autocomplete and ExposedDropdown motion axes are now v2-covered. Continue M3PV2-020
+  with DatePicker or TimePicker fixed-timestep motion.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]

@@ -33,11 +33,11 @@ use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
+use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::part_test_id;
-use crate::interaction::state_layer::StateLayerAnimator;
-use crate::motion::ms_to_frames;
+use crate::motion::{SpringAnimator, ms_to_frames};
 use crate::text_field::{TextField, TextFieldTokenNamespace, TextFieldVariant};
 use crate::tokens::autocomplete as autocomplete_tokens;
 use crate::tokens::dropdown_menu as dropdown_menu_tokens;
@@ -363,7 +363,7 @@ struct AutocompleteFrameState {
 #[derive(Debug, Default)]
 struct AutocompleteChevronRuntime {
     target_open: bool,
-    anim: StateLayerAnimator,
+    anim: SpringAnimator,
 }
 
 fn first_enabled(items: &[AutocompleteItem]) -> Option<usize> {
@@ -585,27 +585,18 @@ fn autocomplete_into_element<H: UiHost>(
 
         let now_frame = cx.frame_id.0;
         let (chevron_progress, chevron_want_frames) = if autocomplete.show_trailing_dropdown_icon {
-            let (open_duration_ms, close_duration_ms, easing) = {
+            let spatial = {
                 let theme = Theme::global(&*cx.app);
-                (
-                    dropdown_menu_tokens::open_duration_ms(theme),
-                    dropdown_menu_tokens::close_duration_ms(theme),
-                    dropdown_menu_tokens::easing(theme),
-                )
+                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial)
             };
             cx.slot_state(AutocompleteChevronRuntime::default, |rt| {
-                if rt.target_open != open_now {
+                if !rt.anim.is_initialized() {
                     rt.target_open = open_now;
-                    rt.anim.set_target(
-                        now_frame,
-                        if open_now { 1.0 } else { 0.0 },
-                        if open_now {
-                            open_duration_ms
-                        } else {
-                            close_duration_ms
-                        },
-                        easing,
-                    );
+                    rt.anim.reset(now_frame, if open_now { 1.0 } else { 0.0 });
+                } else if rt.target_open != open_now {
+                    rt.target_open = open_now;
+                    rt.anim
+                        .set_target(now_frame, if open_now { 1.0 } else { 0.0 }, spatial);
                 }
                 rt.anim.advance(now_frame);
                 (rt.anim.value(), rt.anim.is_active())

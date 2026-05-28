@@ -67,6 +67,11 @@ packet found and fixed a recipe bug where ink was constrained to the padded cont
 starting over the editable text area did not start SearchBar ripple. SearchBar now keeps
 component-local pointer-down interaction state, feeds it into the shared Material ink runtime, and
 separates outer chrome from inner padded content.
+M3PV2-041 is complete: Autocomplete and ExposedDropdown popup/trigger motion is now v2-covered.
+Popup alpha/scale already used `foundation::overlay_motion`; the bug was Autocomplete's old
+duration/easing chevron animator. The shared trigger now uses scoped Material `FastSpatial` spring
+motion like Select, and ExposedDropdown inherits the fix through composition. Autocomplete headless
+goldens were refreshed for the current active-indicator and selectable option row signatures.
 
 ## Decisions
 
@@ -79,10 +84,8 @@ separates outer chrome from inner padded content.
 ## Next Recommended Action
 
 Continue M3PV2-020 with another field-family packet. Good next candidates are DatePicker or
-TimePicker fixed-timestep motion, or Autocomplete/ExposedDropdown popup/trigger motion
-classification. Autocomplete/ExposedDropdown already inherit the shared TextField field-motion path,
-but still need their own popup/trigger motion classification before their motion axes are closed.
-Do not mark motion axes complete from settled-geometry evidence alone.
+TimePicker fixed-timestep motion. Do not mark motion axes complete from settled-geometry evidence
+alone.
 
 ## Useful Gates
 
