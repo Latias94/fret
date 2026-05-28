@@ -401,6 +401,28 @@ Task IDs use `M3PV2-*`.
   Handoff: Autocomplete and ExposedDropdown motion axes are now v2-covered. Continue M3PV2-020
   with DatePicker or TimePicker fixed-timestep motion.
 
+- [x] M3PV2-042 [owner=codex] [deps=M3PV2-028] [scope=ecosystem/fret-ui-material3/src/{foundation/modal_motion.rs,foundation/mod.rs,dialog.rs,date_picker.rs},ecosystem/fret-ui-material3/tests/date_picker_motion.rs,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close DatePicker modal motion by proving fixed-frame scrim/panel fade plus Dialog-aligned
+  panel rise/scale, and remove duplicated modal panel transform math.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --test date_picker_motion`
+  failed because DatePickerDialog faded but did not rise on the first open frame; green gates:
+  `cargo nextest run -p fret-ui-material3 --test date_picker_motion`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_exposes_stable_part_test_ids material3_date_picker_month_label_is_polite_live_region material3_date_picker_uses_material_string_registry_and_date_descriptions material3_date_picker_respects_selectable_dates`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_date_picker_suite_goldens_v1 material3_headless_menu_dialog_style_suite_goldens_v1`;
+  `cargo nextest run -p fret-ui-material3 --lib date_picker`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`;
+  docs/catalog gates: `python -m json.tool` for the workstream and matrix JSON,
+  `python tools/check_workstream_catalog.py`, and `git diff --check`.
+  Review: DONE. This was shared Material modal foundation drift: DatePickerDialog carried a
+  component-local pure scale while Dialog used fade/rise/scale. The new
+  `foundation::modal_motion` helper keeps Dialog behavior equivalent and moves DatePickerDialog to
+  the shared modal transform.
+  Evidence: `artifacts/material3_date_picker_modal_motion_packet_v2.md`.
+  Handoff: DatePicker motion is now v2-covered for the current docked/modal recipe surface.
+  Continue M3PV2-020 with TimePicker modal/input/dial fixed-timestep motion.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]

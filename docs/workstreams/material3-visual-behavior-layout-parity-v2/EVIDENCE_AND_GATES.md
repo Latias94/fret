@@ -400,6 +400,24 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     popup alpha/scale plus chevron rotation for first open/close frames. The Autocomplete headless
     baseline now records the current active-indicator and selectable option row clip signatures.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_autocomplete_exposed_dropdown_motion_packet_v2.md`
+- 2026-05-28: M3PV2-042 closed DatePicker modal motion.
+  - Sources: Compose Material3 DatePickerDialog delegates modal behavior to `BasicAlertDialog` and
+    hosts DatePicker content in a modal DatePicker `Surface`; current Fret Material Dialog is the
+    local modal-motion exemplar for implemented dialog surfaces.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --test date_picker_motion`
+    failed because DatePickerDialog faded but did not rise on the first open frame.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --test date_picker_motion`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_exposes_stable_part_test_ids material3_date_picker_month_label_is_polite_live_region material3_date_picker_uses_material_string_registry_and_date_descriptions material3_date_picker_respects_selectable_dates`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_date_picker_suite_goldens_v1 material3_headless_menu_dialog_style_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --lib date_picker`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Workstream JSON, matrix JSON, catalog, and `git diff --check` gates passed.
+  - Result: `foundation::modal_motion` now owns the shared Material modal panel fade/rise/scale
+    transform, Dialog reuses it without golden drift, and DatePickerDialog uses it instead of the
+    old component-local pure scale.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_date_picker_modal_motion_packet_v2.md`
 
 ## Proof Note Template
 

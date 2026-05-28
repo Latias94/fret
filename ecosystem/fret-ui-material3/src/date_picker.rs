@@ -26,6 +26,7 @@ use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{Button, ButtonVariant};
 use crate::foundation::interactive_size::{centered_fill, minimum_interactive_size};
+use crate::foundation::modal_motion::material_modal_panel_transform;
 use crate::foundation::strings::{
     material_date_picker_cancel_label, material_date_picker_confirm_label,
     material_date_picker_day_description, material_date_picker_dismiss_label,
@@ -623,8 +624,8 @@ impl DatePickerDialog {
 
                             let panel = cx.named("panel", |cx| {
                                 let opacity = transition.progress;
-                                let scale = 0.95 + 0.05 * transition.progress;
-                                let transform = fret_core::Transform2D::scale_uniform(scale);
+                                let transform =
+                                    material_modal_panel_transform(cx.bounds, transition.progress);
 
                                 let mut align = FlexProps::default();
                                 align.direction = Axis::Vertical;

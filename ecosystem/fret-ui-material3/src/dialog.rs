@@ -32,6 +32,7 @@ use fret_ui_kit::{
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
+use crate::foundation::modal_motion::material_modal_panel_transform;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{optional_chrome_part_test_id, part_test_id};
 use crate::motion;
@@ -716,20 +717,8 @@ impl Dialog {
 
                             let panel = cx.named("panel", |cx| {
                                 let opacity = transition.progress;
-                                let translate_y = Px((1.0 - transition.progress) * 20.0);
-                                let scale = 0.9 + 0.1 * transition.progress;
-
-                                let origin = fret_core::Point::new(
-                                    Px(cx.bounds.origin.x.0 + cx.bounds.size.width.0 * 0.5),
-                                    Px(cx.bounds.origin.y.0 + cx.bounds.size.height.0 * 0.5),
-                                );
-                                let origin_inv =
-                                    fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0));
-                                let transform = fret_core::Transform2D::translation(
-                                    fret_core::Point::new(Px(0.0), translate_y),
-                                ) * fret_core::Transform2D::translation(origin)
-                                    * fret_core::Transform2D::scale_uniform(scale)
-                                    * fret_core::Transform2D::translation(origin_inv);
+                                let transform =
+                                    material_modal_panel_transform(cx.bounds, transition.progress);
 
                                 let mut center_layout = LayoutStyle::default();
                                 center_layout.size.width = Length::Fill;

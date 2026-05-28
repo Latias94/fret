@@ -72,6 +72,9 @@ Popup alpha/scale already used `foundation::overlay_motion`; the bug was Autocom
 duration/easing chevron animator. The shared trigger now uses scoped Material `FastSpatial` spring
 motion like Select, and ExposedDropdown inherits the fix through composition. Autocomplete headless
 goldens were refreshed for the current active-indicator and selectable option row signatures.
+M3PV2-042 is complete: DatePicker modal motion is now v2-covered for the current docked/modal
+recipe surface. The packet extracted `foundation::modal_motion`, kept Dialog on the same modal
+fade/rise/scale transform, and moved DatePickerDialog off its old pure-scale panel animation.
 
 ## Decisions
 
@@ -83,9 +86,8 @@ goldens were refreshed for the current active-indicator and selectable option ro
 
 ## Next Recommended Action
 
-Continue M3PV2-020 with another field-family packet. Good next candidates are DatePicker or
-TimePicker fixed-timestep motion. Do not mark motion axes complete from settled-geometry evidence
-alone.
+Continue M3PV2-020 with TimePicker fixed-timestep motion. TimePickerDialog still has component-local
+modal panel motion and should likely reuse `foundation::modal_motion`.
 
 ## Useful Gates
 

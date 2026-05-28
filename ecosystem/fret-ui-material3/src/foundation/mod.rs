@@ -23,6 +23,7 @@ pub mod indication;
 pub mod interaction;
 pub mod interactive_size;
 pub mod layout_probe;
+pub mod modal_motion;
 pub mod motion_scheme;
 pub mod overlay_motion;
 pub mod search_motion;

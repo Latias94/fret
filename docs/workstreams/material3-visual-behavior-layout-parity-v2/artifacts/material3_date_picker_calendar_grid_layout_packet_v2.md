@@ -65,6 +65,7 @@ cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D
 
 ## Residual Risk
 
-- DatePicker motion remains seeded; this packet only proves settled calendar layout.
+- DatePicker modal motion is covered later by `material3_date_picker_modal_motion_packet_v2.md`;
+  this packet only proves settled calendar layout.
 - Year selection and input-mode layout still need their own source-backed v2 packet.
 - Date range picker behavior is not covered by this crate's current DatePicker-only surface.
