@@ -44,6 +44,11 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI combo control option types into direct-combo and model-combo private owners
+      without changing public option type names, default values, placeholder text, popup defaults,
+      shortcut fields, facade imports, combo smoke behavior, or combo-model behavior.
+      Result: `options/controls/combo.rs` is now a public re-export hub.
+      `combo/direct.rs` owns `ComboOptions`; `combo/model.rs` owns `ComboModelOptions`.
 - [x] Split IMUI boolean control option types into checkbox, radio, and switch private owners
       without changing public option type names, default values, shortcut fields, facade imports,
       button smoke coverage, or boolean control behavior.

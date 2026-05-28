@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Combo Control Option Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI combo control option types split into direct-combo and model-combo private
+owners without changing public option type names, default values, placeholder text, popup defaults,
+shortcut fields, facade imports, combo smoke behavior, or combo-model behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/controls/combo.rs` is now a public re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/combo/direct.rs` owns `ComboOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/combo/model.rs` owns `ComboModelOptions` and
+  its default placeholder text.
+- `tools/gate_imui_workstream_source.py` now rejects these option bodies from drifting back into
+  `combo.rs` and checks the two dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_combo_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui models_combo --no-fail-fast`:
+  pass.
+
 ## Boolean Control Option Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI boolean control option types split into checkbox, radio, and switch private

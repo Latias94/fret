@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 combo control option owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/controls/combo.rs` is now a public re-export hub.
+`combo/direct.rs` owns `ComboOptions`, while `combo/model.rs` owns `ComboModelOptions` and the
+default placeholder text.
+
 2026-05-28 boolean control option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/boolean.rs` is now a public re-export hub.
 `boolean/checkbox.rs`, `boolean/radio.rs`, and `boolean/switch.rs` own the three option structs
