@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-29 editor theme preset picker option owner-split result:
+`ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs` keeps picker rendering and
+behavior. `editor_theme_preset_picker/options.rs` owns `EditorThemePresetPickerOptions` defaults
+while the public controls re-export and IMUI adapter remain unchanged.
+
 2026-05-29 leaf control option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/selection.rs`,
 `ecosystem/fret-ui-kit/src/imui/options/controls/tab.rs`, and

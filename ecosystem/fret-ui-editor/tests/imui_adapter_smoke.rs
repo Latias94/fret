@@ -463,7 +463,15 @@ fn editor_imui_adapter_option_defaults_compile() {
     let _ = SliderOptions::default();
     let _ = CheckboxOptions::default();
     let _ = EnumSelectOptions::default();
-    let _ = EditorThemePresetPickerOptions::default();
+    let theme_picker_options = EditorThemePresetPickerOptions::default();
+    assert!(theme_picker_options.enabled);
+    assert!(theme_picker_options.focusable);
+    assert_eq!(
+        theme_picker_options.label.as_deref(),
+        Some("Editor theme preset")
+    );
+    assert!(theme_picker_options.test_id.is_none());
+    assert!(theme_picker_options.item_test_id_prefix.is_none());
     let _ = VecEditOptions::default();
     let _ = TransformEditOptions::default();
     let _ = PropertyGroupOptions::default();

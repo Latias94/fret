@@ -44,6 +44,11 @@ Last updated: 2026-05-29
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor-owned IMUI style/theme preset picker option records into a private owner
+      without changing public control names, option fields/defaults, controls re-exports, IMUI
+      adapter callsite, listbox semantics, selected-state behavior, or reversible preset replay.
+      Result: `controls/editor_theme_preset_picker.rs` keeps picker rendering and behavior, while
+      `controls/editor_theme_preset_picker/options.rs` owns `EditorThemePresetPickerOptions`.
 - [x] Split IMUI leaf control option records into selection, tab-item, and slider private owners
       without changing public option type names, fields, defaults, root re-exports, selectable
       smoke behavior, tab/menu behavior, or slider model behavior.
