@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI boolean control option types into checkbox, radio, and switch private owners
+      without changing public option type names, default values, shortcut fields, facade imports,
+      button smoke coverage, or boolean control behavior.
+      Result: `options/controls/boolean.rs` is now a public re-export hub.
+      `boolean/checkbox.rs`, `boolean/radio.rs`, and `boolean/switch.rs` own the three option
+      structs and their default values.
 - [x] Split IMUI disclosure control option types into collapsing-header and tree-node private
       owners without changing public option type names, default values, shortcut fields, hierarchy
       metadata defaults, facade imports, disclosure smoke behavior, or disclosure-control tests.

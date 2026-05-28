@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 boolean control option owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/controls/boolean.rs` is now a public re-export hub.
+`boolean/checkbox.rs`, `boolean/radio.rs`, and `boolean/switch.rs` own the three option structs
+and their default values.
+
 2026-05-28 disclosure control option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/disclosure.rs` is now a public re-export hub.
 `disclosure/collapsing_header.rs` owns `CollapsingHeaderOptions`, and
