@@ -40,11 +40,13 @@ use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::field::{
     material_field_active_indicator_layer, material_field_text_start_inset_x,
 };
+use crate::foundation::field_motion::{FieldInputPhase, FieldMotionTargets, field_motion_frame};
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
+use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{chrome_part_test_id, part_test_id};
@@ -64,6 +66,7 @@ fn default_select_listbox_test_id() -> Arc<str> {
 struct SelectPartTestIds {
     chrome: Arc<str>,
     active_indicator: Arc<str>,
+    label: Arc<str>,
     trailing_icon: Arc<str>,
 }
 
@@ -72,6 +75,7 @@ impl SelectPartTestIds {
         Self {
             chrome: chrome_part_test_id(base),
             active_indicator: part_test_id(base, "active-indicator"),
+            label: part_test_id(base, "label"),
             trailing_icon: part_test_id(base, "trailing-icon"),
         }
     }
@@ -711,6 +715,7 @@ fn select_trigger_element<H: UiHost>(
 ) -> SelectTriggerOutput {
     let part_test_ids = test_id.as_ref().map(SelectPartTestIds::from_base);
     let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+    let label_test_id = part_test_ids.as_ref().map(|ids| ids.label.clone());
     let trailing_icon_test_id = part_test_ids.as_ref().map(|ids| ids.trailing_icon.clone());
     let active_indicator_test_id = part_test_ids
         .as_ref()
@@ -816,8 +821,9 @@ fn select_trigger_element<H: UiHost>(
             focus_opacity,
             ripple_base_opacity,
             ripple_config,
-            float_duration_ms,
-            float_easing,
+            spatial,
+            fast_effects,
+            slow_effects,
             open_duration_ms,
             close_duration_ms,
             open_easing,
@@ -908,17 +914,9 @@ fn select_trigger_element<H: UiHost>(
             let ripple_base_opacity = pressed_opacity;
             let ripple_config = material_pressable_indication_config(theme, None);
 
-            let float_duration_ms = theme
-                .duration_ms_by_key("md.sys.motion.duration.short4")
-                .unwrap_or(200);
-            let float_easing = theme
-                .easing_by_key("md.sys.motion.easing.standard")
-                .unwrap_or(fret_ui::theme::CubicBezier {
-                    x1: 0.0,
-                    y1: 0.0,
-                    x2: 1.0,
-                    y2: 1.0,
-                });
+            let spatial = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+            let fast_effects = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastEffects);
+            let slow_effects = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::SlowEffects);
 
             let open_duration_ms = dropdown_menu_tokens::open_duration_ms(theme);
             let close_duration_ms = dropdown_menu_tokens::close_duration_ms(theme);
@@ -944,8 +942,9 @@ fn select_trigger_element<H: UiHost>(
                 focus_opacity,
                 ripple_base_opacity,
                 ripple_config,
-                float_duration_ms,
-                float_easing,
+                spatial,
+                fast_effects,
+                slow_effects,
                 open_duration_ms,
                 close_duration_ms,
                 open_easing,
@@ -1016,21 +1015,45 @@ fn select_trigger_element<H: UiHost>(
                 );
 
                 let should_float = focused || open || populated;
+                let input_phase = if focused {
+                    FieldInputPhase::Focused
+                } else if populated {
+                    FieldInputPhase::UnfocusedNotEmpty
+                } else {
+                    FieldInputPhase::UnfocusedEmpty
+                };
+                let show_placeholder = if label.is_some() {
+                    (focused || open) && !populated
+                } else {
+                    true
+                };
+                let placeholder_target_opacity = if show_placeholder { 1.0 } else { 0.0 };
 
-                let (float_progress, float_want_frames) =
-                    cx.slot_state(SelectTriggerRuntime::default, |rt| {
-                        if rt.float_target != should_float {
-                            rt.float_target = should_float;
-                            rt.float.set_target(
-                                now_frame,
-                                if should_float { 1.0 } else { 0.0 },
-                                float_duration_ms,
-                                float_easing,
-                            );
-                        }
-                        rt.float.advance(now_frame);
-                        (rt.float.value(), rt.float.is_active())
-                    });
+                let mut target_border = Edges::all(Px(0.0));
+                let mut target_border_color = Color::TRANSPARENT;
+                if let Some((width, color)) = outline {
+                    target_border = Edges::all(width);
+                    target_border_color = color;
+                } else if let Some((height, color)) = indicator {
+                    target_border.bottom = height;
+                    target_border_color = color;
+                }
+
+                let motion = field_motion_frame(
+                    cx,
+                    FieldMotionTargets {
+                        disabled: !enabled,
+                        should_float,
+                        input_phase,
+                        placeholder_target_opacity,
+                        border: target_border,
+                        border_color: target_border_color,
+                        spatial,
+                        fast_effects,
+                        slow_effects,
+                    },
+                );
+                let float_progress = motion.float_progress.clamp(0.0, 1.0);
 
                 let (chevron_progress, chevron_want_frames) =
                     cx.slot_state(SelectChevronRuntime::default, |rt| {
@@ -1051,15 +1074,9 @@ fn select_trigger_element<H: UiHost>(
                         (rt.anim.value(), rt.anim.is_active())
                     });
 
-                if float_want_frames || chevron_want_frames {
+                if chevron_want_frames {
                     cx.request_animation_frame();
                 }
-
-                let show_placeholder = if label.is_some() {
-                    (focused || open) && !populated
-                } else {
-                    true
-                };
                 let display_text = if populated {
                     value_text.clone()
                 } else if show_placeholder {
@@ -1070,7 +1087,7 @@ fn select_trigger_element<H: UiHost>(
                 let is_placeholder = !populated && show_placeholder;
 
                 let display_color = if is_placeholder {
-                    placeholder_color
+                    with_opacity(placeholder_color, motion.placeholder_opacity)
                 } else {
                     text_color
                 };
@@ -1128,22 +1145,21 @@ fn select_trigger_element<H: UiHost>(
                 chrome.background = container_bg;
                 chrome.corner_radii = corner;
                 let mut outline_width_for_notch = Px(0.0);
-                if let Some((outline_width, outline_color)) = outline
-                    && outline_width.0 > 0.0
-                {
-                    chrome.border = Edges::all(outline_width);
-                    chrome.border_color = Some(outline_color);
-                    outline_width_for_notch = outline_width;
+                if outline.is_some() && motion.border.top.0 > 0.0 {
+                    chrome.border = motion.border;
+                    chrome.border_color = Some(motion.border_color);
+                    outline_width_for_notch = motion.border.top;
                 }
 
-                let indicator_el = indicator.map(|(h, c)| {
-                    material_field_active_indicator_layer(
-                        cx,
-                        h,
-                        c,
-                        active_indicator_test_id.clone(),
-                    )
-                });
+                let indicator_el =
+                    (indicator.is_some() && motion.border.bottom.0 > 0.0).then(|| {
+                        material_field_active_indicator_layer(
+                            cx,
+                            motion.border.bottom,
+                            motion.border_color,
+                            active_indicator_test_id.clone(),
+                        )
+                    });
 
                 let style_override = style.clone();
 
@@ -1211,6 +1227,7 @@ fn select_trigger_element<H: UiHost>(
                             focused,
                             container_bg.unwrap_or(Color::TRANSPARENT),
                             outline_width_for_notch,
+                            label_test_id.clone(),
                         ));
                     }
                     if let Some(indicator_el) = indicator_el {
@@ -1362,12 +1379,6 @@ fn select_menu_item_icon<H: UiHost>(
 }
 
 #[derive(Debug, Default)]
-struct SelectTriggerRuntime {
-    float_target: bool,
-    float: StateLayerAnimator,
-}
-
-#[derive(Debug, Default)]
 struct SelectChevronRuntime {
     target_open: bool,
     anim: StateLayerAnimator,
@@ -1387,6 +1398,7 @@ fn select_trigger_label<H: UiHost>(
     focused: bool,
     input_bg: Color,
     outline_width: Px,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
@@ -1434,7 +1446,7 @@ fn select_trigger_label<H: UiHost>(
     }
     patch.layout = layout;
 
-    cx.container(patch, move |cx| {
+    let mut label = cx.container(patch, move |cx| {
         vec![cx.text_props(TextProps {
             layout: fret_ui::element::LayoutStyle::default(),
             text: text.clone(),
@@ -1445,7 +1457,11 @@ fn select_trigger_label<H: UiHost>(
             align: fret_core::TextAlign::Start,
             ink_overflow: Default::default(),
         })]
-    })
+    });
+    if let Some(test_id) = test_id {
+        label = label.test_id(test_id);
+    }
+    label
 }
 
 fn select_supporting_text<H: UiHost>(

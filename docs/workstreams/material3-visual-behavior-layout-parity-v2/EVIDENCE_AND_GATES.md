@@ -309,6 +309,28 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     multiline branches, and filled active-indicator thickness is proven to animate between `1px`
     and `2px` before settling.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_motion_packet_v2.md`
+- 2026-05-28: M3PV2-036 closed Select trigger field-motion drift.
+  - Sources: Compose Material3 field transition semantics from `TextFieldTransitionScope`, MUI
+    Select input-field composition, and the Fret TextField M3PV2-035 fixed-frame exemplar.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --features diagnostics --test select_behavior select_initial_selected_label_mounts_at_settled_floating_position`
+    failed because an initially selected outlined Select label rendered at `first=19` before
+    settling to `7`.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --features diagnostics --test select_behavior select_focus_floating_label_animates_between_idle_and_focused`
+    failed because an outlined Select focus frame rendered `first=21` from `idle=19` instead of
+    moving toward the floated label geometry.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test select_behavior select_initial_selected_label_mounts_at_settled_floating_position select_focus_floating_label_animates_between_idle_and_focused`
+  - `cargo nextest run -p fret-ui-material3 --test text_field_hover text_field_floating_label_animates_between_idle_and_focused filled_text_field_focus_uses_focus_indicator_thickness`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_select_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test select_behavior`
+  - `cargo nextest run -p fret-ui-material3 --test text_field_hover`
+  - `cargo nextest run -p fret-ui-material3 --test select_behavior`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: TextField field motion now lives in `foundation::field_motion`, Select trigger uses the
+    same label/placeholder/border/indicator motion targets, initially populated Select labels mount
+    floated, and focused Select labels show an intermediate first frame instead of a snap/delay.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_trigger_motion_packet_v2.md`
 
 ## Proof Note Template
 

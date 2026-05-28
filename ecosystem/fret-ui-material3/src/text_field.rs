@@ -32,6 +32,7 @@ use fret_ui_kit::{
 use crate::foundation::field::{
     material_field_active_indicator_layer, material_field_text_start_inset_x,
 };
+use crate::foundation::field_motion::{FieldInputPhase, FieldMotionTargets, field_motion_frame};
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -40,7 +41,6 @@ use crate::foundation::indication::{
 use crate::foundation::interactive_size::minimum_interactive_size;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::test_id::part_test_id;
-use crate::motion::SpringAnimator;
 use crate::tokens::autocomplete as autocomplete_tokens;
 use crate::tokens::text_field as text_field_tokens;
 
@@ -134,19 +134,6 @@ impl TextFieldStyle {
     }
 }
 
-#[derive(Debug, Default)]
-struct TextFieldRuntime {
-    float_target: bool,
-    float: SpringAnimator,
-    last_phase: TextFieldInputPhase,
-    placeholder_opacity: SpringAnimator,
-    border_top: SpringAnimator,
-    border_right: SpringAnimator,
-    border_bottom: SpringAnimator,
-    border_left: SpringAnimator,
-    border_color: AnimatedColor,
-}
-
 #[derive(Debug, Clone)]
 struct TextFieldPartTestIds {
     chrome: Arc<str>,
@@ -168,191 +155,6 @@ impl TextFieldPartTestIds {
             trailing_icon: part_test_id(base, "trailing-icon"),
         }
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-enum TextFieldInputPhase {
-    Focused,
-    #[default]
-    UnfocusedEmpty,
-    UnfocusedNotEmpty,
-}
-
-#[derive(Debug, Default)]
-struct AnimatedColor {
-    r: SpringAnimator,
-    g: SpringAnimator,
-    b: SpringAnimator,
-    a: SpringAnimator,
-}
-
-impl AnimatedColor {
-    fn reset(&mut self, now_frame: u64, color: Color) {
-        self.r.reset(now_frame, color.r);
-        self.g.reset(now_frame, color.g);
-        self.b.reset(now_frame, color.b);
-        self.a.reset(now_frame, color.a);
-    }
-
-    fn set_target(&mut self, now_frame: u64, color: Color, spec: crate::motion::SpringSpec) {
-        self.r.set_target(now_frame, color.r, spec);
-        self.g.set_target(now_frame, color.g, spec);
-        self.b.set_target(now_frame, color.b, spec);
-        self.a.set_target(now_frame, color.a, spec);
-    }
-
-    fn advance(&mut self, now_frame: u64) {
-        self.r.advance(now_frame);
-        self.g.advance(now_frame);
-        self.b.advance(now_frame);
-        self.a.advance(now_frame);
-    }
-
-    fn is_active(&self) -> bool {
-        self.r.is_active() || self.g.is_active() || self.b.is_active() || self.a.is_active()
-    }
-
-    fn value(&self) -> Color {
-        Color {
-            r: self.r.value().clamp(0.0, 1.0),
-            g: self.g.value().clamp(0.0, 1.0),
-            b: self.b.value().clamp(0.0, 1.0),
-            a: self.a.value().clamp(0.0, 1.0),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-struct TextFieldMotionTargets {
-    disabled: bool,
-    should_float: bool,
-    input_phase: TextFieldInputPhase,
-    placeholder_target_opacity: f32,
-    border: Edges,
-    border_color: Color,
-    spatial: crate::motion::SpringSpec,
-    fast_effects: crate::motion::SpringSpec,
-    slow_effects: crate::motion::SpringSpec,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct TextFieldMotionFrame {
-    want_frames: bool,
-    float_progress: f32,
-    border: Edges,
-    border_color: Color,
-    placeholder_opacity: f32,
-}
-
-fn text_field_motion_frame<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    targets: TextFieldMotionTargets,
-) -> TextFieldMotionFrame {
-    let now_frame = cx.frame_id.0;
-
-    let frame = cx.root_state(TextFieldRuntime::default, |rt| {
-        if targets.disabled {
-            rt.float_target = targets.should_float;
-            rt.float
-                .reset(now_frame, if targets.should_float { 1.0 } else { 0.0 });
-            rt.last_phase = targets.input_phase;
-            rt.placeholder_opacity
-                .reset(now_frame, targets.placeholder_target_opacity);
-            rt.border_top.reset(now_frame, targets.border.top.0);
-            rt.border_right.reset(now_frame, targets.border.right.0);
-            rt.border_bottom.reset(now_frame, targets.border.bottom.0);
-            rt.border_left.reset(now_frame, targets.border.left.0);
-            rt.border_color.reset(now_frame, targets.border_color);
-
-            return TextFieldMotionFrame {
-                want_frames: false,
-                float_progress: rt.float.value(),
-                border: targets.border,
-                border_color: targets.border_color,
-                placeholder_opacity: rt.placeholder_opacity.value(),
-            };
-        }
-
-        if !rt.float.is_initialized() {
-            rt.float_target = targets.should_float;
-            rt.float
-                .reset(now_frame, if targets.should_float { 1.0 } else { 0.0 });
-        }
-
-        if rt.float_target != targets.should_float {
-            rt.float_target = targets.should_float;
-            rt.float.set_target(
-                now_frame,
-                if targets.should_float { 1.0 } else { 0.0 },
-                targets.spatial,
-            );
-        }
-
-        let placeholder_effects = match (rt.last_phase, targets.input_phase) {
-            (TextFieldInputPhase::Focused, TextFieldInputPhase::UnfocusedEmpty) => {
-                targets.fast_effects
-            }
-            (TextFieldInputPhase::UnfocusedEmpty, TextFieldInputPhase::Focused)
-            | (TextFieldInputPhase::UnfocusedNotEmpty, TextFieldInputPhase::UnfocusedEmpty) => {
-                targets.slow_effects
-            }
-            _ => targets.fast_effects,
-        };
-        rt.last_phase = targets.input_phase;
-
-        rt.placeholder_opacity.set_target(
-            now_frame,
-            targets.placeholder_target_opacity,
-            placeholder_effects,
-        );
-
-        rt.border_top
-            .set_target(now_frame, targets.border.top.0, targets.spatial);
-        rt.border_right
-            .set_target(now_frame, targets.border.right.0, targets.spatial);
-        rt.border_bottom
-            .set_target(now_frame, targets.border.bottom.0, targets.spatial);
-        rt.border_left
-            .set_target(now_frame, targets.border.left.0, targets.spatial);
-
-        rt.border_color
-            .set_target(now_frame, targets.border_color, targets.fast_effects);
-
-        rt.float.advance(now_frame);
-        rt.placeholder_opacity.advance(now_frame);
-        rt.border_top.advance(now_frame);
-        rt.border_right.advance(now_frame);
-        rt.border_bottom.advance(now_frame);
-        rt.border_left.advance(now_frame);
-        rt.border_color.advance(now_frame);
-
-        let want_frames = rt.float.is_active()
-            || rt.placeholder_opacity.is_active()
-            || rt.border_top.is_active()
-            || rt.border_right.is_active()
-            || rt.border_bottom.is_active()
-            || rt.border_left.is_active()
-            || rt.border_color.is_active();
-
-        TextFieldMotionFrame {
-            want_frames,
-            float_progress: rt.float.value(),
-            border: Edges {
-                top: Px(rt.border_top.value().max(0.0)),
-                right: Px(rt.border_right.value().max(0.0)),
-                bottom: Px(rt.border_bottom.value().max(0.0)),
-                left: Px(rt.border_left.value().max(0.0)),
-            },
-            border_color: rt.border_color.value(),
-            placeholder_opacity: rt.placeholder_opacity.value(),
-        }
-    });
-
-    if frame.want_frames {
-        cx.request_animation_frame();
-    }
-
-    frame
 }
 
 fn maybe_force_strut_from_style(mut style: fret_core::TextStyle) -> fret_core::TextStyle {
@@ -1008,11 +810,11 @@ impl TextField {
                                     let expanded_for_float = expanded.unwrap_or(false);
                                     let should_float = focused || expanded_for_float || populated;
                                     let input_phase = if focused {
-                                        TextFieldInputPhase::Focused
+                                        FieldInputPhase::Focused
                                     } else if populated {
-                                        TextFieldInputPhase::UnfocusedNotEmpty
+                                        FieldInputPhase::UnfocusedNotEmpty
                                     } else {
-                                        TextFieldInputPhase::UnfocusedEmpty
+                                        FieldInputPhase::UnfocusedEmpty
                                     };
 
                                     let placeholder_target_opacity: f32 = if label.is_some() {
@@ -1046,9 +848,9 @@ impl TextField {
                                         Theme::global(&*cx.app),
                                         MotionSchemeKey::SlowEffects,
                                     );
-                                    let motion = text_field_motion_frame(
+                                    let motion = field_motion_frame(
                                         cx,
-                                        TextFieldMotionTargets {
+                                        FieldMotionTargets {
                                             disabled,
                                             should_float,
                                             input_phase,
@@ -1232,11 +1034,11 @@ impl TextField {
                                     let expanded_for_float = expanded.unwrap_or(false);
                                     let should_float = focused || expanded_for_float || populated;
                                     let input_phase = if focused {
-                                        TextFieldInputPhase::Focused
+                                        FieldInputPhase::Focused
                                     } else if populated {
-                                        TextFieldInputPhase::UnfocusedNotEmpty
+                                        FieldInputPhase::UnfocusedNotEmpty
                                     } else {
-                                        TextFieldInputPhase::UnfocusedEmpty
+                                        FieldInputPhase::UnfocusedEmpty
                                     };
 
                                     let placeholder_target_opacity = if label.is_some() {
@@ -1249,9 +1051,9 @@ impl TextField {
                                         1.0
                                     };
 
-                                    let motion = text_field_motion_frame(
+                                    let motion = field_motion_frame(
                                         cx,
-                                        TextFieldMotionTargets {
+                                        FieldMotionTargets {
                                             disabled,
                                             should_float,
                                             input_phase,

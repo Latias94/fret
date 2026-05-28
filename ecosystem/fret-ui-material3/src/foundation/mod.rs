@@ -14,6 +14,7 @@ pub mod content;
 pub mod context;
 pub mod elevation;
 pub mod field;
+pub mod field_motion;
 pub mod floating_label;
 pub mod focus_ring;
 pub mod geometry;

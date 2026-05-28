@@ -380,6 +380,7 @@ fn material3_select_exposes_stable_part_test_ids() {
                 let select = Select::new(selected_model)
                     .variant(SelectVariant::Filled)
                     .a11y_label("Material select")
+                    .label("Choice")
                     .placeholder("Pick one")
                     .items(items)
                     .test_id("m3-select")
@@ -402,6 +403,7 @@ fn material3_select_exposes_stable_part_test_ids() {
         "m3-select",
         "m3-select.chrome",
         "m3-select.active-indicator",
+        "m3-select.label",
         "m3-select.trailing-icon",
     ] {
         assert!(

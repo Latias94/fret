@@ -52,6 +52,10 @@ M3PV2-035 is complete: TextField floating-label motion now initializes on the id
 than snapping on first focus. A shared TextField motion-frame helper drives single-line and
 multiline branches, and fixed-frame tests now prove first-frame label movement plus active-indicator
 thickness interpolation before settle.
+M3PV2-036 is complete: Select trigger field motion now shares the Material field-motion foundation
+with TextField. Initially populated Select labels mount at floated geometry, focused Select labels
+animate through an intermediate first frame, and Select now exposes `<base>.label` for stable
+automation. Select chevron and overlay alpha/scale motion remain separate residual probes.
 
 ## Decisions
 
@@ -63,9 +67,11 @@ thickness interpolation before settle.
 
 ## Next Recommended Action
 
-Continue M3PV2-020 with another field-family packet. Good next candidates are Select,
-Autocomplete/ExposedDropdown, SearchBar/SearchView, DatePicker, or TimePicker fixed-timestep
-motion. Do not mark those motion axes complete from settled-geometry evidence alone.
+Continue M3PV2-020 with another field-family packet. Good next candidates are Select
+chevron/overlay motion, SearchBar/SearchView, DatePicker, or TimePicker fixed-timestep motion.
+Autocomplete/ExposedDropdown already inherit the shared TextField field-motion path, but still need
+their own popup/trigger motion classification before their motion axes are closed. Do not mark
+motion axes complete from settled-geometry evidence alone.
 
 ## Useful Gates
 

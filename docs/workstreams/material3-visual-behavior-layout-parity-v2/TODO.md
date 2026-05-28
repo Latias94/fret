@@ -278,6 +278,34 @@ Task IDs use `M3PV2-*`.
   thickness. Continue M3PV2-020 with Select/Autocomplete/Search/picker motion, or move to the next
   highest-priority component family.
 
+- [x] M3PV2-036 [owner=codex] [deps=M3PV2-035] [scope=ecosystem/fret-ui-material3/src/{foundation/field_motion.rs,foundation/mod.rs,text_field.rs,select.rs},ecosystem/fret-ui-material3/tests/{select_behavior.rs,automation_surface.rs,text_field_hover.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close Select trigger field-motion drift by aligning Select label/placeholder/field chrome
+  transitions with the shared Material TextField motion policy.
+  Validation: red gates before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test select_behavior select_initial_selected_label_mounts_at_settled_floating_position`
+  failed with initial selected outlined label `first=19`, `settled=7`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test select_behavior select_focus_floating_label_animates_between_idle_and_focused`
+  failed with focused outlined label `idle=19`, `first=21`;
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test select_behavior select_initial_selected_label_mounts_at_settled_floating_position select_focus_floating_label_animates_between_idle_and_focused`;
+  `cargo nextest run -p fret-ui-material3 --test text_field_hover text_field_floating_label_animates_between_idle_and_focused filled_text_field_focus_uses_focus_indicator_thickness`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_select_exposes_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test select_behavior`;
+  `cargo nextest run -p fret-ui-material3 --test text_field_hover`;
+  `cargo nextest run -p fret-ui-material3 --test select_behavior`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`;
+  workstream JSON/catalog/diff checks.
+  Review: DONE. This found a component/foundation divergence: Select had a local
+  `StateLayerAnimator` for floating-label progress while TextField already had Material spring
+  field motion. TextField motion was lifted into `foundation::field_motion`, TextField now consumes
+  the shared helper, and Select trigger label/placeholder/outline/active-indicator targets now use
+  the same field-motion runtime. Select also exposes `<base>.label` for stable automation.
+  Evidence: `artifacts/material3_select_trigger_motion_packet_v2.md`.
+  Handoff: Select trigger field motion now has v2 fixed-frame proof. Select chevron rotation and
+  overlay alpha/scale remain residual motion probes for a future overlay/trigger packet; do not
+  treat this as full Select overlay motion closure.
+
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
 - [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]

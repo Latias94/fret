@@ -16,6 +16,223 @@ use support::goldens::run_overlay_frame;
 use support::host::{FakeUiServices, TestHost};
 use support::theme::apply_material_theme;
 
+#[cfg(feature = "diagnostics")]
+fn live_test_id_layout_bounds(
+    ui: &UiTree<TestHost>,
+    app: &TestHost,
+    window: AppWindowId,
+    id: &str,
+) -> Rect {
+    fret_ui::declarative::live_test_id_matches_for_window(app, window, id)
+        .into_iter()
+        .find_map(|m| {
+            ui.debug_node_bounds(m.node)
+                .or_else(|| ui.debug_node_visual_bounds(m.node))
+        })
+        .unwrap_or_else(|| panic!("expected live layout bounds for test_id {id}"))
+}
+
+#[cfg(feature = "diagnostics")]
+#[test]
+fn select_initial_selected_label_mounts_at_settled_floating_position() {
+    use fret_ui_material3::{Select, SelectItem, SelectVariant};
+
+    for (variant, label) in [
+        (SelectVariant::Outlined, "outlined"),
+        (SelectVariant::Filled, "filled"),
+    ] {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(560.0), Px(420.0)),
+        );
+
+        let selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
+        let items: Arc<[SelectItem]> = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+        ]
+        .into();
+
+        let selected_model = selected.clone();
+        let render =
+            move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                let selected_model = selected_model.clone();
+                let items = items.clone();
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    vec![
+                        Select::new(selected_model)
+                            .variant(variant)
+                            .a11y_label("select")
+                            .label("Choice")
+                            .placeholder("Pick one")
+                            .items(items)
+                            .test_id("select-trigger")
+                            .into_element(cx),
+                    ]
+                })
+            };
+
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+        let first_chrome = live_test_id_layout_bounds(&ui, &app, window, "select-trigger.chrome");
+        let first_label = live_test_id_layout_bounds(&ui, &app, window, "select-trigger.label");
+        let first_y = first_label.origin.y.0 - first_chrome.origin.y.0;
+
+        for _ in 0..64 {
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                false,
+                |ui, app, services| render(ui, app, services),
+            );
+        }
+
+        let settled_chrome = live_test_id_layout_bounds(&ui, &app, window, "select-trigger.chrome");
+        let settled_label = live_test_id_layout_bounds(&ui, &app, window, "select-trigger.label");
+        let settled_y = settled_label.origin.y.0 - settled_chrome.origin.y.0;
+        let delta = (first_y - settled_y).abs();
+
+        assert!(
+            delta <= 0.5,
+            "expected {label} initial selected Select label to mount at its settled floating position: first={first_y}, settled={settled_y}, delta={delta}"
+        );
+    }
+}
+
+#[cfg(feature = "diagnostics")]
+#[test]
+fn select_focus_floating_label_animates_between_idle_and_focused() {
+    use fret_ui_material3::{Select, SelectItem, SelectVariant};
+
+    for (variant, label) in [
+        (SelectVariant::Outlined, "outlined"),
+        (SelectVariant::Filled, "filled"),
+    ] {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(560.0), Px(420.0)),
+        );
+
+        let selected = app.models_mut().insert(None::<Arc<str>>);
+        let items: Arc<[SelectItem]> = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+        ]
+        .into();
+
+        let selected_model = selected.clone();
+        let render =
+            move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                let selected_model = selected_model.clone();
+                let items = items.clone();
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    vec![
+                        Select::new(selected_model)
+                            .variant(variant)
+                            .a11y_label("select")
+                            .label("Choice")
+                            .placeholder("Pick one")
+                            .items(items)
+                            .test_id("select-trigger")
+                            .into_element(cx),
+                    ]
+                })
+            };
+
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+        let trigger_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
+                })
+            })
+            .expect("expected select-trigger in semantics snapshot");
+        let idle_chrome = live_test_id_layout_bounds(&ui, &app, window, "select-trigger.chrome");
+        let idle_label = live_test_id_layout_bounds(&ui, &app, window, "select-trigger.label");
+        let idle_y = idle_label.origin.y.0 - idle_chrome.origin.y.0;
+
+        ui.set_focus(Some(trigger_node));
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+        let first_chrome = live_test_id_layout_bounds(&ui, &app, window, "select-trigger.chrome");
+        let first_label = live_test_id_layout_bounds(&ui, &app, window, "select-trigger.label");
+        let first_focus_y = first_label.origin.y.0 - first_chrome.origin.y.0;
+
+        for _ in 0..64 {
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                false,
+                |ui, app, services| render(ui, app, services),
+            );
+        }
+
+        let settled_chrome = live_test_id_layout_bounds(&ui, &app, window, "select-trigger.chrome");
+        let settled_label = live_test_id_layout_bounds(&ui, &app, window, "select-trigger.label");
+        let settled_y = settled_label.origin.y.0 - settled_chrome.origin.y.0;
+
+        assert!(
+            settled_y < idle_y - 0.5,
+            "expected {label} Select focused floating label to settle above idle: idle={idle_y}, settled={settled_y}"
+        );
+        assert!(
+            first_focus_y < idle_y - 0.1,
+            "expected {label} Select floating label to start moving on the first focus frame: idle={idle_y}, first={first_focus_y}"
+        );
+        assert!(
+            first_focus_y > settled_y + 0.5,
+            "expected {label} Select floating label to animate instead of snapping to the focused endpoint: first={first_focus_y}, settled={settled_y}"
+        );
+    }
+}
+
 #[test]
 fn select_dismisses_and_restores_focus_across_schemes() {
     use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
