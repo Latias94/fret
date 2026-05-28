@@ -800,11 +800,11 @@
     {
       "id": "search_bar",
       "family": "field",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_headless_automation_aligned",
       "wave": "wave2_field_family",
       "default_owner_bias": "material_recipe",
       "packet_strategy": "field_consumer_after_text_field",
-      "first_gate_kind": "scene_semantics",
+      "first_gate_kind": "headless_scene_and_automation_surface",
       "selector_status": "field_selector_ready",
       "selector_artifact": "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
       "stable_part_ids": [
@@ -815,12 +815,14 @@
       ],
       "packet_artifacts": [
         "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md",
+        "docs/workstreams/material3-search-bar-headless-packet-v1/artifacts/search_bar_headless_packet_v1.md"
       ],
       "layer_classification": [
-        "material_recipe owns pill field chrome and icon slots",
-        "diagnostics owns stable chrome/icon selector coverage",
-        "no shared Material foundation issue beyond part ids was proven"
+        "material_recipe owns pill field chrome, input surface, and leading/trailing icon slots",
+        "material_foundation owns SearchBar token plumbing, state-layer/ripple indication, and minimum interactive target policy",
+        "diagnostics/test_harness covers stable root/chrome/icon selectors plus idle/hover/pressed/focus-visible headless goldens across schemes/scales",
+        "no kit_policy or mechanism gap found; SearchView overlay policy remains in its own packet"
       ]
     },
     {

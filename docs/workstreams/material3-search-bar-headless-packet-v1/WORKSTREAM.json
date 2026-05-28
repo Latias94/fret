@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "slug": "material3-search-bar-headless-packet-v1",
+  "title": "Material 3 SearchBar Headless Automation Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "follow_on",
+  "problem": "Closed the remaining Material3 SearchBar follow-on by confirming stable automation selectors and headless goldens across schemes and scales, without adding a gallery script or moving policy into crates/*.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-search-bar-headless-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-search-bar-headless-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-search-bar-headless-packet-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-search-bar-headless-packet-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-search-bar-headless-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-search-bar-headless-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "SearchBar already has stable automation selectors and a headless golden suite; this lane closes the remaining matrix residual without a standalone gallery script.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_bar_exposes_stable_part_test_ids",
+      "cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_bar_suite_goldens_v1"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-search-bar-headless-packet-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "search-bar-automation-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_bar_exposes_stable_part_test_ids"
+    },
+    {
+      "name": "search-bar-headless-golden-suite",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_bar_suite_goldens_v1"
+    },
+    {
+      "name": "component-matrix-json",
+      "command": "python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-material3/src/search_bar.rs",
+    "ecosystem/fret-ui-material3/src/tokens/search_bar.rs",
+    "ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs",
+    "ecosystem/fret-ui-material3/src/tokens/v30.rs",
+    "ecosystem/fret-ui-material3/src/bin/material3_token_import.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "ecosystem/fret-ui-material3/tests/radio_alignment.rs",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md",
+    "docs/workstreams/material3-search-view-state-packet-v1/artifacts/search_view_source_packet_v1.md",
+    "repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/SearchBar.kt",
+    "goldens/material3-headless/v1/material3-search-bar.*.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "return_to_material3_sweep",
+    "notes": "SearchBar is a closed recipe primitive. SearchView overlay and presentation remain in their own closed packet. If new visual or interaction drift appears later, start a narrower follow-on instead of reopening this lane."
+  }
+}
