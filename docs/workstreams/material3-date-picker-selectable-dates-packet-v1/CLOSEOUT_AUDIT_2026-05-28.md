@@ -28,8 +28,9 @@ The DatePicker selectable-date disabling follow-on is closed.
 
 ## Residual Risk
 
-- DatePicker still needs locale-aware day/month labels.
-- DatePicker still needs live-region announcements for selection/month changes if the future a11y
-  packet requires them.
+- DatePicker locale-aware day/month labels were closed later by
+  `docs/workstreams/material3-date-picker-locale-strings-packet-v1/`.
+- DatePicker month live-region announcements were closed later by
+  `docs/workstreams/material3-date-picker-month-live-region-packet-v1/`.
 - No year-level predicate type was added; callers can disable a whole year by returning false for
   each date in that year.

@@ -32,5 +32,5 @@ cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_
 
 ## Residual Risk
 
-Locale-aware month names and full date descriptions remain separate DatePicker accessibility
-follow-ons.
+Locale-aware month names and full date descriptions were closed by
+`docs/workstreams/material3-date-picker-locale-strings-packet-v1/`.

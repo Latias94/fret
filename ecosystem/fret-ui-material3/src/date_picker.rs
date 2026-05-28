@@ -25,6 +25,14 @@ use fret_ui_kit::{OverlayController, OverlayPresence};
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{Button, ButtonVariant};
+use crate::foundation::strings::{
+    material_date_picker_cancel_label, material_date_picker_confirm_label,
+    material_date_picker_day_description, material_date_picker_dismiss_label,
+    material_date_picker_month_year, material_date_picker_next_month_label,
+    material_date_picker_next_month_short_label, material_date_picker_previous_month_label,
+    material_date_picker_previous_month_short_label, material_date_picker_title,
+    material_date_picker_weekday_long_label, material_date_picker_weekday_short_label,
+};
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{absolute_region_layout, diagnostic_anchor, part_test_id};
 use crate::motion;
@@ -74,26 +82,6 @@ fn cached_day_of_month_label(day: u8) -> Arc<str> {
         .get(idx)
         .cloned()
         .unwrap_or_else(|| Arc::<str>::from(day.to_string()))
-}
-
-fn weekday_short_arc(w: Weekday) -> Arc<str> {
-    static TABLE: OnceLock<Vec<Arc<str>>> = OnceLock::new();
-    let table = TABLE.get_or_init(|| {
-        ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-            .into_iter()
-            .map(Arc::<str>::from)
-            .collect::<Vec<_>>()
-    });
-    let idx = match w {
-        Weekday::Monday => 0,
-        Weekday::Tuesday => 1,
-        Weekday::Wednesday => 2,
-        Weekday::Thursday => 3,
-        Weekday::Friday => 4,
-        Weekday::Saturday => 5,
-        Weekday::Sunday => 6,
-    };
-    table[idx].clone()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -571,6 +559,10 @@ impl DatePickerDialog {
                                         enabled: open_now,
                                         focusable: false,
                                         a11y: PressableA11y {
+                                            role: Some(SemanticsRole::Button),
+                                            label: Some(material_date_picker_dismiss_label(
+                                                &*cx.app,
+                                            )),
                                             test_id: scrim_test_id.clone(),
                                             ..Default::default()
                                         },
@@ -735,14 +727,23 @@ fn date_picker_modal_panel<H: UiHost>(
     container.corner_radii = corner_radii;
 
     let title = {
-        let mut props = TextProps::new(Arc::<str>::from("Select date"));
+        let title_label = material_date_picker_title(&*cx.app);
+        let title_test_id = content_test_id
+            .as_ref()
+            .map(|id| part_test_id(id, "modal.title"))
+            .unwrap_or_else(|| Arc::<str>::from("material3-date-picker.modal.title"));
+        let mut props = TextProps::new(title_label.clone());
         props.style = Some(headline_style);
         props.color = Some(headline_color);
         props.layout.size.width = Length::Fill;
         props.layout.size.min_width = Some(Length::Px(Px(0.0)));
         props.wrap = TextWrap::None;
         props.overflow = TextOverflow::Ellipsis;
-        cx.text_props(props)
+        cx.text_props(props).a11y(
+            SemanticsDecoration::default()
+                .test_id(title_test_id)
+                .label(title_label),
+        )
     };
 
     let test_id_for_body = content_test_id.clone();
@@ -820,12 +821,12 @@ fn date_picker_actions<H: UiHost>(
             .map(|id| part_test_id(id, "actions.confirm"))
             .unwrap_or_else(|| Arc::<str>::from("material3-date-picker.actions.confirm"));
         vec![
-            Button::new("Cancel")
+            Button::new(material_date_picker_cancel_label(&*cx.app))
                 .variant(ButtonVariant::Text)
                 .on_activate(on_cancel.clone())
                 .test_id(cancel_test_id)
                 .into_element(cx),
-            Button::new("OK")
+            Button::new(material_date_picker_confirm_label(&*cx.app))
                 .variant(ButtonVariant::Filled)
                 .on_activate(on_confirm.clone())
                 .test_id(confirm_test_id)
@@ -869,7 +870,7 @@ fn date_picker_body<H: UiHost>(
                     month_model.clone(),
                     test_id.clone(),
                 ),
-                weekdays_row(cx, token_variant, week_start),
+                weekdays_row(cx, token_variant, week_start, test_id.clone()),
                 dates_grid(
                     cx,
                     token_variant,
@@ -895,25 +896,7 @@ fn month_nav_header<H: UiHost>(
     month_model: Model<CalendarMonth>,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
-    #[derive(Default)]
-    struct DerivedTitle {
-        month: Option<time::Month>,
-        year: i32,
-        title: Option<Arc<str>>,
-    }
-
-    let title = cx.slot_state(DerivedTitle::default, |st| {
-        if st.title.is_none() || st.month != Some(month.month) || st.year != month.year {
-            st.month = Some(month.month);
-            st.year = month.year;
-            st.title = Some(Arc::<str>::from(format!(
-                "{} {}",
-                month_name_en(month.month),
-                month.year
-            )));
-        }
-        st.title.as_ref().expect("title").clone()
-    });
+    let title = material_date_picker_month_year(&*cx.app, month.month, month.year);
 
     let base_id = test_id.clone().unwrap_or_else(default_date_picker_test_id);
     let tag = match token_variant {
@@ -981,12 +964,14 @@ fn month_nav_header<H: UiHost>(
     let prev_test_id = part_test_id(&base_id, &format!("{tag}.prev"));
     let next_test_id = part_test_id(&base_id, &format!("{tag}.next"));
 
-    let prev = Button::new("Prev")
+    let prev = Button::new(material_date_picker_previous_month_short_label(&*cx.app))
+        .a11y_label(material_date_picker_previous_month_label(&*cx.app))
         .variant(ButtonVariant::Text)
         .on_activate(prev)
         .test_id(prev_test_id)
         .into_element(cx);
-    let next = Button::new("Next")
+    let next = Button::new(material_date_picker_next_month_short_label(&*cx.app))
+        .a11y_label(material_date_picker_next_month_label(&*cx.app))
         .variant(ButtonVariant::Text)
         .on_activate(next)
         .test_id(next_test_id)
@@ -999,6 +984,7 @@ fn weekdays_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     token_variant: DatePickerTokenVariant,
     week_start: Weekday,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let mut row = FlexProps::default();
     row.direction = Axis::Horizontal;
@@ -1016,17 +1002,29 @@ fn weekdays_row<H: UiHost>(
     };
 
     let weekdays = weekdays_from_start(week_start);
+    let base_id = test_id.unwrap_or_else(default_date_picker_test_id);
+    let tag = match token_variant {
+        DatePickerTokenVariant::Docked => "docked",
+        DatePickerTokenVariant::Modal => "modal",
+    };
     cx.flex(row, move |cx| {
         weekdays
             .into_iter()
-            .map(|w| {
-                let label = weekday_short_arc(w);
+            .enumerate()
+            .map(|(idx, w)| {
+                let label = material_date_picker_weekday_short_label(&*cx.app, w);
+                let a11y_label = material_date_picker_weekday_long_label(&*cx.app, w);
+                let test_id = part_test_id(&base_id, &format!("{tag}.weekday.{idx}"));
                 let mut props = TextProps::new(label);
                 props.style = Some(style.clone());
                 props.color = Some(color);
                 props.wrap = TextWrap::None;
                 props.overflow = TextOverflow::Clip;
-                cx.text_props(props)
+                cx.text_props(props).a11y(
+                    SemanticsDecoration::default()
+                        .test_id(test_id)
+                        .label(a11y_label),
+                )
             })
             .collect::<Vec<_>>()
     })
@@ -1163,6 +1161,8 @@ fn dates_grid<H: UiHost>(
                             .clone();
                         let date_cell_test_id =
                             date_picker_date_cell_test_id(&base_id_for_row, date);
+                        let date_description =
+                            material_date_picker_day_description(&*cx.app, date, is_today);
 
                         let on_activate: OnActivate = {
                             let selected_model = selected_model.clone();
@@ -1184,6 +1184,8 @@ fn dates_grid<H: UiHost>(
                                 enabled: is_selectable,
                                 focusable: is_selectable,
                                 a11y: PressableA11y {
+                                    role: Some(SemanticsRole::Button),
+                                    label: Some(date_description),
                                     test_id: Some(cell_test_id),
                                     selected: is_selected,
                                     ..Default::default()
@@ -1230,24 +1232,6 @@ fn weekdays_from_start(start: Weekday) -> [Weekday; 7] {
     ];
     let idx = all.iter().position(|w| *w == start).unwrap_or(0);
     std::array::from_fn(|i| all[(idx + i) % 7])
-}
-
-fn month_name_en(m: time::Month) -> &'static str {
-    use time::Month;
-    match m {
-        Month::January => "January",
-        Month::February => "February",
-        Month::March => "March",
-        Month::April => "April",
-        Month::May => "May",
-        Month::June => "June",
-        Month::July => "July",
-        Month::August => "August",
-        Month::September => "September",
-        Month::October => "October",
-        Month::November => "November",
-        Month::December => "December",
-    }
 }
 
 fn with_alpha(c: Color, a: f32) -> Color {

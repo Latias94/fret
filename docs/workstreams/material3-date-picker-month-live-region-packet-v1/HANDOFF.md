@@ -22,5 +22,6 @@ and select the next `known_follow_ons` item with a concrete component gap.
 
 ## Remaining DatePicker Follow-Ons
 
-- Locale-aware month/day labels and date descriptions.
+- Locale-aware month/day labels and date descriptions were closed by
+  `docs/workstreams/material3-date-picker-locale-strings-packet-v1/`.
 - Richer calendar grid semantics only if a focused a11y parity slice proves a specific gap.

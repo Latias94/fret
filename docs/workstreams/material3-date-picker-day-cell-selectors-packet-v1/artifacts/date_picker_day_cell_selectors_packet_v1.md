@@ -29,6 +29,6 @@ date-derived aliases for both docked and modal render paths.
 
 ## Residual Risk
 
-This packet does not implement `SelectableDates`, localized spoken labels, or live-region month
-announcements.
-
+This packet does not implement `SelectableDates` or live-region month announcements. Localized
+spoken labels were closed later by
+`docs/workstreams/material3-date-picker-locale-strings-packet-v1/`.

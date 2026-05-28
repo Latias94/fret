@@ -63,6 +63,6 @@
   ],
   "continue_policy": {
     "default_action": "return_to_material3_sweep",
-    "notes": "Selectable-date disabling is closed. DatePicker locale labels and live-region announcements remain split accessibility follow-ons."
+    "notes": "Selectable-date disabling is closed. DatePicker live-region and locale-label follow-ons were closed by later dedicated packets."
   }
 }

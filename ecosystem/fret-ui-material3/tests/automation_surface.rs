@@ -136,6 +136,21 @@ fn message_arg_u64(args: Option<&MessageArgs>, name: &str) -> u64 {
     .unwrap_or_default()
 }
 
+fn message_arg_display(args: Option<&MessageArgs>, name: &str) -> String {
+    args.and_then(|args| {
+        args.iter().find_map(|(key, value)| {
+            (key == name).then(|| match value {
+                MessageArgValue::String(value) => value.clone(),
+                MessageArgValue::Number(value) => value.to_string(),
+                MessageArgValue::Integer(value) => value.to_string(),
+                MessageArgValue::Unsigned(value) => value.to_string(),
+                MessageArgValue::Bool(value) => value.to_string(),
+            })
+        })
+    })
+    .unwrap_or_default()
+}
+
 struct TimePickerStringLookup;
 
 impl I18nLookup for TimePickerStringLookup {
@@ -190,6 +205,86 @@ impl I18nLookup for TimePickerStringLookup {
 
 fn install_time_picker_string_lookup(app: &mut TestHost) {
     app.set_global(I18nService::default().with_lookup(Rc::new(TimePickerStringLookup)));
+}
+
+struct DatePickerStringLookup;
+
+impl I18nLookup for DatePickerStringLookup {
+    fn format(
+        &self,
+        preferred_locales: &[LocaleId],
+        key: &MessageKey,
+        args: Option<&MessageArgs>,
+    ) -> Result<LocalizedMessage, I18nLookupError> {
+        let locale = preferred_locales
+            .first()
+            .cloned()
+            .unwrap_or_else(LocaleId::en_us);
+        let text = match key.as_str() {
+            "material3-date-picker-title" => "Localized select date".to_string(),
+            "material3-date-picker-dismiss" => "Localized dismiss date picker".to_string(),
+            "material3-date-picker-cancel" => "Localized cancel date".to_string(),
+            "material3-date-picker-confirm" => "Localized confirm date".to_string(),
+            "material3-date-picker-previous-month" => "Localized previous month".to_string(),
+            "material3-date-picker-next-month" => "Localized next month".to_string(),
+            "material3-date-picker-previous-month-short" => "Prev*".to_string(),
+            "material3-date-picker-next-month-short" => "Next*".to_string(),
+            "material3-date-picker-month-year" => format!(
+                "Localized {} {}",
+                message_arg_display(args, "month"),
+                message_arg_display(args, "year")
+            ),
+            "material3-date-picker-day-description" => format!(
+                "Localized date {}-{:02}-{:02}",
+                message_arg_display(args, "year"),
+                message_arg_u64(args, "month_number"),
+                message_arg_u64(args, "day")
+            ),
+            "material3-date-picker-today-description" => "Localized today".to_string(),
+            "material3-date-picker-today-date-description" => format!(
+                "{} / {}",
+                message_arg_display(args, "today"),
+                message_arg_display(args, "date")
+            ),
+            "material3-date-picker-month-january" => "M01".to_string(),
+            "material3-date-picker-month-february" => "M02".to_string(),
+            "material3-date-picker-month-march" => "M03".to_string(),
+            "material3-date-picker-month-april" => "M04".to_string(),
+            "material3-date-picker-month-may" => "M05".to_string(),
+            "material3-date-picker-month-june" => "M06".to_string(),
+            "material3-date-picker-month-july" => "M07".to_string(),
+            "material3-date-picker-month-august" => "M08".to_string(),
+            "material3-date-picker-month-september" => "M09".to_string(),
+            "material3-date-picker-month-october" => "M10".to_string(),
+            "material3-date-picker-month-november" => "M11".to_string(),
+            "material3-date-picker-month-december" => "M12".to_string(),
+            "material3-date-picker-weekday-short-monday" => "Mo*".to_string(),
+            "material3-date-picker-weekday-short-tuesday" => "Tu*".to_string(),
+            "material3-date-picker-weekday-short-wednesday" => "We*".to_string(),
+            "material3-date-picker-weekday-short-thursday" => "Th*".to_string(),
+            "material3-date-picker-weekday-short-friday" => "Fr*".to_string(),
+            "material3-date-picker-weekday-short-saturday" => "Sa*".to_string(),
+            "material3-date-picker-weekday-short-sunday" => "Su*".to_string(),
+            "material3-date-picker-weekday-long-monday" => "Localized Monday".to_string(),
+            "material3-date-picker-weekday-long-tuesday" => "Localized Tuesday".to_string(),
+            "material3-date-picker-weekday-long-wednesday" => "Localized Wednesday".to_string(),
+            "material3-date-picker-weekday-long-thursday" => "Localized Thursday".to_string(),
+            "material3-date-picker-weekday-long-friday" => "Localized Friday".to_string(),
+            "material3-date-picker-weekday-long-saturday" => "Localized Saturday".to_string(),
+            "material3-date-picker-weekday-long-sunday" => "Localized Sunday".to_string(),
+            _ => return Err(I18nLookupError::MissingKey { key: key.clone() }),
+        };
+
+        Ok(LocalizedMessage {
+            text,
+            locale,
+            fallback_depth: 0,
+        })
+    }
+}
+
+fn install_date_picker_string_lookup(app: &mut TestHost) {
+    app.set_global(I18nService::default().with_lookup(Rc::new(DatePickerStringLookup)));
 }
 
 fn semantics_node_live(ui: &UiTree<TestHost>, test_id: &str) -> Option<(SemanticsLive, bool)> {
@@ -1576,6 +1671,8 @@ fn material3_date_picker_exposes_stable_part_test_ids() {
             "m3-date-picker.docked.month-label",
             "m3-date-picker.docked.prev",
             "m3-date-picker.docked.next",
+            "m3-date-picker.docked.weekday.0",
+            "m3-date-picker.docked.weekday.6",
             "m3-date-picker.cell.0.0",
             "m3-date-picker.cell.5.6",
             "m3-date-picker.cell.2025-12-29",
@@ -1648,9 +1745,12 @@ fn material3_date_picker_exposes_stable_part_test_ids() {
             "m3-date-picker-modal.scrim",
             "m3-date-picker-modal.scrim.chrome",
             "m3-date-picker-modal.panel",
+            "m3-date-picker-modal.modal.title",
             "m3-date-picker-modal.modal.month-label",
             "m3-date-picker-modal.modal.prev",
             "m3-date-picker-modal.modal.next",
+            "m3-date-picker-modal.modal.weekday.0",
+            "m3-date-picker-modal.modal.weekday.6",
             "m3-date-picker-modal.cell.0.0",
             "m3-date-picker-modal.cell.2026-01-10",
             "m3-date-picker-modal.cell.2026-01-15",
@@ -1741,6 +1841,209 @@ fn material3_date_picker_month_label_is_polite_live_region() {
         Some((SemanticsLive::Polite, true)),
         "month label should remain live after navigation"
     );
+}
+
+#[test]
+fn material3_date_picker_uses_material_string_registry_and_date_descriptions() {
+    use fret_ui_kit::headless::calendar::CalendarMonth;
+    use fret_ui_material3::{
+        Button, ButtonVariant, DatePickerDialog, DatePickerVariant, DockedDatePicker,
+    };
+    use time::{Date, Month};
+
+    let today = Date::from_calendar_date(2026, Month::January, 10).expect("valid date");
+    let selected_date = Date::from_calendar_date(2026, Month::January, 15).expect("valid date");
+
+    {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        install_date_picker_string_lookup(&mut app);
+        apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(560.0), Px(420.0)),
+        );
+
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::January));
+        let selected = app.models_mut().insert(Some(selected_date));
+        let render =
+            move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let picker = DockedDatePicker::new(month.clone(), selected.clone())
+                        .variant(DatePickerVariant::Docked)
+                        .today(Some(today))
+                        .test_id("m3-date-picker-i18n")
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(32.0), picker)]
+                })
+            };
+
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-i18n.docked.month-label"),
+            "Localized M01 2026"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-i18n.docked.weekday.0"),
+            "Localized Monday"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-i18n.docked.weekday.6"),
+            "Localized Sunday"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-i18n.docked.prev"),
+            "Localized previous month"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-i18n.docked.next"),
+            "Localized next month"
+        );
+        assert_eq!(
+            semantics_node_role(&ui, "m3-date-picker-i18n.cell.1.5"),
+            SemanticsRole::Button
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-i18n.cell.1.5"),
+            "Localized today / Localized date 2026-01-10"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-i18n.cell.2.3"),
+            "Localized date 2026-01-15"
+        );
+        assert!(
+            semantics_node_selected(&ui, "m3-date-picker-i18n.cell.2.3"),
+            "selected date cell should expose selected semantics"
+        );
+
+        click_semantics_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            "m3-date-picker-i18n.docked.next",
+            PointerId(51),
+        );
+
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-i18n.docked.month-label"),
+            "Localized M02 2026",
+            "navigation should recompute the month label through the registry"
+        );
+    }
+
+    {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        install_date_picker_string_lookup(&mut app);
+        apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(720.0), Px(520.0)),
+        );
+
+        let open = app.models_mut().insert(true);
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::January));
+        let selected = app.models_mut().insert(Some(selected_date));
+        let render = move |ui: &mut UiTree<TestHost>,
+                           app: &mut TestHost,
+                           services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let dialog = DatePickerDialog::new(open.clone(), month.clone(), selected.clone())
+                    .today(Some(today))
+                    .open_duration_ms(Some(1))
+                    .close_duration_ms(Some(1))
+                    .test_id("m3-date-picker-modal-i18n")
+                    .into_element(cx, |cx| {
+                        Button::new("Underlay")
+                            .variant(ButtonVariant::Outlined)
+                            .test_id("m3-date-picker-modal-i18n-underlay")
+                            .into_element(cx)
+                    });
+                vec![with_padding(cx, Px(32.0), dialog)]
+            })
+        };
+
+        for _ in 0..8 {
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                true,
+                |ui, app, services| render(ui, app, services),
+            );
+            if live_test_id_exists(&ui, &app, window, "m3-date-picker-modal-i18n.panel") {
+                break;
+            }
+        }
+
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-modal-i18n.scrim"),
+            "Localized dismiss date picker"
+        );
+        assert_eq!(
+            semantics_node_role(&ui, "m3-date-picker-modal-i18n.scrim"),
+            SemanticsRole::Button
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-modal-i18n.modal.title"),
+            "Localized select date"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-modal-i18n.modal.month-label"),
+            "Localized M01 2026"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-modal-i18n.modal.weekday.0"),
+            "Localized Monday"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-modal-i18n.modal.prev"),
+            "Localized previous month"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-modal-i18n.modal.next"),
+            "Localized next month"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-modal-i18n.cell.1.5"),
+            "Localized today / Localized date 2026-01-10"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-modal-i18n.actions.cancel"),
+            "Localized cancel date"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-date-picker-modal-i18n.actions.confirm"),
+            "Localized confirm date"
+        );
+    }
 }
 
 #[test]

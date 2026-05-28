@@ -49,6 +49,9 @@ semantics, focusability, and pointer/key activation blocking.
 - Do not port MUI X internals; the local Material UI mirror does not include the active X
   DatePicker source.
 
+Status note (2026-05-28): locale-specific month/day labels were closed later by
+`docs/workstreams/material3-date-picker-locale-strings-packet-v1/`.
+
 ## Upstream References
 
 - Compose Material3 `DatePicker.kt`: `SelectableDates`, `isSelectableDate`,

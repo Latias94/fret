@@ -325,11 +325,11 @@
     {
       "id": "date_picker",
       "family": "field",
-      "status": "packet_done_month_live_region_known_follow_ons",
+      "status": "packet_done_locale_strings_aligned",
       "wave": "wave2_field_family",
       "default_owner_bias": "material_recipe",
       "packet_strategy": "picker_after_field_foundation",
-      "first_gate_kind": "semantics_dialog_grid_value_ids_selectable_dates_and_month_live_region",
+      "first_gate_kind": "semantics_dialog_grid_value_ids_selectable_dates_month_live_region_locale_strings_and_date_descriptions",
       "selector_status": "picker_selector_ready",
       "stable_part_ids": [
         "date_picker",
@@ -337,9 +337,12 @@
         "date_picker.docked.month-label",
         "date_picker.docked.prev",
         "date_picker.docked.next",
+        "date_picker.docked.weekday.<index>",
+        "date_picker.modal.title",
         "date_picker.modal.month-label",
         "date_picker.modal.prev",
         "date_picker.modal.next",
+        "date_picker.modal.weekday.<index>",
         "date_picker.cell.<row>.<col>",
         "date_picker.cell.<yyyy-mm-dd>",
         "date_picker.scrim",
@@ -352,13 +355,15 @@
         "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md",
         "docs/workstreams/material3-date-picker-day-cell-selectors-packet-v1/artifacts/date_picker_day_cell_selectors_packet_v1.md",
         "docs/workstreams/material3-date-picker-selectable-dates-packet-v1/artifacts/date_picker_selectable_dates_packet_v1.md",
-        "docs/workstreams/material3-date-picker-month-live-region-packet-v1/artifacts/date_picker_month_live_region_packet_v1.md"
+        "docs/workstreams/material3-date-picker-month-live-region-packet-v1/artifacts/date_picker_month_live_region_packet_v1.md",
+        "docs/workstreams/material3-date-picker-locale-strings-packet-v1/artifacts/date_picker_locale_strings_packet_v1.md"
       ],
       "layer_classification": [
-        "material_recipe owns month navigation, displayed-month live region, staged selected-date draft, selectable-date disabling, day-grid selection, modal panel composition, picker part ids, and value-derived day-cell selector aliases",
+        "material_recipe owns month navigation, displayed-month live region, staged selected-date draft, selectable-date disabling, day-grid selection, day-cell semantics/date-description consumption, modal panel composition, picker part ids, and value-derived day-cell selector aliases",
+        "material_foundation owns DatePicker string helpers over I18nService with English fallbacks, month/weekday fallback tables, and structured date-description arguments",
         "kit_policy owns modal overlay request, scrim dismiss, focus trap, and focus restore through existing overlay/focus primitives",
         "diagnostics/test_harness owned stale modal underlay/action stretch goldens and old hyphen selector drift",
-        "follow_on still covers locale-aware labels and date descriptions"
+        "DatePicker locale-aware labels and date descriptions are closed for the current docked/modal calendar grid"
       ]
     },
     {
@@ -1098,7 +1103,7 @@
         "material_foundation owns the Material string registry bridge over I18nService with English fallback",
         "kit_policy owns modal overlay request, scrim dismiss, focus trap, and focus restore through existing overlay/focus primitives",
         "diagnostics/test_harness owned stale modal underlay stretch goldens and old global selector drift",
-        "TimePicker localization registry wiring is closed; DatePicker locale-aware date descriptions remain a separate picker follow-on"
+        "TimePicker localization registry wiring is closed; DatePicker locale-aware labels/date descriptions are closed by material3-date-picker-locale-strings-packet-v1"
       ]
     },
     {

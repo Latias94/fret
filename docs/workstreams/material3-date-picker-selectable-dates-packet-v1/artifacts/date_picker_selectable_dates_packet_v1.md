@@ -29,5 +29,5 @@ Date: 2026-05-28
 
 ## Residual Risk
 
-Locale-specific labels and live-region announcements remain open DatePicker accessibility
-follow-ons.
+Locale-specific labels and live-region announcements were closed later by dedicated DatePicker
+packets.

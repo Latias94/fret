@@ -554,6 +554,45 @@ material3-time-picker-minute-error = Minute must be 0-59
 material3-time-picker-hour-value-12h = { $hour } o'clock
 material3-time-picker-hour-value-24h = { $hour } hours
 material3-time-picker-minute-value = { $minute } minutes
+
+material3-date-picker-title = Select date
+material3-date-picker-dismiss = Dismiss
+material3-date-picker-cancel = Cancel
+material3-date-picker-confirm = OK
+material3-date-picker-previous-month = Switch to previous month
+material3-date-picker-next-month = Switch to next month
+material3-date-picker-previous-month-short = Prev
+material3-date-picker-next-month-short = Next
+material3-date-picker-month-year = { $month } { $year }
+material3-date-picker-day-description = { $month } { $day }, { $year }
+material3-date-picker-today-description = Today
+material3-date-picker-today-date-description = { $today }, { $date }
+material3-date-picker-month-january = January
+material3-date-picker-month-february = February
+material3-date-picker-month-march = March
+material3-date-picker-month-april = April
+material3-date-picker-month-may = May
+material3-date-picker-month-june = June
+material3-date-picker-month-july = July
+material3-date-picker-month-august = August
+material3-date-picker-month-september = September
+material3-date-picker-month-october = October
+material3-date-picker-month-november = November
+material3-date-picker-month-december = December
+material3-date-picker-weekday-short-monday = Mo
+material3-date-picker-weekday-short-tuesday = Tu
+material3-date-picker-weekday-short-wednesday = We
+material3-date-picker-weekday-short-thursday = Th
+material3-date-picker-weekday-short-friday = Fr
+material3-date-picker-weekday-short-saturday = Sa
+material3-date-picker-weekday-short-sunday = Su
+material3-date-picker-weekday-long-monday = Monday
+material3-date-picker-weekday-long-tuesday = Tuesday
+material3-date-picker-weekday-long-wednesday = Wednesday
+material3-date-picker-weekday-long-thursday = Thursday
+material3-date-picker-weekday-long-friday = Friday
+material3-date-picker-weekday-long-saturday = Saturday
+material3-date-picker-weekday-long-sunday = Sunday
 "#;
 
 const DEFAULT_I18N_FTL_ZH_CN: &str = r#"
@@ -593,6 +632,45 @@ material3-time-picker-minute-error = 分钟必须介于 0 到 59
 material3-time-picker-hour-value-12h = { $hour } 点
 material3-time-picker-hour-value-24h = { $hour } 时
 material3-time-picker-minute-value = { $minute } 分钟
+
+material3-date-picker-title = 选择日期
+material3-date-picker-dismiss = 关闭
+material3-date-picker-cancel = 取消
+material3-date-picker-confirm = 确定
+material3-date-picker-previous-month = 切换到上个月
+material3-date-picker-next-month = 切换到下个月
+material3-date-picker-previous-month-short = 上月
+material3-date-picker-next-month-short = 下月
+material3-date-picker-month-year = { $year }年{ $month }
+material3-date-picker-day-description = { $year }年{ $month_number }月{ $day }日
+material3-date-picker-today-description = 今天
+material3-date-picker-today-date-description = { $today }，{ $date }
+material3-date-picker-month-january = 1月
+material3-date-picker-month-february = 2月
+material3-date-picker-month-march = 3月
+material3-date-picker-month-april = 4月
+material3-date-picker-month-may = 5月
+material3-date-picker-month-june = 6月
+material3-date-picker-month-july = 7月
+material3-date-picker-month-august = 8月
+material3-date-picker-month-september = 9月
+material3-date-picker-month-october = 10月
+material3-date-picker-month-november = 11月
+material3-date-picker-month-december = 12月
+material3-date-picker-weekday-short-monday = 一
+material3-date-picker-weekday-short-tuesday = 二
+material3-date-picker-weekday-short-wednesday = 三
+material3-date-picker-weekday-short-thursday = 四
+material3-date-picker-weekday-short-friday = 五
+material3-date-picker-weekday-short-saturday = 六
+material3-date-picker-weekday-short-sunday = 日
+material3-date-picker-weekday-long-monday = 星期一
+material3-date-picker-weekday-long-tuesday = 星期二
+material3-date-picker-weekday-long-wednesday = 星期三
+material3-date-picker-weekday-long-thursday = 星期四
+material3-date-picker-weekday-long-friday = 星期五
+material3-date-picker-weekday-long-saturday = 星期六
+material3-date-picker-weekday-long-sunday = 星期日
 "#;
 
 /// Builder wrapper around `fret_launch::WinitAppBuilder` with common bootstrapping conveniences.
@@ -2235,6 +2313,70 @@ mod default_i18n_tests {
                 .expect("zh-CN Material3 period label must format")
                 .text,
             "选择上午或下午"
+        );
+    }
+
+    #[test]
+    fn default_i18n_formats_material3_date_picker_strings() {
+        let lookup = default_i18n_lookup();
+        let en_us = [LocaleId::parse("en-US").expect("hardcoded locale must parse")];
+        let zh_cn = [LocaleId::parse("zh-CN").expect("hardcoded locale must parse")];
+        let en_month_year_args = MessageArgs::new()
+            .with("month", "January")
+            .with("month_number", 1_u64)
+            .with("year", 2026_i64);
+        let zh_month_year_args = MessageArgs::new()
+            .with("month", "1月")
+            .with("month_number", 1_u64)
+            .with("year", 2026_i64);
+        let date_args = en_month_year_args.clone().with("day", 10_u64);
+        let today_args = MessageArgs::new()
+            .with("today", "Today")
+            .with("date", "January 10, 2026");
+
+        assert_eq!(
+            lookup
+                .format(
+                    &en_us,
+                    &MessageKey::from("material3-date-picker-day-description"),
+                    Some(&date_args),
+                )
+                .expect("en-US Material3 date picker day description must format")
+                .text,
+            "January 10, 2026"
+        );
+        assert_eq!(
+            lookup
+                .format(
+                    &en_us,
+                    &MessageKey::from("material3-date-picker-today-date-description"),
+                    Some(&today_args),
+                )
+                .expect("en-US Material3 date picker today description must format")
+                .text,
+            "Today, January 10, 2026"
+        );
+        assert_eq!(
+            lookup
+                .format(
+                    &zh_cn,
+                    &MessageKey::from("material3-date-picker-month-year"),
+                    Some(&zh_month_year_args),
+                )
+                .expect("zh-CN Material3 date picker month label must format")
+                .text,
+            "2026年1月"
+        );
+        assert_eq!(
+            lookup
+                .format(
+                    &zh_cn,
+                    &MessageKey::from("material3-date-picker-weekday-long-monday"),
+                    None,
+                )
+                .expect("zh-CN Material3 date picker weekday label must format")
+                .text,
+            "星期一"
         );
     }
 }

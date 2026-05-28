@@ -99,7 +99,8 @@ Start new narrow workstreams instead of reopening this broad sweep for:
   parts.
 - SearchView full Compose-style SearchBarState, full-screen transition, and back-handling parity.
 - DatePicker/TimePicker deeper accessibility such as localized labels, disabled date/time items,
-  and live-region announcements.
+  and live-region announcements. Several DatePicker and TimePicker slices were closed later by
+  dedicated packets.
 - Rich tooltip interactivity, because current tooltip overlays are click-through.
 - BottomSheet layout-safe chrome aliases if consumers need stable subpart automation.
 - Further `radio_alignment.rs` family splits, one stable golden family at a time.

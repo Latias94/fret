@@ -10,10 +10,10 @@ preserving the existing row/column semantic ids.
 
 ## Next Action
 
-Continue with a separate packet for selectable-date disabling, localized spoken labels, or
-live-region month announcements.
+This packet is historical. Selectable-date disabling, localized spoken labels, and live-region
+month announcements were closed by later DatePicker packets.
 
 ## Non-Goals
 
-Do not implement selectable-date disabling, localized spoken labels, or live-region announcements in
-this packet.
+Do not reopen this packet for selectable-date disabling, localized spoken labels, or live-region
+announcements; use the later dedicated packets as the shipped source of truth.

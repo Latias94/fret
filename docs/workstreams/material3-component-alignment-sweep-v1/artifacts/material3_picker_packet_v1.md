@@ -37,6 +37,7 @@ goldens.
 | Time input invalid/error text | `material_recipe` | Editable invalid input stays staged, exposes invalid semantics, and switches supporting text without changing committed time. |
 | Time selector accessibility labels | `material_recipe` | Hour/minute selectors now expose Compose-aligned radio-button semantics, spoken values, dial labels, and period-group labels. |
 | Time string registry | `material_foundation` + `material_recipe` | TimePicker labels, spoken values, input supporting/error text, scrim, and actions now route through Material string helpers over `I18nService` with English fallback. |
+| Date string registry and date descriptions | `material_foundation` + `material_recipe` | DatePicker title, scrim, actions, month navigation, weekday labels, month/year labels, and day-cell descriptions now route through Material string helpers over `I18nService` with English fallback. |
 | Headless picker golden drift | `test_harness` | The current scenes are stable. Previous picker goldens encoded stale stretched underlay/action-button geometry. |
 | Accessibility parity depth | `follow_on` | Richer calendar/time-grid semantics should be split from this selector/golden packet. |
 
@@ -49,9 +50,12 @@ DatePicker now derives stable ids from the supplied base:
 - `date_picker.docked.month-label`
 - `date_picker.docked.prev`
 - `date_picker.docked.next`
+- `date_picker.docked.weekday.<index>`
+- `date_picker.modal.title`
 - `date_picker.modal.month-label`
 - `date_picker.modal.prev`
 - `date_picker.modal.next`
+- `date_picker.modal.weekday.<index>`
 - `date_picker.cell.<row>.<col>`
 - `date_picker.cell.<yyyy-mm-dd>`
 - `date_picker.scrim`
@@ -74,6 +78,16 @@ DatePicker now also exposes the displayed month/year label as a polite atomic li
 - `date_picker.modal.month-label`
 
 The label text updates when month navigation changes the displayed month.
+
+DatePicker strings now route through a Material-owned registry bridge:
+
+- `foundation::strings` reads `I18nService` from the host and falls back to English Material
+  outcomes when the app has no backend or key.
+- DatePicker title, month navigation labels, weekday short/long labels, month/year labels, day-cell
+  descriptions, today descriptions, scrim label, and action labels consume typed helpers.
+- Day cells expose button semantics, selected state, and localized date descriptions through the
+  row/column cell semantics node.
+- Bootstrap defaults seed `en-US` and `zh-CN` Fluent resources for DatePicker keys.
 
 TimePicker now derives stable ids from the supplied base:
 
@@ -141,6 +155,7 @@ The UI gallery TimePicker chrome-fill diagnostic was updated to use these base-d
 - `docs/workstreams/material3-date-picker-day-cell-selectors-packet-v1/artifacts/date_picker_day_cell_selectors_packet_v1.md`
 - `docs/workstreams/material3-date-picker-selectable-dates-packet-v1/artifacts/date_picker_selectable_dates_packet_v1.md`
 - `docs/workstreams/material3-date-picker-month-live-region-packet-v1/artifacts/date_picker_month_live_region_packet_v1.md`
+- `docs/workstreams/material3-date-picker-locale-strings-packet-v1/artifacts/date_picker_locale_strings_packet_v1.md`
 - `docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/artifacts/time_picker_dial_accessibility_packet_v1.md`
 - `docs/workstreams/material3-time-picker-input-error-packet-v1/artifacts/time_picker_input_error_packet_v1.md`
 - `docs/workstreams/material3-time-picker-a11y-labels-packet-v1/artifacts/time_picker_a11y_labels_packet_v1.md`
@@ -157,6 +172,7 @@ cargo check -p fret-ui-material3 --features diagnostics --tests
 cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface
 cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_respects_selectable_dates
 cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_month_label_is_polite_live_region
+cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_uses_material_string_registry_and_date_descriptions
 cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_uses_compose_aligned_accessibility_labels
 cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_uses_material_string_registry
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_clock_dial_drag_updates_time
@@ -164,6 +180,7 @@ cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_select
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_time_input_replaces_and_auto_advances_hour
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_time_input_rejects_invalid_values_and_recovers
 cargo test -p fret-bootstrap --lib default_i18n_formats_material3_time_picker_strings
+cargo test -p fret-bootstrap --lib default_i18n_formats_material3_date_picker_strings
 $env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_date_picker_suite_goldens_v1; Remove-Item Env:FRET_UPDATE_GOLDENS
 $env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_time_picker_suite_goldens_v1; Remove-Item Env:FRET_UPDATE_GOLDENS
 cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_date_picker_suite_goldens_v1
@@ -177,8 +194,9 @@ python tools/check_workstream_catalog.py
 
 ## Residual Risk
 
-- DatePicker still needs localized day/month labels and richer date descriptions.
+- DatePicker localized labels and date descriptions are closed for the current docked/modal calendar
+  grid.
 - TimePicker localized labels/strings are now routed through the Material string registry. Compose
   only exposes `liveRegion = Polite` for input supporting text, which is already closed here.
-- These are accessibility depth follow-ons, not blockers for the current component/foundation
-  classification. They should be split if M3CAS-070/M3CAS-080 shows a shared a11y primitive need.
+- Unbuilt picker modes such as text input, year selection, and range selection remain future feature
+  work and should be split into their own packets if the Material3 surface grows.

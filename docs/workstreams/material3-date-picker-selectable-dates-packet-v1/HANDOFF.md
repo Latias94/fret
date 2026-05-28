@@ -10,6 +10,5 @@ The public recipe API is `selectable_dates(|date| ...)` and defaults to all date
 
 ## Continue Policy
 
-Return to the broader Material3 component alignment sweep. Remaining DatePicker follow-ons are
-locale-specific labels and live-region announcements; those should be split only when the
-accessibility truth set is explicit.
+Return to the broader Material3 component alignment sweep. The later DatePicker month-live-region
+and locale-string packets closed the follow-ons that were still open when this packet landed.

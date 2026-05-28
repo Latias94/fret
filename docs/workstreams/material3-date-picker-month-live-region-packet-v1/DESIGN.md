@@ -6,8 +6,9 @@ Last updated: 2026-05-28
 ## Problem
 
 The DatePicker selectable-date packet left a broad accessibility follow-on for locale labels and
-live-region announcements. Compose Material3 makes the displayed month/year label a polite live
-region so screen readers announce updates when arrow navigation changes the displayed month.
+live-region announcements. This packet closed the displayed-month live-region slice. The locale
+string slice was closed later by
+`docs/workstreams/material3-date-picker-locale-strings-packet-v1/`.
 
 Fret's DatePicker already rendered the month/year label, but it had no stable part id and no live
 region semantics.
@@ -43,7 +44,8 @@ region semantics.
 
 ## Non-Goals
 
-- Do not add localized month/day strings in this slice.
+- Do not add localized month/day strings in this slice; they were closed later by
+  `docs/workstreams/material3-date-picker-locale-strings-packet-v1/`.
 - Do not add full APG grid navigation or announcement coverage.
 - Do not change DatePicker selection behavior.
 - Do not add platform-specific announcement APIs.

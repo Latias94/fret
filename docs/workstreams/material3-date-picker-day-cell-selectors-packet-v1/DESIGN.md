@@ -39,6 +39,8 @@ This is `ecosystem/fret-ui-material3` recipe work:
 
 - Add a `SelectableDates` public API.
 - Disable non-selectable days.
-- Add localized date spoken labels.
 - Add live-region month announcements.
 - Change existing row/column selectors.
+
+Status note (2026-05-28): localized date spoken labels were closed later by
+`docs/workstreams/material3-date-picker-locale-strings-packet-v1/`.

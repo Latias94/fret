@@ -111,6 +111,7 @@ impl ButtonStyle {
 #[derive(Clone)]
 pub struct Button {
     label: Arc<str>,
+    a11y_label: Option<Arc<str>>,
     variant: ButtonVariant,
     size: ButtonSize,
     leading_icon: Option<IconId>,
@@ -126,6 +127,7 @@ impl std::fmt::Debug for Button {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Button")
             .field("label", &self.label)
+            .field("a11y_label", &self.a11y_label)
             .field("variant", &self.variant)
             .field("size", &self.size)
             .field(
@@ -149,6 +151,7 @@ impl Button {
     pub fn new(label: impl Into<Arc<str>>) -> Self {
         Self {
             label: label.into(),
+            a11y_label: None,
             variant: ButtonVariant::default(),
             size: ButtonSize::default(),
             leading_icon: None,
@@ -163,6 +166,11 @@ impl Button {
 
     pub fn variant(mut self, variant: ButtonVariant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
         self
     }
 
@@ -266,7 +274,7 @@ impl Button {
                     key_activation: Default::default(),
                     a11y: PressableA11y {
                         role: Some(SemanticsRole::Button),
-                        label: Some(self.label.clone()),
+                        label: Some(self.a11y_label.as_ref().unwrap_or(&self.label).clone()),
                         test_id: self.test_id.clone(),
                         ..Default::default()
                     },
