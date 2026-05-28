@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Pressable Drag State-Machine Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI pressable drag state machine split into a private interaction-runtime owner
+without changing drag kind derivation, theme threshold reads, pointer-down active item marking,
+long-press cancellation/arming, thresholded move transitions, drag started/stopped transient events,
+pointer-up cleanup, or public response drag state.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag.rs` keeps drag kind/threshold helpers
+  and private sub-owner re-exports.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pressable.rs` owns pressable pointer
+  down/move/up drag state transitions, long-press timer coordination, active item cleanup, and
+  drag-started/stopped transient events.
+- `tools/gate_imui_workstream_source.py` now rejects thresholded pressable drag state-machine
+  bodies from drifting back into `interaction_runtime/drag.rs` and checks the dedicated pressable
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_drag --no-fail-fast`: pass; 8 drag interaction tests
+  passed.
+
 ## Drag-Source Payload Lifecycle Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI drag-source payload lifecycle hooks split into a private owner without

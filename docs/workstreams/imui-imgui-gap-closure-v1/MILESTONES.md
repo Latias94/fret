@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 pressable drag state-machine owner-split result:
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pressable.rs` now owns pressable pointer
+down/move/up drag state transitions, long-press timer coordination, active item cleanup, and
+drag-started/stopped transients. `interaction_runtime/drag.rs` keeps drag kind/threshold helpers
+and private sub-owner re-exports.
+
 2026-05-28 drag-source payload lifecycle owner-split result:
 `ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks/payload_lifecycle.rs` now owns pointer-move
 active payload tracking, hovered-target preservation, and pointer-up delivery insertion.

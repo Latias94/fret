@@ -623,6 +623,7 @@
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/active_item.rs",
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/long_press_timer.rs",
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pointer_region.rs",
+    "ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pressable.rs",
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/response.rs",
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs",
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/long_press.rs",

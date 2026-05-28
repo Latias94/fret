@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI pressable drag state machine into a private interaction-runtime owner without
+      changing drag kind derivation, theme threshold reads, pointer-down active item marking,
+      long-press cancellation/arming, thresholded move transitions, drag started/stopped transient
+      events, pointer-up cleanup, or public response drag state.
+      Result: `interaction_runtime/drag/pressable.rs` owns pressable pointer down/move/up drag
+      state transitions. `interaction_runtime/drag.rs` keeps drag kind/threshold helpers and
+      private sub-owner re-exports.
 - [x] Split IMUI drag-source payload lifecycle hooks into a private owner without changing
       drag-source trigger-id gating, enabled/cross-window pointer-down policy, active payload
       tracking, hovered-target preservation, drop delivery writeback, or public drag/drop response
