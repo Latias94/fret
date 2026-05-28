@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 input-text props owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_controls/input/props.rs` now owns
+`InputTextAssistiveSemantics`, `TextInputProps` construction, built-in/custom insert filters,
+password-mode projection, accessibility metadata, placeholder/submit/cancel forwarding, and compact
+IMUI input chrome/style. `input.rs` keeps model reads, response lifecycle, select-all effect
+dispatch, element mounting, and policy-command installation.
+
 2026-05-28 text policy command owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands.rs` is now a private module/re-export
 index. `policy_commands/input.rs` owns input completion/history/undo/redo key-down dispatch, and

@@ -44,6 +44,13 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI input-text props and assistive-semantics assembly into a private owner without
+      changing model reads, response lifecycle population, select-all-on-focus effect dispatch,
+      input filters/custom filter ordering, password mode, accessibility metadata, placeholder/
+      command forwarding, compact IMUI chrome/style, or public input-text surfaces.
+      Result: `text_controls/input/props.rs` owns `InputTextAssistiveSemantics`,
+      `TextInputProps` construction, insert filters, password-mode projection, a11y metadata, and
+      input chrome/style. `input.rs` keeps model/lifecycle/effect/element orchestration.
 - [x] Split IMUI text-control policy command installation into private input and textarea owners
       without changing completion/history/undo/redo key handling, repeat gating, IME/Alt/Meta
       guards, textarea Enter/CtrlEnter/Escape capture policy, repeat-consume semantics, or public

@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Input Text Props Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI input-text props and assistive-semantics assembly split into a private owner
+without changing model reads, response lifecycle population, select-all-on-focus effect dispatch,
+input filters/custom filter ordering, password mode, accessibility metadata, placeholder/command
+forwarding, compact IMUI chrome/style, or public input-text surfaces.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_controls/input.rs` keeps input model reads, response
+  lifecycle population, select-all-on-focus command emission, text-input mounting, and policy
+  command installation.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/input/props.rs` owns
+  `InputTextAssistiveSemantics`, `TextInputProps` construction, built-in/custom insert filters,
+  password-mode projection, accessibility metadata, placeholder/submit/cancel forwarding, and
+  compact IMUI input chrome/style.
+- `tools/gate_imui_workstream_source.py` now rejects props/filter/style bodies from drifting back
+  into `input.rs` and checks the dedicated props owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib text_controls::tests
+  --no-fail-fast`: pass; 3 text-control tests passed.
+- `cargo nextest run -p fret-imui models_text_area models_text_picker models_text_filters
+  --no-fail-fast`: pass; 17 text model/picker/filter tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Text Policy Command Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI text-control policy command installation split into private input and textarea
