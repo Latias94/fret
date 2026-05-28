@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw filled path painters into polygon-fill and round-fill private owners
+      without changing public draw-list commands, path command generation, shared fill style,
+      canvas path dispatch, summaries, or debug-draw smoke behavior.
+      Result: `paint_shapes/paths/filled/polygons.rs` owns convex/concave/quad/triangle fills and
+      `paint_shapes/paths/filled/round.rs` owns circle/ngon/ellipse fills. `filled.rs` keeps the
+      shared fill style plus private re-exports.
 - [x] Split IMUI disclosure header indicator, padding, and border metrics into a private owner
       without changing header row composition, palette resolution, indicator glyph text role, tree
       row label text role, or tree-node/collapsing-header public behavior.

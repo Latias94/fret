@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 debug-draw filled path painter owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/polygons.rs` now owns
+convex/concave/quad/triangle fill painting, and `paint_shapes/paths/filled/round.rs` owns
+circle/ngon/ellipse fill painting. `filled.rs` keeps the shared fill style and private re-exports.
+
 2026-05-28 disclosure header metrics owner-split result:
 `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header/metrics.rs` now owns indicator
 glyph selection, tree indentation padding, and header border edges. `visual/header.rs` keeps
