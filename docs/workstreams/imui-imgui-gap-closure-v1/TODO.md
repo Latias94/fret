@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI popup option records into popup-menu and popup-modal private owners without
+      changing public option type names, popup placement defaults, menu size/modal/auto-focus
+      defaults, modal size/outside-press defaults, root re-exports, popup smoke behavior, or
+      popup-hover behavior.
+      Result: `options/menus/popup.rs` is now a public re-export hub. `popup/menu.rs` owns
+      `PopupMenuOptions`, and `popup/modal.rs` owns `PopupModalOptions`.
 - [x] Split IMUI misc option records into drag-source, drop-target, separator-text, and bullet-text
       private owners without changing public option type names, default enabled/cross-window
       behavior, `test_id` fields, root re-exports, drag/drop smoke behavior, separator/bullet smoke
@@ -1251,7 +1257,8 @@ Last updated: 2026-05-28
 - [x] Split IMUI menu/popup/tab/tooltip option types out of
       `ecosystem/fret-ui-kit/src/imui/options/menus.rs` into private owner modules without
       changing option type names, fields, defaults, or re-export paths.
-      Result: `menus/popup.rs` owns popup menu/modal options, `menus/menu.rs` owns menu bar,
+      Result: `menus/popup.rs` is the current popup option re-export hub, `popup/menu.rs` owns
+      popup-menu options, `popup/modal.rs` owns popup-modal options, `menus/menu.rs` owns menu bar,
       begin-menu/submenu, and menu-item options plus shortcut seams, `menus/tab.rs` owns tab-bar
       selection/gap/test-id options, and `menus/tooltip.rs` owns tooltip placement, timing,
       hoverable-content, and diagnostics options. The root `menus.rs` file is now a thin

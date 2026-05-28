@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Popup Option Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI popup option records split into popup-menu and popup-modal private owners
+without changing public option type names, popup placement defaults, menu size/modal/auto-focus
+defaults, modal size/outside-press defaults, root re-exports, popup smoke behavior, or popup-hover
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/menus/popup.rs` is now a public re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/options/menus/popup/menu.rs` owns `PopupMenuOptions` and its
+  popper placement/menu size/modal/auto-focus defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/menus/popup/modal.rs` owns `PopupModalOptions` and its
+  size/outside-press defaults.
+- `tools/gate_imui_workstream_source.py` now rejects these option bodies from drifting back into
+  `popup.rs` and checks the two dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_popup_options_smoke
+  --no-fail-fast`: pass.
+- `CARGO_INCREMENTAL=0 cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass.
+
 ## Misc Option Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI misc option records split into drag-source, drop-target, separator-text, and
@@ -5787,9 +5817,12 @@ without changing public option names, fields, defaults, or top-level re-export p
 
 Evidence:
 
-- `ecosystem/fret-ui-kit/src/imui/options/menus/popup.rs` now owns `PopupMenuOptions` and
-  `PopupModalOptions`, including popper placement, default sizes, modal/auto-focus, and
-  outside-press close defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/menus/popup.rs` is the current popup option re-export
+  hub.
+- `ecosystem/fret-ui-kit/src/imui/options/menus/popup/menu.rs` owns `PopupMenuOptions`, including
+  popper placement, default size, modal, and auto-focus defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/menus/popup/modal.rs` owns `PopupModalOptions`,
+  including modal size and outside-press defaults.
 - `ecosystem/fret-ui-kit/src/imui/options/menus/menu.rs` is the menu-option re-export hub. The
   2026-05-28 menu option owner split records the current child owners for `MenuBarOptions`,
   `BeginMenuOptions`, `BeginSubmenuOptions`, and `MenuItemOptions`.
