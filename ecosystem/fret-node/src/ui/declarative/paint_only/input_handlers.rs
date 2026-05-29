@@ -173,6 +173,10 @@ pub(super) fn build_key_down_capture_handler(params: KeyHandlerParams) -> OnKeyD
 
 pub(super) fn build_pointer_down_handler(params: PointerDownHandlerParams) -> OnPointerDown {
     Arc::new(move |host, action_cx: ActionCx, down: PointerDownCx| {
+        if down.hit_pressable_target_in_descendant_subtree {
+            return false;
+        }
+
         host.request_focus(params.focus_target);
 
         let bounds = host.bounds();

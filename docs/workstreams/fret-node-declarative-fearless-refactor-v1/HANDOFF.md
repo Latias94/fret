@@ -1,7 +1,7 @@
 # `fret-node` Fearless Refactor (v1) - Handoff
 
 Status: Active
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 ## Current State
 
@@ -10,22 +10,22 @@ controller/binding-first, editor-grade node graph surface for Fret. Recent work 
 canvas mirror cleanup, concrete declarative overlay/add-on parity gates, and now the first
 store/view-policy hazard found in the 2026-05-28 `fret-node` architecture audit, the first default
 declarative public-extension decision, and the custom edge path spatial, hit-test, anchor, toolbar,
-edge-label, and custom edge-label renderer contract slices. The current risk is consumer-facing
-drift where public extension or store surfaces look authoritative but bypass the store's contracts
-or imply unimplemented view-policy parity.
+edge-label, custom edge-label renderer, and child-bounds interactive edge-label control contract
+slices. The current risk is consumer-facing drift where public extension or store surfaces look
+authoritative but bypass the store's contracts or imply unimplemented view-policy parity.
 
 ## Active Task
 
-- Task ID: FNDX-051.
+- Task ID: FNDX-052.
 - Owner: current Codex session.
 - Status: DONE.
 - Claim: custom `NodeGraphEdgeTypes::register_path(...)` output now feeds default declarative
-  `edge_centers_window` anchors, declarative EdgeToolbar host child placement, and default
-  `EdgeRenderHint.label` child-layer placement through the same custom path midpoint. The default
-  surface now also exposes a non-interactive `NodeGraphDeclarativeEdgeLabelRenderer` contract for
-  custom child content on that anchor, plus `NodeGraphDeclarativeSurfaceRenderers` for combining it
-  with custom node portal renderers. Pointer-interactive edge label controls remain an explicit
-  follow-up.
+  `edge_centers_window` anchors, declarative EdgeToolbar host child placement, default
+  `EdgeRenderHint.label` child-layer placement, custom edge-label renderer placement, and the first
+  opt-in pointer-interactive edge-label control contract through the same custom path midpoint. The
+  new `NodeGraphEdgeLabelHitTestMode::ChildBounds` mode limits hit-testing to the measured custom
+  child rect; default labels/renderers remain transparent, and points outside an interactive child
+  still fall through to the canvas.
 - Review: use `review-workstream` before accepting broader lane closure.
 - Evidence:
   - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_path_geometry.rs` computes
@@ -38,24 +38,29 @@ or imply unimplemented view-policy parity.
     declarative EdgeToolbar host.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_labels.rs` builds hit-test-transparent
     managed child layers for visible `EdgeRenderHint.label` output and custom renderer children
-    from the same internals anchor.
+    from the same internals anchor, with opt-in child-bounds hit-test rects for interactive custom
+    children.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs` lets descendant
+    pressables bypass the graph surface's capture-phase `PointerRegion` handler so custom
+    edge-label controls can receive pointer events.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs` mounts the edge-label
     layer before other overlay children in the default declarative surface.
   - `ecosystem/fret-node/src/ui/declarative/paint_only.rs` defines
-    `NodeGraphDeclarativeEdgeLabelRenderer`, `NodeGraphEdgeLabelLayout`, and
-    `node_graph_surface_with_edge_label_renderer(...)`, plus
+    `NodeGraphDeclarativeEdgeLabelRenderer`, `NodeGraphEdgeLabelLayout`,
+    `NodeGraphEdgeLabelHitTestMode`, and `node_graph_surface_with_edge_label_renderer(...)`, plus
     `NodeGraphDeclarativeSurfaceRenderers` / `node_graph_surface_with_renderers(...)`.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs` carries
     `custom_edge_path_feeds_default_declarative_edge_center_anchor` and
     `custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor`, plus
     `custom_edge_path_feeds_declarative_edge_label_child_layer_anchor` and
-    `custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor`.
+    `custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor`, plus
+    `custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds`.
   - `ecosystem/fret-node/src/surface_policy_tests.rs` now carries
     `default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`.
   - Fresh gates passed:
-    `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor`
+    `cargo nextest run -p fret-node custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds`
     and
-    `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor custom_edge_path_feeds_declarative_edge_label_child_layer_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`,
+    `cargo nextest run -p fret-node custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor custom_edge_path_feeds_declarative_edge_label_child_layer_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`,
     `cargo check -p fret-node --tests`,
     `cargo check -p fret-node --all-features --tests`,
     `cargo check -p fret-node --no-default-features`,
@@ -64,7 +69,7 @@ or imply unimplemented view-policy parity.
     `python3 tools/check_layering.py`,
     `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`,
     `git diff --check`, and
-    `cargo nextest run -p fret-node` (463 tests).
+    `cargo nextest run -p fret-node` (464 tests).
   - Earlier closeout/package gates for FNDX-010 through FNDX-050 remain recorded in
     `EVIDENCE_AND_GATES.md`.
 
@@ -107,15 +112,17 @@ or imply unimplemented view-policy parity.
 - FNDX-050 extends the custom edge path contract from toolbar composition into default visible
   `EdgeRenderHint.label` child-layer placement, but does not claim arbitrary EdgeLabelRenderer-style
   custom child renderers.
-- FNDX-051 extends the edge-label contract into non-interactive custom child renderer placement, but
-  does not claim pointer-interactive edge label controls.
+- FNDX-051 extends the edge-label contract into non-interactive custom child renderer placement.
+- FNDX-052 extends the edge-label contract into opt-in child-bounds pointer-interactive controls,
+  but does not claim broader XyFlow EdgeWrapper lifecycle parity or a broad `NodeGraphPresenter`
+  public surface.
 
 ## Blockers
 
-- None for FNDX-051.
+- None for FNDX-052.
 
 ## Next Recommended Action
 
 - Pick the next view-policy/public-extension slice with a concrete gate. The strongest candidate is
-  now either pointer-interactive edge label controls or the broad `NodeGraphPresenter` split into
+  now either broader EdgeWrapper lifecycle parity or the broad `NodeGraphPresenter` split into
   narrower label, geometry, menu, and insertion/search contracts.

@@ -137,9 +137,11 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
 
     let mut out: Vec<AnyElement> = vec![canvas];
     let mut overlay_children: Vec<AnyElement> = Vec::new();
+    let mut interactive_overlay_children: Vec<AnyElement> = Vec::new();
     push_edge_label_overlays(
         cx,
         &mut overlay_children,
+        &mut interactive_overlay_children,
         &binding,
         edge_draws.as_deref().map(Vec::as_slice),
         grid_bounds,
@@ -220,6 +222,7 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         grid_bounds,
         &style_tokens,
     );
+    out.extend(interactive_overlay_children);
     push_overlay_layer_if_needed(cx, &mut out, overlay_children);
 
     out

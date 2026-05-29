@@ -137,8 +137,11 @@ the edge-center anchor. For arbitrary non-interactive edge label children, use
 `node_graph_surface_with_edge_label_renderer(...)` and `NodeGraphDeclarativeEdgeLabelRenderer`; the
 renderer receives `NodeGraphEdgeLabelLayout` with the same screen-space anchor. Use
 `node_graph_surface_with_renderers(...)` when combining custom node portal and edge-label
-renderers. Pointer-interactive edge label controls remain a follow-up contract; use declarative
-EdgeToolbar for interactive edge actions today.
+renderers. Edge-label renderers are hit-test transparent by default. For the first narrow
+pointer-interactive control contract, return `NodeGraphEdgeLabelHitTestMode::ChildBounds` from
+`edge_label_hit_test_mode(...)`; the default surface then routes pointer hit-testing only inside the
+custom child bounds, while points outside those bounds fall through to the canvas surface.
+Declarative EdgeToolbar remains the higher-level composition path for edge action clusters.
 
 ### Styling (theme tokens + UI-only chrome hints)
 

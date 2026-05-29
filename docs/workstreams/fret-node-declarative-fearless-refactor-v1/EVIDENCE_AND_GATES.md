@@ -1,17 +1,28 @@
 # `fret-node` Fearless Refactor (v1) - Evidence And Gates
 
 Status: Active
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 ## Current Focus
 
-FNDX-051 adds the first non-interactive `NodeGraphDeclarativeEdgeLabelRenderer` child contract on
-the default declarative surface. Custom renderer output consumes the same custom-path-derived
-`edge_centers_window` anchor as declarative EdgeToolbar and default `EdgeRenderHint.label` output,
-and `NodeGraphDeclarativeSurfaceRenderers` keeps edge-label and node-portal renderers composable,
-while pointer-interactive edge label controls remain an explicit follow-up contract.
+FNDX-052 adds the first pointer-interactive `NodeGraphDeclarativeEdgeLabelRenderer` child contract
+on the default declarative surface. Custom renderer output still consumes the same
+custom-path-derived `edge_centers_window` anchor as declarative EdgeToolbar and default
+`EdgeRenderHint.label` output, remains hit-test transparent by default, and can opt into
+`NodeGraphEdgeLabelHitTestMode::ChildBounds` so only the custom child rect intercepts pointer input
+while surrounding label-host space falls through to the canvas.
 
 ## Targeted Iteration Gates
+
+```bash
+cargo nextest run -p fret-node custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor custom_edge_path_feeds_declarative_edge_label_child_layer_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter
+```
+
+This gate proves the FNDX-052 pointer-interactive edge label control contract: app-provided
+edge-label controls can opt into `NodeGraphEdgeLabelHitTestMode::ChildBounds`, reuse the
+custom-path-derived edge-center anchor, intercept pointer input only inside the measured child
+bounds, let outside points fall through to the canvas, and keep `NodeGraphPresenter` out of the
+default declarative surface.
 
 ```bash
 cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor custom_edge_path_feeds_declarative_edge_label_child_layer_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter
@@ -190,6 +201,7 @@ closeout note must name those failures.
 - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_hit_test.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_labels.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_path_geometry.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
@@ -446,5 +458,30 @@ closeout note must name those failures.
   - `git diff --check`: passed; proves the patch has no whitespace errors.
   - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
     green with the new custom edge-label renderer gate.
+- FNDX-052:
+  - `cargo nextest run -p fret-node custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds`:
+    passed; proves an app-provided edge-label control can opt into child-bounds hit-testing, render
+    at the custom-path-derived edge-center anchor, intercept pointer down inside its measured child
+    rect, and let points outside that rect fall through.
+  - `cargo nextest run -p fret-node custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor custom_edge_path_feeds_declarative_edge_label_child_layer_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`:
+    passed; proves the new interactive control gate, prior custom renderer/default label gates, and
+    source-policy/docs stay aligned while `NodeGraphPresenter` remains deferred from the default
+    surface.
+  - `cargo check -p fret-node --tests`: passed; proves UI-enabled test targets compile with the
+    new edge-label hit-test mode and surface descendant-pressable bypass.
+  - `cargo check -p fret-node --all-features --tests`: passed; proves optional UI/integration test
+    targets compile with the new public hit-test mode.
+  - `cargo check -p fret-node --no-default-features`: passed; proves headless/runtime-facing
+    package compilation remains unaffected by the UI-only edge-label control slice.
+  - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed; proves the
+    public enum/trait-method addition and default-surface event path are lint-clean.
+  - `cargo fmt --check`: passed; proves formatting remains clean.
+  - `python3 tools/check_layering.py`: passed; proves the slice did not violate workspace layering
+    policy.
+  - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed;
+    proves the workstream metadata remains valid JSON.
+  - `git diff --check`: passed; proves the patch has no whitespace errors.
+  - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
+    green with 464 tests.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

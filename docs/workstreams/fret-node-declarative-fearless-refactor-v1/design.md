@@ -1,6 +1,6 @@
 # `fret-node` Fearless Refactor (v1) - Design Map
 
-Status: execution-oriented companion (last updated 2026-05-28)
+Status: execution-oriented companion (last updated 2026-05-29)
 Scope: `ecosystem/fret-node` only
 
 Current note: the surface map and FNDX-045 follow-up guidance below are the active execution
@@ -66,9 +66,8 @@ Use these surfaces for new app code and new examples.
   - currently affect the default declarative edge paint path and conservative edge spatial
     candidates, exact custom-path distance hit filtering, and custom path midpoint anchors for
     edge-center internals consumed by declarative EdgeToolbar and default `EdgeRenderHint.label`
-    child composition, plus non-interactive `NodeGraphDeclarativeEdgeLabelRenderer` custom child
-    composition; pointer-interactive edge label controls and node/body skin geometry remain
-    follow-up contracts.
+    child composition, plus `NodeGraphDeclarativeEdgeLabelRenderer` custom child composition with
+    opt-in child-bounds pointer interaction; node/body skin geometry remains a follow-up contract.
 
 ### XYFlow alignment note
 
@@ -471,6 +470,10 @@ Status note (2026-05-28):
   at the same custom-path-derived anchor, so apps can supply EdgeLabelRenderer-style visual content
   without widening the broad presenter surface, and can combine it with node portal rendering
   through `NodeGraphDeclarativeSurfaceRenderers`.
+- FNDX-052 adds `NodeGraphEdgeLabelHitTestMode::ChildBounds` for the first pointer-interactive
+  custom edge-label control contract: renderer children remain transparent by default, but controls
+  can opt into child-rect hit-testing while surrounding label-host space falls through to the
+  canvas.
 
 Why this still matters:
 

@@ -1,6 +1,6 @@
 # Workstream: `fret-node` Fearless Refactor (v1)
 
-Status: Reframed and active (last updated 2026-05-28)
+Status: Reframed and active (last updated 2026-05-29)
 Quick navigation:
 
 - `design.md` - current surface map + next worktree order
@@ -172,10 +172,12 @@ update rather than an incidental refactor.
   - FNDX-051 adds `NodeGraphDeclarativeEdgeLabelRenderer` for non-interactive custom edge-label
     children on that same anchor, plus a combined renderers bag for composing it with node portal
     renderers.
+  - FNDX-052 adds `NodeGraphEdgeLabelHitTestMode::ChildBounds` for the first pointer-interactive
+    custom edge-label control contract while keeping transparent labels as the default.
   - Custom `NodeGraphPresenter` remains advanced/internal on the default path because it still mixes
     geometry, labels, context menus, and insertion/search policy.
-  - Pointer-interactive edge label controls remain follow-up work before claiming full XyFlow edge
-    wrapper parity.
+  - Broader XyFlow edge-wrapper lifecycle parity remains follow-up work beyond this first
+    child-bounds control contract.
 
 - **Ergonomic API fragmentation**
   - The surface naming is now closed around `NodeGraphSurfaceBinding` (instance-style app-facing
@@ -534,7 +536,7 @@ The remaining blockers should be tracked as concrete public-surface or behavior 
 
 - whether the remaining broad `NodeGraphPresenter` responsibilities should split into narrower
   default-path label/geometry/menu/search contracts, or stay advanced-only,
-- whether pointer-interactive edge label controls should be the next edge-wrapper parity slice,
+- whether broader EdgeWrapper lifecycle policy should be the next edge-wrapper parity slice,
 - whether paint/style tokens still leak geometry or hit-testing policy,
 - whether `prepare_surface_frame` should be split further around frame plan, portal measurement,
   a11y/internals publication, and diagnostics.

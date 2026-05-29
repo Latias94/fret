@@ -19,7 +19,9 @@ use fret_runtime::{
     ModelsHost, ShareSheetToken, TickId, TimeHost, TimerToken,
 };
 use fret_ui::action::UiActionHost;
-use fret_ui::element::{ContainerProps, LayoutStyle, Length, PointerRegionProps, SizeStyle};
+use fret_ui::element::{
+    ContainerProps, LayoutStyle, Length, PointerRegionProps, PressableProps, SizeStyle,
+};
 
 use super::hover_anchor::{HoverTooltipAnchorSource, hovered_canvas_anchor_rect_for_surface};
 
@@ -37,17 +39,17 @@ use super::{
     NodeDragPointerMoveOutcome, NodeDragReleaseOutcome, NodeDragState,
     NodeGraphDeclarativeEdgeLabelRenderer, NodeGraphDeclarativeInteractionContext,
     NodeGraphDeclarativeInteractionHook, NodeGraphDeclarativeInteractionOutcome,
-    NodeGraphDeclarativePortalRenderer, NodeGraphDiagnosticsConfig, NodeGraphEdgeLabelLayout,
-    NodeGraphVisibleSubsetPortalConfig, NodeRectDraw, PaintOnlyInteractionFrameInputs,
-    PendingSelectionState, PortalBoundsStore, PortalDebugFlags, PortalMeasuredGeometryState,
-    apply_declarative_diag_view_preset_action_host, authoritative_surface_boundary_snapshot,
-    begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
-    build_click_selection_preview_nodes, build_diag_normalize_visible_node_transaction,
-    build_diag_nudge_visible_node_transaction, build_edge_spatial_rect_overrides,
-    build_edges_draws_paint_only, build_key_down_capture_handler,
-    build_marquee_preview_selected_nodes, build_node_drag_transaction,
-    collect_portal_label_infos_for_visible_subset, commit_graph_transaction,
-    commit_marquee_selection_action_host, commit_node_drag_transaction,
+    NodeGraphDeclarativePortalRenderer, NodeGraphDiagnosticsConfig, NodeGraphEdgeLabelHitTestMode,
+    NodeGraphEdgeLabelLayout, NodeGraphVisibleSubsetPortalConfig, NodeRectDraw,
+    PaintOnlyInteractionFrameInputs, PendingSelectionState, PortalBoundsStore, PortalDebugFlags,
+    PortalMeasuredGeometryState, apply_declarative_diag_view_preset_action_host,
+    authoritative_surface_boundary_snapshot, begin_left_pointer_down_action_host,
+    begin_pan_pointer_down_action_host, build_click_selection_preview_nodes,
+    build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
+    build_edge_spatial_rect_overrides, build_edges_draws_paint_only,
+    build_key_down_capture_handler, build_marquee_preview_selected_nodes,
+    build_node_drag_transaction, collect_portal_label_infos_for_visible_subset,
+    commit_graph_transaction, commit_marquee_selection_action_host, commit_node_drag_transaction,
     commit_pending_selection_action_host, complete_left_pointer_release_action_host,
     complete_node_drag_release_action_host, derived_geometry_cache_key, edges_cache_key,
     effective_selected_nodes_for_paint, escape_cancel_declarative_interactions_action_host,
@@ -6386,6 +6388,58 @@ impl NodeGraphDeclarativeEdgeLabelRenderer<TestActionHostImpl> for RecordingEdge
     }
 }
 
+struct InteractiveEdgeLabelRenderer {
+    calls: Rc<RefCell<Vec<NodeGraphEdgeLabelLayout>>>,
+    pointer_downs: Arc<AtomicUsize>,
+}
+
+impl NodeGraphDeclarativeEdgeLabelRenderer<TestActionHostImpl> for InteractiveEdgeLabelRenderer {
+    fn edge_label_hit_test_mode(
+        &mut self,
+        _graph: &Graph,
+        _layout: &NodeGraphEdgeLabelLayout,
+    ) -> NodeGraphEdgeLabelHitTestMode {
+        NodeGraphEdgeLabelHitTestMode::ChildBounds
+    }
+
+    fn render_edge_label(
+        &mut self,
+        cx: &mut fret_ui::ElementContext<'_, TestActionHostImpl>,
+        graph: &Graph,
+        layout: NodeGraphEdgeLabelLayout,
+    ) -> fret_ui::element::Elements {
+        if !graph.edges.contains_key(&layout.edge) {
+            return Vec::new().into();
+        }
+        self.calls.borrow_mut().push(layout.clone());
+
+        let mut pressable = PressableProps::default();
+        pressable.layout = LayoutStyle {
+            size: SizeStyle {
+                width: Length::Px(Px(96.0)),
+                height: Length::Px(Px(24.0)),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let pointer_downs = self.pointer_downs.clone();
+        let test_id = format!("node_graph.edge_label.control.{}", layout.edge.0);
+        vec![cx
+            .pressable(pressable, move |cx, _state| {
+                cx.pressable_on_pointer_down(Arc::new(move |_host, _cx, down| {
+                    if down.button == MouseButton::Left {
+                        pointer_downs.fetch_add(1, Ordering::Relaxed);
+                        return fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation;
+                    }
+                    fret_ui::action::PressablePointerDownResult::Continue
+                }));
+                Vec::new()
+            })
+            .test_id(test_id)]
+        .into()
+    }
+}
+
 #[test]
 fn custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor() {
     let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
@@ -6504,6 +6558,189 @@ fn custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor() {
         .expect("custom edge label renderer should be called for the edge");
     assert_eq!(call.label, None);
     assert_eq!(call.zoom, 1.0);
+    assert_point_near(call.edge_center_window, expected_center, 0.5);
+}
+
+#[test]
+fn custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds() {
+    let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let edge_ref = graph.edges.get(&edge).expect("test edge");
+    let from = geom.port_center(edge_ref.from).expect("from port center");
+    let to = geom.port_center(edge_ref.to).expect("to port center");
+    let detour_y = from.y.0 + 240.0;
+    let custom_points = [
+        from,
+        Point::new(from.x, Px(detour_y)),
+        Point::new(to.x, Px(detour_y)),
+        to,
+    ];
+    let expected_center = polyline_midpoint(&custom_points);
+    let edge_types = Rc::new(NodeGraphEdgeTypes::new().register_path(
+        EdgeTypeKey::new("data"),
+        move |_graph, _edge_id, _style, _hint, input| {
+            let detour_y = input.from.y.0 + 240.0;
+            Some(EdgeCustomPath {
+                cache_key: 102,
+                commands: vec![
+                    PathCommand::MoveTo(input.from),
+                    PathCommand::LineTo(Point::new(input.from.x, Px(detour_y))),
+                    PathCommand::LineTo(Point::new(input.to.x, Px(detour_y))),
+                    PathCommand::LineTo(input.to),
+                ],
+            })
+        },
+    ));
+
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order,
+            ..Default::default()
+        },
+        default_editor_config(),
+    );
+
+    let calls = Rc::new(RefCell::new(Vec::<NodeGraphEdgeLabelLayout>::new()));
+    let pointer_downs = Arc::new(AtomicUsize::new(0));
+    let mut renderer = InteractiveEdgeLabelRenderer {
+        calls: calls.clone(),
+        pointer_downs: pointer_downs.clone(),
+    };
+    let custom_test_id = format!("node_graph.edge_label.control.{}", edge.0);
+    let mut last = None;
+    for _ in 0..4 {
+        let edge_types = edge_types.clone();
+        let snapshot = render_surface_frame_with_edge_label_renderer_for_binding(
+            &mut ui,
+            &mut host,
+            &mut services,
+            window,
+            bounds,
+            &binding,
+            move |binding| {
+                let mut props = super::NodeGraphSurfaceProps::new(binding.clone());
+                props.edge_types = Some(edge_types);
+                props
+            },
+            &mut renderer,
+        );
+        if snapshot
+            .nodes
+            .iter()
+            .any(|node| node.test_id.as_deref() == Some(custom_test_id.as_str()))
+        {
+            last = Some(snapshot);
+            break;
+        }
+        last = Some(snapshot);
+    }
+    let snapshot = last.expect("at least one frame rendered");
+    let custom = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some(custom_test_id.as_str()))
+        .expect("custom edge label control should be present");
+    let inside = Point::new(
+        Px(custom.bounds.origin.x.0 + 1.0),
+        Px(custom.bounds.origin.y.0 + 1.0),
+    );
+    let outside = Point::new(Px(bounds.origin.x.0 + 12.0), Px(bounds.origin.y.0 + 12.0));
+
+    assert_point_near(
+        Point::new(
+            Px(custom.bounds.origin.x.0 + custom.bounds.size.width.0 / 2.0),
+            Px(custom.bounds.origin.y.0 + custom.bounds.size.height.0 / 2.0),
+        ),
+        expected_center,
+        0.5,
+    );
+    let inside_hit = ui.debug_hit_test(inside).hit;
+    let inside_routing_hit = ui.debug_hit_test_routing(inside).hit;
+    assert_eq!(
+        inside_hit,
+        Some(custom.id),
+        "inside the custom edge-label control should hit the control node"
+    );
+    assert_eq!(
+        inside_routing_hit,
+        Some(custom.id),
+        "pointer routing should target the custom edge-label control"
+    );
+    let outside_hit = ui.debug_hit_test(outside).hit;
+    let outside_hit_path = outside_hit
+        .map(|node| ui.debug_node_path(node))
+        .unwrap_or_default();
+    let outside_hit_bounds = outside_hit.and_then(|node| ui.debug_node_bounds(node));
+    assert!(
+        outside_hit.is_some(),
+        "outside the custom edge-label control should still hit the underlying surface"
+    );
+    assert_ne!(
+        outside_hit, inside_hit,
+        "outside the custom edge-label control should not be masked by the label host"
+    );
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: PointerId(0),
+            position: inside,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        pointer_downs.load(Ordering::Relaxed),
+        1,
+        "inside pointer down should be handled by the edge-label control"
+    );
+    assert_eq!(
+        ui.focus(),
+        Some(custom.id),
+        "inside pointer down should focus the edge-label control instead of the canvas pointer path"
+    );
+
+    let focus_before_outside = ui.focus();
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: PointerId(1),
+            position: outside,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        pointer_downs.load(Ordering::Relaxed),
+        1,
+        "outside pointer down should fall through instead of targeting the edge-label control"
+    );
+    assert!(
+        ui.focus().is_some() && ui.focus() != focus_before_outside,
+        "outside pointer down should reach the canvas pointer path; outside_hit={outside_hit:?}, outside_hit_path={outside_hit_path:?}, outside_hit_bounds={outside_hit_bounds:?}, focus_before={focus_before_outside:?}, focus_after={:?}",
+        ui.focus()
+    );
+
+    let calls = calls.borrow();
+    let call = calls
+        .iter()
+        .find(|call| call.edge == edge)
+        .expect("custom edge label renderer should be called for the edge");
     assert_point_near(call.edge_center_window, expected_center, 0.5);
 }
 

@@ -14,7 +14,9 @@ use crate::ui::style::NodeGraphStyle;
 
 use super::cache::EdgePathDraw;
 use super::surface_support::read_authoritative_graph_in_models;
-use super::{NodeGraphDeclarativeEdgeLabelRenderer, NodeGraphEdgeLabelLayout};
+use super::{
+    NodeGraphDeclarativeEdgeLabelRenderer, NodeGraphEdgeLabelHitTestMode, NodeGraphEdgeLabelLayout,
+};
 
 #[derive(Debug, Clone)]
 struct EdgeLabelInfo {
@@ -26,6 +28,7 @@ struct EdgeLabelInfo {
 pub(super) fn push_edge_label_overlays<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     overlay_children: &mut Vec<AnyElement>,
+    interactive_overlay_children: &mut Vec<AnyElement>,
     binding: &NodeGraphSurfaceBinding,
     edge_draws: Option<&[EdgePathDraw]>,
     bounds: Rect,
@@ -66,7 +69,25 @@ pub(super) fn push_edge_label_overlays<H: UiHost + 'static>(
     {
         let style_tokens = style_tokens.clone();
         let graph_snapshot = graph_snapshot.clone();
-        overlay_children.push(cx.keyed(("fret-node.edge-label.v1", info.edge), |cx| {
+        let custom_hit_test_mode = if let Some(renderer) = edge_label_renderer.as_deref_mut() {
+            let layout = NodeGraphEdgeLabelLayout {
+                edge: info.edge,
+                edge_center_window: info.center,
+                label: info.label.clone(),
+                zoom,
+            };
+            renderer.edge_label_hit_test_mode(&graph_snapshot, &layout)
+        } else {
+            NodeGraphEdgeLabelHitTestMode::Transparent
+        };
+        let custom_hit_testable =
+            custom_hit_test_mode == NodeGraphEdgeLabelHitTestMode::ChildBounds;
+        let target_children = if custom_hit_testable {
+            &mut *interactive_overlay_children
+        } else {
+            &mut *overlay_children
+        };
+        target_children.push(cx.keyed(("fret-node.edge-label.v1", info.edge), |cx| {
             let custom_children = if let Some(renderer) = edge_label_renderer.as_deref_mut() {
                 let layout = NodeGraphEdgeLabelLayout {
                     edge: info.edge,
@@ -80,7 +101,7 @@ pub(super) fn push_edge_label_overlays<H: UiHost + 'static>(
             } else {
                 Vec::new()
             };
-
+            let custom_hit_testable = custom_hit_testable && !custom_children.is_empty();
             edge_label_host_element(
                 cx,
                 bounds,
@@ -88,6 +109,7 @@ pub(super) fn push_edge_label_overlays<H: UiHost + 'static>(
                 ordinal,
                 style_tokens.clone(),
                 custom_children,
+                custom_hit_testable,
             )
         }));
     }
@@ -128,6 +150,7 @@ fn edge_label_host_element<H: UiHost + 'static>(
     ordinal: usize,
     style_tokens: NodeGraphStyle,
     custom_children: Vec<AnyElement>,
+    custom_hit_testable: bool,
 ) -> AnyElement {
     let center = info.center;
     let mut surface = fret_ui::element::ManagedSurfaceProps::default();
@@ -161,7 +184,11 @@ fn edge_label_host_element<H: UiHost + 'static>(
                 size,
             );
             cx.layout_child(child, rect);
-            cx.set_hit_test_rects([]);
+            if custom_hit_testable {
+                cx.set_hit_test_rects([rect]);
+            } else {
+                cx.set_hit_test_rects([]);
+            }
         },
         move |cx| {
             for child in cx.children().to_vec() {

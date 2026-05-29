@@ -27,6 +27,8 @@ const UI_DECLARATIVE_PAINT_ONLY_EDGE_HIT_TEST_RS: &str =
     include_str!("ui/declarative/paint_only/edge_hit_test.rs");
 const UI_DECLARATIVE_PAINT_ONLY_EDGE_PATH_GEOMETRY_RS: &str =
     include_str!("ui/declarative/paint_only/edge_path_geometry.rs");
+const UI_DECLARATIVE_PAINT_ONLY_INPUT_HANDLERS_RS: &str =
+    include_str!("ui/declarative/paint_only/input_handlers.rs");
 const UI_DECLARATIVE_PAINT_ONLY_SURFACE_FRAME_RS: &str =
     include_str!("ui/declarative/paint_only/surface_frame.rs");
 const UI_DECLARATIVE_PAINT_ONLY_SURFACE_CONTENT_RS: &str =
@@ -421,21 +423,26 @@ fn default_declarative_surface_exposes_edge_types_and_skin_without_custom_presen
     let edge_hit_source = source_without_tests(UI_DECLARATIVE_PAINT_ONLY_EDGE_HIT_TEST_RS);
     let edge_path_geometry_source =
         source_without_tests(UI_DECLARATIVE_PAINT_ONLY_EDGE_PATH_GEOMETRY_RS);
+    let input_handlers_source = source_without_tests(UI_DECLARATIVE_PAINT_ONLY_INPUT_HANDLERS_RS);
     let surface_frame_source = source_without_tests(UI_DECLARATIVE_PAINT_ONLY_SURFACE_FRAME_RS);
     let surface_content_source = source_without_tests(UI_DECLARATIVE_PAINT_ONLY_SURFACE_CONTENT_RS);
 
     assert!(surface_source.contains("pub edge_types: Option<NodeGraphEdgeTypesRef>"));
     assert!(surface_source.contains("pub skin: Option<NodeGraphSkinRef>"));
     assert!(surface_source.contains("pub struct NodeGraphEdgeLabelLayout"));
+    assert!(surface_source.contains("pub enum NodeGraphEdgeLabelHitTestMode"));
     assert!(surface_source.contains("pub trait NodeGraphDeclarativeEdgeLabelRenderer"));
+    assert!(surface_source.contains("fn edge_label_hit_test_mode("));
     assert!(surface_source.contains("pub struct NodeGraphDeclarativeSurfaceRenderers"));
     assert!(surface_source.contains("node_graph_surface_with_edge_label_renderer"));
     assert!(surface_source.contains("node_graph_surface_with_renderers"));
     assert!(declarative_mod_source.contains("NodeGraphDeclarativeEdgeLabelRenderer"));
+    assert!(declarative_mod_source.contains("NodeGraphEdgeLabelHitTestMode"));
     assert!(declarative_mod_source.contains("NodeGraphDeclarativeSurfaceRenderers"));
     assert!(declarative_mod_source.contains("node_graph_surface_with_edge_label_renderer"));
     assert!(declarative_mod_source.contains("node_graph_surface_with_renderers"));
     assert!(ui_mod_source.contains("NodeGraphDeclarativeEdgeLabelRenderer"));
+    assert!(ui_mod_source.contains("NodeGraphEdgeLabelHitTestMode"));
     assert!(ui_mod_source.contains("NodeGraphDeclarativeSurfaceRenderers"));
     assert!(ui_mod_source.contains("node_graph_surface_with_edge_label_renderer"));
     assert!(ui_mod_source.contains("node_graph_surface_with_renderers"));
@@ -467,8 +474,14 @@ fn default_declarative_surface_exposes_edge_types_and_skin_without_custom_presen
     assert!(surface_content_source.contains("push_edge_label_overlays("));
     assert!(edge_labels_source.contains("edge_centers_window"));
     assert!(edge_labels_source.contains("render_edge_label("));
+    assert!(edge_labels_source.contains("edge_label_hit_test_mode("));
+    assert!(edge_labels_source.contains("NodeGraphEdgeLabelHitTestMode::Transparent"));
+    assert!(edge_labels_source.contains("NodeGraphEdgeLabelHitTestMode::ChildBounds"));
     assert!(edge_labels_source.contains("custom_renderer_enabled"));
+    assert!(edge_labels_source.contains("interactive_overlay_children"));
     assert!(edge_labels_source.contains("cx.set_hit_test_rects([])"));
+    assert!(edge_labels_source.contains("cx.set_hit_test_rects([rect])"));
+    assert!(input_handlers_source.contains("down.hit_pressable_target_in_descendant_subtree"));
     assert!(edge_labels_source.contains("node_graph.edge_label."));
     assert!(cache_source.contains("edge_types_rev"));
     assert!(cache_source.contains("skin_rev"));
@@ -485,6 +498,7 @@ fn default_declarative_surface_exposes_edge_types_and_skin_without_custom_presen
         assert!(docs.contains("node_graph_surface_with_edge_label_renderer"));
         assert!(docs.contains("node_graph_surface_with_renderers"));
         assert!(docs.contains("NodeGraphDeclarativeEdgeLabelRenderer"));
+        assert!(docs.contains("NodeGraphEdgeLabelHitTestMode::ChildBounds"));
         assert!(docs.contains(
             "Custom `NodeGraphPresenter` is not part of the default declarative surface"
         ));

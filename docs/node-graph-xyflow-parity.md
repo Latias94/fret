@@ -261,8 +261,10 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       conservative spatial-index candidate rects, then applies exact path-distance hit filtering
       for edge interaction candidates, uses the custom path midpoint for edge-center anchors, and
       feeds those anchors into declarative EdgeToolbar, `EdgeRenderHint.label` child placement, and
-      non-interactive `NodeGraphDeclarativeEdgeLabelRenderer` custom child placement.
-      Pointer-interactive edge label controls remain a follow-up spatial/overlay contract.
+      `NodeGraphDeclarativeEdgeLabelRenderer` custom child placement. Edge-label renderers remain
+      transparent by default and can opt into the first pointer-interactive control contract with
+      `NodeGraphEdgeLabelHitTestMode::ChildBounds`, which limits hit-testing to the custom child
+      bounds and lets outside points fall through to the canvas.
 
 - [~] **Per-node/edge view lifecycle + memoization strategy**
   - XyFlow: React memoization + internals updates + DOM handle bounds pipeline
@@ -791,8 +793,10 @@ canonical data flow and invalidation boundaries:
     anchor. Non-interactive custom edge label children can use
     `node_graph_surface_with_edge_label_renderer(...)` / `NodeGraphDeclarativeEdgeLabelRenderer`
     and receive `NodeGraphEdgeLabelLayout` with the same anchor; apps that also render custom node
-    portals can use `node_graph_surface_with_renderers(...)`.
-    - pointer-interactive edge label controls remain TODO
+    portals can use `node_graph_surface_with_renderers(...)`. Renderers are hit-test transparent by
+    default; controls can opt into `NodeGraphEdgeLabelHitTestMode::ChildBounds` so only the custom
+    child bounds intercept pointer input and the surrounding label host falls through to the
+    canvas.
     - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 
 ## 6.2 Edge selection and context menus

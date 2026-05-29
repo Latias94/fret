@@ -275,6 +275,16 @@ pub struct NodeGraphEdgeLabelLayout {
     pub zoom: f32,
 }
 
+/// Hit-test behavior for a declarative edge-label child renderer.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub enum NodeGraphEdgeLabelHitTestMode {
+    /// The label layer paints only; pointer input falls through to the canvas.
+    #[default]
+    Transparent,
+    /// The laid-out renderer child bounds receive pointer input.
+    ChildBounds,
+}
+
 /// Per-edge child renderer for the declarative edge-label layer.
 ///
 /// This is the default-path replacement for XyFlow-style `EdgeLabelRenderer` children. It receives
@@ -282,6 +292,14 @@ pub struct NodeGraphEdgeLabelLayout {
 /// declarative elements. Returning an empty list falls back to the built-in text label when
 /// `EdgeRenderHint.label` is present.
 pub trait NodeGraphDeclarativeEdgeLabelRenderer<H: UiHost> {
+    fn edge_label_hit_test_mode(
+        &mut self,
+        _graph: &Graph,
+        _layout: &NodeGraphEdgeLabelLayout,
+    ) -> NodeGraphEdgeLabelHitTestMode {
+        NodeGraphEdgeLabelHitTestMode::Transparent
+    }
+
     fn render_edge_label(
         &mut self,
         cx: &mut ElementContext<'_, H>,
