@@ -5,7 +5,7 @@ use fret_ui::element::AnyElement;
 use fret_ui::element::CanvasProps;
 use fret_ui::{ElementContext, Invalidation, ThemeSnapshot, UiHost};
 
-use crate::core::NodeId;
+use crate::core::{EdgeId, NodeId};
 use crate::ui::paint_overrides::NodeGraphPaintOverridesRef;
 use crate::ui::style::NodeGraphStyle;
 
@@ -49,6 +49,7 @@ pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
     pub(super) theme: ThemeSnapshot,
     pub(super) hovered_node_value: Option<NodeId>,
     pub(super) selected_nodes: Vec<NodeId>,
+    pub(super) selected_edges: Vec<EdgeId>,
     pub(super) marquee_value: Option<MarqueeDragState>,
     pub(super) node_drag_value: Option<NodeDragState>,
     pub(super) paint_overrides_ref: Option<NodeGraphPaintOverridesRef>,
@@ -89,6 +90,7 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         theme,
         hovered_node_value,
         selected_nodes,
+        selected_edges,
         marquee_value,
         node_drag_value,
         paint_overrides_ref,
@@ -98,6 +100,7 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
     let edge_draws_for_paint = edge_draws.clone();
     let style_tokens_for_paint = style_tokens.clone();
     let selected_nodes_for_paint = selected_nodes.clone();
+    let selected_edges_for_paint = selected_edges.clone();
     let node_drag_for_paint = node_drag_value.clone();
     let paint_overrides_for_paint = paint_overrides_ref.clone();
 
@@ -130,6 +133,7 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
             edge_draws_for_paint.clone(),
             geom_for_paint.clone(),
             node_drag_for_paint.as_ref(),
+            &selected_edges_for_paint,
             &style_tokens_for_paint,
             paint_overrides_for_paint.as_deref(),
         );

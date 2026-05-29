@@ -566,6 +566,45 @@ Execution companion: `design.md` (surface map + next worktree order).
     - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
     - `cargo nextest run -p fret-node`: passed.
 
+- [x] FNDX-054 Feed store-backed selected edges into default declarative edge paint.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node edge_stroke_width_mul_for_selection_applies_selected_edge_width_token node_graph_surface_semantics_reports_selected_edges_count custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path`
+  - Exit note: default declarative edge paint now receives `NodeGraphViewState.selected_edges`
+    from the authoritative store-backed frame and applies `wire_width_selected_mul` to selected
+    edge strokes. Surface diagnostics also report selected edge count. This closes the selected-edge
+    visible paint/diagnostics loop after FNDX-053, but does not claim EdgeWrapper reconnect anchors
+    or drag lifecycle parity.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo nextest run -p fret-node edge_stroke_width_mul_for_selection_applies_selected_edge_width_token node_graph_surface_semantics_reports_selected_edges_count custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path`:
+      passed.
+    - `cargo fmt -p fret-node --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+
 ## M0 - Decision gates and internal seam map
 
 - [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.

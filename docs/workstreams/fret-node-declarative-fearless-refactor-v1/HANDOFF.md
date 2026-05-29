@@ -10,42 +10,37 @@ controller/binding-first, editor-grade node graph surface for Fret. Recent work 
 canvas mirror cleanup, concrete declarative overlay/add-on parity gates, and now the first
 store/view-policy hazard found in the 2026-05-28 `fret-node` architecture audit, the first default
 declarative public-extension decision, and the custom edge path spatial, hit-test, anchor, toolbar,
-edge-label, custom edge-label renderer, child-bounds interactive edge-label control, and default
-declarative click-edge selection contract slices. The current risk is consumer-facing drift where
-public extension or store surfaces look authoritative but bypass the store's contracts or imply
-unimplemented view-policy parity.
+edge-label, custom edge-label renderer, child-bounds interactive edge-label control, default
+declarative click-edge selection, and selected-edge paint/diagnostics contract slices. The current
+risk is consumer-facing drift where public extension or store surfaces look authoritative but bypass
+the store's contracts or imply unimplemented view-policy parity.
 
 ## Active Task
 
-- Task ID: FNDX-053.
+- Task ID: FNDX-054.
 - Owner: current Codex session.
 - Status: DONE.
-- Claim: default declarative pointer-down now receives the active `edgeTypes`/style policy, resolves
-  edge hits after node hits through the existing custom-path-aware edge hit-test, and commits
-  click-edge selection through the store-backed view-state helper. Multi-selection toggles only the
-  clicked edge kind and preserves other selected element kinds. FNDX-052's child-bounds
-  pointer-interactive edge-label controls still bypass the graph surface handler inside the custom
-  child rect.
+- Claim: default declarative edge paint now receives the authoritative store-backed
+  `selected_edges` list and applies the selected wire-width token to selected edge strokes. Surface
+  diagnostics also expose selected edge count, so the FNDX-053 click-edge selection path now has a
+  visible default-paint/diagnostics loop. EdgeWrapper reconnect anchors and drag lifecycle parity
+  remain follow-up work.
 - Review: use `review-workstream` before accepting broader lane closure.
 - Evidence:
-  - `ecosystem/fret-node/src/ui/declarative/paint_only/pointer_down.rs` reads the resolved
-    interaction state and calls the existing custom-path-aware edge hit-test after node hit-testing.
-  - `ecosystem/fret-node/src/ui/declarative/paint_only/selection.rs` owns edge click selection and
-    multi-selection toggle semantics through the store-backed selection helper.
-  - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs` passes style and
-    `edgeTypes` policy into the pointer-down snapshot while preserving the descendant pressable
-    bypass for edge-label controls.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs` derives selected edge stroke width
+    from `wire_width_selected_mul`.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs` /
-    `surface_shell.rs` carry the frame's `edgeTypes` policy into input without exposing a broad
-    presenter prop.
+    `surface_shell.rs` / `surface_content.rs` thread authoritative `selected_edges` into edge
+    paint.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs` reports selected edge count in
+    surface diagnostics.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs` carries
-    `custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path`,
-    `build_click_selection_preview_edges_multi_click_toggles_hit_membership`,
-    `commit_edge_click_selection_action_host_multi_toggles_edge_without_clearing_other_kinds`,
-    and the prior custom path hit-test / child-bounds edge-label gates.
+    `edge_stroke_width_mul_for_selection_applies_selected_edge_width_token`,
+    `node_graph_surface_semantics_reports_selected_edges_count`, and the prior
+    `custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path` gate.
   - Fresh gates passed:
     `cargo check -p fret-node --tests`,
-    `cargo nextest run -p fret-node custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path build_click_selection_preview_edges_multi_click_toggles_hit_membership commit_edge_click_selection_action_host_multi_toggles_edge_without_clearing_other_kinds custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds`,
+    `cargo nextest run -p fret-node edge_stroke_width_mul_for_selection_applies_selected_edge_width_token node_graph_surface_semantics_reports_selected_edges_count custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path`,
     `cargo fmt -p fret-node --check`,
     `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`,
     `git diff --check`,
@@ -53,8 +48,8 @@ unimplemented view-policy parity.
     `cargo check -p fret-node --all-features --tests`,
     `cargo check -p fret-node --no-default-features`,
     `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`, and
-    `cargo nextest run -p fret-node` (467 tests).
-  - Earlier closeout/package gates for FNDX-010 through FNDX-052 remain recorded in
+    `cargo nextest run -p fret-node` (469 tests).
+  - Earlier closeout/package gates for FNDX-010 through FNDX-053 remain recorded in
     `EVIDENCE_AND_GATES.md`.
 
 ## Decisions Since Last Update
@@ -102,10 +97,12 @@ unimplemented view-policy parity.
   public surface.
 - FNDX-053 feeds custom-path-aware edge hit-testing into default declarative click-edge selection,
   but does not claim reconnect/update-anchor lifecycle parity.
+- FNDX-054 feeds store-backed selected-edge state into default declarative edge paint and
+  diagnostics, but still does not claim reconnect/update-anchor lifecycle parity.
 
 ## Blockers
 
-- None for FNDX-053.
+- None for FNDX-054.
 
 ## Next Recommended Action
 

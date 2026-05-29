@@ -104,7 +104,7 @@ use self::cache::{
 #[cfg(test)]
 use self::cache::{
     build_edge_spatial_rect_overrides, build_edges_draws_paint_only, derived_geometry_cache_key,
-    edges_cache_key, grid_cache_key, nodes_cache_key,
+    edge_stroke_width_mul_for_selection, edges_cache_key, grid_cache_key, nodes_cache_key,
 };
 use self::diag::{
     DeclarativeDiagKeyAction, DeclarativeKeyboardZoomAction,
@@ -619,6 +619,7 @@ fn node_graph_surface_impl<'a, H: UiHost + 'static>(
     let edges_cache_value = prepared_frame.edges_cache_value;
     let hovered_node_value = prepared_frame.hovered_node_value;
     let effective_selected_nodes = prepared_frame.effective_selected_nodes;
+    let selected_edges = prepared_frame.selected_edges;
     let portals_disabled = prepared_frame.portals_disabled;
     let semantics_value = prepared_frame.semantics_value;
     let test_id = prepared_frame.test_id;
@@ -766,6 +767,7 @@ fn node_graph_surface_impl<'a, H: UiHost + 'static>(
                         edges_cache_value: edges_cache_value.clone(),
                         hovered_node_value,
                         effective_selected_nodes: effective_selected_nodes.clone(),
+                        selected_edges: selected_edges.clone(),
                         portals_disabled,
                         semantics_value: semantics_value.clone(),
                         test_id: test_id.clone(),

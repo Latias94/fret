@@ -477,6 +477,9 @@ Status note (2026-05-28):
 - FNDX-053 feeds the custom-path-aware edge hit-test into default declarative pointer-down, so
   click-edge selection now follows the active `edgeTypes` path and commits through the store-backed
   view-state helper without claiming reconnect/update-anchor lifecycle parity.
+- FNDX-054 feeds store-backed `selected_edges` into default declarative edge paint and surface
+  diagnostics, so click-edge selection now has a visible default-paint loop without claiming
+  reconnect/update-anchor lifecycle parity.
 
 Why this still matters:
 

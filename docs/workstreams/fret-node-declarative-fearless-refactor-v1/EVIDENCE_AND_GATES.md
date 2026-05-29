@@ -5,13 +5,22 @@ Last updated: 2026-05-29
 
 ## Current Focus
 
-FNDX-053 feeds the existing custom-path-aware edge hit-test into the default declarative
-pointer-down path for click-edge selection. Edge hits are resolved after node hits but before
-marquee/empty-canvas handling, selection commits through the store-backed view-state path, and the
-FNDX-052 child-bounds edge-label control bypass remains intact. This closes click-edge selection
-only; reconnect/update-anchor lifecycle parity remains follow-up work.
+FNDX-054 closes the first selected-edge rendering loop after FNDX-053: default declarative edge
+paint consumes the store-backed `selected_edges` list, selected edges apply the selected wire-width
+token, and surface diagnostics expose the selected edge count. This closes visible selected-edge
+state for the default paint path only; reconnect/update-anchor lifecycle parity remains follow-up
+work.
 
 ## Targeted Iteration Gates
+
+```bash
+cargo nextest run -p fret-node edge_stroke_width_mul_for_selection_applies_selected_edge_width_token node_graph_surface_semantics_reports_selected_edges_count custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path
+```
+
+This gate proves the FNDX-054 selected-edge paint/diagnostics contract: default edge paint can derive
+selected stroke width from the store-backed selected edge list, surface semantics report selected
+edge count for diagnostics, and the FNDX-053 custom-path click-edge selection path still commits the
+edge that will feed that selected paint state.
 
 ```bash
 cargo nextest run -p fret-node custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path build_click_selection_preview_edges_multi_click_toggles_hit_membership commit_edge_click_selection_action_host_multi_toggles_edge_without_clearing_other_kinds custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds
@@ -210,6 +219,7 @@ closeout note must name those failures.
 - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_hit_test.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_labels.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_path_geometry.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/pointer_down.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/selection.rs`
@@ -517,5 +527,26 @@ closeout note must name those failures.
     input-path and selection-helper changes are lint-clean.
   - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
     green with 467 tests.
+- FNDX-054:
+  - `cargo check -p fret-node --tests`: passed; proves UI-enabled test targets compile with
+    selected-edge paint threading and diagnostics updates.
+  - `cargo nextest run -p fret-node edge_stroke_width_mul_for_selection_applies_selected_edge_width_token node_graph_surface_semantics_reports_selected_edges_count custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path`:
+    passed; proves selected-edge paint applies the selected wire-width token, surface diagnostics
+    expose selected edge count, and the custom-path click-edge selection path still feeds the store
+    state used by paint.
+  - `cargo fmt -p fret-node --check`: passed; proves the touched crate remains formatted.
+  - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed;
+    proves the workstream metadata remains valid JSON.
+  - `git diff --check`: passed; proves the patch has no whitespace errors.
+  - `python3 tools/check_layering.py`: passed; proves the slice did not violate workspace layering
+    policy.
+  - `cargo check -p fret-node --all-features --tests`: passed; proves optional UI/integration test
+    targets compile with selected-edge paint threading.
+  - `cargo check -p fret-node --no-default-features`: passed; proves headless/runtime-facing
+    package compilation remains unaffected by the UI-only paint slice.
+  - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed; proves the
+    paint/semantics/test changes are lint-clean.
+  - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
+    green with 469 tests.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

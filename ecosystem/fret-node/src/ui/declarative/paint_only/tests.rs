@@ -53,9 +53,10 @@ use super::{
     collect_portal_label_infos_for_visible_subset, commit_edge_click_selection_action_host,
     commit_graph_transaction, commit_marquee_selection_action_host, commit_node_drag_transaction,
     commit_pending_selection_action_host, complete_left_pointer_release_action_host,
-    complete_node_drag_release_action_host, derived_geometry_cache_key, edges_cache_key,
-    effective_selected_nodes_for_paint, escape_cancel_declarative_interactions_action_host,
-    flush_portal_measured_geometry_state, grid_cache_key, handle_declarative_diag_key_action_host,
+    complete_node_drag_release_action_host, derived_geometry_cache_key,
+    edge_stroke_width_mul_for_selection, edges_cache_key, effective_selected_nodes_for_paint,
+    escape_cancel_declarative_interactions_action_host, flush_portal_measured_geometry_state,
+    grid_cache_key, handle_declarative_diag_key_action_host,
     handle_declarative_keyboard_zoom_action_host, handle_declarative_pointer_cancel_action_host,
     handle_declarative_pointer_up_action_host, handle_marquee_left_pointer_release_action_host,
     handle_marquee_pointer_move_action_host, handle_node_drag_left_pointer_release_action_host,
@@ -1534,6 +1535,43 @@ fn node_graph_surface_active_descendant_points_to_focused_edge_semantics_node() 
     );
 
     assert_canvas_active_descendant_label(&snapshot, &format!("Edge {edge:?}"));
+}
+
+#[test]
+fn node_graph_surface_semantics_reports_selected_edges_count() {
+    let (mut graph, _a, _a_in, a_out, _b, b_in) = make_graph_two_nodes_with_ports();
+    let edge = EdgeId::from_u128(0xA132);
+    graph.edges.insert(
+        edge,
+        Edge {
+            kind: EdgeKind::Data,
+            from: a_out,
+            to: b_in,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
+        },
+    );
+    let snapshot = render_surface_semantics_snapshot(
+        graph,
+        NodeGraphViewState {
+            selected_edges: vec![edge],
+            ..Default::default()
+        },
+    );
+    let canvas = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("node_graph.canvas"))
+        .expect("node graph canvas semantics node");
+
+    assert!(
+        canvas
+            .value
+            .as_deref()
+            .is_some_and(|value| value.contains("selected_edges:1;")),
+        "canvas semantics should expose selected edge count for diagnostics"
+    );
 }
 
 #[test]
@@ -3492,6 +3530,22 @@ fn build_click_selection_preview_edges_multi_click_toggles_hit_membership() {
     assert_eq!(added.as_ref(), &[edge_a, edge_b]);
     assert_eq!(removed.as_ref(), &[edge_a]);
     assert_eq!(replaced.as_ref(), &[edge_b]);
+}
+
+#[test]
+fn edge_stroke_width_mul_for_selection_applies_selected_edge_width_token() {
+    let mut style = crate::ui::style::NodeGraphStyle::default();
+    style.paint.wire_width_selected_mul = 1.75;
+
+    assert_eq!(edge_stroke_width_mul_for_selection(2.0, false, &style), 2.0);
+    assert_eq!(edge_stroke_width_mul_for_selection(2.0, true, &style), 3.5);
+
+    style.paint.wire_width_selected_mul = 0.0;
+    assert_eq!(edge_stroke_width_mul_for_selection(2.0, true, &style), 2.0);
+    assert_eq!(
+        edge_stroke_width_mul_for_selection(f32::NAN, true, &style),
+        1.0
+    );
 }
 
 #[test]

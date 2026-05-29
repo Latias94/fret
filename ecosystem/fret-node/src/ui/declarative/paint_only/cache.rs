@@ -712,6 +712,7 @@ pub(super) fn paint_edges_cached(
     draws: Option<Arc<Vec<EdgePathDraw>>>,
     geom: Option<Arc<CanvasGeometry>>,
     node_drag: Option<&NodeDragState>,
+    selected_edges: &[crate::core::EdgeId],
     style_tokens: &NodeGraphStyle,
     paint_overrides: Option<&dyn crate::ui::paint_overrides::NodeGraphPaintOverrides>,
 ) {
@@ -741,7 +742,9 @@ pub(super) fn paint_edges_cached(
 
         for d in draws.iter() {
             let mut paint: PaintBindingV1 = d.color.into();
-            let mut stroke_width_mul = d.width_mul;
+            let selected = selected_edges.contains(&d.edge);
+            let mut stroke_width_mul =
+                edge_stroke_width_mul_for_selection(d.width_mul, selected, style_tokens);
             let mut dash = d
                 .dash
                 .and_then(|p| scale_dash_pattern_screen_px_to_canvas_units(p, zoom));
@@ -842,6 +845,28 @@ pub(super) fn paint_edges_cached(
             }
         }
     });
+}
+
+pub(super) fn edge_stroke_width_mul_for_selection(
+    base_width_mul: f32,
+    selected: bool,
+    style_tokens: &NodeGraphStyle,
+) -> f32 {
+    let base = if base_width_mul.is_finite() && base_width_mul > 0.0 {
+        base_width_mul
+    } else {
+        1.0
+    };
+    if !selected {
+        return base;
+    }
+
+    let selected_mul = style_tokens.paint.wire_width_selected_mul;
+    if selected_mul.is_finite() && selected_mul > 0.0 {
+        base * selected_mul
+    } else {
+        base
+    }
 }
 
 fn build_nodes_draws_paint_only(graph: &Graph, zoom: f32) -> Arc<Vec<NodeRectDraw>> {

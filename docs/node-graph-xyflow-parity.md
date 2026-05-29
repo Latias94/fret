@@ -542,6 +542,8 @@ canonical data flow and invalidation boundaries:
     - default declarative pointer selection now consumes the same custom-path-aware edge hit-test
       used by paint/culling and commits click-edge selection through the store-backed view-state
       path
+    - default declarative edge paint consumes the store-backed `selected_edges` list for selected
+      wire-width styling, and surface diagnostics report selected edge count
     - keyboard focus is available via `Ctrl/Cmd+Tab` cycling (opt-in policy until per-edge focus nodes exist)
     - config gates: `NodeGraphInteractionState.{elements_selectable, edges_selectable, edges_focusable}`
     - reconnect gating: `NodeGraphInteractionState.edges_reconnectable`
@@ -803,6 +805,14 @@ canonical data flow and invalidation boundaries:
 
 ## 6.2 Edge selection and context menus
 
+- [~] **Selected edge state**
+  - XyFlow: `EdgeWrapper` passes `selected` into the edge component and styling layer.
+  - fret-node: default declarative click-edge selection commits through the store-backed
+    `NodeGraphViewState.selected_edges` path, and default edge paint now consumes that selected
+    edge list to apply the selected wire-width token. Surface diagnostics also report the selected
+    edge count.
+    - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+
 - [~] **Right-click edge context menu**
   - XyFlow: can be userland
   - fret-node: supported in canvas (edge context menu)
@@ -813,8 +823,9 @@ canonical data flow and invalidation boundaries:
   - XyFlow: `edgesReconnectable` + edge update anchors (`components/EdgeWrapper/EdgeUpdateAnchors.tsx`)
   - fret-node: reconnect model/config/callback contracts exist, but default declarative EdgeWrapper
     lifecycle parity is still being closed in slices
-    - current default declarative slice: click-edge selection uses custom-path-aware hit-testing
-      and keeps edge-label controls hit-test isolated
+    - current default declarative slices: click-edge selection uses custom-path-aware hit-testing,
+      selected edge state feeds default edge paint/diagnostics, and edge-label controls remain
+      hit-test isolated
     - follow-up: interactive update anchors for focused/selected edges, anchor-click priority,
       drag-threshold reconnect start, and empty-canvas drop policy
     - gating:

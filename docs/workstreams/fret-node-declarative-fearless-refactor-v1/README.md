@@ -176,6 +176,8 @@ update rather than an incidental refactor.
     custom edge-label control contract while keeping transparent labels as the default.
   - FNDX-053 feeds the same custom-path-aware edge hit-test into default declarative click-edge
     selection through the store-backed view-state helper.
+  - FNDX-054 feeds store-backed selected-edge state into default declarative edge paint and surface
+    diagnostics.
   - Custom `NodeGraphPresenter` remains advanced/internal on the default path because it still mixes
     geometry, labels, context menus, and insertion/search policy.
   - Broader XyFlow edge-wrapper lifecycle parity remains follow-up work beyond click selection and

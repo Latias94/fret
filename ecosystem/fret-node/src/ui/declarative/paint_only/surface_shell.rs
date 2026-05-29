@@ -203,6 +203,7 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
                 theme: prepared_frame.theme.clone(),
                 hovered_node_value: prepared_frame.hovered_node_value,
                 selected_nodes: prepared_frame.effective_selected_nodes.clone(),
+                selected_edges: prepared_frame.selected_edges.clone(),
                 marquee_value: prepared_frame.marquee_value.clone(),
                 node_drag_value: prepared_frame.node_drag_value.clone(),
                 paint_overrides_ref: prepared_frame.paint_overrides_ref.clone(),
