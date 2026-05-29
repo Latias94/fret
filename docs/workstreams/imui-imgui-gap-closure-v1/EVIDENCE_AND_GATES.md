@@ -5850,6 +5850,40 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Debug-Draw Draw-List Round Owner-Split Evidence - 2026-05-30
+
+Claim verified: debug-draw draw-list round shape authoring moved into private circle, ngon, and
+ellipse owners without changing public authoring method names, command payloads, summary
+projection, paint behavior, or debug-draw smoke coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/round.rs` is now a private
+  module index.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/round/circle.rs` owns
+  circle command recording.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/round/ngon.rs` owns ngon
+  command recording.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/round/ellipse.rs` owns
+  ellipse command recording.
+- `tools/gate_imui_workstream_source.py` now rejects command recording from the root round module
+  and requires each shape-family owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls::tests::draw_list
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Table-Column Method-Family Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI `TableColumn` construction, identity/accessor, visibility, sort, resize, and

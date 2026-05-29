@@ -27075,16 +27075,84 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/round.rs"),
             required=[
+                "mod circle;",
+                "mod ellipse;",
+                "mod ngon;",
+            ],
+            forbidden=[
                 "impl ImUiDebugDrawList",
-                "pub fn add_circle",
-                "pub fn add_circle_with_style",
-                "pub fn add_ngon_filled",
-                "pub fn add_ellipse_filled",
                 "DebugDrawCommand::Circle",
                 "DebugDrawCommand::NgonFilled",
                 "DebugDrawCommand::EllipseFilled",
+                "sequential_triangle_indices",
+                "DebugDrawCommand::Rect",
+                "DebugDrawCommand::TriangleMesh",
+                "DebugDrawCommand::Bezier",
+                "pub fn add_image",
+                "pub fn command_count",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/round/circle.rs"
+            ),
+            required=[
+                "impl ImUiDebugDrawList",
+                "pub fn add_circle",
+                "pub fn add_circle_with_style",
+                "pub fn add_circle_filled",
+                "DebugDrawCommand::Circle",
+                "DebugDrawCommand::CircleFilled",
             ],
             forbidden=[
+                "DebugDrawCommand::Ngon",
+                "DebugDrawCommand::Ellipse",
+                "sequential_triangle_indices",
+                "DebugDrawCommand::Rect",
+                "DebugDrawCommand::TriangleMesh",
+                "DebugDrawCommand::Bezier",
+                "pub fn add_image",
+                "pub fn command_count",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/round/ngon.rs"
+            ),
+            required=[
+                "impl ImUiDebugDrawList",
+                "pub fn add_ngon",
+                "pub fn add_ngon_with_style",
+                "pub fn add_ngon_filled",
+                "DebugDrawCommand::Ngon",
+                "DebugDrawCommand::NgonFilled",
+            ],
+            forbidden=[
+                "DebugDrawCommand::Circle",
+                "DebugDrawCommand::Ellipse",
+                "sequential_triangle_indices",
+                "DebugDrawCommand::Rect",
+                "DebugDrawCommand::TriangleMesh",
+                "DebugDrawCommand::Bezier",
+                "pub fn add_image",
+                "pub fn command_count",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/round/ellipse.rs"
+            ),
+            required=[
+                "impl ImUiDebugDrawList",
+                "pub fn add_ellipse",
+                "pub fn add_ellipse_with_style",
+                "pub fn add_ellipse_filled",
+                "DebugDrawCommand::Ellipse",
+                "DebugDrawCommand::EllipseFilled",
+            ],
+            forbidden=[
+                "DebugDrawCommand::Circle",
+                "DebugDrawCommand::Ngon",
                 "sequential_triangle_indices",
                 "DebugDrawCommand::Rect",
                 "DebugDrawCommand::TriangleMesh",
