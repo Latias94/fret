@@ -645,6 +645,7 @@
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/trigger.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state/clear.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state/clear/reset.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state/select.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/capture.rs",

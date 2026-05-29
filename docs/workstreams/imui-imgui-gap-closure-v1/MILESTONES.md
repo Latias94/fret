@@ -761,6 +761,11 @@ module/re-export index. `submenu_state/clear.rs` owns submenu clear behavior, in
 open cleanup, pointer-grace cleanup, timer cleanup, and focus retry reset. `submenu_state/select.rs`
 owns submenu selection writes and pending/open-timer cleanup.
 
+2026-05-30 submenu clear reset owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state/clear.rs` keeps the
+public-in-menu-family clear flow. `submenu_state/clear/reset.rs` owns active submenu, pending
+submenu, and runtime pointer-grace/focus/timer model resets.
+
 2026-05-28 menu keyboard owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard.rs` is now a private module/re-export index.
 `keyboard/popup.rs` owns popup menu item registration, keyboard shortcut activation,

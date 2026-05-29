@@ -868,6 +868,13 @@ Last updated: 2026-05-30
       Result: `menu_family_controls/submenu_state.rs` is now a private module/re-export index.
       `submenu_state/clear.rs` owns clear/reset behavior, and `submenu_state/select.rs` owns
       selection writes.
+- [x] Split IMUI submenu clear model reset details out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state/clear.rs` into a private
+      reset owner without changing active submenu matching, trigger matching, optional geometry
+      clearing, pending-open cleanup, pointer-grace/close/focus/open timer cleanup, or focus retry
+      reset.
+      Result: `submenu_state/clear.rs` keeps the public-in-menu-family clear flow, while
+      `submenu_state/clear/reset.rs` owns active, pending, and runtime submenu model resets.
 - [x] Split IMUI menu-item keyboard behavior into private popup-menu and menubar owners without
       changing popup item nav registration, Arrow/Home/End focus movement, shortcut activation,
       popup-close-on-key activation, lifecycle instant marking, menubar horizontal-arrow
