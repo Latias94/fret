@@ -1115,10 +1115,16 @@ reads, and `ResponseExt` population. `radio.rs` keeps label identity, `RadioOpti
 field chrome, radio indicator mounting, boolean label mounting, and fill-row visual assembly.
 
 2026-05-27 debug-draw media paint owner-split result:
-`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` keeps
-`paint_debug_draw_media_command(...)` routing. `paint/media/raster.rs` owns image, image-region, and
-image-quad paint. `paint/media/rounded.rs` owns rounded image/region paint and clip balancing.
-`paint/media/svg.rs` owns SVG image and mask-icon paint.
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` kept
+`paint_debug_draw_media_command(...)` routing for this slice. `paint/media/raster.rs` owns image,
+image-region, and image-quad paint. `paint/media/rounded.rs` owns rounded image/region paint and
+clip balancing. `paint/media/svg.rs` owns SVG image and mask-icon paint.
+
+2026-05-30 debug-draw media dispatch owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/dispatch.rs` now owns
+`paint_debug_draw_media_command(...)` media command match routing and non-media no-op dispatch.
+`paint/media.rs` is now only the media paint module/type hub for `MediaPaintKey`, `RasterImage`,
+`RasterUvRect`, and child owner wiring.
 
 2026-05-27 debug-draw element behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element/behavior.rs` now owns pressable
@@ -1423,10 +1429,16 @@ Bezier, arc, fast-arc, and elliptical-arc authoring methods plus their sampling/
 point-count/empty accessors. The public `ImUiDebugDrawPath` API remains unchanged.
 
 2026-05-27 debug-draw paint media owner split result:
-`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` now owns image, image-region,
-image-quad, rounded-image, rounded-image-region, SVG image, and SVG mask-icon painting. Root
-`paint.rs` keeps clip-stack balancing and command-class dispatch to media vs shape painters.
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` delegates media paint behavior
+to private raster, rounded, and SVG owners. Root `paint.rs` keeps clip-stack balancing and
+command-class dispatch to media vs shape painters.
 Debug-draw scene output and public authoring APIs remain unchanged.
+
+2026-05-30 debug-draw media dispatch owner split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/dispatch.rs` now owns the media
+command routing over image, image-region, image-quad, rounded-image, rounded-image-region, SVG
+image, and SVG mask-icon commands. `paint/media.rs` only wires the child owners and shared paint
+types.
 
 2026-05-26 button visual owner-split result:
 `ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` now owns button variant layout,

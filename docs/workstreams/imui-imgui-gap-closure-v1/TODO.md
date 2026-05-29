@@ -1190,14 +1190,21 @@ Last updated: 2026-05-30
       Result: `debug_draw_controls/commands/types.rs` owns private `DebugDrawCommand` payload
       variants. `commands.rs` keeps command module wiring, summary projection installation, and the
       parent-visible `DebugDrawCommand` re-export.
-- [x] Split IMUI debug-draw media paint routing out of
+- [x] Split IMUI debug-draw media paint behavior behind
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` into private raster,
       rounded, and SVG owner modules without changing image/region/quad/SVG paint behavior, opacity
       filtering, UV validation, rounded clip balancing, or media command no-op routing.
-      Result: `paint/media.rs` keeps `paint_debug_draw_media_command(...)` routing,
+      Result: `paint/media.rs` kept `paint_debug_draw_media_command(...)` routing for this slice,
       `paint/media/raster.rs` owns image/region/quad paint, `paint/media/rounded.rs` owns rounded
       image/region paint and clip push/pop balancing, and `paint/media/svg.rs` owns SVG image/mask
-      icon paint.
+      icon paint. A follow-up dispatch split below moved that routing out of the hub as well.
+- [x] Split IMUI debug-draw media command dispatch out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` into a private dispatch
+      owner without changing image/region/quad/rounded-image/SVG/mask-icon routing, non-media
+      no-op behavior, or raster/rounded/SVG paint behavior.
+      Result: `paint/media/dispatch.rs` owns `paint_debug_draw_media_command(...)` media match
+      routing. `paint/media.rs` is now only the media paint module/type hub for `MediaPaintKey`,
+      `RasterImage`, `RasterUvRect`, and child owner wiring.
 - [x] Split IMUI debug-draw pressable element behavior out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element.rs` into a private owner module
       without changing noninteractive canvas output, pressable canvas wrapping, keyboard activation
@@ -2246,9 +2253,10 @@ Readiness order for the next locally testable review slices:
    `debug_draw_controls/path_builder/shape_methods.rs` now owns rect, Bezier, arc, fast-arc, and
    elliptical-arc authoring methods. `path_builder.rs` keeps point basics, stroke/fill recording,
    and path state accessors.
-   2026-05-27 debug-draw paint media owner split: `debug_draw_controls/paint/media.rs` now owns
-   image, image-region, image-quad, rounded-image, rounded-image-region, SVG image, and SVG
-   mask-icon painting. Root `paint.rs` keeps clip-stack balancing and media/shape command dispatch.
+   2026-05-27 debug-draw paint media owner split: `debug_draw_controls/paint/media.rs` kept
+   media command routing while `paint/media/raster.rs`, `paint/media/rounded.rs`, and
+   `paint/media/svg.rs` took image, rounded-image, SVG image, and SVG mask-icon paint behavior.
+   Root `paint.rs` keeps clip-stack balancing and media/shape command dispatch.
    2026-05-14 editor drag-value follow-up: `DragValueCoreResponse` now keeps drag/hover/press/focus
    storage private and no longer exposes external default construction. `DragValueCore` still owns
    response construction, while editor controls read visual state through `dragging()`, `hovered()`,
@@ -2270,6 +2278,10 @@ Readiness order for the next locally testable review slices:
    `debug_draw_controls/commands/summary_projection/residual.rs` now owns media, clip, SVG, and
    text command summary dispatch over the existing private `DebugDrawCommand` discriminant.
    `summary_projection.rs` keeps only clip-state application plus geometry/residual dispatch.
+   2026-05-30 debug-draw media dispatch owner split:
+   `debug_draw_controls/paint/media/dispatch.rs` now owns media command match routing and
+   non-media no-op dispatch. `paint/media.rs` is now a module/type hub that wires dispatch,
+   raster, rounded, and SVG paint owners without owning command routing or paint behavior.
    2026-05-14 source-gate follow-up: the IMUI workstream source gate now carries a reusable
    opaque-output-struct check for sealed response/context/summary records, so public output fields
    cannot return by simply changing field names.
