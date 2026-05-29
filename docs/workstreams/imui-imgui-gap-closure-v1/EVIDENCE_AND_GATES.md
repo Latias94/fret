@@ -3291,8 +3291,9 @@ row label text role, or tree-node/collapsing-header public behavior.
 
 Evidence:
 
-- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header.rs` keeps palette lookup, row
-  element composition, glyph/text rendering, and spacer layout.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header.rs` kept palette lookup, row
+  element composition, glyph/text rendering, and spacer layout at this split; the later
+  2026-05-30 children split moves the flex/body composition to `header/children.rs`.
 - `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header/metrics.rs` owns indicator
   glyph selection, tree indentation padding, and header border edges.
 - `tools/gate_imui_workstream_source.py` now rejects indicator/padding/border metric bodies from
@@ -3309,6 +3310,34 @@ Focused gates:
 - `cargo check -p fret-ui-kit --features imui --lib`: pass.
 - `cargo nextest run -p fret-ui-kit --features imui disclosure_indicator_uses_shared_chrome_glyph_text_role tree_row_label_uses_shared_list_row_text_role tree_node_default_options_start_at_level_one tree_node_leaf_uses_tree_item_semantics --no-fail-fast`:
   pass; 6 focused disclosure/header tests passed.
+
+## Disclosure Header Children Owner-Split Evidence - 2026-05-30
+
+Claim verified: disclosure header flex/body composition moved into a private owner without changing
+collapsing-header/tree-node a11y, palette policy, indicator glyphs, label text roles, row chrome,
+indentation, or trigger behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header/children.rs` owns the header
+  flex row, indicator slot, label text, and spacer composition.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header.rs` keeps palette lookup, row
+  container props, and metric lookups only.
+- `tools/gate_imui_workstream_source.py` now rejects flex/body composition bodies from drifting
+  back into `visual/header.rs` while requiring the dedicated children owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_disclosure_smoke --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib disclosure_controls --no-fail-fast`: pass;
+  6 disclosure tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
 
 ## Menu-Item Command Helper Owner-Split Evidence - 2026-05-28
 

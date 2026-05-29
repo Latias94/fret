@@ -1514,9 +1514,16 @@ APIs remain unchanged.
 2026-05-27 disclosure header-row visual owner-split result:
 `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header.rs` now owns header row
 container/flex assembly, indicator glyph mounting, label text mounting, row padding, border, and
-radius props. `disclosure_controls/visual.rs` keeps disclosure a11y, content padding, and palette
-resolution. Trigger pressable behavior, shortcut/context-menu handling, indicator glyphs, label
-text roles, indentation, and row chrome remain unchanged.
+radius props until the later 2026-05-30 children split moved the flex/body composition out.
+`disclosure_controls/visual.rs` keeps disclosure a11y, content padding, and palette resolution.
+Trigger pressable behavior, shortcut/context-menu handling, indicator glyphs, label text roles,
+indentation, and row chrome remain unchanged.
+
+2026-05-30 disclosure header children owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header/children.rs` now owns the header
+flex row, indicator slot, label text, and spacer composition. `header.rs` keeps palette lookup,
+row container props, and metric lookups only. The public collapsing-header and tree-node APIs
+remain unchanged.
 
 2026-05-30 disclosure visual sub-owner split result:
 `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual.rs` is now the header/a11y/style

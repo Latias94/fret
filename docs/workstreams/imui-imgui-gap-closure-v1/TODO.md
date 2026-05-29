@@ -1499,8 +1499,15 @@ Last updated: 2026-05-30
       without changing collapsing-header/tree-node a11y, palette policy, indicator glyphs, label
       text roles, row chrome, indentation, or trigger behavior.
       Result: `disclosure_controls/visual/header.rs` owns header row container/flex assembly,
-      indicator glyph mounting, label text mounting, row padding, border, and radius props.
-      `visual.rs` keeps disclosure a11y, content padding, and palette resolution.
+      indicator glyph mounting, label text mounting, row padding, border, and radius props until
+      the later children split below moved the flex/body composition out. `visual.rs` keeps
+      disclosure a11y, content padding, and palette resolution.
+- [x] Split IMUI disclosure header-row children composition into a private owner without changing
+      collapsing-header/tree-node a11y, palette policy, indicator glyphs, label text roles, row
+      chrome, indentation, or trigger behavior.
+      Result: `disclosure_controls/visual/header/children.rs` owns the header flex row, indicator
+      slot, label text, and spacer composition. `header.rs` keeps palette lookup, row container
+      props, and metric lookups only.
 - [x] Split IMUI disclosure visual a11y and style policy into private child owners without changing
       collapsing-header/tree-node roles, expanded/selected/level metadata, content padding, palette
       fallback order, header-row rendering, or public disclosure facade behavior.
