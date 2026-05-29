@@ -3,7 +3,7 @@
 Status: execution-oriented companion (last updated 2026-05-29)
 Scope: `ecosystem/fret-node` only
 
-Current note: the surface map and FNDX-060 follow-up guidance below are the active execution
+Current note: the surface map and FNDX-061 follow-up guidance below are the active execution
 authority. Deep retained-widget notes in older slice history are preserved only as historical
 context and must not be used to revive deleted retained compatibility files or features.
 
@@ -495,7 +495,10 @@ Status note (2026-05-28):
   rejected, empty/no-op, Escape, PointerCancel, and missed-left-button cleanup end paths, while
   still deferring preview wire paint and `reconnect_on_drop_empty`.
 - FNDX-060 paints an active reconnect preview wire from the fixed port to the current pointer using
-  the default canvas path paint route, while still deferring `reconnect_on_drop_empty`.
+  the default canvas path paint route.
+- FNDX-061 adds the minimal `reconnect_on_drop_empty` event outcome: default empty reconnect drops
+  stay no-op, while opt-in empty drops emit `OpenInsertNodePicker` without committing graph
+  changes or mounting picker UI.
 
 Why this still matters:
 

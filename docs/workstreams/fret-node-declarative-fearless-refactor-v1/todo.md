@@ -842,6 +842,36 @@ Execution companion: `design.md` (surface map + next worktree order).
       passed.
     - `cargo fmt`: passed.
 
+- [x] FNDX-061 Add minimal `reconnect_on_drop_empty` outcome semantics for default declarative
+      reconnect drops.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`
+  - Exit note: active default declarative update-anchor reconnect drops on empty canvas now honor
+    `NodeGraphInteractionState.reconnect_on_drop_empty` at the mechanism/event layer. The default
+    remains `ConnectEndOutcome::NoOp`; when enabled, empty drops emit
+    `ConnectEndOutcome::OpenInsertNodePicker` with `target: None`, clear transient reconnect state,
+    and do not commit a graph transaction. This slice intentionally does not mount a concrete
+    insert-node picker UI.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled`:
+      passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`:
+      passed.
+    - `cargo fmt --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+
 ## M0 - Decision gates and internal seam map
 
 - [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.

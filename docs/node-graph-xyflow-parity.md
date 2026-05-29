@@ -828,11 +828,12 @@ canonical data flow and invalidation boundaries:
       selected/focused edge endpoints, rendered update-anchor controls are hit-testable with
       anchor-click priority, anchor drags reuse the existing connection-drag threshold/cancel
       lifecycle, accepted reconnect drops hit-test target ports and commit through the store-backed
-      reconnect transaction/callback path, endpoint-gated or empty-canvas drops clear without
-      commit, reconnect gesture start/end callback aliases fire for arm/commit/reject/no-op/cancel
-      end paths, active drags paint a transient reconnect preview wire, and edge-label controls
-      remain hit-test isolated
-    - follow-up: empty-canvas drop policy
+      reconnect transaction/callback path, endpoint-gated drops reject, default empty-canvas drops
+      clear as no-op, opt-in `reconnect_on_drop_empty` empty drops emit the insert-node-picker
+      outcome without a graph transaction, reconnect gesture start/end callback aliases fire for
+      arm/commit/reject/no-op/picker/cancel end paths, active drags paint a transient reconnect
+      preview wire, and edge-label controls remain hit-test isolated
+    - follow-up: concrete insert-node picker UI/policy for empty-canvas reconnect drops
     - gating:
       - global: `NodeGraphInteractionState.edges_reconnectable` (XyFlow `edgesReconnectable`)
       - per-edge override: `Edge.reconnectable` (XyFlow `edge.reconnectable: boolean | 'source' | 'target'`)
@@ -856,7 +857,10 @@ canonical data flow and invalidation boundaries:
           - winit mapping: `crates/fret-runner-winit/src/lib.rs`
           - capture routing + auto-release: `crates/fret-ui/src/tree/dispatch.rs`
           - surface cancel handling: `ecosystem/fret-node/src/ui/declarative/paint_only/*`
-    - reconnect on drop on empty canvas: `NodeGraphInteractionState.reconnect_on_drop_empty`
+    - [x] reconnect on drop on empty canvas:
+      `NodeGraphInteractionState.reconnect_on_drop_empty` maps empty active reconnect drops to
+      `ConnectEndOutcome::OpenInsertNodePicker` with `target: None` and no graph transaction;
+      picker UI remains a policy follow-up
 
 ## 6.4 Edge split / reroute node
 

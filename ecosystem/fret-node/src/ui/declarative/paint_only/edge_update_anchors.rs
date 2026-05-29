@@ -600,6 +600,7 @@ fn commit_reconnect_drop_action_host(
 
 enum ReconnectDropDecision {
     Empty,
+    OpenInsertNodePicker,
     Rejected { target: PortId },
     NoOp { target: Option<PortId> },
     Accepted { target: PortId, plan: ConnectPlan },
@@ -611,6 +612,10 @@ impl ReconnectDropDecision {
             Self::Empty => ReconnectDropResult {
                 target: None,
                 outcome: ConnectEndOutcome::NoOp,
+            },
+            Self::OpenInsertNodePicker => ReconnectDropResult {
+                target: None,
+                outcome: ConnectEndOutcome::OpenInsertNodePicker,
             },
             Self::Rejected { target } => ReconnectDropResult {
                 target: Some(target),
@@ -669,7 +674,7 @@ fn hit_test_reconnect_drop_decision(
     let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
     let radius_canvas = interaction.connection_radius.max(0.0) / zoom;
     if radius_canvas <= 0.0 {
-        return ReconnectDropDecision::Empty;
+        return empty_reconnect_drop_decision(interaction);
     }
     let radius2 = radius_canvas * radius_canvas;
     let drop_canvas = view.screen_to_canvas(bounds, drop_screen);
@@ -697,7 +702,7 @@ fn hit_test_reconnect_drop_decision(
     }
 
     let Some((_, _, target)) = best else {
-        return ReconnectDropDecision::Empty;
+        return empty_reconnect_drop_decision(interaction);
     };
     if !port_allows_reconnect_endpoint(graph, interaction, target, drag.endpoint) {
         return ReconnectDropDecision::Rejected { target };
@@ -718,6 +723,14 @@ fn hit_test_reconnect_drop_decision(
         };
     }
     ReconnectDropDecision::Accepted { target, plan }
+}
+
+fn empty_reconnect_drop_decision(interaction: &NodeGraphInteractionState) -> ReconnectDropDecision {
+    if interaction.reconnect_on_drop_empty {
+        ReconnectDropDecision::OpenInsertNodePicker
+    } else {
+        ReconnectDropDecision::Empty
+    }
 }
 
 fn port_allows_reconnect_endpoint(

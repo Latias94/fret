@@ -5,22 +5,33 @@ Last updated: 2026-05-29
 
 ## Current Focus
 
-FNDX-060 advances default declarative EdgeWrapper reconnect/update-anchor parity from gesture
-lifecycle callbacks to active preview wire paint. Active update-anchor reconnect drags now paint one
-transient preview wire from the fixed port to the current pointer using the existing canvas path
-paint, Bezier route, preview color, and dashed stroke conventions. The preview remains suppressed
-while the drag is only armed and disappears after pointer-up, Escape, PointerCancel, and
-missed-left-button cleanup. This slice still does not implement `reconnect_on_drop_empty`.
+FNDX-061 closes the minimal default declarative `reconnect_on_drop_empty` mechanism semantics for
+EdgeWrapper update-anchor reconnect drags. Empty-canvas active drops still default to
+`ConnectEndOutcome::NoOp`; when `NodeGraphInteractionState.reconnect_on_drop_empty` is enabled, the
+same drop emits `ConnectEndOutcome::OpenInsertNodePicker` with no target and no graph transaction.
+This slice deliberately stops at the event/outcome contract and does not mount a concrete
+insert-node picker UI.
 
 ## Targeted Iteration Gates
 
 ```bash
-cargo nextest run -p fret-node edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup edge_update_anchor_reconnect_drag_cancel_paths_clear_transient edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit
+cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drag_cancel_paths_clear_transient
 ```
 
-This gate proves the FNDX-060 update-anchor reconnect preview contract: threshold arming still
-suppresses preview paint, active drag adds exactly one scene path for the preview wire, cleanup
-removes it, and the FNDX-058/FNDX-059 commit/reject/callback paths remain intact.
+This gate proves the FNDX-061 empty-drop contract and keeps the surrounding reconnect behavior
+intact: default empty drops remain no-op, opt-in empty drops emit the insert-node-picker outcome,
+preview cleanup still runs, valid target drops still commit, endpoint-gated drops still reject, and
+cancel paths still end as canceled/no-transaction gestures.
+
+Fresh evidence for FNDX-061 (2026-05-29):
+
+- `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled`: passed.
+- `cargo check -p fret-node --tests`: passed.
+- `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`: passed.
+- `cargo fmt --check`: passed.
+- `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed.
+- `git diff --check`: passed.
+- `python3 tools/check_layering.py`: passed.
 
 Fresh evidence for FNDX-060 (2026-05-29):
 

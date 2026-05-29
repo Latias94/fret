@@ -4847,8 +4847,10 @@ fn edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_withou
     assert!(!binding.internals_store().a11y_snapshot().connecting);
 }
 
-#[test]
-fn edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit() {
+fn assert_edge_update_anchor_reconnect_drop_on_empty_space(
+    editor_config: NodeGraphEditorConfig,
+    expected_outcome: ConnectEndOutcome,
+) {
     let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
     let edge_before = graph.edges.get(&edge).expect("edge present").clone();
     let geom = build_test_canvas_geometry(&graph, &draw_order);
@@ -4863,6 +4865,7 @@ fn edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit() {
     let bounds = test_node_graph_surface_bounds();
     host.bounds = bounds;
     let mut services = FakeUiServices;
+    let mode = editor_config.resolved_interaction_state().connection_mode;
     let binding = NodeGraphSurfaceBinding::new(
         &mut host.models,
         graph,
@@ -4871,7 +4874,7 @@ fn edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit() {
             selected_edges: vec![edge],
             ..Default::default()
         },
-        default_editor_config(),
+        editor_config,
     );
     let trace = install_declarative_callback_trace(&mut host, &binding.store_model());
 
@@ -4946,9 +4949,6 @@ fn edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit() {
     assert!(got.commit_labels.is_empty());
     assert!(got.reconnects.is_empty());
     assert!(got.edge_updates.is_empty());
-    let mode = default_editor_config()
-        .resolved_interaction_state()
-        .connection_mode;
     let reconnect_kind = ConnectDragKind::Reconnect {
         edge,
         endpoint: EdgeEndpoint::From,
@@ -4962,7 +4962,7 @@ fn edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit() {
         kind: reconnect_kind,
         mode,
         target: None,
-        outcome: ConnectEndOutcome::NoOp,
+        outcome: expected_outcome,
     };
     assert_eq!(got.connect_starts, vec![expected_start.clone()]);
     assert_eq!(got.reconnect_starts, vec![expected_start.clone()]);
@@ -4986,6 +4986,24 @@ fn edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit() {
     assert!(value.contains("reconnect_dragging:false;"));
     assert!(value.contains("reconnect_preview_wire:false;"));
     assert!(!binding.internals_store().a11y_snapshot().connecting);
+}
+
+#[test]
+fn edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit() {
+    assert_edge_update_anchor_reconnect_drop_on_empty_space(
+        default_editor_config(),
+        ConnectEndOutcome::NoOp,
+    );
+}
+
+#[test]
+fn edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled() {
+    assert_edge_update_anchor_reconnect_drop_on_empty_space(
+        test_editor_config(|editor_config| {
+            editor_config.interaction.reconnect_on_drop_empty = true;
+        }),
+        ConnectEndOutcome::OpenInsertNodePicker,
+    );
 }
 
 #[test]

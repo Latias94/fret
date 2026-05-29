@@ -191,11 +191,14 @@ update rather than an incidental refactor.
     rejected, empty/no-op, Escape, PointerCancel, and missed-left-button cleanup end paths.
   - FNDX-060 paints an active reconnect preview wire from the fixed port to the current pointer and
     removes it on pointer-up/cancel cleanup.
+  - FNDX-061 adds the minimal `reconnect_on_drop_empty` event outcome: opt-in empty reconnect drops
+    emit `OpenInsertNodePicker` without graph commits or concrete picker UI, while the default
+    remains no-op.
   - Custom `NodeGraphPresenter` remains advanced/internal on the default path because it still mixes
     geometry, labels, context menus, and insertion/search policy.
   - Broader XyFlow edge-wrapper lifecycle parity remains follow-up work beyond click selection,
     the first child-bounds control contract, rendered update-anchor controls, reconnect drag
-    start/cancel lifecycle, and accepted reconnect commits.
+    start/cancel lifecycle, accepted reconnect commits, and opt-in empty-drop outcome semantics.
 
 - **Ergonomic API fragmentation**
   - The surface naming is now closed around `NodeGraphSurfaceBinding` (instance-style app-facing
