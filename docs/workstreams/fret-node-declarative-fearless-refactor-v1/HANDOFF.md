@@ -20,15 +20,18 @@ store's contracts or imply unimplemented view-policy parity.
 
 ## Active Task
 
-- Task ID: FNDX-061.
+- Task ID: none active after closeout.
 - Owner: current Codex session.
-- Status: DONE.
-- Claim: default declarative EdgeWrapper update-anchor reconnect drops now honor the minimal
-  `reconnect_on_drop_empty` mechanism/event contract. Active empty-canvas drops still default to
-  `ConnectEndOutcome::NoOp`; when the config is enabled, the same drop emits
-  `ConnectEndOutcome::OpenInsertNodePicker` with `target: None`, clears transient reconnect state,
-  and does not commit a graph transaction. Concrete picker UI remains a policy follow-up.
-- Review: use `review-workstream` before accepting broader lane closure.
+- Status: reconnect/update-anchor sub-lane CLOSED; parent workstream remains active.
+- Claim: FNDX-055 through FNDX-061 close the default declarative EdgeWrapper update-anchor
+  mechanism path. Selected/focused edge anchors are planned and rendered, reconnect drags own
+  threshold/cancel/pointer-up lifecycle, valid target drops commit through store transactions,
+  endpoint-gated and no-op drops avoid graph commits, reconnect callback aliases fire, active
+  preview wires paint and clear, and opt-in empty-canvas drops emit
+  `ConnectEndOutcome::OpenInsertNodePicker` without graph commits. Concrete picker UI/policy is
+  split as FNDX-062.
+- Review: `review-workstream` and `verify-rust-workstream` found no blocking closeout issues for
+  FNDX-055 through FNDX-061.
 - Evidence:
   - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs` owns deterministic
     selected/focused edge update-anchor planning, hit-test rects, rendered controls, reconnect
@@ -155,13 +158,17 @@ store's contracts or imply unimplemented view-policy parity.
   removes it on current cleanup paths.
 - FNDX-061 maps opt-in empty-canvas reconnect drops to the insert-node-picker end outcome while
   keeping default empty drops no-op and leaving concrete picker UI as policy follow-up.
+- Closeout review accepts FNDX-055 through FNDX-061 as a closed default declarative
+  reconnect/update-anchor mechanism sub-lane.
+- FNDX-062 is split as the concrete insert-node picker UI/policy follow-up and must not reopen the
+  closed mechanism-layer reconnect contract unless a regression is found.
 
 ## Blockers
 
-- None for FNDX-061.
+- None for the closed reconnect/update-anchor sub-lane.
 
 ## Next Recommended Action
 
-- This reconnect/update-anchor slice is ready for `close-workstream` consideration. If continuing
-  feature work instead, the next strongest candidate is concrete insert-node picker UI/policy for
-  the opt-in empty-drop outcome, kept separate from the mechanism-layer reconnect event contract.
+- Pick the next active slice. The most direct split follow-up is FNDX-062: concrete insert-node
+  picker UI/policy for the opt-in empty-drop outcome, kept separate from the closed
+  mechanism-layer reconnect event contract.

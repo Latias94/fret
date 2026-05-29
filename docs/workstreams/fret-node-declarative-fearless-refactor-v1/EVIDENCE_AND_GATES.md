@@ -5,12 +5,12 @@ Last updated: 2026-05-29
 
 ## Current Focus
 
-FNDX-061 closes the minimal default declarative `reconnect_on_drop_empty` mechanism semantics for
-EdgeWrapper update-anchor reconnect drags. Empty-canvas active drops still default to
-`ConnectEndOutcome::NoOp`; when `NodeGraphInteractionState.reconnect_on_drop_empty` is enabled, the
-same drop emits `ConnectEndOutcome::OpenInsertNodePicker` with no target and no graph transaction.
-This slice deliberately stops at the event/outcome contract and does not mount a concrete
-insert-node picker UI.
+The FNDX-055 through FNDX-061 reconnect/update-anchor sub-lane is closed for the default
+declarative path. The closed mechanism contract covers selected/focused edge update-anchor
+planning, rendered controls, reconnect drag lifecycle, valid target commit/reject/no-op outcomes,
+reconnect gesture callback aliases, active preview wire paint, and the opt-in
+`reconnect_on_drop_empty` picker outcome without graph commits. Concrete insert-node picker
+UI/policy is split as FNDX-062 follow-up work.
 
 ## Targeted Iteration Gates
 
@@ -45,6 +45,14 @@ Review and verification evidence for the reconnect/update-anchor closeout (2026-
 - `cargo check -p fret-node --all-features --tests`: passed.
 - `cargo nextest run -p fret-node --no-default-features runtime`: passed with 48 tests.
 - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+
+Closeout decision (2026-05-29):
+
+- FNDX-055 through FNDX-061 are accepted as a closed sub-lane. The parent workstream remains
+  active because broader `fret-node` declarative-first parity and public-surface cleanup work still
+  exist outside reconnect/update-anchor mechanics.
+- Remaining picker work is split as FNDX-062 and must prove concrete UI/policy behavior separately
+  from the closed mechanism-layer outcome contract.
 
 Fresh evidence for FNDX-060 (2026-05-29):
 

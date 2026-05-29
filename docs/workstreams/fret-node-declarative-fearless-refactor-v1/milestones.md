@@ -229,6 +229,16 @@ Status target: architectural + API landing milestone
 Make the declarative path editor-grade by routing committed edits through store/controller entry
 points rather than direct graph mutation.
 
+### Closeout note (2026-05-29)
+
+- The FNDX-055 through FNDX-061 reconnect/update-anchor sub-lane is closeout-verified for the
+  default declarative path. It now covers selected/focused update-anchor planning, rendered
+  controls, reconnect drag lifecycle, valid target transaction commits, rejected/no-op empty-drop
+  outcomes, reconnect gesture callback aliases, preview wire paint, and opt-in empty-drop picker
+  outcomes without graph commits.
+- Concrete insert-node picker UI/policy is split as FNDX-062 and is not required to accept the
+  closed mechanism contract above.
+
 ### Progress note (2026-03-07)
 
 - First landing slices are complete:

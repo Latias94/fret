@@ -3,9 +3,9 @@
 Status: execution-oriented companion (last updated 2026-05-29)
 Scope: `ecosystem/fret-node` only
 
-Current note: the surface map and FNDX-061 follow-up guidance below are the active execution
-authority. Deep retained-widget notes in older slice history are preserved only as historical
-context and must not be used to revive deleted retained compatibility files or features.
+Current note: the surface map and reconnect/update-anchor closeout guidance below are the active
+execution authority. Deep retained-widget notes in older slice history are preserved only as
+historical context and must not be used to revive deleted retained compatibility files or features.
 
 This file is the shortest possible answer to:
 
@@ -499,6 +499,16 @@ Status note (2026-05-28):
 - FNDX-061 adds the minimal `reconnect_on_drop_empty` event outcome: default empty reconnect drops
   stay no-op, while opt-in empty drops emit `OpenInsertNodePicker` without committing graph
   changes or mounting picker UI.
+
+Closeout note (2026-05-29):
+
+- FNDX-055 through FNDX-061 are accepted as a closed reconnect/update-anchor sub-lane for the
+  default declarative path. The closed claim is mechanism-level EdgeWrapper parity: selected/focused
+  edge update anchors render, own reconnect drag lifecycle, commit valid target drops through the
+  store transaction path, emit reconnect callback aliases, paint active preview wires, and surface
+  opt-in empty-drop picker outcomes without graph commits.
+- Concrete insert-node picker UI/policy is split as a follow-on. Do not reopen the mechanism
+  sub-lane unless a regression is found in the shipped contracts above.
 
 Why this still matters:
 

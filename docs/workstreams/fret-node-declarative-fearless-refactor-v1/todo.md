@@ -872,6 +872,21 @@ Execution companion: `design.md` (surface map + next worktree order).
     - `git diff --check`: passed.
     - `python3 tools/check_layering.py`: passed.
 
+- [ ] FNDX-062 Split follow-on: decide and wire concrete insert-node picker UI/policy for opt-in
+      empty reconnect drops.
+  - Status: follow-up split from the closed FNDX-055 through FNDX-061 reconnect/update-anchor
+    mechanism sub-lane.
+  - Scope:
+    - the policy layer that should react to `ConnectEndOutcome::OpenInsertNodePicker`
+    - insert-node/searcher UI entrypoints
+    - focused declarative behavior tests
+  - Non-goal: do not reopen update-anchor planning, reconnect transaction commit, gesture callback
+    aliasing, or preview wire mechanics unless a regression proves the closed mechanism contract is
+    wrong.
+  - Validation:
+    - add a focused behavior gate proving the picker opens from the opt-in empty-drop outcome and
+      still does not commit graph changes until the user chooses an insertion action.
+
 ## M0 - Decision gates and internal seam map
 
 - [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.
