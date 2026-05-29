@@ -118,6 +118,14 @@ Last updated: 2026-05-29
       slider/combo model, input text model, input text picker/history model, and textarea model
       trait default declarations/forwarding. Existing `boolean_wrappers.rs`, `value_models.rs`,
       and `text_models.rs` inherent wrappers still own focusable recording.
+- [x] Split IMUI facade model surface macro owner into boolean, value/combo, and text child owners
+      without changing the public `UiWriterImUiFacadeExt` trait, caller import behavior,
+      checkbox/radio/switch, slider/combo model, input text, picker/history text, textarea method
+      names, focusable recording wrappers, or model-control behavior.
+      Result: `facade_writer/model_surface.rs` is now a module/re-export hub.
+      `model_surface/boolean.rs` owns checkbox/radio/switch model forwarding,
+      `model_surface/value_combo.rs` owns slider and combo-model forwarding, and
+      `model_surface/text.rs` owns input text, input text picker/history, and textarea forwarding.
 - [x] Split IMUI facade button/image/action trait default method declarations out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, button/image/action method names,
