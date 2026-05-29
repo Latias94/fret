@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-29 table response owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/widgets/table.rs` now keeps the `TableResponse`
+aggregation and header lookup methods. `response/widgets/table/header.rs` owns
+`TableHeaderResponse` accessors, and `response/widgets/table/resize.rs` owns
+`TableColumnResizeResponse` drag/width projection accessors.
+
 2026-05-29 debug-draw root owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs` now stays a thin module/re-export hub.
 `debug_draw_controls/draw_list.rs` owns `ImUiDebugDrawList` and channel-split state, while

@@ -44,6 +44,13 @@ Last updated: 2026-05-29
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI table response header/resize accessors out of
+      `ecosystem/fret-ui-kit/src/imui/response/widgets/table.rs` without changing public response
+      names, field privacy, header lookup behavior, resize drag accessors, width clamping, table
+      smoke behavior, or table-column visibility behavior.
+      Result: `response/widgets/table.rs` owns `TableResponse` aggregation and header lookup,
+      `response/widgets/table/header.rs` owns `TableHeaderResponse`, and
+      `response/widgets/table/resize.rs` owns `TableColumnResizeResponse`.
 - [x] Split IMUI debug-draw root draw-list state and facade entry glue out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs` without changing public debug-draw
       list/options/response names, command recording, channel merging, summary projection,
@@ -1149,7 +1156,9 @@ Last updated: 2026-05-29
       Result: `response/widgets/open.rs` owns disclosure/combo responses,
       `response/widgets/text_picker.rs` owns input text picker responses,
       `response/widgets/tabs.rs` owns tab responses, `response/widgets/table.rs` owns table
-      responses, and `response/widgets/virtual_list.rs` owns virtual-list responses. The root
+      response aggregation, `response/widgets/table/header.rs` owns table header responses,
+      `response/widgets/table/resize.rs` owns table resize responses, and
+      `response/widgets/virtual_list.rs` owns virtual-list responses. The root
       `widgets.rs` file is now a thin module/re-export index beside the existing child-region owner.
 - [x] Split IMUI text-control option types out of
       `ecosystem/fret-ui-kit/src/imui/options/controls/text.rs` into private owner modules without

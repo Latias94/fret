@@ -725,6 +725,8 @@
     "ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize/y.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets/open.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets/table.rs",
+    "ecosystem/fret-ui-kit/src/imui/response/widgets/table/header.rs",
+    "ecosystem/fret-ui-kit/src/imui/response/widgets/table/resize.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets/tabs.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets/text_picker.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets/virtual_list.rs",

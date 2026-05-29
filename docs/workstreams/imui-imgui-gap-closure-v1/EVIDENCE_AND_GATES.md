@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-29
 
+## Table Response Owner-Split Evidence - 2026-05-29
+
+Claim verified: IMUI table response header/resize accessors split into dedicated owners without
+changing public response names, field privacy, header lookup behavior, resize drag accessors, width
+clamping, table smoke behavior, or table-column visibility behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/table.rs` now stays the `TableResponse`
+  aggregation and header lookup owner.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/table/header.rs` owns `TableHeaderResponse`
+  storage and accessors.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/table/resize.rs` owns
+  `TableColumnResizeResponse` storage, drag accessors, and width clamping.
+- `tools/gate_imui_workstream_source.py` now follows the opaque-struct checks to the split owners
+  and rejects header/resize response bodies from drifting back into `table.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke
+  --no-fail-fast`: pass (9 passed).
+- `cargo nextest run -p fret-ui-kit --features imui table_column_visibility
+  --no-fail-fast`: pass (11 passed, 739 skipped).
+
 ## Debug-Draw Root Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI debug-draw root draw-list state and facade entry glue split into dedicated
