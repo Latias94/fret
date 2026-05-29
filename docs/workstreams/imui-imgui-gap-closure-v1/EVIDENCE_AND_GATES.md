@@ -3716,6 +3716,38 @@ Focused gates:
 - `python tools\gate_imui_workstream_source.py`: pass.
 - `git diff --check`: pass.
 
+## Combo Trigger Visual Sub-Owner Evidence - 2026-05-30
+
+Claim verified: IMUI combo trigger visual ownership split into props/a11y and children/badge child
+owners without changing ComboBox semantics, trigger activation behavior, open/close toggling,
+shortcut handling, preview/label rendering, a11y label formatting, state badge text, or public combo
+facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/visual.rs` is now the chrome/re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/visual/props.rs` owns trigger
+  `PressableProps`, `ComboBox` a11y semantics, expanded state, min-height/fill sizing, and a11y
+  label derivation.
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/visual/children.rs` owns the label/preview
+  row and Open/Menu state badge assembly.
+- `tools/gate_imui_workstream_source.py` now rejects props/a11y and child-row/badge assembly from
+  drifting back into `combo_controls/trigger/visual.rs` while checking both child owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib combo_trigger_a11y_label --no-fail-fast`:
+  pass; 2 combo trigger a11y tests passed.
+- `cargo nextest run -p fret-imui models_combo --no-fail-fast`: pass; 11 combo facade behavior tests
+  passed on immediate retry after target cleanup.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Popup Menu Overlay Request Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI popup-menu overlay request assembly split into a private request owner without

@@ -828,6 +828,14 @@ Last updated: 2026-05-30
       Result: `combo_controls/trigger/visual.rs` owns the trigger props, chrome, children, and
       a11y label helper. `combo_controls/trigger.rs` keeps the behavior installation and visual
       owner dispatch.
+- [x] Split IMUI combo trigger visual owner into props/a11y and children/badge child owners without
+      changing ComboBox semantics, trigger activation behavior, open/close toggling, shortcut
+      handling, preview/label rendering, a11y label formatting, state badge text, or public combo
+      facade behavior.
+      Result: `combo_controls/trigger/visual.rs` is now the chrome/re-export hub.
+      `combo_controls/trigger/visual/props.rs` owns trigger `PressableProps` and a11y label
+      derivation, while `combo_controls/trigger/visual/children.rs` owns the label/preview row and
+      Open/Menu state badge assembly.
 - [x] Split IMUI popup-menu overlay request assembly into a private request owner without changing
       overlay id/root naming, popup open model forwarding, trigger fallback, auto-focus targets,
       focus-outside submenu preservation, menubar close-auto-focus suppression, submenu pointer

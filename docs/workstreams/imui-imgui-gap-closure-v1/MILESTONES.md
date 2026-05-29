@@ -722,6 +722,12 @@ deactivation, and transient change emission.
 field chrome lookup, visual children assembly, and the a11y label helper. `trigger.rs` keeps
 behavior installation and visual-owner dispatch, while public combo behavior remains unchanged.
 
+2026-05-30 combo trigger visual sub-owner split result:
+`ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/visual.rs` is now the chrome/re-export hub
+for ComboBox trigger visuals. `trigger/visual/props.rs` owns `PressableProps` construction and
+a11y label derivation, while `trigger/visual/children.rs` owns the label/preview row and Open/Menu
+state badge assembly. Public combo behavior remains unchanged.
+
 2026-05-28 popup-menu overlay request owner-split result:
 `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/request.rs` now owns popup-menu open model
 lookup, trigger fallback, auto-focus target construction, focus-outside submenu preservation,
