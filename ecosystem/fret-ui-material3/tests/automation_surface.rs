@@ -901,6 +901,8 @@ fn material3_surface_data_display_expose_stable_part_test_ids() {
 
     for id in [
         "m3-badge",
+        "m3-badge.anchor",
+        "m3-badge.badge",
         "m3-button",
         "m3-button.chrome",
         "m3-card",
@@ -930,6 +932,16 @@ fn material3_surface_data_display_expose_stable_part_test_ids() {
             "expected live surface/data-display part test_id {id}"
         );
     }
+
+    assert_eq!(semantics_node_role(&ui, "m3-badge"), SemanticsRole::Group);
+    assert_eq!(
+        semantics_node_label(&ui, "m3-badge.badge"),
+        "Material badge"
+    );
+    assert_eq!(
+        semantics_node_value(&ui, "m3-badge.badge").as_deref(),
+        Some("7")
+    );
 }
 
 #[test]

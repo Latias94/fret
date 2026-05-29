@@ -509,6 +509,22 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     elevation, keeps pressed shape morphing on `DefaultEffects`, and proves role/label/disabled
     semantics. Existing controls goldens stayed green without refresh.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_button_elevation_state_motion_packet_v2.md`
+- 2026-05-29: M3PV2-048 closed standalone Badge root/anchor/badge semantics and text layout.
+  - Sources: Compose Material3 `Badge.kt` models `BadgedBox` as explicit `anchor` and `badge`
+    layout slots and gives content badges `defaultMinSize` plus horizontal padding; MUI Material UI
+    `Badge.js` separates `BadgeRoot` and `BadgeBadge` slots.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --test badge_semantics` failed
+    because `m3-badge` still resolved to a `Generic` badge wrapper and no `.anchor` / `.badge`
+    part contract existed.
+  - `cargo nextest run -p fret-ui-material3 --test badge_semantics`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`
+  - `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_badge_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_badge_suite_goldens_v1`
+  - Result: Badge now exposes a BadgedBox group at `base`, an anchor part at `base.anchor`, and a
+    badge part at `base.badge`; author labels and visible values live on the badge part. Moving
+    semantics decoration onto the visual badge also unmasked the old text-badge width clamp, so the
+    refreshed badge goldens record Material-aligned text badge expansion.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_badge_anchor_semantics_layout_packet_v2.md`
 
 ## Proof Note Template
 

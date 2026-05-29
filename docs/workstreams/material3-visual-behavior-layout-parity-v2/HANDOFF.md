@@ -101,6 +101,12 @@ surface/elevation foundation. Button now paints default Elevated shadows, animat
 hover elevation, snaps disabled elevation, exposes role/label/disabled semantics in a focused gate,
 and uses Compose-aligned `DefaultEffects` for pressed-shape motion.
 
+M3PV2-048 is complete: standalone Badge style/layout/accessibility axes are now v2-covered. The
+packet found a Material recipe gap, not a core or kit mechanism gap: Badge collapsed BadgedBox root,
+anchor, and visual badge identity into one semantics wrapper, and that wrapper masked text-badge
+intrinsic width. Badge now exposes `base`, `base.anchor`, and `base.badge`, puts author label/value
+semantics on the badge part, and refreshed Badge goldens for Material-aligned text badge expansion.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -111,7 +117,9 @@ and uses Compose-aligned `DefaultEffects` for pressed-shape motion.
 
 ## Next Recommended Action
 
-Continue with the next uncovered Material3 packet from the matrix.
+Continue with the next uncovered Material3 packet from the matrix. Good M5 candidates are Card,
+CarouselItem, FAB, List, and ProgressIndicator; higher-priority choice-control candidates remain
+Checkbox and Radio.
 
 ## Useful Gates
 

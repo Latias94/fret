@@ -558,6 +558,24 @@ Task IDs use `M3PV2-*`.
   Handoff: Continue M3PV2-060 with Badge or Card, or use matrix priority to continue with
   high-priority choice controls such as Checkbox.
 
+- [x] M3PV2-048 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/badge.rs,ecosystem/fret-ui-material3/tests/{badge_semantics.rs,automation_surface.rs},goldens/material3-headless/v1/material3-badge.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close standalone Badge root/anchor/badge part semantics and text-badge intrinsic layout
+  drift against Compose BadgedBox and MUI Badge slot references.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --test badge_semantics`
+  failed because the root test id still identified a `Generic` badge wrapper instead of a
+  BadgedBox group and no `.anchor` / `.badge` part contract existed; green gates:
+  `cargo nextest run -p fret-ui-material3 --test badge_semantics`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`;
+  `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_badge_suite_goldens_v1`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_badge_suite_goldens_v1`.
+  Review: DONE. This found a Material recipe gap, not a core or kit mechanism gap. Badge now
+  exposes `base`, `base.anchor`, and `base.badge` surfaces, places author labels/value on the badge
+  part, and lets text badges expand beyond the large-badge minimum width.
+  Evidence: `artifacts/material3_badge_anchor_semantics_layout_packet_v2.md`.
+  Handoff: Badge style/layout/accessibility are v2-covered. Continue M3PV2-060 with Card,
+  CarouselItem, FAB, List, or ProgressIndicator, or use matrix priority to pick Checkbox/Radio.
+
 - [ ] M3PV2-060 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{badge.rs,button.rs,card.rs,carousel_item.rs,divider.rs,fab.rs,list.rs,progress_indicator.rs},ecosystem/fret-ui-material3/tests,goldens/material3-headless/v1]
   Goal: Add style/layout proof for low-interaction components without overfitting gallery layout.
   Validation: targeted golden or scene assertions for chrome, shape, elevation, spacing, and canvas
