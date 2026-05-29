@@ -714,6 +714,30 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     handle movement. The gap was kit primitive semantics plus Material recipe wiring/proof density,
     not a core mechanism issue.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_switch_semantics_layout_motion_packet_v2.md`
+- 2026-05-29: M3PV2-068 closed Slider continuous numeric semantics, RangeSlider peer-constrained
+  thumb semantics, active draw-region proof, and pressed state-layer motion proof.
+  - Sources: Compose Material3 `Slider.kt` publishes progress/set-progress semantics, uses a 1%
+    range delta for continuous keyboard sliders, derives page movement from `actualSteps / 10`,
+    and constrains RangeSlider start/end thumb semantics to the peer thumb; Compose
+    `SliderTokens.kt` defines 44dp handles, 16dp tracks, stop indicators, and value-indicator
+    spacing.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test slider_state`
+    failed because continuous Slider did not publish numeric step metadata and RangeSlider thumbs
+    exposed the full component min/max instead of peer-constrained ranges. Draw-region and
+    state-layer probes already passed, so the implementation gap was semantics wiring plus proof
+    density.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test slider_state`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_choice_controls_expose_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_slider_suite_goldens_v1`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: Slider now publishes keyboard-aligned continuous step/jump metadata, RangeSlider thumbs
+    publish peer-constrained min/max ranges, active-track diagnostics prove the draw region follows
+    pointer updates, and a fixed-frame scene test proves pressed state-layer animation. The gap was
+    Material recipe accessibility/proof density, not core or kit mechanism.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_slider_semantics_draw_region_motion_packet_v2.md`
 
 ## Proof Note Template
 

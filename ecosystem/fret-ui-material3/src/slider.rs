@@ -533,6 +533,8 @@ pub fn slider<H: UiHost>(
         .clamp(min, max);
     let value_now = quantize_value(value_now, min, max, step);
     let t_value = value_to_t(value_now, min, max);
+    let semantic_step = keyboard_step_delta(min, max, step);
+    let semantic_jump = keyboard_page_delta(min, max, step);
 
     let mut semantics = SemanticsProps::default();
     semantics.layout.size.width = Length::Fill;
@@ -552,9 +554,11 @@ pub fn slider<H: UiHost>(
     if max.is_finite() {
         semantics.max_numeric_value = Some(max as f64);
     }
-    if step.is_finite() && step > 0.0 {
-        semantics.numeric_value_step = Some(step as f64);
-        semantics.numeric_value_jump = Some((step * 10.0) as f64);
+    if semantic_step.is_finite() && semantic_step > 0.0 {
+        semantics.numeric_value_step = Some(semantic_step as f64);
+    }
+    if semantic_jump.is_finite() && semantic_jump > 0.0 {
+        semantics.numeric_value_jump = Some(semantic_jump as f64);
     }
     semantics.value_editable = Some(!disabled);
 
@@ -1345,6 +1349,8 @@ pub fn range_slider<H: UiHost>(
     semantics.value = Some(range_value_text);
 
     let track_h = Px(active_track_h.0.max(inactive_track_h.0));
+    let semantic_step = keyboard_step_delta(min, max, step);
+    let semantic_jump = keyboard_page_delta(min, max, step);
 
     cx.semantics_with_id(semantics, move |cx, group_semantics_id| {
         let track_test_id = optional_part_test_id(test_id.as_ref(), "track");
@@ -1458,12 +1464,14 @@ pub fn range_slider<H: UiHost>(
         if min.is_finite() {
             start_thumb_semantics.min_numeric_value = Some(min as f64);
         }
-        if max.is_finite() {
-            start_thumb_semantics.max_numeric_value = Some(max as f64);
+        if values_now[1].is_finite() {
+            start_thumb_semantics.max_numeric_value = Some(values_now[1] as f64);
         }
-        if step.is_finite() && step > 0.0 {
-            start_thumb_semantics.numeric_value_step = Some(step as f64);
-            start_thumb_semantics.numeric_value_jump = Some((step * 10.0) as f64);
+        if semantic_step.is_finite() && semantic_step > 0.0 {
+            start_thumb_semantics.numeric_value_step = Some(semantic_step as f64);
+        }
+        if semantic_jump.is_finite() && semantic_jump > 0.0 {
+            start_thumb_semantics.numeric_value_jump = Some(semantic_jump as f64);
         }
         start_thumb_semantics.value_editable = Some(enabled);
 
@@ -1535,15 +1543,17 @@ pub fn range_slider<H: UiHost>(
         if values_now[1].is_finite() {
             end_thumb_semantics.numeric_value = Some(values_now[1] as f64);
         }
-        if min.is_finite() {
-            end_thumb_semantics.min_numeric_value = Some(min as f64);
+        if values_now[0].is_finite() {
+            end_thumb_semantics.min_numeric_value = Some(values_now[0] as f64);
         }
         if max.is_finite() {
             end_thumb_semantics.max_numeric_value = Some(max as f64);
         }
-        if step.is_finite() && step > 0.0 {
-            end_thumb_semantics.numeric_value_step = Some(step as f64);
-            end_thumb_semantics.numeric_value_jump = Some((step * 10.0) as f64);
+        if semantic_step.is_finite() && semantic_step > 0.0 {
+            end_thumb_semantics.numeric_value_step = Some(semantic_step as f64);
+        }
+        if semantic_jump.is_finite() && semantic_jump > 0.0 {
+            end_thumb_semantics.numeric_value_jump = Some(semantic_jump as f64);
         }
         end_thumb_semantics.value_editable = Some(enabled);
 

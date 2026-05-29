@@ -181,6 +181,16 @@ fixed-frame handle movement. Existing pointer/keyboard/icon ripple and headless 
 stayed green. Drag/swipe gestures and exact Compose `FastSpatial` replacement for the current
 Material Web-aligned motion remain residual.
 
+M3PV2-068 is complete: Slider layout, accessibility, and current state-layer/draw-region motion
+are now v2-covered. The packet found a Material recipe accessibility/proof-density gap, not a core
+or kit mechanism gap: core already exposes numeric metadata and derives set-value support when
+the numeric contract is complete, while Material Slider already had pointer/keyboard/RTL/range
+behavior and state-layer animation. Slider now publishes keyboard-aligned continuous step/jump
+metadata, RangeSlider thumbs publish peer-constrained min/max semantics, focused tests prove
+active-track draw-region updates, and fixed-frame scene evidence proves pressed state-layer
+animation. Vertical slider, dedicated value-indicator choreography, and advanced track
+gap/corner-shrinking parity remain residual.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -192,7 +202,7 @@ Material Web-aligned motion remain residual.
 ## Next Recommended Action
 
 Continue with the next uncovered Material3 packet from the matrix. Higher-priority choice-control
-candidates now start with Slider, SegmentedButton, IconButton/IconToggleButton, and chips;
+candidates now start with SegmentedButton, IconButton/IconToggleButton, and chips;
 NavigationRail / NavigationBar layout packets are also open.
 
 ## Useful Gates

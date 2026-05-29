@@ -82,6 +82,7 @@
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_checkbox_semantics_layout_motion_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_radio_semantics_layout_motion_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_switch_semantics_layout_motion_packet_v2.md",
+    "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_slider_semantics_draw_region_motion_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_dotted_listbox_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_autocomplete_exposed_dropdown_listbox_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_semantics_chrome_packet_v2.md",

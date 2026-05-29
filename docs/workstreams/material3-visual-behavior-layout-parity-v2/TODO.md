@@ -578,6 +578,30 @@ Task IDs use `M3PV2-*`.
   gestures and exact Compose `FastSpatial` replacement for the current Material Web-aligned switch
   motion remain residual.
 
+- [x] M3PV2-068 [owner=codex] [deps=M3PV2-010,M3PV2-040,M3PV2-067] [scope=ecosystem/fret-ui-material3/src/slider.rs,ecosystem/fret-ui-material3/tests/{slider_state.rs,automation_surface.rs,radio_alignment.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close Slider continuous numeric semantics, RangeSlider peer-constrained thumb semantics,
+  active draw-region proof, and pressed state-layer motion proof against Compose Material3 Slider.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test slider_state`
+  failed because continuous Slider did not publish numeric step metadata and RangeSlider thumbs used
+  the full component min/max instead of peer-constrained ranges; green gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test slider_state`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_choice_controls_expose_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_slider_suite_goldens_v1`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`.
+  Review: DONE. This found a Material recipe accessibility/proof-density gap, not a core or kit
+  mechanism gap. Core already exposes numeric metadata and derives set-value support when the
+  numeric contract is complete; Slider already had pointer/keyboard/RTL/range behavior and
+  state-layer animation. Slider now publishes keyboard-aligned continuous step/jump metadata, range
+  thumbs publish peer-constrained min/max semantics, and focused tests prove active draw-region and
+  state-layer motion outcomes.
+  Evidence: `artifacts/material3_slider_semantics_draw_region_motion_packet_v2.md`.
+  Handoff: Slider layout, accessibility, and current state-layer/draw-region motion are v2-covered.
+  Vertical slider, dedicated value-indicator choreography, and advanced track gap/corner-shrinking
+  parity remain residual.
+
 ## M4 - Overlay And Feedback Interaction Depth
 
 - [x] M3PV2-046 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/bottom_sheet.rs,ecosystem/fret-ui-material3/tests/bottom_sheet_motion.rs,goldens/material3-headless/v1/material3-bottom-sheet.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]
