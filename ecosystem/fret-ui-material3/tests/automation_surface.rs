@@ -915,8 +915,12 @@ fn material3_surface_data_display_expose_stable_part_test_ids() {
         "m3-list",
         "m3-list-alpha",
         "m3-list-alpha.chrome",
+        "m3-list-alpha.headline",
+        "m3-list-alpha.leading-icon",
         "m3-list-beta",
         "m3-list-beta.chrome",
+        "m3-list-beta.headline",
+        "m3-list-beta.trailing-icon",
         "m3-linear-progress",
         "m3-linear-progress.track",
         "m3-linear-progress.active-track",
@@ -942,6 +946,13 @@ fn material3_surface_data_display_expose_stable_part_test_ids() {
         semantics_node_value(&ui, "m3-badge.badge").as_deref(),
         Some("7")
     );
+    assert_eq!(semantics_node_role(&ui, "m3-list"), SemanticsRole::List);
+    assert_eq!(
+        semantics_node_role(&ui, "m3-list-alpha"),
+        SemanticsRole::ListItem
+    );
+    assert!(!semantics_node_selected(&ui, "m3-list-alpha"));
+    assert!(semantics_node_selected(&ui, "m3-list-beta"));
 }
 
 #[test]

@@ -65,6 +65,8 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_bottom_sheet_motion_semantics_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_carousel_item_semantics_sizing_elevation_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_fab_size_elevation_motion_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_list_density_slots_semantics_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -582,6 +584,33 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     primary lowered FABs resolve lowered elevation aliases, and FAB shares the Material
     `foundation::elevation` runtime already used by Button/Card/CarouselItem.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_fab_size_elevation_motion_packet_v2.md`
+- 2026-05-29: M3PV2-063 closed standalone List density, slots, and semantics coverage.
+  - Sources: Compose Material3 `ListItem.kt` exposes headline, overline, supporting, leading, and
+    trailing slots and maps overline/supporting presence to one-line/two-line/three-line layouts;
+    Compose `ListItemDefaults.kt` owns default content padding/alignment; Compose `ListTokens.kt`
+    and generated Material Web v30 tokens expose 56/72/88px row heights plus distinct headline,
+    overline, supporting, and trailing supporting text colors/typography.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --features diagnostics --test list_state`
+    failed because `ListItem` had no `supporting_text` or `overline_text` builder API.
+  - Red golden gate after slot wiring:
+    `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_list_suite_goldens_v1`
+    failed because the intentional multi-line List scene signature no longer matched the old
+    one-line-only baseline.
+  - `cargo fmt --package fret-ui-material3 --package fret-ui-gallery`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test list_state`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`
+  - `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_list_suite_goldens_v1; Remove-Item Env:\FRET_UPDATE_GOLDENS`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_list_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --lib list`
+  - Workstream JSON, matrix JSON, catalog, and `git diff --check` gates passed.
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - `cargo check -p fret-ui-gallery`
+  - Result: ListItem now exposes overline/supporting/trailing-supporting text slots, selects
+    Material 56/72/88px row heights, stamps stable slot part ids, refreshes List headless goldens
+    for multi-line rows, and proves List/ListItem role, selected state, disabled state, and
+    collection metadata. The gap was Material recipe/API completeness, not core or kit mechanism.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_list_density_slots_semantics_packet_v2.md`
 
 ## Proof Note Template
 

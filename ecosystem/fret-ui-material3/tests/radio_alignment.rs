@@ -7557,12 +7557,17 @@ fn material3_headless_list_suite_goldens_v1() {
                                 .items(vec![
                                     ListItem::new("alpha", "Alpha")
                                         .leading_icon(fret_icons::ids::ui::SEARCH)
+                                        .supporting_text("Supporting text")
                                         .test_id("list-alpha"),
                                     ListItem::new("beta", "Beta (selected)")
                                         .leading_icon(fret_icons::ids::ui::SETTINGS)
+                                        .supporting_text("Selected supporting text")
+                                        .trailing_supporting_text("Meta")
                                         .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
                                         .test_id("list-beta"),
                                     ListItem::new("charlie", "Charlie (disabled)")
+                                        .overline_text("Overline")
+                                        .supporting_text("Disabled supporting text")
                                         .leading_icon(fret_icons::ids::ui::SLASH)
                                         .disabled(true)
                                         .test_id("list-charlie"),

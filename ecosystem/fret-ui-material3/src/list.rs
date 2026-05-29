@@ -33,13 +33,16 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
-use crate::foundation::test_id::optional_chrome_part_test_id;
+use crate::foundation::test_id::{optional_chrome_part_test_id, optional_part_test_id};
 use crate::tokens::list as list_tokens;
 
 #[derive(Debug, Clone)]
 pub struct ListItem {
     value: Arc<str>,
     label: Arc<str>,
+    overline_text: Option<Arc<str>>,
+    supporting_text: Option<Arc<str>>,
+    trailing_supporting_text: Option<Arc<str>>,
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
     disabled: bool,
@@ -52,12 +55,30 @@ impl ListItem {
         Self {
             value: value.into(),
             label: label.into(),
+            overline_text: None,
+            supporting_text: None,
+            trailing_supporting_text: None,
             leading_icon: None,
             trailing_icon: None,
             disabled: false,
             a11y_label: None,
             test_id: None,
         }
+    }
+
+    pub fn overline_text(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.overline_text = Some(text.into());
+        self
+    }
+
+    pub fn supporting_text(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.supporting_text = Some(text.into());
+        self
+    }
+
+    pub fn trailing_supporting_text(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.trailing_supporting_text = Some(text.into());
+        self
     }
 
     pub fn leading_icon(mut self, icon: IconId) -> Self {
@@ -341,10 +362,21 @@ fn list_item<H: UiHost>(
 ) -> AnyElement {
     let value = item.value.clone();
     let label = item.label.clone();
+    let overline_text = item.overline_text.clone();
+    let supporting_text = item.supporting_text.clone();
+    let trailing_supporting_text = item.trailing_supporting_text.clone();
     let leading_icon = item.leading_icon.clone();
     let trailing_icon = item.trailing_icon.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
+    let chrome_test_id = optional_chrome_part_test_id(test_id.as_ref());
+    let leading_icon_test_id = optional_part_test_id(test_id.as_ref(), "leading-icon");
+    let trailing_icon_test_id = optional_part_test_id(test_id.as_ref(), "trailing-icon");
+    let headline_test_id = optional_part_test_id(test_id.as_ref(), "headline");
+    let overline_test_id = optional_part_test_id(test_id.as_ref(), "overline");
+    let supporting_text_test_id = optional_part_test_id(test_id.as_ref(), "supporting-text");
+    let trailing_supporting_text_test_id =
+        optional_part_test_id(test_id.as_ref(), "trailing-supporting-text");
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !disabled_group && !item.disabled;
@@ -380,9 +412,19 @@ fn list_item<H: UiHost>(
             cx.pressable_on_activate(handler);
         }
 
+        let has_overline = overline_text.is_some();
+        let has_secondary_text = supporting_text.is_some() || trailing_supporting_text.is_some();
+        let is_three_line = has_overline && supporting_text.is_some();
+
         let (height, focus_ring) = {
             let theme = Theme::global(&*cx.app);
-            let height = list_tokens::one_line_container_height(theme);
+            let height = if is_three_line {
+                list_tokens::three_line_container_height(theme)
+            } else if has_overline || has_secondary_text {
+                list_tokens::two_line_container_height(theme)
+            } else {
+                list_tokens::one_line_container_height(theme)
+            };
             let focus_ring_corner_radii = list_tokens::item_container_shape_for_interaction(
                 theme,
                 selected,
@@ -424,8 +466,6 @@ fn list_item<H: UiHost>(
             focus_ring_bounds: None,
         };
 
-        let chrome_test_id = optional_chrome_part_test_id(test_id.as_ref());
-
         let pointer_region = cx.named("pointer_region", |cx| {
             let mut props = PointerRegionProps::default();
             props.enabled = enabled;
@@ -457,6 +497,12 @@ fn list_item<H: UiHost>(
                     leading_icon_size,
                     trailing_icon_size,
                     label_style,
+                    overline_color,
+                    overline_style,
+                    supporting_color,
+                    supporting_style,
+                    trailing_supporting_color,
+                    trailing_supporting_style,
                 ) = {
                     let theme = Theme::global(&*cx.app);
                     let (label_color, icon_color, state_layer_color, state_layer_target) =
@@ -493,6 +539,22 @@ fn list_item<H: UiHost>(
                         .unwrap_or_default();
                     let label_style = typography::with_intent(label_style, TextIntent::Control);
 
+                    let overline_color = list_tokens::overline_text_color(theme, enabled, selected);
+                    let overline_style = list_tokens::overline_text_style(theme, selected)
+                        .map(|style| typography::with_intent(style, TextIntent::Control))
+                        .unwrap_or_default();
+                    let supporting_color =
+                        list_tokens::supporting_text_color(theme, enabled, selected);
+                    let supporting_style = list_tokens::supporting_text_style(theme, selected)
+                        .map(|style| typography::with_intent(style, TextIntent::Control))
+                        .unwrap_or_default();
+                    let trailing_supporting_color =
+                        list_tokens::trailing_supporting_text_color(theme, enabled, selected);
+                    let trailing_supporting_style =
+                        list_tokens::trailing_supporting_text_style(theme, selected)
+                            .map(|style| typography::with_intent(style, TextIntent::Control))
+                            .unwrap_or_default();
+
                     (
                         label_color,
                         icon_color,
@@ -507,6 +569,12 @@ fn list_item<H: UiHost>(
                         leading_icon_size,
                         trailing_icon_size,
                         label_style,
+                        overline_color,
+                        overline_style,
+                        supporting_color,
+                        supporting_style,
+                        trailing_supporting_color,
+                        trailing_supporting_style,
                     )
                 };
                 let overlay = material_ink_layer_for_pressable(
@@ -529,7 +597,11 @@ fn list_item<H: UiHost>(
                 row.layout.overflow = Overflow::Clip;
                 row.direction = Axis::Horizontal;
                 row.justify = MainAlign::Start;
-                row.align = CrossAlign::Center;
+                row.align = if is_three_line {
+                    CrossAlign::Start
+                } else {
+                    CrossAlign::Center
+                };
                 row.gap = gap.into();
                 row.padding = padding.into();
 
@@ -547,20 +619,71 @@ fn list_item<H: UiHost>(
                         ..Default::default()
                     },
                     move |cx| {
-                        let leading = leading_icon
-                            .as_ref()
-                            .map(|id| list_icon(cx, id, icon_color, leading_icon_size));
-                        let trailing = trailing_icon
-                            .as_ref()
-                            .map(|id| list_icon(cx, id, icon_color, trailing_icon_size));
-                        let label_el = list_item_label(cx, &label, label_style, label_color);
+                        let leading = leading_icon.as_ref().map(|id| {
+                            let icon = list_icon(cx, id, icon_color, leading_icon_size);
+                            if let Some(test_id) = leading_icon_test_id.clone() {
+                                icon.test_id(test_id)
+                            } else {
+                                icon
+                            }
+                        });
+                        let trailing = trailing_icon.as_ref().map(|id| {
+                            let icon = list_icon(cx, id, icon_color, trailing_icon_size);
+                            if let Some(test_id) = trailing_icon_test_id.clone() {
+                                icon.test_id(test_id)
+                            } else {
+                                icon
+                            }
+                        });
+                        let label_el = list_item_text(
+                            cx,
+                            &label,
+                            label_style,
+                            label_color,
+                            headline_test_id.clone(),
+                            true,
+                        );
 
-                        let content = cx.flex(row, move |_cx| {
+                        let content = cx.flex(row, move |body_cx| {
                             let mut out = Vec::new();
                             if let Some(leading) = leading {
                                 out.push(leading);
                             }
-                            out.push(label_el);
+                            if has_overline || has_secondary_text {
+                                let overline_slot =
+                                    overline_text.clone().map(|text| ListTextSlot {
+                                        text,
+                                        style: overline_style,
+                                        color: overline_color,
+                                        test_id: overline_test_id.clone(),
+                                        fill: true,
+                                    });
+                                let supporting_slot =
+                                    supporting_text.clone().map(|text| ListTextSlot {
+                                        text,
+                                        style: supporting_style,
+                                        color: supporting_color,
+                                        test_id: supporting_text_test_id.clone(),
+                                        fill: true,
+                                    });
+                                let trailing_supporting_slot =
+                                    trailing_supporting_text.clone().map(|text| ListTextSlot {
+                                        text,
+                                        style: trailing_supporting_style,
+                                        color: trailing_supporting_color,
+                                        test_id: trailing_supporting_text_test_id.clone(),
+                                        fill: false,
+                                    });
+                                out.push(list_item_multiline_body(
+                                    body_cx,
+                                    label_el,
+                                    overline_slot,
+                                    supporting_slot,
+                                    trailing_supporting_slot,
+                                ));
+                            } else {
+                                out.push(label_el);
+                            }
                             if let Some(trailing) = trailing {
                                 out.push(trailing);
                             }
@@ -612,22 +735,130 @@ fn list_icon<H: UiHost>(
     cx.svg_icon_props(props)
 }
 
-fn list_item_label<H: UiHost>(
+fn list_item_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: &Arc<str>,
     style: TextStyle,
     color: Color,
+    test_id: Option<Arc<str>>,
+    fill: bool,
 ) -> AnyElement {
     let mut props = TextProps::new(text.clone());
     props.style = Some(style);
     props.color = Some(color);
-    props.layout.size.width = Length::Fill;
     props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-    props.layout.flex.grow = 1.0;
-    props.layout.flex.basis = Length::Px(Px(0.0));
+    if fill {
+        props.layout.size.width = Length::Fill;
+        props.layout.flex.grow = 1.0;
+        props.layout.flex.basis = Length::Px(Px(0.0));
+    } else {
+        props.layout.flex.shrink = 1.0;
+    }
     props.wrap = TextWrap::None;
     props.overflow = TextOverflow::Clip;
-    cx.text_props(props)
+    let mut text = cx.text_props(props);
+    if let Some(test_id) = test_id {
+        text = text.test_id(test_id);
+    }
+    text
+}
+
+#[derive(Clone)]
+struct ListTextSlot {
+    text: Arc<str>,
+    style: TextStyle,
+    color: Color,
+    test_id: Option<Arc<str>>,
+    fill: bool,
+}
+
+fn list_item_multiline_body<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    headline_el: AnyElement,
+    overline: Option<ListTextSlot>,
+    supporting: Option<ListTextSlot>,
+    trailing_supporting: Option<ListTextSlot>,
+) -> AnyElement {
+    let overline_el = overline.as_ref().map(|slot| {
+        list_item_text(
+            cx,
+            &slot.text,
+            slot.style.clone(),
+            slot.color,
+            slot.test_id.clone(),
+            slot.fill,
+        )
+    });
+    let supporting_el = supporting.as_ref().map(|slot| {
+        list_item_text(
+            cx,
+            &slot.text,
+            slot.style.clone(),
+            slot.color,
+            slot.test_id.clone(),
+            slot.fill,
+        )
+    });
+    let trailing_supporting_el = trailing_supporting.as_ref().map(|slot| {
+        list_item_text(
+            cx,
+            &slot.text,
+            slot.style.clone(),
+            slot.color,
+            slot.test_id.clone(),
+            slot.fill,
+        )
+    });
+
+    let mut column = FlexProps::default();
+    column.direction = Axis::Vertical;
+    column.justify = MainAlign::Start;
+    column.align = CrossAlign::Stretch;
+    column.gap = Px(0.0).into();
+    column.layout.size.width = Length::Fill;
+    column.layout.size.min_width = Some(Length::Px(Px(0.0)));
+    column.layout.overflow = Overflow::Clip;
+    column.layout.flex.grow = 1.0;
+    column.layout.flex.basis = Length::Px(Px(0.0));
+
+    cx.flex(column, move |cx| {
+        let mut out = Vec::new();
+        if let Some(el) = overline_el {
+            out.push(el);
+        }
+        out.push(headline_el);
+
+        if supporting_el.is_some() || trailing_supporting_el.is_some() {
+            let mut second_row = FlexProps::default();
+            second_row.direction = Axis::Horizontal;
+            second_row.justify = MainAlign::Start;
+            second_row.align = CrossAlign::Center;
+            second_row.gap = Px(8.0).into();
+            second_row.layout.size.width = Length::Fill;
+            second_row.layout.size.min_width = Some(Length::Px(Px(0.0)));
+            second_row.layout.overflow = Overflow::Clip;
+
+            out.push(cx.flex(second_row, move |cx| {
+                let mut flex_spacer = fret_ui::element::SpacerProps::default();
+                flex_spacer.layout.size.width = Length::Fill;
+                flex_spacer.layout.size.height = Length::Px(Px(0.0));
+                flex_spacer.layout.flex.grow = 1.0;
+                let flex_spacer = cx.spacer(flex_spacer);
+
+                let mut children = Vec::new();
+                if let Some(el) = supporting_el {
+                    children.push(el);
+                }
+                children.push(flex_spacer);
+                if let Some(el) = trailing_supporting_el {
+                    children.push(el);
+                }
+                children
+            }));
+        }
+
+        out
+    })
 }
 
 #[cfg(test)]

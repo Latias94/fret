@@ -640,6 +640,34 @@ Task IDs use `M3PV2-*`.
   Show/hide and extended collapsed/expanded choreography remain residual because the current Fret
   FAB API has no visibility/expanded state surface.
 
+- [x] M3PV2-063 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{list.rs,tokens/list.rs},ecosystem/fret-ui-material3/tests/{list_state.rs,automation_surface.rs,radio_alignment.rs},apps/fret-ui-gallery/src/ui/snippets/material3,goldens/material3-headless/v1/material3-list.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close standalone List density, text slot, stable part-id, and semantics proof against
+  Compose Material3 ListItem and Material Web list tokens.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test list_state`
+  failed because `ListItem` had no `supporting_text` / `overline_text` API; red golden gate:
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_list_suite_goldens_v1`
+  failed after slot wiring because the intentional two-line/three-line scene signature changed.
+  Green gates:
+  `cargo fmt --package fret-ui-material3 --package fret-ui-gallery`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test list_state`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`;
+  `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_list_suite_goldens_v1; Remove-Item Env:\FRET_UPDATE_GOLDENS`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_list_suite_goldens_v1`;
+  `cargo nextest run -p fret-ui-material3 --lib list`;
+  workstream JSON, matrix JSON, catalog, and `git diff --check`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`;
+  `cargo check -p fret-ui-gallery`.
+  Review: DONE. This found a Material recipe/API completeness gap, not a core or kit mechanism
+  gap. ListItem now exposes overline/supporting/trailing-supporting text slots, selects 56/72/88px
+  Material row heights, exposes stable slot part ids, and has dedicated semantics coverage for
+  list/list-item role, selection, disabled state, and collection metadata.
+  Evidence: `artifacts/material3_list_density_slots_semantics_packet_v2.md`.
+  Handoff: List style/layout/accessibility are v2-covered for the current standalone selectable
+  list recipe. Roving keyboard behavior remains seeded rather than v2-closed, and reorder/reveal,
+  avatars/images/video, segmented list items, and multiline wrapped supporting text remain residual.
+
 - [ ] M3PV2-060 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{badge.rs,button.rs,card.rs,carousel_item.rs,divider.rs,fab.rs,list.rs,progress_indicator.rs},ecosystem/fret-ui-material3/tests,goldens/material3-headless/v1]
   Goal: Add style/layout proof for low-interaction components without overfitting gallery layout.
   Validation: targeted golden or scene assertions for chrome, shape, elevation, spacing, and canvas

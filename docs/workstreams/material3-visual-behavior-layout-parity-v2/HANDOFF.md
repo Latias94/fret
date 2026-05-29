@@ -133,6 +133,17 @@ extended FAB tokens, resolves lowered elevation aliases, and shares `foundation:
 Button/Card/CarouselItem. Show/hide and extended collapsed/expanded choreography remain residual
 because the current Fret FAB API has no visibility/expanded state surface.
 
+M3PV2-063 is complete: standalone List style/layout/accessibility axes are now v2-covered for the
+current selectable recipe surface. The packet found a Material recipe/API completeness gap, not a
+core or kit mechanism gap: ListItem exposed only a one-line headline + icon MVP while Compose
+Material3 ListItem supports headline, overline, supporting, leading, and trailing slots with
+56/72/88px density outcomes. ListItem now exposes overline/supporting/trailing-supporting text
+builders, resolves one-line/two-line/three-line heights, exposes stable slot part ids, refreshes
+List headless goldens for multi-line rows, and proves List/ListItem role, selected state, disabled
+state, and collection metadata. Roving keyboard behavior remains seeded rather than v2-closed, and
+reorder/reveal, avatars/images/video, segmented list items, and multiline wrapped supporting text
+remain residual.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -144,8 +155,7 @@ because the current Fret FAB API has no visibility/expanded state surface.
 ## Next Recommended Action
 
 Continue with the next uncovered Material3 packet from the matrix. Good M5 candidates are
-List and ProgressIndicator; higher-priority choice-control candidates remain Checkbox and
-Radio.
+ProgressIndicator; higher-priority choice-control candidates remain Checkbox and Radio.
 
 ## Useful Gates
 
