@@ -3,6 +3,14 @@
     "both_open": {
       "signature": [
         {
+          "kind": "shadow_r_rect",
+          "order": 0
+        },
+        {
+          "kind": "shadow_r_rect",
+          "order": 0
+        },
+        {
           "kind": "quad",
           "order": 0
         },
@@ -121,7 +129,7 @@
           "rect": [
             240,
             240,
-            3824,
+            640,
             400
           ],
           "background": [
@@ -148,7 +156,7 @@
           "rect": [
             240,
             240,
-            3824,
+            640,
             400
           ],
           "background": [
@@ -173,9 +181,9 @@
         {
           "order": 0,
           "rect": [
-            4544,
+            7720,
             240,
-            3816,
+            640,
             400
           ],
           "background": [
@@ -200,9 +208,9 @@
         {
           "order": 0,
           "rect": [
-            4544,
+            7720,
             680,
-            3816,
+            1280,
             1440
           ],
           "background": [
@@ -227,9 +235,9 @@
         {
           "order": 0,
           "rect": [
-            4544,
+            7720,
             680,
-            3816,
+            480,
             480
           ],
           "background": [
@@ -254,9 +262,9 @@
         {
           "order": 0,
           "rect": [
-            4544,
+            7720,
             1160,
-            3816,
+            480,
             480
           ],
           "background": [
@@ -281,9 +289,9 @@
         {
           "order": 0,
           "rect": [
-            4544,
+            7720,
             1640,
-            3816,
+            480,
             480
           ],
           "background": [
@@ -308,10 +316,10 @@
         {
           "order": 0,
           "rect": [
-            2024,
-            16,
-            256,
-            184
+            360,
+            680,
+            400,
+            320
           ],
           "background": [
             34,
@@ -337,6 +345,14 @@
     "rich_both_open": {
       "signature": [
         {
+          "kind": "shadow_r_rect",
+          "order": 0
+        },
+        {
+          "kind": "shadow_r_rect",
+          "order": 0
+        },
+        {
           "kind": "quad",
           "order": 0
         },
@@ -467,7 +483,7 @@
           "rect": [
             240,
             240,
-            3824,
+            640,
             400
           ],
           "background": [
@@ -494,7 +510,7 @@
           "rect": [
             240,
             240,
-            3824,
+            640,
             400
           ],
           "background": [
@@ -519,9 +535,9 @@
         {
           "order": 0,
           "rect": [
-            4544,
+            7720,
             240,
-            3816,
+            640,
             400
           ],
           "background": [
@@ -546,9 +562,9 @@
         {
           "order": 0,
           "rect": [
-            4544,
+            7720,
             680,
-            3816,
+            1280,
             1440
           ],
           "background": [
@@ -573,9 +589,9 @@
         {
           "order": 0,
           "rect": [
-            4544,
+            7720,
             680,
-            3816,
+            480,
             480
           ],
           "background": [
@@ -600,9 +616,9 @@
         {
           "order": 0,
           "rect": [
-            4544,
+            7720,
             1160,
-            3816,
+            480,
             480
           ],
           "background": [
@@ -627,9 +643,9 @@
         {
           "order": 0,
           "rect": [
-            4544,
+            7720,
             1640,
-            3816,
+            480,
             480
           ],
           "background": [
@@ -654,10 +670,10 @@
         {
           "order": 0,
           "rect": [
-            1944,
+            352,
             680,
             416,
-            480
+            520
           ],
           "background": [
             913,
@@ -802,7 +818,7 @@
           "kind": "push_clip_rect"
         },
         {
-          "kind": "push_clip_rect"
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "push_clip_rect"
@@ -836,7 +852,7 @@
           "order": 0
         },
         {
-          "kind": "push_clip_rect"
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "push_clip_rect"
@@ -866,7 +882,7 @@
           "kind": "pop_clip"
         },
         {
-          "kind": "push_clip_rect"
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "push_clip_rect"
@@ -1040,9 +1056,9 @@
         {
           "order": 0,
           "rect": [
-            0,
+            40,
             1160,
-            784,
+            704,
             480
           ],
           "background": [
@@ -1058,10 +1074,10 @@
             0
           ],
           "corner_radii": [
-            0,
-            0,
-            0,
-            0
+            120,
+            120,
+            120,
+            120
           ]
         }
       ]
@@ -1184,7 +1200,7 @@
           "kind": "push_clip_rect"
         },
         {
-          "kind": "push_clip_rect"
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "push_clip_rect"
@@ -1218,7 +1234,7 @@
           "order": 0
         },
         {
-          "kind": "push_clip_rect"
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "push_clip_rect"
@@ -1252,7 +1268,7 @@
           "kind": "pop_clip"
         },
         {
-          "kind": "push_clip_rect"
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "push_clip_rect"
@@ -1399,9 +1415,9 @@
         {
           "order": 0,
           "rect": [
-            0,
+            40,
             1160,
-            784,
+            704,
             480
           ],
           "background": [
@@ -1417,18 +1433,18 @@
             0
           ],
           "corner_radii": [
-            0,
-            0,
-            0,
-            0
+            120,
+            120,
+            120,
+            120
           ]
         },
         {
           "order": 0,
           "rect": [
-            0,
+            40,
             1160,
-            784,
+            704,
             480
           ],
           "background": [
@@ -1574,7 +1590,7 @@
           "kind": "push_clip_rect"
         },
         {
-          "kind": "push_clip_rect"
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "push_clip_rect"
@@ -1608,7 +1624,7 @@
           "order": 0
         },
         {
-          "kind": "push_clip_rect"
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "push_clip_rect"
@@ -1638,7 +1654,7 @@
           "kind": "pop_clip"
         },
         {
-          "kind": "push_clip_rect"
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "push_clip_rect"
@@ -1812,9 +1828,9 @@
         {
           "order": 0,
           "rect": [
-            0,
+            40,
             1160,
-            784,
+            704,
             480
           ],
           "background": [
@@ -1830,10 +1846,10 @@
             0
           ],
           "corner_radii": [
-            0,
-            0,
-            0,
-            0
+            120,
+            120,
+            120,
+            120
           ]
         }
       ]

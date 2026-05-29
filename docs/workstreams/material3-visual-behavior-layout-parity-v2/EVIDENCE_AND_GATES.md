@@ -81,6 +81,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_top_app_bar_scroll_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_dialog_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_snackbar_layout_motion_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_tooltip_layout_a11y_motion_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -990,6 +991,27 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     min-height tokens were only used for stack estimation, and the toast renderer had no optional
     scale-from motion channel for non-Sonner skins.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_snackbar_layout_motion_packet_v2.md`
+- 2026-05-29: M3PV2-079 closed Tooltip plain/rich layout, assertive live-region semantics, and
+  current open/close fade-scale motion proof.
+  - Sources: Compose Material3 `Tooltip.kt` uses 40x24dp minimum surface sizing, 200dp plain max
+    width, 320dp rich max width, 8x4dp plain padding, 16dp rich horizontal padding, title-aware
+    rich text padding, and fade+scale motion from/to 0.8; Compose internal `BasicTooltip.kt` marks
+    tooltip popups as assertive live regions. Base UI Tooltip was used as a supporting reference
+    for trigger/popup part composition.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test tooltip_state`
+    failed because plain tooltip chrome capped at the old shared 240px width and lacked the
+    40x24dp minimum surface, while rich tooltip chrome also capped at 240px instead of 320dp.
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test tooltip_state`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_tooltip_and_snackbar_expose_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment tooltip`
+  - `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_overlays_suite_goldens_v1; Remove-Item Env:\FRET_UPDATE_GOLDENS`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_overlays_suite_goldens_v1`
+  - Result: Tooltip now applies separate plain/rich max-width tokens, a shared 40x24dp surface
+    minimum, title-aware rich padding, and assertive live-region semantics while preserving kit
+    trigger `described_by` wiring and shared overlay-motion fade-scale behavior. The gap was
+    Material recipe/token proof density, not a core or kit mechanism gap.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_tooltip_layout_a11y_motion_packet_v2.md`
 
 ## Proof Note Template
 

@@ -307,6 +307,20 @@ style min-height to real layout, and Material Snackbar wires 12dp margin/mobile 
 width, `Alert`, `Dismiss`, and zero-slide fade-scale motion. Queue, action, close, timer, and
 removal behavior stayed green through existing kit and Material tests.
 
+M3PV2-079 is complete: Tooltip layout/accessibility/current overlay motion are now v2-covered for
+the current plain/rich recipe surface. Compose Material3 was the primary source: PlainTooltip uses
+40x24dp minimum sizing and a 200dp max width; RichTooltip uses 40x24dp minimum sizing, a 320dp max
+width, 16dp horizontal padding, title-aware vertical padding, and rich elevation/shape; Tooltip
+visibility fades and scales from/to 0.8; BasicTooltip marks the popup as an assertive live region.
+The packet found a Material recipe/token proof-density gap, not a core or kit mechanism gap:
+Tooltip already used the shared overlay-motion foundation, and kit already owned delay groups,
+safe hover, touch suppression, click-through overlays, and trigger `described_by` wiring. Material
+Tooltip now uses separate plain/rich max-width tokens, applies the 40x24dp surface minimum, marks
+the popup as an assertive live region, and has `tooltip_state` tests proving role, relation,
+layout, first-open fade-scale, and first-close fade-scale. Rich tooltip action rows remain
+residual because `OverlayLayerKind::Tooltip` is intentionally non-hit-testable; a portable
+pane-title semantics field remains a future core a11y decision.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -318,8 +332,8 @@ removal behavior stayed green through existing kit and Material tests.
 ## Next Recommended Action
 
 Continue with the next uncovered Material3 packet from the matrix. Higher-priority candidates now
-move through remaining overlay surfaces: Tooltip motion plus Menu/DropdownMenu item layout/focus
-packets are still open. Broader overlay-family policy comparison remains in M3PV2-050.
+move through remaining overlay surfaces: Menu/DropdownMenu item layout/focus packets are still
+open. Broader overlay-family policy comparison remains in M3PV2-050.
 
 ## Useful Gates
 

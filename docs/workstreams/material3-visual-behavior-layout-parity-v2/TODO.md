@@ -867,6 +867,29 @@ Task IDs use `M3PV2-*`.
   duration, action, close, and removal behavior remain covered by existing kit/Material tests;
   broader overlay-family policy comparison remains in M3PV2-050.
 
+- [x] M3PV2-079 [owner=codex] [deps=M3PV2-010,M3PV2-050] [scope=ecosystem/fret-ui-material3/src/{tooltip.rs,tokens/tooltip.rs},ecosystem/fret-ui-material3/tests/{tooltip_state.rs,automation_surface.rs,radio_alignment.rs},goldens/material3-headless/v1/material3-overlays.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close Tooltip plain/rich surface sizing, trigger description relation, assertive live
+  region, and open/close fade-scale motion proof against Compose Material3 Tooltip and BasicTooltip
+  sources.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test tooltip_state`
+  failed because plain tooltip chrome still used the shared 240px width cap and had no 40x24dp
+  minimum surface, while rich tooltip chrome also capped at 240px instead of 320dp; green gates:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test tooltip_state`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_tooltip_and_snackbar_expose_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment tooltip`;
+  `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_overlays_suite_goldens_v1; Remove-Item Env:\FRET_UPDATE_GOLDENS`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_overlays_suite_goldens_v1`.
+  Review: DONE. This found a Material recipe/token proof-density gap, not a core or kit mechanism
+  gap. Kit already owned delay groups, safe hover, touch suppression, click-through overlays, and
+  trigger `described_by` wiring; core already exposed tooltip roles, live-region flags, relations,
+  opacity, and render transforms.
+  Evidence: `artifacts/material3_tooltip_layout_a11y_motion_packet_v2.md`.
+  Handoff: Tooltip layout, accessibility, and current overlay motion are v2-covered for the
+  current plain/rich recipe surface. Rich tooltip action rows remain residual because tooltip
+  overlays are intentionally non-hit-testable; a dedicated pane-title semantics field remains a
+  future core a11y decision.
+
 - [ ] M3PV2-050 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{menu.rs,dropdown_menu.rs,dialog.rs,bottom_sheet.rs,tooltip.rs,snackbar.rs},ecosystem/fret-ui-kit,tools/diag-scripts/ui-gallery/material3]
   Goal: Audit dismissal, focus containment/restore, live region, action close parts, sheet motion,
   and rich tooltip interaction against Material/MUI/Compose/Base UI sources.

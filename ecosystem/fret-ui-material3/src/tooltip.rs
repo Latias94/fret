@@ -1,14 +1,15 @@
-//! Material 3 tooltip (MVP).
+//! Material 3 tooltip.
 //!
-//! This module currently targets the "plain tooltip" outcome:
+//! This module owns the Material tooltip recipe:
 //! - floating placement via `fret-ui-kit` popper helpers
 //! - Radix-aligned open delay + safe-hover corridor policies via `fret-ui-kit` tooltip primitives
-//! - token-driven container + text styling (`md.comp.plain-tooltip.*`)
+//! - token-driven plain/rich tooltip container, text, accessibility, and motion outcomes
 
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextWrap,
+    Axis, Color, Corners, Edges, KeyCode, PointerType, Px, Rect, SemanticsLive, Size, TextOverflow,
+    TextWrap,
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, Elements, FlexProps, HoverRegionProps, LayoutStyle,
@@ -52,6 +53,7 @@ fn tooltip_content_root<H: UiHost>(
     cx.semantics(
         SemanticsProps {
             role: fret_core::SemanticsRole::Tooltip,
+            live: Some(SemanticsLive::Assertive),
             test_id,
             ..Default::default()
         },
@@ -766,6 +768,8 @@ impl PlainTooltip {
             shadow,
             supporting_text_style,
             content_max_width,
+            content_min_width,
+            content_min_height,
             container_padding,
             corner_radii,
             text_fg,
@@ -793,7 +797,9 @@ impl PlainTooltip {
                 .unwrap_or_default();
             let supporting_text_style =
                 typography::with_intent(supporting_text_style, TextIntent::Content);
-            let content_max_width = tooltip_tokens::max_width(theme);
+            let content_max_width = tooltip_tokens::plain_container_max_width(theme);
+            let content_min_width = tooltip_tokens::container_min_width(theme);
+            let content_min_height = tooltip_tokens::container_min_height(theme);
             let container_padding = tooltip_tokens::plain_container_padding(theme);
 
             (
@@ -801,6 +807,8 @@ impl PlainTooltip {
                 surface.shadow,
                 supporting_text_style,
                 content_max_width,
+                content_min_width,
+                content_min_height,
                 container_padding,
                 corner_radii,
                 text_fg,
@@ -824,6 +832,8 @@ impl PlainTooltip {
 
             let mut layout = LayoutStyle::default();
             layout.size.max_width = Some(Length::Px(content_max_width));
+            layout.size.min_width = Some(Length::Px(content_min_width));
+            layout.size.min_height = Some(Length::Px(content_min_height));
 
             let chrome = cx.container(
                 ContainerProps {
@@ -1020,6 +1030,10 @@ impl RichTooltip {
         let content_spec = self.content;
         let trigger_id = base_trigger.id;
         let anchor_id = anchor_override.unwrap_or(trigger_id);
+        let has_title = matches!(
+            &content_spec,
+            RichTooltipContent::Text { title: Some(_), .. }
+        );
 
         let (
             container_bg,
@@ -1030,6 +1044,8 @@ impl RichTooltip {
             subhead_style,
             supporting_style,
             content_max_width,
+            content_min_width,
+            content_min_height,
             container_padding,
             text_gap,
         ) = {
@@ -1061,8 +1077,10 @@ impl RichTooltip {
                 .unwrap_or_default();
             let supporting_style = typography::with_intent(supporting_style, TextIntent::Content);
 
-            let content_max_width = tooltip_tokens::max_width(theme);
-            let container_padding = tooltip_tokens::rich_container_padding(theme);
+            let content_max_width = tooltip_tokens::rich_container_max_width(theme);
+            let content_min_width = tooltip_tokens::container_min_width(theme);
+            let content_min_height = tooltip_tokens::container_min_height(theme);
+            let container_padding = tooltip_tokens::rich_container_padding(theme, has_title);
             let text_gap = tooltip_tokens::rich_text_gap(theme);
 
             (
@@ -1074,6 +1092,8 @@ impl RichTooltip {
                 subhead_style,
                 supporting_style,
                 content_max_width,
+                content_min_width,
+                content_min_height,
                 container_padding,
                 text_gap,
             )
@@ -1126,6 +1146,8 @@ impl RichTooltip {
 
             let mut layout = LayoutStyle::default();
             layout.size.max_width = Some(Length::Px(content_max_width));
+            layout.size.min_width = Some(Length::Px(content_min_width));
+            layout.size.min_height = Some(Length::Px(content_min_height));
 
             let chrome = cx.container(
                 ContainerProps {
