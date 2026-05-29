@@ -117,6 +117,38 @@ Focused gates:
 - `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass (18 passed,
   168 skipped).
 
+## Facade Container Layout Method Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade container layout method behavior ownership split into linear,
+grid/scroll, and child-region child owners without changing public facade methods, build-focus
+forwarding, horizontal/vertical/grid/scroll element routing, child-region response behavior, or
+`container_methods` re-export paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/layout.rs` is now a
+  module/re-export hub for the three layout method behavior owners.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/layout/linear.rs` owns
+  horizontal and vertical forwarding to `horizontal_container_element` / `vertical_container_element`.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/layout/grid_scroll.rs` owns grid
+  and scroll forwarding to `grid_container_element` / `scroll_container_element`.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/layout/child_region.rs` owns
+  child-region forwarding and response return from `child_region::child_region_element`.
+- `tools/gate_imui_workstream_source.py` checks the new sub-owners and rejects concrete element
+  routing from drifting back into `container_methods/layout.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_child_region_smoke
+  --no-fail-fast`: pass (3 passed).
+- `cargo nextest run -p fret-imui layout_collections --no-fail-fast`: pass (28 passed,
+  158 skipped).
+
 ## Facade Floating Surface Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI facade floating/popup/tooltip/drag/window trait default method declarations
