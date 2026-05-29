@@ -52,6 +52,13 @@ Last updated: 2026-05-29
       only. `scope_surface.rs`, `basic_surface.rs`, and `disclosure_surface.rs` own the remaining
       trait default declarations/forwarding, while `scope_methods.rs`, `basic_items.rs`, and
       `disclosure_controls` remain the behavior owners.
+- [x] Split IMUI facade scope method behavior owner into push-id and disabled-scope child owners
+      without changing public facade method names, keyed identity scoping, disabled alpha/gating,
+      runtime frame preparation, or `scope_surface` forwarding.
+      Result: `facade_writer/scope_methods.rs` is now a module/re-export hub.
+      `scope_methods/push_id.rs` owns keyed child facade execution and result propagation, while
+      `scope_methods/disabled_scope.rs` owns disabled-scope wrapping, alpha, pointer blocking, and
+      focus traversal gating.
 - [x] Split IMUI facade container/layout trait default method declarations out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, item-flow, same-line,

@@ -20,6 +20,13 @@ and debug-draw, and disclosure/tree trait default method declarations now live i
 `facade_writer/disclosure_surface.rs`. Existing `scope_methods.rs`, `basic_items.rs`, and
 `disclosure_controls` remain the behavior owners.
 
+2026-05-29 facade scope method sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods.rs` is now a module/re-export hub.
+`scope_methods/push_id.rs` owns keyed child facade execution and result propagation, while
+`scope_methods/disabled_scope.rs` owns disabled-scope wrapping, disabled alpha, pointer blocking,
+and focus traversal gating. Public facade method names, `scope_surface` forwarding, runtime frame
+preparation, keyed identity semantics, and disabled-scope behavior remain unchanged.
+
 2026-05-29 facade container surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but item-flow, same-line, dummy/spacing/indent, layout groups,

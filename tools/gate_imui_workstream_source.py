@@ -463,6 +463,9 @@ def main() -> None:
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/button_command.rs",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/buttons.rs",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/commands.rs",
+                "ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods.rs",
+                "ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods/disabled_scope.rs",
+                "ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods/push_id.rs",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/basic_items.rs",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo.rs",
@@ -14142,7 +14145,26 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods.rs"),
             required=[
-                "pub(super) fn push_id<H, W, K, R>",
+                "mod disabled_scope;",
+                "mod push_id;",
+                "pub(super) use disabled_scope::disabled_scope;",
+                "pub(super) use push_id::push_id;",
+            ],
+            forbidden=[
+                "pub(in crate::imui::facade_writer) fn push_id<H, W, K, R>",
+                "pub(in crate::imui::facade_writer) fn disabled_scope<H, W>",
+                "enum Built",
+                "DisabledScopeGuard::push(depth)",
+                "PointerRegionProps::default()",
+                "focus_traversal_gate(false",
+                "pub fn ",
+                "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods/push_id.rs"),
+            required=[
+                "pub(in crate::imui::facade_writer) fn push_id<H, W, K, R>",
                 "W: UiWriter<H> + ?Sized",
                 "K: Hash",
                 "let mut result = None;",
@@ -14150,7 +14172,20 @@ def main() -> None:
                 "prepare_imui_runtime_for_frame(cx)",
                 "build_focus: None",
                 "result.expect(\"imui push_id closure should produce a result\")",
-                "pub(super) fn disabled_scope<H, W>",
+            ],
+            forbidden=[
+                "pub(in crate::imui::facade_writer) fn disabled_scope<H, W>",
+                "DisabledScopeGuard::push(depth)",
+                "PointerRegionProps::default()",
+                "focus_traversal_gate(false",
+                "pub fn ",
+                "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods/disabled_scope.rs"),
+            required=[
+                "pub(in crate::imui::facade_writer) fn disabled_scope<H, W>",
                 "W: UiWriter<H> + ?Sized",
                 "enum Built",
                 "let depth = disabled_scope_depth_for(cx);",
@@ -14160,6 +14195,8 @@ def main() -> None:
                 "focus_traversal_gate(false",
             ],
             forbidden=[
+                "pub(in crate::imui::facade_writer) fn push_id<H, W, K, R>",
+                "cx.keyed(key, |cx|",
                 "pub fn ",
                 "fret_imui",
             ],

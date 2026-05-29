@@ -41,6 +41,38 @@ Focused gates:
 - `cargo nextest run -p fret-imui interaction_shortcuts --no-fail-fast`: pass (10 passed,
   176 skipped).
 
+## Facade Scope Method Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade scope method behavior ownership split into push-id and disabled-scope
+child owners without changing public facade method names, keyed identity scoping, disabled
+alpha/gating, runtime frame preparation, or `scope_surface` forwarding.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods.rs` is now a module/re-export hub for
+  the two scope behavior owners.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods/push_id.rs` owns keyed child facade
+  execution, runtime frame preparation, output extension, and result propagation.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods/disabled_scope.rs` owns
+  disabled-scope wrapping, disabled alpha, pointer blocking, and focus traversal gating.
+- `tools/gate_imui_workstream_source.py` checks the new child owners and rejects scope behavior
+  bodies from drifting back into `scope_methods.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass; validated 473 dedicated directories and 47
+  standalone markdown files.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke
+  --no-fail-fast`: pass (3 passed).
+- `cargo nextest run -p fret-imui disabled_scope models_text_identity --no-fail-fast`: pass
+  (2 passed, 184 skipped).
+- `git diff --check`: pass.
+
 ## Facade Container Surface Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI facade container/layout trait default method declarations split out of the
