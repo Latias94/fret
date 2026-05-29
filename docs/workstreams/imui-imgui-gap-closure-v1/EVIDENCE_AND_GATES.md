@@ -3687,6 +3687,41 @@ Focused gates:
   pass.
 - `python tools\gate_imui_workstream_source.py`: pass.
 
+## Slider Pointer Hook Sub-Owner Evidence - 2026-05-30
+
+Claim verified: IMUI slider pointer down/move/up hook installation split into private child owners
+without changing pointer capture/release, focus request, active-item mutation, lifecycle
+activation/deactivation/edit marking, changed transient emission, or slider pointer behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/pointer.rs` now keeps model clone and
+  hook installation order only.
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/pointer/down.rs` owns left-button
+  activation, capture/focus, active-item writes, initial value update, edit marking, and changed
+  transient emission.
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/pointer/move_handler.rs` owns drag
+  value updates plus lost-left-button release/deactivation cleanup.
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/pointer/up.rs` owns pointer-up
+  release/deactivation cleanup.
+- `tools/gate_imui_workstream_source.py` now rejects hook callback bodies from drifting back into
+  `pointer.rs` while checking all three hook owners and preserving `value_update.rs` as the value
+  projection owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_controls::slider --no-fail-fast`: pass; 2 slider pointer
+  behavior tests passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test
+  imui_leaf_control_options_smoke --no-fail-fast`: pass; 6 kit smoke tests passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Combo Trigger Visual Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI combo trigger visual props, chrome, and children assembly split into a

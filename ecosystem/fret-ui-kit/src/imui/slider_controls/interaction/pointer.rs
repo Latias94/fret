@@ -1,18 +1,12 @@
-use std::sync::Arc;
-
-use fret_core::MouseButton;
 use fret_runtime::Model;
-use fret_ui::action::UiActionHostExt as _;
-use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use super::SliderInteractionRange;
 use crate::imui::interaction_runtime::{ImUiActiveItemState, ImUiLifecycleSessionState};
-use crate::imui::{
-    KEY_CHANGED, mark_lifecycle_activated_on_left_pointer_down,
-    mark_lifecycle_deactivated_on_left_pointer_up,
-};
 
+mod down;
+mod move_handler;
+mod up;
 mod value_update;
 
 pub(super) fn install_slider_pointer_handlers<H: UiHost>(
@@ -31,85 +25,22 @@ pub(super) fn install_slider_pointer_handlers<H: UiHost>(
     let lifecycle_model_for_up = lifecycle_model;
 
     let model_for_down = model.clone();
-    cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
-        if down.button != MouseButton::Left {
-            return PressablePointerDownResult::Continue;
-        }
-
-        mark_lifecycle_activated_on_left_pointer_down(
-            host,
-            acx,
-            down.button,
-            &lifecycle_model_for_down,
-        );
-        let _ = host.update_model(&active_item_model_for_down, |st| {
-            st.active = Some(acx.target);
-        });
-        host.capture_pointer();
-        host.request_focus(acx.target);
-
-        let changed = value_update::apply_slider_pointer_value_update(
-            host,
-            &model_for_down,
-            range,
-            down.position,
-        );
-        if changed {
-            crate::imui::mark_lifecycle_edit(host, acx, &lifecycle_model_for_down);
-            host.record_transient_event(acx, KEY_CHANGED);
-            host.notify(acx);
-        }
-
-        PressablePointerDownResult::Continue
-    }));
+    down::install_slider_pointer_down_handler(
+        cx,
+        model_for_down,
+        range,
+        active_item_model_for_down,
+        lifecycle_model_for_down,
+    );
 
     let model_for_move = model;
-    cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
-        if !mv.buttons.left {
-            mark_lifecycle_deactivated_on_left_pointer_up(
-                host,
-                acx,
-                MouseButton::Left,
-                &lifecycle_model_for_move,
-            );
-            host.release_pointer_capture();
-            let _ = host.update_model(&active_item_model_for_move, |st| {
-                if st.active == Some(acx.target) {
-                    st.active = None;
-                }
-            });
-            return false;
-        }
+    move_handler::install_slider_pointer_move_handler(
+        cx,
+        model_for_move,
+        range,
+        active_item_model_for_move,
+        lifecycle_model_for_move,
+    );
 
-        let changed = value_update::apply_slider_pointer_value_update(
-            host,
-            &model_for_move,
-            range,
-            mv.position,
-        );
-        if changed {
-            crate::imui::mark_lifecycle_edit(host, acx, &lifecycle_model_for_move);
-            host.record_transient_event(acx, KEY_CHANGED);
-            host.notify(acx);
-        }
-        changed
-    }));
-
-    cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
-        if up.button == MouseButton::Left {
-            mark_lifecycle_deactivated_on_left_pointer_up(
-                host,
-                acx,
-                up.button,
-                &lifecycle_model_for_up,
-            );
-            host.release_pointer_capture();
-            let _ = host.update_model(&active_item_model_for_up, |st| {
-                if st.active == Some(id) {
-                    st.active = None;
-                }
-            });
-        }
-        PressablePointerUpResult::Continue
-    }));
+    up::install_slider_pointer_up_handler(cx, id, active_item_model_for_up, lifecycle_model_for_up);
 }

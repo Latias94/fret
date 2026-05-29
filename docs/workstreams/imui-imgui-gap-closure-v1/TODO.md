@@ -822,6 +822,12 @@ Last updated: 2026-05-30
       Result: `slider_controls/interaction/pointer/value_update.rs` owns pointer-to-value
       projection, clamp/snap, and value write detection. `pointer.rs` keeps pointer hook
       installation, active-item updates, capture, and lifecycle edit emission.
+- [x] Split IMUI slider pointer down/move/up hook installation into private child owners without
+      changing pointer capture/release, focus request, active-item mutation, lifecycle
+      activation/deactivation/edit marking, changed transient emission, or slider pointer behavior.
+      Result: `slider_controls/interaction/pointer.rs` now keeps model clone/installation order.
+      `pointer/down.rs`, `pointer/move_handler.rs`, and `pointer/up.rs` own the corresponding
+      pointer hook callbacks, while `pointer/value_update.rs` remains the value projection owner.
 - [x] Split IMUI combo trigger visual props/a11y/chrome assembly into a private owner without
       changing ComboBox semantics, trigger activation behavior, open/close toggling, shortcut
       handling, preview/label rendering, or public combo facade behavior.

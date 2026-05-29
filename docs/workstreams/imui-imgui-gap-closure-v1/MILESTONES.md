@@ -717,6 +717,12 @@ pointer-to-value projection, clamp/snap, and changed-detection writes. `pointer.
 pointer hook installation, active-item updates, capture/release, focus, lifecycle activation/
 deactivation, and transient change emission.
 
+2026-05-30 slider pointer hook sub-owner split result:
+`ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/pointer.rs` now keeps model clone and
+hook installation order only. `pointer/down.rs` owns left-button activation, capture/focus, active
+item writes, initial value update, and changed transient emission. `pointer/move_handler.rs` owns
+drag value updates plus lost-left-button cleanup. `pointer/up.rs` owns release/deactivation cleanup.
+
 2026-05-28 combo trigger visual owner-split result:
 `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/visual.rs` now owns ComboBox trigger props,
 field chrome lookup, visual children assembly, and the a11y label helper. `trigger.rs` keeps
