@@ -3,7 +3,7 @@
 Status: Active
 Last updated: 2026-05-30
 
-Current slice: DMDA-010 completed on 2026-05-30. DMDA-020 is the next candidate slice.
+Current slice: DMDA-020 completed on 2026-05-30. DMDA-030 is the next decision point.
 
 The prior `imui-demo-metrics-debug-devtools-v1` route productization lane is closed. This follow-on
 keeps the route owner closed and adds a narrower action metadata owner for richer GUI execution
@@ -20,6 +20,5 @@ Focused verification is recorded in `EVIDENCE_AND_GATES.md`.
 
 Next expected work:
 
-1. Decide whether DMDA-020 should add a DevTools-side disabled/runnable action row using
-   `requires_bundle`, or whether broader command-palette integration needs a separate lane.
+1. Decide whether command-palette integration belongs here or should start a separate follow-on.
 2. Keep the old route owner lane closed; do not move diagnostics UI into `fret-imui`.

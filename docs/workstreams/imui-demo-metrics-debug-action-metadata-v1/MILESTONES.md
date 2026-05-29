@@ -17,7 +17,7 @@ Exit criteria:
 
 ## M2 - GUI Execution Readiness
 
-Status: Pending.
+Status: Completed on 2026-05-30 as a readiness projection.
 
 Exit criteria:
 

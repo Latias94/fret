@@ -294,6 +294,28 @@ fn demo_metrics_debug_action_metadata_lines() -> Vec<String> {
         .collect()
 }
 
+fn demo_metrics_debug_action_readiness_lines(selected_bundle_count: usize) -> Vec<String> {
+    DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS
+        .iter()
+        .map(|action| {
+            let runnable = !action.requires_bundle || selected_bundle_count > 0;
+            let reason = if action.requires_bundle {
+                if selected_bundle_count > 0 {
+                    "selected bundle evidence available"
+                } else {
+                    "select a regression bundle"
+                }
+            } else {
+                "no bundle required"
+            };
+            format!(
+                "action readiness: {} | id={} | category={} | runnable={} | reason={}",
+                action.label, action.id, action.category, runnable, reason
+            )
+        })
+        .collect()
+}
+
 #[derive(Clone)]
 struct DevtoolsConfig {
     transport: DiagTransportKind,
@@ -3359,7 +3381,15 @@ fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElem
         dogfood_workflow_rows,
     );
     let mut demo_metrics_debug_rows = Vec::new();
-    for line in devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref()) {
+    let demo_metrics_debug_selected_bundle_count = cx
+        .app
+        .models()
+        .read(&st.regression_selected_bundle_dirs, |v| v.len())
+        .unwrap_or(0);
+    for line in devtools_demo_metrics_debug_lines_with_state(
+        st.cfg.fs_out_dir.as_ref(),
+        demo_metrics_debug_selected_bundle_count,
+    ) {
         demo_metrics_debug_rows.push(cx.text(line));
     }
     demo_metrics_debug_rows.push(devtools_demo_metrics_debug_action_row(cx));
@@ -9522,6 +9552,13 @@ fn devtools_dogfood_workflow_lines(artifacts_root: &str) -> Vec<String> {
 }
 
 fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
+    devtools_demo_metrics_debug_lines_with_state(artifacts_root, 0)
+}
+
+fn devtools_demo_metrics_debug_lines_with_state(
+    artifacts_root: &str,
+    selected_bundle_count: usize,
+) -> Vec<String> {
     let artifacts_root = artifacts_root.trim();
     let artifacts_root = if artifacts_root.is_empty() {
         "<unset>"
@@ -9547,6 +9584,9 @@ fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
         format!("action: validate docking campaign -> {DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND}"),
     ];
     lines.extend(demo_metrics_debug_action_metadata_lines());
+    lines.extend(demo_metrics_debug_action_readiness_lines(
+        selected_bundle_count,
+    ));
     lines.extend([
         format!("demo editor workbench: {DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND}"),
         format!("demo editor proof supporting: {DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND}"),
@@ -12115,6 +12155,12 @@ mod tests {
         assert!(text.contains(
             "action metadata: inspect debug trace | id=inspect_debug_trace | category=debug | primary=false | requires_bundle=true"
         ));
+        assert!(text.contains(
+            "action readiness: open workbench | id=open_workbench | category=demo | runnable=true | reason=no bundle required"
+        ));
+        assert!(text.contains(
+            "action readiness: inspect metrics stats | id=inspect_metrics_stats | category=metrics | runnable=false | reason=select a regression bundle"
+        ));
         assert!(text.contains("demo editor workbench: cargo run -p fret-demo --bin imui_editor_workbench_demo"));
         assert!(text.contains(
             "demo editor proof supporting: cargo run -p fret-demo --bin imui_editor_proof_demo"
@@ -12179,6 +12225,21 @@ mod tests {
         let metadata = demo_metrics_debug_action_metadata_lines();
         assert!(metadata.contains(&"action metadata: open workbench | id=open_workbench | category=demo | primary=true | requires_bundle=false".to_string()));
         assert!(metadata.contains(&"action metadata: inspect metrics stats | id=inspect_metrics_stats | category=metrics | primary=false | requires_bundle=true".to_string()));
+        let no_bundle = demo_metrics_debug_action_readiness_lines(0);
+        assert!(no_bundle.contains(&"action readiness: inspect metrics stats | id=inspect_metrics_stats | category=metrics | runnable=false | reason=select a regression bundle".to_string()));
+        let with_bundle = demo_metrics_debug_action_readiness_lines(1);
+        assert!(with_bundle.contains(&"action readiness: inspect metrics stats | id=inspect_metrics_stats | category=metrics | runnable=true | reason=selected bundle evidence available".to_string()));
+    }
+
+    #[test]
+    fn demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle() {
+        let text = devtools_demo_metrics_debug_lines_with_state("target/fret-diag", 2).join("\n");
+        assert!(text.contains(
+            "action readiness: inspect metrics stats | id=inspect_metrics_stats | category=metrics | runnable=true | reason=selected bundle evidence available"
+        ));
+        assert!(text.contains(
+            "action readiness: inspect debug trace | id=inspect_debug_trace | category=debug | runnable=true | reason=selected bundle evidence available"
+        ));
     }
 
     #[test]

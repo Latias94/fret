@@ -16,9 +16,11 @@ Last updated: 2026-05-30
     - `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`
     - `python tools/gate_imui_workstream_source.py`
 
-- [ ] DMDA-020 - Decide the next GUI execution-control slice.
+- [x] DMDA-020 - Surface DevTools GUI action readiness from metadata.
   - Scope: only after DMDA-010 proves action shape. Prefer a small DevTools-side control that uses
     `requires_bundle` to disable bundle-backed actions when no bundle is selected.
+  - Status: Completed on 2026-05-30 as a readiness projection in the Demo/Metrics/Debug guide.
+    No new command runner was added.
   - Validation: add or update a focused DevTools unit test before adding broader GUI behavior.
 
 - [ ] DMDA-030 - Split command-palette contract work if needed.

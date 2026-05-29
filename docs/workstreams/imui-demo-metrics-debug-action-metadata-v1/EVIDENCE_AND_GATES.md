@@ -46,6 +46,18 @@ git diff --check
 Note: full-workspace `cargo fmt` hit Windows `os error 206` due command-line/path length, so the
 verified formatting gate is package-scoped to the touched Rust packages.
 
+## Verified 2026-05-30 - DMDA-020
+
+```bash
+cargo fmt -p fret-devtools
+cargo fmt -p fret-devtools -- --check
+cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle --no-fail-fast
+python tools/diag_gate_imui_product_chain.py --only discovery
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
+python tools/gate_imui_workstream_source.py
+git diff --check
+```
+
 ## Evidence Anchors
 
 - `apps/fretboard/src/demos.rs`
