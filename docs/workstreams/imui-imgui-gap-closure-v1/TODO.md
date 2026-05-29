@@ -3175,8 +3175,17 @@ opening the slice.
       `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into the resize owner without
       changing the public IMUI surface.
       Result: `floating_window_resize.rs` now owns the handle enumeration, drag-kind lookup, drag
-      snapshot shape, and collapsed-aware resizing signal, while `floating_window_on_area.rs`
-      consumes `current_resize_snapshot(...)` / `prepare_resize_state(...)` as owner outputs.
+      snapshot shape, and collapsed-aware resizing signal, while `floating_window_on_area/state.rs`
+      consumes `current_resize_snapshot(...)` / `prepare_resize_state(...)` as owner outputs for
+      the on-area composition layer.
+- [x] Split the floating-window on-area collapse/resize state preparation out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into a dedicated private owner
+      without changing collapsed toggles, resize-state preparation, area position feedback,
+      title/content/shell wiring, or `FloatingWindowChromeResponse` semantics.
+      Result: `floating_window_on_area/state.rs` owns resizable-layout/resize-enabled derivation,
+      collapse toggle/readback, scale-factor lookup, resize owner calls, area position feedback,
+      and chrome response assembly. `floating_window_on_area.rs` now only wires the prepared state
+      into title bar, content, shell, and facade output.
 - [x] Split the floating-window shell/container composition out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into a dedicated internal helper
       without changing the public IMUI surface.

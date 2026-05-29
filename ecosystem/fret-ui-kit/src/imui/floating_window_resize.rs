@@ -6,7 +6,7 @@ mod state;
 
 pub(super) use handles::resize_stack_element;
 pub(in crate::imui) use snapshot::{FloatingWindowResizeSnapshot, current_resize_snapshot};
-pub(in crate::imui) use state::prepare_resize_state;
+pub(in crate::imui) use state::{FloatingWindowResizeStateOutput, prepare_resize_state};
 
 #[derive(Debug, Clone)]
 pub(super) struct FloatingWindowResizeHandleTestIds {

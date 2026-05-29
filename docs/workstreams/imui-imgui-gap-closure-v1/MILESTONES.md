@@ -1500,6 +1500,13 @@ device-pixel snapping, and resize state/test-id output. `floating_window_resize.
 `handles`/`state` index plus the shared resize-handle test-id record; `handles.rs` still owns
 pointer-region handle rendering and drag lifecycle wiring.
 
+2026-05-29 floating-window on-area state prep owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_on_area/state.rs` now owns resizable-layout and
+resize-enabled derivation, collapse toggle/readback, scale-factor lookup, resize owner calls, area
+position feedback after resize, and `FloatingWindowChromeResponse` assembly.
+`floating_window_on_area.rs` now wires prepared state into title bar, content, shell, and facade
+output.
+
 2026-05-26 floating-window resize snapshot owner-split result:
 `ecosystem/fret-ui-kit/src/imui/floating_window_resize/snapshot.rs` now owns active resize drag
 discovery and snapshot capture. `state.rs` now focuses on resize delta application, min/max

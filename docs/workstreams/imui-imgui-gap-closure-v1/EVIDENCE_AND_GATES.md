@@ -7001,6 +7001,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Floating-Window On-Area State Prep Owner Evidence - 2026-05-29
+
+Claim verified: floating-window on-area collapse/resize state preparation moved out of the
+composition owner without changing collapsed toggles, resize-state preparation, area position
+feedback after resize, title/content/shell wiring, or `FloatingWindowChromeResponse` semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_on_area/state.rs` owns resizable-layout and
+  resize-enabled derivation, collapse toggle/readback, scale-factor lookup, resize owner calls, area
+  position feedback, and chrome response assembly.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` now wires prepared state into title
+  bar, content, shell, and facade output.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs` re-exports the internal resize-state
+  output DTO to the `crate::imui` owner layer instead of forcing on-area composition to retain
+  resize internals.
+- `tools/gate_imui_workstream_source.py` now rejects collapse/resize/metrics state preparation from
+  drifting back into `floating_window_on_area.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke --test imui_floating_area_options_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui floating --no-fail-fast`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Floating Window Resize Snapshot Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI floating-window active resize snapshot discovery moved out of the resize state
