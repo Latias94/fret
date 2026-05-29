@@ -5,6 +5,7 @@ use fret_ui::GlobalElementId;
 use super::drag::DragResponse;
 
 mod core_state;
+mod drag_accessors;
 mod flags;
 mod hover_state;
 mod lifecycle;
@@ -78,34 +79,4 @@ pub struct ResponseExt {
     /// to `None`.
     pointer_click_modifiers: Modifiers,
     pub(crate) drag: DragResponse,
-}
-
-impl ResponseExt {
-    pub(crate) fn drag_mut(&mut self) -> &mut DragResponse {
-        &mut self.drag
-    }
-
-    pub fn drag(self) -> DragResponse {
-        self.drag
-    }
-
-    pub fn drag_started(self) -> bool {
-        self.drag.started()
-    }
-
-    pub fn dragging(self) -> bool {
-        self.drag.dragging()
-    }
-
-    pub fn drag_stopped(self) -> bool {
-        self.drag.stopped()
-    }
-
-    pub fn drag_delta(self) -> Point {
-        self.drag.delta()
-    }
-
-    pub fn drag_total(self) -> Point {
-        self.drag.total()
-    }
 }

@@ -2192,7 +2192,8 @@ Readiness order for the next locally testable review slices:
    2026-05-26 hover query owner split: `ImUiHoveredFlags` now lives in
    `response/hover/flags.rs`, while `hovered_like_imgui(...)` / `is_hovered(...)` query policy
    lives in `response/hover/query.rs`. The root `response/hover.rs` stays focused on
-   `ResponseExt` storage, mutators, accessors, and drag convenience helpers.
+   `ResponseExt` storage, mutators, accessors, and drag convenience helpers until the later drag
+   accessor owner split below moves drag methods out.
    2026-05-26 lifecycle owner split: `ResponseExt` lifecycle signal mutators, merge helpers,
    clearing, and read-only accessors now live in `response/hover/lifecycle.rs`. The root
    `response/hover.rs` still owns the lifecycle storage fields but no longer owns lifecycle
@@ -2208,6 +2209,9 @@ Readiness order for the next locally testable review slices:
    2026-05-26 core-state owner split: `ResponseExt` core `fret_authoring::Response`, id, enabled,
    clicked, changed, rect, hover, press, and focus mutators/accessors now live in
    `response/hover/core_state.rs`. The root `response/hover.rs` keeps core/id/enabled storage only.
+   2026-05-30 drag accessor owner split: `ResponseExt` drag mutation and drag read accessors now
+   live in `response/hover/drag_accessors.rs`. The root `response/hover.rs` keeps the drag storage
+   field only.
    2026-05-26 menu-family menu owner split: `begin_menu_with_options(...)` now lives in
    `menu_family_controls/menu.rs`. The root `menu_family_controls.rs` keeps menubar policy state,
    menu-bar element construction, module wiring, and tests only.

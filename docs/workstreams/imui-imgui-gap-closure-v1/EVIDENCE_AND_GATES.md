@@ -9247,6 +9247,35 @@ Gate note:
   the background. The process was allowed to finish naturally; the same command was then rerun and
   passed.
 
+## Drag Accessor Owner-Split Evidence - 2026-05-30
+
+Claim verified: `ResponseExt` drag mutation and public drag read accessors moved into a private
+owner without changing the public `ResponseExt` API, drag storage, drag response projection, or
+drag signal behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/hover/drag_accessors.rs` owns `drag_mut()`, `drag()`,
+  `drag_started()`, `dragging()`, `drag_stopped()`, `drag_delta()`, and `drag_total()`.
+- `ecosystem/fret-ui-kit/src/imui/response/hover.rs` keeps the `ResponseExt` storage fields,
+  including the private drag storage field.
+- `tools/gate_imui_workstream_source.py` now rejects drag accessor bodies from drifting back into
+  `response/hover.rs` while requiring the private drag accessor owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke
+  --no-fail-fast`: pass; 2 response contract tests passed.
+- `cargo nextest run -p fret-imui drag_core --no-fail-fast`: pass; 3 drag core tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Core-State Owner-Split Evidence - 2026-05-26
 
 Claim verified: `ResponseExt` core response/id/enabled behavior moved out of the root hover

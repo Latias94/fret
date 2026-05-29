@@ -1542,7 +1542,8 @@ public checkbox, radio, and switch APIs remain unchanged.
 `ecosystem/fret-ui-kit/src/imui/response/hover/flags.rs` now owns `ImUiHoveredFlags`, while
 `ecosystem/fret-ui-kit/src/imui/response/hover/query.rs` owns the ImGui-style hovered query
 helpers. `response/hover.rs` keeps `ResponseExt` storage, crate-local mutators, public accessors,
-and drag convenience helpers. The public hover flags and `ResponseExt` API remain unchanged.
+and drag convenience helpers until the later 2026-05-30 drag accessor owner split moves drag
+methods out. The public hover flags and `ResponseExt` API remain unchanged.
 
 2026-05-26 lifecycle owner-split result:
 `ecosystem/fret-ui-kit/src/imui/response/hover/lifecycle.rs` now owns the `ResponseExt`
@@ -1567,6 +1568,11 @@ read-only accessors. `response/hover.rs` keeps the hover state storage fields on
 core-response, id, enabled, clicked, changed, rect, hover, press, and focus mutators/accessors.
 `response/hover.rs` keeps core/id/enabled storage only. The public `ResponseExt` API remains
 unchanged.
+
+2026-05-30 drag accessor owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/hover/drag_accessors.rs` now owns `ResponseExt` drag
+mutation plus public drag read accessors. `response/hover.rs` keeps the drag storage field only.
+The public `ResponseExt` API remains unchanged.
 
 2026-05-26 interaction-runtime hover owner-split result:
 `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay.rs` now owns window-scoped

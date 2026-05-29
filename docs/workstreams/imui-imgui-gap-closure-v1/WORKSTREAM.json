@@ -733,6 +733,7 @@
     "ecosystem/fret-ui-kit/src/imui/facade_support/slider_math.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover/core_state.rs",
+    "ecosystem/fret-ui-kit/src/imui/response/hover/drag_accessors.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover/flags.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover/hover_state.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover/lifecycle.rs",
