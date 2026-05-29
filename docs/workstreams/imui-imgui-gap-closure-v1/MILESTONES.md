@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-29 item behavior pointer hook owner-split result:
+`ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` now keeps hook clearing, model capture,
+and behavior assembly. `item_behavior/install/pointer_down.rs` owns lifecycle activation and drag
+start preparation, `pointer_move.rs` owns drag-threshold move handling, and `pointer_up.rs` owns
+lifecycle deactivation, drag finish, context-menu transients, pointer-click modifier capture, and
+double-click transients.
+
 2026-05-29 table response owner-split result:
 `ecosystem/fret-ui-kit/src/imui/response/widgets/table.rs` now keeps the `TableResponse`
 aggregation and header lookup methods. `response/widgets/table/header.rs` owns
@@ -549,10 +556,10 @@ registration, activation dispatch, layer child mounting, rank sort application, 
 layout.
 
 2026-05-28 shared item behavior install owner-split result:
-`ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` now owns pressable pointer hook
-clearing/installation, active-item/long-press/lifecycle model capture, drag threshold wiring,
-context-menu transient emission, pointer-click modifier capture, and double-click transient
-emission. `item_behavior.rs` keeps shared data shapes plus install/response re-exports.
+`ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` now owns pressable pointer hook clearing,
+active-item/long-press/lifecycle model capture, and assembly. Later pointer-hook sub-owner splits
+move down/move/up transient bodies into `item_behavior/install/*`.
+`item_behavior.rs` keeps shared data shapes plus install/response re-exports.
 
 2026-05-28 facade floating/popup owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs` is now a private module/re-export

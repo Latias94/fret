@@ -44,6 +44,15 @@ Last updated: 2026-05-29
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI shared pressable item pointer hook bodies out of
+      `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` without changing shared button,
+      checkbox/radio, selectable, combo, image-item, debug-draw pressable, context-menu,
+      pointer-click, double-click, drag, long-press, lifecycle, or response population behavior.
+      Result: `item_behavior/install.rs` keeps hook clearing, model capture, and behavior assembly;
+      `item_behavior/install/pointer_down.rs` owns lifecycle activation and drag start
+      preparation; `pointer_move.rs` owns drag-threshold move handling; `pointer_up.rs` owns
+      lifecycle deactivation, drag finish, context-menu transients, pointer-click modifier capture,
+      and double-click transients.
 - [x] Split IMUI table response header/resize accessors out of
       `ecosystem/fret-ui-kit/src/imui/response/widgets/table.rs` without changing public response
       names, field privacy, header lookup behavior, resize drag accessors, width clamping, table
@@ -688,9 +697,9 @@ Last updated: 2026-05-29
       changing shared button, checkbox/radio, selectable, combo, image-item, debug-draw pressable,
       context-menu, pointer-click, double-click, drag, long-press, lifecycle, or response
       population behavior.
-      Result: `item_behavior/install.rs` owns pressable pointer hook clearing/installation,
-      active-item/long-press/lifecycle model capture, drag threshold wiring, context-menu transient
-      emission, pointer-click modifier capture, and double-click transient emission. The root
+      Result: `item_behavior/install.rs` owns pressable pointer hook clearing,
+      active-item/long-press/lifecycle model capture, and assembly. Later pointer-hook sub-owner
+      splits move down/move/up transient bodies into `item_behavior/install/*`. The root
       `item_behavior.rs` keeps shared data shapes plus install/response re-exports.
 - [x] Split IMUI facade floating/popup thin forwarding out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs` into private floating,

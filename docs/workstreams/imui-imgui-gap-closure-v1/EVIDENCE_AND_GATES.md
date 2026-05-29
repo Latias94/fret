@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-29
 
+## Item Behavior Pointer Hook Owner-Split Evidence - 2026-05-29
+
+Claim verified: IMUI shared pressable item pointer hook bodies split into down/move/up private
+owners without changing shared button, checkbox/radio, selectable, combo, image-item, debug-draw
+pressable, context-menu, pointer-click, double-click, drag, long-press, lifecycle, or response
+population behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` keeps hook clearing, model capture, and
+  `PressableItemBehavior` assembly.
+- `ecosystem/fret-ui-kit/src/imui/item_behavior/install/pointer_down.rs` owns lifecycle activation
+  and drag start preparation.
+- `ecosystem/fret-ui-kit/src/imui/item_behavior/install/pointer_move.rs` owns drag-threshold move
+  handling.
+- `ecosystem/fret-ui-kit/src/imui/item_behavior/install/pointer_up.rs` owns lifecycle deactivation,
+  drag finish, context-menu transients, pointer-click modifier capture, and double-click
+  transients.
+- `tools/gate_imui_workstream_source.py` now rejects pointer hook bodies drifting back to
+  `install.rs` and checks the dedicated down/move/up owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_press --no-fail-fast`: pass (9 passed, 177 skipped).
+- `cargo nextest run -p fret-imui interaction_drag --no-fail-fast`: pass (8 passed, 178 skipped).
+- `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass (21 passed, 165 skipped).
+
 ## Table Response Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI table response header/resize accessors split into dedicated owners without
@@ -2836,10 +2870,9 @@ Evidence:
 
 - `ecosystem/fret-ui-kit/src/imui/item_behavior.rs` keeps shared data shapes plus install/response
   re-exports.
-- `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` owns pressable pointer hook
-  clearing/installation, active-item/long-press/lifecycle model capture, drag threshold wiring,
-  context-menu transient emission, pointer-click modifier capture, and double-click transient
-  emission.
+- `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` owns pressable pointer hook clearing,
+  active-item/long-press/lifecycle model capture, and assembly; later pointer-hook sub-owner splits
+  move down/move/up transient bodies into `item_behavior/install/*`.
 - `ecosystem/fret-ui-kit/src/imui/item_behavior/response.rs` continues to own shared `ResponseExt`
   population, drag response merging, and hover query hook installation.
 - `tools/gate_imui_workstream_source.py` now rejects hook-installation and pointer transient bodies
