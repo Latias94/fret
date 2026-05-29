@@ -9,7 +9,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Axis, Color, Corners, Edges, KeyCode, Px, SemanticsOrientation, SemanticsRole, TextOverflow,
+    TextStyle, TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -201,6 +202,7 @@ impl NavigationDrawer {
                 label: a11y_label.clone(),
                 test_id: test_id.clone(),
                 disabled,
+                orientation: Some(SemanticsOrientation::Vertical),
                 ..Default::default()
             };
             let chrome_test_id = test_id.as_ref().map(|id| part_test_id(id, "chrome"));

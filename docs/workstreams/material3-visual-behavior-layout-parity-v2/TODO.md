@@ -577,6 +577,31 @@ Task IDs use `M3PV2-*`.
   collapsed destination recipes. Adaptive NavigationSuite, wide rails, modal rails, headers, and
   dedicated motion diagnostics remain residual/future API work.
 
+- [x] M3PV2-075 [owner=codex] [deps=M3PV2-010,M3PV2-030,M3PV2-074] [scope=ecosystem/fret-ui-material3/src/{navigation_drawer.rs,modal_navigation_drawer.rs},ecosystem/fret-ui-material3/tests/{navigation_drawer_state.rs,automation_surface.rs,radio_alignment.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close NavigationDrawer and ModalNavigationDrawer vertical semantics, Material item
+  geometry proof, modal panel/scrim semantics, and left-edge slide/scrim fixed-frame motion.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test navigation_drawer_state`
+  failed because NavigationDrawer's `TabList` orientation was `None` and
+  ModalNavigationDrawer's panel semantics resolved as `Generic` instead of `Dialog`; green gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test navigation_drawer_state`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_navigation_drawer_exposes_stable_part_test_ids material3_modal_navigation_drawer_exposes_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment navigation_drawer_roving_skips_disabled_and_updates_model navigation_drawer_roving_wraps_and_skips_disabled_on_reverse navigation_drawer_roving_does_not_wrap_when_loop_navigation_false navigation_drawer_roving_single_enabled_item_does_not_move_under_no_loop modal_navigation_drawer_focus_is_contained_and_restored_across_schemes`;
+  `cargo nextest run -p fret-ui-material3 --lib navigation_drawer modal_navigation_drawer`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`.
+  Review: DONE. This found Material recipe semantics/proof-density gaps, not a core or kit
+  mechanism gap. Core already had orientation, tab, dialog, labels, and layout-transparent
+  semantics decoration; kit overlay focus/dismiss policy stayed green. NavigationDrawer now writes
+  vertical orientation, ModalNavigationDrawer panel writes `Dialog` / `Navigation menu`, and the
+  scrim writes `Close drawer`.
+  Evidence: `artifacts/material3_navigation_drawer_modal_semantics_layout_motion_packet_v2.md`.
+  Handoff: NavigationDrawer layout/accessibility and ModalNavigationDrawer layout/accessibility/
+  current slide+scrim motion are v2-covered. Dismissible drawer gestures, predictive-back scaling,
+  RTL slide direction, permanent drawer insets, headers, and adaptive NavigationSuite remain
+  residual/future API work.
+
 ## M3 - Choice Controls, Chips, And Motion
 
 - [ ] M3PV2-040 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{checkbox.rs,radio.rs,switch.rs,slider.rs,segmented_button.rs,chip*.rs,*chip.rs},ecosystem/fret-ui-material3/src/interaction,ecosystem/fret-ui-material3/tests]

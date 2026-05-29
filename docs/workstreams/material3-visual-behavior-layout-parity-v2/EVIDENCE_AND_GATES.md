@@ -76,6 +76,8 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_segmented_button_semantics_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_icon_button_semantics_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_tabs_indicator_semantics_layout_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_navigation_bar_rail_semantics_layout_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_navigation_drawer_modal_semantics_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -889,6 +891,28 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     padding, keeps destination chrome at 80x56dp, and paints the 56x32dp active indicator. The gap
     was Material recipe/token-accessor only; no core or kit mechanism change was required.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_navigation_bar_rail_semantics_layout_packet_v2.md`
+- 2026-05-29: M3PV2-075 closed NavigationDrawer and ModalNavigationDrawer vertical semantics,
+  item geometry proof, modal panel/scrim semantics, and current slide/scrim motion proof.
+  - Sources: Compose Material3 `NavigationDrawer.kt` gives ModalNavigationDrawer a
+    `NavigationMenu` pane title, `CloseDrawer` scrim description, Escape/dismiss behavior, and a
+    negative-sheet-width closed anchor; Compose `DrawerSheet` constrains width to 360dp and fills
+    height; Compose `NavigationDrawerItem` uses `Role.Tab`, 56dp minimum height, 12dp external
+    item padding, 16/24dp content padding, and 12dp icon/badge gaps.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test navigation_drawer_state`
+    failed because NavigationDrawer's `TabList` orientation was `None` and ModalNavigationDrawer's
+    panel semantics resolved as `Generic` instead of `Dialog`.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test navigation_drawer_state`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_navigation_drawer_exposes_stable_part_test_ids material3_modal_navigation_drawer_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment navigation_drawer_roving_skips_disabled_and_updates_model navigation_drawer_roving_wraps_and_skips_disabled_on_reverse navigation_drawer_roving_does_not_wrap_when_loop_navigation_false navigation_drawer_roving_single_enabled_item_does_not_move_under_no_loop modal_navigation_drawer_focus_is_contained_and_restored_across_schemes`
+  - `cargo nextest run -p fret-ui-material3 --lib navigation_drawer modal_navigation_drawer`
+  - Result: NavigationDrawer now publishes vertical tablist orientation while preserving item
+    geometry and existing roving behavior. ModalNavigationDrawer panel now publishes `Dialog` /
+    `Navigation menu`, the scrim publishes `Close drawer`, and fixed-frame evidence proves the
+    panel slides from the negative drawer-width anchor while the scrim fades without panel opacity
+    fade. The gap was Material recipe/proof density, not core or kit mechanism.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_navigation_drawer_modal_semantics_layout_motion_packet_v2.md`
 
 ## Proof Note Template
 

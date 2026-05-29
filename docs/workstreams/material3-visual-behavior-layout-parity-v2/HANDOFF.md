@@ -253,6 +253,18 @@ NavigationRail applied 4dp padding on all sides and let item chrome collapse to 
 minimum, and active-indicator target fallback used the wrong bounds. Adaptive NavigationSuite, wide
 rails, modal rails, headers, and dedicated motion diagnostics remain residual/future API work.
 
+M3PV2-075 is complete: NavigationDrawer layout/accessibility and ModalNavigationDrawer
+layout/accessibility/current motion are now v2-covered for the current drawer recipes. Compose
+Material3 was the primary source: Drawer items use `Role.Tab`, 56dp height, 12dp external item
+padding, 16/24dp content padding, and 12dp icon/badge gaps; ModalNavigationDrawer uses
+`NavigationMenu` pane semantics, `CloseDrawer` scrim description, a 360dp sheet, full-height panel,
+and a negative sheet-width closed anchor. Fret core already had orientation, tab, dialog, label, and
+layout-transparent semantics mechanisms, and kit overlay focus/dismiss policy remained green. The
+packet found Material recipe/proof-density gaps: NavigationDrawer omitted vertical orientation,
+ModalNavigationDrawer panel exposed only generic test-id semantics, and the scrim had no close
+label. Dismissible drawer gestures, predictive-back scaling, RTL slide direction, permanent drawer
+insets, headers, and adaptive NavigationSuite remain residual/future API work.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -264,9 +276,8 @@ rails, modal rails, headers, and dedicated motion diagnostics remain residual/fu
 ## Next Recommended Action
 
 Continue with the next uncovered Material3 packet from the matrix. Higher-priority candidates now
-move through remaining navigation and overlay surfaces: NavigationRail / NavigationBar layout
-packets, Dialog/Snackbar motion/layout, and Menu/DropdownMenu item layout/focus packets are all
-still open.
+move through remaining navigation and overlay surfaces: TopAppBar scroll/collapse layout/motion,
+Dialog/Snackbar motion/layout, and Menu/DropdownMenu item layout/focus packets are all still open.
 
 ## Useful Gates
 

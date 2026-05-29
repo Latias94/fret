@@ -8,12 +8,12 @@
 
 use std::sync::Arc;
 
-use fret_core::{Color, Px};
+use fret_core::{Color, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::{DismissReason, DismissRequestCx, OnActivate, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, FractionalRenderTransformProps, InsetStyle, InteractivityGateProps,
-    LayoutStyle, Length, PositionStyle, PressableA11y, PressableProps,
+    LayoutStyle, Length, PositionStyle, PressableA11y, PressableProps, SemanticsDecoration,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
@@ -24,6 +24,9 @@ use fret_ui_kit::{OverlayController, OverlayPresence};
 use crate::foundation::test_id::{optional_part_test_id, part_test_id};
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion;
+
+const MODAL_NAVIGATION_DRAWER_PANE_LABEL: &str = "Navigation menu";
+const MODAL_NAVIGATION_DRAWER_CLOSE_LABEL: &str = "Close drawer";
 
 #[derive(Clone)]
 pub struct ModalNavigationDrawer {
@@ -231,6 +234,9 @@ impl ModalNavigationDrawer {
                                         focusable: false,
                                         a11y: PressableA11y {
                                             test_id: scrim_test_id.clone(),
+                                            label: Some(Arc::<str>::from(
+                                                MODAL_NAVIGATION_DRAWER_CLOSE_LABEL,
+                                            )),
                                             ..Default::default()
                                         },
                                         layout: {
@@ -328,7 +334,11 @@ impl ModalNavigationDrawer {
                                 if let Some(test_id) = panel_test_id.clone() {
                                     panel = panel.test_id(test_id);
                                 }
-                                panel
+                                panel.attach_semantics(
+                                    SemanticsDecoration::default()
+                                        .role(SemanticsRole::Dialog)
+                                        .label(MODAL_NAVIGATION_DRAWER_PANE_LABEL),
+                                )
                             });
 
                             vec![scrim, drawer_panel]
