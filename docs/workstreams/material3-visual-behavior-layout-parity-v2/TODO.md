@@ -642,6 +642,27 @@ Task IDs use `M3PV2-*`.
   Handoff: IconButton layout, accessibility, and current state-layer motion are v2-covered. Larger
   expressive icon-button sizes and dedicated corner-radius timeline assertions remain residual.
 
+- [x] M3PV2-071 [owner=codex] [deps=M3PV2-010,M3PV2-040,M3PV2-070] [scope=ecosystem/fret-ui-material3/src/{chip.rs,suggestion_chip.rs,filter_chip.rs,input_chip.rs,chip_set.rs},ecosystem/fret-ui-material3/tests/{chip_state.rs,automation_surface.rs,radio_alignment.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close chip family selectable semantics, 48/32/18px touch/chrome/icon layout proof, stable
+  content/trailing-action part ids, primary vs trailing activation routing, ChipSet gap/wrap proof,
+  and pressed state-layer proof against Compose Material3.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test chip_state`
+  failed because FilterChip/InputChip exposed `Button` roles instead of `Checkbox`, chip content
+  did not expose stable `.label` / icon part ids, and the packet had no focused chip state-layer
+  proof; green gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test chip_state`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_segmented_buttons_and_chips_expose_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment chips_export_checked_state_for_selected_semantics chip_set_roving_treats_trailing_action_focus_as_active_chip material3_headless_controls_suite_goldens_v1`.
+  Review: DONE. This found a Material recipe wiring/proof-density gap, not a core or kit
+  mechanism gap. Core already exposes explicit checked-state semantics, and Material chips already
+  had 48px interactive sizing, 32px chrome, 18px icons, ripple, and state-layer wiring.
+  Evidence: `artifacts/material3_chip_semantics_layout_motion_packet_v2.md`.
+  Handoff: Chip, SuggestionChip, FilterChip, InputChip, and ChipSet layout, behavior,
+  accessibility, and current state-layer motion are v2-covered. Exact selectable icon
+  expand/shrink/fade, InputChip avatar slots, and expressive corner morphing remain residual.
+
 ## M4 - Overlay And Feedback Interaction Depth
 
 - [x] M3PV2-046 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/bottom_sheet.rs,ecosystem/fret-ui-material3/tests/bottom_sheet_motion.rs,goldens/material3-headless/v1/material3-bottom-sheet.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]

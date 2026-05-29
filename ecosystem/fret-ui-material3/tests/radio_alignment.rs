@@ -3297,6 +3297,7 @@ fn chips_export_checked_state_for_selected_semantics() {
         .iter()
         .find(|node| node.test_id.as_deref() == Some("filter-chip-selected"))
         .expect("expected filter chip in semantics snapshot");
+    assert_eq!(filter.role, fret_core::SemanticsRole::Checkbox);
     assert_eq!(filter.flags.checked, Some(true));
     assert_eq!(
         filter.flags.checked_state,
@@ -3308,6 +3309,7 @@ fn chips_export_checked_state_for_selected_semantics() {
         .iter()
         .find(|node| node.test_id.as_deref() == Some("input-chip-unselected"))
         .expect("expected input chip in semantics snapshot");
+    assert_eq!(input.role, fret_core::SemanticsRole::Checkbox);
     assert_eq!(input.flags.checked, Some(false));
     assert_eq!(
         input.flags.checked_state,

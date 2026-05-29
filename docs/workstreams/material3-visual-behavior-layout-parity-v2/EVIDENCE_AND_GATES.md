@@ -784,6 +784,30 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     icon content, and proves pressed state-layer animation over chrome. The gap was Material recipe
     wiring and proof density, not core or kit mechanism.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_icon_button_semantics_layout_motion_packet_v2.md`
+- 2026-05-29: M3PV2-071 closed chip-family selectable semantics, content part ids, touch/chrome
+  geometry, activation routing, ChipSet gap/wrap layout, and pressed state-layer proof.
+  - Sources: Compose Material3 `Chip.kt` uses button-like semantics for Assist/Suggestion chips and
+    checkbox-like selectable semantics for Filter/Input chips; Compose chip token files define
+    32dp containers and 18dp icons. Base UI Button/checkbox sources confirm the headless semantics
+    split.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test chip_state`
+    failed because FilterChip/InputChip exposed `Button` roles instead of `Checkbox`, chip content
+    lacked stable `.label` / icon part ids, and there was no focused chip state-layer packet.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test chip_state`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_segmented_buttons_and_chips_expose_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment chips_export_checked_state_for_selected_semantics chip_set_roving_treats_trailing_action_focus_as_active_chip material3_headless_controls_suite_goldens_v1`
+  - Workstream JSON, matrix JSON, catalog, and `git diff --check` gates passed.
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: Assist/Suggestion chips now expose stable content part ids while preserving `Button`
+    semantics; Filter/Input chips now expose `Checkbox` semantics plus explicit checked state;
+    Filter/Input trailing action glyphs and touch targets are separately addressable; focused tests
+    prove 48/32/18px geometry, primary/trailing activation routing, ChipSet 8px gap/wrap layout,
+    and pressed state-layer animation. The gap was Material recipe wiring and proof density, not
+    core or kit mechanism.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_chip_semantics_layout_motion_packet_v2.md`
 
 ## Proof Note Template
 

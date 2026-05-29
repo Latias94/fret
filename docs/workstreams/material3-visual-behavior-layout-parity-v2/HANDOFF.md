@@ -209,6 +209,17 @@ wiring. IconButton now writes explicit binary checked-state metadata for toggle 
 animation. Larger expressive icon-button sizes and dedicated corner-radius timeline assertions
 remain residual.
 
+M3PV2-071 is complete: Chip, SuggestionChip, FilterChip, InputChip, and ChipSet layout, behavior,
+accessibility, and current state-layer motion are now v2-covered. The packet found a Material
+recipe wiring/proof-density gap, not a core or kit mechanism gap: explicit checked-state semantics
+already existed and chips already had Material 48px interactive sizing, 32px chrome, 18px icons,
+ripple, and state-layer wiring. Assist/Suggestion chips now expose stable `.label` and
+`.leading-icon` content anchors, Filter/Input chips expose `Checkbox` semantics plus explicit
+checked state, actionable trailing icons split the 34x48 action slot from the 18px glyph, and
+focused tests prove primary/trailing activation routing, ChipSet 8px gap/wrap layout, and pressed
+state-layer animation. Exact selectable icon expand/shrink/fade, InputChip avatar slots, and
+expressive corner morphing remain residual.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -219,9 +230,10 @@ remain residual.
 
 ## Next Recommended Action
 
-Continue with the next uncovered Material3 packet from the matrix. Higher-priority choice-control
-candidates now start with chips;
-NavigationRail / NavigationBar layout packets are also open.
+Continue with the next uncovered Material3 packet from the matrix. Higher-priority candidates now
+move from choice controls into navigation and overlay surfaces: NavigationRail / NavigationBar
+layout packets, Dialog/Snackbar motion/layout, and Menu/DropdownMenu item layout/focus packets are
+all still open.
 
 ## Useful Gates
 

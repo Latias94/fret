@@ -798,14 +798,24 @@ fn material3_segmented_buttons_and_chips_expose_stable_part_test_ids() {
         "m3-chip-set",
         "m3-assist-chip",
         "m3-assist-chip.chrome",
+        "m3-assist-chip.label",
+        "m3-assist-chip.leading-icon",
         "m3-suggestion-chip",
         "m3-suggestion-chip.chrome",
+        "m3-suggestion-chip.label",
+        "m3-suggestion-chip.leading-icon",
         "m3-filter-chip",
         "m3-filter-chip.chrome",
+        "m3-filter-chip.label",
+        "m3-filter-chip.leading-icon",
         "m3-filter-chip.trailing-icon",
+        "m3-filter-chip.trailing-icon.glyph",
         "m3-input-chip",
         "m3-input-chip.chrome",
+        "m3-input-chip.label",
+        "m3-input-chip.leading-icon",
         "m3-input-chip.trailing-icon",
+        "m3-input-chip.trailing-icon.glyph",
     ] {
         assert!(
             live_test_id_exists(&ui, &app, window, id),
@@ -819,6 +829,30 @@ fn material3_segmented_buttons_and_chips_expose_stable_part_test_ids() {
     );
     assert_eq!(
         semantics_node_checked_state(&ui, "m3-segmented-beta"),
+        Some(SemanticsCheckedState::False)
+    );
+    assert_eq!(
+        semantics_node_role(&ui, "m3-assist-chip"),
+        SemanticsRole::Button
+    );
+    assert_eq!(
+        semantics_node_role(&ui, "m3-suggestion-chip"),
+        SemanticsRole::Button
+    );
+    assert_eq!(
+        semantics_node_role(&ui, "m3-filter-chip"),
+        SemanticsRole::Checkbox
+    );
+    assert_eq!(
+        semantics_node_checked_state(&ui, "m3-filter-chip"),
+        Some(SemanticsCheckedState::True)
+    );
+    assert_eq!(
+        semantics_node_role(&ui, "m3-input-chip"),
+        SemanticsRole::Checkbox
+    );
+    assert_eq!(
+        semantics_node_checked_state(&ui, "m3-input-chip"),
         Some(SemanticsCheckedState::False)
     );
 }
