@@ -1378,6 +1378,11 @@ population. Public table-column visibility helpers and test-id behavior remain u
 re-export index. `command/kind.rs` owns `DebugDrawCommandKind`, while `command/summary.rs` owns
 `DebugDrawCommandSummary` storage, accessors, construction, and channel projection.
 
+2026-05-30 debug-draw list summary sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/list.rs` keeps the opaque
+`DebugDrawListSummary` storage shape. `list/accessors.rs` owns public getters, and
+`list/mutation.rs` owns construction, final-clip-depth updates, and command inclusion aggregation.
+
 2026-05-27 facade container-wrapper owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs` is now a thin module index.
 Flow wrappers live in `container_wrappers/flow.rs`, layout wrappers live in

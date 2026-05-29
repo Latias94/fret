@@ -1242,6 +1242,14 @@ Last updated: 2026-05-30
       Result: `summaries/command.rs` is now a private re-export index; `command/kind.rs` owns
       `DebugDrawCommandKind`, and `command/summary.rs` owns `DebugDrawCommandSummary` storage,
       accessors, construction, and channel projection.
+- [x] Split IMUI debug-draw list-summary accessors and mutation out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/list.rs` into private
+      accessor and mutation owners without changing `DebugDrawListSummary` public accessors,
+      opaque counter storage, final clip-depth projection, command inclusion counts, or
+      command-kind classification.
+      Result: `summaries/list.rs` keeps the opaque `DebugDrawListSummary` storage shape;
+      `list/accessors.rs` owns public getters, and `list/mutation.rs` owns construction,
+      final-clip-depth updates, and command inclusion aggregation.
 - [x] Split IMUI debug-draw path-command dispatch by shape family out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands.rs` into
       private linear, round, and bezier owners without changing path command routing, canvas keys,
