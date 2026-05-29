@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-29 facade button surface owner-split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
+`UiWriterImUiFacadeExt` trait hub, but button, small/arrow/invisible button, image item/button,
+action button, payload action button, and button-command trait default method declarations now live
+in `facade_writer/button_surface.rs` and are expanded into the public trait. The existing
+`button_actions.rs` / `button_actions/*` inherent wrapper owners still record focusable state, and
+`image_items.rs` still owns image-button option normalization.
+
 2026-05-29 item behavior pointer hook owner-split result:
 `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` now keeps hook clearing, model capture,
 and behavior assembly. `item_behavior/install/pointer_down.rs` owns lifecycle activation and drag

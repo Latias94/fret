@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-05-29
 
+## Facade Button Surface Owner-Split Evidence - 2026-05-29
+
+Claim verified: IMUI facade button/image/action trait default method declarations split out of the
+root facade writer without changing the public `UiWriterImUiFacadeExt` trait, caller import
+behavior, button/image/action method names, button-command presentation forwarding, focusable
+recording wrappers, image-button option normalization, or button/image smoke behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
+  `UiWriterImUiFacadeExt` trait hub and expands `button_surface::button_surface_methods!()`.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/button_surface.rs` owns button,
+  small/arrow/invisible button, image item/button, action button, payload action button, and
+  button-command trait default declarations/forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs` and
+  `button_actions/*` still own focusable-recording inherent wrappers and command presentation
+  forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/image_items.rs` still owns image-button option
+  normalization.
+- `tools/gate_imui_workstream_source.py` now rejects button/image/action trait default bodies from
+  drifting back into `facade_writer.rs` and checks the new button surface owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke
+  --test imui_image_item_smoke --no-fail-fast`: pass (3 passed).
+- `cargo nextest run -p fret-imui interaction_shortcuts --no-fail-fast`: pass (10 passed,
+  176 skipped).
+- `cargo nextest run -p fret-imui image_item --no-fail-fast`: pass (2 passed, 184 skipped).
+- `cargo nextest run -p fret-imui control_geometry --no-fail-fast`: pass (4 passed, 182 skipped).
+
 ## Item Behavior Pointer Hook Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI shared pressable item pointer hook bodies split into down/move/up private
