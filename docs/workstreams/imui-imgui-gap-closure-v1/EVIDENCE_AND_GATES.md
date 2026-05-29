@@ -662,6 +662,46 @@ Focused gates:
 - `cargo nextest run -p fret-imui models_combo --no-fail-fast`: pass (11 passed, 175 skipped).
 - `cargo nextest run -p fret-imui multi_select --no-fail-fast`: pass (1 passed, 185 skipped).
 
+## Facade Selection/Combo Surface Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade menu/selection selection-combo surface macro ownership split into
+selection and combo child owners without changing public trait method names, default option
+forwarding, response returns, macro expansion order, focusable-recording inherent wrapper owners,
+or concrete selectable/combo behavior ownership.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/menu_selection_surface/selection_combo.rs` is now
+  a module/re-export hub for selection/combo surface macros.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/menu_selection_surface/selection_combo/selectables.rs`
+  owns selectable and multi-selectable trait forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/menu_selection_surface/selection_combo/combo.rs`
+  owns combo trait forwarding and response returns.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` expands selection and combo surface macros in
+  the previous public method order.
+- `tools/gate_imui_workstream_source.py` checks the new child owners and rejects
+  selectable/combo surface macro bodies from drifting back into
+  `facade_writer/menu_selection_surface/selection_combo.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke
+  --test imui_selectable_smoke --test imui_combo_smoke --no-fail-fast`: pass (6 passed).
+- `$env:CARGO_INCREMENTAL = '0'; cargo nextest run -p fret-imui models_combo --no-fail-fast`:
+  pass (11 passed, 175 skipped).
+- `$env:CARGO_INCREMENTAL = '0'; cargo nextest run -p fret-imui interaction_shortcuts
+  --no-fail-fast`: pass (10 passed, 176 skipped).
+- `$env:CARGO_INCREMENTAL = '0'; cargo nextest run -p fret-imui multi_select --no-fail-fast`:
+  pass (1 passed, 185 skipped).
+- `python tools\check_workstream_catalog.py`: pass; validated 473 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+
 ## Facade Selectable/Combo Inherent Wrapper Sub-Owner Evidence - 2026-05-29
 
 Claim verified: IMUI facade selectable/combo inherent wrapper behavior ownership split into

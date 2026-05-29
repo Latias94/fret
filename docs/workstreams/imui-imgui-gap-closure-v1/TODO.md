@@ -182,6 +182,13 @@ Last updated: 2026-05-29
       `menu_selection_surface/selection_combo.rs` owns selectable/multi-selectable/combo
       forwarding, and `menu_selection_surface/context_popup.rs` owns context-menu popup
       forwarding.
+- [x] Split IMUI facade menu/selection selection-combo surface macro owner into selection and
+      combo child owners without changing public trait method names, default option forwarding,
+      response returns, macro expansion order, focusable recording wrappers, or concrete
+      selectable/combo behavior ownership.
+      Result: `menu_selection_surface/selection_combo.rs` is now a module/re-export hub.
+      `selection_combo/selectables.rs` owns selectable and multi-selectable forwarding, while
+      `selection_combo/combo.rs` owns combo forwarding.
 - [x] Split IMUI facade selectable/combo inherent wrapper behavior owner into selectable and combo
       child owners without changing public inherent method names, focusable recording, disabled
       checks, selectable/multi-selectable delegation, combo delegation, or `fret-imui` thinness.

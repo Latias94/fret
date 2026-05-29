@@ -157,6 +157,13 @@ forwarding, and `menu_selection_surface/context_popup.rs` owns context-menu popu
 public trait expansion points in `facade_writer.rs` now call these child macros directly, while
 the existing behavior/inherent wrapper owners remain unchanged.
 
+2026-05-29 facade menu/selection selection-combo surface sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/menu_selection_surface/selection_combo.rs` is now a
+module/re-export hub. `selection_combo/selectables.rs` owns selectable and multi-selectable trait
+forwarding, while `selection_combo/combo.rs` owns combo trait forwarding. Public trait method
+names, default option forwarding, macro expansion order, response returns, focusable-recording
+inherent wrapper owners, and concrete selectable/combo behavior owners remain unchanged.
+
 2026-05-29 facade selectable/combo inherent-wrapper sub-owner result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo.rs` is now a module hub.
 `selection_combo/selectables.rs` owns selectable and multi-selectable inherent wrappers, including

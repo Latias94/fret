@@ -70,7 +70,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     menu_selection_surface::menu_family_surface_methods!();
 
-    menu_selection_surface::selection_combo_surface_methods!();
+    menu_selection_surface::selection_surface_methods!();
+
+    menu_selection_surface::combo_surface_methods!();
 
     menu_selection_surface::context_popup_surface_methods!();
 
