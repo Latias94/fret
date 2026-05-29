@@ -1,3 +1,4 @@
+use super::super::element::debug_draw_element;
 use super::*;
 
 #[test]

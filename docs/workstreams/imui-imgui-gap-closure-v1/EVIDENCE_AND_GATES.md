@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-29
 
+## Debug-Draw Root Owner-Split Evidence - 2026-05-29
+
+Claim verified: IMUI debug-draw root draw-list state and facade entry glue split into dedicated
+owners without changing public debug-draw list/options/response names, command recording, channel
+merging, summary projection, element mounting, or debug-draw smoke behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs` now stays a thin module/re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list.rs` owns `ImUiDebugDrawList` and
+  channel-split state storage.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/facade.rs` owns `debug_draw_with_options(...)`
+  list capture, channel merge, command-summary projection, command boxing, keyed element mounting,
+  and `DebugDrawResponse` assembly.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/element.rs` now imports the element
+  owner directly instead of relying on a root helper import.
+- `tools/gate_imui_workstream_source.py` now rejects debug-draw list state and facade entry bodies
+  from drifting back into `debug_draw_controls.rs` and checks the dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui imui::debug_draw_controls
+  --no-fail-fast`: pass (38 passed, 712 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke
+  --no-fail-fast`: pass (1 passed).
+
 ## Popup Overlay Root Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI popup-overlay root state helpers and context-menu wrapper split into private

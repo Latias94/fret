@@ -44,6 +44,13 @@ Last updated: 2026-05-29
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw root draw-list state and facade entry glue out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs` without changing public debug-draw
+      list/options/response names, command recording, channel merging, summary projection,
+      element mounting, or debug-draw smoke behavior.
+      Result: `debug_draw_controls/draw_list.rs` owns `ImUiDebugDrawList` and channel-split state,
+      while `debug_draw_controls/facade.rs` owns `debug_draw_with_options(...)` list capture,
+      summaries, command boxing, keyed element mounting, and response assembly.
 - [x] Split IMUI popup-overlay root state helpers and context-menu wrapper out of
       `ecosystem/fret-ui-kit/src/imui/popup_overlay.rs` into private owners without changing popup
       open/close/drop/open-at behavior, context-menu anchor fallback, menu/modal entrypoints,
@@ -1678,11 +1685,11 @@ Readiness order for the next locally testable review slices:
    menu-bar element construction, module wiring, and tests only.
    2026-05-26 debug-draw response owner split: `DebugDrawResponse` now lives in
    `debug_draw_controls/response.rs`, and the opaque-output source gate follows the new owner. The
-   root `debug_draw_controls.rs` keeps debug draw options, draw-list/style types, and helper
-   orchestration.
+   root `debug_draw_controls.rs` re-exports the public surface.
    2026-05-26 debug-draw options owner split: public debug draw options/style/vertex types now
    live in `debug_draw_controls/options.rs`. The root `debug_draw_controls.rs` re-exports them and
-   keeps draw-list state plus helper orchestration.
+   later owner splits moved draw-list state to `debug_draw_controls/draw_list.rs` and facade entry
+   glue to `debug_draw_controls/facade.rs`.
    2026-05-27 debug-draw options sub-owner split: `debug_draw_controls/options.rs` is now a thin
    re-export index; `options/root.rs` owns root/interaction canvas options, `options/stroke.rs`
    owns stroke style and path-style conversion, `options/round_corners.rs` owns rounded-corner

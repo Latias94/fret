@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-29 debug-draw root owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs` now stays a thin module/re-export hub.
+`debug_draw_controls/draw_list.rs` owns `ImUiDebugDrawList` and channel-split state, while
+`debug_draw_controls/facade.rs` owns `debug_draw_with_options(...)` list capture, summary
+projection, element mounting, and `DebugDrawResponse` assembly.
+
 2026-05-29 popup-overlay root owner-split result:
 `ecosystem/fret-ui-kit/src/imui/popup_overlay.rs` now keeps menu/modal entrypoint delegation and
 re-exports private owners. `popup_overlay/state.rs` owns popup open/drop/open-at/close state
@@ -1124,14 +1130,14 @@ unchanged.
 2026-05-26 debug-draw response owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/response.rs` now owns `DebugDrawResponse`
 storage and accessors. The opaque-output source gate follows the new owner, while
-`debug_draw_controls.rs` keeps debug draw options, draw-list/style types, and helper orchestration.
-The public debug draw response API remains unchanged.
+`debug_draw_controls.rs` re-exports the public surface. The public debug draw response API remains
+unchanged.
 
 2026-05-26 debug-draw options owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options.rs` now owns the public debug draw
 options, stroke/rounding/image/svg options, and mesh vertex helper types. `debug_draw_controls.rs`
-re-exports those types and keeps draw-list state plus helper orchestration. The public debug draw
-API remains unchanged.
+re-exports those types; later owner splits moved draw-list state to `draw_list.rs` and facade entry
+glue to `facade.rs`. The public debug draw API remains unchanged.
 
 2026-05-27 multi-select state owner-split result:
 `ecosystem/fret-ui-kit/src/imui/multi_select/state.rs` now owns `ImUiMultiSelectState`,
