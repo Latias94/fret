@@ -808,6 +808,40 @@ Execution companion: `design.md` (surface map + next worktree order).
       passed.
     - `cargo fmt`: passed.
 
+- [x] FNDX-060 Paint default declarative active reconnect preview wire.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup edge_update_anchor_reconnect_drag_cancel_paths_clear_transient edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit`
+  - Exit note: active default declarative update-anchor reconnect drags now paint one transient
+    preview wire from the fixed port to the current pointer using the existing canvas path paint,
+    Bezier route, preview color, and dashed stroke conventions. The preview stays suppressed while
+    the drag is only armed and disappears after pointer-up, Escape, PointerCancel, and
+    missed-left-button cleanup. This slice still does not implement `reconnect_on_drop_empty`.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup`: red first, then passed after implementation.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo nextest run -p fret-node edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup edge_update_anchor_reconnect_drag_cancel_paths_clear_transient edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit`:
+      passed.
+    - `cargo fmt`: passed.
+
 ## M0 - Decision gates and internal seam map
 
 - [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.

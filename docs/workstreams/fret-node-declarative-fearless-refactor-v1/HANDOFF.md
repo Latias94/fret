@@ -12,29 +12,33 @@ store/view-policy hazard found in the 2026-05-28 `fret-node` architecture audit,
 declarative public-extension decision, and the custom edge path spatial, hit-test, anchor, toolbar,
 edge-label, custom edge-label renderer, child-bounds interactive edge-label control, default
 declarative click-edge selection, selected-edge paint/diagnostics, update-anchor planning,
-rendered update-anchor controls, reconnect-drag lifecycle, and valid reconnect drop commit/callback
-slices, plus reconnect gesture start/end callback aliases. The current risk is
+rendered update-anchor controls, reconnect-drag lifecycle, valid reconnect drop commit/callback
+slices, reconnect gesture start/end callback aliases, and active reconnect preview wire paint. The current risk is
 consumer-facing drift where public extension or store surfaces look authoritative but bypass the
 store's contracts or imply unimplemented view-policy parity.
 
 ## Active Task
 
-- Task ID: FNDX-059.
+- Task ID: FNDX-060.
 - Owner: current Codex session.
 - Status: DONE.
-- Claim: default declarative EdgeWrapper update-anchor reconnect drags now emit reconnect gesture
-  start/end callback aliases. Successful left-button arm emits `on_connect_start`,
-  `on_reconnect_start`, and `on_edge_update_start` with `ConnectDragKind::Reconnect`; committed
-  drops, rejected endpoint-gated drops, empty/no-op drops, Escape, PointerCancel, and
-  missed-left-button cleanup each emit one matching end event through `on_connect_end`,
-  `on_reconnect_end`, and `on_edge_update_end`. Preview wire paint and `reconnect_on_drop_empty`
-  remain follow-up work.
+- Claim: default declarative EdgeWrapper update-anchor reconnect drags now paint an active preview
+  wire. Active drags render one transient dashed preview wire from the fixed port to the current
+  pointer through the existing canvas path paint path; armed drags do not paint it, and pointer-up,
+  Escape, PointerCancel, and missed-left-button cleanup remove it. `reconnect_on_drop_empty`
+  remains follow-up work.
 - Review: use `review-workstream` before accepting broader lane closure.
 - Evidence:
   - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs` owns deterministic
     selected/focused edge update-anchor planning, hit-test rects, rendered controls, reconnect
     armed/active pointer lifecycle, target-port hit-testing, and accepted reconnect transaction
     dispatch plus reconnect gesture start/end event emission.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs` paints the active reconnect
+    preview wire with existing canvas path, Bezier route, preview color, and dash conventions.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`,
+    `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`, and
+    `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs` pass reconnect state into
+    paint and diagnostics.
   - `ecosystem/fret-node/src/runtime/events.rs`, `ecosystem/fret-node/src/runtime/store.rs`, and
     `ecosystem/fret-node/src/runtime/callbacks.rs` expose transient gesture events, store
     gesture subscriptions, and reconnect-only callback alias fan-out.
@@ -146,13 +150,15 @@ store's contracts or imply unimplemented view-policy parity.
   arm and all current end paths: committed drop, rejected endpoint-gated drop, empty/no-op drop,
   Escape, PointerCancel, and missed-left-button cleanup. It still defers preview wire paint and
   `reconnect_on_drop_empty`.
+- FNDX-060 paints an active reconnect preview wire from the fixed port to the current pointer and
+  removes it on current cleanup paths. It still defers `reconnect_on_drop_empty`.
 
 ## Blockers
 
-- None for FNDX-059.
+- None for FNDX-060.
 
 ## Next Recommended Action
 
-- Pick the next reconnect lifecycle slice with a concrete gate. The strongest candidates are either
-  preview wire paint for active reconnect drags or `reconnect_on_drop_empty`; keep them separate
-  unless one slice proves a shared implementation point is required.
+- Pick the next reconnect lifecycle slice with a concrete gate. The strongest remaining candidate
+  is `reconnect_on_drop_empty`; keep picker/insert-node policy explicit rather than folding it into
+  the preview/callback mechanics.

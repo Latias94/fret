@@ -1306,6 +1306,27 @@ fn render_surface_frame_for_binding(
     binding: &NodeGraphSurfaceBinding,
     props_for_binding: impl FnOnce(&NodeGraphSurfaceBinding) -> super::NodeGraphSurfaceProps,
 ) -> fret_core::SemanticsSnapshot {
+    render_surface_frame_for_binding_with_scene(
+        ui,
+        host,
+        services,
+        window,
+        bounds,
+        binding,
+        props_for_binding,
+    )
+    .0
+}
+
+fn render_surface_frame_for_binding_with_scene(
+    ui: &mut fret_ui::UiTree<TestActionHostImpl>,
+    host: &mut TestActionHostImpl,
+    services: &mut FakeUiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    binding: &NodeGraphSurfaceBinding,
+    props_for_binding: impl FnOnce(&NodeGraphSurfaceBinding) -> super::NodeGraphSurfaceProps,
+) -> (fret_core::SemanticsSnapshot, fret_core::Scene) {
     let root = fret_ui::declarative::render_root(
         ui,
         host,
@@ -1324,9 +1345,12 @@ fn render_surface_frame_for_binding(
     let mut scene = fret_core::Scene::default();
     ui.paint_all(host, services, bounds, &mut scene, 1.0);
     host.frame_id = fret_runtime::FrameId(host.frame_id.0.saturating_add(1));
-    ui.semantics_snapshot()
-        .cloned()
-        .expect("semantics snapshot")
+    (
+        ui.semantics_snapshot()
+            .cloned()
+            .expect("semantics snapshot"),
+        scene,
+    )
 }
 
 fn render_default_surface_frame_until_test_id(
@@ -1368,6 +1392,14 @@ fn canvas_semantics_value(snapshot: &fret_core::SemanticsSnapshot) -> &str {
         .find(|node| node.test_id.as_deref() == Some("node_graph.canvas"))
         .and_then(|node| node.value.as_deref())
         .expect("canvas semantics value")
+}
+
+fn scene_path_count(scene: &fret_core::Scene) -> usize {
+    scene
+        .ops()
+        .iter()
+        .filter(|op| matches!(op, fret_core::SceneOp::Path { .. }))
+        .count()
 }
 
 fn render_surface_frame_with_portal_renderer_for_binding(
@@ -4092,6 +4124,7 @@ fn edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect() {
     let value = canvas_semantics_value(&snapshot);
     assert!(value.contains("reconnect_drag_armed:true;"));
     assert!(value.contains("reconnect_dragging:false;"));
+    assert!(value.contains("reconnect_preview_wire:false;"));
     assert!(!binding.internals_store().a11y_snapshot().connecting);
 
     ui.dispatch_event(
@@ -4121,6 +4154,7 @@ fn edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect() {
     let value = canvas_semantics_value(&snapshot);
     assert!(value.contains("reconnect_drag_armed:true;"));
     assert!(value.contains("reconnect_dragging:false;"));
+    assert!(value.contains("reconnect_preview_wire:false;"));
     assert!(!binding.internals_store().a11y_snapshot().connecting);
 
     ui.dispatch_event(
@@ -4150,6 +4184,7 @@ fn edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect() {
     let value = canvas_semantics_value(&snapshot);
     assert!(value.contains("reconnect_drag_armed:false;"));
     assert!(value.contains("reconnect_dragging:true;"));
+    assert!(value.contains("reconnect_preview_wire:true;"));
     assert!(binding.internals_store().a11y_snapshot().connecting);
 
     ui.dispatch_event(
@@ -4177,6 +4212,7 @@ fn edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect() {
     let value = canvas_semantics_value(&snapshot);
     assert!(value.contains("reconnect_drag_armed:false;"));
     assert!(value.contains("reconnect_dragging:false;"));
+    assert!(value.contains("reconnect_preview_wire:false;"));
     assert!(!binding.internals_store().a11y_snapshot().connecting);
 }
 
@@ -4300,6 +4336,7 @@ fn edge_update_anchor_reconnect_drag_cancel_paths_clear_transient() {
         |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
     );
     assert!(canvas_semantics_value(&snapshot).contains("reconnect_dragging:false;"));
+    assert!(canvas_semantics_value(&snapshot).contains("reconnect_preview_wire:false;"));
     assert!(!binding.internals_store().a11y_snapshot().connecting);
 
     arm_and_activate(&mut ui, &mut host, &mut services);
@@ -4325,6 +4362,7 @@ fn edge_update_anchor_reconnect_drag_cancel_paths_clear_transient() {
         |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
     );
     assert!(canvas_semantics_value(&snapshot).contains("reconnect_dragging:false;"));
+    assert!(canvas_semantics_value(&snapshot).contains("reconnect_preview_wire:false;"));
     assert!(!binding.internals_store().a11y_snapshot().connecting);
 
     arm_and_activate(&mut ui, &mut host, &mut services);
@@ -4353,6 +4391,7 @@ fn edge_update_anchor_reconnect_drag_cancel_paths_clear_transient() {
         |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
     );
     assert!(canvas_semantics_value(&snapshot).contains("reconnect_dragging:false;"));
+    assert!(canvas_semantics_value(&snapshot).contains("reconnect_preview_wire:false;"));
     assert!(!binding.internals_store().a11y_snapshot().connecting);
 
     let got = trace.borrow();
@@ -4376,6 +4415,125 @@ fn edge_update_anchor_reconnect_drag_cancel_paths_clear_transient() {
     );
     assert_eq!(&got.reconnect_ends, &got.connect_ends);
     assert_eq!(&got.edge_update_ends, &got.connect_ends);
+}
+
+#[test]
+fn edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup() {
+    let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let source_center = graph
+        .edges
+        .get(&edge)
+        .and_then(|edge| geom.port_center(edge.from))
+        .expect("source port center");
+
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order,
+            selected_edges: vec![edge],
+            ..Default::default()
+        },
+        default_editor_config(),
+    );
+
+    let source_test_id = format!("node_graph.edge_update_anchor.{}.source", edge.0);
+    let _snapshot = render_default_surface_frame_until_test_id(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        &source_test_id,
+    );
+    let (snapshot, base_scene) = render_surface_frame_for_binding_with_scene(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+    );
+    assert!(
+        snapshot
+            .nodes
+            .iter()
+            .any(|node| node.test_id.as_deref() == Some(source_test_id.as_str()))
+    );
+    let base_path_count = scene_path_count(&base_scene);
+    assert!(canvas_semantics_value(&snapshot).contains("reconnect_preview_wire:false;"));
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: PointerId(0),
+            position: source_center,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: PointerId(0),
+            position: Point::new(Px(source_center.x.0 + 32.0), Px(source_center.y.0 + 20.0)),
+            buttons: MouseButtons {
+                left: true,
+                right: false,
+                middle: false,
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    let (snapshot, active_scene) = render_surface_frame_for_binding_with_scene(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+    );
+    assert!(canvas_semantics_value(&snapshot).contains("reconnect_dragging:true;"));
+    assert!(canvas_semantics_value(&snapshot).contains("reconnect_preview_wire:true;"));
+    assert_eq!(scene_path_count(&active_scene), base_path_count + 1);
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    let (snapshot, cleanup_scene) = render_surface_frame_for_binding_with_scene(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+    );
+    assert!(canvas_semantics_value(&snapshot).contains("reconnect_dragging:false;"));
+    assert!(canvas_semantics_value(&snapshot).contains("reconnect_preview_wire:false;"));
+    assert_eq!(scene_path_count(&cleanup_scene), base_path_count);
 }
 
 #[test]
@@ -4685,6 +4843,7 @@ fn edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_withou
     let value = canvas_semantics_value(&snapshot);
     assert!(value.contains("reconnect_drag_armed:false;"));
     assert!(value.contains("reconnect_dragging:false;"));
+    assert!(value.contains("reconnect_preview_wire:false;"));
     assert!(!binding.internals_store().a11y_snapshot().connecting);
 }
 
@@ -4825,6 +4984,7 @@ fn edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit() {
     let value = canvas_semantics_value(&snapshot);
     assert!(value.contains("reconnect_drag_armed:false;"));
     assert!(value.contains("reconnect_dragging:false;"));
+    assert!(value.contains("reconnect_preview_wire:false;"));
     assert!(!binding.internals_store().a11y_snapshot().connecting);
 }
 

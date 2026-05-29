@@ -100,7 +100,8 @@ mod transactions;
 use self::cache::{
     DerivedGeometryCacheState, EdgePaintCacheState, NodePaintCacheState, NodeRectDraw,
     canvas_viewport_rect, declarative_presenter_revision, paint_debug_grid_cached,
-    paint_edges_cached, paint_nodes_cached, sync_derived_cache, sync_edges_cache, sync_grid_cache,
+    paint_edges_cached, paint_nodes_cached, paint_reconnect_preview_wire,
+    reconnect_preview_wire_paintable, sync_derived_cache, sync_edges_cache, sync_grid_cache,
     sync_nodes_cache,
 };
 #[cfg(test)]

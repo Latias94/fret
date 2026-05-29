@@ -189,6 +189,8 @@ update rather than an incidental refactor.
     cleanup-only.
   - FNDX-059 emits reconnect gesture start/end callback aliases for successful arm plus committed,
     rejected, empty/no-op, Escape, PointerCancel, and missed-left-button cleanup end paths.
+  - FNDX-060 paints an active reconnect preview wire from the fixed port to the current pointer and
+    removes it on pointer-up/cancel cleanup.
   - Custom `NodeGraphPresenter` remains advanced/internal on the default path because it still mixes
     geometry, labels, context menus, and insertion/search policy.
   - Broader XyFlow edge-wrapper lifecycle parity remains follow-up work beyond click selection,

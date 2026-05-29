@@ -1,5 +1,6 @@
 use super::edge_hit_test::effective_edge_hit_width_screen_px;
 use super::*;
+use crate::rules::EdgeEndpoint;
 
 #[derive(Debug, Clone, Default)]
 pub(super) struct DerivedGeometryCacheState {
@@ -845,6 +846,112 @@ pub(super) fn paint_edges_cached(
             }
         }
     });
+}
+
+pub(super) fn reconnect_preview_wire_paintable(
+    geom: Option<&CanvasGeometry>,
+    reconnect_drag: Option<&ReconnectDragState>,
+) -> bool {
+    let Some(drag) = reconnect_drag.filter(|drag| drag.is_active()) else {
+        return false;
+    };
+    geom.and_then(|geom| geom.port_center(drag.fixed_port))
+        .is_some()
+        && drag.current_screen.x.0.is_finite()
+        && drag.current_screen.y.0.is_finite()
+}
+
+pub(super) fn paint_reconnect_preview_wire(
+    p: &mut CanvasPainter<'_>,
+    view: PanZoom2D,
+    margin_screen_px: f32,
+    geom: Option<Arc<CanvasGeometry>>,
+    reconnect_drag: Option<&ReconnectDragState>,
+    style_tokens: &NodeGraphStyle,
+) {
+    let Some(geom) = geom.as_deref() else {
+        return;
+    };
+    let Some(drag) = reconnect_drag.filter(|drag| drag.is_active()) else {
+        return;
+    };
+
+    let bounds = p.bounds();
+    let Some((from, to)) = reconnect_preview_wire_points(view, bounds, geom, drag) else {
+        return;
+    };
+    let Some(cull) = canvas_viewport_rect(bounds, view, margin_screen_px) else {
+        return;
+    };
+    let Some(transform) = view.render_transform(bounds) else {
+        return;
+    };
+
+    let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
+    let commands = edge_commands_for_route(EdgeRouteKind::Bezier, from, to, zoom);
+    let bbox = padded_edge_bbox(&commands, from, to, zoom, style_tokens, 1.0);
+    if !rects_intersect(cull, bbox) {
+        return;
+    }
+
+    let dash = scale_dash_pattern_screen_px_to_canvas_units(
+        DashPatternV1::new(Px(8.0), Px(6.0), Px(0.0)),
+        zoom,
+    );
+    let stroke_width = (style_tokens.geometry.wire_width / zoom).max(0.0);
+    let style = PathStyle::StrokeV2(StrokeStyleV2 {
+        width: Px(stroke_width),
+        join: StrokeJoinV1::Round,
+        cap: StrokeCapV1::Round,
+        miter_limit: 4.0,
+        dash,
+    });
+    let paint: PaintBindingV1 = style_tokens.paint.wire_color_preview.into();
+    let key = CanvasKey::from_hash(&(
+        "fret-node.reconnect-preview-wire.v1",
+        drag.edge,
+        drag.endpoint,
+        quantize_f32(from.x.0, 1024.0),
+        quantize_f32(from.y.0, 1024.0),
+        quantize_f32(to.x.0, 1024.0),
+        quantize_f32(to.y.0, 1024.0),
+    ))
+    .0;
+    let raster_scale_factor = p.scale_factor() * zoom;
+
+    p.with_transform(transform, |p| {
+        p.path_paint(
+            key,
+            DrawOrder(3),
+            Point::new(Px(0.0), Px(0.0)),
+            &commands,
+            style,
+            paint,
+            raster_scale_factor,
+        );
+    });
+}
+
+fn reconnect_preview_wire_points(
+    view: PanZoom2D,
+    bounds: Rect,
+    geom: &CanvasGeometry,
+    drag: &ReconnectDragState,
+) -> Option<(Point, Point)> {
+    let fixed = geom.port_center(drag.fixed_port)?;
+    let current = view.screen_to_canvas(bounds, drag.current_screen);
+    if !fixed.x.0.is_finite()
+        || !fixed.y.0.is_finite()
+        || !current.x.0.is_finite()
+        || !current.y.0.is_finite()
+    {
+        return None;
+    }
+
+    Some(match drag.endpoint {
+        EdgeEndpoint::From => (current, fixed),
+        EdgeEndpoint::To => (fixed, current),
+    })
 }
 
 pub(super) fn edge_stroke_width_mul_for_selection(

@@ -25,7 +25,8 @@ use super::{
     authoritative_surface_boundary_snapshot, collect_edge_paint_diagnostics,
     collect_portal_diagnostics, declarative_presenter_revision,
     flush_portal_measured_geometry_state, plan_paint_only_interaction_frame,
-    read_authoritative_graph_in_models, read_authoritative_view_state_in_models, stable_hash_u64,
+    read_authoritative_graph_in_models, read_authoritative_view_state_in_models,
+    reconnect_preview_wire_paintable, stable_hash_u64,
     sync_authoritative_surface_boundary_in_models, sync_derived_cache, sync_edges_cache,
     sync_grid_cache, sync_nodes_cache, view_from_state,
 };
@@ -488,6 +489,10 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         cull_margin_screen_px,
         node_drag_value.as_ref(),
     );
+    let reconnect_preview_wire = reconnect_preview_wire_paintable(
+        derived_cache_value.geom.as_deref(),
+        reconnect_drag_value.as_ref(),
+    );
     let semantics_value = super::build_surface_semantics_value(SurfaceSemanticsParams {
         panning: interaction_plan.panning,
         marquee_active: interaction_plan.marquee_active,
@@ -495,6 +500,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         node_dragging: interaction_plan.node_dragging,
         reconnect_drag_armed: interaction_plan.reconnect_drag_armed,
         reconnect_dragging: interaction_plan.reconnect_dragging,
+        reconnect_preview_wire,
         hovered: interaction_plan.hovered,
         selected_nodes_len: interaction_plan.selected_nodes_len(),
         grid_cached,

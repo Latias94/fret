@@ -13,7 +13,7 @@ use super::{
     HoverAnchorStore, HoverTooltipOverlayParams, MarqueeDragState, NodeDragState,
     PortalMeasuredGeometryState, ReconnectDragState, ReconnectDropContext,
     apply_pending_fit_to_portals, host_visible_portal_labels, paint_debug_grid_cached,
-    paint_edges_cached, paint_nodes_cached, push_edge_label_overlays,
+    paint_edges_cached, paint_nodes_cached, paint_reconnect_preview_wire, push_edge_label_overlays,
     push_edge_update_anchor_controls, push_hover_tooltip_overlay_if_needed,
     push_marquee_overlay_if_active, push_overlay_layer_if_needed,
     sync_hover_anchor_store_in_models,
@@ -56,6 +56,7 @@ pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
     pub(super) selected_edges: Vec<EdgeId>,
     pub(super) marquee_value: Option<MarqueeDragState>,
     pub(super) node_drag_value: Option<NodeDragState>,
+    pub(super) reconnect_drag_value: Option<ReconnectDragState>,
     pub(super) paint_overrides_ref: Option<NodeGraphPaintOverridesRef>,
 }
 
@@ -99,6 +100,7 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         selected_edges,
         marquee_value,
         node_drag_value,
+        reconnect_drag_value,
         paint_overrides_ref,
     } = params;
 
@@ -109,6 +111,7 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
     let selected_nodes_for_paint = selected_nodes.clone();
     let selected_edges_for_paint = selected_edges.clone();
     let node_drag_for_paint = node_drag_value.clone();
+    let reconnect_drag_for_paint = reconnect_drag_value;
     let paint_overrides_for_paint = paint_overrides_ref.clone();
 
     let store_model_id = binding.store_model().id();
@@ -145,6 +148,14 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
             &selected_edges_for_paint,
             &style_tokens_for_paint,
             paint_overrides_for_paint.as_deref(),
+        );
+        paint_reconnect_preview_wire(
+            p,
+            view_for_paint,
+            cull_margin_screen_px,
+            geom_for_paint_canvas.clone(),
+            reconnect_drag_for_paint.as_ref(),
+            &style_tokens_for_paint,
         );
     });
 
