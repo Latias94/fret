@@ -1,7 +1,7 @@
-//! Material 3 list (MVP).
+//! Material 3 list.
 //!
 //! Outcome-oriented implementation:
-//! - Token-driven sizing and colors via `md.comp.list.*` (subset).
+//! - Token-driven sizing and colors via `md.comp.list.*`.
 //! - Roving focus + automatic activation (selection follows focus).
 //! - State layer + bounded ripple aligned to item bounds.
 
@@ -231,7 +231,9 @@ impl List {
                 .ok()
                 .flatten();
 
-            let tab_stop = selected_idx.or_else(|| disabled_items.iter().position(|&d| !d));
+            let selected_enabled_idx =
+                selected_idx.filter(|&idx| !disabled_items.get(idx).copied().unwrap_or(false));
+            let tab_stop = selected_enabled_idx.or_else(|| disabled_items.iter().position(|&d| !d));
             let model_for_roving = model.clone();
             let items_for_roving = items.clone();
 
@@ -241,7 +243,7 @@ impl List {
             roving.flex.align = CrossAlign::Stretch;
             roving.flex.justify = MainAlign::Start;
             roving.roving = fret_ui::element::RovingFocusProps {
-                enabled: true,
+                enabled: !disabled,
                 wrap: loop_navigation,
                 disabled: disabled_items.clone(),
             };
@@ -291,22 +293,27 @@ impl List {
                                     return RovingNavigateResult::Handled { target: None };
                                 };
 
-                                let mut idx = current;
-                                for _ in 0..it.len {
-                                    idx = if forward {
-                                        if idx + 1 < it.len { idx + 1 } else { 0 }
-                                    } else if idx > 0 {
-                                        idx - 1
-                                    } else {
-                                        it.len.saturating_sub(1)
-                                    };
-
-                                    if !is_disabled(idx) {
-                                        return RovingNavigateResult::Handled { target: Some(idx) };
+                                let len = it.len;
+                                let mut target: Option<usize> = None;
+                                if it.wrap {
+                                    for step in 1..=len {
+                                        let idx = if forward {
+                                            (current + step) % len
+                                        } else {
+                                            (current + len - (step % len)) % len
+                                        };
+                                        if !is_disabled(idx) {
+                                            target = Some(idx);
+                                            break;
+                                        }
                                     }
+                                } else if forward {
+                                    target = ((current + 1)..len).find(|&i| !is_disabled(i));
+                                } else if current > 0 {
+                                    target = (0..current).rev().find(|&i| !is_disabled(i));
                                 }
 
-                                RovingNavigateResult::Handled { target: None }
+                                RovingNavigateResult::Handled { target }
                             }));
 
                             cx.roving_on_active_change(Arc::new(move |host, action_cx, idx| {

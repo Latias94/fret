@@ -68,6 +68,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_carousel_item_semantics_sizing_elevation_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_fab_size_elevation_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_list_density_slots_semantics_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_list_roving_behavior_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_progress_indicator_semantics_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_checkbox_semantics_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_radio_semantics_layout_motion_packet_v2.md`
@@ -1033,6 +1034,22 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     includes vertical menu padding in placement size, preserves kit dismissal/focus restore, and
     has fixed-frame open/close fade-scale proof.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_menu_dropdown_layout_focus_motion_packet_v2.md`
+- 2026-05-29: M3PV2-082 closed standalone List roving keyboard behavior for the current
+  selectable recipe surface.
+  - Sources: Compose Material3 `ListItem.kt` interactive overloads define enabled/disabled,
+    selected, and clickable item outcomes; existing Material navigation recipes supplied the
+    Fret-side roving no-loop/disabled-skip exemplar.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test list_state`
+    failed because ArrowUp at the first enabled item wrapped to the last enabled item despite
+    `loop_navigation(false)`, and a disabled selected value left the first enabled item without a
+    focus action.
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test list_state`
+  - Result: List now honors no-loop boundaries, skips disabled items during roving focus, updates
+    selection only for enabled active items, keeps Home/End on first/last enabled items, disables
+    the roving group when the whole list is disabled, and falls back to the first enabled tab stop
+    when the selected value points to a disabled item.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_list_roving_behavior_packet_v2.md`
 
 ## Proof Note Template
 

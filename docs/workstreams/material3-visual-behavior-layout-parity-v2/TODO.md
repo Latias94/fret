@@ -1052,8 +1052,26 @@ Task IDs use `M3PV2-*`.
   list/list-item role, selection, disabled state, and collection metadata.
   Evidence: `artifacts/material3_list_density_slots_semantics_packet_v2.md`.
   Handoff: List style/layout/accessibility are v2-covered for the current standalone selectable
-  list recipe. Roving keyboard behavior remains seeded rather than v2-closed, and reorder/reveal,
+  list recipe. Roving keyboard behavior is covered by M3PV2-082, while reorder/reveal,
   avatars/images/video, segmented list items, and multiline wrapped supporting text remain residual.
+
+- [x] M3PV2-082 [owner=codex] [deps=M3PV2-063] [scope=ecosystem/fret-ui-material3/src/list.rs,ecosystem/fret-ui-material3/tests/list_state.rs,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close selectable List roving keyboard behavior for disabled-item skipping,
+  selection-follows-focus, Home/End, no-loop boundaries, and disabled-selected tab-stop fallback.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test list_state`
+  failed because ArrowUp at the first enabled item wrapped to the last enabled item even with
+  `loop_navigation(false)`, and a disabled selected value left the first enabled item without a
+  focus action; green gate:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test list_state`.
+  Review: DONE. This found a Material List recipe behavior bug, not a core or kit mechanism gap.
+  Fret core already had roving focus, focus actions, and selected/disabled semantics; the local
+  List recipe had a stale custom ArrowUp/ArrowDown algorithm and did not filter disabled selected
+  items out of tab-stop selection.
+  Evidence: `artifacts/material3_list_roving_behavior_packet_v2.md`.
+  Handoff: List behavior is now v2-covered for the current selectable recipe surface. Compose's
+  separate clickable, single-selection, multi-selection, and segmented list-item overload breadth
+  remains future component-surface work.
 
 - [x] M3PV2-064 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/progress_indicator.rs,ecosystem/fret-ui-material3/tests/{progress_indicator_state.rs,automation_surface.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
   Goal: Close ProgressIndicator accessibility and motion proof by exposing progressbar semantics,

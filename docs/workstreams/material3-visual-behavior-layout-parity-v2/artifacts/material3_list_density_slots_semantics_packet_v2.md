@@ -90,8 +90,9 @@ cargo check -p fret-ui-gallery
 
 ## Residual Risk
 
-- List behavior remains classified as seeded: roving focus and selection-follow-focus already
-  exist, but this packet did not add a dedicated keyboard-navigation behavior test.
+- List behavior is covered by the later
+  `material3_list_roving_behavior_packet_v2.md`; this density packet itself did not add a
+  dedicated keyboard-navigation behavior test.
 - Drag/reorder, reveal, segmented list items, avatars, images, and video leading content remain
   outside this packet.
 - Supporting text is single-line clipped in the current Fret recipe; Compose's multiline

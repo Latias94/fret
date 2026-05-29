@@ -140,9 +140,19 @@ Material3 ListItem supports headline, overline, supporting, leading, and trailin
 56/72/88px density outcomes. ListItem now exposes overline/supporting/trailing-supporting text
 builders, resolves one-line/two-line/three-line heights, exposes stable slot part ids, refreshes
 List headless goldens for multi-line rows, and proves List/ListItem role, selected state, disabled
-state, and collection metadata. Roving keyboard behavior remains seeded rather than v2-closed, and
-reorder/reveal, avatars/images/video, segmented list items, and multiline wrapped supporting text
-remain residual.
+state, and collection metadata. M3PV2-082 closes roving keyboard behavior for the current
+selectable recipe surface, while reorder/reveal, avatars/images/video, segmented list items, and
+multiline wrapped supporting text remain residual.
+
+M3PV2-082 is complete: standalone List behavior is now v2-covered for the current selectable
+recipe surface. Compose Material3 was the interactive item source, and existing Material
+navigation recipes were the Fret-side roving exemplar. The packet found a Material List recipe
+behavior bug, not a core or kit mechanism gap: List's local ArrowUp/ArrowDown handler always
+wrapped at edges even when `loop_navigation(false)`, and a disabled selected value could consume
+the list tab stop. List now mirrors the established disabled-skip/no-loop roving algorithm, disables
+the roving group when the whole list is disabled, and filters disabled selected items out of
+tab-stop selection. `list_state` now proves disabled-item skipping, selection-follows-focus,
+Home/End, no-loop edge behavior, and disabled-selected tab-stop fallback.
 
 M3PV2-064 is complete: ProgressIndicator accessibility and current indeterminate draw-region
 motion axes are now v2-covered. The packet found a Material recipe/diagnostics wiring gap, not a
@@ -346,9 +356,9 @@ scroll/max-height behavior.
 
 ## Next Recommended Action
 
-Continue with the next uncovered Material3 packet from the matrix. Higher-priority candidates now
-move through remaining seeded rows such as NavigationDrawer motion or List behavior, or close the
-broader overlay-family policy comparison in M3PV2-050.
+Continue with the next uncovered Material3 packet from the matrix. Remaining seeded rows are now
+NavigationDrawer motion and standalone Menu motion breadth, or close the broader overlay-family
+policy comparison in M3PV2-050.
 
 ## Useful Gates
 
