@@ -79,6 +79,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_tabs_indicator_semantics_layout_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_navigation_bar_rail_semantics_layout_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_navigation_drawer_modal_semantics_layout_motion_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_navigation_drawer_item_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_top_app_bar_scroll_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_dialog_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_snackbar_layout_motion_packet_v2.md`
@@ -1062,6 +1063,17 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     the current Menu item recipe paints bounded pressed state-layer motion over item chrome through
     the shared Material ink runtime.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_menu_item_motion_packet_v2.md`
+- 2026-05-29: M3PV2-084 closed standalone NavigationDrawer item motion proof for the current
+  destination recipe surface.
+  - Sources: Compose Material3 `NavigationDrawerItem` renders through `Surface` with selected,
+    click, shape, color, and interaction-source handling; Fret Material tokens expose
+    `md.comp.navigation-drawer.*` state-layer colors and opacity.
+  - Proof gate:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test navigation_drawer_state navigation_drawer_pressed_state_layer_animates_over_item_chrome`
+  - Result: The new fixed-frame `navigation_drawer_state` gate passed without implementation
+    changes, proving the current NavigationDrawer destination recipe paints bounded pressed
+    state-layer motion over item chrome through the shared Material ink runtime.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_navigation_drawer_item_motion_packet_v2.md`
 
 ## Proof Note Template
 

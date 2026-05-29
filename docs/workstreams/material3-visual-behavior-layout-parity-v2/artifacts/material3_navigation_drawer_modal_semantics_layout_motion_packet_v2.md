@@ -96,7 +96,8 @@ git diff --check
 - This packet covers the current left-edge modal drawer and standard drawer destination recipe.
   Dismissible drawer gestures, predictive-back scaling, RTL slide direction, permanent drawer
   window insets, drawer headers, and adaptive NavigationSuite ownership remain future API work.
-- NavigationDrawer standard motion remains seeded because the standalone standard recipe has no
-  open/close motion surface.
+- NavigationDrawer standard item pressed state-layer motion is covered by
+  `material3_navigation_drawer_item_motion_packet_v2.md`; standalone standard drawers still have
+  no open/close surface motion because they are always-present navigation surfaces.
 - Exact surface shape/elevation conflicts between Compose defaults and Material Web token aliases
   remain style-axis v1 coverage unless a later packet chooses a single authoritative variant model.

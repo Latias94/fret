@@ -926,6 +926,20 @@ Task IDs use `M3PV2-*`.
   motion remains covered by M3PV2-081. Menu style and broader component-surface breadth remain
   residual.
 
+- [x] M3PV2-084 [owner=codex] [deps=M3PV2-075] [scope=ecosystem/fret-ui-material3/src/navigation_drawer.rs,ecosystem/fret-ui-material3/tests/navigation_drawer_state.rs,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close standalone NavigationDrawer item motion proof by adding a fixed-frame pressed
+  state-layer gate for the current destination recipe surface.
+  Validation: proof gate:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test navigation_drawer_state navigation_drawer_pressed_state_layer_animates_over_item_chrome`.
+  Review: DONE. This found a proof-density gap, not an implementation or infrastructure gap:
+  Material NavigationDrawer already used the shared bounded ink/state-layer runtime, and the new
+  gate passed without recipe, token, kit, or core changes. The stale module-level `MVP` label was
+  removed because the current recipe now has v2 proof coverage.
+  Evidence: `artifacts/material3_navigation_drawer_item_motion_packet_v2.md`.
+  Handoff: NavigationDrawer motion is v2-covered for standard destination state-layer motion;
+  ModalNavigationDrawer panel/scrim motion remains covered by M3PV2-075. Standard drawers are
+  always-present surfaces and have no open/close motion surface.
+
 - [ ] M3PV2-050 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{menu.rs,dropdown_menu.rs,dialog.rs,bottom_sheet.rs,tooltip.rs,snackbar.rs},ecosystem/fret-ui-kit,tools/diag-scripts/ui-gallery/material3]
   Goal: Audit dismissal, focus containment/restore, live region, action close parts, sheet motion,
   and rich tooltip interaction against Material/MUI/Compose/Base UI sources.

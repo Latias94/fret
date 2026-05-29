@@ -352,6 +352,13 @@ Menu already used the shared Material bounded ink/state-layer runtime, and the n
 `menu_state` gate passed without recipe, token, kit, or core changes. DropdownMenu overlay motion
 remains covered by M3PV2-081; Menu style and broader component-surface breadth remain residual.
 
+M3PV2-084 is complete: standalone NavigationDrawer item motion is now v2-covered for the current
+destination recipe surface. The packet found a proof-density gap, not an implementation or
+infrastructure gap: NavigationDrawer already used the shared Material bounded ink/state-layer
+runtime, and the new fixed-frame `navigation_drawer_state` gate passed without recipe, token, kit,
+or core changes. ModalNavigationDrawer panel/scrim motion remains covered by M3PV2-075; standard
+drawers are always-present navigation surfaces and have no open/close motion surface.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -362,8 +369,10 @@ remains covered by M3PV2-081; Menu style and broader component-surface breadth r
 
 ## Next Recommended Action
 
-Continue with the next uncovered Material3 packet from the matrix. The only remaining seeded row is
-NavigationDrawer motion, or close the broader overlay-family policy comparison in M3PV2-050.
+The v2 matrix now has no `seeded` or `needs_v2_packet` component-axis rows. Continue by closing the
+broader aggregate tasks still marked pending: M3PV2-050 overlay-family policy comparison,
+M3PV2-030/M3PV2-060 family umbrella review, then M3PV2-070 harness consolidation and M3PV2-080
+closeout.
 
 ## Useful Gates
 

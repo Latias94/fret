@@ -1,4 +1,4 @@
-//! Material 3 navigation drawer (MVP).
+//! Material 3 navigation drawer.
 //!
 //! Outcome-oriented implementation:
 //! - Token-driven sizing and colors via `md.comp.navigation-drawer.*` (subset).

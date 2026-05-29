@@ -5,8 +5,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    AppWindowId, Paint, Point, Px, Rect, Scene, SceneOp, SemanticsNode, SemanticsOrientation,
-    SemanticsRole, Size, UiServices,
+    AppWindowId, Paint, Point, PointerId, Px, Rect, Scene, SceneOp, SemanticsNode,
+    SemanticsOrientation, SemanticsRole, Size, UiServices,
 };
 use fret_runtime::{Model, ModelHost, PlatformCapabilities};
 use fret_ui::UiTree;
@@ -18,6 +18,7 @@ use fret_ui_material3::{
 mod interaction_harness;
 mod support;
 
+use support::events::{pointer_down, pointer_move};
 use support::goldens::run_overlay_frame_with_scene_scaled;
 use support::host::{FakeUiServices, TestHost};
 use support::theme::apply_material_theme;
@@ -111,6 +112,43 @@ fn assert_px_close(actual: f32, expected: f32, context: &str) {
 
 fn rect_right(rect: Rect) -> f32 {
     rect.origin.x.0 + rect.size.width.0
+}
+
+fn paint(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    bounds: Rect,
+) -> Scene {
+    let mut scene = Scene::default();
+    ui.paint_all(app, services, bounds, &mut scene, 1.0);
+    scene
+}
+
+fn state_layer_alphas_for_chrome(scene: &Scene, chrome: Rect) -> Vec<f32> {
+    scene
+        .ops()
+        .iter()
+        .filter_map(|op| match *op {
+            SceneOp::Quad {
+                rect, background, ..
+            } if rect.origin.x.0 >= chrome.origin.x.0 - 0.1
+                && rect.origin.y.0 >= chrome.origin.y.0 - 0.1
+                && rect.origin.x.0 + rect.size.width.0
+                    <= chrome.origin.x.0 + chrome.size.width.0 + 0.1
+                && rect.origin.y.0 + rect.size.height.0
+                    <= chrome.origin.y.0 + chrome.size.height.0 + 0.1
+                && (rect.size.width.0 - chrome.size.width.0).abs() <= 2.1
+                && (rect.size.height.0 - chrome.size.height.0).abs() <= 2.1 =>
+            {
+                match background.paint {
+                    Paint::Solid(color) if color.a > 0.0 && color.a < 0.2 => Some(color.a),
+                    _ => None,
+                }
+            }
+            _ => None,
+        })
+        .collect()
 }
 
 fn largest_negative_horizontal_slide_tx(scene: &Scene) -> Option<f32> {
@@ -207,6 +245,52 @@ fn navigation_drawer_exports_vertical_tablist_semantics_and_item_geometry() {
     );
     assert_px_close(icon.size.width.0, 24.0, "icon width");
     assert_px_close(label.origin.x.0 - rect_right(icon), 12.0, "icon-label gap");
+}
+
+#[test]
+fn navigation_drawer_pressed_state_layer_animates_over_item_chrome() {
+    let (mut app, window, mut services, mut ui) = harness();
+    let selected = app.models_mut().insert(Arc::<str>::from("search"));
+    let bounds = bounds();
+
+    render_navigation_drawer(&mut ui, &mut app, &mut services, window, selected.clone());
+
+    let chrome = visual_bounds_by_test_id(&ui, &app, window, "m3-drawer-settings.chrome");
+    assert!(
+        state_layer_alphas_for_chrome(&paint(&mut ui, &mut app, &mut services, bounds), chrome)
+            .is_empty(),
+        "idle navigation drawer item should not paint a visible state layer"
+    );
+
+    let press_at = Point::new(
+        Px(chrome.origin.x.0 + chrome.size.width.0 * 0.5),
+        Px(chrome.origin.y.0 + chrome.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_move(PointerId(1), press_at),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), press_at),
+    );
+
+    let mut animated = Vec::new();
+    for _ in 0..4 {
+        app.advance_frame();
+        render_navigation_drawer(&mut ui, &mut app, &mut services, window, selected.clone());
+        animated.extend(state_layer_alphas_for_chrome(
+            &paint(&mut ui, &mut app, &mut services, bounds),
+            chrome,
+        ));
+    }
+
+    assert!(
+        animated.iter().any(|alpha| *alpha > 0.001 && *alpha < 0.2),
+        "expected pressed navigation drawer item state layer to animate through partial alpha, got {animated:?}"
+    );
 }
 
 #[test]
