@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-29 facade floating surface owner-split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
+`UiWriterImUiFacadeExt` trait hub, but floating layer/area, popup open/drop/begin,
+tooltip, drag/drop, and in-window floating-window trait default method declarations now live in
+`facade_writer/floating_surface.rs` and are expanded into the public trait. Existing
+`floating_popup/*` owners still delegate to the concrete floating, popup, tooltip, drag/drop, and
+window behavior modules.
+
 2026-05-29 facade menu/selection surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but menu item, begin menu/submenu, selectable,

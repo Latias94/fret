@@ -44,6 +44,16 @@ Last updated: 2026-05-29
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI facade floating/popup/tooltip/drag/window trait default method declarations out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
+      `UiWriterImUiFacadeExt` trait, caller import behavior, floating area/window, popup, tooltip,
+      drag/drop method names, popup/window docs, or floating/popup/drag behavior.
+      Result: `facade_writer.rs` keeps the single public trait hub and expands
+      `facade_writer/floating_surface.rs` at the original floating, tooltip/drag, and window
+      positions. `floating_surface.rs` owns floating layer/area, popup open/drop/begin, tooltip,
+      drag/drop, and in-window floating-window trait default declarations/forwarding. Existing
+      `floating_popup/*` owners still delegate to concrete floating, popup, tooltip, drag/drop, and
+      window behavior modules.
 - [x] Split IMUI facade menu/selection trait default method declarations out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, menu item, begin menu/submenu,
