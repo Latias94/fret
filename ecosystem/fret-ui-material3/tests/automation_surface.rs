@@ -925,6 +925,8 @@ fn material3_surface_data_display_expose_stable_part_test_ids() {
         "m3-linear-progress.track",
         "m3-linear-progress.active-track",
         "m3-circular-progress",
+        "m3-circular-progress.track",
+        "m3-circular-progress.active-track",
         "m3-top-app-bar",
         "m3-top-app-bar-nav",
         "m3-top-app-bar-nav.chrome",
@@ -953,6 +955,14 @@ fn material3_surface_data_display_expose_stable_part_test_ids() {
     );
     assert!(!semantics_node_selected(&ui, "m3-list-alpha"));
     assert!(semantics_node_selected(&ui, "m3-list-beta"));
+    assert_eq!(
+        semantics_node_role(&ui, "m3-linear-progress"),
+        SemanticsRole::ProgressBar
+    );
+    assert_eq!(
+        semantics_node_role(&ui, "m3-circular-progress"),
+        SemanticsRole::ProgressBar
+    );
 }
 
 #[test]

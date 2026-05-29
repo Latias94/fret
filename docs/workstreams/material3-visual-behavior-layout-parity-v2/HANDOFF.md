@@ -144,6 +144,15 @@ state, and collection metadata. Roving keyboard behavior remains seeded rather t
 reorder/reveal, avatars/images/video, segmented list items, and multiline wrapped supporting text
 remain residual.
 
+M3PV2-064 is complete: ProgressIndicator accessibility and current indeterminate draw-region
+motion axes are now v2-covered. The packet found a Material recipe/diagnostics wiring gap, not a
+core or kit mechanism gap: `fret-core` already exposed `ProgressBar`, numeric range metadata, and
+busy flags, but Material progress indicators wrapped their canvas as generic semantics nodes.
+Linear and circular indicators now expose progressbar semantics, optional accessible labels,
+determinate 0..1 numeric metadata, indeterminate busy state, circular `.track` / `.active-track`
+part ids, and a fixed-frame test proves indeterminate draw regions move across frames. Determinate
+value interpolation, linear default width policy, and wavy progress indicators remain residual.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -154,8 +163,8 @@ remain residual.
 
 ## Next Recommended Action
 
-Continue with the next uncovered Material3 packet from the matrix. Good M5 candidates are
-ProgressIndicator; higher-priority choice-control candidates remain Checkbox and Radio.
+Continue with the next uncovered Material3 packet from the matrix. Higher-priority choice-control
+candidates remain Checkbox and Radio; NavigationRail/NavigationBar layout packets are also open.
 
 ## Useful Gates
 

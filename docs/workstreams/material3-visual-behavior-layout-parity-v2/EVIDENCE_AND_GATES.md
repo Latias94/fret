@@ -67,6 +67,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_carousel_item_semantics_sizing_elevation_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_fab_size_elevation_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_list_density_slots_semantics_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_progress_indicator_semantics_motion_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -611,6 +612,31 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     for multi-line rows, and proves List/ListItem role, selected state, disabled state, and
     collection metadata. The gap was Material recipe/API completeness, not core or kit mechanism.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_list_density_slots_semantics_packet_v2.md`
+- 2026-05-29: M3PV2-064 closed ProgressIndicator accessibility and current indeterminate
+  draw-region motion coverage.
+  - Sources: Compose Material3 `ProgressIndicator.kt` sets determinate
+    `ProgressBarRangeInfo(current, 0f..1f)` and uses `progressSemantics()` for indeterminate
+    progress; `ProgressIndicatorDefaults` defines circular indeterminate transparent track color
+    and progress animation constants; Compose linear/circular progress token files define size,
+    thickness, gap, and wave metrics.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test progress_indicator_state`
+    failed because LinearProgressIndicator and CircularProgressIndicator had no local
+    `a11y_label` builder and the current root semantics were generic rather than progressbar.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test progress_indicator_state`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`
+  - First progress headless golden run timed out while waiting on Cargo build locks; the immediate
+    long-timeout rerun passed:
+    `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_progress_indicator_suite_goldens_v1`
+  - Workstream JSON, matrix JSON, catalog, and `git diff --check` gates passed.
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: progress indicators now expose `ProgressBar` semantics, optional accessible labels,
+    determinate 0..1 numeric metadata, indeterminate busy state, circular track/active-track part
+    ids, and a fixed-frame scene geometry gate for indeterminate draw-region movement. The gap was
+    Material recipe/diagnostics wiring; no core or kit mechanism change was needed.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_progress_indicator_semantics_motion_packet_v2.md`
 
 ## Proof Note Template
 

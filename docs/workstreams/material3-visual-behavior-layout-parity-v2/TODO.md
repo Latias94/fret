@@ -668,6 +668,28 @@ Task IDs use `M3PV2-*`.
   list recipe. Roving keyboard behavior remains seeded rather than v2-closed, and reorder/reveal,
   avatars/images/video, segmented list items, and multiline wrapped supporting text remain residual.
 
+- [x] M3PV2-064 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/progress_indicator.rs,ecosystem/fret-ui-material3/tests/{progress_indicator_state.rs,automation_surface.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close ProgressIndicator accessibility and motion proof by exposing progressbar semantics,
+  determinate numeric range metadata, indeterminate busy state, circular track part ids, and a
+  fixed-frame draw-region motion gate.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test progress_indicator_state`
+  failed because progress indicators had no local `a11y_label` builder and exposed generic
+  semantics; green gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test progress_indicator_state`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_progress_indicator_suite_goldens_v1`;
+  workstream JSON, matrix JSON, catalog, and `git diff --check`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`.
+  Review: DONE. This found a Material recipe/diagnostics wiring gap, not a core or kit mechanism
+  gap. The existing core semantics model already had progressbar, numeric range, and busy flags.
+  Evidence: `artifacts/material3_progress_indicator_semantics_motion_packet_v2.md`.
+  Handoff: ProgressIndicator accessibility and current indeterminate draw-region motion are
+  v2-covered. Determinate value interpolation, linear default width policy, and wavy progress
+  indicators remain residual.
+
 - [ ] M3PV2-060 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{badge.rs,button.rs,card.rs,carousel_item.rs,divider.rs,fab.rs,list.rs,progress_indicator.rs},ecosystem/fret-ui-material3/tests,goldens/material3-headless/v1]
   Goal: Add style/layout proof for low-interaction components without overfitting gallery layout.
   Validation: targeted golden or scene assertions for chrome, shape, elevation, spacing, and canvas
