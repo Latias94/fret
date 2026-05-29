@@ -78,6 +78,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_tabs_indicator_semantics_layout_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_navigation_bar_rail_semantics_layout_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_navigation_drawer_modal_semantics_layout_motion_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_top_app_bar_scroll_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -913,6 +914,30 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     panel slides from the negative drawer-width anchor while the scrim fades without panel opacity
     fade. The gap was Material recipe/proof density, not core or kit mechanism.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_navigation_drawer_modal_semantics_layout_motion_packet_v2.md`
+- 2026-05-29: M3PV2-076 closed TopAppBar Large scroll/collapse layout and current title/container
+  motion proof.
+  - Sources: Compose Material3 `AppBar.kt` uses 4dp app-bar horizontal padding, a 12dp title
+    inset under the 16dp content start, Medium/Large expanded heights of 112dp/152dp, collapsed
+    height 64dp, `TopTitleAlphaEasing = CubicBezierEasing(.8f, 0f, .8f, .15f)`, and a
+    FastOutLinearIn-style container color transition fraction.
+  - Regression gate during implementation:
+    `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_top_app_bar_suite_goldens_v1`
+    failed until Medium/Large explicit `.scrolled(true)` bars without scroll behavior continued
+    to resolve to the fully scrolled color state.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --test top_app_bar_alignment`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_top_app_bar_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --lib top_app_bar`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Workstream JSON, matrix JSON, catalog, and `git diff --check` gates passed.
+  - Result: TopAppBar now exposes stable `.chrome`, `.title`, `.collapsed-title`, and
+    `.expanded-title` anchors, proves Large 152/108/64dp collapse geometry, applies Compose
+    top-title alpha easing, and interpolates Medium/Large container color only when scroll
+    behavior supplies a fractional layout state. The gap was Material recipe/token proof density,
+    not core or kit mechanism.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_top_app_bar_scroll_layout_motion_packet_v2.md`
 
 ## Proof Note Template
 

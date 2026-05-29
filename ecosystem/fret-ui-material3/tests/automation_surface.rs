@@ -1021,6 +1021,8 @@ fn material3_surface_data_display_expose_stable_part_test_ids() {
         "m3-circular-progress.track",
         "m3-circular-progress.active-track",
         "m3-top-app-bar",
+        "m3-top-app-bar.chrome",
+        "m3-top-app-bar.title",
         "m3-top-app-bar-nav",
         "m3-top-app-bar-nav.chrome",
         "m3-top-app-bar-search",

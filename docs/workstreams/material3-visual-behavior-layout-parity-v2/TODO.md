@@ -602,6 +602,32 @@ Task IDs use `M3PV2-*`.
   RTL slide direction, permanent drawer insets, headers, and adaptive NavigationSuite remain
   residual/future API work.
 
+- [x] M3PV2-076 [owner=codex] [deps=M3PV2-010,M3PV2-030,M3PV2-075] [scope=ecosystem/fret-ui-material3/src/{top_app_bar.rs,tokens/top_app_bar.rs},ecosystem/fret-ui-material3/tests/{top_app_bar_alignment.rs,automation_surface.rs,radio_alignment.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close TopAppBar scroll/collapse layout and current motion proof against Compose
+  Material3 by exposing stable chrome/title parts, proving Large expanded/half/collapsed geometry,
+  applying Compose title-alpha easing, and interpolating the container color with scroll fraction.
+  Validation: packet regression gate during implementation:
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_top_app_bar_suite_goldens_v1`
+  failed until explicit `.scrolled(true)` Medium/Large bars without a scroll behavior continued to
+  use the fully scrolled color state; green gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --test top_app_bar_alignment`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_top_app_bar_suite_goldens_v1`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --lib top_app_bar`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`.
+  Review: DONE. This found Material recipe/token proof gaps, not a core or kit mechanism gap.
+  TopAppBar already had scroll behavior state and toolbar semantics, but lacked stable part probes,
+  used boolean container color switching, and used linear collapsed-title alpha. TopAppBar now
+  exposes `.chrome`, `.title`, `.collapsed-title`, and `.expanded-title`, drives Large/Medium
+  color through a FastOutLinearIn scroll fraction, and uses Compose's top-title alpha easing.
+  Evidence: `artifacts/material3_top_app_bar_scroll_layout_motion_packet_v2.md`.
+  Handoff: TopAppBar layout and current scroll/collapse motion are v2-covered for the current
+  recipe surface. Pinned/enter-always behavior remains covered by existing lib tests; flexible
+  app bars, predictive-back integration, and exhaustive variant/theme visual matrices remain
+  residual/future API work.
+
 ## M3 - Choice Controls, Chips, And Motion
 
 - [ ] M3PV2-040 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{checkbox.rs,radio.rs,switch.rs,slider.rs,segmented_button.rs,chip*.rs,*chip.rs},ecosystem/fret-ui-material3/src/interaction,ecosystem/fret-ui-material3/tests]

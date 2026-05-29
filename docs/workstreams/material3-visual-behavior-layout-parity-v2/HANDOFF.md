@@ -265,6 +265,20 @@ ModalNavigationDrawer panel exposed only generic test-id semantics, and the scri
 label. Dismissible drawer gestures, predictive-back scaling, RTL slide direction, permanent drawer
 insets, headers, and adaptive NavigationSuite remain residual/future API work.
 
+M3PV2-076 is complete: TopAppBar layout and current scroll/collapse motion are now v2-covered for
+the current recipe surface. Compose Material3 was the primary source: app bars use 4dp horizontal
+padding, a 12dp title inset under the 16dp content start, Medium/Large collapse to 64dp from
+112/152dp, the two-row top title uses `TopTitleAlphaEasing`, and container color transitions with
+a FastOutLinearIn-style scroll fraction. The packet found Material recipe/token proof-density
+gaps, not core or kit mechanism gaps: TopAppBar already had scroll behavior state and toolbar
+semantics, but lacked stable chrome/title probes, used boolean container color switching, and used
+linear collapsed-title alpha. TopAppBar now exposes `.chrome`, `.title`, `.collapsed-title`, and
+`.expanded-title`, proves Large 152/108/64dp collapse geometry, keeps explicit `.scrolled(true)`
+Medium/Large bars on the fully scrolled color path when no scroll behavior is attached, and uses
+fractional color only for scroll-behavior-driven layouts. Flexible app bars, subtitles,
+predictive-back integration, RTL-specific title placement, and exhaustive variant/theme visual
+matrices remain residual/future API work.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -276,8 +290,8 @@ insets, headers, and adaptive NavigationSuite remain residual/future API work.
 ## Next Recommended Action
 
 Continue with the next uncovered Material3 packet from the matrix. Higher-priority candidates now
-move through remaining navigation and overlay surfaces: TopAppBar scroll/collapse layout/motion,
-Dialog/Snackbar motion/layout, and Menu/DropdownMenu item layout/focus packets are all still open.
+move through remaining overlay surfaces: Dialog/Snackbar motion/layout and Menu/DropdownMenu item
+layout/focus packets are still open.
 
 ## Useful Gates
 
