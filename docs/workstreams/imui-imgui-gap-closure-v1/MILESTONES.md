@@ -43,6 +43,13 @@ forwarding; `container_surface/menu_tabs.rs` owns menu-bar and tab-bar forwardin
 points in `facade_writer.rs` now call these child macros directly, while concrete
 `container_methods/*` behavior owners remain unchanged.
 
+2026-05-29 facade container layout surface sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/container_surface/layout.rs` is now a
+module/re-export hub. `layout/flow.rs` owns item-flow, same-line, dummy, spacing, and indent trait
+forwarding, while `layout/groups.rs` owns horizontal and vertical group trait forwarding. Public
+trait method names, macro expansion order, and concrete `container_methods/*` behavior owners
+remain unchanged.
+
 2026-05-29 facade container layout-method sub-owner result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/layout.rs` is now a module/re-export
 hub. `layout/linear.rs` owns horizontal/vertical forwarding, `layout/grid_scroll.rs` owns grid and

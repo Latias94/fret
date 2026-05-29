@@ -77,6 +77,13 @@ Last updated: 2026-05-29
       `container_surface/menu_tabs.rs` owns menu-bar and tab-bar forwarding,
       `container_surface/collections.rs` owns ListBox/grid/table/virtual-list forwarding, and
       `container_surface/regions.rs` owns scroll and child-region forwarding.
+- [x] Split IMUI facade container layout surface macro owner into flow and group child owners
+      without changing public trait method names, item-flow/same-line/dummy/spacing/indent
+      forwarding, horizontal/vertical forwarding, or concrete `container_methods/*` behavior
+      ownership.
+      Result: `container_surface/layout.rs` is now a module/re-export hub. `layout/flow.rs` owns
+      item-flow, same-line, dummy, spacing, and indent forwarding, while `layout/groups.rs` owns
+      horizontal and vertical group forwarding.
 - [x] Split IMUI facade container layout method behavior owner into linear, grid/scroll, and
       child-region child owners without changing public facade methods, build-focus forwarding,
       horizontal/vertical/grid/scroll element routing, child-region response behavior, or

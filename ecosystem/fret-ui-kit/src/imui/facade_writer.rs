@@ -38,7 +38,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     basic_surface::basic_surface_methods!();
 
-    container_surface::layout_surface_methods!();
+    container_surface::layout_flow_surface_methods!();
+
+    container_surface::layout_group_surface_methods!();
 
     container_surface::menu_tab_surface_methods!();
 

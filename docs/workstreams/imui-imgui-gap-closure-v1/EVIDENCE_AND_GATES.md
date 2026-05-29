@@ -149,6 +149,41 @@ Focused gates:
 - `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass (18 passed,
   168 skipped).
 
+## Facade Container Layout Surface Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade container layout surface macro ownership split into flow and group
+child owners without changing public trait method names, item-flow/same-line/dummy/spacing/indent
+forwarding, horizontal/vertical forwarding, macro expansion order, or concrete
+`container_methods/*` behavior ownership.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_surface/layout.rs` is now a
+  module/re-export hub for layout surface macros.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_surface/layout/flow.rs` owns item-flow,
+  same-line, dummy, spacing, and indent trait forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_surface/layout/groups.rs` owns
+  horizontal and vertical group trait forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` expands flow before group forwarding, preserving
+  the previous public trait method order.
+- `tools/gate_imui_workstream_source.py` checks the new child owners and rejects layout surface
+  macro bodies from drifting back into `facade_writer/container_surface/layout.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke
+  --no-fail-fast`: pass (3 passed).
+- `cargo nextest run -p fret-imui layout_collections --no-fail-fast`: pass (28 passed,
+  158 skipped).
+- `python tools\check_workstream_catalog.py`: pass; validated 473 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+
 ## Facade Container Layout Method Sub-Owner Evidence - 2026-05-29
 
 Claim verified: IMUI facade container layout method behavior ownership split into linear,
