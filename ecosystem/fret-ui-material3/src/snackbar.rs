@@ -19,7 +19,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::{
     OverlayController, OverlayRequest, ToastAction, ToastButtonStyle, ToastId, ToastLayerStyle,
-    ToastPosition, ToastRequest, ToastStore, ToastTextStyle,
+    ToastOffset, ToastPosition, ToastRequest, ToastStore, ToastTextStyle,
 };
 
 use crate::motion::ms_to_frames;
@@ -228,21 +228,30 @@ impl SnackbarHost {
                 });
             }
 
-            let style = cx.with_theme(snackbar_toast_layer_style);
+            let (style, default_margin, default_max_width) = cx.with_theme(|theme| {
+                (
+                    snackbar_toast_layer_style(theme),
+                    snackbar_tokens::host_margin(theme),
+                    snackbar_tokens::container_max_width(theme),
+                )
+            });
 
             let mut request = OverlayRequest::toast_layer(id, self.store.clone())
                 .toast_position(self.position)
-                .toast_style(style);
-            if let Some(margin) = self.margin {
-                request = request.toast_margin(margin);
-            }
+                .toast_style(style)
+                .toast_margin(self.margin.unwrap_or(default_margin))
+                .toast_mobile_offset(ToastOffset::all(default_margin))
+                .toast_container_aria_label("Alert");
             if let Some(gap) = self.gap {
                 request = request.toast_gap(gap);
             }
             if let Some(width) = self.min_width {
                 request = request.toast_min_width(width);
             }
-            if let Some(width) = self.max_width {
+            let max_width = self
+                .max_width
+                .or_else(|| self.min_width.is_none().then_some(default_max_width));
+            if let Some(width) = max_width {
                 request = request.toast_max_width(width);
             }
             OverlayController::request(cx, request);
@@ -270,8 +279,10 @@ fn snackbar_toast_layer_style(theme: &Theme) -> ToastLayerStyle {
         open_ticks,
         close_ticks,
         easing,
-        slide_distance: Px(16.0),
+        slide_distance: Px(0.0),
+        scale_from: Some(snackbar_tokens::closed_scale(theme)),
         show_close_button: true,
+        close_button_aria_label: Some(Arc::from("Dismiss")),
         border_color_key: None,
         border_width: Px(0.0),
         description_color_key: Some("md.comp.snackbar.supporting-text.color".to_string()),

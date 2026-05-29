@@ -294,6 +294,19 @@ intentional centered vertical content signature. Full-screen dialogs, compact po
 predictive-back choreography, and broader overlay-family policy comparison remain residual/future
 API work.
 
+M3PV2-078 is complete: Snackbar layout/accessibility/enter-exit motion are now v2-covered for the
+current toast-backed recipe surface. Compose Material3 was the primary source: SnackbarHost applies
+12dp host padding, Snackbar caps container width at 600dp, uses 48dp/68dp single-line/two-line
+heights, labels the live pane as `Alert`, labels the close affordance as `Dismiss`, and animates
+visibility with fade plus scale from/to 0.8. The packet found a Material recipe gap plus a reusable
+`fret-ui-kit` toast-surface gap, not a core mechanism gap: SnackbarHost still inherited generic
+toast width/offset/close-label defaults, while the kit renderer had no design-system-agnostic
+scale-from style slot and used style min-height tokens only for stack estimation. `ToastLayerStyle`
+now has an optional `scale_from` with `None` preserving Sonner/shadcn defaults, toast surfaces apply
+style min-height to real layout, and Material Snackbar wires 12dp margin/mobile offset, 600dp max
+width, `Alert`, `Dismiss`, and zero-slide fade-scale motion. Queue, action, close, timer, and
+removal behavior stayed green through existing kit and Material tests.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -305,8 +318,8 @@ API work.
 ## Next Recommended Action
 
 Continue with the next uncovered Material3 packet from the matrix. Higher-priority candidates now
-move through remaining overlay surfaces: Snackbar motion/layout, Tooltip motion, and
-Menu/DropdownMenu item layout/focus packets are still open.
+move through remaining overlay surfaces: Tooltip motion plus Menu/DropdownMenu item layout/focus
+packets are still open. Broader overlay-family policy comparison remains in M3PV2-050.
 
 ## Useful Gates
 

@@ -840,6 +840,33 @@ Task IDs use `M3PV2-*`.
   dialogs, compact pointer padding, predictive-back choreography, and broader overlay-family
   policy comparison remain residual.
 
+- [x] M3PV2-078 [owner=codex] [deps=M3PV2-010,M3PV2-050] [scope=ecosystem/fret-ui-material3/src/{snackbar.rs,tokens/snackbar.rs},ecosystem/fret-ui-kit/src/window_overlays/{requests.rs,render.rs},ecosystem/fret-ui-material3/tests/{snackbar_state.rs,automation_surface.rs,radio_alignment.rs},goldens/material3-headless/v1/material3-snackbar.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close Snackbar placement, live-region labelling, close affordance labelling, Material
+  minimum heights, 600dp width cap, and enter/exit fade-scale motion proof against Compose
+  Material3 SnackbarHost/Snackbar sources.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test snackbar_state`
+  failed because the host still used kit's generic 356px toast width and no Material scale motion
+  existed; green gates:
+  `cargo fmt --package fret-ui-kit --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test snackbar_state`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_tooltip_and_snackbar_expose_stable_part_test_ids`;
+  `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_snackbar_suite_goldens_v1; Remove-Item Env:\FRET_UPDATE_GOLDENS`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment snackbar`;
+  `cargo nextest run -p fret-ui-kit --lib toast`;
+  `cargo check -p fret-ui-kit --tests`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-kit --tests --no-deps -- -D warnings`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`.
+  Review: DONE. This found both a Material recipe gap and a reusable kit toast-surface motion and
+  layout gap, not a core mechanism gap. Snackbar now defaults to Material 12dp host inset, 600dp
+  max width, 48/68dp surface heights, `Alert` live-region label, `Dismiss` close label, and
+  fade-scale motion from/toward 0.8 without the generic Sonner Y-slide.
+  Evidence: `artifacts/material3_snackbar_layout_motion_packet_v2.md`.
+  Handoff: Snackbar layout, accessibility, and enter/exit motion are v2-covered. Queueing,
+  duration, action, close, and removal behavior remain covered by existing kit/Material tests;
+  broader overlay-family policy comparison remains in M3PV2-050.
+
 - [ ] M3PV2-050 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{menu.rs,dropdown_menu.rs,dialog.rs,bottom_sheet.rs,tooltip.rs,snackbar.rs},ecosystem/fret-ui-kit,tools/diag-scripts/ui-gallery/material3]
   Goal: Audit dismissal, focus containment/restore, live region, action close parts, sheet motion,
   and rich tooltip interaction against Material/MUI/Compose/Base UI sources.

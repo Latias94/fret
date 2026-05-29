@@ -2357,6 +2357,7 @@ pub fn render<H: UiHost + 'static>(
                 let toast_open_ticks = toast_style.open_ticks;
                 let toast_close_ticks = toast_style.close_ticks;
                 let toast_slide_distance = toast_style.slide_distance;
+                let toast_scale_from = toast_style.scale_from.map(|scale| scale.clamp(0.0, 1.0));
                 let toast_single_line_min_height = toast_style.single_line_min_height;
                 let toast_two_line_min_height = toast_style.two_line_min_height;
 
@@ -2646,6 +2647,12 @@ pub fn render<H: UiHost + 'static>(
                                                 let toast_height_override =
                                                     (!toast_content_visible)
                                                         .then_some(front_height);
+                                                let toast_min_height = if toast.description.is_some()
+                                                {
+                                                    toast_two_line_min_height
+                                                } else {
+                                                    toast_single_line_min_height
+                                                };
                                                 let stack_offset_y = stack_shift.stack_offset_y[idx];
                                                 let stack_scale = stack_shift.stack_scale[idx];
 
@@ -3309,14 +3316,22 @@ pub fn render<H: UiHost + 'static>(
                                                             )
                                                         }
                                                     };
-                                                    let mut opacity = presence.opacity;
+                                                    let presence_progress =
+                                                        presence.opacity.clamp(0.0, 1.0);
+                                                    let mut opacity = presence_progress;
                                                     if !toast_visible {
                                                         opacity = 0.0;
                                                     }
+                                                    let presence_scale = toast_scale_from
+                                                        .map(|from| {
+                                                            from
+                                                                + (1.0 - from) * presence_progress
+                                                        })
+                                                        .unwrap_or(1.0);
 
                                                     let slide_px = Px(
                                                         toast_slide_distance.0
-                                                            * (1.0 - presence.opacity),
+                                                            * (1.0 - presence_progress),
                                                     );
                                                     // Sonner's open/close transitions only slide along the Y axis.
                                                     let dx = Px(0.0);
@@ -3329,7 +3344,9 @@ pub fn render<H: UiHost + 'static>(
                                                         Px(dx.0 + drag_offset.x.0),
                                                         Px(dy.0 + drag_offset.y.0 + stack_offset_y.0),
                                                     ))
-                                                    .compose(Transform2D::scale_uniform(stack_scale));
+                                                    .compose(Transform2D::scale_uniform(
+                                                        stack_scale * presence_scale,
+                                                    ));
 
                                                     let mut toast_layout = fret_ui::element::LayoutStyle {
                                                         position: fret_ui::element::PositionStyle::Absolute,
@@ -3354,6 +3371,10 @@ pub fn render<H: UiHost + 'static>(
 
                                                     let mut pressable_layout = fret_ui::element::LayoutStyle::default();
                                                     pressable_layout.size.width = fret_ui::element::Length::Fill;
+                                                    if let Some(h) = toast_min_height {
+                                                        pressable_layout.size.min_height =
+                                                            Some(fret_ui::element::Length::Px(h));
+                                                    }
                                                     if toast_height_override.is_some() {
                                                         pressable_layout.size.height = fret_ui::element::Length::Fill;
                                                     }
@@ -3390,9 +3411,18 @@ pub fn render<H: UiHost + 'static>(
                                                             }
 
                                                             let toast_children = toast_children;
+                                                            let mut container_layout =
+                                                                fret_ui::element::LayoutStyle::default();
+                                                            container_layout.size.width =
+                                                                fret_ui::element::Length::Fill;
+                                                            if let Some(h) = toast_min_height {
+                                                                container_layout.size.min_height = Some(
+                                                                    fret_ui::element::Length::Px(h),
+                                                                );
+                                                            }
                                                             let toast_el = cx.container(
                                                                 fret_ui::element::ContainerProps {
-                                                                    layout: fret_ui::element::LayoutStyle::default(),
+                                                                    layout: container_layout,
                                                                     padding: toast_padding.into(),
                                                                     background: Some(bg),
                                                                     background_paint: None,

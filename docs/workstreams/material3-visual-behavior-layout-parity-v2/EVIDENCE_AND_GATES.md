@@ -80,6 +80,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_navigation_drawer_modal_semantics_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_top_app_bar_scroll_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_dialog_layout_motion_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_snackbar_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -963,6 +964,32 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     spacing and panel labelled/described relations, and keeps shared modal fade/rise/scale motion
     green. The gap was Material recipe/proof density, not core or kit overlay policy.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_dialog_layout_motion_packet_v2.md`
+- 2026-05-29: M3PV2-078 closed Snackbar placement, live-region labelling, Material surface height,
+  and enter/exit fade-scale motion proof.
+  - Sources: Compose Material3 `Snackbar.kt` applies 12dp host padding, caps container width at
+    600dp, and uses 48dp/68dp single-line/two-line heights. Compose `SnackbarHost.kt` animates
+    snackbar visibility with fade plus scale from 0.8, exposes a polite live region, and uses the
+    pane title `Alert`; the English string table gives the close affordance `Dismiss`.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test snackbar_state`
+    failed because the host measured at the generic kit 356px toast width and the first open frame
+    had no Material scale transform.
+  - `cargo fmt --package fret-ui-kit --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test snackbar_state`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_tooltip_and_snackbar_expose_stable_part_test_ids`
+  - `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_snackbar_suite_goldens_v1; Remove-Item Env:\FRET_UPDATE_GOLDENS`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment snackbar`
+  - `cargo nextest run -p fret-ui-kit --lib toast`
+  - `cargo check -p fret-ui-kit --tests`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-kit --tests --no-deps -- -D warnings`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: Snackbar now defaults to 12dp host inset, 600dp max width, 48/68dp surface minimum
+    heights, `Alert` live-region label, `Dismiss` close label, and fade-scale open/close motion
+    without the generic Sonner Y-slide. The packet found a reusable kit toast-surface gap: style
+    min-height tokens were only used for stack estimation, and the toast renderer had no optional
+    scale-from motion channel for non-Sonner skins.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_snackbar_layout_motion_packet_v2.md`
 
 ## Proof Note Template
 
