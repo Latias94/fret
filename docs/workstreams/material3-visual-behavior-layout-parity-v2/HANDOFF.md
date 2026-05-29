@@ -220,6 +220,16 @@ focused tests prove primary/trailing activation routing, ChipSet 8px gap/wrap la
 state-layer animation. Exact selectable icon expand/shrink/fade, InputChip avatar slots, and
 expressive corner morphing remain residual.
 
+M3PV2-072 is complete: standalone SearchBar accessibility is now v2-covered. The packet found both
+a core mechanism gap and a Material recipe gap. Core semantics had role descriptions but no
+state-description field, so Compose's expanded suggestions phrase could not be represented without
+overloading label/value. Material SearchBar also made its accessible label entirely caller-owned,
+while Compose always publishes a default search label. `SemanticsNodeExtra::state_description` now
+flows through `fret-ui` declarative authoring surfaces and AccessKit; Material SearchBar now uses
+localized default strings for `Search` and expanded `Suggestions below` while preserving explicit
+label overrides, placeholder semantics, and SearchView relation wiring. Diagnostics JSON export of
+state descriptions remains additive future work.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.

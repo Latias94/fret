@@ -97,6 +97,7 @@
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_display_input_layout_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_full_screen_header_layout_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_bar_default_width_packet_v2.md",
+    "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_bar_accessibility_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_a11y_relations_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_multiline_line_limits_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_motion_packet_v2.md",
@@ -123,7 +124,8 @@
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
     "docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md",
     "docs/adr/0166-interactivity-pseudoclasses-and-structural-stability.md",
-    "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
+    "docs/adr/0226-material3-state-layer-and-ripple-primitives.md",
+    "docs/adr/0324-a11y-state-description-semantics-v1.md"
   ],
   "continue_policy": {
     "default_action": "run_next_task",

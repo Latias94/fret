@@ -60,6 +60,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_display_input_layout_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_full_screen_header_layout_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_bar_default_width_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_bar_accessibility_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_a11y_relations_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_multiline_line_limits_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_motion_packet_v2.md`
@@ -808,6 +809,33 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     and pressed state-layer animation. The gap was Material recipe wiring and proof density, not
     core or kit mechanism.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_chip_semantics_layout_motion_packet_v2.md`
+- 2026-05-29: M3PV2-072 closed standalone SearchBar accessibility and added the portable
+  state-description mechanism.
+  - Sources: Compose Material3 `SearchBarDefaults.InputField` sets `contentDescription` from
+    `Strings.SearchBarSearch` and sets `stateDescription` from `Strings.SuggestionsAvailable`
+    while expanded. Compose English localization maps these to `Search` and `Suggestions below`.
+    Base UI Combobox input/listbox sources cross-check the input-owned a11y pattern.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test search_bar_accessibility`
+    failed because standalone SearchBar without `.a11y_label(...)` published no accessible label.
+  - `cargo fmt --package fret-core --package fret-ui --package fret-a11y-accesskit --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test search_bar_accessibility`
+  - `cargo nextest run -p fret-ui --lib declarative_text_input_respects_a11y_role_override_and_expanded declarative_attach_semantics_can_override_state_and_relations`
+  - `cargo nextest run -p fret-a11y-accesskit --lib maps_state_description maps_role_description`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_bar_exposes_stable_part_test_ids material3_search_view_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test search_view_behavior`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_bar_suite_goldens_v1 material3_headless_search_view_suite_goldens_v1`
+  - `cargo check -p fret-ui --lib`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - `cargo clippy -p fret-a11y-accesskit --lib --no-deps -- -D warnings`
+  - Workstream JSON, matrix JSON, catalog, and `git diff --check` gates passed.
+  - Result: `SemanticsNodeExtra::state_description` now flows through `fret-ui` authoring
+    surfaces and AccessKit. Material SearchBar now publishes a default `Search` label, keeps
+    explicit label overrides caller-owned, preserves placeholder semantics, and writes
+    `Suggestions below` while expanded. The packet found both a core mechanism gap and a Material
+    recipe gap.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_bar_accessibility_packet_v2.md`
 
 ## Proof Note Template
 

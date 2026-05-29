@@ -7,6 +7,21 @@ use fret_ui::UiHost;
 use time::{Date, Month, Weekday};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SearchBarStringKey {
+    Search,
+    SuggestionsAvailable,
+}
+
+impl SearchBarStringKey {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Search => "material3-search-bar-search",
+            Self::SuggestionsAvailable => "material3-search-bar-suggestions-available",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum TimePickerStringKey {
     Title,
     Dismiss,
@@ -160,6 +175,21 @@ fn material_string<H: UiHost>(
     }
 
     Arc::<str>::from(fallback())
+}
+
+pub(crate) fn material_search_bar_search_label<H: UiHost>(app: &H) -> Arc<str> {
+    material_string(app, SearchBarStringKey::Search.as_str(), None, || {
+        "Search".to_string()
+    })
+}
+
+pub(crate) fn material_search_bar_suggestions_available_label<H: UiHost>(app: &H) -> Arc<str> {
+    material_string(
+        app,
+        SearchBarStringKey::SuggestionsAvailable.as_str(),
+        None,
+        || "Suggestions below".to_string(),
+    )
 }
 
 pub(crate) fn material_time_picker_title<H: UiHost>(app: &H) -> Arc<str> {

@@ -180,6 +180,9 @@ impl ElementHostWidget {
                 if let Some(label) = props.a11y_label.as_ref() {
                     cx.set_label(label.as_ref().to_string());
                 }
+                if let Some(state_description) = props.a11y_state_description.as_ref() {
+                    cx.set_state_description(Some(state_description.as_ref().to_string()));
+                }
                 if let Some(test_id) = props.test_id.as_ref() {
                     cx.set_test_id(test_id.as_ref().to_string());
                 }
@@ -235,6 +238,9 @@ impl ElementHostWidget {
                 area.set_max_height(props.max_height);
                 if let Some(label) = props.a11y_label.as_ref() {
                     cx.set_label(label.as_ref().to_string());
+                }
+                if let Some(state_description) = props.a11y_state_description.as_ref() {
+                    cx.set_state_description(Some(state_description.as_ref().to_string()));
                 }
                 if let Some(test_id) = props.test_id.as_ref() {
                     cx.set_test_id(test_id.as_ref().to_string());
@@ -294,6 +300,9 @@ impl ElementHostWidget {
                     }
                     if let Some(value) = props.a11y.value.as_ref() {
                         cx.set_value(value.as_ref().to_string());
+                    }
+                    if let Some(state_description) = props.a11y.state_description.as_ref() {
+                        cx.set_state_description(Some(state_description.as_ref().to_string()));
                     }
                     if let Some(test_id) = props.a11y.test_id.as_ref() {
                         cx.set_test_id(test_id.as_ref().to_string());
@@ -501,6 +510,9 @@ impl ElementHostWidget {
             }
             if let Some(role_description) = decoration.role_description.as_ref() {
                 cx.set_role_description(Some(role_description.as_ref().to_string()));
+            }
+            if let Some(state_description) = decoration.state_description.as_ref() {
+                cx.set_state_description(Some(state_description.as_ref().to_string()));
             }
             if let Some(test_id) = decoration.test_id.as_ref() {
                 cx.set_test_id(test_id.as_ref().to_string());

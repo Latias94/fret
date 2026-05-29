@@ -23,6 +23,9 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable_with_last_down,
     material_pressable_indication_config,
 };
+use crate::foundation::strings::{
+    material_search_bar_search_label, material_search_bar_suggestions_available_label,
+};
 use crate::foundation::test_id::part_test_id;
 use crate::tokens::search_bar as search_bar_tokens;
 use crate::tokens::search_view as search_view_tokens;
@@ -282,6 +285,12 @@ impl SearchBar {
                 );
 
                 let mut input_id = GlobalElementId(0);
+                let a11y_label = self
+                    .a11y_label
+                    .clone()
+                    .unwrap_or_else(|| material_search_bar_search_label(&*cx.app));
+                let a11y_state_description =
+                    expanded.then(|| material_search_bar_suggestions_available_label(&*cx.app));
                 let input = cx.text_input_with_id_props(|_cx, id| {
                     input_id = id;
 
@@ -289,7 +298,8 @@ impl SearchBar {
                     props.enabled = enabled;
                     props.focusable = enabled;
                     props.a11y_role = Some(SemanticsRole::TextField);
-                    props.a11y_label = self.a11y_label.clone();
+                    props.a11y_label = Some(a11y_label.clone());
+                    props.a11y_state_description = a11y_state_description.clone();
                     props.test_id = self.test_id.clone();
                     props.placeholder = self.placeholder.clone();
                     props.expanded = Some(expanded);

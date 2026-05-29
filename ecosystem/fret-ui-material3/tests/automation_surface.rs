@@ -1901,6 +1901,21 @@ fn material3_search_bar_exposes_stable_part_test_ids() {
     let chrome = live_test_id_layout_bounds(&ui, &app, window, "m3-search-bar.chrome");
     assert_px_close(chrome.size.height.0, 56.0, "SearchBar chrome height");
     assert_px_close(chrome.size.width.0, 720.0, "SearchBar chrome max width");
+
+    let search = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.test_id.as_deref() == Some("m3-search-bar"))
+        })
+        .expect("expected SearchBar input semantics node");
+    assert_eq!(search.role, SemanticsRole::TextField);
+    assert_eq!(search.label.as_deref(), Some("Material search"));
+    assert_eq!(search.extra.placeholder.as_deref(), Some("Search"));
+    assert!(!search.flags.expanded);
+    assert_eq!(search.extra.state_description, None);
 }
 
 #[test]

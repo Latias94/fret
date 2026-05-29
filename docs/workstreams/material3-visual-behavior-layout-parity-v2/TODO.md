@@ -375,6 +375,34 @@ Task IDs use `M3PV2-*`.
   DatePicker/TimePicker fixed-timestep motion or Autocomplete/ExposedDropdown popup/trigger motion
   classification.
 
+- [x] M3PV2-072 [owner=codex] [deps=M3PV2-033,M3PV2-039] [scope=crates/fret-core/src/semantics.rs,crates/fret-ui/src/{widget.rs,element.rs,declarative/host_widget/semantics.rs,declarative/tests/semantics.rs},crates/fret-a11y-accesskit/src/mapping.rs,ecosystem/fret-ui-material3/src/{foundation/strings.rs,search_bar.rs},ecosystem/fret-ui-material3/tests/{search_bar_accessibility.rs,automation_surface.rs},docs/adr,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close standalone SearchBar accessibility drift by adding a portable state-description
+  mechanism and wiring Compose-aligned default search/suggestions strings into the Material recipe.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test search_bar_accessibility`
+  failed because SearchBar without an explicit accessible label exposed no label; green gates:
+  `cargo fmt --package fret-core --package fret-ui --package fret-a11y-accesskit --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test search_bar_accessibility`;
+  `cargo nextest run -p fret-ui --lib declarative_text_input_respects_a11y_role_override_and_expanded declarative_attach_semantics_can_override_state_and_relations`;
+  `cargo nextest run -p fret-a11y-accesskit --lib maps_state_description maps_role_description`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_search_bar_exposes_stable_part_test_ids material3_search_view_exposes_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test search_view_behavior`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_search_bar_suite_goldens_v1 material3_headless_search_view_suite_goldens_v1`;
+  `cargo check -p fret-ui --lib`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`;
+  `cargo clippy -p fret-a11y-accesskit --lib --no-deps -- -D warnings`;
+  workstream JSON/catalog/diff checks.
+  Review: DONE. This found both a core mechanism gap and a Material recipe gap:
+  `SemanticsNodeExtra` had no state-description channel, and SearchBar made its accessible label
+  entirely caller-owned. The mechanism is now policy-free in `fret-core`/`fret-ui`/AccessKit;
+  Material SearchBar owns the localized default `Search` label and expanded `Suggestions below`
+  state-description adoption.
+  Evidence: `artifacts/material3_search_bar_accessibility_packet_v2.md`.
+  Handoff: SearchBar accessibility is now v2-covered for default label, explicit label override,
+  placeholder separation, expanded state, and state-description. Continue with the next uncovered
+  navigation or overlay surface from the matrix.
+
 - [x] M3PV2-041 [owner=codex] [deps=M3PV2-025,M3PV2-027,M3PV2-037] [scope=ecosystem/fret-ui-material3/src/{autocomplete.rs,tokens/dropdown_menu.rs},ecosystem/fret-ui-material3/tests/autocomplete_motion.rs,goldens/material3-headless/v1/material3-autocomplete.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]
   Goal: Close Autocomplete and ExposedDropdown popup/trigger motion by proving popup alpha/scale
   and trailing chevron rotation on first open/close frames.

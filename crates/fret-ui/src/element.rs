@@ -818,6 +818,8 @@ pub struct SemanticsDecoration {
     pub label: Option<Arc<str>>,
     /// Optional role description override (ARIA `aria-roledescription`-like outcome).
     pub role_description: Option<Arc<str>>,
+    /// Optional state description override for assistive technologies.
+    pub state_description: Option<Arc<str>>,
     /// Debug/test-only identifier for deterministic automation.
     ///
     /// This MUST NOT be mapped into platform accessibility name/label fields by default.
@@ -882,6 +884,7 @@ impl SemanticsDecoration {
             role: other.role.or(self.role),
             label: other.label.or(self.label),
             role_description: other.role_description.or(self.role_description),
+            state_description: other.state_description.or(self.state_description),
             test_id: other.test_id.or(self.test_id),
             value: other.value.or(self.value),
             disabled: other.disabled.or(self.disabled),
@@ -936,6 +939,11 @@ impl SemanticsDecoration {
 
     pub fn role_description(mut self, role_description: impl Into<Arc<str>>) -> Self {
         self.role_description = Some(role_description.into());
+        self
+    }
+
+    pub fn state_description(mut self, state_description: impl Into<Arc<str>>) -> Self {
+        self.state_description = Some(state_description.into());
         self
     }
 
@@ -1732,6 +1740,8 @@ pub struct PressableA11y {
     pub label: Option<Arc<str>>,
     /// Optional value text for composite pressables such as combobox/select triggers.
     pub value: Option<Arc<str>>,
+    /// Optional state description for assistive technologies.
+    pub state_description: Option<Arc<str>>,
     /// Optional hierarchy level for outline/tree semantics (1-based).
     pub level: Option<u32>,
     /// Debug/test-only identifier for deterministic automation.
@@ -2021,6 +2031,7 @@ pub struct TextInputProps {
     pub focusable: bool,
     pub model: Model<String>,
     pub a11y_label: Option<std::sync::Arc<str>>,
+    pub a11y_state_description: Option<std::sync::Arc<str>>,
     pub a11y_role: Option<SemanticsRole>,
     pub test_id: Option<std::sync::Arc<str>>,
     pub placeholder: Option<std::sync::Arc<str>>,
@@ -2081,6 +2092,7 @@ impl TextInputProps {
             focusable: true,
             model,
             a11y_label: None,
+            a11y_state_description: None,
             a11y_role: None,
             test_id: None,
             placeholder: None,
@@ -2112,6 +2124,10 @@ impl std::fmt::Debug for TextInputProps {
             .field("focusable", &self.focusable)
             .field("model", &"<model>")
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field(
+                "a11y_state_description",
+                &self.a11y_state_description.as_ref().map(|s| s.as_ref()),
+            )
             .field("a11y_role", &self.a11y_role)
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field(
@@ -2150,6 +2166,7 @@ pub struct TextAreaProps {
     pub a11y_required: bool,
     pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     pub a11y_label: Option<std::sync::Arc<str>>,
+    pub a11y_state_description: Option<std::sync::Arc<str>>,
     /// Declarative-only: element ID of a node which labels this text area.
     ///
     /// This is an authoring convenience for relationships like `aria-labelledby` where the
@@ -2188,6 +2205,7 @@ impl TextAreaProps {
             a11y_required: false,
             a11y_invalid: None,
             a11y_label: None,
+            a11y_state_description: None,
             labelled_by_element: None,
             described_by_element: None,
             test_id: None,
@@ -2214,6 +2232,10 @@ impl std::fmt::Debug for TextAreaProps {
             .field("read_only", &self.read_only)
             .field("allow_tab_input", &self.allow_tab_input)
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field(
+                "a11y_state_description",
+                &self.a11y_state_description.as_ref().map(|s| s.as_ref()),
+            )
             .field("labelled_by_element", &self.labelled_by_element)
             .field("described_by_element", &self.described_by_element)
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))

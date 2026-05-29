@@ -1473,6 +1473,14 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
         self.extra.role_description = None;
     }
 
+    pub fn set_state_description<T: Into<String>>(&mut self, state_description: Option<T>) {
+        self.extra.state_description = state_description.map(Into::into);
+    }
+
+    pub fn clear_state_description(&mut self) {
+        self.extra.state_description = None;
+    }
+
     pub fn set_level(&mut self, level: Option<u32>) {
         self.extra.level = level;
     }
