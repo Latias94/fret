@@ -137,6 +137,15 @@ Last updated: 2026-05-29
       button-command trait default declarations/forwarding. Existing `button_actions.rs` /
       `button_actions/*` inherent wrappers still own focusable recording, while `image_items.rs`
       still owns image-button option normalization.
+- [x] Split IMUI facade button surface macro owner into plain-button, image-button, and
+      action-button child owners without changing the public `UiWriterImUiFacadeExt` trait, caller
+      import behavior, button/image/action method names, command presentation forwarding,
+      focusable recording wrappers, or image-button option normalization.
+      Result: `facade_writer/button_surface.rs` is now a module/re-export hub.
+      `button_surface/plain.rs` owns plain/small/arrow/invisible button forwarding,
+      `button_surface/images.rs` owns image item/button forwarding, and
+      `button_surface/actions.rs` owns action button, payload action button, and button-command
+      forwarding.
 - [x] Split IMUI shared pressable item pointer hook bodies out of
       `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` without changing shared button,
       checkbox/radio, selectable, combo, image-item, debug-draw pressable, context-menu,

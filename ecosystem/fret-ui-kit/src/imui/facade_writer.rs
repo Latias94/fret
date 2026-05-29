@@ -60,7 +60,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     menu_selection_surface::context_popup_surface_methods!();
 
-    button_surface::button_surface_methods!();
+    button_surface::plain_button_surface_methods!();
+
+    button_surface::image_button_surface_methods!();
+
+    button_surface::action_button_surface_methods!();
 
     model_surface::boolean_model_surface_methods!();
 

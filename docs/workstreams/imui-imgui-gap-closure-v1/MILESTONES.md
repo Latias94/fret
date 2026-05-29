@@ -92,6 +92,14 @@ in `facade_writer/button_surface.rs` and are expanded into the public trait. The
 `button_actions.rs` / `button_actions/*` inherent wrapper owners still record focusable state, and
 `image_items.rs` still owns image-button option normalization.
 
+2026-05-29 facade button surface sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/button_surface.rs` is now a module/re-export hub.
+`button_surface/plain.rs` owns plain, small, arrow, and invisible button forwarding;
+`button_surface/images.rs` owns image item/button forwarding; and `button_surface/actions.rs` owns
+action button, payload action button, and button-command forwarding. The public trait expansion
+points in `facade_writer.rs` now call these child macros directly, while `button_actions.rs` /
+`button_actions/*` and `image_items.rs` remain the behavior/inherent wrapper owners.
+
 2026-05-29 item behavior pointer hook owner-split result:
 `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` now keeps hook clearing, model capture,
 and behavior assembly. `item_behavior/install/pointer_down.rs` owns lifecycle activation and drag
