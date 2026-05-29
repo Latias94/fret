@@ -7248,6 +7248,38 @@ Focused gates:
 - `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
 - `python tools\gate_imui_workstream_source.py`: pass.
 
+## Debug-Draw Command Summary Sub-Owner Evidence - 2026-05-30
+
+Claim verified: debug-draw command kind and command-summary storage moved into private kind and
+summary owners without changing public type names, command-kind variants, accessor-first summary
+storage, opaque field visibility, or list-summary classification.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/command.rs` is now a private
+  re-export index.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/command/kind.rs` owns
+  `DebugDrawCommandKind`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/command/summary.rs` owns
+  `DebugDrawCommandSummary` storage, accessors, construction, and channel projection.
+- `tools/gate_imui_workstream_source.py` now moves the opaque `DebugDrawCommandSummary` check to
+  the concrete summary owner and rejects type bodies from drifting back into the command index.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls::tests::draw_list::summaries
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Facade Container Wrapper Owner-Split Evidence - 2026-05-27
 
 Claim verified: root `ImUiFacade` container wrapper methods moved into private flow, layout,

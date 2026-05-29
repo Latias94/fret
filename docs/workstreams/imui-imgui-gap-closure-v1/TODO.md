@@ -1227,6 +1227,13 @@ Last updated: 2026-05-30
       summaries for geometric commands, `commands/summary_projection/clip_state.rs` owns
       push/pop/current clip rect and depth updates, and the root summary projection file keeps the
       public-in-debug-draw entry point plus media/text/clip command routing.
+- [x] Split IMUI debug-draw command kind and command-summary storage out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/command.rs` into private kind
+      and summary owner modules without changing public type names, command-kind variants,
+      accessor-first summary storage, opaque field visibility, or list-summary classification.
+      Result: `summaries/command.rs` is now a private re-export index; `command/kind.rs` owns
+      `DebugDrawCommandKind`, and `command/summary.rs` owns `DebugDrawCommandSummary` storage,
+      accessors, construction, and channel projection.
 - [x] Split IMUI debug-draw path-command dispatch by shape family out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands.rs` into
       private linear, round, and bezier owners without changing path command routing, canvas keys,

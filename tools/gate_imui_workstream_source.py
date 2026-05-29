@@ -336,7 +336,9 @@ def main() -> None:
             ["DebugDrawResponse"],
         ),
         OpaqueStructCheck(
-            Path("ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/command.rs"),
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/command/summary.rs"
+            ),
             ["DebugDrawCommandSummary"],
         ),
         OpaqueStructCheck(
@@ -29459,7 +29461,47 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/command.rs"),
             required=[
+                "mod kind;",
+                "mod summary;",
+                "pub use kind::DebugDrawCommandKind;",
+                "pub use summary::DebugDrawCommandSummary;",
+            ],
+            forbidden=[
                 "pub enum DebugDrawCommandKind",
+                "pub struct DebugDrawCommandSummary",
+                "pub(in crate::imui::debug_draw_controls) kind: DebugDrawCommandKind",
+                "pub fn kind(self) -> DebugDrawCommandKind",
+                "DebugDrawListSummary::default()",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/command/kind.rs"
+            ),
+            required=[
+                "pub enum DebugDrawCommandKind",
+                "Line,",
+                "RectFilledMultiColor,",
+                "ImageTriangleMesh,",
+                "CircleFilled,",
+                "BezierCubic,",
+                "PushClipRect,",
+                "SvgMaskIcon,",
+                "Text,",
+            ],
+            forbidden=[
+                "pub struct DebugDrawCommandSummary",
+                "pub(in crate::imui::debug_draw_controls)",
+                "pub fn kind(self) -> DebugDrawCommandKind",
+                "pub struct DebugDrawListSummary",
+                "DebugDrawListSummary::default()",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/command/summary.rs"
+            ),
+            required=[
                 "pub struct DebugDrawCommandSummary {",
                 "pub(in crate::imui::debug_draw_controls) kind: DebugDrawCommandKind",
                 "pub(in crate::imui::debug_draw_controls) triangle_count: usize",
@@ -29476,6 +29518,7 @@ def main() -> None:
                 "pub(in crate::imui::debug_draw_controls) fn with_channel",
             ],
             forbidden=[
+                "pub enum DebugDrawCommandKind",
                 "pub kind: DebugDrawCommandKind",
                 "pub channel: Option<usize>",
                 "pub clip_rect: Option<Rect>",
