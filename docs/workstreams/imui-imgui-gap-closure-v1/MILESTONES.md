@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-29 facade menu/selection surface owner-split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
+`UiWriterImUiFacadeExt` trait hub, but menu item, begin menu/submenu, selectable,
+multi-selectable, combo, and context-menu trait default method declarations now live in
+`facade_writer/menu_selection_surface.rs` and are expanded into the public trait. Existing
+`menu_items.rs`, `selection_combo.rs`, and `floating_popup/*` owners still carry inherent wrappers
+and underlying behavior.
+
 2026-05-29 facade model surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but checkbox/radio/switch, slider/combo model, input text

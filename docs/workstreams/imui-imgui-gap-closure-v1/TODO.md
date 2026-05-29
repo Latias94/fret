@@ -44,6 +44,16 @@ Last updated: 2026-05-29
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI facade menu/selection trait default method declarations out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
+      `UiWriterImUiFacadeExt` trait, caller import behavior, menu item, begin menu/submenu,
+      selectable, multi-selectable, combo, context-menu method names, focusable recording wrappers,
+      popup/menu behavior, or selectable/combo behavior.
+      Result: `facade_writer.rs` keeps the single public trait hub and expands
+      `facade_writer/menu_selection_surface.rs` inside it. `menu_selection_surface.rs` owns menu
+      item, begin menu/submenu, selectable, multi-selectable, combo, and context-menu trait default
+      declarations/forwarding. Existing `menu_items.rs`, `selection_combo.rs`, and
+      `floating_popup/*` owners still carry inherent wrappers and underlying behavior.
 - [x] Split IMUI facade model/control trait default method declarations out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, checkbox/radio/switch,

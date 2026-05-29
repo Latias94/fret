@@ -3,6 +3,45 @@
 Status: Active
 Last updated: 2026-05-29
 
+## Facade Menu/Selection Surface Owner-Split Evidence - 2026-05-29
+
+Claim verified: IMUI facade menu/selection trait default method declarations split out of the root
+facade writer without changing the public `UiWriterImUiFacadeExt` trait, caller import behavior,
+menu item, begin menu/submenu, selectable, multi-selectable, combo, context-menu method names,
+focusable recording wrappers, popup/menu behavior, or selectable/combo behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
+  `UiWriterImUiFacadeExt` trait hub and expands
+  `menu_selection_surface::menu_selection_surface_methods!()`.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/menu_selection_surface.rs` owns menu item, begin
+  menu/submenu, selectable, multi-selectable, combo, and context-menu trait default
+  declarations/forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs`,
+  `selection_combo.rs`, and `floating_popup/*` still carry inherent wrappers and underlying
+  behavior.
+- `tools/gate_imui_workstream_source.py` now rejects menu/selection trait default bodies from
+  drifting back into `facade_writer.rs` and checks the new menu/selection surface owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke
+  --test imui_combo_smoke --test imui_disclosure_smoke --test imui_popup_options_smoke
+  --no-fail-fast`: pass (5 passed).
+- `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass (18 passed,
+  168 skipped).
+- `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass (21 passed, 165 skipped).
+- `cargo nextest run -p fret-imui models_combo --no-fail-fast`: pass (11 passed, 175 skipped).
+- `cargo nextest run -p fret-imui multi_select --no-fail-fast`: pass (1 passed, 185 skipped).
+
 ## Facade Model Surface Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI facade model/control trait default method declarations split out of the root
