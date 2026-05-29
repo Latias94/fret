@@ -4342,8 +4342,9 @@ scheduling, hover-leave clear timer scheduling, clear-timer cancellation, or sha
 
 Evidence:
 
-- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay.rs` keeps hover-enter/
-  leave shared timer policy and clear-timer handling.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay.rs` kept hover-enter/
+  leave shared timer policy and clear-timer handling at this split; the later 2026-05-30
+  hover-change/timer sub-owner split moves that event policy into dedicated child owners.
 - `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay/state.rs` owns
   `ImUiSharedHoverDelayState`, `ImUiSharedHoverDelayStore`, `model_for_window`, and `delay_flags`.
 - `tools/gate_imui_workstream_source.py` now rejects shared hover-delay state/store/model lookup
@@ -4354,6 +4355,38 @@ Focused gates:
 - `cargo fmt -p fret-ui-kit`: pass.
 - `cargo check -p fret-ui-kit --features imui --lib`: pass.
 - `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Shared Hover-Delay Event-Policy Sub-Owner Evidence - 2026-05-30
+
+Claim verified: IMUI shared hover-delay hover-change and timer event policy moved into private
+owners without changing window-scoped shared-delay model allocation, short/normal timer scheduling,
+hover-leave clear timer scheduling, clear-timer cancellation, timer-hit delay flags, notify
+behavior, or shared-delay reads.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay/hover_change.rs` owns
+  hover-enter/leave shared timer scheduling and clear-timer cancellation.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay/timer.rs` owns
+  short/normal/clear timer consumption, delay-flag updates, pending timer cancellation, and notify
+  behavior.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay.rs` is now a private
+  module/re-export hub.
+- `tools/gate_imui_workstream_source.py` now rejects hover-change/timer bodies from drifting back
+  into `shared_delay.rs` while requiring the dedicated event-policy owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui hover_flags --no-fail-fast`: pass; 5 hover flag/shared-delay
+  tests passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
   pass.

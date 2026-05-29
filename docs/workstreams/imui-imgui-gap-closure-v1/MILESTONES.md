@@ -844,7 +844,15 @@ storage plus stroke/fill dispatch.
 2026-05-28 shared hover-delay state owner-split result:
 `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay/state.rs` now owns
 `ImUiSharedHoverDelayState`, `ImUiSharedHoverDelayStore`, `model_for_window`, and `delay_flags`.
-`hover/shared_delay.rs` keeps hover-enter/leave shared timer policy and clear-timer handling.
+`hover/shared_delay.rs` kept hover-enter/leave shared timer policy and clear-timer handling until
+the later 2026-05-30 hover-change/timer sub-owner split moved that event policy out.
+
+2026-05-30 shared hover-delay event-policy sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay/hover_change.rs` now owns
+hover-enter/leave shared timer scheduling and clear-timer cancellation.
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay/timer.rs` now owns
+short/normal/clear timer consumption, delay-flag updates, pending timer cancellation, and notify
+behavior. `shared_delay.rs` is now a private module/re-export hub.
 
 2026-05-28 hover query delay read owner-split result:
 `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/read.rs` now owns local hover-delay
