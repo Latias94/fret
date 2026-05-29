@@ -1591,6 +1591,13 @@ Last updated: 2026-05-30
       eight handles, `floating_window_resize/handles/layout.rs` owns layout geometry only, and
       `floating_window_resize/handles/pointer.rs` composes both before wiring pointer-region
       behavior.
+- [x] Split IMUI floating-window resize-handle edge/corner layout geometry out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout.rs` into private
+      edge and corner owners without changing handle sizes, absolute insets, pointer-region
+      behavior, resize state, or public IMUI APIs.
+      Result: `floating_window_resize/handles/layout.rs` now dispatches by handle family,
+      `floating_window_resize/handles/layout/edge.rs` owns the four 6 px edge handles, and
+      `floating_window_resize/handles/layout/corner.rs` owns the four 10 px corner handles.
 - [x] Split IMUI selectable keyboard ownership out of
       `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` into a private owner module without
       changing selectable activation, popup close, menu navigation, or context-menu behavior.

@@ -826,6 +826,13 @@ unknown-rank fallback, and original-index stable tie-break sorting. `floating_su
 keeps marker state, child registration, activation dispatch, child mounting, and z-order snapshot
 reconciliation.
 
+2026-05-30 floating resize handle edge/corner layout owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout.rs` now only dispatches
+resize handle layout by handle family. `floating_window_resize/handles/layout/edge.rs` owns the
+four 6 px edge handles and `floating_window_resize/handles/layout/corner.rs` owns the four 10 px
+corner handles. `floating_window_resize/handles/pointer.rs` still composes layout, cursor, pointer
+capture, and activation behavior without public IMUI API changes.
+
 2026-05-28 shared item behavior install owner-split result:
 `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` now owns pressable pointer hook clearing,
 active-item/long-press/lifecycle model capture, and assembly. Later pointer-hook sub-owner splits

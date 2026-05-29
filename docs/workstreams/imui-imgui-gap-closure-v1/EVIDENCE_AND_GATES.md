@@ -12607,6 +12607,35 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
 
+## Floating Resize Handle Edge/Corner Layout Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI floating-window resize handle edge and corner geometry moved out of the layout
+dispatch owner without changing handle sizes, absolute insets, pointer-region behavior, cursor
+mapping, resize state, activation handoff, or public IMUI APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout.rs` keeps the stable
+  `resize_handle_layout(...)` dispatch entry point and routes by handle family only.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout/edge.rs` owns the four
+  6 px edge handle layouts.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout/corner.rs` owns the four
+  10 px corner handle layouts.
+- `tools/gate_imui_workstream_source.py` now rejects edge/corner geometry bodies from drifting back
+  into `floating_window_resize/handles/layout.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-imui floating --no-fail-fast`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 2026-05-27 IMUI multi-select state owner split, refreshed 2026-05-30:
 
 - Claim verified: `ImUiMultiSelectState` storage and read-only accessors moved from
