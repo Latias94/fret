@@ -75,6 +75,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_slider_semantics_draw_region_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_segmented_button_semantics_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_icon_button_semantics_layout_motion_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_tabs_indicator_semantics_layout_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -836,6 +837,30 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     `Suggestions below` while expanded. The packet found both a core mechanism gap and a Material
     recipe gap.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_bar_accessibility_packet_v2.md`
+- 2026-05-29: M3PV2-073 closed Tabs tablist orientation, content-sized primary indicator layout,
+  scrollable edge/min-width layout, and active-indicator paint proof.
+  - Sources: Compose Material3 `TabRow.kt` uses `PrimaryIndicator` with
+    `tabIndicatorOffset(..., matchContentSize = true)`, `ScrollableTabRowEdgeStartPadding = 52.dp`,
+    `ScrollableTabRowMinTabWidth = 90.dp`, and a 24dp minimum content indicator width; Compose
+    `Tab.kt` uses `Role.Tab`; Base UI Tabs confirms `tablist` orientation and tab selected-state
+    semantics.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test tabs_state`
+    failed because `TabList` orientation was `None`, fixed primary Tabs produced no painted
+    active-indicator quad, and scrollable Tabs started at the row edge instead of after 52px
+    Material edge padding.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test tabs_state`
+  - `cargo nextest run -p fret-ui-material3 --lib tabs`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_tabs_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment tabs_pressed_scene_structure_is_stable`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_navigation_bar_exposes_stable_part_test_ids material3_navigation_rail_exposes_stable_part_test_ids`
+  - Result: Material Tabs now writes horizontal orientation, exposes `.label` part ids, renders a
+    content-sized primary indicator with the 24px Material minimum, applies scrollable 52px edge
+    padding and 90px minimum tab width, and the shared active-indicator foundation now paints an
+    indicator quad instead of only exposing a live test id. The gap was Material recipe plus
+    Material foundation; no core or kit mechanism change was required.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_tabs_indicator_semantics_layout_packet_v2.md`
 
 ## Proof Note Template
 

@@ -7,7 +7,10 @@
 
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextWrap};
+use fret_core::{
+    Axis, Color, Corners, Edges, KeyCode, Px, SemanticsOrientation, SemanticsRole, TextOverflow,
+    TextWrap,
+};
 use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
@@ -38,6 +41,7 @@ use crate::tokens::tabs as tabs_tokens;
 #[derive(Debug, Default, Clone)]
 struct TabListLayoutRuntime {
     tabs: LayoutProbeList,
+    labels: LayoutProbeList,
 }
 
 #[derive(Debug, Clone)]
@@ -264,6 +268,7 @@ impl Tabs {
                 label: a11y_label.clone(),
                 test_id: test_id.clone(),
                 disabled,
+                orientation: Some(SemanticsOrientation::Horizontal),
                 ..Default::default()
             };
 
@@ -295,6 +300,19 @@ impl Tabs {
             props.flex.gap = Px(0.0).into();
             props.flex.justify = MainAlign::Start;
             props.flex.align = fret_ui::element::CrossAlign::Stretch;
+            if scrollable {
+                let edge_padding = {
+                    let theme = Theme::global(&*cx.app);
+                    tabs_tokens::scrollable_edge_padding(theme)
+                };
+                props.flex.padding = Edges {
+                    left: edge_padding,
+                    right: edge_padding,
+                    top: Px(0.0),
+                    bottom: Px(0.0),
+                }
+                .into();
+            }
             props.roving = fret_ui::element::RovingFocusProps {
                 enabled: !disabled,
                 wrap: loop_navigation,
@@ -319,6 +337,7 @@ impl Tabs {
 
                         cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
                             rt.tabs.ensure_len(tab_count);
+                            rt.labels.ensure_len(tab_count);
                         });
                         let indicator = primary_tab_list_indicator(
                             cx,
@@ -326,6 +345,7 @@ impl Tabs {
                             tab_count,
                             selected_idx,
                             indicator_test_id.clone(),
+                            scrollable,
                             disabled,
                             &style,
                         );
@@ -472,6 +492,7 @@ fn material_primary_tab<H: UiHost>(
 
         cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
             rt.tabs.ensure_len(set_size);
+            rt.labels.ensure_len(set_size);
             rt.tabs.set(idx, pressable_id);
         });
 
@@ -518,7 +539,12 @@ fn material_primary_tab<H: UiHost>(
                 let mut l = fret_ui::element::LayoutStyle::default();
                 l.size.height = Length::Px(height);
                 if scrollable {
+                    let min_width = {
+                        let theme = Theme::global(&*cx.app);
+                        tabs_tokens::scrollable_min_tab_width(theme)
+                    };
                     l.size.width = Length::Auto;
+                    l.size.min_width = Some(Length::Px(min_width));
                     l.flex.grow = 0.0;
                     l.flex.shrink = 0.0;
                 } else {
@@ -549,8 +575,17 @@ fn material_primary_tab<H: UiHost>(
         let mut pointer_region = cx.named("pointer_region", |cx| {
             let mut props = PointerRegionProps::default();
             props.enabled = enabled;
-            props.layout.size.width = Length::Fill;
+            props.layout.size.width = if scrollable {
+                Length::Auto
+            } else {
+                Length::Fill
+            };
             props.layout.size.height = Length::Fill;
+            if scrollable {
+                let theme = Theme::global(&*cx.app);
+                props.layout.size.min_width =
+                    Some(Length::Px(tabs_tokens::scrollable_min_tab_width(theme)));
+            }
             cx.pointer_region(props, |cx| {
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
@@ -622,7 +657,17 @@ fn material_primary_tab<H: UiHost>(
                     indication_config,
                     false,
                 );
-                let label_el = primary_tab_label(cx, &label, label_color, scrollable);
+                let label_test_id = test_id.as_ref().map(|id| part_test_id(id, "label"));
+                let label_el = primary_tab_label(
+                    cx,
+                    container_id,
+                    idx,
+                    set_size,
+                    &label,
+                    label_color,
+                    scrollable,
+                    label_test_id,
+                );
 
                 let mut row = FlexProps::default();
                 row.layout.size.width = if scrollable {
@@ -631,6 +676,11 @@ fn material_primary_tab<H: UiHost>(
                     Length::Fill
                 };
                 row.layout.size.height = Length::Px(height);
+                if scrollable {
+                    let theme = Theme::global(&*cx.app);
+                    row.layout.size.min_width =
+                        Some(Length::Px(tabs_tokens::scrollable_min_tab_width(theme)));
+                }
                 row.layout.overflow = Overflow::Clip;
                 {
                     let theme = Theme::global(&*cx.app);
@@ -669,34 +719,52 @@ fn material_primary_tab<H: UiHost>(
 
 fn primary_tab_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    container_id: GlobalElementId,
+    idx: usize,
+    set_size: usize,
     label: &Arc<str>,
     color: Color,
     scrollable: bool,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
-    let style = {
-        let theme = Theme::global(&*cx.app);
-        let style = theme
-            .text_style_by_key("md.sys.typescale.title-small")
-            .unwrap_or_default();
-        typography::with_intent(style, TextIntent::Control)
-    };
+    let label = label.clone();
 
-    let mut props = TextProps::new(label.clone());
-    props.style = Some(style);
-    props.color = Some(color);
-    if scrollable {
+    cx.named("primary_tab_label", move |cx| {
+        let label_id = cx.root_id();
+        cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
+            rt.labels.ensure_len(set_size);
+            rt.labels.set(idx, label_id);
+        });
+
+        let style = {
+            let theme = Theme::global(&*cx.app);
+            let style = theme
+                .text_style_by_key("md.sys.typescale.title-small")
+                .unwrap_or_default();
+            typography::with_intent(style, TextIntent::Control)
+        };
+
+        let mut props = TextProps::new(label.clone());
+        props.style = Some(style);
+        props.color = Some(color);
         props.layout.size.width = Length::Auto;
-        props.layout.flex.grow = 0.0;
-        props.layout.flex.basis = Length::Auto;
-    } else {
-        props.layout.size.width = Length::Fill;
         props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-        props.layout.flex.grow = 1.0;
-        props.layout.flex.basis = Length::Px(Px(0.0));
-    }
-    props.wrap = TextWrap::None;
-    props.overflow = TextOverflow::Clip;
-    cx.text_props(props)
+        props.layout.size.max_width = Some(Length::Fill);
+        props.layout.flex.grow = 0.0;
+        props.layout.flex.shrink = 1.0;
+        props.layout.flex.basis = Length::Auto;
+        if scrollable {
+            props.layout.flex.shrink = 0.0;
+        }
+        props.wrap = TextWrap::None;
+        props.overflow = TextOverflow::Clip;
+
+        let mut label_el = cx.text_props(props);
+        if let Some(test_id) = test_id.clone() {
+            label_el = label_el.test_id(test_id);
+        }
+        label_el
+    })
 }
 
 #[cfg(test)]
@@ -745,10 +813,12 @@ mod tests {
         let label = find_text_by_content(&el, label.as_ref()).expect("primary tab label text");
         assert_eq!(label.wrap, TextWrap::None);
         assert_eq!(label.overflow, TextOverflow::Clip);
-        assert_eq!(label.layout.size.width, Length::Fill);
+        assert_eq!(label.layout.size.width, Length::Auto);
         assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
-        assert_eq!(label.layout.flex.grow, 1.0);
-        assert_eq!(label.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(label.layout.size.max_width, Some(Length::Fill));
+        assert_eq!(label.layout.flex.grow, 0.0);
+        assert_eq!(label.layout.flex.shrink, 1.0);
+        assert_eq!(label.layout.flex.basis, Length::Auto);
     }
 
     #[test]
@@ -773,8 +843,9 @@ mod tests {
         assert_eq!(label.wrap, TextWrap::None);
         assert_eq!(label.overflow, TextOverflow::Clip);
         assert_eq!(label.layout.size.width, Length::Auto);
-        assert_eq!(label.layout.size.min_width, None);
+        assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(label.layout.flex.grow, 0.0);
+        assert_eq!(label.layout.flex.shrink, 0.0);
         assert_eq!(label.layout.flex.basis, Length::Auto);
     }
 }
@@ -841,12 +912,12 @@ fn primary_tab_list_indicator<H: UiHost>(
     tab_count: usize,
     selected_idx: Option<usize>,
     indicator_test_id: Option<Arc<str>>,
+    scrollable: bool,
     disabled: bool,
     style_override: &TabsStyle,
 ) -> AnyElement {
     cx.named("primary_tab_indicator", move |cx| {
-        let id = cx.root_id();
-        let container_bounds = cx.last_bounds_for_element(id).unwrap_or(cx.bounds);
+        let container_bounds = cx.last_bounds_for_element(container_id);
         let tab_bounds = selected_idx
             .and_then(|idx| {
                 cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
@@ -854,6 +925,13 @@ fn primary_tab_list_indicator<H: UiHost>(
                 })
             })
             .and_then(|tab_id| cx.last_bounds_for_element(tab_id));
+        let label_bounds = selected_idx
+            .and_then(|idx| {
+                cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
+                    rt.labels.get(idx)
+                })
+            })
+            .and_then(|label_id| cx.last_bounds_for_element(label_id));
 
         let mut states = WidgetStates::empty();
         if disabled {
@@ -863,35 +941,79 @@ fn primary_tab_list_indicator<H: UiHost>(
             states |= WidgetStates::SELECTED;
         }
 
-        let (target_x, target_width, target_height, color, corner_radii, spring) = {
+        let (target_x, target_y, target_width, target_height, color, corner_radii, spring) = {
             let theme = Theme::global(&*cx.app);
 
-            let (target_x, target_width, target_height, color) = if tab_count > 0 {
+            let (target_x, target_y, target_width, target_height, color) = if tab_count > 0 {
                 if let Some(tab_bounds) = tab_bounds {
                     let height = tabs_tokens::active_indicator_height(theme);
+                    let min_width = tabs_tokens::active_indicator_min_width(theme).0;
+                    let edge_padding = if scrollable {
+                        tabs_tokens::scrollable_edge_padding(theme).0
+                    } else {
+                        0.0
+                    };
+                    let content_width = label_bounds
+                        .map(|bounds| bounds.size.width.0)
+                        .unwrap_or(min_width)
+                        .max(min_width)
+                        .min(tab_bounds.size.width.0);
                     let color = resolve_override_slot_with(
                         style_override.active_indicator_color.as_ref(),
                         states,
                         |color| color.resolve(theme),
                         || tabs_tokens::active_indicator_color(theme),
                     );
-                    let x = tab_bounds.origin.x.0 - container_bounds.origin.x.0;
-                    (x, tab_bounds.size.width.0, height.0, color)
+                    let idx = selected_idx.unwrap_or(0);
+                    let tab_x = container_bounds
+                        .map(|bounds| tab_bounds.origin.x.0 - bounds.origin.x.0)
+                        .unwrap_or_else(|| edge_padding + tab_bounds.size.width.0 * (idx as f32));
+                    let tab_y = container_bounds
+                        .map(|bounds| tab_bounds.origin.y.0 - bounds.origin.y.0)
+                        .unwrap_or(0.0);
+                    let x = tab_x + (tab_bounds.size.width.0 - content_width) * 0.5;
+                    let y = tab_y + (tab_bounds.size.height.0 - height.0).max(0.0);
+                    (x, y, content_width, height.0, color)
                 } else if let Some(idx) = selected_idx {
-                    let tab_width_px = container_bounds.size.width.0 / (tab_count as f32);
+                    let min_width = tabs_tokens::active_indicator_min_width(theme).0;
+                    let edge_padding = if scrollable {
+                        tabs_tokens::scrollable_edge_padding(theme).0
+                    } else {
+                        0.0
+                    };
+                    let tab_width_px = if scrollable {
+                        tabs_tokens::scrollable_min_tab_width(theme).0
+                    } else {
+                        container_bounds
+                            .map(|bounds| bounds.size.width.0 / (tab_count as f32))
+                            .unwrap_or(min_width.max(48.0))
+                    };
                     let height = tabs_tokens::active_indicator_height(theme);
+                    let target_width = min_width.min(tab_width_px);
+                    let target_y = container_bounds
+                        .map(|bounds| (bounds.size.height.0 - height.0).max(0.0))
+                        .unwrap_or_else(|| {
+                            (tabs_tokens::container_height(theme).0 - height.0).max(0.0)
+                        });
                     let color = resolve_override_slot_with(
                         style_override.active_indicator_color.as_ref(),
                         states,
                         |color| color.resolve(theme),
                         || tabs_tokens::active_indicator_color(theme),
                     );
-                    (tab_width_px * (idx as f32), tab_width_px, height.0, color)
+                    let tab_x = edge_padding + tab_width_px * (idx as f32);
+                    (
+                        tab_x + (tab_width_px - target_width) * 0.5,
+                        target_y,
+                        target_width,
+                        height.0,
+                        color,
+                    )
                 } else {
-                    (0.0, 0.0, 0.0, Color::TRANSPARENT)
+                    (0.0, 0.0, 0.0, 0.0, Color::TRANSPARENT)
                 }
             } else {
-                (0.0, 0.0, 0.0, Color::TRANSPARENT)
+                (0.0, 0.0, 0.0, 0.0, Color::TRANSPARENT)
             };
 
             let corner_radii = tabs_tokens::active_indicator_shape(theme);
@@ -899,6 +1021,7 @@ fn primary_tab_list_indicator<H: UiHost>(
 
             (
                 target_x,
+                target_y,
                 target_width,
                 target_height,
                 color,
@@ -906,7 +1029,6 @@ fn primary_tab_list_indicator<H: UiHost>(
                 spring,
             )
         };
-        let target_y = (container_bounds.size.height.0 - target_height).max(0.0);
         let target = ActiveIndicatorRect::new(target_x, target_y, target_width, target_height);
 
         material_active_indicator_layer(

@@ -525,6 +525,31 @@ Task IDs use `M3PV2-*`.
   Review: Pending.
   Handoff: Keep page/window-class layout outside recipe defaults unless upstream owns it.
 
+- [x] M3PV2-073 [owner=codex] [deps=M3PV2-010,M3PV2-030] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,tokens/tabs.rs,foundation/active_indicator.rs},ecosystem/fret-ui-material3/tests/{tabs_state.rs,automation_surface.rs,radio_alignment.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close Tabs tablist orientation, content-sized primary indicator, scrollable edge/min-width
+  layout, stable label part ids, and active-indicator foundation paint proof against Compose
+  Material3.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test tabs_state`
+  failed because `TabList` orientation was missing, fixed primary Tabs produced no painted
+  active-indicator quad, and scrollable tabs started at the row edge instead of after the 52px
+  Material edge padding; green gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test tabs_state`;
+  `cargo nextest run -p fret-ui-material3 --lib tabs`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_tabs_exposes_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment tabs_pressed_scene_structure_is_stable`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_navigation_bar_exposes_stable_part_test_ids material3_navigation_rail_exposes_stable_part_test_ids`.
+  Review: DONE. This found a Material recipe gap plus a shared Material foundation gap: core and
+  kit already had the necessary tab roles, orientation, selected state, collection metadata, and
+  relation mechanisms, but Material Tabs did not write orientation, lacked label part probes,
+  stretched or failed to paint the primary indicator, and did not apply Compose scrollable
+  edge/min-width defaults.
+  Evidence: `artifacts/material3_tabs_indicator_semantics_layout_packet_v2.md`.
+  Handoff: Tabs layout and accessibility are v2-covered for the current text-only primary Tabs
+  recipe. Leading-icon tabs, secondary tabs, panel-owning Material Tabs, and scroll-to-selected
+  overflow behavior remain residual or future API work.
+
 ## M3 - Choice Controls, Chips, And Motion
 
 - [ ] M3PV2-040 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{checkbox.rs,radio.rs,switch.rs,slider.rs,segmented_button.rs,chip*.rs,*chip.rs},ecosystem/fret-ui-material3/src/interaction,ecosystem/fret-ui-material3/tests]

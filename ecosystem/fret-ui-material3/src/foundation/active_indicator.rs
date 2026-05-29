@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, DrawOrder, Point, Px, Rect, Size};
 use fret_ui::UiHost;
-use fret_ui::element::{AnyElement, CanvasProps, PositionStyle, SemanticsDecoration};
+use fret_ui::element::{AnyElement, CanvasProps, Length, PositionStyle, SemanticsDecoration};
 use fret_ui::elements::ElementContext;
 use fret_ui_headless::motion::spring::SpringDescription;
 use fret_ui_headless::motion::tolerance::Tolerance;
@@ -87,6 +87,8 @@ pub(crate) fn material_active_indicator_layer<H: UiHost>(
 
     let mut props = CanvasProps::default();
     props.layout.position = PositionStyle::Absolute;
+    props.layout.size.width = Length::Fill;
+    props.layout.size.height = Length::Fill;
     props.layout.inset.top = Some(Px(0.0)).into();
     props.layout.inset.right = Some(Px(0.0)).into();
     props.layout.inset.bottom = Some(Px(0.0)).into();

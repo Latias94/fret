@@ -230,6 +230,17 @@ localized default strings for `Search` and expanded `Suggestions below` while pr
 label overrides, placeholder semantics, and SearchView relation wiring. Diagnostics JSON export of
 state descriptions remains additive future work.
 
+M3PV2-073 is complete: text-only primary Tabs layout and accessibility axes are now v2-covered.
+The packet found a Material recipe gap plus a shared Material foundation gap, not a core or kit
+mechanism gap. Core already had tab roles, orientation, selected state, collection metadata, and
+relations; kit already had richer headless Tabs helpers. Material Tabs now writes horizontal
+`TabList` orientation, exposes per-tab `.label` anchors, uses Compose-aligned content-sized primary
+indicator geometry with the 24px minimum, and applies the 52px edge padding / 90px minimum tab
+width for scrollable rows. The shared active-indicator canvas now explicitly fills its parent so a
+live indicator test id also produces a painted indicator quad. Leading-icon tabs, secondary tabs,
+panel-owning Material Tabs, and scroll-to-selected overflow behavior remain residual API/follow-on
+work.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -241,9 +252,9 @@ state descriptions remains additive future work.
 ## Next Recommended Action
 
 Continue with the next uncovered Material3 packet from the matrix. Higher-priority candidates now
-move from choice controls into navigation and overlay surfaces: NavigationRail / NavigationBar
-layout packets, Dialog/Snackbar motion/layout, and Menu/DropdownMenu item layout/focus packets are
-all still open.
+move through remaining navigation and overlay surfaces: NavigationRail / NavigationBar layout
+packets, Dialog/Snackbar motion/layout, and Menu/DropdownMenu item layout/focus packets are all
+still open.
 
 ## Useful Gates
 

@@ -1103,8 +1103,10 @@ fn material3_tabs_exposes_stable_part_test_ids() {
         "m3-tabs.active-indicator",
         "m3-tab-overview",
         "m3-tab-overview.chrome",
+        "m3-tab-overview.label",
         "m3-tab-settings",
         "m3-tab-settings.chrome",
+        "m3-tab-settings.label",
     ] {
         assert!(
             live_test_id_exists(&ui, &app, window, id),
