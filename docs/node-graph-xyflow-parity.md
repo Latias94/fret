@@ -831,10 +831,12 @@ canonical data flow and invalidation boundaries:
       reconnect transaction/callback path, endpoint-gated drops reject, default empty-canvas drops
       clear as no-op, opt-in `reconnect_on_drop_empty` empty drops emit the insert-node-picker
       outcome without a graph transaction and raise a store-first
-      `NodeGraphDeclarativeInsertNodePickerRequest` for policy hooks, reconnect gesture start/end
-      callback aliases fire for arm/commit/reject/no-op/picker/cancel end paths, active drags
-      paint a transient reconnect preview wire, and edge-label controls remain hit-test isolated
-    - follow-up: concrete insert-node picker candidate UI/policy for empty-canvas reconnect drops
+      `NodeGraphDeclarativeInsertNodePickerRequest` for policy hooks, expose reusable
+      `NodeGraphDeclarativeInsertNodePickerState` + candidate-provider policy for cancel and
+      explicit candidate selection transactions, reconnect gesture start/end callback aliases fire
+      for arm/commit/reject/no-op/picker/cancel end paths, active drags paint a transient reconnect
+      preview wire, and edge-label controls remain hit-test isolated
+    - follow-up: concrete visual searcher/list UI for empty-canvas reconnect drops
     - gating:
       - global: `NodeGraphInteractionState.edges_reconnectable` (XyFlow `edgesReconnectable`)
       - per-edge override: `Edge.reconnectable` (XyFlow `edge.reconnectable: boolean | 'source' | 'target'`)
@@ -862,7 +864,9 @@ canonical data flow and invalidation boundaries:
       `NodeGraphInteractionState.reconnect_on_drop_empty` maps empty active reconnect drops to
       `ConnectEndOutcome::OpenInsertNodePicker` with `target: None` and no graph transaction;
       `NodeGraphSurfaceProps::interaction_hook` can observe the resulting
-      `NodeGraphDeclarativeInsertNodePickerRequest`; concrete picker UI remains a policy follow-up
+      `NodeGraphDeclarativeInsertNodePickerRequest`; `NodeGraphDeclarativeInsertNodePickerState`
+      can hold candidates, cancel without committing, and plan an explicit selected-candidate
+      transaction; concrete visual searcher UI remains a follow-up
 
 ## 6.4 Edge split / reroute node
 

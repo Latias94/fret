@@ -38,7 +38,9 @@ This is the closest match to “useReactFlow + built-ins”:
 - Empty-drop reconnect picker policy can also stay in that hook via
   `NodeGraphDeclarativeInsertNodePickerRequest`; the default surface emits the request after the
   opt-in picker outcome and still leaves graph insertion uncommitted until app policy chooses a
-  candidate.
+  candidate. Use `NodeGraphDeclarativeInsertNodePickerState` with a
+  `NodeGraphDeclarativeInsertNodePickerCandidateProvider` when you want a reusable candidate list,
+  cancel, and explicit selection-to-transaction flow.
 - When lower-level imperative ownership is useful, derive it explicitly with
   `NodeGraphController::new(surface.store_model())`.
 

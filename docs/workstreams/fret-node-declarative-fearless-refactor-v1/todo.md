@@ -911,20 +911,59 @@ Execution companion: `design.md` (surface map + next worktree order).
       passed.
     - `git diff --check`: passed.
 
-- [ ] FNDX-062B Split follow-on: decide and wire concrete insert-node picker candidate UI/policy
+- [x] FNDX-062B Split follow-on: decide and wire insert-node picker candidate state/policy
       for opt-in empty reconnect drops.
-  - Status: follow-up split after FNDX-062A established the store-first picker request seam.
+  - Status: completed as the reusable candidate policy/state slice after FNDX-062A established
+    the store-first picker request seam.
   - Scope:
     - candidate provider policy for `NodeGraphDeclarativeInsertNodePickerRequest`
-    - insert-node/searcher UI entrypoints
+    - reusable picker session state for candidate-list UI entrypoints
     - explicit selection action that commits through binding/controller/store helpers
     - focused declarative behavior tests
   - Non-goal: do not reopen update-anchor planning, reconnect transaction commit, gesture callback
-    aliasing, preview wire mechanics, or the FNDX-062A request shape unless a concrete UI workload
-    proves the seam is insufficient.
+    aliasing, preview wire mechanics, the FNDX-062A request shape, or build a visual searcher/list
+    widget.
   - Validation:
-    - add a focused behavior gate proving the picker opens from the request, choosing a candidate
-      commits only through an explicit insertion action, and canceling leaves the graph unchanged.
+    - `cargo nextest run -p fret-node empty_reconnect_insert_picker_cancel_and_select_commit`
+  - Exit note: the default declarative path now has a reusable
+    `NodeGraphDeclarativeInsertNodePickerState` plus
+    `NodeGraphDeclarativeInsertNodePickerCandidateProvider` seam. The state opens from the
+    FNDX-062A request, exposes candidates for a future visual list/searcher, cancels without graph
+    commits, and plans an explicit selected-candidate `Insert Node` transaction that callers
+    dispatch through binding/controller/store helpers.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/insert_node_picker.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - Red first: the focused insert-picker cancel/select gate failed before implementation because
+      the picker state/provider API did not exist.
+    - `cargo nextest run -p fret-node empty_reconnect_insert_picker_cancel_and_select_commit`:
+      passed.
+    - `cargo nextest run -p fret-node empty_reconnect_insert_picker_cancel_and_select_commit edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit declarative_interaction_hook_contract_stays_store_first public_node_graph_guides_teach_binding_first_surface`:
+      passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo fmt --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+
+- [ ] FNDX-062C Split follow-on: mount a concrete visual insert-node searcher/list UI for the
+      FNDX-062B picker state.
+  - Status: follow-up split after FNDX-062B established candidate state and explicit commit policy.
+  - Scope:
+    - visual list/searcher element for active `NodeGraphDeclarativeInsertNodePickerState`
+    - keyboard/focus/cancel behavior for the mounted picker UI
+    - candidate selection command route into the FNDX-062B explicit transaction path
+  - Non-goal: do not reopen update-anchor mechanics, request shape, or candidate planning unless
+    the visual UI exposes a concrete mismatch.
+  - Validation:
+    - add a focused declarative UI gate proving the mounted picker can focus, cancel without a
+      transaction, and choose a candidate through the explicit commit path.
 
 ## M0 - Decision gates and internal seam map
 

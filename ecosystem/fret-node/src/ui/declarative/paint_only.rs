@@ -60,6 +60,8 @@ mod frame_plan;
 mod hover_anchor;
 #[path = "paint_only/input_handlers.rs"]
 mod input_handlers;
+#[path = "paint_only/insert_node_picker.rs"]
+mod insert_node_picker;
 #[path = "paint_only/interaction_hooks.rs"]
 mod interaction_hooks;
 #[path = "paint_only/overlay_elements.rs"]
@@ -137,6 +139,11 @@ use self::input_handlers::{
     PointerMoveHandlerParams, WheelHandlerParams, build_key_down_capture_handler,
     build_pinch_handler, build_pointer_cancel_handler, build_pointer_down_handler,
     build_pointer_move_handler, build_pointer_up_handler, build_wheel_handler,
+};
+pub use self::insert_node_picker::{
+    NodeGraphDeclarativeInsertNodePickerCandidateProvider,
+    NodeGraphDeclarativeInsertNodePickerOpenOutcome, NodeGraphDeclarativeInsertNodePickerPlanError,
+    NodeGraphDeclarativeInsertNodePickerSession, NodeGraphDeclarativeInsertNodePickerState,
 };
 pub use self::interaction_hooks::{
     NodeGraphDeclarativeInsertNodePickerRequest, NodeGraphDeclarativeInteractionContext,

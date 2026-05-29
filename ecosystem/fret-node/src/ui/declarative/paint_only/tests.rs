@@ -38,7 +38,9 @@ use super::{
     LeftPointerDownSnapshot, LeftPointerReleaseOutcome, MarqueeDragState,
     MarqueePointerMoveOutcome, NodeDragPhase, NodeDragPointerMoveOutcome, NodeDragReleaseOutcome,
     NodeDragState, NodeGraphDeclarativeEdgeLabelRenderer,
-    NodeGraphDeclarativeInsertNodePickerRequest, NodeGraphDeclarativeInteractionContext,
+    NodeGraphDeclarativeInsertNodePickerCandidateProvider,
+    NodeGraphDeclarativeInsertNodePickerOpenOutcome, NodeGraphDeclarativeInsertNodePickerRequest,
+    NodeGraphDeclarativeInsertNodePickerState, NodeGraphDeclarativeInteractionContext,
     NodeGraphDeclarativeInteractionHook, NodeGraphDeclarativeInteractionOutcome,
     NodeGraphDeclarativePortalRenderer, NodeGraphDiagnosticsConfig, NodeGraphEdgeLabelHitTestMode,
     NodeGraphEdgeLabelLayout, NodeGraphVisibleSubsetPortalConfig, NodeRectDraw,
@@ -89,12 +91,12 @@ use crate::ui::internals::NodeGraphInternalsSnapshot;
 use crate::ui::measured::MEASURED_GEOMETRY_EPSILON_PX;
 use crate::ui::paint_overrides::{NodeGraphPaintOverrides, NodeGraphPaintOverridesMap};
 use crate::ui::{
-    EdgeChromeHint, EdgeCustomPath, EdgeRouteKind, EdgeTypeKey, MeasuredGeometryStore,
-    NodeGraphController, NodeGraphDeclarativePortalCommandHandler, NodeGraphEdgeTypes,
-    NodeGraphNodeTypes, NodeGraphSkin, NodeGraphSurfaceBinding, PortalCommandOutcome,
-    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalTextCommand,
-    PortalTextEditHandler, PortalTextEditSpec, PortalTextEditSubmit, PortalTextStepMode,
-    node_graph_surface, node_graph_surface_with_edge_label_renderer,
+    EdgeChromeHint, EdgeCustomPath, EdgeRouteKind, EdgeTypeKey, InsertNodeCandidate,
+    MeasuredGeometryStore, NodeGraphController, NodeGraphDeclarativePortalCommandHandler,
+    NodeGraphEdgeTypes, NodeGraphNodeTypes, NodeGraphSkin, NodeGraphSurfaceBinding,
+    PortalCommandOutcome, PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit,
+    PortalTextCommand, PortalTextEditHandler, PortalTextEditSpec, PortalTextEditSubmit,
+    PortalTextStepMode, node_graph_surface, node_graph_surface_with_edge_label_renderer,
     node_graph_surface_with_portal_renderer, portal_cancel_text_command,
     portal_step_text_command_with_mode, portal_submit_text_command,
 };
@@ -964,6 +966,74 @@ impl NodeGraphDeclarativeInteractionHook for InsertNodePickerRequestRecorder {
     ) -> NodeGraphDeclarativeInteractionOutcome {
         self.requests.borrow_mut().push(request);
         NodeGraphDeclarativeInteractionOutcome::Handled
+    }
+}
+
+#[derive(Clone)]
+struct SingleInsertNodePickerProvider {
+    candidate: InsertNodeCandidate,
+    created_node: NodeId,
+    planned_positions: Rc<RefCell<Vec<CanvasPoint>>>,
+}
+
+impl NodeGraphDeclarativeInsertNodePickerCandidateProvider for SingleInsertNodePickerProvider {
+    fn list_insert_node_candidates(
+        &mut self,
+        _graph: &Graph,
+        _request: &NodeGraphDeclarativeInsertNodePickerRequest,
+    ) -> Vec<InsertNodeCandidate> {
+        vec![self.candidate.clone()]
+    }
+
+    fn plan_insert_node_candidate(
+        &mut self,
+        _graph: &Graph,
+        request: &NodeGraphDeclarativeInsertNodePickerRequest,
+        _candidate: &InsertNodeCandidate,
+    ) -> Result<Vec<GraphOp>, Arc<str>> {
+        let at = CanvasPoint {
+            x: request.canvas_position.x.0,
+            y: request.canvas_position.y.0,
+        };
+        self.planned_positions.borrow_mut().push(at);
+        Ok(vec![GraphOp::AddNode {
+            id: self.created_node,
+            node: test_node(at),
+        }])
+    }
+}
+
+#[derive(Clone)]
+struct InsertNodePickerPolicyHook<P> {
+    state: Rc<RefCell<NodeGraphDeclarativeInsertNodePickerState>>,
+    provider: Rc<RefCell<P>>,
+}
+
+impl<P> NodeGraphDeclarativeInteractionHook for InsertNodePickerPolicyHook<P>
+where
+    P: NodeGraphDeclarativeInsertNodePickerCandidateProvider + 'static,
+{
+    fn handle_insert_node_picker_request(
+        &mut self,
+        ctx: &mut NodeGraphDeclarativeInteractionContext<'_>,
+        request: NodeGraphDeclarativeInsertNodePickerRequest,
+    ) -> NodeGraphDeclarativeInteractionOutcome {
+        let Some(graph) = ctx.graph_snapshot() else {
+            return NodeGraphDeclarativeInteractionOutcome::NotHandled;
+        };
+        let outcome = self.state.borrow_mut().open_from_provider(
+            &graph,
+            request,
+            &mut *self.provider.borrow_mut(),
+        );
+        if matches!(
+            outcome,
+            NodeGraphDeclarativeInsertNodePickerOpenOutcome::Opened { .. }
+        ) {
+            NodeGraphDeclarativeInteractionOutcome::Handled
+        } else {
+            NodeGraphDeclarativeInteractionOutcome::NotHandled
+        }
     }
 }
 
@@ -5172,6 +5242,201 @@ fn edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without
     assert_eq!(request.connect_end, expected_end);
     assert_eq!(request.screen_position, empty_space);
     assert_eq!(request.canvas_position, Point::new(Px(760.0), Px(540.0)));
+}
+
+#[test]
+fn empty_reconnect_insert_picker_cancel_and_select_commit() {
+    let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let edge_before = graph.edges.get(&edge).expect("edge present").clone();
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let source_center = geom
+        .port_center(edge_before.from)
+        .expect("source port center");
+
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let editor_config = test_editor_config(|editor_config| {
+        editor_config.interaction.reconnect_on_drop_empty = true;
+    });
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order,
+            selected_edges: vec![edge],
+            ..Default::default()
+        },
+        editor_config,
+    );
+    let trace = install_declarative_callback_trace(&mut host, &binding.store_model());
+
+    let picker_state = Rc::new(RefCell::new(
+        NodeGraphDeclarativeInsertNodePickerState::default(),
+    ));
+    let created_node = NodeId::from_u128(0x620B);
+    let planned_positions = Rc::new(RefCell::new(Vec::new()));
+    let provider = Rc::new(RefCell::new(SingleInsertNodePickerProvider {
+        candidate: InsertNodeCandidate {
+            kind: NodeKindKey::new("test.inserted"),
+            label: Arc::<str>::from("Inserted Test Node"),
+            enabled: true,
+            template: None,
+            payload: Value::Null,
+        },
+        created_node,
+        planned_positions: planned_positions.clone(),
+    }));
+    let picker_hook = Rc::new(RefCell::new(InsertNodePickerPolicyHook {
+        state: picker_state.clone(),
+        provider: provider.clone(),
+    }));
+
+    let source_test_id = format!("node_graph.edge_update_anchor.{}.source", edge.0);
+    let render_with_picker_hook =
+        |ui: &mut fret_ui::UiTree<TestActionHostImpl>,
+         host: &mut TestActionHostImpl,
+         services: &mut FakeUiServices| {
+            let mut anchor_visible = false;
+            for _ in 0..4 {
+                let picker_hook = picker_hook.clone();
+                let snapshot = render_surface_frame_for_binding(
+                    ui,
+                    host,
+                    services,
+                    window,
+                    bounds,
+                    &binding,
+                    move |binding| {
+                        let mut props = super::NodeGraphSurfaceProps::new(binding.clone());
+                        props.interaction_hook = Some(picker_hook);
+                        props
+                    },
+                );
+                if snapshot
+                    .nodes
+                    .iter()
+                    .any(|node| node.test_id.as_deref() == Some(source_test_id.as_str()))
+                {
+                    anchor_visible = true;
+                    break;
+                }
+            }
+            assert!(
+                anchor_visible,
+                "edge update anchor should render before drag"
+            );
+        };
+    let dispatch_empty_reconnect_drop =
+        |ui: &mut fret_ui::UiTree<TestActionHostImpl>,
+         host: &mut TestActionHostImpl,
+         services: &mut FakeUiServices| {
+            let empty_space =
+                Point::new(Px(bounds.origin.x.0 + 760.0), Px(bounds.origin.y.0 + 540.0));
+            ui.dispatch_event(
+                host,
+                services,
+                &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                    pointer_id: PointerId(0),
+                    position: source_center,
+                    button: MouseButton::Left,
+                    modifiers: Modifiers::default(),
+                    click_count: 1,
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+            ui.dispatch_event(
+                host,
+                services,
+                &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                    pointer_id: PointerId(0),
+                    position: empty_space,
+                    buttons: MouseButtons {
+                        left: true,
+                        right: false,
+                        middle: false,
+                    },
+                    modifiers: Modifiers::default(),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+            ui.dispatch_event(
+                host,
+                services,
+                &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                    pointer_id: PointerId(0),
+                    position: empty_space,
+                    button: MouseButton::Left,
+                    modifiers: Modifiers::default(),
+                    is_click: false,
+                    click_count: 1,
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+        };
+
+    render_with_picker_hook(&mut ui, &mut host, &mut services);
+    dispatch_empty_reconnect_drop(&mut ui, &mut host, &mut services);
+
+    {
+        let state = picker_state.borrow();
+        let session = state.active().expect("picker opens from empty drop");
+        assert_eq!(session.candidates.len(), 1);
+        assert_eq!(
+            session.request.canvas_position,
+            Point::new(Px(760.0), Px(540.0))
+        );
+    }
+    assert!(trace.borrow().commit_labels.is_empty());
+    assert!(
+        !host
+            .models
+            .read(&binding.store_model(), |store| store
+                .graph()
+                .nodes
+                .contains_key(&created_node))
+            .expect("store readable")
+    );
+    assert!(picker_state.borrow_mut().cancel());
+    assert!(picker_state.borrow().active().is_none());
+    assert!(trace.borrow().commit_labels.is_empty());
+
+    render_with_picker_hook(&mut ui, &mut host, &mut services);
+    dispatch_empty_reconnect_drop(&mut ui, &mut host, &mut services);
+    let graph_for_plan = host
+        .models
+        .read(&binding.store_model(), |store| store.graph().clone())
+        .expect("store graph readable");
+    let tx = picker_state
+        .borrow()
+        .plan_candidate_with_provider(&graph_for_plan, &mut *provider.borrow_mut(), 0)
+        .expect("candidate produces insertion transaction");
+    binding
+        .dispatch_transaction_action_host(&mut host, &tx)
+        .expect("candidate transaction commits through binding");
+    picker_state.borrow_mut().close_after_commit();
+
+    assert_eq!(
+        planned_positions.borrow().as_slice(),
+        &[CanvasPoint { x: 760.0, y: 540.0 }]
+    );
+    assert!(picker_state.borrow().active().is_none());
+    let inserted = host
+        .models
+        .read(&binding.store_model(), |store| {
+            store.graph().nodes.get(&created_node).cloned()
+        })
+        .expect("store readable")
+        .expect("candidate inserted node");
+    assert_eq!(inserted.pos, CanvasPoint { x: 760.0, y: 540.0 });
+    assert_eq!(
+        trace.borrow().commit_labels,
+        vec![Some("Insert Node".to_string())]
+    );
 }
 
 #[test]

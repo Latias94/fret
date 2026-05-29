@@ -503,6 +503,10 @@ Status note (2026-05-28):
   `NodeGraphDeclarativeInsertNodePickerRequest` through
   `NodeGraphDeclarativeInteractionHook::handle_insert_node_picker_request`, carrying the
   `ConnectEnd`, screen drop point, and canvas drop point without committing graph changes.
+- FNDX-062B adds reusable insert-node picker candidate state and provider policy for that request:
+  apps can open a candidate session, cancel it without graph commits, and turn an explicit
+  candidate selection into an `Insert Node` transaction that is only applied when dispatched through
+  the binding/controller/store path.
 
 Closeout note (2026-05-29):
 
@@ -511,9 +515,9 @@ Closeout note (2026-05-29):
   edge update anchors render, own reconnect drag lifecycle, commit valid target drops through the
   store transaction path, emit reconnect callback aliases, paint active preview wires, and surface
   opt-in empty-drop picker outcomes without graph commits.
-- Concrete insert-node picker candidate UI/policy is split as a follow-on. Do not reopen the
-  mechanism sub-lane or the request seam unless a concrete UI workload proves the seam is
-  insufficient.
+- Concrete visual insert-node searcher/list UI is split as FNDX-062C. Do not reopen the mechanism
+  sub-lane, the request seam, or the FNDX-062B candidate state/provider seam unless a concrete UI
+  workload proves the seams are insufficient.
 
 Why this still matters:
 

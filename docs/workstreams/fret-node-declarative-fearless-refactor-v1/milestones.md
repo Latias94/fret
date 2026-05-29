@@ -237,8 +237,12 @@ points rather than direct graph mutation.
   outcomes, reconnect gesture callback aliases, preview wire paint, and opt-in empty-drop picker
   outcomes without graph commits.
 - FNDX-062A adds a store-first request seam for opt-in empty-drop picker outcomes without graph
-  commits. Concrete insert-node picker candidate UI/policy remains split as FNDX-062B and is not
-  required to accept the closed mechanism contract above.
+  commits.
+- FNDX-062B adds reusable picker candidate state/provider policy for that request. It lets apps
+  cancel without graph commits and turns an explicit candidate selection into an `Insert Node`
+  transaction that is only applied through the binding/controller/store dispatch path. Concrete
+  visual insert-node searcher/list UI remains split as FNDX-062C and is not required to accept the
+  closed mechanism contract above.
 
 ### Progress note (2026-03-07)
 

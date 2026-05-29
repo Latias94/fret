@@ -197,12 +197,17 @@ update rather than an incidental refactor.
   - FNDX-062A adds the narrow policy/request seam for that outcome through
     `NodeGraphDeclarativeInsertNodePickerRequest` on `NodeGraphDeclarativeInteractionHook`, still
     without committing graph changes or mounting concrete picker UI.
+  - FNDX-062B adds reusable `NodeGraphDeclarativeInsertNodePickerState` plus
+    `NodeGraphDeclarativeInsertNodePickerCandidateProvider`, so app policy can open a candidate
+    session from the request, cancel without commits, and explicitly plan an `Insert Node`
+    transaction for caller dispatch through the binding/controller/store path.
   - Custom `NodeGraphPresenter` remains advanced/internal on the default path because it still mixes
     geometry, labels, context menus, and insertion/search policy.
   - Broader XyFlow edge-wrapper lifecycle parity remains follow-up work beyond click selection,
     the first child-bounds control contract, rendered update-anchor controls, reconnect drag
     start/cancel lifecycle, accepted reconnect commits, opt-in empty-drop outcome semantics, and
-    the request seam for picker policy.
+    the request plus candidate policy seams for insert-node picker behavior. Concrete visual
+    searcher/list UI remains a follow-up.
 
 - **Ergonomic API fragmentation**
   - The surface naming is now closed around `NodeGraphSurfaceBinding` (instance-style app-facing

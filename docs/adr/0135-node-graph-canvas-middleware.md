@@ -55,9 +55,13 @@ The supported replacement for retained canvas input interception is
 
 The first shipped hook point was key-down capture for the declarative surface. The same store-first
 hook surface now also carries insert-node picker requests for opt-in empty reconnect drops through
-`NodeGraphDeclarativeInsertNodePickerRequest`. This remains intentionally small: it covers
+`NodeGraphDeclarativeInsertNodePickerRequest`. Reusable picker policy lives on
+`NodeGraphDeclarativeInsertNodePickerState` plus
+`NodeGraphDeclarativeInsertNodePickerCandidateProvider`: policy code can open a candidate session,
+cancel it without graph commits, and plan an explicit `Insert Node` transaction for caller dispatch
+through the binding/controller/store path. This remains intentionally small: it covers
 tool-mode/shortcut interception and picker-policy handoff without reopening retained widget
-authoring or adding a second graph owner.
+authoring, mounting a concrete visual searcher, or adding a second graph owner.
 
 Hooks receive a `NodeGraphDeclarativeInteractionContext`, not a mutable `Graph` and not raw
 `ModelStore` access. The context may expose:
