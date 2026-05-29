@@ -922,6 +922,8 @@
     "ecosystem/fret-ui-kit/src/imui/options/controls/value/slider.rs",
     "ecosystem/fret-ui-kit/tests/imui_leaf_control_options_smoke.rs",
     "ecosystem/fret-ui-editor/src/imui.rs",
+    "ecosystem/fret-ui-editor/src/theme.rs",
+    "ecosystem/fret-ui-editor/src/theme/patches.rs",
     "ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs",
     "ecosystem/fret-ui-editor/src/primitives/input_group.rs",
     "ecosystem/fret-ui-editor/src/primitives/popup_list.rs",

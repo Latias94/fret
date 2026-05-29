@@ -1461,6 +1461,35 @@ Focused gates:
 - `cargo nextest run -p fret-ui-editor editor_theme_preset_picker_stamps_listbox_options_and_selected_state editor_theme_preset_picker_click_updates_model_and_replays_reversible_preset --no-fail-fast`:
   pass.
 
+## Editor Theme Patch Owner-Split Evidence - 2026-05-30
+
+Claim verified: editor-owned theme preset patch construction moved behind a private owner without
+changing preset metadata, install/reapply APIs, host theme sync behavior, default/dense token
+values, style/theme picker behavior, or the policy boundary that keeps style tooling in
+`fret-ui-editor`.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/theme.rs` keeps `EditorThemePresetV1`, stable preset metadata,
+  install/reapply APIs, and host theme sync helpers.
+- `ecosystem/fret-ui-editor/src/theme/patches.rs` owns default and ImGui-like dense token patch
+  construction, including numeric scrub reset values and dense overrides.
+- `tools/gate_imui_workstream_source.py` now rejects patch construction helpers from
+  `theme.rs` and checks the private patch owner directly.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor --check`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor default_preset_keeps_existing_editor_patch_baseline imgui_like_dense_preset_overrides_density_and_field_chrome default_preset_resets_dense_numeric_scrub_tokens installed_preset_can_be_reapplied_after_base_theme_reset --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Leaf Control Option Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI leaf control option records split into selection, tab-item, and slider private

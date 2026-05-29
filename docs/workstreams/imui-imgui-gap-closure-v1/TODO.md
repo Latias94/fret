@@ -349,6 +349,11 @@ Last updated: 2026-05-30
       adapter callsite, listbox semantics, selected-state behavior, or reversible preset replay.
       Result: `controls/editor_theme_preset_picker.rs` keeps picker rendering and behavior, while
       `controls/editor_theme_preset_picker/options.rs` owns `EditorThemePresetPickerOptions`.
+- [x] Split editor-owned theme preset patch construction into a private owner without changing
+      preset metadata, install/reapply APIs, host theme sync behavior, dense/default token values,
+      or style/theme picker proof behavior.
+      Result: `theme.rs` keeps public preset metadata and install/replay APIs, while
+      `theme/patches.rs` owns default and ImGui-like dense token patch construction.
 - [x] Split IMUI leaf control option records into selection, tab-item, and slider private owners
       without changing public option type names, fields, defaults, root re-exports, selectable
       smoke behavior, tab/menu behavior, or slider model behavior.
