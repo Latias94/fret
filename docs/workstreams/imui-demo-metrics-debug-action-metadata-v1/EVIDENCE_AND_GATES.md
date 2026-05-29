@@ -1,6 +1,6 @@
 # IMUI Demo Metrics Debug Action Metadata v1 - Evidence and Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-30
 
 ## Repro
@@ -67,3 +67,4 @@ git diff --check
 - `tools/diag_gate_imui_product_chain.py`
 - `tools/diag_gate_imui_p2_devtools_first_open.py`
 - `tools/gate_imui_workstream_source.py`
+- `docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/CLOSEOUT_AUDIT_2026-05-30.md`

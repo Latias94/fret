@@ -1,9 +1,9 @@
 # IMUI Demo Metrics Debug Action Metadata v1 - Handoff
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-30
 
-Current slice: DMDA-020 completed on 2026-05-30. DMDA-030 is the next decision point.
+Current slice: lane closed on 2026-05-30 after DMDA-010, DMDA-020, and DMDA-030.
 
 The prior `imui-demo-metrics-debug-devtools-v1` route productization lane is closed. This follow-on
 keeps the route owner closed and adds a narrower action metadata owner for richer GUI execution
@@ -18,7 +18,8 @@ cargo run -p fretboard-dev -- list tool-apps
 
 Focused verification is recorded in `EVIDENCE_AND_GATES.md`.
 
-Next expected work:
+Follow-ons:
 
-1. Decide whether command-palette integration belongs here or should start a separate follow-on.
+1. Start a separate DevTools command-palette/action-execution follow-on if real execution controls
+   are needed.
 2. Keep the old route owner lane closed; do not move diagnostics UI into `fret-imui`.

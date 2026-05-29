@@ -1,6 +1,6 @@
 # IMUI Demo Metrics Debug Action Metadata v1 - Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-30
 
 ## M1 - Metadata Contract
@@ -28,7 +28,7 @@ Exit criteria:
 
 ## M3 - Closeout or Split
 
-Status: Pending.
+Status: Completed on 2026-05-30.
 
 Exit criteria:
 

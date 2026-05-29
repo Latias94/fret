@@ -1,6 +1,6 @@
 # IMUI Demo Metrics Debug Action Metadata v1 - TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-30
 
 ## Tasks
@@ -23,7 +23,9 @@ Last updated: 2026-05-30
     No new command runner was added.
   - Validation: add or update a focused DevTools unit test before adding broader GUI behavior.
 
-- [ ] DMDA-030 - Split command-palette contract work if needed.
+- [x] DMDA-030 - Split command-palette contract work if needed.
   - Scope: start a separate follow-on if the action metadata needs a generalized command registry,
     command palette UI, or cross-route action availability contract.
+  - Status: Completed on 2026-05-30 by closing this metadata/readiness lane and deferring real
+    command-palette/action-execution controls to a future narrower DevTools follow-on.
   - Validation: new lane must name its owner crate and avoid `fret-imui` widening.

@@ -1,7 +1,11 @@
 # IMUI Demo Metrics Debug Action Metadata v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-30
+
+Status note (2026-05-30): this lane is closed after landing stable action metadata and DevTools
+readiness projection. Future command-palette or real execution controls should start as a narrower
+DevTools follow-on.
 
 ## Problem
 
