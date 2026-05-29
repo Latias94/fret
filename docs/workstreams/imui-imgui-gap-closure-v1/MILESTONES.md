@@ -51,6 +51,14 @@ window behavior modules.
 `floating_surface/window.rs` owns in-window floating-window forwarding. The public trait expansion
 points in `facade_writer.rs` and the concrete `floating_popup/*` behavior owners remain unchanged.
 
+2026-05-29 facade floating popup surface sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/floating_surface/popup.rs` is now a module/re-export
+hub. `floating_surface/popup/area.rs` owns floating layer, floating area, and area drag-surface
+forwarding; `floating_surface/popup/state.rs` owns popup open-model, drop, open, anchor-open, and
+close forwarding; and `floating_surface/popup/begin.rs` owns popup menu/modal begin forwarding.
+The public trait expansion points in `facade_writer.rs` now call these child macros directly,
+while concrete `floating_popup/*` behavior owners remain unchanged.
+
 2026-05-29 facade menu/selection surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but menu item, begin menu/submenu, selectable,
