@@ -149,6 +149,40 @@ Focused gates:
 - `cargo nextest run -p fret-imui layout_collections --no-fail-fast`: pass (28 passed,
   158 skipped).
 
+## Facade Container Collection Method Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade container collection method behavior ownership split into ListBox,
+Table, and VirtualList child owners without changing public facade methods, build-focus forwarding,
+collection element routing, response returns, or `container_methods` re-export paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections.rs` is now a
+  module/re-export hub for the three collection method behavior owners.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections/list_box.rs` owns
+  ListBox option normalization and forwarding to `list_box_controls::list_box_element`.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections/table.rs` owns Table
+  forwarding and `TableResponse` return from `table_controls::table_element`.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections/virtual_list.rs`
+  owns VirtualList forwarding and `VirtualListResponse` return from
+  `virtual_list_controls::virtual_list_element`.
+- `tools/gate_imui_workstream_source.py` checks the new sub-owners and rejects concrete collection
+  element routing from drifting back into `container_methods/collections.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke
+  --test imui_virtual_list_smoke --no-fail-fast`: pass (10 passed).
+- `cargo nextest run -p fret-imui layout_collections --no-fail-fast`: pass (28 passed,
+  158 skipped).
+
 ## Facade Floating Surface Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI facade floating/popup/tooltip/drag/window trait default method declarations

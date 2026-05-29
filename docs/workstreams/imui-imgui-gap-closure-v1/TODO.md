@@ -78,6 +78,13 @@ Last updated: 2026-05-29
       `layout/linear.rs` owns horizontal/vertical forwarding, `layout/grid_scroll.rs` owns grid
       and scroll forwarding, and `layout/child_region.rs` owns child-region forwarding and response
       return.
+- [x] Split IMUI facade container collection method behavior owner into ListBox, Table, and
+      VirtualList child owners without changing public facade methods, build-focus forwarding,
+      collection element routing, response returns, or `container_methods` re-export paths.
+      Result: `facade_writer/container_methods/collections.rs` is now a module/re-export hub.
+      `collections/list_box.rs` owns ListBox option normalization and element forwarding,
+      `collections/table.rs` owns Table forwarding and response return, and
+      `collections/virtual_list.rs` owns VirtualList forwarding and response return.
 - [x] Split IMUI facade floating/popup/tooltip/drag/window trait default method declarations out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, floating area/window, popup, tooltip,

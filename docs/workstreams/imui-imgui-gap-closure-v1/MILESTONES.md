@@ -43,6 +43,15 @@ scroll forwarding, and `layout/child_region.rs` owns child-region forwarding plu
 The public facade methods, build-focus forwarding, element routing, and `container_methods`
 re-export paths remain unchanged.
 
+2026-05-29 facade container collection-method sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections.rs` is now a
+module/re-export hub. `collections/list_box.rs` owns ListBox option normalization and forwarding to
+`list_box_controls::list_box_element`, `collections/table.rs` owns Table forwarding and response
+return from `table_controls::table_element`, and `collections/virtual_list.rs` owns VirtualList
+forwarding and response return from `virtual_list_controls::virtual_list_element`. The public
+facade methods, build-focus forwarding, element routing, and `container_methods` re-export paths
+remain unchanged.
+
 2026-05-29 facade floating surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but floating layer/area, popup open/drop/begin,

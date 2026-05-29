@@ -8711,12 +8711,35 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections.rs"),
             required=[
+                "mod list_box;",
+                "mod table;",
+                "mod virtual_list;",
+                "pub(in crate::imui::facade_writer) use list_box::{list_box, list_box_with_options};",
+                "pub(in crate::imui::facade_writer) use table::{table, table_with_options};",
+                "pub(in crate::imui::facade_writer) use virtual_list::{virtual_list, virtual_list_with_options};",
+            ],
+            forbidden=[
+                "pub(in crate::imui::facade_writer) fn list_box",
+                "pub(in crate::imui::facade_writer) fn table",
+                "pub(in crate::imui::facade_writer) fn virtual_list",
+                "ListBoxOptions {",
+                "list_box_controls::list_box_element",
+                "table_controls::table_element",
+                "virtual_list_controls::virtual_list_element",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections/list_box.rs"),
+            required=[
                 "pub(in crate::imui::facade_writer) fn list_box",
                 "pub(in crate::imui::facade_writer) fn list_box_with_options",
                 "ListBoxOptions {",
                 "list_box_controls::list_box_element(cx, id, build_focus, options, f)",
             ],
-            forbidden=[],
+            forbidden=[
+                "table_controls::table_element",
+                "virtual_list_controls::virtual_list_element",
+            ],
         ),
         SourceCheck(
             Path(
@@ -14105,13 +14128,70 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections.rs"),
             required=[
+                "mod list_box;",
+                "mod table;",
+                "mod virtual_list;",
+                "pub(in crate::imui::facade_writer) use list_box::{list_box, list_box_with_options};",
+                "pub(in crate::imui::facade_writer) use table::{table, table_with_options};",
+                "pub(in crate::imui::facade_writer) use virtual_list::{virtual_list, virtual_list_with_options};",
+            ],
+            forbidden=[
                 "pub(in crate::imui::facade_writer) fn list_box",
-                "pub(in crate::imui::facade_writer) fn list_box_with_options",
                 "pub(in crate::imui::facade_writer) fn table",
                 "pub(in crate::imui::facade_writer) fn virtual_list",
                 "ListBoxOptions {",
+                "layout_sugar::items_element",
+                "horizontal_container_element",
+                "child_region::child_region_element",
+                "menu_family_controls::menu_bar_element",
+                "list_box_controls::list_box_element",
+                "table_controls::table_element",
+                "virtual_list_controls::virtual_list_element",
+                "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections/list_box.rs"),
+            required=[
+                "pub(in crate::imui::facade_writer) fn list_box",
+                "pub(in crate::imui::facade_writer) fn list_box_with_options",
+                "ListBoxOptions {",
                 "list_box_controls::list_box_element(cx, id, build_focus, options, f)",
+            ],
+            forbidden=[
+                "layout_sugar::items_element",
+                "horizontal_container_element",
+                "child_region::child_region_element",
+                "menu_family_controls::menu_bar_element",
+                "table_controls::table_element",
+                "virtual_list_controls::virtual_list_element",
+                "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections/table.rs"),
+            required=[
+                "pub(in crate::imui::facade_writer) fn table",
+                "pub(in crate::imui::facade_writer) fn table_with_options",
+                "TableOptions::default()",
                 "table_controls::table_element(cx, id, columns, build_focus, options, f)",
+            ],
+            forbidden=[
+                "layout_sugar::items_element",
+                "horizontal_container_element",
+                "child_region::child_region_element",
+                "menu_family_controls::menu_bar_element",
+                "list_box_controls::list_box_element",
+                "virtual_list_controls::virtual_list_element",
+                "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections/virtual_list.rs"),
+            required=[
+                "pub(in crate::imui::facade_writer) fn virtual_list",
+                "pub(in crate::imui::facade_writer) fn virtual_list_with_options",
+                "VirtualListOptions::default()",
                 "virtual_list_controls::virtual_list_element(cx, id, len, build_focus, options, key_at, row)",
             ],
             forbidden=[
@@ -14119,6 +14199,8 @@ def main() -> None:
                 "horizontal_container_element",
                 "child_region::child_region_element",
                 "menu_family_controls::menu_bar_element",
+                "list_box_controls::list_box_element",
+                "table_controls::table_element",
                 "fret_imui",
             ],
         ),
@@ -27868,12 +27950,35 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections.rs"),
             required=[
+                "mod list_box;",
+                "mod table;",
+                "mod virtual_list;",
+                "pub(in crate::imui::facade_writer) use list_box::{list_box, list_box_with_options};",
+                "pub(in crate::imui::facade_writer) use table::{table, table_with_options};",
+                "pub(in crate::imui::facade_writer) use virtual_list::{virtual_list, virtual_list_with_options};",
+            ],
+            forbidden=[
+                "pub(in crate::imui::facade_writer) fn list_box",
+                "pub(in crate::imui::facade_writer) fn table",
+                "pub(in crate::imui::facade_writer) fn virtual_list",
+                "ListBoxOptions {",
+                "list_box_controls::list_box_element",
+                "table_controls::table_element",
+                "virtual_list_controls::virtual_list_element",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections/list_box.rs"),
+            required=[
                 "pub(in crate::imui::facade_writer) fn list_box",
                 "pub(in crate::imui::facade_writer) fn list_box_with_options",
                 "ListBoxOptions {",
                 "list_box_controls::list_box_element",
             ],
-            forbidden=[],
+            forbidden=[
+                "table_controls::table_element",
+                "virtual_list_controls::virtual_list_element",
+            ],
         ),
         SourceCheck(
             Path("ecosystem/fret-imui/src/tests/composition/layout_collections.rs"),
