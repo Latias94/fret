@@ -87,6 +87,14 @@ constructing `list_box_controls::list_box_element` directly. This keeps ListBox 
 the collection method owner and makes inherent ListBox, Table, and VirtualList wrappers follow the
 same delegation shape.
 
+2026-05-29 facade container collection wrapper sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections.rs` is now a module
+hub. `collections/list_box.rs` owns inherent ListBox label/options wrappers,
+`collections/table.rs` owns inherent Table wrappers and response returns, and
+`collections/virtual_list.rs` owns inherent VirtualList wrappers and response returns. Public
+inherent method names, build-focus forwarding, and `container_methods/*` delegation remain
+unchanged.
+
 2026-05-29 facade floating surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but floating layer/area, popup open/drop/begin,

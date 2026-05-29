@@ -339,6 +339,40 @@ Focused gates:
   list_box_container_stamps_semantics_scroll_and_hosts_selectables --no-fail-fast`: pass
   (1 passed, 185 skipped).
 
+## Facade Container Collection Wrapper Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade container collection inherent wrapper ownership split into ListBox,
+Table, and VirtualList child owners without changing public inherent method names, build-focus
+forwarding, response returns, or `container_methods/*` delegation.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections.rs` is now a module
+  hub for the collection wrapper owners.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections/list_box.rs` owns
+  inherent ListBox label/options wrappers and build-focus forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections/table.rs` owns
+  inherent Table wrappers and response returns.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections/virtual_list.rs`
+  owns inherent VirtualList wrappers and response returns.
+- `tools/gate_imui_workstream_source.py` checks the new child owners and rejects collection wrapper
+  bodies from drifting back into `container_wrappers/collections.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke
+  --no-fail-fast`: pass (3 passed).
+- `cargo nextest run -p fret-imui layout_collections --no-fail-fast`: pass (28 passed,
+  158 skipped).
+- `python tools\check_workstream_catalog.py`: pass; validated 473 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+
 ## Facade Floating Surface Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI facade floating/popup/tooltip/drag/window trait default method declarations

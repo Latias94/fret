@@ -117,6 +117,12 @@ Last updated: 2026-05-29
       Result: `facade_writer/container_wrappers/collections.rs` now delegates
       `list_box_with_options(...)` to `container_methods::list_box_with_options(...)`, matching
       the Table and VirtualList wrapper pattern.
+- [x] Split IMUI facade container collection inherent wrapper owner into ListBox, Table, and
+      VirtualList child owners without changing public inherent method names, build-focus
+      forwarding, response returns, or `container_methods/*` delegation.
+      Result: `container_wrappers/collections.rs` is now a module hub. `collections/list_box.rs`
+      owns ListBox label/options wrappers, `collections/table.rs` owns Table wrappers, and
+      `collections/virtual_list.rs` owns VirtualList wrappers.
 - [x] Split IMUI facade floating/popup/tooltip/drag/window trait default method declarations out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, floating area/window, popup, tooltip,

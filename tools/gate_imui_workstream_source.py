@@ -492,6 +492,9 @@ def main() -> None:
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup/popup/state.rs",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup/tooltip.rs",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup/window.rs",
+                "ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections/list_box.rs",
+                "ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections/table.rs",
+                "ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections/virtual_list.rs",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections.rs",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/flow.rs",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/flow/indent.rs",
@@ -8820,7 +8823,7 @@ def main() -> None:
         ),
         SourceCheck(
             Path(
-                "ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections.rs"
+                "ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections/list_box.rs"
             ),
             required=[
                 "pub fn list_box(",
@@ -8829,6 +8832,8 @@ def main() -> None:
                 "container_methods::list_box_with_options(self, build_focus, id, options, f)",
             ],
             forbidden=[
+                "pub fn table(",
+                "pub fn virtual_list",
                 "list_box_controls::list_box_element",
             ],
         ),
@@ -14850,14 +14855,84 @@ def main() -> None:
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections.rs"
             ),
             required=[
+                "mod list_box;",
+                "mod table;",
+                "mod virtual_list;",
+            ],
+            forbidden=[
+                "pub fn ",
+                "container_methods::",
+                "ListBoxOptions {",
+                "list_box_controls::list_box_element",
+                "child_region::child_region_element",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections/list_box.rs"
+            ),
+            required=[
                 "pub fn list_box(",
                 "pub fn list_box_with_options(",
                 "ListBoxOptions {",
                 "container_methods::list_box_with_options(self, build_focus, id, options, f)",
-                "container_methods::table(self, build_focus, id, columns, f)",
-                "container_methods::virtual_list(self, build_focus, id, len, key_at, row)",
             ],
             forbidden=[
+                "pub fn table(",
+                "pub fn virtual_list",
+                "container_methods::items",
+                "container_methods::same_line",
+                "container_methods::horizontal",
+                "container_methods::child_region",
+                "container_methods::menu_bar",
+                "container_methods::tab_bar",
+                "layout_sugar::",
+                "list_box_controls::list_box_element",
+                "child_region::child_region_element",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections/table.rs"
+            ),
+            required=[
+                "pub fn table(",
+                "pub fn table_with_options(",
+                "container_methods::table(self, build_focus, id, columns, f)",
+                "container_methods::table_with_options(self, build_focus, id, columns, options, f)",
+            ],
+            forbidden=[
+                "pub fn list_box(",
+                "pub fn virtual_list",
+                "ListBoxOptions {",
+                "container_methods::items",
+                "container_methods::same_line",
+                "container_methods::horizontal",
+                "container_methods::child_region",
+                "container_methods::menu_bar",
+                "container_methods::tab_bar",
+                "layout_sugar::",
+                "list_box_controls::list_box_element",
+                "child_region::child_region_element",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections/virtual_list.rs"
+            ),
+            required=[
+                "pub fn virtual_list<K, R>(",
+                "pub fn virtual_list_with_options<K, R>(",
+                "container_methods::virtual_list(self, build_focus, id, len, key_at, row)",
+                "container_methods::virtual_list_with_options(",
+                "options,",
+                "key_at,",
+                "row,",
+            ],
+            forbidden=[
+                "pub fn list_box(",
+                "pub fn table(",
+                "ListBoxOptions {",
                 "container_methods::items",
                 "container_methods::same_line",
                 "container_methods::horizontal",
