@@ -958,6 +958,7 @@
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/geometry/mesh.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/geometry/round.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/media.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/residual.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/facade.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/geometry.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/geometry/finite.rs",

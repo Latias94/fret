@@ -6083,6 +6083,35 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Debug-Draw Residual Summary Projection Owner-Split Evidence - 2026-05-30
+
+Claim verified: debug-draw non-geometry summary dispatch moved behind a narrower private owner
+without changing command variants, geometry summaries, media counts, clip-state application,
+channel stamping, text summary kind, or effective clip-stack tracking.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection.rs` keeps
+  `summary_with_clip_state(...)`, clip-state application, and geometry/residual routing.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/residual.rs`
+  owns media, clip, SVG, and text command summary dispatch over the unchanged private
+  `DebugDrawCommand` discriminant.
+- `tools/gate_imui_workstream_source.py` now rejects media/text/clip summary construction from the
+  root summary projection owner and guards the residual owner shape.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls::tests --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Begin-Menu Active-Trigger Open-Policy Owner-Split Evidence - 2026-05-27
 
 Claim verified: begin-menu menubar active-trigger open-policy moved behind a narrower private

@@ -1,11 +1,12 @@
 use fret_core::Rect;
 
-use super::super::summaries::{DebugDrawCommandKind, DebugDrawCommandSummary};
+use super::super::summaries::DebugDrawCommandSummary;
 use super::DebugDrawCommand;
 
 mod clip_state;
 mod geometry;
 mod media;
+mod residual;
 
 impl DebugDrawCommand {
     pub(in crate::imui::debug_draw_controls) fn summary_with_clip_state(
@@ -22,44 +23,11 @@ impl DebugDrawCommand {
         if let Some(summary) = geometry::geometry_summary(self) {
             return summary;
         }
+        if let Some(summary) = residual::residual_summary(self) {
+            return summary;
+        }
 
         match self {
-            DebugDrawCommand::ImageTriangleMesh {
-                image,
-                vertices,
-                indices,
-                ..
-            } => media::image_triangle_mesh_summary(*image, vertices.len(), indices.len()),
-            DebugDrawCommand::PushClipRect { .. } => {
-                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::PushClipRect);
-                summary.point_count = 4;
-                summary
-            }
-            DebugDrawCommand::PopClipRect => {
-                DebugDrawCommandSummary::new(DebugDrawCommandKind::PopClipRect)
-            }
-            DebugDrawCommand::Image { image, .. } => {
-                media::image_rect_summary(DebugDrawCommandKind::Image, *image)
-            }
-            DebugDrawCommand::ImageRegion { image, .. } => {
-                media::image_rect_summary(DebugDrawCommandKind::ImageRegion, *image)
-            }
-            DebugDrawCommand::ImageQuad { image, .. } => media::image_quad_summary(*image),
-            DebugDrawCommand::ImageRounded { image, .. } => {
-                media::image_rect_summary(DebugDrawCommandKind::ImageRounded, *image)
-            }
-            DebugDrawCommand::ImageRegionRounded { image, .. } => {
-                media::image_rect_summary(DebugDrawCommandKind::ImageRegionRounded, *image)
-            }
-            DebugDrawCommand::SvgImage { .. } => {
-                media::svg_rect_summary(DebugDrawCommandKind::SvgImage)
-            }
-            DebugDrawCommand::SvgMaskIcon { .. } => {
-                media::svg_rect_summary(DebugDrawCommandKind::SvgMaskIcon)
-            }
-            DebugDrawCommand::Text { .. } => {
-                DebugDrawCommandSummary::new(DebugDrawCommandKind::Text)
-            }
             DebugDrawCommand::Line { .. }
             | DebugDrawCommand::Polyline { .. }
             | DebugDrawCommand::ConvexPolyFilled { .. }
@@ -81,6 +49,19 @@ impl DebugDrawCommand {
             | DebugDrawCommand::BezierQuadratic { .. }
             | DebugDrawCommand::BezierCubic { .. } => {
                 unreachable!("geometry commands are handled by geometry_summary")
+            }
+            DebugDrawCommand::ImageTriangleMesh { .. }
+            | DebugDrawCommand::PushClipRect { .. }
+            | DebugDrawCommand::PopClipRect
+            | DebugDrawCommand::Image { .. }
+            | DebugDrawCommand::ImageRegion { .. }
+            | DebugDrawCommand::ImageQuad { .. }
+            | DebugDrawCommand::ImageRounded { .. }
+            | DebugDrawCommand::ImageRegionRounded { .. }
+            | DebugDrawCommand::SvgImage { .. }
+            | DebugDrawCommand::SvgMaskIcon { .. }
+            | DebugDrawCommand::Text { .. } => {
+                unreachable!("residual commands are handled by residual_summary")
             }
         }
     }

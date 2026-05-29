@@ -2042,6 +2042,10 @@ Readiness order for the next locally testable review slices:
    `debug_draw_controls/commands/summary_projection/media.rs` now owns image/SVG/media command
    summary count and image-id assembly. `summary_projection.rs` keeps clip-stack tracking and
    non-media command projection.
+   2026-05-30 debug-draw residual summary projection owner split:
+   `debug_draw_controls/commands/summary_projection/residual.rs` now owns media, clip, SVG, and
+   text command summary dispatch over the existing private `DebugDrawCommand` discriminant.
+   `summary_projection.rs` keeps only clip-state application plus geometry/residual dispatch.
    2026-05-14 source-gate follow-up: the IMUI workstream source gate now carries a reusable
    opaque-output-struct check for sealed response/context/summary records, so public output fields
    cannot return by simply changing field names.

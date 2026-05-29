@@ -1029,6 +1029,12 @@ owns point/vertex/index/triangle-count summaries for geometric commands.
 `summary_projection.rs` keeps the public-in-debug-draw entry point plus media/text/clip command
 routing.
 
+2026-05-30 debug-draw residual summary projection owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/residual.rs` now
+owns non-geometry media, clip, SVG, and text command summary dispatch. `summary_projection.rs`
+keeps `summary_with_clip_state(...)`, clip-state application, and geometry/residual routing over
+the unchanged private `DebugDrawCommand` discriminant.
+
 2026-05-27 canonical workbench teaching-doc refresh result:
 `docs/examples/README.md`, `apps/fret-cookbook/README.md`, and
 `apps/fret-cookbook/EXAMPLES.md` now say `imui_editor_workbench_demo` mounts the editor-notes
