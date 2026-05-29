@@ -9,7 +9,7 @@ use super::model::{
     hue_wheel_target_from_local_position, parse_color_numeric_input, rgb_numeric_text, rgb_to_hsv,
 };
 use super::popup::copy::{ColorEditCopyFormat, color_copy_entries};
-use super::popup::picker::{alpha_from_local_x, alpha_from_local_y, alpha_percent_text};
+use super::popup::picker::alpha::{alpha_from_local_x, alpha_from_local_y, alpha_percent_text};
 use super::popup::preview::{
     SIDE_PREVIEW_SWATCH_HEIGHT, SIDE_PREVIEW_SWATCH_WIDTH, checkerboard_cell_color,
     opaque_preview_color, preview_color_for_alpha_visibility, restore_reference_color,

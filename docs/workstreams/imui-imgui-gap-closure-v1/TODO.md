@@ -359,6 +359,12 @@ Last updated: 2026-05-30
       color-edit popup policy tests.
       Result: `color_edit/popup/picker.rs` keeps picker composition and interactions, while
       `color_edit/popup/picker/hue_wheel.rs` owns hue-wheel canvas painting and geometry helpers.
+- [x] Split editor color-edit alpha bar previews and interaction into a private owner without
+      changing horizontal/vertical alpha bars, alpha coordinate mapping, popup picker composition,
+      color-edit helper tests, or color-edit popup policy tests.
+      Result: `color_edit/popup/picker.rs` keeps picker composition and entrypoint re-exports,
+      while `color_edit/popup/picker/alpha.rs` owns alpha gradients, thumb overlays, pointer
+      updates, and alpha helper math.
 - [x] Split IMUI leaf control option records into selection, tab-item, and slider private owners
       without changing public option type names, fields, defaults, root re-exports, selectable
       smoke behavior, tab/menu behavior, or slider model behavior.

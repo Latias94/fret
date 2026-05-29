@@ -1521,6 +1521,42 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Editor Color-Edit Alpha Bar Owner-Split Evidence - 2026-05-30
+
+Claim verified: editor color-edit alpha bar previews and interaction moved behind a private owner
+without changing horizontal/vertical alpha bars, alpha coordinate mapping, popup picker
+composition, color-edit helper tests, popup policy tests, or the editor-owned color-edit surface
+boundary.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker.rs` keeps picker composition,
+  pointer interaction for HSV/SV/hue paths, and re-exports the alpha bar entrypoint.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/alpha.rs` owns horizontal and
+  vertical alpha bar previews, alpha gradients, thumb overlays, pointer update application, and
+  alpha coordinate/a11y helper math.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` imports alpha coordinate helpers
+  from the new owner so the existing clamp/rounding tests stay tied to the owner.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now reads the alpha owner directly
+  while keeping the picker composition assertions.
+- `tools/gate_imui_workstream_source.py` now rejects alpha preview/interaction helpers from
+  `picker.rs` and freezes the private alpha owner shape.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor --check`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-editor alpha_bar_position_maps_local_x_to_clamped_alpha vertical_alpha_bar_position_maps_local_y_to_inverted_alpha alpha_percent_text_rounds_for_a11y_value --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Leaf Control Option Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI leaf control option records split into selection, tab-item, and slider private

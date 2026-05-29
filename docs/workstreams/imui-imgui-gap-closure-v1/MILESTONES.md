@@ -329,6 +329,12 @@ token patch construction without changing preset keys, labels, or token values.
 pointer interactions, and exported picker preview entrypoints. `picker/hue_wheel.rs` owns the
 hue-wheel canvas painting and local geometry helpers used by the popup and option thumbnails.
 
+2026-05-30 color-edit alpha bar owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker.rs` keeps color picker composition
+and alpha entrypoint re-exports. `picker/alpha.rs` owns horizontal and vertical alpha bar
+previews, gradient overlays, thumb overlays, pointer update application, and alpha coordinate/a11y
+helper math.
+
 2026-05-29 leaf control option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/selection.rs`,
 `ecosystem/fret-ui-kit/src/imui/options/controls/tab.rs`, and
