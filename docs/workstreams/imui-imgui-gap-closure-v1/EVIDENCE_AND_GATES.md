@@ -3520,9 +3520,10 @@ open-policy behavior.
 
 Evidence:
 
-- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/capture.rs` keeps
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/capture.rs` kept
   `BeginMenuState`, `MenuRenderState`, row/popup/was-open model identity, render-state writeback,
-  and read facade methods.
+  and read facade methods at this split; the later 2026-05-30 state-carrier split moves those state
+  bodies to `capture/state.rs`.
 - `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/capture/read.rs` owns bool and
   open-menu model reads for begin-menu capture/open-policy.
 - `tools/gate_imui_workstream_source.py` now rejects direct `read_model` / `Invalidation::Paint`
@@ -3538,6 +3539,37 @@ Focused gates:
 - `cargo check -p fret-ui-kit --features imui --lib`: pass.
 - `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass; 18
   menu/submenu/tab tests passed.
+
+## Begin-Menu Capture State-Carrier Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI begin-menu capture state carrier and render-state writeback moved into a
+private owner without changing row/popup/was-open model identity, pre-render snapshots, read facade
+methods, render-state writeback, or begin-menu public behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/capture/state.rs` owns
+  `BeginMenuState`, `MenuRenderState`, row/open-menu read facade methods, and
+  `record_render_state(...)`.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/capture.rs` keeps begin-menu
+  model capture and state assembly.
+- `tools/gate_imui_workstream_source.py` now rejects state structs and render-state writeback from
+  drifting back into `capture.rs` while requiring the private state-carrier owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui menu_activation --no-fail-fast`: pass; 6 menu activation tests
+  passed.
+- `cargo nextest run -p fret-imui submenu_hover --no-fail-fast`: pass; 6 submenu hover tests
+  passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
 
 ## Table Builder Test-Id Owner-Split Evidence - 2026-05-28
 

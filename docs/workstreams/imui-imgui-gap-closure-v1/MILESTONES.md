@@ -684,9 +684,14 @@ re-export.
 
 2026-05-28 begin-menu capture read owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/capture/read.rs` now owns bool and
-open-menu model reads for begin-menu capture/open-policy. `capture.rs` keeps `BeginMenuState`,
+open-menu model reads for begin-menu capture/open-policy. `capture.rs` kept `BeginMenuState`,
 `MenuRenderState`, row/popup/was-open model identity, render-state writeback, and read facade
-methods.
+methods until the later 2026-05-30 state-carrier split moved those state bodies out.
+
+2026-05-30 begin-menu capture state-carrier owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/capture/state.rs` now owns
+`BeginMenuState`, `MenuRenderState`, row/open-menu read facade methods, and
+`record_render_state(...)`. `capture.rs` keeps begin-menu model capture and state assembly.
 
 2026-05-28 table builder test-id owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/builder/test_ids.rs` now owns row/cell test-id

@@ -789,8 +789,15 @@ Last updated: 2026-05-30
       row/popup/was-open model identity, open-menu model reads, render-state writeback, or menubar
       open-policy behavior.
       Result: `menu_family_controls/menu_state/capture/read.rs` owns bool/open-menu model reads.
-      `capture.rs` keeps `BeginMenuState`, `MenuRenderState`, model capture, render-state
-      writeback, and read facade methods.
+      `capture.rs` kept `BeginMenuState`, `MenuRenderState`, model capture, render-state
+      writeback, and read facade methods until the later state-carrier split below moved the state
+      types and render-state writeback out.
+- [x] Split IMUI begin-menu capture state carrier and render-state writeback into a private owner
+      without changing row/popup/was-open model identity, pre-render snapshots, read facade methods,
+      render-state writeback, or begin-menu public behavior.
+      Result: `menu_family_controls/menu_state/capture/state.rs` owns `BeginMenuState`,
+      `MenuRenderState`, row/open-menu read facade methods, and `record_render_state(...)`.
+      `capture.rs` keeps begin-menu model capture and state assembly.
 - [x] Split IMUI table builder row/cell test-id derivation into a private owner without changing
       public `ImUiTable` / `ImUiTableRow` methods, row option explicit test-id override behavior,
       default row/cell test-id strings, child `ImUiFacade` mounting, or table render behavior.
