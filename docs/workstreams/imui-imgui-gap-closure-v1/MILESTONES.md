@@ -807,6 +807,11 @@ module/re-export index. `filters/builtin.rs` owns `InputTextFilters` plus
 decimal/scientific/hex/uppercase/no-blank character filtering, and `filters/custom.rs` owns
 `InputTextCustomFilter` closure storage and debug output.
 
+2026-05-30 input-text built-in filter application owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/controls/text/filters/builtin.rs` now owns
+`InputTextFilters` storage and constructors. `filters/builtin/filtering.rs` owns
+`filter_text(...)`, per-character filtering, and decimal/scientific character classifiers.
+
 2026-05-28 debug-draw draw-list image-authoring owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list/images.rs` is now a private module
 index. `images/mesh.rs` owns image triangle-mesh command recording, `images/raster.rs` owns image,

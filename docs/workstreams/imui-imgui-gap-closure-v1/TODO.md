@@ -919,6 +919,14 @@ Last updated: 2026-05-30
       Result: `options/controls/text/filters.rs` is now a private module/re-export index.
       `filters/builtin.rs` owns `InputTextFilters` plus decimal/scientific/hex/uppercase/no-blank
       character filtering, and `filters/custom.rs` owns `InputTextCustomFilter`.
+- [x] Split IMUI input-text built-in filter application out of
+      `ecosystem/fret-ui-kit/src/imui/options/controls/text/filters/builtin.rs` into a private
+      filtering owner without changing `InputTextFilters` constructors, public flags,
+      `filter_text(...)`, decimal/scientific/hex/uppercase/no-blank behavior, or text-control
+      call sites.
+      Result: `filters/builtin.rs` owns the `InputTextFilters` storage and constructors, while
+      `filters/builtin/filtering.rs` owns `filter_text(...)`, per-character filtering, and
+      decimal/scientific character classifiers.
 - [x] Split IMUI debug-draw draw-list image authoring into private mesh, raster, and rounded-image
       owners without changing `ImUiDebugDrawList` image method names, default option forwarding,
       command payload variants, vertex/index collection, image-region/quad recording, rounded
