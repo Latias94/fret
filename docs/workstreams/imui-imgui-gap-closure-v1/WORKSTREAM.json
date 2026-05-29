@@ -488,6 +488,8 @@
     "ecosystem/fret-ui-kit/src/imui/facade_writer/boolean_wrappers/radio.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/boolean_wrappers/switch.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/value_models.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/value_models/combo_model.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/value_models/slider.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_surface.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_surface/popup.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_surface/popup/area.rs",

@@ -143,6 +143,13 @@ points in `facade_writer.rs` now call these child macros directly, while `boolea
 switch model inherent wrappers. Disabled checks, focusable recording, trait delegation paths, public
 inherent method names, and the `fret-imui` thin boundary remain unchanged.
 
+2026-05-29 facade value/combo-model inherent-wrapper sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/value_models.rs` is now a module hub.
+`value_models/slider.rs` owns slider model inherent wrappers, and
+`value_models/combo_model.rs` owns combo-model inherent wrappers. Disabled checks, focusable
+recording, trait delegation paths, public inherent method names, and the `fret-imui` thin boundary
+remain unchanged.
+
 2026-05-29 facade button surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but button, small/arrow/invisible button, image item/button,

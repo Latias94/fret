@@ -589,6 +589,37 @@ Focused gates:
   --test imui_button_smoke --no-fail-fast`: pass (4 passed).
 - `cargo nextest run -p fret-imui models_controls --no-fail-fast`: pass (11 passed, 175 skipped).
 
+## Facade Value/Combo-Model Inherent Wrapper Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade value/combo-model inherent wrapper behavior ownership split into slider
+and combo-model child owners without changing public inherent method names, disabled checks,
+focusable recording, trait delegation paths, or `fret-imui` thinness.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/value_models.rs` is now a module hub for the two
+  value/combo-model inherent wrapper owners.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/value_models/slider.rs` owns slider model inherent
+  wrappers, including disabled checks and focusable recording.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/value_models/combo_model.rs` owns combo-model
+  inherent wrappers, including disabled checks and focusable recording.
+- `tools/gate_imui_workstream_source.py` checks the new child owners and rejects focusable-recording
+  wrapper bodies from drifting back into `value_models.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_combo_smoke --no-fail-fast`:
+  pass (2 passed).
+- `cargo nextest run -p fret-imui models_combo models_controls --no-fail-fast`: pass (22 passed,
+  164 skipped).
+
 ## Facade Button Surface Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI facade button/image/action trait default method declarations split out of the
