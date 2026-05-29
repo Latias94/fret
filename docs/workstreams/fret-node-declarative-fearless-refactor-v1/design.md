@@ -499,6 +499,10 @@ Status note (2026-05-28):
 - FNDX-061 adds the minimal `reconnect_on_drop_empty` event outcome: default empty reconnect drops
   stay no-op, while opt-in empty drops emit `OpenInsertNodePicker` without committing graph
   changes or mounting picker UI.
+- FNDX-062A adds the policy seam for that outcome: opt-in empty reconnect drops now raise
+  `NodeGraphDeclarativeInsertNodePickerRequest` through
+  `NodeGraphDeclarativeInteractionHook::handle_insert_node_picker_request`, carrying the
+  `ConnectEnd`, screen drop point, and canvas drop point without committing graph changes.
 
 Closeout note (2026-05-29):
 
@@ -507,8 +511,9 @@ Closeout note (2026-05-29):
   edge update anchors render, own reconnect drag lifecycle, commit valid target drops through the
   store transaction path, emit reconnect callback aliases, paint active preview wires, and surface
   opt-in empty-drop picker outcomes without graph commits.
-- Concrete insert-node picker UI/policy is split as a follow-on. Do not reopen the mechanism
-  sub-lane unless a regression is found in the shipped contracts above.
+- Concrete insert-node picker candidate UI/policy is split as a follow-on. Do not reopen the
+  mechanism sub-lane or the request seam unless a concrete UI workload proves the seam is
+  insufficient.
 
 Why this still matters:
 

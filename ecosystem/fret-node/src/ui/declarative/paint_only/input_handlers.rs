@@ -89,6 +89,7 @@ pub(super) struct PointerFinishHandlerParams {
     pub(super) node_drag: Model<Option<NodeDragState>>,
     pub(super) reconnect_drag: Model<Option<ReconnectDragState>>,
     pub(super) reconnect_drop_context: ReconnectDropContext,
+    pub(super) interaction_hook: Option<NodeGraphDeclarativeInteractionHookRef>,
     pub(super) pending_selection: Model<Option<PendingSelectionState>>,
     pub(super) binding: NodeGraphSurfaceBinding,
 }
@@ -370,6 +371,7 @@ pub(super) fn build_pointer_up_handler(params: PointerFinishHandlerParams) -> On
             &params.reconnect_drag,
             &params.binding,
             &params.reconnect_drop_context,
+            params.interaction_hook.as_ref(),
             up,
         ) {
             return true;

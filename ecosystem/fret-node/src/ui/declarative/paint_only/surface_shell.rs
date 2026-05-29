@@ -142,6 +142,7 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
             view: prepared_frame.view_for_paint,
             bounds: prepared_frame.grid_cache_value.bounds,
         },
+        interaction_hook: interaction_hook.clone(),
         pending_selection: pending_selection.clone(),
         binding: binding.clone(),
     });
@@ -157,6 +158,7 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
             view: prepared_frame.view_for_paint,
             bounds: prepared_frame.grid_cache_value.bounds,
         },
+        interaction_hook: interaction_hook.clone(),
         pending_selection: pending_selection.clone(),
         binding: binding.clone(),
     });
@@ -194,6 +196,7 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
                 node_drag_model: node_drag.clone(),
                 marquee_drag_model: marquee_drag.clone(),
                 reconnect_drag_model: reconnect_drag.clone(),
+                interaction_hook: interaction_hook.clone(),
                 hover_anchor_store: hover_anchor_store.clone(),
                 portal_bounds_store: portal_bounds_store.clone(),
                 portal_measured_geometry_state: portal_measured_geometry_state.clone(),

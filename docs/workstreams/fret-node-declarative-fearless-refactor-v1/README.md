@@ -194,11 +194,15 @@ update rather than an incidental refactor.
   - FNDX-061 adds the minimal `reconnect_on_drop_empty` event outcome: opt-in empty reconnect drops
     emit `OpenInsertNodePicker` without graph commits or concrete picker UI, while the default
     remains no-op.
+  - FNDX-062A adds the narrow policy/request seam for that outcome through
+    `NodeGraphDeclarativeInsertNodePickerRequest` on `NodeGraphDeclarativeInteractionHook`, still
+    without committing graph changes or mounting concrete picker UI.
   - Custom `NodeGraphPresenter` remains advanced/internal on the default path because it still mixes
     geometry, labels, context menus, and insertion/search policy.
   - Broader XyFlow edge-wrapper lifecycle parity remains follow-up work beyond click selection,
     the first child-bounds control contract, rendered update-anchor controls, reconnect drag
-    start/cancel lifecycle, accepted reconnect commits, and opt-in empty-drop outcome semantics.
+    start/cancel lifecycle, accepted reconnect commits, opt-in empty-drop outcome semantics, and
+    the request seam for picker policy.
 
 - **Ergonomic API fragmentation**
   - The surface naming is now closed around `NodeGraphSurfaceBinding` (instance-style app-facing

@@ -830,10 +830,11 @@ canonical data flow and invalidation boundaries:
       lifecycle, accepted reconnect drops hit-test target ports and commit through the store-backed
       reconnect transaction/callback path, endpoint-gated drops reject, default empty-canvas drops
       clear as no-op, opt-in `reconnect_on_drop_empty` empty drops emit the insert-node-picker
-      outcome without a graph transaction, reconnect gesture start/end callback aliases fire for
-      arm/commit/reject/no-op/picker/cancel end paths, active drags paint a transient reconnect
-      preview wire, and edge-label controls remain hit-test isolated
-    - follow-up: concrete insert-node picker UI/policy for empty-canvas reconnect drops
+      outcome without a graph transaction and raise a store-first
+      `NodeGraphDeclarativeInsertNodePickerRequest` for policy hooks, reconnect gesture start/end
+      callback aliases fire for arm/commit/reject/no-op/picker/cancel end paths, active drags
+      paint a transient reconnect preview wire, and edge-label controls remain hit-test isolated
+    - follow-up: concrete insert-node picker candidate UI/policy for empty-canvas reconnect drops
     - gating:
       - global: `NodeGraphInteractionState.edges_reconnectable` (XyFlow `edgesReconnectable`)
       - per-edge override: `Edge.reconnectable` (XyFlow `edge.reconnectable: boolean | 'source' | 'target'`)
@@ -860,7 +861,8 @@ canonical data flow and invalidation boundaries:
     - [x] reconnect on drop on empty canvas:
       `NodeGraphInteractionState.reconnect_on_drop_empty` maps empty active reconnect drops to
       `ConnectEndOutcome::OpenInsertNodePicker` with `target: None` and no graph transaction;
-      picker UI remains a policy follow-up
+      `NodeGraphSurfaceProps::interaction_hook` can observe the resulting
+      `NodeGraphDeclarativeInsertNodePickerRequest`; concrete picker UI remains a policy follow-up
 
 ## 6.4 Edge split / reroute node
 

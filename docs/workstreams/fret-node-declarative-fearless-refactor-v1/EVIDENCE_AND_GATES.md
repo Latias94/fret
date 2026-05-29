@@ -9,8 +9,10 @@ The FNDX-055 through FNDX-061 reconnect/update-anchor sub-lane is closed for the
 declarative path. The closed mechanism contract covers selected/focused edge update-anchor
 planning, rendered controls, reconnect drag lifecycle, valid target commit/reject/no-op outcomes,
 reconnect gesture callback aliases, active preview wire paint, and the opt-in
-`reconnect_on_drop_empty` picker outcome without graph commits. Concrete insert-node picker
-UI/policy is split as FNDX-062 follow-up work.
+`reconnect_on_drop_empty` picker outcome without graph commits. FNDX-062A now adds the narrow
+store-first request seam that lets declarative policy hooks observe that outcome without committing
+graph changes. Concrete insert-node picker candidate UI/policy remains split as FNDX-062B follow-up
+work.
 
 ## Targeted Iteration Gates
 
@@ -22,6 +24,31 @@ This gate proves the FNDX-061 empty-drop contract and keeps the surrounding reco
 intact: default empty drops remain no-op, opt-in empty drops emit the insert-node-picker outcome,
 preview cleanup still runs, valid target drops still commit, endpoint-gated drops still reject, and
 cancel paths still end as canceled/no-transaction gestures.
+
+```bash
+cargo nextest run -p fret-node edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit
+```
+
+This gate proves the FNDX-062A request seam: an opt-in empty reconnect drop reaches
+`NodeGraphDeclarativeInteractionHook::handle_insert_node_picker_request` with the `ConnectEnd`,
+screen drop point, and canvas drop point while the graph edge and commit callbacks remain
+unchanged.
+
+Fresh evidence for FNDX-062A (2026-05-29):
+
+- Red first: the focused gate failed before implementation because
+  `NodeGraphDeclarativeInsertNodePickerRequest` and
+  `handle_insert_node_picker_request` did not exist.
+- `cargo nextest run -p fret-node edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit`: passed.
+- `cargo nextest run -p fret-node edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit declarative_interaction_hook_contract_stays_store_first public_node_graph_guides_teach_binding_first_surface`: passed.
+- `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit`: passed.
+- `cargo check -p fret-node --all-features --tests`: passed.
+- `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+- `cargo fmt`: passed.
+- `cargo fmt --check`: passed.
+- `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed.
+- `git diff --check`: passed.
+- `python3 tools/check_layering.py`: passed.
 
 Fresh evidence for FNDX-061 (2026-05-29):
 
@@ -51,8 +78,8 @@ Closeout decision (2026-05-29):
 - FNDX-055 through FNDX-061 are accepted as a closed sub-lane. The parent workstream remains
   active because broader `fret-node` declarative-first parity and public-surface cleanup work still
   exist outside reconnect/update-anchor mechanics.
-- Remaining picker work is split as FNDX-062 and must prove concrete UI/policy behavior separately
-  from the closed mechanism-layer outcome contract.
+- Remaining picker work is split as FNDX-062B and must prove concrete UI/policy behavior separately
+  from the closed mechanism-layer outcome contract and the FNDX-062A request seam.
 
 Fresh evidence for FNDX-060 (2026-05-29):
 

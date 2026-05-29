@@ -236,8 +236,9 @@ points rather than direct graph mutation.
   controls, reconnect drag lifecycle, valid target transaction commits, rejected/no-op empty-drop
   outcomes, reconnect gesture callback aliases, preview wire paint, and opt-in empty-drop picker
   outcomes without graph commits.
-- Concrete insert-node picker UI/policy is split as FNDX-062 and is not required to accept the
-  closed mechanism contract above.
+- FNDX-062A adds a store-first request seam for opt-in empty-drop picker outcomes without graph
+  commits. Concrete insert-node picker candidate UI/policy remains split as FNDX-062B and is not
+  required to accept the closed mechanism contract above.
 
 ### Progress note (2026-03-07)
 

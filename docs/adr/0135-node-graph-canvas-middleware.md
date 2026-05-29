@@ -53,9 +53,11 @@ The replacement direction is:
 The supported replacement for retained canvas input interception is
 `NodeGraphDeclarativeInteractionHook` on `NodeGraphSurfaceProps`.
 
-The first shipped hook point is key-down capture for the declarative surface. This is intentionally
-small: it covers tool-mode and shortcut interception without reopening retained widget authoring or
-adding a second graph owner.
+The first shipped hook point was key-down capture for the declarative surface. The same store-first
+hook surface now also carries insert-node picker requests for opt-in empty reconnect drops through
+`NodeGraphDeclarativeInsertNodePickerRequest`. This remains intentionally small: it covers
+tool-mode/shortcut interception and picker-policy handoff without reopening retained widget
+authoring or adding a second graph owner.
 
 Hooks receive a `NodeGraphDeclarativeInteractionContext`, not a mutable `Graph` and not raw
 `ModelStore` access. The context may expose:

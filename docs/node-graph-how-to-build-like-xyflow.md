@@ -35,6 +35,10 @@ This is the closest match to “useReactFlow + built-ins”:
 - Tool-mode or shortcut interception belongs on `NodeGraphDeclarativeInteractionHook` through
   `NodeGraphSurfaceProps::interaction_hook`; hooks receive store snapshots and binding/controller
   commit helpers, not mutable graph ownership.
+- Empty-drop reconnect picker policy can also stay in that hook via
+  `NodeGraphDeclarativeInsertNodePickerRequest`; the default surface emits the request after the
+  opt-in picker outcome and still leaves graph insertion uncommitted until app policy chooses a
+  candidate.
 - When lower-level imperative ownership is useful, derive it explicitly with
   `NodeGraphController::new(surface.store_model())`.
 

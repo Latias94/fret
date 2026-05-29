@@ -25,9 +25,12 @@ use crate::ui::canvas::CanvasGeometry;
 use crate::ui::internals::NodeGraphInternalsSnapshot;
 use crate::ui::style::NodeGraphStyle;
 
-use super::commit_graph_transaction;
 use super::surface_math::pointer_crossed_threshold;
 use super::surface_support::read_authoritative_interaction_config_in_models;
+use super::{
+    NodeGraphDeclarativeInsertNodePickerRequest, NodeGraphDeclarativeInteractionContext,
+    NodeGraphDeclarativeInteractionHookRef, commit_graph_transaction,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct EdgeUpdateAnchorInfo {
@@ -186,6 +189,7 @@ pub(super) fn push_edge_update_anchor_controls<H: UiHost + 'static>(
     anchors: &[EdgeUpdateAnchorInfo],
     reconnect_drag: &Model<Option<ReconnectDragState>>,
     drop_context: ReconnectDropContext,
+    interaction_hook: Option<&NodeGraphDeclarativeInteractionHookRef>,
     binding: &NodeGraphSurfaceBinding,
     bounds: Rect,
     style_tokens: &NodeGraphStyle,
@@ -208,6 +212,7 @@ pub(super) fn push_edge_update_anchor_controls<H: UiHost + 'static>(
         let style_tokens = style_tokens.clone();
         let reconnect_drag = reconnect_drag.clone();
         let drop_context = drop_context.clone();
+        let interaction_hook = interaction_hook.cloned();
         let binding = binding.clone();
         interactive_overlay_children.push(cx.keyed(
             (
@@ -223,6 +228,7 @@ pub(super) fn push_edge_update_anchor_controls<H: UiHost + 'static>(
                     rect,
                     reconnect_drag.clone(),
                     drop_context.clone(),
+                    interaction_hook.clone(),
                     binding.clone(),
                     style_tokens,
                 )
@@ -238,6 +244,7 @@ fn edge_update_anchor_control<H: UiHost + 'static>(
     rect: Rect,
     reconnect_drag: Model<Option<ReconnectDragState>>,
     drop_context: ReconnectDropContext,
+    interaction_hook: Option<NodeGraphDeclarativeInteractionHookRef>,
     binding: NodeGraphSurfaceBinding,
     style_tokens: NodeGraphStyle,
 ) -> AnyElement {
@@ -287,6 +294,7 @@ fn edge_update_anchor_control<H: UiHost + 'static>(
 
         let reconnect_drag_for_up = reconnect_drag.clone();
         let drop_context_for_up = drop_context.clone();
+        let interaction_hook_for_up = interaction_hook.clone();
         let binding_for_up = binding.clone();
         cx.pressable_on_pointer_up(Arc::new(move |host, action_cx, up| {
             if finish_reconnect_drag_pointer_up_action_host(
@@ -295,6 +303,7 @@ fn edge_update_anchor_control<H: UiHost + 'static>(
                 &reconnect_drag_for_up,
                 &binding_for_up,
                 &drop_context_for_up,
+                interaction_hook_for_up.as_ref(),
                 up,
             ) {
                 PressablePointerUpResult::SkipActivate
@@ -376,8 +385,9 @@ fn emit_reconnect_end_action_host(
     drag: ReconnectDragState,
     target: Option<PortId>,
     outcome: ConnectEndOutcome,
-) {
+) -> Option<ConnectEnd> {
     let store = binding.store_model();
+    let mut emitted = None;
     let _ = host.models_mut().update(&store, |store| {
         let ev = ConnectEnd {
             kind: reconnect_drag_kind(drag),
@@ -385,8 +395,10 @@ fn emit_reconnect_end_action_host(
             target,
             outcome,
         };
+        emitted = Some(ev.clone());
         store.emit_gesture(NodeGraphGestureEvent::ConnectEnd(ev));
     });
+    emitted
 }
 
 fn reconnect_drag_kind(drag: ReconnectDragState) -> ConnectDragKind {
@@ -412,7 +424,8 @@ pub(super) fn cancel_reconnect_drag_action_host(
         return false;
     };
 
-    emit_reconnect_end_action_host(host, binding, current, None, ConnectEndOutcome::Canceled);
+    let _ =
+        emit_reconnect_end_action_host(host, binding, current, None, ConnectEndOutcome::Canceled);
     let cleared = clear_reconnect_drag_action_host(host, reconnect_drag);
     if cleared {
         host.notify(action_cx);
@@ -486,6 +499,7 @@ pub(super) fn finish_reconnect_drag_pointer_up_action_host(
     reconnect_drag: &Model<Option<ReconnectDragState>>,
     binding: &NodeGraphSurfaceBinding,
     drop_context: &ReconnectDropContext,
+    interaction_hook: Option<&NodeGraphDeclarativeInteractionHookRef>,
     up: fret_ui::action::PointerUpCx,
 ) -> bool {
     if up.button != MouseButton::Left {
@@ -512,13 +526,24 @@ pub(super) fn finish_reconnect_drag_pointer_up_action_host(
             outcome: ConnectEndOutcome::NoOp,
         }
     };
-    emit_reconnect_end_action_host(
+    let connect_end = emit_reconnect_end_action_host(
         host,
         binding,
         current,
         drop_result.target,
         drop_result.outcome,
     );
+    if let Some(connect_end) = connect_end.as_ref() {
+        request_insert_node_picker_if_needed_action_host(
+            host,
+            action_cx,
+            binding,
+            drop_context,
+            up.position,
+            interaction_hook,
+            connect_end,
+        );
+    }
 
     let cleared = clear_reconnect_drag_action_host(host, reconnect_drag);
     if cleared {
@@ -528,6 +553,34 @@ pub(super) fn finish_reconnect_drag_pointer_up_action_host(
         host.request_redraw(action_cx.window);
     }
     true
+}
+
+fn request_insert_node_picker_if_needed_action_host(
+    host: &mut dyn fret_ui::action::UiPointerActionHost,
+    action_cx: ActionCx,
+    binding: &NodeGraphSurfaceBinding,
+    drop_context: &ReconnectDropContext,
+    drop_screen: Point,
+    interaction_hook: Option<&NodeGraphDeclarativeInteractionHookRef>,
+    connect_end: &ConnectEnd,
+) {
+    if connect_end.outcome != ConnectEndOutcome::OpenInsertNodePicker {
+        return;
+    }
+    let Some(interaction_hook) = interaction_hook else {
+        return;
+    };
+
+    let request = NodeGraphDeclarativeInsertNodePickerRequest {
+        connect_end: connect_end.clone(),
+        screen_position: drop_screen,
+        canvas_position: drop_context
+            .view
+            .screen_to_canvas(drop_context.bounds, drop_screen),
+    };
+    let mut hook = interaction_hook.borrow_mut();
+    let mut ctx = NodeGraphDeclarativeInteractionContext::new(host, action_cx, binding);
+    let _ = hook.handle_insert_node_picker_request(&mut ctx, request);
 }
 
 pub(super) fn cancel_reconnect_drag_pointer_action_host(

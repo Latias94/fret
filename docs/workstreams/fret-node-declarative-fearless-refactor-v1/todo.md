@@ -273,6 +273,7 @@ Execution companion: `design.md` (surface map + next worktree order).
     - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
       passed.
     - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
     - `cargo nextest run -p fret-node`: passed.
 
 - [x] FNDX-047 Feed custom edge paths into exact edge hit-distance filtering.
@@ -872,20 +873,58 @@ Execution companion: `design.md` (surface map + next worktree order).
     - `git diff --check`: passed.
     - `python3 tools/check_layering.py`: passed.
 
-- [ ] FNDX-062 Split follow-on: decide and wire concrete insert-node picker UI/policy for opt-in
-      empty reconnect drops.
+- [x] FNDX-062A Add a narrow declarative insert-node picker request seam for opt-in empty
+      reconnect drops.
   - Status: follow-up split from the closed FNDX-055 through FNDX-061 reconnect/update-anchor
     mechanism sub-lane.
   - Scope:
-    - the policy layer that should react to `ConnectEndOutcome::OpenInsertNodePicker`
-    - insert-node/searcher UI entrypoints
+    - `NodeGraphDeclarativeInsertNodePickerRequest`
+    - `NodeGraphDeclarativeInteractionHook::handle_insert_node_picker_request`
+    - edge update-anchor pointer-up routing for both anchor-local and surface-level release paths
     - focused declarative behavior tests
   - Non-goal: do not reopen update-anchor planning, reconnect transaction commit, gesture callback
-    aliasing, or preview wire mechanics unless a regression proves the closed mechanism contract is
-    wrong.
+    aliasing, preview wire mechanics, candidate listing, or concrete picker UI.
   - Validation:
-    - add a focused behavior gate proving the picker opens from the opt-in empty-drop outcome and
-      still does not commit graph changes until the user chooses an insertion action.
+    - `cargo nextest run -p fret-node edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit`
+  - Exit note: opt-in empty reconnect drops now raise a store-first declarative request containing
+    the `ConnectEnd`, screen drop position, and canvas drop position through
+    `NodeGraphSurfaceProps::interaction_hook`. The seam does not commit graph changes; app policy
+    must still choose a candidate and dispatch an explicit insertion action.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/interaction_hooks.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit`:
+      passed.
+    - `cargo nextest run -p fret-node edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit declarative_interaction_hook_contract_stays_store_first public_node_graph_guides_teach_binding_first_surface`:
+      passed.
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit`:
+      passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo fmt`: passed.
+    - `cargo fmt --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+
+- [ ] FNDX-062B Split follow-on: decide and wire concrete insert-node picker candidate UI/policy
+      for opt-in empty reconnect drops.
+  - Status: follow-up split after FNDX-062A established the store-first picker request seam.
+  - Scope:
+    - candidate provider policy for `NodeGraphDeclarativeInsertNodePickerRequest`
+    - insert-node/searcher UI entrypoints
+    - explicit selection action that commits through binding/controller/store helpers
+    - focused declarative behavior tests
+  - Non-goal: do not reopen update-anchor planning, reconnect transaction commit, gesture callback
+    aliasing, preview wire mechanics, or the FNDX-062A request shape unless a concrete UI workload
+    proves the seam is insufficient.
+  - Validation:
+    - add a focused behavior gate proving the picker opens from the request, choosing a candidate
+      commits only through an explicit insertion action, and canceling leaves the graph unchanged.
 
 ## M0 - Decision gates and internal seam map
 

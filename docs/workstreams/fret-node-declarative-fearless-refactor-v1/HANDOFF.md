@@ -14,22 +14,26 @@ edge-label, custom edge-label renderer, child-bounds interactive edge-label cont
 declarative click-edge selection, selected-edge paint/diagnostics, update-anchor planning,
 rendered update-anchor controls, reconnect-drag lifecycle, valid reconnect drop commit/callback
 slices, reconnect gesture start/end callback aliases, active reconnect preview wire paint, and the
-minimal `reconnect_on_drop_empty` empty-drop event outcome. The current risk is
+minimal `reconnect_on_drop_empty` empty-drop event outcome plus the FNDX-062A store-first
+insert-node picker request seam. The current risk is
 consumer-facing drift where public extension or store surfaces look authoritative but bypass the
 store's contracts or imply unimplemented view-policy parity.
 
 ## Active Task
 
-- Task ID: none active after closeout.
+- Task ID: FNDX-062A.
 - Owner: current Codex session.
-- Status: reconnect/update-anchor sub-lane CLOSED; parent workstream remains active.
+- Status: DONE; reconnect/update-anchor mechanism sub-lane remains closed; parent workstream
+  remains active.
 - Claim: FNDX-055 through FNDX-061 close the default declarative EdgeWrapper update-anchor
   mechanism path. Selected/focused edge anchors are planned and rendered, reconnect drags own
   threshold/cancel/pointer-up lifecycle, valid target drops commit through store transactions,
   endpoint-gated and no-op drops avoid graph commits, reconnect callback aliases fire, active
   preview wires paint and clear, and opt-in empty-canvas drops emit
-  `ConnectEndOutcome::OpenInsertNodePicker` without graph commits. Concrete picker UI/policy is
-  split as FNDX-062.
+  `ConnectEndOutcome::OpenInsertNodePicker` without graph commits. FNDX-062A adds the
+  policy/request seam for that outcome through `NodeGraphDeclarativeInsertNodePickerRequest` on
+  `NodeGraphDeclarativeInteractionHook`. Concrete picker candidate UI/policy is split as
+  FNDX-062B.
 - Review: `review-workstream` and `verify-rust-workstream` found no blocking closeout issues for
   FNDX-055 through FNDX-061.
 - Evidence:
@@ -48,7 +52,11 @@ store's contracts or imply unimplemented view-policy parity.
     gesture subscriptions, and reconnect-only callback alias fan-out.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs` routes surface-level
     move/up/cancel/Escape events through reconnect drop/cleanup and lifecycle-end emission before
-    other canvas gestures.
+    other canvas gestures, and forwards the declarative interaction hook to the surface-level
+    reconnect release path.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/interaction_hooks.rs` defines the
+    store-first `NodeGraphDeclarativeInsertNodePickerRequest` and hook method used by policy code
+    to observe opt-in empty reconnect drops without taking raw graph ownership.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/frame_plan.rs` and
     `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs` expose reconnect
     armed/active diagnostics.
@@ -56,7 +64,7 @@ store's contracts or imply unimplemented view-policy parity.
     through frame preparation and marks internals `connecting` only once active.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs` places update-anchor
     controls in the interactive overlay layer and passes the per-frame drop context needed by
-    reconnect hit-testing.
+    reconnect hit-testing plus the interaction hook used by anchor-local reconnect releases.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs` supplies the same drop
     context to the surface-level pointer-up route so captured pointer releases and anchor-local
     releases use the same commit path.
@@ -71,12 +79,16 @@ store's contracts or imply unimplemented view-policy parity.
     `edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`,
     `edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks`,
     `edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit`,
-    `edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit`, and
-    `edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled`.
-  - Fresh gates passed:
-    `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled`,
-    `cargo check -p fret-node --tests`,
-    `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`,
+    `edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit`,
+    `edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled`, and
+    `edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit`.
+  - Fresh FNDX-062A gates passed:
+    `cargo nextest run -p fret-node edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit`,
+    `cargo nextest run -p fret-node edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit declarative_interaction_hook_contract_stays_store_first public_node_graph_guides_teach_binding_first_surface`,
+    `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit`,
+    `cargo check -p fret-node --all-features --tests`,
+    `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`,
+    `cargo fmt`,
     `cargo fmt --check`,
     `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`,
     `git diff --check`,
@@ -157,11 +169,15 @@ store's contracts or imply unimplemented view-policy parity.
 - FNDX-060 paints an active reconnect preview wire from the fixed port to the current pointer and
   removes it on current cleanup paths.
 - FNDX-061 maps opt-in empty-canvas reconnect drops to the insert-node-picker end outcome while
-  keeping default empty drops no-op and leaving concrete picker UI as policy follow-up.
+  keeping default empty drops no-op.
+- FNDX-062A maps that outcome to a store-first
+  `NodeGraphDeclarativeInsertNodePickerRequest` policy hook without committing graph changes or
+  mounting concrete picker UI.
 - Closeout review accepts FNDX-055 through FNDX-061 as a closed default declarative
   reconnect/update-anchor mechanism sub-lane.
-- FNDX-062 is split as the concrete insert-node picker UI/policy follow-up and must not reopen the
-  closed mechanism-layer reconnect contract unless a regression is found.
+- FNDX-062B is split as the concrete insert-node picker candidate UI/policy follow-up and must not
+  reopen the closed mechanism-layer reconnect contract or the FNDX-062A request seam unless a
+  concrete UI workload proves the seam is insufficient.
 
 ## Blockers
 
@@ -169,6 +185,6 @@ store's contracts or imply unimplemented view-policy parity.
 
 ## Next Recommended Action
 
-- Pick the next active slice. The most direct split follow-up is FNDX-062: concrete insert-node
-  picker UI/policy for the opt-in empty-drop outcome, kept separate from the closed
-  mechanism-layer reconnect event contract.
+- Pick the next active slice. The most direct split follow-up is FNDX-062B: concrete insert-node
+  picker candidate UI/policy for the opt-in empty-drop request, kept separate from the closed
+  mechanism-layer reconnect event contract and the FNDX-062A request seam.

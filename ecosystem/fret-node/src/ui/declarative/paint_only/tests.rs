@@ -37,7 +37,8 @@ use super::{
     HoverAnchorStore, Invalidation, KeyHandlerParams, LeftPointerDownOutcome,
     LeftPointerDownSnapshot, LeftPointerReleaseOutcome, MarqueeDragState,
     MarqueePointerMoveOutcome, NodeDragPhase, NodeDragPointerMoveOutcome, NodeDragReleaseOutcome,
-    NodeDragState, NodeGraphDeclarativeEdgeLabelRenderer, NodeGraphDeclarativeInteractionContext,
+    NodeDragState, NodeGraphDeclarativeEdgeLabelRenderer,
+    NodeGraphDeclarativeInsertNodePickerRequest, NodeGraphDeclarativeInteractionContext,
     NodeGraphDeclarativeInteractionHook, NodeGraphDeclarativeInteractionOutcome,
     NodeGraphDeclarativePortalRenderer, NodeGraphDiagnosticsConfig, NodeGraphEdgeLabelHitTestMode,
     NodeGraphEdgeLabelLayout, NodeGraphVisibleSubsetPortalConfig, NodeRectDraw,
@@ -947,6 +948,22 @@ impl NodeGraphGestureCallbacks for DeclarativeCallbackRecorder {
 
     fn on_edge_update_end(&mut self, ev: ConnectEnd) {
         self.trace.borrow_mut().edge_update_ends.push(ev);
+    }
+}
+
+#[derive(Clone)]
+struct InsertNodePickerRequestRecorder {
+    requests: Rc<RefCell<Vec<NodeGraphDeclarativeInsertNodePickerRequest>>>,
+}
+
+impl NodeGraphDeclarativeInteractionHook for InsertNodePickerRequestRecorder {
+    fn handle_insert_node_picker_request(
+        &mut self,
+        _ctx: &mut NodeGraphDeclarativeInteractionContext<'_>,
+        request: NodeGraphDeclarativeInsertNodePickerRequest,
+    ) -> NodeGraphDeclarativeInteractionOutcome {
+        self.requests.borrow_mut().push(request);
+        NodeGraphDeclarativeInteractionOutcome::Handled
     }
 }
 
@@ -5004,6 +5021,157 @@ fn edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_whe
         }),
         ConnectEndOutcome::OpenInsertNodePicker,
     );
+}
+
+#[test]
+fn edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit() {
+    let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let edge_before = graph.edges.get(&edge).expect("edge present").clone();
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let source_center = geom
+        .port_center(edge_before.from)
+        .expect("source port center");
+
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let editor_config = test_editor_config(|editor_config| {
+        editor_config.interaction.reconnect_on_drop_empty = true;
+    });
+    let mode = editor_config.resolved_interaction_state().connection_mode;
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order,
+            selected_edges: vec![edge],
+            ..Default::default()
+        },
+        editor_config,
+    );
+    let trace = install_declarative_callback_trace(&mut host, &binding.store_model());
+    let picker_requests = Rc::new(RefCell::new(Vec::new()));
+    let picker_hook = Rc::new(RefCell::new(InsertNodePickerRequestRecorder {
+        requests: picker_requests.clone(),
+    }));
+
+    let source_test_id = format!("node_graph.edge_update_anchor.{}.source", edge.0);
+    let mut anchor_visible = false;
+    for _ in 0..4 {
+        let picker_hook = picker_hook.clone();
+        let snapshot = render_surface_frame_for_binding(
+            &mut ui,
+            &mut host,
+            &mut services,
+            window,
+            bounds,
+            &binding,
+            move |binding| {
+                let mut props = super::NodeGraphSurfaceProps::new(binding.clone());
+                props.interaction_hook = Some(picker_hook);
+                props
+            },
+        );
+        if snapshot
+            .nodes
+            .iter()
+            .any(|node| node.test_id.as_deref() == Some(source_test_id.as_str()))
+        {
+            anchor_visible = true;
+            break;
+        }
+    }
+    assert!(
+        anchor_visible,
+        "edge update anchor should render before drag"
+    );
+
+    let empty_space = Point::new(Px(bounds.origin.x.0 + 760.0), Px(bounds.origin.y.0 + 540.0));
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: PointerId(0),
+            position: source_center,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: PointerId(0),
+            position: empty_space,
+            buttons: MouseButtons {
+                left: true,
+                right: false,
+                middle: false,
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            pointer_id: PointerId(0),
+            position: empty_space,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: false,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    let edge_after = host
+        .models
+        .read(&binding.store_model(), |store| {
+            store
+                .graph()
+                .edges
+                .get(&edge)
+                .expect("edge after empty-space drop")
+                .clone()
+        })
+        .expect("store readable");
+    assert_eq!(edge_after.from, edge_before.from);
+    assert_eq!(edge_after.to, edge_before.to);
+
+    let reconnect_kind = ConnectDragKind::Reconnect {
+        edge,
+        endpoint: EdgeEndpoint::From,
+        fixed: edge_before.to,
+    };
+    let expected_end = ConnectEnd {
+        kind: reconnect_kind.clone(),
+        mode,
+        target: None,
+        outcome: ConnectEndOutcome::OpenInsertNodePicker,
+    };
+    let got = trace.borrow();
+    assert!(got.commit_labels.is_empty());
+    assert!(got.reconnects.is_empty());
+    assert!(got.edge_updates.is_empty());
+    assert_eq!(got.connect_ends, vec![expected_end.clone()]);
+    assert_eq!(got.reconnect_ends, vec![expected_end.clone()]);
+    assert_eq!(got.edge_update_ends, vec![expected_end.clone()]);
+    drop(got);
+
+    let got_requests = picker_requests.borrow();
+    assert_eq!(got_requests.len(), 1);
+    let request = &got_requests[0];
+    assert_eq!(request.connect_end, expected_end);
+    assert_eq!(request.screen_position, empty_space);
+    assert_eq!(request.canvas_position, Point::new(Px(760.0), Px(540.0)));
 }
 
 #[test]

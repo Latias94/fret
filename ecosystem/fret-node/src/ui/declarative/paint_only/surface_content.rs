@@ -11,12 +11,12 @@ use crate::ui::style::NodeGraphStyle;
 
 use super::{
     HoverAnchorStore, HoverTooltipOverlayParams, MarqueeDragState, NodeDragState,
-    PortalMeasuredGeometryState, ReconnectDragState, ReconnectDropContext,
-    apply_pending_fit_to_portals, host_visible_portal_labels, paint_debug_grid_cached,
-    paint_edges_cached, paint_nodes_cached, paint_reconnect_preview_wire, push_edge_label_overlays,
-    push_edge_update_anchor_controls, push_hover_tooltip_overlay_if_needed,
-    push_marquee_overlay_if_active, push_overlay_layer_if_needed,
-    sync_hover_anchor_store_in_models,
+    NodeGraphDeclarativeInteractionHookRef, PortalMeasuredGeometryState, ReconnectDragState,
+    ReconnectDropContext, apply_pending_fit_to_portals, host_visible_portal_labels,
+    paint_debug_grid_cached, paint_edges_cached, paint_nodes_cached, paint_reconnect_preview_wire,
+    push_edge_label_overlays, push_edge_update_anchor_controls,
+    push_hover_tooltip_overlay_if_needed, push_marquee_overlay_if_active,
+    push_overlay_layer_if_needed, sync_hover_anchor_store_in_models,
 };
 
 pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
@@ -26,6 +26,7 @@ pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
     pub(super) node_drag_model: Model<Option<NodeDragState>>,
     pub(super) marquee_drag_model: Model<Option<MarqueeDragState>>,
     pub(super) reconnect_drag_model: Model<Option<ReconnectDragState>>,
+    pub(super) interaction_hook: Option<NodeGraphDeclarativeInteractionHookRef>,
     pub(super) hover_anchor_store: Model<HoverAnchorStore>,
     pub(super) portal_bounds_store: Model<super::PortalBoundsStore>,
     pub(super) portal_measured_geometry_state: Model<PortalMeasuredGeometryState>,
@@ -71,6 +72,7 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         node_drag_model,
         marquee_drag_model,
         reconnect_drag_model,
+        interaction_hook,
         hover_anchor_store,
         portal_bounds_store,
         portal_measured_geometry_state,
@@ -183,6 +185,7 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
             view: view_for_paint,
             bounds: grid_bounds,
         },
+        interaction_hook.as_ref(),
         &binding,
         grid_bounds,
         &style_tokens,

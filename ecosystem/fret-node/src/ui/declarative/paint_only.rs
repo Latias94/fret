@@ -139,8 +139,9 @@ use self::input_handlers::{
     build_pointer_move_handler, build_pointer_up_handler, build_wheel_handler,
 };
 pub use self::interaction_hooks::{
-    NodeGraphDeclarativeInteractionContext, NodeGraphDeclarativeInteractionHook,
-    NodeGraphDeclarativeInteractionHookRef, NodeGraphDeclarativeInteractionOutcome,
+    NodeGraphDeclarativeInsertNodePickerRequest, NodeGraphDeclarativeInteractionContext,
+    NodeGraphDeclarativeInteractionHook, NodeGraphDeclarativeInteractionHookRef,
+    NodeGraphDeclarativeInteractionOutcome,
 };
 use self::overlays::{
     HoverTooltipOverlayParams, push_hover_tooltip_overlay_if_needed,

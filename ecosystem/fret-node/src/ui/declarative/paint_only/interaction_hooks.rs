@@ -1,13 +1,14 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use fret_core::AppWindowId;
+use fret_core::{AppWindowId, Point};
 use fret_ui::GlobalElementId;
 use fret_ui::action::{ActionCx, KeyDownCx, UiFocusActionHost};
 
 use crate::core::Graph;
 use crate::io::NodeGraphViewState;
 use crate::ops::GraphTransaction;
+use crate::runtime::events::ConnectEnd;
 use crate::runtime::store::DispatchOutcome;
 use crate::ui::{NodeGraphControllerError, NodeGraphSurfaceBinding};
 
@@ -24,6 +25,17 @@ impl NodeGraphDeclarativeInteractionOutcome {
     pub fn is_handled(self) -> bool {
         matches!(self, Self::Handled)
     }
+}
+
+/// Request emitted when declarative connection policy should open an insert-node picker.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NodeGraphDeclarativeInsertNodePickerRequest {
+    /// Connection-end event that caused the picker request.
+    pub connect_end: ConnectEnd,
+    /// Drop position in window/surface screen coordinates.
+    pub screen_position: Point,
+    /// Drop position mapped through the current node-graph viewport into canvas coordinates.
+    pub canvas_position: Point,
 }
 
 /// Store-first context passed to declarative interaction hooks.
@@ -113,13 +125,21 @@ impl<'a> NodeGraphDeclarativeInteractionContext<'a> {
 
 /// Declarative surface interaction hook.
 ///
-/// The first supported interception point is key-down capture. Pointer and command interception can
-/// be added here later, but should preserve the same store-first context shape.
+/// Hooks are policy seams over the default declarative surface. Graph edits must still flow through
+/// the store-first context instead of raw model mutation.
 pub trait NodeGraphDeclarativeInteractionHook: 'static {
     fn handle_key_down(
         &mut self,
         _ctx: &mut NodeGraphDeclarativeInteractionContext<'_>,
         _key: KeyDownCx,
+    ) -> NodeGraphDeclarativeInteractionOutcome {
+        NodeGraphDeclarativeInteractionOutcome::NotHandled
+    }
+
+    fn handle_insert_node_picker_request(
+        &mut self,
+        _ctx: &mut NodeGraphDeclarativeInteractionContext<'_>,
+        _request: NodeGraphDeclarativeInsertNodePickerRequest,
     ) -> NodeGraphDeclarativeInteractionOutcome {
         NodeGraphDeclarativeInteractionOutcome::NotHandled
     }
