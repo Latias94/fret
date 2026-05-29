@@ -7,6 +7,7 @@ const COLOR_EDIT_POPUP_EYEDROPPER_RS: &str =
     include_str!("../src/controls/color_edit/popup/eyedropper.rs");
 const COLOR_EDIT_DRAG_DROP_RS: &str = include_str!("../src/controls/color_edit/drag_drop.rs");
 const COLOR_EDIT_MODEL_RS: &str = include_str!("../src/controls/color_edit/model.rs");
+const COLOR_EDIT_OPTIONS_RS: &str = include_str!("../src/controls/color_edit/options.rs");
 const COLOR_EDIT_POPUP_RS: &str = include_str!("../src/controls/color_edit/popup.rs");
 const COLOR_EDIT_POPUP_NUMERIC_RS: &str =
     include_str!("../src/controls/color_edit/popup/numeric.rs");
@@ -41,6 +42,9 @@ fn count_occurrences(haystack: &str, needle: &str) -> usize {
 #[test]
 fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_RS.contains("const COLOR_PRESETS:"));
+    assert!(COLOR_EDIT_RS.contains("mod options;"));
+    assert!(COLOR_EDIT_RS.contains("pub use self::options::{"));
+    assert!(COLOR_EDIT_OPTIONS_RS.contains("pub struct ColorEditOptions"));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("fn preset_swatch<"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn color_preview_stack<"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn checkerboard_grid<"));
@@ -76,30 +80,30 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_RS.contains("fn alpha_bar<"));
     assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_RS.contains("fn alpha_gradient_overlay<"));
     assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_RS.contains("fn alpha_from_local_x("));
-    assert!(COLOR_EDIT_RS.contains("pub struct ColorEditPopupOptions"));
+    assert!(COLOR_EDIT_OPTIONS_RS.contains("pub struct ColorEditPopupOptions"));
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditPaletteEntry"));
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditPaletteSlotDrop"));
     assert!(COLOR_EDIT_RS.contains("pub type OnColorEditPaletteSlotDrop"));
     assert!(COLOR_EDIT_RS.contains("pub fn default_color_edit_palette()"));
-    assert!(COLOR_EDIT_RS.contains("pub history: Arc<[ColorEditPaletteEntry]>"));
-    assert!(COLOR_EDIT_RS.contains("pub enum ColorEditAlphaPreview"));
-    assert!(COLOR_EDIT_RS.contains("pub struct ColorEditDragDropOptions"));
+    assert!(COLOR_EDIT_OPTIONS_RS.contains("pub history: Arc<[ColorEditPaletteEntry]>"));
+    assert!(COLOR_EDIT_OPTIONS_RS.contains("pub enum ColorEditAlphaPreview"));
+    assert!(COLOR_EDIT_OPTIONS_RS.contains("pub struct ColorEditDragDropOptions"));
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditDragDropPayload"));
-    assert!(COLOR_EDIT_RS.contains("pub enum ColorEditPopupPicker"));
-    assert!(COLOR_EDIT_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
-    assert!(COLOR_EDIT_RS.contains("struct ColorEditPopupRuntimeOptions"));
+    assert!(COLOR_EDIT_OPTIONS_RS.contains("pub enum ColorEditPopupPicker"));
+    assert!(COLOR_EDIT_OPTIONS_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
+    assert!(COLOR_EDIT_OPTIONS_RS.contains("struct ColorEditPopupRuntimeOptions"));
     assert!(COLOR_EDIT_RS.contains("fn sync_popup_runtime_options<"));
-    assert!(COLOR_EDIT_RS.contains("pub enum ColorEditPopupNumericInputs"));
-    assert!(COLOR_EDIT_RS.contains("pub enum ColorEditPopupSidePreview"));
-    assert!(COLOR_EDIT_RS.contains("pub struct ColorEditTooltipOptions"));
-    assert!(COLOR_EDIT_RS.contains("pub tooltip: ColorEditTooltipOptions"));
+    assert!(COLOR_EDIT_OPTIONS_RS.contains("pub enum ColorEditPopupNumericInputs"));
+    assert!(COLOR_EDIT_OPTIONS_RS.contains("pub enum ColorEditPopupSidePreview"));
+    assert!(COLOR_EDIT_OPTIONS_RS.contains("pub struct ColorEditTooltipOptions"));
+    assert!(COLOR_EDIT_OPTIONS_RS.contains("pub tooltip: ColorEditTooltipOptions"));
     assert!(COLOR_EDIT_RS.contains("fn tooltip_open_model<"));
-    assert!(COLOR_EDIT_RS.contains("pub struct ColorEditCopyOptions"));
-    assert!(COLOR_EDIT_RS.contains("pub copy: ColorEditCopyOptions"));
+    assert!(COLOR_EDIT_OPTIONS_RS.contains("pub struct ColorEditCopyOptions"));
+    assert!(COLOR_EDIT_OPTIONS_RS.contains("pub copy: ColorEditCopyOptions"));
     assert!(COLOR_EDIT_RS.contains("fn copy_menu_open_model<"));
     assert!(COLOR_EDIT_RS.contains("pub struct ColorEditEyedropperRequest"));
     assert!(COLOR_EDIT_RS.contains("pub type OnColorEditEyedropper"));
-    assert!(COLOR_EDIT_RS.contains("pub on_eyedropper: Option<OnColorEditEyedropper>"));
+    assert!(COLOR_EDIT_OPTIONS_RS.contains("pub on_eyedropper: Option<OnColorEditEyedropper>"));
     assert!(COLOR_EDIT_POPUP_COPY_RS.contains("fn request_color_copy_menu_overlay<"));
     assert!(COLOR_EDIT_POPUP_COPY_RS.contains("fn color_copy_entries("));
     assert!(COLOR_EDIT_POPUP_COPY_RS.contains("Effect::ClipboardWriteText"));
@@ -148,7 +152,7 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_RS.contains("popup_options.side_preview"));
     assert!(COLOR_EDIT_MODEL_RS.contains("ColorEditPopupNumericInputs::RgbAndHsv"));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn color_numeric_input_modes("));
-    assert!(COLOR_EDIT_RS.contains("fn has_visible_content_with_swatches("));
+    assert!(COLOR_EDIT_OPTIONS_RS.contains("fn has_visible_content_with_swatches("));
     assert!(!COLOR_EDIT_RS.contains("Color picker (stub)"));
     assert!(!COLOR_EDIT_RS.contains("picker TBD"));
     assert!(!COLOR_EDIT_POPUP_RS.contains("Color picker (stub)"));

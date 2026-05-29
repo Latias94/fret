@@ -1664,6 +1664,41 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Editor Color-Edit Options Owner-Split Evidence - 2026-05-30
+
+Claim verified: editor color-edit option records and runtime popup defaults moved behind a private
+owner without changing public `ColorEditOptions` / popup option names, default values, runtime
+override semantics, palette/payload/request ownership, popup policy tests, or the editor-owned
+color-edit surface boundary.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit.rs` keeps public re-exports, palette/payload
+  and eyedropper request records, the main `ColorEdit` renderer, local model helpers, and runtime
+  sync callsites.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/options.rs` owns alpha/drag/drop/popup/tooltip
+  / copy option records, `ColorEditOptions`, default construction, popup runtime defaults, and
+  runtime sync semantics.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now reads the option owner directly
+  while keeping root re-export assertions.
+- `tools/gate_imui_workstream_source.py` now rejects option records from drifting back into
+  `color_edit.rs` and rejects renderer/input/pressable code from `options.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor --check`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-editor color_edit_options_default_to_the_builtin_palette_source color_edit_palette_entries_are_app_owned_rgb_slots palette_slot_drop_event_replaces_rgb_and_preserves_slot_metadata drag_drop_options_default_to_imgui_enabled_local_payloads eyedropper_request_applies_sample_alpha_by_visibility popup_runtime_options_are_local_overrides_until_defaults_change --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Leaf Control Option Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI leaf control option records split into selection, tab-item, and slider private

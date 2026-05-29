@@ -352,6 +352,11 @@ and shared HSV color application. `picker/hue_wheel.rs` remains the pure canvas 
 while `picker/hue_wheel_picker.rs` owns hue-wheel pressable drag target tracking and HSV update
 wiring.
 
+2026-05-30 color-edit options owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit.rs` keeps public re-exports, payload/request
+records, the main control renderer, and shared local models. `controls/color_edit/options.rs` owns
+option records, default construction, popup runtime defaults, and runtime sync semantics.
+
 2026-05-29 leaf control option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/selection.rs`,
 `ecosystem/fret-ui-kit/src/imui/options/controls/tab.rs`, and

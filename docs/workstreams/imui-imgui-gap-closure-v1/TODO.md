@@ -384,6 +384,12 @@ Last updated: 2026-05-30
       `color_edit/popup/picker/hue_wheel.rs` remains the pure canvas owner, and
       `color_edit/popup/picker/hue_wheel_picker.rs` owns pressable drag target tracking and HSV
       update wiring.
+- [x] Split editor color-edit option records and runtime popup defaults into a private owner
+      without changing public `ColorEditOptions` / popup option names, default values, runtime
+      override semantics, palette/payload/request ownership, or popup policy tests.
+      Result: `controls/color_edit.rs` keeps public re-exports, payload/request records, the main
+      control renderer, and shared local models, while `controls/color_edit/options.rs` owns
+      option records, default construction, runtime defaults, and runtime sync semantics.
 - [x] Split IMUI leaf control option records into selection, tab-item, and slider private owners
       without changing public option type names, fields, defaults, root re-exports, selectable
       smoke behavior, tab/menu behavior, or slider model behavior.
