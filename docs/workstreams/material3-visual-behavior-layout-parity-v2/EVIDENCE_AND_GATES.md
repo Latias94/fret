@@ -525,6 +525,23 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     semantics decoration onto the visual badge also unmasked the old text-badge width clamp, so the
     refreshed badge goldens record Material-aligned text badge expansion.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_badge_anchor_semantics_layout_packet_v2.md`
+- 2026-05-29: M3PV2-049 closed standalone Card static/interactive semantics and elevation motion.
+  - Sources: Compose Material3 `Card.kt` separates non-clickable `Surface` card overloads from
+    clickable card overloads, and `CardElevation.shadowElevation` animates interaction elevation
+    while snapping disabled transitions; MUI `Card.js` is a Paper-backed root surface rather than
+    an intrinsically interactive control.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --test card_state` failed because
+    static cards exposed `Button` role and interactive filled cards snapped hover elevation to a
+    painted shadow on the first hover frame.
+  - `cargo nextest run -p fret-ui-material3 --test card_state`
+  - `cargo nextest run -p fret-ui-material3 --test button_state`
+  - `cargo nextest run -p fret-ui-material3 --lib button`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_controls_suite_goldens_v1`
+  - Result: Static cards now expose `Group` semantics without disabled/invoke control flags,
+    interactive cards retain button semantics, and Button/Card share the new
+    `foundation::elevation` animation runtime for Material hover/focus/press elevation.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_card_semantics_elevation_packet_v2.md`
 
 ## Proof Note Template
 

@@ -107,6 +107,13 @@ anchor, and visual badge identity into one semantics wrapper, and that wrapper m
 intrinsic width. Badge now exposes `base`, `base.anchor`, and `base.badge`, puts author label/value
 semantics on the badge part, and refreshed Badge goldens for Material-aligned text badge expansion.
 
+M3PV2-049 is complete: standalone Card style/accessibility/motion axes are now v2-covered while
+layout remains caller-owned. The packet found a Card recipe gap and a Material foundation gap:
+static cards leaked disabled button semantics through the reused pressable wrapper, and Button's
+Compose-like elevation animation had not yet been promoted to shared foundation. Static cards now
+present as non-disabled groups with no invoke action, interactive cards keep button semantics, and
+Button/Card share `foundation::elevation` animation behavior.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -117,7 +124,7 @@ semantics on the badge part, and refreshed Badge goldens for Material-aligned te
 
 ## Next Recommended Action
 
-Continue with the next uncovered Material3 packet from the matrix. Good M5 candidates are Card,
+Continue with the next uncovered Material3 packet from the matrix. Good M5 candidates are
 CarouselItem, FAB, List, and ProgressIndicator; higher-priority choice-control candidates remain
 Checkbox and Radio.
 

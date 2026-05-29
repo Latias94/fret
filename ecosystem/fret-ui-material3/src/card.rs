@@ -11,6 +11,7 @@ use fret_runtime::ActionId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ContainerProps, Overflow, PointerRegionProps, PressableA11y, PressableProps,
+    SemanticsDecoration,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
@@ -22,11 +23,14 @@ use fret_ui_kit::{
     resolve_override_slot_with,
 };
 
+use crate::foundation::elevation::{
+    AnimatedElevationRuntime, MaterialElevationInteraction, animate_material_elevation,
+};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
-use crate::foundation::interaction::pressable_interaction;
+use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::surface::material_surface_style;
 use crate::tokens::card as card_tokens;
 
@@ -168,12 +172,13 @@ impl Card {
         I: IntoIterator<Item = AnyElement>,
     {
         cx.scope(|cx| {
-            control_chrome_pressable_with_id_props(cx, |cx, st, pressable_id| {
+            let interactive = self.action.is_some() || self.on_activate.is_some();
+            let disabled = self.disabled;
+            let mut card = control_chrome_pressable_with_id_props(cx, |cx, st, pressable_id| {
                 let action_enabled = self
                     .action
                     .as_ref()
                     .is_none_or(|action| cx.command_is_enabled(action));
-                let interactive = self.action.is_some() || self.on_activate.is_some();
                 let enabled = interactive && !self.disabled && action_enabled;
 
                 if let Some(action) = self.action.clone() {
@@ -202,7 +207,11 @@ impl Card {
                     focusable: enabled,
                     key_activation: Default::default(),
                     a11y: PressableA11y {
-                        role: interactive.then_some(SemanticsRole::Button),
+                        role: Some(if interactive {
+                            SemanticsRole::Button
+                        } else {
+                            SemanticsRole::Group
+                        }),
                         label: self.a11y_label.clone(),
                         test_id: self.test_id.clone(),
                         ..Default::default()
@@ -226,7 +235,16 @@ impl Card {
                 let interaction = pressable_interaction(is_pressed, is_hovered, is_focused);
                 let states = WidgetStates::from_pressable(cx, st, enabled);
 
-                let (chrome, state_layer_color, state_layer_target, ripple_base_opacity, config) = {
+                let (
+                    container_bg,
+                    elevation_target,
+                    shadow_color,
+                    outline,
+                    state_layer_color,
+                    state_layer_target,
+                    ripple_base_opacity,
+                    config,
+                ) = {
                     let theme = Theme::global(&*cx.app);
 
                     let container_bg =
@@ -238,20 +256,13 @@ impl Card {
                         || container_bg,
                     );
 
-                    let elevation = card_tokens::container_elevation(
+                    let elevation_target = card_tokens::container_elevation(
                         theme,
                         self.variant,
                         !self.disabled,
                         interaction,
                     );
                     let shadow_color = card_tokens::container_shadow_color(theme, self.variant);
-                    let surface = material_surface_style(
-                        theme,
-                        container_bg,
-                        elevation,
-                        Some(shadow_color),
-                        corner_radii,
-                    );
 
                     let outline =
                         card_tokens::outline(theme, self.variant, !self.disabled, interaction);
@@ -281,6 +292,43 @@ impl Card {
                         card_tokens::pressed_state_layer_opacity(theme, self.variant);
                     let config = material_pressable_indication_config(theme, None);
 
+                    (
+                        container_bg,
+                        elevation_target,
+                        shadow_color,
+                        outline,
+                        state_layer_color,
+                        state_layer_target,
+                        ripple_base_opacity,
+                        config,
+                    )
+                };
+
+                let elevation_interaction = interaction.map(|interaction| match interaction {
+                    PressableInteraction::Pressed => MaterialElevationInteraction::Pressed,
+                    PressableInteraction::Hovered => MaterialElevationInteraction::Hovered,
+                    PressableInteraction::Focused => MaterialElevationInteraction::Focused,
+                });
+                let (elevation, elevation_want_frames) =
+                    cx.state_for(pressable_id, AnimatedElevationRuntime::default, |rt| {
+                        animate_material_elevation(
+                            rt,
+                            now_frame,
+                            enabled,
+                            elevation_interaction,
+                            elevation_target,
+                        )
+                    });
+
+                let chrome = {
+                    let theme = Theme::global(&*cx.app);
+                    let surface = material_surface_style(
+                        theme,
+                        container_bg,
+                        elevation,
+                        Some(shadow_color),
+                        corner_radii,
+                    );
                     let mut chrome = ContainerProps::default();
                     chrome.background = Some(surface.background);
                     chrome.shadow = surface.shadow;
@@ -289,14 +337,7 @@ impl Card {
                         chrome.border = Edges::all(outline.width);
                         chrome.border_color = Some(outline.color);
                     }
-
-                    (
-                        chrome,
-                        state_layer_color,
-                        state_layer_target,
-                        ripple_base_opacity,
-                        config,
-                    )
+                    chrome
                 };
 
                 let pointer_region = cx.named("pointer_region", |cx| {
@@ -318,7 +359,7 @@ impl Card {
                             state_layer_target,
                             ripple_base_opacity,
                             config,
-                            false,
+                            elevation_want_frames,
                         );
 
                         std::iter::once(overlay)
@@ -328,7 +369,17 @@ impl Card {
                 });
 
                 (pressable_props, chrome, move |_cx| vec![pointer_region])
-            })
+            });
+
+            if !interactive {
+                card = card.a11y(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Group)
+                        .disabled(disabled)
+                        .invokable(false),
+                );
+            }
+            card
         })
     }
 }

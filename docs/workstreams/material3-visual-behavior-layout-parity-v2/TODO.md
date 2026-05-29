@@ -576,6 +576,26 @@ Task IDs use `M3PV2-*`.
   Handoff: Badge style/layout/accessibility are v2-covered. Continue M3PV2-060 with Card,
   CarouselItem, FAB, List, or ProgressIndicator, or use matrix priority to pick Checkbox/Radio.
 
+- [x] M3PV2-049 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{card.rs,button.rs,foundation/elevation.rs},ecosystem/fret-ui-material3/tests/card_state.rs,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close standalone Card static/interactive semantics and Material elevation animation drift,
+  extracting shared elevation motion from Button into Material foundation where justified.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --test card_state`
+  failed because static cards exposed `Button` semantics and interactive filled cards painted hover
+  shadows on the first hover frame; green gates:
+  `cargo nextest run -p fret-ui-material3 --test card_state`;
+  `cargo nextest run -p fret-ui-material3 --test button_state`;
+  `cargo nextest run -p fret-ui-material3 --lib button`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_controls_suite_goldens_v1`.
+  Review: DONE. This found both a Card recipe gap and a Material foundation gap. Static cards now
+  present as non-disabled groups with no invoke action, interactive cards keep button semantics,
+  and Button/Card share `foundation::elevation` animation behavior.
+  Evidence: `artifacts/material3_card_semantics_elevation_packet_v2.md`.
+  Handoff: Card style/accessibility/motion are v2-covered; layout remains caller-owned. Continue
+  M3PV2-060 with CarouselItem, FAB, List, or ProgressIndicator, or use matrix priority to pick
+  Checkbox/Radio.
+
 - [ ] M3PV2-060 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{badge.rs,button.rs,card.rs,carousel_item.rs,divider.rs,fab.rs,list.rs,progress_indicator.rs},ecosystem/fret-ui-material3/tests,goldens/material3-headless/v1]
   Goal: Add style/layout proof for low-interaction components without overfitting gallery layout.
   Validation: targeted golden or scene assertions for chrome, shape, elevation, spacing, and canvas
