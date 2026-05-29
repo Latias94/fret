@@ -5,14 +5,39 @@ Last updated: 2026-05-29
 
 ## Current Focus
 
-FNDX-056 advances default declarative EdgeWrapper reconnect/update-anchor parity from planning to
-rendered controls. Selected and focused edges now produce hit-testable source/target update-anchor
-controls from authoritative port centers. Those controls respect global `edges_reconnectable`,
-per-edge `Edge.reconnectable`, endpoint overrides, missing centers, and `reconnect_radius` gates,
-and anchor pointer-downs take priority over the canvas surface pointer path. This slice does not
-start reconnect drags or implement `reconnect_on_drop_empty` yet.
+FNDX-057 advances default declarative EdgeWrapper reconnect/update-anchor parity from rendered
+controls to the first reconnect drag lifecycle. Selected/focused edge update-anchor controls now
+arm reconnect drags on anchor pointer-down, reuse the authoritative connection-drag threshold before
+becoming active, surface armed/active diagnostics, mark internals `connecting` only once active, and
+clear transient state on pointer-up, Escape, or pointer cancel. This slice does not yet hit-test
+target ports, dispatch reconnect commits/callbacks, paint a preview wire, or implement
+`reconnect_on_drop_empty`.
 
 ## Targeted Iteration Gates
+
+```bash
+cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient
+```
+
+This gate proves the FNDX-057 update-anchor reconnect-drag contract: FNDX-055 planning and
+FNDX-056 rendered controls still resolve and preempt correctly, anchor pointer-down arms reconnect
+state, movement below `connection_drag_threshold` remains non-connecting, threshold crossing marks
+the drag active/connecting, and pointer-up/Escape/pointer-cancel clear transient reconnect state.
+
+Fresh evidence for FNDX-057 (2026-05-29):
+
+- `cargo nextest run -p fret-node edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`: passed.
+- `cargo fmt -p fret-node`: passed.
+- `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`: passed.
+- `cargo fmt -p fret-node --check`: passed.
+- `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed.
+- `git diff --check`: passed.
+- `python3 tools/check_layering.py`: passed.
+- `cargo check -p fret-node --tests`: passed.
+- `cargo check -p fret-node --all-features --tests`: passed.
+- `cargo check -p fret-node --no-default-features`: passed.
+- `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+- `cargo nextest run -p fret-node`: passed with 476 tests.
 
 ```bash
 cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate

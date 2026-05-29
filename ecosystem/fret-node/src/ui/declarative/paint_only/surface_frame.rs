@@ -43,6 +43,7 @@ pub(super) struct PreparedPaintOnlySurfaceFrame {
     pub(super) marquee_value: Option<super::MarqueeDragState>,
     pub(super) marquee_active: bool,
     pub(super) node_drag_value: Option<super::NodeDragState>,
+    pub(super) reconnect_drag_value: Option<super::ReconnectDragState>,
     pub(super) node_dragging: bool,
     pub(super) grid_cache_value: super::GridPaintCacheState,
     pub(super) derived_cache_value: super::DerivedGeometryCacheState,
@@ -66,6 +67,7 @@ fn sync_binding_internals_for_surface(
     derived_cache: &super::DerivedGeometryCacheState,
     edges_cache: &super::EdgePaintCacheState,
     style_tokens: &NodeGraphStyle,
+    connecting: bool,
 ) {
     let Some(geom) = derived_cache.geom.as_deref() else {
         binding
@@ -119,6 +121,7 @@ fn sync_binding_internals_for_surface(
         focused_node,
         focused_port,
         focused_edge,
+        connecting,
         ..NodeGraphInternalsSnapshot::default()
     };
 
@@ -237,6 +240,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         drag,
         marquee_drag,
         node_drag,
+        reconnect_drag,
         pending_selection,
         hovered_node,
         hit_scratch: _,
@@ -279,6 +283,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         drag,
         marquee_drag,
         node_drag,
+        reconnect_drag,
         pending_selection,
         hovered_node,
         hover_anchor_store,
@@ -295,6 +300,9 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
 
     let node_drag_value = cx
         .get_model_cloned(node_drag, Invalidation::Layout)
+        .unwrap_or(None);
+    let reconnect_drag_value = cx
+        .get_model_cloned(reconnect_drag, Invalidation::Layout)
         .unwrap_or(None);
     let pending_selection_value = cx
         .get_model_cloned(pending_selection, Invalidation::Layout)
@@ -432,6 +440,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         &derived_cache_value,
         &edges_cache_value,
         &style_tokens,
+        reconnect_drag_value.is_some_and(|state| state.is_active()),
     );
     let internals_snapshot = binding.internals_store().snapshot();
     let edge_update_anchors =
@@ -453,6 +462,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         drag: drag_value,
         marquee: marquee_value.as_ref(),
         node_drag: node_drag_value.as_ref(),
+        reconnect_drag: reconnect_drag_value.as_ref(),
         pending_selection: pending_selection_value.as_ref(),
         hovered_node: hovered_node_value,
     });
@@ -483,6 +493,8 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         marquee_active: interaction_plan.marquee_active,
         node_drag_armed: interaction_plan.node_drag_armed,
         node_dragging: interaction_plan.node_dragging,
+        reconnect_drag_armed: interaction_plan.reconnect_drag_armed,
+        reconnect_dragging: interaction_plan.reconnect_dragging,
         hovered: interaction_plan.hovered,
         selected_nodes_len: interaction_plan.selected_nodes_len(),
         grid_cached,
@@ -513,6 +525,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         marquee_active: interaction_plan.marquee_active,
         marquee_value,
         node_drag_value,
+        reconnect_drag_value,
         node_dragging: interaction_plan.node_dragging,
         grid_cache_value,
         derived_cache_value,

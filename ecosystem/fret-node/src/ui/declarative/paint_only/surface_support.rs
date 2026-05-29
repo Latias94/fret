@@ -132,6 +132,7 @@ pub(super) fn sync_authoritative_surface_boundary_in_models(
     drag: &Model<Option<DragState>>,
     marquee: &Model<Option<MarqueeDragState>>,
     node_drag: &Model<Option<NodeDragState>>,
+    reconnect_drag: &Model<Option<ReconnectDragState>>,
     pending_selection: &Model<Option<PendingSelectionState>>,
     hovered_node: &Model<Option<crate::core::NodeId>>,
     hover_anchor_store: &Model<HoverAnchorStore>,
@@ -160,6 +161,7 @@ pub(super) fn sync_authoritative_surface_boundary_in_models(
     if graph_changed || selection_changed {
         let _ = models.update(marquee, |state| *state = None);
         let _ = models.update(node_drag, |state| *state = None);
+        let _ = models.update(reconnect_drag, |state| *state = None);
         let _ = models.update(pending_selection, |state| *state = None);
     }
 

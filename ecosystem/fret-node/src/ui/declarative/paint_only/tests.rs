@@ -42,7 +42,7 @@ use super::{
     NodeGraphDeclarativePortalRenderer, NodeGraphDiagnosticsConfig, NodeGraphEdgeLabelHitTestMode,
     NodeGraphEdgeLabelLayout, NodeGraphVisibleSubsetPortalConfig, NodeRectDraw,
     PaintOnlyInteractionFrameInputs, PendingSelectionState, PointerDownHandlerParams,
-    PortalBoundsStore, PortalDebugFlags, PortalMeasuredGeometryState,
+    PortalBoundsStore, PortalDebugFlags, PortalMeasuredGeometryState, ReconnectDragState,
     apply_declarative_diag_view_preset_action_host, authoritative_surface_boundary_snapshot,
     begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
     build_click_selection_preview_edges, build_click_selection_preview_nodes,
@@ -1287,6 +1287,47 @@ fn render_surface_frame_for_binding(
     ui.semantics_snapshot()
         .cloned()
         .expect("semantics snapshot")
+}
+
+fn render_default_surface_frame_until_test_id(
+    ui: &mut fret_ui::UiTree<TestActionHostImpl>,
+    host: &mut TestActionHostImpl,
+    services: &mut FakeUiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    binding: &NodeGraphSurfaceBinding,
+    test_id: &str,
+) -> fret_core::SemanticsSnapshot {
+    let mut last = None;
+    for _ in 0..4 {
+        let snapshot = render_surface_frame_for_binding(
+            ui,
+            host,
+            services,
+            window,
+            bounds,
+            binding,
+            |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+        );
+        if snapshot
+            .nodes
+            .iter()
+            .any(|node| node.test_id.as_deref() == Some(test_id))
+        {
+            return snapshot;
+        }
+        last = Some(snapshot);
+    }
+    last.expect("at least one frame rendered")
+}
+
+fn canvas_semantics_value(snapshot: &fret_core::SemanticsSnapshot) -> &str {
+    snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("node_graph.canvas"))
+        .and_then(|node| node.value.as_deref())
+        .expect("canvas semantics value")
 }
 
 fn render_surface_frame_with_portal_renderer_for_binding(
@@ -3186,6 +3227,7 @@ fn declarative_interaction_hook_commits_only_through_binding_dispatch_context() 
         drag: host.models.insert(None::<DragState>),
         marquee_drag: host.models.insert(None::<MarqueeDragState>),
         node_drag: host.models.insert(None::<NodeDragState>),
+        reconnect_drag: host.models.insert(None::<ReconnectDragState>),
         pending_selection: host.models.insert(None::<PendingSelectionState>),
         binding: binding.clone(),
         portal_bounds_store: host.models.insert(PortalBoundsStore::default()),
@@ -3936,6 +3978,294 @@ fn edge_update_anchor_controls_respect_endpoint_reconnectable_gate() {
         ui.focus().is_some(),
         "pointer down where the source anchor is gated off should fall through to the canvas"
     );
+}
+
+#[test]
+fn edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect() {
+    let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let source_center = graph
+        .edges
+        .get(&edge)
+        .and_then(|edge| geom.port_center(edge.from))
+        .expect("source port center");
+
+    let mut editor_config = default_editor_config();
+    editor_config.interaction.connection_drag_threshold = 6.0;
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order,
+            selected_edges: vec![edge],
+            ..Default::default()
+        },
+        editor_config,
+    );
+
+    let source_test_id = format!("node_graph.edge_update_anchor.{}.source", edge.0);
+    let snapshot = render_default_surface_frame_until_test_id(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        &source_test_id,
+    );
+    let source = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some(source_test_id.as_str()))
+        .expect("source update anchor control");
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: PointerId(0),
+            position: source_center,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(source.id));
+
+    let snapshot = render_surface_frame_for_binding(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+    );
+    let value = canvas_semantics_value(&snapshot);
+    assert!(value.contains("reconnect_drag_armed:true;"));
+    assert!(value.contains("reconnect_dragging:false;"));
+    assert!(!binding.internals_store().a11y_snapshot().connecting);
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: PointerId(0),
+            position: Point::new(Px(source_center.x.0 + 3.0), source_center.y),
+            buttons: MouseButtons {
+                left: true,
+                right: false,
+                middle: false,
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    let snapshot = render_surface_frame_for_binding(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+    );
+    let value = canvas_semantics_value(&snapshot);
+    assert!(value.contains("reconnect_drag_armed:true;"));
+    assert!(value.contains("reconnect_dragging:false;"));
+    assert!(!binding.internals_store().a11y_snapshot().connecting);
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: PointerId(0),
+            position: Point::new(Px(source_center.x.0 + 8.0), source_center.y),
+            buttons: MouseButtons {
+                left: true,
+                right: false,
+                middle: false,
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    let snapshot = render_surface_frame_for_binding(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+    );
+    let value = canvas_semantics_value(&snapshot);
+    assert!(value.contains("reconnect_drag_armed:false;"));
+    assert!(value.contains("reconnect_dragging:true;"));
+    assert!(binding.internals_store().a11y_snapshot().connecting);
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            pointer_id: PointerId(0),
+            position: Point::new(Px(source_center.x.0 + 8.0), source_center.y),
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: false,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    let snapshot = render_surface_frame_for_binding(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+    );
+    let value = canvas_semantics_value(&snapshot);
+    assert!(value.contains("reconnect_drag_armed:false;"));
+    assert!(value.contains("reconnect_dragging:false;"));
+    assert!(!binding.internals_store().a11y_snapshot().connecting);
+}
+
+#[test]
+fn edge_update_anchor_reconnect_drag_cancel_paths_clear_transient() {
+    let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let source_center = graph
+        .edges
+        .get(&edge)
+        .and_then(|edge| geom.port_center(edge.from))
+        .expect("source port center");
+
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order,
+            selected_edges: vec![edge],
+            ..Default::default()
+        },
+        default_editor_config(),
+    );
+
+    let source_test_id = format!("node_graph.edge_update_anchor.{}.source", edge.0);
+    let arm_and_activate = |ui: &mut fret_ui::UiTree<TestActionHostImpl>,
+                            host: &mut TestActionHostImpl,
+                            services: &mut FakeUiServices| {
+        let _snapshot = render_default_surface_frame_until_test_id(
+            ui,
+            host,
+            services,
+            window,
+            bounds,
+            &binding,
+            &source_test_id,
+        );
+        ui.dispatch_event(
+            host,
+            services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: PointerId(0),
+                position: source_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            host,
+            services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: PointerId(0),
+                position: Point::new(Px(source_center.x.0 + 12.0), source_center.y),
+                buttons: MouseButtons {
+                    left: true,
+                    right: false,
+                    middle: false,
+                },
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        let snapshot = render_surface_frame_for_binding(
+            ui,
+            host,
+            services,
+            window,
+            bounds,
+            &binding,
+            |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+        );
+        assert!(canvas_semantics_value(&snapshot).contains("reconnect_dragging:true;"));
+    };
+
+    arm_and_activate(&mut ui, &mut host, &mut services);
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    let snapshot = render_surface_frame_for_binding(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+    );
+    assert!(canvas_semantics_value(&snapshot).contains("reconnect_dragging:false;"));
+    assert!(!binding.internals_store().a11y_snapshot().connecting);
+
+    arm_and_activate(&mut ui, &mut host, &mut services);
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::PointerCancel(fret_core::PointerCancelEvent {
+            pointer_id: PointerId(0),
+            position: Some(Point::new(Px(source_center.x.0 + 12.0), source_center.y)),
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
+        }),
+    );
+    let snapshot = render_surface_frame_for_binding(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+    );
+    assert!(canvas_semantics_value(&snapshot).contains("reconnect_dragging:false;"));
+    assert!(!binding.internals_store().a11y_snapshot().connecting);
 }
 
 #[test]
@@ -4745,6 +5075,7 @@ fn paint_only_interaction_frame_plan_is_pure_snapshot_state() {
         drag: Some(drag),
         marquee: Some(&marquee),
         node_drag: Some(&node_drag),
+        reconnect_drag: None,
         pending_selection: Some(&pending),
         hovered_node: Some(node_c),
     });
@@ -4753,6 +5084,8 @@ fn paint_only_interaction_frame_plan_is_pure_snapshot_state() {
     assert!(!plan.marquee_active);
     assert!(plan.node_drag_armed);
     assert!(!plan.node_dragging);
+    assert!(!plan.reconnect_drag_armed);
+    assert!(!plan.reconnect_dragging);
     assert!(plan.hovered);
     assert_eq!(plan.hovered_node, Some(node_c));
     assert_eq!(plan.effective_selected_nodes, vec![node_b]);
@@ -7990,6 +8323,7 @@ fn sync_authoritative_surface_boundary_in_models_clears_graph_scoped_transients_
         NodeDragPhase::Active,
         Point::new(Px(16.0), Px(0.0)),
     )));
+    let reconnect_drag = host.models.insert(None::<ReconnectDragState>);
     let pending = host.models.insert(Some(PendingSelectionState {
         nodes: Arc::from([node_b]),
         clear_edges: false,
@@ -8027,6 +8361,7 @@ fn sync_authoritative_surface_boundary_in_models_clears_graph_scoped_transients_
         &drag,
         &marquee,
         &node_drag,
+        &reconnect_drag,
         &pending,
         &hovered,
         &hover_anchor,
@@ -8111,6 +8446,7 @@ fn sync_authoritative_surface_boundary_in_models_keeps_pan_and_hover_on_selectio
         clear_edges: false,
         clear_groups: false,
     }));
+    let reconnect_drag = host.models.insert(None::<ReconnectDragState>);
     let hovered = host.models.insert(Some(node_a));
     let hover_bounds = Rect::new(
         Point::new(Px(10.0), Px(10.0)),
@@ -8140,6 +8476,7 @@ fn sync_authoritative_surface_boundary_in_models_keeps_pan_and_hover_on_selectio
         &drag,
         &marquee,
         &node_drag,
+        &reconnect_drag,
         &pending,
         &hovered,
         &hover_anchor,

@@ -12,40 +12,48 @@ store/view-policy hazard found in the 2026-05-28 `fret-node` architecture audit,
 declarative public-extension decision, and the custom edge path spatial, hit-test, anchor, toolbar,
 edge-label, custom edge-label renderer, child-bounds interactive edge-label control, default
 declarative click-edge selection, selected-edge paint/diagnostics, and update-anchor planning
-and rendered update-anchor control contract slices. The current risk is consumer-facing drift where
-public extension or store surfaces look authoritative but bypass the store's contracts or imply
-unimplemented view-policy parity.
+and rendered update-anchor control plus reconnect-drag lifecycle slices. The current risk is
+consumer-facing drift where public extension or store surfaces look authoritative but bypass the
+store's contracts or imply unimplemented view-policy parity.
 
 ## Active Task
 
-- Task ID: FNDX-056.
+- Task ID: FNDX-057.
 - Owner: current Codex session.
 - Status: DONE.
-- Claim: default declarative EdgeWrapper update-anchor controls now render from the selected/focused
-  update-anchor plan. Controls are placed at authoritative port centers, expose stable test IDs and
-  button semantics, respect global/per-edge source/target reconnectability gates, and intercept
-  anchor pointer-down before the canvas surface pointer path. Reconnect drag lifecycle,
-  callbacks, and `reconnect_on_drop_empty` remain follow-up work.
+- Claim: default declarative EdgeWrapper update-anchor controls now start reconnect drags from the
+  rendered source/target anchors. Left pointer-down arms a transient reconnect state, movement below
+  the authoritative `connection_drag_threshold` remains non-connecting, threshold crossing marks the
+  drag active and sets internals `connecting`, and pointer-up/Escape/pointer-cancel clear the
+  transient. Target hit-testing, reconnect commits/callbacks, preview wire paint, and
+  `reconnect_on_drop_empty` remain follow-up work.
 - Review: use `review-workstream` before accepting broader lane closure.
 - Evidence:
   - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs` owns deterministic
-    selected/focused edge update-anchor planning, hit-test rects, and default declarative control
-    composition.
-  - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs` carries planned anchors
-    from internals sync into the prepared frame.
+    selected/focused edge update-anchor planning, hit-test rects, rendered controls, and the
+    reconnect armed/active pointer lifecycle.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs` routes surface-level
+    move/up/cancel/Escape events through reconnect cleanup before other canvas gestures.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/frame_plan.rs` and
+    `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs` expose reconnect
+    armed/active diagnostics.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs` carries reconnect state
+    through frame preparation and marks internals `connecting` only once active.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs` places update-anchor
-    controls in the interactive overlay layer.
-  - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs` still reports planned
-    update-anchor count in surface diagnostics.
+    controls in the interactive overlay layer and observes reconnect state for paint invalidation.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs` carries
     `edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides`,
     `collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers`,
     `collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius`,
     `node_graph_surface_semantics_reports_selected_edges_count`,
     `edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down`, and
-    `edge_update_anchor_controls_respect_endpoint_reconnectable_gate`.
+    `edge_update_anchor_controls_respect_endpoint_reconnectable_gate`,
+    `edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect`, and
+    `edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`.
   - Fresh gates passed:
     `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate`,
+    `cargo nextest run -p fret-node edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`,
+    `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`,
     `cargo fmt -p fret-node --check`,
     `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`,
     `git diff --check`,
@@ -54,8 +62,8 @@ unimplemented view-policy parity.
     `cargo check -p fret-node --all-features --tests`,
     `cargo check -p fret-node --no-default-features`,
     `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`, and
-    `cargo nextest run -p fret-node` (474 tests).
-  - Earlier closeout/package gates for FNDX-010 through FNDX-055 remain recorded in
+    `cargo nextest run -p fret-node` (476 tests).
+  - Earlier closeout/package gates for FNDX-010 through FNDX-056 remain recorded in
     `EVIDENCE_AND_GATES.md`.
 
 ## Decisions Since Last Update
@@ -110,13 +118,18 @@ unimplemented view-policy parity.
 - FNDX-056 renders those planned update anchors as default declarative hit-testable controls with
   anchor-click priority, but still does not start reconnect drags, dispatch reconnect callbacks, or
   implement `reconnect_on_drop_empty`.
+- FNDX-057 starts reconnect drags from those rendered update anchors, reuses the existing
+  connection-drag threshold and cancel/up cleanup policy, and exposes armed/active diagnostics, but
+  still does not target-hit-test, commit reconnect transactions, dispatch reconnect callbacks, paint
+  a preview wire, or implement `reconnect_on_drop_empty`.
 
 ## Blockers
 
-- None for FNDX-056.
+- None for FNDX-057.
 
 ## Next Recommended Action
 
-- Pick the next view-policy/public-extension slice with a concrete gate. The strongest candidate is
-  starting reconnect drags from the rendered update-anchor controls with the existing
-  threshold/cancel policy. `reconnect_on_drop_empty` remains a later lifecycle slice.
+- Pick the next reconnect lifecycle slice with a concrete gate. The strongest candidate is active
+  reconnect target-port hit-testing plus the store-backed reconnect commit/callback path; preview
+  wire paint and `reconnect_on_drop_empty` should stay separate unless the target/commit slice
+  proves they are required.

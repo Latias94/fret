@@ -116,7 +116,11 @@ use self::diag::{
 #[cfg(test)]
 use self::edge_hit_test::hit_test_edge_at_canvas_point;
 use self::edge_labels::push_edge_label_overlays;
-use self::edge_update_anchors::{EdgeUpdateAnchorInfo, push_edge_update_anchor_controls};
+use self::edge_update_anchors::{
+    EdgeUpdateAnchorInfo, ReconnectDragState, cancel_reconnect_drag_pointer_action_host,
+    clear_reconnect_drag_action_host, finish_reconnect_drag_pointer_up_action_host,
+    handle_reconnect_drag_pointer_move_action_host, push_edge_update_anchor_controls,
+};
 #[cfg(test)]
 use self::edge_update_anchors::{
     collect_edge_update_anchor_infos, edge_reconnect_endpoint_enabled,
@@ -560,6 +564,7 @@ fn node_graph_surface_impl<'a, H: UiHost + 'static>(
         drag,
         marquee_drag,
         node_drag,
+        reconnect_drag,
         pending_selection,
         hovered_node,
         hit_scratch,
@@ -584,6 +589,7 @@ fn node_graph_surface_impl<'a, H: UiHost + 'static>(
                 drag: drag.clone(),
                 marquee_drag: marquee_drag.clone(),
                 node_drag: node_drag.clone(),
+                reconnect_drag: reconnect_drag.clone(),
                 pending_selection: pending_selection.clone(),
                 hovered_node: hovered_node.clone(),
                 hit_scratch: hit_scratch.clone(),
@@ -620,6 +626,7 @@ fn node_graph_surface_impl<'a, H: UiHost + 'static>(
     let marquee_value = prepared_frame.marquee_value;
     let marquee_active = prepared_frame.marquee_active;
     let node_drag_value = prepared_frame.node_drag_value;
+    let reconnect_drag_value = prepared_frame.reconnect_drag_value;
     let node_dragging = prepared_frame.node_dragging;
     let grid_cache_value = prepared_frame.grid_cache_value;
     let derived_cache_value = prepared_frame.derived_cache_value;
@@ -742,6 +749,7 @@ fn node_graph_surface_impl<'a, H: UiHost + 'static>(
                         drag: drag.clone(),
                         marquee_drag: marquee_drag.clone(),
                         node_drag: node_drag.clone(),
+                        reconnect_drag: reconnect_drag.clone(),
                         pending_selection: pending_selection.clone(),
                         hovered_node: hovered_node.clone(),
                         hit_scratch: hit_scratch.clone(),
@@ -769,6 +777,7 @@ fn node_graph_surface_impl<'a, H: UiHost + 'static>(
                         marquee_value: marquee_value.clone(),
                         marquee_active,
                         node_drag_value: node_drag_value.clone(),
+                        reconnect_drag_value,
                         node_dragging,
                         grid_cache_value: grid_cache_value.clone(),
                         derived_cache_value: derived_cache_value.clone(),

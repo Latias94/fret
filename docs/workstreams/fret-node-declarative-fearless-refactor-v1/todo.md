@@ -677,6 +677,54 @@ Execution companion: `design.md` (surface map + next worktree order).
     - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
     - `cargo nextest run -p fret-node`: passed with 474 tests.
 
+- [x] FNDX-057 Start declarative reconnect drags from rendered update-anchor controls.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/frame_plan.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_models.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_support.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`
+  - Exit note: rendered source/target update-anchor controls now start a transient reconnect drag
+    state on left pointer-down, remain armed until movement crosses the authoritative
+    `connection_drag_threshold`, then become active and mark internals `connecting` for diagnostics
+    and accessibility. Pointer-up, Escape, pointer cancel, missed-left-button moves, graph changes,
+    and selection changes clear the transient reconnect state. This slice does not target-hit-test,
+    commit reconnect transactions, dispatch reconnect callbacks, paint a preview wire, or implement
+    `reconnect_on_drop_empty`.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/frame_plan.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`:
+      passed.
+    - `cargo fmt -p fret-node`: passed.
+    - `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`:
+      passed.
+    - `cargo fmt -p fret-node --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo nextest run -p fret-node`: passed with 476 tests.
+
 ## M0 - Decision gates and internal seam map
 
 - [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.

@@ -11,11 +11,11 @@ use crate::ui::style::NodeGraphStyle;
 
 use super::{
     HoverAnchorStore, HoverTooltipOverlayParams, MarqueeDragState, NodeDragState,
-    PortalMeasuredGeometryState, apply_pending_fit_to_portals, host_visible_portal_labels,
-    paint_debug_grid_cached, paint_edges_cached, paint_nodes_cached, push_edge_label_overlays,
-    push_edge_update_anchor_controls, push_hover_tooltip_overlay_if_needed,
-    push_marquee_overlay_if_active, push_overlay_layer_if_needed,
-    sync_hover_anchor_store_in_models,
+    PortalMeasuredGeometryState, ReconnectDragState, apply_pending_fit_to_portals,
+    host_visible_portal_labels, paint_debug_grid_cached, paint_edges_cached, paint_nodes_cached,
+    push_edge_label_overlays, push_edge_update_anchor_controls,
+    push_hover_tooltip_overlay_if_needed, push_marquee_overlay_if_active,
+    push_overlay_layer_if_needed, sync_hover_anchor_store_in_models,
 };
 
 pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
@@ -24,6 +24,7 @@ pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
     pub(super) hovered_node_model: Model<Option<NodeId>>,
     pub(super) node_drag_model: Model<Option<NodeDragState>>,
     pub(super) marquee_drag_model: Model<Option<MarqueeDragState>>,
+    pub(super) reconnect_drag_model: Model<Option<ReconnectDragState>>,
     pub(super) hover_anchor_store: Model<HoverAnchorStore>,
     pub(super) portal_bounds_store: Model<super::PortalBoundsStore>,
     pub(super) portal_measured_geometry_state: Model<PortalMeasuredGeometryState>,
@@ -67,6 +68,7 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         hovered_node_model,
         node_drag_model,
         marquee_drag_model,
+        reconnect_drag_model,
         hover_anchor_store,
         portal_bounds_store,
         portal_measured_geometry_state,
@@ -111,11 +113,13 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
     let hovered_node_model_id = hovered_node_model.id();
     let node_drag_model_id = node_drag_model.id();
     let marquee_drag_model_id = marquee_drag_model.id();
+    let reconnect_drag_model_id = reconnect_drag_model.id();
     let canvas = cx.canvas(canvas, move |p| {
         p.observe_model_id(store_model_id, Invalidation::Paint);
         p.observe_model_id(hovered_node_model_id, Invalidation::Paint);
         p.observe_model_id(node_drag_model_id, Invalidation::Paint);
         p.observe_model_id(marquee_drag_model_id, Invalidation::Paint);
+        p.observe_model_id(reconnect_drag_model_id, Invalidation::Paint);
 
         paint_debug_grid_cached(p, view_for_paint, grid_ops.clone(), &style_tokens_for_paint);
         paint_nodes_cached(
@@ -160,6 +164,8 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         cx,
         &mut interactive_overlay_children,
         &edge_update_anchors,
+        &reconnect_drag_model,
+        &binding,
         grid_bounds,
         &style_tokens,
     );

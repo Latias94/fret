@@ -18,15 +18,17 @@ use super::{
     DeclarativeDiagKeyAction, DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState,
     GridPaintCacheState, MarqueeDragState, NodeDragState, NodeGraphDeclarativeInteractionContext,
     NodeGraphDeclarativeInteractionHookRef, PendingSelectionState, PortalBoundsStore,
-    PortalDebugFlags, apply_pan_by_screen_delta, apply_zoom_about_screen_point,
+    PortalDebugFlags, ReconnectDragState, apply_pan_by_screen_delta, apply_zoom_about_screen_point,
     begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
-    handle_declarative_diag_key_action_host, handle_declarative_escape_key_action_host,
-    handle_declarative_keyboard_zoom_action_host, handle_declarative_pointer_cancel_action_host,
-    handle_declarative_pointer_up_action_host, handle_marquee_pointer_move_action_host,
-    handle_node_drag_pointer_move_action_host, invalidate_notify_and_redraw_pointer_action_host,
-    mouse_buttons_contains, notify_and_redraw_action_host,
-    read_left_pointer_down_snapshot_action_host, update_hovered_node_pointer_move_action_host,
-    update_view_state_action_host,
+    cancel_reconnect_drag_pointer_action_host, clear_reconnect_drag_action_host,
+    finish_reconnect_drag_pointer_up_action_host, handle_declarative_diag_key_action_host,
+    handle_declarative_escape_key_action_host, handle_declarative_keyboard_zoom_action_host,
+    handle_declarative_pointer_cancel_action_host, handle_declarative_pointer_up_action_host,
+    handle_marquee_pointer_move_action_host, handle_node_drag_pointer_move_action_host,
+    handle_reconnect_drag_pointer_move_action_host,
+    invalidate_notify_and_redraw_pointer_action_host, mouse_buttons_contains,
+    notify_and_redraw_action_host, read_left_pointer_down_snapshot_action_host,
+    update_hovered_node_pointer_move_action_host, update_view_state_action_host,
 };
 use fret_canvas::view::{PanZoom2D, wheel_zoom_factor};
 use fret_ui::Invalidation;
@@ -38,6 +40,7 @@ pub(super) struct KeyHandlerParams {
     pub(super) drag: Model<Option<DragState>>,
     pub(super) marquee_drag: Model<Option<MarqueeDragState>>,
     pub(super) node_drag: Model<Option<NodeDragState>>,
+    pub(super) reconnect_drag: Model<Option<ReconnectDragState>>,
     pub(super) pending_selection: Model<Option<PendingSelectionState>>,
     pub(super) binding: NodeGraphSurfaceBinding,
     pub(super) portal_bounds_store: Model<PortalBoundsStore>,
@@ -70,6 +73,7 @@ pub(super) struct PointerMoveHandlerParams {
     pub(super) drag: Model<Option<DragState>>,
     pub(super) marquee_drag: Model<Option<MarqueeDragState>>,
     pub(super) node_drag: Model<Option<NodeDragState>>,
+    pub(super) reconnect_drag: Model<Option<ReconnectDragState>>,
     pub(super) pending_selection: Model<Option<PendingSelectionState>>,
     pub(super) binding: NodeGraphSurfaceBinding,
     pub(super) grid_cache: Model<GridPaintCacheState>,
@@ -83,6 +87,7 @@ pub(super) struct PointerFinishHandlerParams {
     pub(super) drag: Model<Option<DragState>>,
     pub(super) marquee_drag: Model<Option<MarqueeDragState>>,
     pub(super) node_drag: Model<Option<NodeDragState>>,
+    pub(super) reconnect_drag: Model<Option<ReconnectDragState>>,
     pub(super) pending_selection: Model<Option<PendingSelectionState>>,
     pub(super) binding: NodeGraphSurfaceBinding,
 }
@@ -128,7 +133,7 @@ pub(super) fn build_key_down_capture_handler(params: KeyHandlerParams) -> OnKeyD
                 &params.marquee_drag,
                 &params.node_drag,
                 &params.pending_selection,
-            );
+            ) || clear_reconnect_drag_action_host(host, &params.reconnect_drag);
             if handled {
                 host.request_redraw(action_cx.window);
             }
@@ -251,6 +256,16 @@ pub(super) fn build_pointer_move_handler(params: PointerMoveHandlerParams) -> On
             .ok()
             .flatten();
         let Some(mut drag) = drag else {
+            if handle_reconnect_drag_pointer_move_action_host(
+                host,
+                action_cx,
+                &params.reconnect_drag,
+                &params.binding,
+                mv,
+            ) {
+                return true;
+            }
+
             if let Some(outcome) = handle_node_drag_pointer_move_action_host(
                 host,
                 &params.node_drag,
@@ -343,6 +358,11 @@ pub(super) fn build_pointer_move_handler(params: PointerMoveHandlerParams) -> On
 
 pub(super) fn build_pointer_up_handler(params: PointerFinishHandlerParams) -> OnPointerUp {
     Arc::new(move |host, action_cx: ActionCx, up: PointerUpCx| {
+        if finish_reconnect_drag_pointer_up_action_host(host, action_cx, &params.reconnect_drag, up)
+        {
+            return true;
+        }
+
         handle_declarative_pointer_up_action_host(
             host,
             action_cx,
@@ -359,6 +379,8 @@ pub(super) fn build_pointer_up_handler(params: PointerFinishHandlerParams) -> On
 
 pub(super) fn build_pointer_cancel_handler(params: PointerFinishHandlerParams) -> OnPointerCancel {
     Arc::new(move |host, action_cx: ActionCx, cancel: PointerCancelCx| {
+        let reconnect_cleared =
+            cancel_reconnect_drag_pointer_action_host(host, action_cx, &params.reconnect_drag);
         handle_declarative_pointer_cancel_action_host(
             host,
             action_cx,
@@ -367,7 +389,7 @@ pub(super) fn build_pointer_cancel_handler(params: PointerFinishHandlerParams) -
             &params.marquee_drag,
             &params.node_drag,
             &params.pending_selection,
-        )
+        ) || reconnect_cleared
     })
 }
 
