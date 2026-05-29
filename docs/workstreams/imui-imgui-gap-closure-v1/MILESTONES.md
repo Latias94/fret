@@ -817,8 +817,14 @@ registration, activation dispatch, layer child mounting, and rank sort applicati
 2026-05-30 floating layer layout owner-split result:
 `ecosystem/fret-ui-kit/src/imui/floating_surface/layer/layout.rs` now owns the absolute fill
 visible-overflow layer shell and root id stamping. `floating_surface/layer.rs` now keeps marker
-state, child registration, activation dispatch, child mounting, z-order snapshot reconciliation,
-and rank sort application.
+state, child registration, activation dispatch, child mounting, and z-order snapshot
+reconciliation before delegating rank sort and layout.
+
+2026-05-30 floating layer sort owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_surface/layer/sort.rs` now owns z-order rank lookup,
+unknown-rank fallback, and original-index stable tie-break sorting. `floating_surface/layer.rs`
+keeps marker state, child registration, activation dispatch, child mounting, and z-order snapshot
+reconciliation.
 
 2026-05-28 shared item behavior install owner-split result:
 `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` now owns pressable pointer hook clearing,

@@ -4068,10 +4068,38 @@ Evidence:
 - `ecosystem/fret-ui-kit/src/imui/floating_surface/layer/layout.rs` owns the absolute fill
   visible-overflow layer container and assigns the layer root id.
 - `ecosystem/fret-ui-kit/src/imui/floating_surface/layer.rs` now keeps marker state, child
-  registration, activation dispatch, child mounting, z-order snapshot reconciliation, and rank sort
-  application.
+  registration, activation dispatch, child mounting, and z-order snapshot reconciliation; rank sort
+  application was later split into a narrower owner.
 - `tools/gate_imui_workstream_source.py` now rejects direct container/layout shell construction
   from drifting back into `floating_surface/layer.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating::movement_z_order --no-fail-fast`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Floating Layer Sort Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI floating layer z-order rank sort application moved out of the layer
+registration owner without changing child registration, bring-to-front activation, missing-window
+pruning, unknown-rank fallback, original-order tie-breaks, hit-test order, or absolute layer layout.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/layer/sort.rs` owns z-order rank lookup,
+  unknown-rank fallback, and original-index stable tie-break sorting.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/layer.rs` now keeps marker state, child
+  registration, activation dispatch, child mounting, and z-order snapshot reconciliation before
+  delegating sorting and shell layout.
+- `tools/gate_imui_workstream_source.py` now rejects rank lookup and stable sort implementation
+  details from drifting back into `floating_surface/layer.rs`.
 
 Focused gates:
 

@@ -948,8 +948,16 @@ Last updated: 2026-05-30
       APIs.
       Result: `floating_surface/layer/layout.rs` owns the absolute fill visible-overflow layer
       container and id stamping. `layer.rs` keeps layer marker state, child registration,
-      activation dispatch, layer child mounting, z-order snapshot reconciliation, and rank sort
-      application.
+      activation dispatch, layer child mounting, and z-order snapshot reconciliation before
+      delegating rank sort and layout.
+- [x] Split IMUI floating layer z-order rank sort application out of
+      `ecosystem/fret-ui-kit/src/imui/floating_surface/layer.rs` into a private owner without
+      changing child registration, bring-to-front activation, missing-window pruning, unknown-rank
+      fallback, original-order tie-breaks, hit-test order, or absolute layer layout.
+      Result: `floating_surface/layer/sort.rs` owns z-order rank lookup, unknown-rank fallback, and
+      original-index stable tie-break sorting. `layer.rs` keeps marker state, child registration,
+      activation dispatch, child mounting, and z-order snapshot reconciliation before handing the
+      sorted windows to the layout owner.
 - [x] Split shared IMUI pressable item hook installation out of
       `ecosystem/fret-ui-kit/src/imui/item_behavior.rs` into a private install owner without
       changing shared button, checkbox/radio, selectable, combo, image-item, debug-draw pressable,
