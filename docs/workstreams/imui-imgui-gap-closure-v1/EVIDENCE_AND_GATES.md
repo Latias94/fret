@@ -1490,6 +1490,37 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Editor Color-Edit Hue-Wheel Canvas Owner-Split Evidence - 2026-05-30
+
+Claim verified: editor color-edit hue-wheel canvas painting moved behind a private owner without
+changing HSV hue-wheel picker entrypoints, pointer drag behavior, option thumbnails, alpha/SV
+bars, popup policy tests, or the editor-owned color-edit surface boundary.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker.rs` keeps picker composition,
+  pointer interactions, alpha/SV/hue bar composition, and re-exports `hue_wheel_canvas`.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/hue_wheel.rs` owns hue-wheel
+  canvas painting, sweep-gradient ring construction, triangle filling, cursors, and local geometry
+  path helpers.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now reads the hue-wheel owner directly
+  while keeping the picker entrypoint assertions.
+- `tools/gate_imui_workstream_source.py` now rejects hue-wheel painting helpers from
+  `picker.rs` and freezes the private hue-wheel owner shape.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor --check`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Leaf Control Option Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI leaf control option records split into selection, tab-item, and slider private

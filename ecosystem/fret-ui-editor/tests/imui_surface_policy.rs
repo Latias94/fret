@@ -13,6 +13,8 @@ const COLOR_EDIT_POPUP_NUMERIC_RS: &str =
 const COLOR_EDIT_POPUP_OPTIONS_RS: &str =
     include_str!("../src/controls/color_edit/popup/options.rs");
 const COLOR_EDIT_POPUP_PICKER_RS: &str = include_str!("../src/controls/color_edit/popup/picker.rs");
+const COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_RS: &str =
+    include_str!("../src/controls/color_edit/popup/picker/hue_wheel.rs");
 const COLOR_EDIT_POPUP_PREVIEW_RS: &str =
     include_str!("../src/controls/color_edit/popup/preview.rs");
 const COLOR_EDIT_POPUP_SWATCHES_RS: &str =
@@ -34,6 +36,8 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("fn preset_swatch<"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn color_preview_stack<"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn checkerboard_grid<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("mod hue_wheel;"));
+    assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("pub(super) use hue_wheel::hue_wheel_canvas;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_picker<"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn sv_picker<"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hue_bar<"));
@@ -108,7 +112,8 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_TOOLTIP_RS.contains("fn color_tooltip_lines("));
     assert!(COLOR_EDIT_POPUP_TOOLTIP_RS.contains("radix_tooltip::tooltip_request("));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_hue_wheel_picker<"));
-    assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hue_wheel_canvas<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_RS.contains("fn hue_wheel_canvas<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_RS.contains("fn paint_hue_wheel_canvas("));
     assert!(COLOR_EDIT_POPUP_OPTIONS_RS.contains("fn picker_option_thumbnail<"));
     assert!(COLOR_EDIT_POPUP_OPTIONS_RS.contains("fn hue_bar_picker_thumbnail<"));
     assert!(COLOR_EDIT_POPUP_OPTIONS_RS.contains("fn hue_wheel_picker_thumbnail<"));

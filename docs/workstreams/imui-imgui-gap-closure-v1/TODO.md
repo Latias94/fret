@@ -354,6 +354,11 @@ Last updated: 2026-05-30
       or style/theme picker proof behavior.
       Result: `theme.rs` keeps public preset metadata and install/replay APIs, while
       `theme/patches.rs` owns default and ImGui-like dense token patch construction.
+- [x] Split editor color-edit hue-wheel canvas painting into a private owner without changing HSV
+      hue-wheel picker entrypoints, pointer drag behavior, option thumbnails, alpha/SV bars, or
+      color-edit popup policy tests.
+      Result: `color_edit/popup/picker.rs` keeps picker composition and interactions, while
+      `color_edit/popup/picker/hue_wheel.rs` owns hue-wheel canvas painting and geometry helpers.
 - [x] Split IMUI leaf control option records into selection, tab-item, and slider private owners
       without changing public option type names, fields, defaults, root re-exports, selectable
       smoke behavior, tab/menu behavior, or slider model behavior.

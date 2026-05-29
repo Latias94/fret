@@ -324,6 +324,11 @@ while the public controls re-export and IMUI adapter remain unchanged.
 theme sync APIs. `ecosystem/fret-ui-editor/src/theme/patches.rs` owns default and ImGui-like dense
 token patch construction without changing preset keys, labels, or token values.
 
+2026-05-30 color-edit hue-wheel canvas owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker.rs` keeps picker composition,
+pointer interactions, and exported picker preview entrypoints. `picker/hue_wheel.rs` owns the
+hue-wheel canvas painting and local geometry helpers used by the popup and option thumbnails.
+
 2026-05-29 leaf control option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/selection.rs`,
 `ecosystem/fret-ui-kit/src/imui/options/controls/tab.rs`, and
