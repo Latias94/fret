@@ -1503,9 +1503,15 @@ call sites remain unchanged.
 
 2026-05-26 floating-window resize handle owner-split result:
 `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout.rs` now owns handle geometry
-and resize cursors, while `handles/pointer.rs` owns pointer-region wiring, pointer capture,
-runtime drag begin/update/cancel, cursor updates, and activation handoff. `handles.rs` now only
-stacks body/blocker with the eight resize handles.
+while `handles/pointer.rs` owns pointer-region wiring, pointer capture, runtime drag
+begin/update/cancel, cursor updates, and activation handoff. `handles.rs` now only stacks
+body/blocker with the eight resize handles.
+
+2026-05-29 floating-window resize cursor sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/cursor.rs` now owns
+handle-to-cursor mapping for all eight resize handles. `handles/layout.rs` is geometry-only, and
+`handles/pointer.rs` composes cursor and layout before wiring pointer-region behavior, keeping the
+handle stack free of layout, cursor, and drag details.
 
 2026-05-27 begin-menu state owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state.rs` now owns begin-menu state

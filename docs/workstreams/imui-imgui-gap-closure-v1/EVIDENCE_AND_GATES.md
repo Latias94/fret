@@ -6909,7 +6909,8 @@ begin/update/cancel, activation handoff, or resize behavior.
 Evidence:
 
 - `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout.rs` now owns handle
-  geometry and resize cursor selection for all eight resize handles.
+  geometry for all eight resize handles; cursor selection was later split into a narrower
+  sub-owner.
 - `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/pointer.rs` now owns
   pointer-region wiring, pointer capture/release, runtime drag begin/update/cancel, cursor updates,
   and resize-handle activation handoff.
@@ -6933,6 +6934,37 @@ Focused gates:
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
   pass.
 - `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Floating-Window Resize Cursor Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI floating-window resize cursor mapping moved out of the handle geometry owner
+without changing handle placement, cursor icons, pointer capture/release, activation handoff, or
+resize drag lifecycle.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/cursor.rs` owns the
+  `FloatWindowResizeHandle` to `CursorIcon` mapping for all eight resize handles.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout.rs` now owns only absolute
+  handle placement and size geometry.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/pointer.rs` composes cursor and
+  layout before wiring pointer-region behavior.
+- `tools/gate_imui_workstream_source.py` now rejects cursor mapping from drifting back into the
+  layout owner or root handle stack.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke --test imui_floating_area_options_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui floating --no-fail-fast`: pass.
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 

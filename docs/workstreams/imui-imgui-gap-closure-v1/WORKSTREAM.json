@@ -784,6 +784,7 @@
     "ecosystem/fret-ui-kit/src/imui/floating_window_shell/props.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/cursor.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/pointer.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/snapshot.rs",
