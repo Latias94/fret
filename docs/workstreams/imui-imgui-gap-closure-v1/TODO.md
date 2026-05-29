@@ -127,6 +127,12 @@ Last updated: 2026-05-29
       `floating_surface/popup.rs` owns floating layer/area plus popup open/drop/begin forwarding,
       `floating_surface/tooltip_drag.rs` owns tooltip and drag/drop forwarding, and
       `floating_surface/window.rs` owns in-window floating-window forwarding.
+- [x] Split IMUI facade floating tooltip/drag surface macro owner into tooltip and drag/drop child
+      owners without changing public trait method names, tooltip forwarding, drag/drop forwarding,
+      drag/drop docs, or concrete `floating_popup/*` behavior ownership.
+      Result: `floating_surface/tooltip_drag.rs` is now a module/re-export hub.
+      `tooltip_drag/tooltip.rs` owns tooltip text/custom-content forwarding, while
+      `tooltip_drag/drag_drop.rs` owns typed drag source/drop target forwarding and docs.
 - [x] Split IMUI facade floating popup surface macro owner into floating-area/layer, popup state,
       and begin-popup child owners without changing the public `UiWriterImUiFacadeExt` trait,
       caller import behavior, floating layer/area/drag-surface, popup open/drop/close, popup

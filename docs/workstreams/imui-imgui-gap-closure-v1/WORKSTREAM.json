@@ -504,6 +504,8 @@
     "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_surface/popup/begin.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_surface/popup/state.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_surface/tooltip_drag.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_surface/tooltip_drag/drag_drop.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_surface/tooltip_drag/tooltip.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_surface/window.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/container_surface.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/container_surface/collections.rs",

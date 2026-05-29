@@ -54,7 +54,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     disclosure_surface::disclosure_surface_methods!();
 
-    floating_surface::tooltip_drag_surface_methods!();
+    floating_surface::tooltip_surface_methods!();
+
+    floating_surface::drag_drop_surface_methods!();
 
     menu_selection_surface::menu_item_surface_methods!();
 

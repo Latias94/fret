@@ -95,6 +95,13 @@ window behavior modules.
 `floating_surface/window.rs` owns in-window floating-window forwarding. The public trait expansion
 points in `facade_writer.rs` and the concrete `floating_popup/*` behavior owners remain unchanged.
 
+2026-05-29 facade floating tooltip/drag surface sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/floating_surface/tooltip_drag.rs` is now a
+module/re-export hub. `tooltip_drag/tooltip.rs` owns tooltip text and custom-content forwarding,
+while `tooltip_drag/drag_drop.rs` owns typed drag source/drop target forwarding and docs. Public
+trait method names, tooltip behavior, drag/drop behavior, and concrete `floating_popup/*` behavior
+owners remain unchanged.
+
 2026-05-29 facade floating popup surface sub-owner result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_surface/popup.rs` is now a module/re-export
 hub. `floating_surface/popup/area.rs` owns floating layer, floating area, and area drag-surface

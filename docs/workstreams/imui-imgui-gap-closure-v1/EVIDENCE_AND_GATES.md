@@ -342,6 +342,40 @@ Focused gates:
 - `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass (21 passed, 165 skipped).
 - `cargo nextest run -p fret-imui interaction_drag --no-fail-fast`: pass (8 passed, 178 skipped).
 
+## Facade Floating Tooltip/Drag Surface Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade floating tooltip/drag surface macro ownership split into tooltip and
+drag/drop child owners without changing public trait method names, tooltip forwarding, drag/drop
+forwarding, drag/drop docs, or concrete `floating_popup/*` behavior ownership.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_surface/tooltip_drag.rs` is now a
+  module/re-export hub for tooltip and drag/drop surface macros.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_surface/tooltip_drag/tooltip.rs` owns
+  tooltip text and custom-content trait forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_surface/tooltip_drag/drag_drop.rs` owns
+  typed drag source/drop target trait forwarding and docs.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` now expands tooltip and drag/drop surface
+  macros separately, preserving the previous method order.
+- `tools/gate_imui_workstream_source.py` checks the new child owners and rejects tooltip/drag
+  macro bodies from drifting back into `facade_writer/floating_surface/tooltip_drag.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_tooltip_smoke --test
+  imui_drag_drop_smoke --no-fail-fast`: pass (2 passed).
+- `cargo nextest run -p fret-imui popup_hover interaction_drag --no-fail-fast`: pass
+  (29 passed, 157 skipped).
+- `python tools\check_workstream_catalog.py`: pass; validated 473 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+
 ## Facade Floating Surface Sub-Owner Evidence - 2026-05-29
 
 Claim verified: IMUI facade floating surface macro ownership split into popup/floating-area,
