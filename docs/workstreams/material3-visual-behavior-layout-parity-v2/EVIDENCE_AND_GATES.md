@@ -69,6 +69,10 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_list_density_slots_semantics_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_progress_indicator_semantics_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_checkbox_semantics_layout_motion_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_radio_semantics_layout_motion_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_switch_semantics_layout_motion_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_slider_semantics_draw_region_motion_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_segmented_button_semantics_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -738,6 +742,27 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     pointer updates, and a fixed-frame scene test proves pressed state-layer animation. The gap was
     Material recipe accessibility/proof density, not core or kit mechanism.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_slider_semantics_draw_region_motion_packet_v2.md`
+- 2026-05-29: M3PV2-069 closed SegmentedButton checked-state semantics, joined layout proof,
+  stable content-slot part ids, and pressed state-layer motion proof.
+  - Sources: Compose Material3 `SegmentedButton.kt` uses `selectableGroup()` for single-choice
+    rows, radio semantics for single-choice items, toggleable checked semantics for multi-choice
+    items, 40dp outlined containers, 1dp joined borders, full outer shape, weighted segments, and
+    Material state-layer/ripple interactions. Base UI radio/toggle-group sources confirm the
+    headless checked-state split.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test segmented_button_state`
+    failed because SegmentedButton items did not publish explicit `checked_state` and did not expose
+    `.icon` / `.label` part ids. Joined geometry and pressed state-layer probes already passed, so
+    the implementation gap was recipe semantics wiring plus proof density.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test segmented_button_state`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_segmented_buttons_and_chips_expose_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment segmented_button_semantics_roles_match_compose_baseline material3_headless_segmented_button_suite_goldens_v1`
+  - Result: SegmentedButton now writes explicit binary checked-state metadata, exposes `.chrome`,
+    `.icon`, and `.label` part ids, proves 48px touch targets with centered 40px joined chrome, and
+    proves pressed state-layer animation over segment chrome. The gap was Material recipe wiring
+    and proof density, not core or kit mechanism.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_segmented_button_semantics_layout_motion_packet_v2.md`
 
 ## Proof Note Template
 

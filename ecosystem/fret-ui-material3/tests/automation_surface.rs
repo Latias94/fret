@@ -783,8 +783,12 @@ fn material3_segmented_buttons_and_chips_expose_stable_part_test_ids() {
         "m3-segmented",
         "m3-segmented-alpha",
         "m3-segmented-alpha.chrome",
+        "m3-segmented-alpha.icon",
+        "m3-segmented-alpha.label",
         "m3-segmented-beta",
         "m3-segmented-beta.chrome",
+        "m3-segmented-beta.icon",
+        "m3-segmented-beta.label",
         "m3-chip-set",
         "m3-assist-chip",
         "m3-assist-chip.chrome",
@@ -802,6 +806,15 @@ fn material3_segmented_buttons_and_chips_expose_stable_part_test_ids() {
             "expected live segmented/chip part test_id {id}"
         );
     }
+
+    assert_eq!(
+        semantics_node_checked_state(&ui, "m3-segmented-alpha"),
+        Some(SemanticsCheckedState::True)
+    );
+    assert_eq!(
+        semantics_node_checked_state(&ui, "m3-segmented-beta"),
+        Some(SemanticsCheckedState::False)
+    );
 }
 
 #[test]

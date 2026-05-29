@@ -6477,6 +6477,10 @@ fn segmented_button_semantics_roles_match_compose_baseline() {
     let alpha = find("segmented-single-alpha");
     assert_eq!(alpha.role, fret_core::SemanticsRole::RadioButton);
     assert_eq!(alpha.flags.checked, Some(true));
+    assert_eq!(
+        alpha.flags.checked_state,
+        Some(fret_core::SemanticsCheckedState::True)
+    );
     assert!(
         !alpha.flags.selected,
         "radio buttons should not set selected"
@@ -6485,6 +6489,10 @@ fn segmented_button_semantics_roles_match_compose_baseline() {
     let beta = find("segmented-single-beta");
     assert_eq!(beta.role, fret_core::SemanticsRole::RadioButton);
     assert_eq!(beta.flags.checked, Some(false));
+    assert_eq!(
+        beta.flags.checked_state,
+        Some(fret_core::SemanticsCheckedState::False)
+    );
     assert!(
         !beta.flags.selected,
         "radio buttons should not set selected"
@@ -6493,6 +6501,10 @@ fn segmented_button_semantics_roles_match_compose_baseline() {
     let multi_alpha = find("segmented-multi-alpha");
     assert_eq!(multi_alpha.role, fret_core::SemanticsRole::Checkbox);
     assert_eq!(multi_alpha.flags.checked, Some(true));
+    assert_eq!(
+        multi_alpha.flags.checked_state,
+        Some(fret_core::SemanticsCheckedState::True)
+    );
     assert!(
         !multi_alpha.flags.selected,
         "checkboxes should not set selected"
@@ -6501,6 +6513,10 @@ fn segmented_button_semantics_roles_match_compose_baseline() {
     let multi_beta = find("segmented-multi-beta");
     assert_eq!(multi_beta.role, fret_core::SemanticsRole::Checkbox);
     assert_eq!(multi_beta.flags.checked, Some(false));
+    assert_eq!(
+        multi_beta.flags.checked_state,
+        Some(fret_core::SemanticsCheckedState::False)
+    );
     assert!(
         !multi_beta.flags.selected,
         "checkboxes should not set selected"

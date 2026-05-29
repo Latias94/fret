@@ -602,6 +602,26 @@ Task IDs use `M3PV2-*`.
   Vertical slider, dedicated value-indicator choreography, and advanced track gap/corner-shrinking
   parity remain residual.
 
+- [x] M3PV2-069 [owner=codex] [deps=M3PV2-010,M3PV2-040,M3PV2-068] [scope=ecosystem/fret-ui-material3/src/segmented_button.rs,ecosystem/fret-ui-material3/tests/{segmented_button_state.rs,automation_surface.rs,radio_alignment.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close SegmentedButton explicit checked-state semantics, joined shape/touch/chrome layout
+  proof, stable content part ids, and pressed state-layer proof against Compose Material3.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test segmented_button_state`
+  failed because SegmentedButton items did not publish explicit `checked_state` and did not expose
+  `.icon` / `.label` part ids; geometry and state-layer probes already passed; green gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test segmented_button_state`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_segmented_buttons_and_chips_expose_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment segmented_button_semantics_roles_match_compose_baseline material3_headless_segmented_button_suite_goldens_v1`.
+  Review: DONE. This found a Material recipe wiring/proof-density gap, not a core or kit
+  mechanism gap. Core already exposes explicit checked-state semantics and the component already
+  had roving focus, RTL arrows, 48/40px touch/chrome split, joined borders, ripple, and state-layer
+  animation.
+  Evidence: `artifacts/material3_segmented_button_semantics_layout_motion_packet_v2.md`.
+  Handoff: SegmentedButton layout, accessibility, and current state-layer motion are v2-covered.
+  Exact Compose check-icon scale/content-offset motion and selected-interaction z-index draw-order
+  assertions remain residual.
+
 ## M4 - Overlay And Feedback Interaction Depth
 
 - [x] M3PV2-046 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/bottom_sheet.rs,ecosystem/fret-ui-material3/tests/bottom_sheet_motion.rs,goldens/material3-headless/v1/material3-bottom-sheet.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]

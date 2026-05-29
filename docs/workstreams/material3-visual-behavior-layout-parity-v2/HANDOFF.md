@@ -191,6 +191,15 @@ active-track draw-region updates, and fixed-frame scene evidence proves pressed 
 animation. Vertical slider, dedicated value-indicator choreography, and advanced track
 gap/corner-shrinking parity remain residual.
 
+M3PV2-069 is complete: SegmentedButton layout, accessibility, and current state-layer motion are
+now v2-covered. The packet found a Material recipe wiring/proof-density gap, not a core or kit
+mechanism gap: explicit checked-state semantics already existed and SegmentedButton already had
+roving focus, RTL-aware horizontal arrows, 48/40px touch/chrome split, joined borders, ripple, and
+state-layer animation. SegmentedButton now writes explicit binary checked-state metadata, exposes
+`.chrome`, `.icon`, and `.label` part ids, proves joined 48px touch targets with centered 40px
+chrome, and proves pressed state-layer animation. Exact Compose check-icon scale/content-offset
+motion and selected-interaction z-index draw-order assertions remain residual.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -202,7 +211,7 @@ gap/corner-shrinking parity remain residual.
 ## Next Recommended Action
 
 Continue with the next uncovered Material3 packet from the matrix. Higher-priority choice-control
-candidates now start with SegmentedButton, IconButton/IconToggleButton, and chips;
+candidates now start with IconButton/IconToggleButton and chips;
 NavigationRail / NavigationBar layout packets are also open.
 
 ## Useful Gates
