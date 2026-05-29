@@ -44,6 +44,14 @@ Last updated: 2026-05-29
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI popup-overlay root state helpers and context-menu wrapper out of
+      `ecosystem/fret-ui-kit/src/imui/popup_overlay.rs` into private owners without changing popup
+      open/close/drop/open-at behavior, context-menu anchor fallback, menu/modal entrypoints,
+      popup-hover behavior, or popup/menu facade behavior.
+      Result: `popup_overlay/state.rs` owns popup open model lookup, drop/open/open-at/close
+      mutations, keep-alive generation writes, anchor writes, and redraw requests.
+      `popup_overlay/context_menu.rs` owns context-menu trigger inspection, 1px fallback anchor
+      construction, and delegation to the menu owner.
 - [x] Split IMUI tab-bar item builder methods out of
       `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs` into a private owner without
       changing public `ImUiTabBar` method names, label identity parsing, panel test-id fallback,

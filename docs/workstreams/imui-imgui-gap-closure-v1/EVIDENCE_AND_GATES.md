@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-29
 
+## Popup Overlay Root Owner-Split Evidence - 2026-05-29
+
+Claim verified: IMUI popup-overlay root state helpers and context-menu wrapper split into private
+owners without changing popup open/close/drop/open-at behavior, context-menu anchor fallback,
+menu/modal entrypoints, popup options smoke behavior, or fret-imui popup-hover behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay.rs` now stays a thin menu/modal entrypoint hub and
+  re-exports the popup state and context-menu owners.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/state.rs` owns popup open model lookup, scope drop,
+  open/open-at/close mutations, keep-alive generation writes, anchor writes, and redraw requests.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/context_menu.rs` owns context-menu request
+  inspection, 1px fallback anchor creation, and menu delegation.
+- `tools/gate_imui_workstream_source.py` now rejects popup state/context-menu bodies from drifting
+  back into `popup_overlay.rs` and checks the dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_popup_options_smoke
+  --no-fail-fast`: pass (1 passed).
+- `CARGO_INCREMENTAL=0 cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass
+  (21 passed, 165 skipped).
+
 ## Tab-Bar Item Method Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI tab-bar item builder methods split out of

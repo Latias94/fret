@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-29 popup-overlay root owner-split result:
+`ecosystem/fret-ui-kit/src/imui/popup_overlay.rs` now keeps menu/modal entrypoint delegation and
+re-exports private owners. `popup_overlay/state.rs` owns popup open/drop/open-at/close state
+mutations, and `popup_overlay/context_menu.rs` owns context-menu anchor fallback and menu
+delegation.
+
 2026-05-29 tab-bar item-method owner-split result:
 `ecosystem/fret-ui-kit/src/imui/tab_family_controls/item_methods.rs` now owns `ImUiTabBar`
 `tab_item`, `tab_item_with_options`, `begin_tab_item`, and `begin_tab_item_with_options`
