@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "slug": "jellyflow-package-split-v1",
+  "title": "Jellyflow Package Split v1",
+  "status": "active",
+  "updated": "2026-05-29",
+  "scope_kind": "execution",
+  "problem": "`fret-node` mixes reusable headless node/flow graph engine contracts with Fret UI adapter responsibilities; Jellyflow needs a stable in-workspace package boundary before any future standalone repository extraction.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/jellyflow-package-split-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/jellyflow-package-split-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/jellyflow-package-split-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/jellyflow-package-split-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/jellyflow-package-split-v1/HANDOFF.md"
+    }
+  ],
+  "current_task": null,
+  "next_task": "JF-010",
+  "gates": [
+    "cargo check -p jellyflow-core",
+    "cargo nextest run -p jellyflow-core",
+    "cargo clippy -p jellyflow-core --all-targets -- -D warnings",
+    "cargo check -p fret-node --all-features --tests",
+    "cargo nextest run -p fret-node --no-default-features",
+    "cargo fmt --check",
+    "python3 tools/check_layering.py"
+  ],
+  "evidence": [
+    "docs/adr/0331-jellyflow-headless-node-graph-engine-boundary.md",
+    "ecosystem/jellyflow-core/Cargo.toml",
+    "ecosystem/jellyflow-core/src/lib.rs",
+    "ecosystem/fret-node/Cargo.toml",
+    "ecosystem/fret-node/src/core/mod.rs",
+    "ecosystem/fret-node/src/types/mod.rs",
+    "ecosystem/fret-node/src/interaction/mod.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0331-jellyflow-headless-node-graph-engine-boundary.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue with narrow package-boundary slices. Move runtime/ops/geometry only after the previous slice has focused compile and compatibility gates."
+  }
+}

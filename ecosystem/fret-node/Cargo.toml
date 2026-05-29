@@ -11,6 +11,7 @@ documentation.workspace = true
 description = "Node-graph foundation and integration surfaces for Fret editor workflows."
 
 [dependencies]
+jellyflow-core = { version = "0.1.0", path = "../jellyflow-core" }
 fret-canvas = { version = "0.1.0", path = "../fret-canvas", optional = true }
 fret-app = { version = "0.1.0", path = "../../crates/fret-app", optional = true }
 fret-core = { version = "0.1.0", path = "../../crates/fret-core" }

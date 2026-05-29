@@ -2606,6 +2606,7 @@ dependencies = [
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",
+ "jellyflow-core",
  "serde",
  "serde_json",
  "slotmap",
@@ -4403,6 +4404,17 @@ dependencies = [
  "gobject-sys",
  "libc",
  "system-deps",
+]
+
+[[package]]
+name = "jellyflow-core"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "uuid",
 ]
 
 [[package]]

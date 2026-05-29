@@ -1,0 +1,41 @@
+# Jellyflow Package Split v1 - Evidence And Gates
+
+Status: Active
+Last updated: 2026-05-29
+
+## Current Gates
+
+```bash
+cargo check -p jellyflow-core
+cargo nextest run -p jellyflow-core
+cargo clippy -p jellyflow-core --all-targets -- -D warnings
+cargo check -p fret-node --all-features --tests
+cargo nextest run -p fret-node --no-default-features
+cargo fmt --check
+python3 tools/check_layering.py
+```
+
+## Fresh Evidence
+
+- `cargo search jellyflow --limit 5`: returned no matches during the local check on 2026-05-29.
+  This is a convenience check only, not a publishing guarantee.
+- `cargo check -p jellyflow-core`: passed after creating the crate.
+- `cargo check -p fret-node --all-features --tests`: passed after adding compatibility wrapper
+  modules.
+- `cargo nextest run -p jellyflow-core`: passed with 14 tests.
+- `cargo clippy -p jellyflow-core --all-targets -- -D warnings`: passed.
+- `cargo nextest run -p fret-node --no-default-features`: passed with 124 tests.
+- `cargo fmt --check`: passed.
+- `jq empty docs/workstreams/jellyflow-package-split-v1/WORKSTREAM.json`: passed.
+- `git diff --check`: passed.
+- `python3 tools/check_layering.py`: passed.
+
+## Evidence Anchors
+
+- `docs/adr/0331-jellyflow-headless-node-graph-engine-boundary.md`
+- `ecosystem/jellyflow-core/Cargo.toml`
+- `ecosystem/jellyflow-core/src/lib.rs`
+- `ecosystem/fret-node/Cargo.toml`
+- `ecosystem/fret-node/src/core/mod.rs`
+- `ecosystem/fret-node/src/types/mod.rs`
+- `ecosystem/fret-node/src/interaction/mod.rs`
