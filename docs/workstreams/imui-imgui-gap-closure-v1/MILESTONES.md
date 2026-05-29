@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-29
+Last updated: 2026-05-30
 
 ## M6 - Continuing IMUI Owner-Split Pressure
 
@@ -1438,8 +1438,10 @@ re-exports those types; later owner splits moved draw-list state to `draw_list.r
 glue to `facade.rs`. The public debug draw API remains unchanged.
 
 2026-05-27 multi-select state owner-split result:
-`ecosystem/fret-ui-kit/src/imui/multi_select/state.rs` now owns `ImUiMultiSelectState`,
-ordered-selection normalization, anchor repair, and crate-local mutation helpers. The root
+`ecosystem/fret-ui-kit/src/imui/multi_select/state.rs` now owns `ImUiMultiSelectState` storage and
+read-only accessors. 2026-05-30 follow-up:
+`ecosystem/fret-ui-kit/src/imui/multi_select/state/selection.rs` now owns ordered-selection
+normalization, anchor repair, crate-local mutation helpers, and `is_selected(...)`. The root
 `multi_select.rs` keeps model hook, selectable response wiring, click-modifier policy, and response
 changed reporting, so collection helper state remains accessor-first without broadening the public
 surface.

@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-29
+Last updated: 2026-05-30
 
 ## Facade Root Surface Owner-Split Evidence - 2026-05-29
 
@@ -12607,15 +12607,17 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
 
-2026-05-27 IMUI multi-select state owner split:
+2026-05-27 IMUI multi-select state owner split, refreshed 2026-05-30:
 
-- Claim verified: `ImUiMultiSelectState` storage, ordered-selection normalization, anchor repair,
-  and crate-local selection mutation helpers moved from `multi_select.rs` into
-  `multi_select/state.rs` without changing the public collection helper API.
+- Claim verified: `ImUiMultiSelectState` storage and read-only accessors moved from
+  `multi_select.rs` into `multi_select/state.rs`, while ordered-selection normalization, anchor
+  repair, crate-local selection mutation helpers, and `is_selected(...)` now live in
+  `multi_select/state/selection.rs` without changing the public collection helper API.
 - `ecosystem/fret-ui-kit/src/imui/multi_select.rs` now keeps model hook, selectable response wiring,
   click-modifier policy, and response changed reporting.
 - `tools/gate_imui_workstream_source.py` now covers `multi_select/state.rs` in the opaque-struct
-  catalog and rejects the state body or selection normalization from drifting back into the root.
+  catalog, checks `multi_select/state/selection.rs`, and rejects the state body or selection
+  normalization from drifting back into the root.
 - Focused gates passed:
   `cargo fmt -p fret-ui-kit`,
   `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`,
