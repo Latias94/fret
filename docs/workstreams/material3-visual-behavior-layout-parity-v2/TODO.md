@@ -527,6 +527,30 @@ Task IDs use `M3PV2-*`.
   Handoff: Checkbox layout, accessibility, and current mark motion are v2-covered. Exact Compose
   path-draw geometry and a public error-state checkbox variant remain residual.
 
+- [x] M3PV2-066 [owner=codex] [deps=M3PV2-010,M3PV2-040] [scope=ecosystem/fret-ui-material3/src/radio.rs,ecosystem/fret-ui-material3/tests/{radio_state.rs,automation_surface.rs,radio_alignment.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close Radio checked-state semantics, touch/state-layer/icon/dot layout proof, stable part
+  ids, and selected-dot motion against Compose Material3 and Base UI.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test radio_state`
+  failed because Radio did not expose `.icon` / `.dot` test ids, did not write explicit
+  `checked_state`, and initially selected radios did not paint a settled dot on the first frame;
+  green gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test radio_state`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_choice_controls_expose_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment radio_selected_dot_is_centered_in_outline radio_ripple_origin_tracks_pointer_down_position radio_pressed_scene_structure_is_stable material3_headless_controls_suite_goldens_v1`;
+  workstream JSON, matrix JSON, catalog, and `git diff --check`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`.
+  Review: DONE. This found a Material recipe wiring/proof-density gap: core and kit already
+  supported explicit checked-state semantics, and Radio already had roving/typeahead behavior,
+  collection metadata, 48/40/20/10px geometry, and Material ripple/state-layer wiring, but the
+  recipe bypassed the kit a11y helper, lacked icon/dot part anchors, and used duration/easing dot
+  animation instead of Material `FastSpatial`.
+  Evidence: `artifacts/material3_radio_semantics_layout_motion_packet_v2.md`.
+  Handoff: Radio layout, accessibility, and current selected-dot motion are v2-covered. Color
+  interpolation and form-registration parity remain residual.
+
 ## M4 - Overlay And Feedback Interaction Depth
 
 - [x] M3PV2-046 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/bottom_sheet.rs,ecosystem/fret-ui-material3/tests/bottom_sheet_motion.rs,goldens/material3-headless/v1/material3-bottom-sheet.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]

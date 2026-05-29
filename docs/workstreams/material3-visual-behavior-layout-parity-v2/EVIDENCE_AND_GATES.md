@@ -661,6 +661,30 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     the existing Material `DefaultSpatial` motion-scheme spring. The gap was Material recipe wiring
     and proof density, not core or kit mechanism.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_checkbox_semantics_layout_motion_packet_v2.md`
+- 2026-05-29: M3PV2-066 closed Radio checked-state semantics, part geometry, and selected-dot
+  motion coverage.
+  - Sources: Compose Material3 `RadioButton.kt` uses `Modifier.selectable(... role =
+    Role.RadioButton)`, `minimumInteractiveComponentSize()`, a 40dp state-layer/ripple radius,
+    20dp icon canvas with 2dp padding, and `FastSpatial` selected-dot animation; Compose
+    `RadioButtonTokens.kt` defines 20dp icon and 40dp state-layer sizes. Base UI radio root and
+    indicator sources confirm explicit checked state and separate indicator part structure.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test radio_state`
+    failed because Radio did not expose `.icon` / `.dot` test ids, did not write explicit
+    `checked_state`, and initially selected radios did not paint a settled dot on the first frame.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test radio_state`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_choice_controls_expose_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment radio_selected_dot_is_centered_in_outline radio_ripple_origin_tracks_pointer_down_position radio_pressed_scene_structure_is_stable material3_headless_controls_suite_goldens_v1`
+  - Workstream JSON, matrix JSON, catalog, and `git diff --check` gates passed.
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: Radio now writes binary and explicit checked-state metadata through the existing kit
+    helper, exposes `.chrome`, `.icon`, and `.dot` part ids, proves 48/40/20/10px Material
+    geometry, starts initially selected radios settled, and animates selected-dot growth through
+    the existing Material `FastSpatial` motion-scheme spring. The gap was Material recipe wiring
+    and proof density, not core or kit mechanism.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_radio_semantics_layout_motion_packet_v2.md`
 
 ## Proof Note Template
 

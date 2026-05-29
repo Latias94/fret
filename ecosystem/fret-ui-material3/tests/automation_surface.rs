@@ -644,8 +644,12 @@ fn material3_choice_controls_expose_stable_part_test_ids() {
         "m3-radio-group",
         "m3-radio-alpha",
         "m3-radio-alpha.chrome",
+        "m3-radio-alpha.icon",
+        "m3-radio-alpha.dot",
         "m3-radio-beta",
         "m3-radio-beta.chrome",
+        "m3-radio-beta.icon",
+        "m3-radio-beta.dot",
         "m3-icon-button",
         "m3-icon-button.chrome",
         "m3-icon-toggle",
@@ -671,6 +675,14 @@ fn material3_choice_controls_expose_stable_part_test_ids() {
     assert_eq!(
         semantics_node_checked_state(&ui, "m3-checkbox"),
         Some(SemanticsCheckedState::True)
+    );
+    assert_eq!(
+        semantics_node_checked_state(&ui, "m3-radio-alpha"),
+        Some(SemanticsCheckedState::True)
+    );
+    assert_eq!(
+        semantics_node_checked_state(&ui, "m3-radio-beta"),
+        Some(SemanticsCheckedState::False)
     );
 }
 

@@ -162,6 +162,15 @@ touch/state-layer/box/mark geometry, and animates mark visibility with the Mater
 `DefaultSpatial` motion scheme. Exact Compose path-draw geometry and a public error-state variant
 remain residual.
 
+M3PV2-066 is complete: Radio layout, accessibility, and current selected-dot motion are now
+v2-covered. The packet found a Material recipe wiring/proof-density gap, not a core or kit
+mechanism gap: `SemanticsCheckedState::{True,False}` and the kit radio a11y helper already existed,
+and Radio already had roving/typeahead behavior, collection metadata, 48/40/20/10px geometry, and
+Material ripple/state-layer wiring. Radio now writes explicit checked-state metadata, exposes
+`.chrome`, `.icon`, and `.dot` part ids, starts initially selected radios settled, and animates
+selected-dot growth with the Material `FastSpatial` motion scheme. Color interpolation and
+form-registration parity remain residual.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -173,8 +182,8 @@ remain residual.
 ## Next Recommended Action
 
 Continue with the next uncovered Material3 packet from the matrix. Higher-priority choice-control
-candidates now start with Radio, Switch, Slider, SegmentedButton, and chips; NavigationRail /
-NavigationBar layout packets are also open.
+candidates now start with Switch, Slider, SegmentedButton, IconButton/IconToggleButton, and chips;
+NavigationRail / NavigationBar layout packets are also open.
 
 ## Useful Gates
 
