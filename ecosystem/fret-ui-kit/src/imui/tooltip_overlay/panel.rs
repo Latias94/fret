@@ -1,15 +1,16 @@
 use std::sync::Arc;
 
-use fret_core::{Edges, Px, Rect, SemanticsRole, Size};
-use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow,
-    PositionStyle, SemanticsDecoration, SpacingLength,
-};
+use fret_core::{Px, Rect, SemanticsRole, Size};
+use fret_ui::element::{AnyElement, SemanticsDecoration};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
+
+use layout::{tooltip_panel_column_props, tooltip_panel_props};
 
 use crate::imui::ImUiFacade;
 use crate::overlay;
 use crate::primitives::popper::{self, PopperContentPlacement};
+
+mod layout;
 
 pub(super) struct TooltipPanelBuildOptions {
     pub(super) trigger_id: GlobalElementId,
@@ -80,42 +81,4 @@ pub(super) fn tooltip_overlay_children<H: UiHost>(
             panel
         })]
     })
-}
-
-fn tooltip_panel_props<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    origin: fret_core::Point,
-) -> ContainerProps {
-    let theme = fret_ui::Theme::global(&*cx.app);
-    ContainerProps {
-        layout: LayoutStyle {
-            position: PositionStyle::Absolute,
-            inset: InsetStyle {
-                left: Some(origin.x).into(),
-                top: Some(origin.y).into(),
-                ..Default::default()
-            },
-            size: fret_ui::element::SizeStyle {
-                width: Length::Auto,
-                height: Length::Auto,
-                ..Default::default()
-            },
-            overflow: Overflow::Visible,
-            ..Default::default()
-        },
-        padding: Edges::all(Px(4.0)).into(),
-        background: Some(theme.color_token("popover")),
-        border: Edges::all(Px(1.0)),
-        border_color: Some(theme.color_token("border")),
-        corner_radii: fret_core::Corners::all(super::super::control_chrome::PANEL_RADIUS),
-        ..Default::default()
-    }
-}
-
-fn tooltip_panel_column_props() -> ColumnProps {
-    let mut column = ColumnProps::default();
-    column.layout.size.width = Length::Auto;
-    column.layout.size.height = Length::Auto;
-    column.gap = SpacingLength::Px(Px(4.0));
-    column
 }
