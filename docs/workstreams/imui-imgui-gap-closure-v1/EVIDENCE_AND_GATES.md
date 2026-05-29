@@ -1733,6 +1733,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Editor Color-Edit State Owner-Split Evidence - 2026-05-30
+
+Claim verified: editor color-edit local state model allocation and popup runtime option sync moved
+behind a private owner without changing local model keys, track-caller allocation posture,
+draft/error/reference defaults, popup runtime default sync behavior, popup policy tests, or the
+editor-owned color-edit surface boundary.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit.rs` keeps public re-exports, the main
+  `ColorEdit` renderer, popup wiring, drag/drop callsites, and visible element composition.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/state.rs` owns popup, tooltip, copy-menu,
+  reference, draft, error, and popup runtime option local models plus runtime default sync.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now reads the state owner directly while
+  keeping root module assertions.
+- `tools/gate_imui_workstream_source.py` now rejects local state helper bodies from drifting back
+  into `color_edit.rs` and rejects renderer/input/pressable code from `state.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor --check`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-editor color_edit_options_default_to_the_builtin_palette_source popup_runtime_options_are_local_overrides_until_defaults_change --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Leaf Control Option Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI leaf control option records split into selection, tab-item, and slider private

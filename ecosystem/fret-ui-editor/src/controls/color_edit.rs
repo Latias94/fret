@@ -31,6 +31,7 @@ mod model;
 mod options;
 mod popup;
 mod records;
+mod state;
 
 #[cfg(test)]
 mod tests;
@@ -55,6 +56,10 @@ pub use self::records::{
     ColorEditDragDropComponents, ColorEditDragDropPayload, ColorEditEyedropperRequest,
     ColorEditPaletteEntry, ColorEditPaletteSlotDrop, OnColorEditEyedropper,
     OnColorEditPaletteSlotDrop, default_color_edit_palette,
+};
+use self::state::{
+    copy_menu_open_model, draft_model, error_model, popup_open_model, popup_runtime_options_model,
+    reference_model, sync_popup_runtime_options, tooltip_open_model,
 };
 
 const CHECKERBOARD_LIGHT_RGB: u32 = 0xd8_de_e8;
@@ -656,53 +661,4 @@ impl ColorEdit {
         }
         el
     }
-}
-
-#[track_caller]
-fn popup_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    cx.local_model(|| false)
-}
-
-#[track_caller]
-fn tooltip_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    cx.local_model_keyed("tooltip_open", || false)
-}
-
-#[track_caller]
-fn copy_menu_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    cx.local_model_keyed("copy_menu_open", || false)
-}
-
-#[track_caller]
-fn reference_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Color>> {
-    cx.local_model(|| None::<Color>)
-}
-
-#[track_caller]
-fn draft_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    cx.local_model(String::new)
-}
-
-#[track_caller]
-fn error_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Arc<str>>> {
-    cx.local_model(|| None::<Arc<str>>)
-}
-
-#[track_caller]
-fn popup_runtime_options_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    defaults: ColorEditPopupRuntimeOptions,
-) -> Model<ColorEditPopupRuntimeOptions> {
-    cx.local_model_keyed("popup_runtime_options", move || defaults)
-}
-
-fn sync_popup_runtime_options<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    model: &Model<ColorEditPopupRuntimeOptions>,
-    defaults: ColorEditPopupRuntimeOptions,
-) {
-    let _ = cx
-        .app
-        .models_mut()
-        .update(model, |runtime| runtime.sync_defaults(defaults));
 }

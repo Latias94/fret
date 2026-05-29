@@ -397,6 +397,13 @@ Last updated: 2026-05-30
       shared local models, while `controls/color_edit/records.rs` owns default palette data,
       palette entries, drag/drop payload records, palette slot drop requests, and eyedropper
       request/callback records.
+- [x] Split editor color-edit local state helpers into a private owner without changing local model
+      keys, track-caller allocation posture, draft/error/reference model defaults, popup runtime
+      option sync behavior, or popup policy tests.
+      Result: `controls/color_edit.rs` keeps public re-exports and the main control renderer,
+      while `controls/color_edit/state.rs` owns popup/tooltip/copy-menu open models,
+      draft/error/reference models, popup runtime option model allocation, and runtime default
+      sync.
 - [x] Split IMUI leaf control option records into selection, tab-item, and slider private owners
       without changing public option type names, fields, defaults, root re-exports, selectable
       smoke behavior, tab/menu behavior, or slider model behavior.
