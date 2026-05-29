@@ -53,9 +53,19 @@ The first slice creates `ecosystem/jellyflow-core` and moves the stable headless
 and `interaction` modules there. `fret-node` now depends on `jellyflow-core` and keeps
 compatibility wrapper modules for `fret_node::{core,types,interaction}`.
 
+Follow-on slice:
+
+`ops` (graph transactions, history, fragment/diff/normalize helpers, and transaction sanity
+checks) now lives in `ecosystem/jellyflow-core`. `fret-node` keeps the XyFlow-style node/edge
+change projection helpers in `ecosystem/fret-node/src/runtime/changes.rs` and re-exports
+`jellyflow_core::ops` from `ecosystem/fret-node/src/ops/mod.rs` for compatibility.
+
 Evidence:
 
 - `ecosystem/jellyflow-core/Cargo.toml`
 - `ecosystem/jellyflow-core/src/lib.rs`
+- `ecosystem/jellyflow-core/src/ops/mod.rs`
 - `ecosystem/fret-node/src/{core,types,interaction}/mod.rs`
+- `ecosystem/fret-node/src/ops/mod.rs`
+- `ecosystem/fret-node/src/runtime/{changes.rs,store.rs,tests.rs}`
 - `docs/workstreams/jellyflow-package-split-v1/`

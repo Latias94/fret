@@ -37,11 +37,27 @@
     - `git diff --check`: passed.
     - `python3 tools/check_layering.py`: passed.
 
-- [ ] JF-010 Decide whether `ops` moves to `jellyflow-core` or waits for `jellyflow-runtime`.
-  - Scope: dependency audit of `ops`, `runtime`, and public re-export compatibility.
-  - Validation: focused compile gate for both `jellyflow-core` and `fret-node`.
+- [x] JF-010 Decide whether `ops` moves to `jellyflow-core` or waits for `jellyflow-runtime`.
+  - Scope:
+    - dependency audit of `ops`, `runtime`, and public re-export compatibility
+    - move `GraphOp`, `GraphTransaction`, `GraphHistory`, fragment/diff/normalize helpers, and
+      transaction sanity checks into `jellyflow-core`
+    - keep the XyFlow-style node/edge change projection helper in `fret-node`
+  - Validation:
+    - `cargo check -p fret-node --all-features --tests`
+    - `cargo nextest run -p fret-node --no-default-features`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+  - Exit note: second compile proof lands the transaction/history boundary without moving runtime
+    or UI.
+  - Fresh gates:
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo nextest run -p fret-node --no-default-features`: passed with 90 tests.
+    - `cargo fmt --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
 
 - [ ] JF-020 Extract the first runtime boundary only after JF-010.
-  - Scope: store/apply/history/changes/callback ownership decision.
+  - Scope: decide whether runtime store/callback helpers and any remaining geometry seams belong in
+    `jellyflow-runtime` or stay in the Fret adapter.
   - Validation: `cargo nextest run -p fret-node --no-default-features runtime` plus new
     Jellyflow runtime gates.

@@ -79,8 +79,8 @@ Common examples:
   - `fret-icons-lucide` (icon set)
   - `fret-icons-radix` (icon set)
 - Node/flow graph incubation:
-  - `jellyflow-core` (headless graph primitives split out from `fret-node`)
-  - `fret-node` (Fret adapter and compatibility facade over Jellyflow-backed node graph surfaces)
+  - `jellyflow-core` (headless graph primitives and transaction ops/history split out from `fret-node`)
+  - `fret-node` (Fret adapter and compatibility facade over Jellyflow-backed node graph surfaces; runtime projections and UI surfaces remain here)
 
 Long-term intent:
 

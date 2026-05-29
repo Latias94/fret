@@ -14,7 +14,15 @@
 
 Status: complete for JF-001. Fresh evidence is recorded in `EVIDENCE_AND_GATES.md`.
 
-## M2 - Runtime Follow-Up
+## M2 - Ops Boundary
 
-- Decide whether `ops` belongs in `jellyflow-core` or `jellyflow-runtime`.
+- `ops`, `GraphHistory`, and fragment/diff/normalize helpers live in `jellyflow-core`.
+- `fret-node` keeps the XyFlow-style change projection and runtime glue.
+
+Status: complete for JF-010. Fresh evidence is recorded in `EVIDENCE_AND_GATES.md`.
+
+## M3 - Runtime Follow-Up
+
+- Decide whether runtime store/callback helpers and any remaining geometry seams belong in
+  `jellyflow-runtime`.
 - Extract runtime only after the previous slice's gates stay green.

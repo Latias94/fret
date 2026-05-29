@@ -139,22 +139,28 @@ fn changes_from_transaction_maps_ops() {
         ],
     };
 
-    let changes = tx.node_graph_changes();
+    let changes = NodeGraphChanges::from_transaction(&tx);
     assert_eq!(changes.nodes.len(), 1);
     assert_eq!(changes.edges.len(), 1);
 
     match &changes.nodes[0] {
-        NodeChange::Position { id, position } => {
-            assert_eq!(*id, a);
-            assert_eq!(*position, CanvasPoint { x: 10.0, y: 20.0 });
+        NodeChange::Position {
+            id: node_id,
+            position: node_position,
+        } => {
+            assert_eq!(*node_id, a);
+            assert_eq!(*node_position, CanvasPoint { x: 10.0, y: 20.0 });
         }
         other => panic!("unexpected node change: {other:?}"),
     }
 
     match &changes.edges[0] {
-        EdgeChange::Kind { id, kind } => {
-            assert_eq!(*id, eid);
-            assert_eq!(*kind, EdgeKind::Exec);
+        EdgeChange::Kind {
+            id: edge_id,
+            kind: edge_kind,
+        } => {
+            assert_eq!(*edge_id, eid);
+            assert_eq!(*edge_kind, EdgeKind::Exec);
         }
         other => panic!("unexpected edge change: {other:?}"),
     }

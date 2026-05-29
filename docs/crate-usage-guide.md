@@ -986,20 +986,20 @@ Notes:
 overlays, portals, diagnostics, or compatibility re-exports for existing `fret_node::*` paths.
 
 **Notes:** `fret-node` now depends on the first Jellyflow headless crate and re-exports the initial
-`core`, `types`, and `interaction` modules for compatibility. If you opt into app-owned
+`core`, `types`, `interaction`, and `ops` modules for compatibility. If you opt into app-owned
 command/keybinding wiring, use the explicit `fret_node::app::install(...)` seam instead of
 root-level install helpers.
 
 ### `jellyflow-core`
 
-**What it is:** the headless graph document model, stable IDs, type descriptors, and interaction
-policy value types used by `fret-node`.
+**What it is:** the headless graph document model, stable IDs, type descriptors, transaction
+ops/history helpers, and interaction policy value types used by `fret-node`.
 
-**Use it when:** you need portable node/flow graph primitives without Fret UI, renderer, platform,
-or windowing dependencies.
+**Use it when:** you need portable node/flow graph primitives and transaction helpers without Fret
+UI, renderer, platform, or windowing dependencies.
 
 **Notes:** `jellyflow-core` is the first slice of the Jellyflow package split. It intentionally does
-not own runtime store/history, geometry, or Fret UI adapters yet.
+not own runtime store/callbacks, geometry, or Fret UI adapters yet.
 
 ### `fret-plot` / `fret-chart` / `fret-plot3d`
 

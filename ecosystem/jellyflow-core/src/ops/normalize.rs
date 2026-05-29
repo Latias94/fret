@@ -1,6 +1,6 @@
 use super::{GraphOp, GraphTransaction};
 
-pub(crate) fn normalize_transaction(mut tx: GraphTransaction) -> GraphTransaction {
+pub fn normalize_transaction(mut tx: GraphTransaction) -> GraphTransaction {
     tx.ops = coalesce_setter_chains(tx.ops);
     tx.ops.retain(|op| !op_is_noop(op));
     tx

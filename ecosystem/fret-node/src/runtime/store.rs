@@ -769,7 +769,7 @@ impl NodeGraphStore {
         self.graph = graph;
         self.bump_graph_revision();
         self.lookups.apply_transaction(&self.graph, committed);
-        committed.node_graph_changes()
+        NodeGraphChanges::from_transaction(committed)
     }
 
     fn publish_graph_commit(

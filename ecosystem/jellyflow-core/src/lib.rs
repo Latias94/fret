@@ -8,6 +8,7 @@
 
 pub mod core;
 pub mod interaction;
+pub mod ops;
 pub mod types;
 
 pub use core::{
@@ -20,6 +21,11 @@ pub use core::{
 pub use interaction::{
     NodeGraphConnectionMode, NodeGraphDragHandleMode, NodeGraphModifierKey,
     NodeGraphZoomActivationKey,
+};
+pub use ops::{
+    ApplyError, DEFAULT_HISTORY_LIMIT, EdgeEndpoints, GraphFragment, GraphHistory, GraphOp,
+    GraphOpBuilderExt, GraphTransaction, IdRemapSeed, IdRemapper, PasteTuning,
+    find_invalid_size_in_tx, find_non_finite_in_tx, normalize_transaction,
 };
 pub use types::{
     DefaultTypeCompatibility, TypeCompatibility, TypeCompatibilityResult, TypeDesc, TypeVarId,

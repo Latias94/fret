@@ -157,7 +157,7 @@ impl NodeGraphPatch {
     }
 
     pub fn node_edge_changes(&self) -> NodeGraphChanges {
-        self.transaction.node_graph_changes()
+        NodeGraphChanges::from_transaction(&self.transaction)
     }
 }
 
@@ -659,12 +659,5 @@ impl NodeGraphChanges {
         }
 
         Ok(tx)
-    }
-}
-
-impl GraphTransaction {
-    /// Projects this graph transaction into the XyFlow-style node/edge change adapter.
-    pub fn node_graph_changes(&self) -> NodeGraphChanges {
-        NodeGraphChanges::from_transaction(self)
     }
 }

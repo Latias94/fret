@@ -2,7 +2,7 @@ use crate::core::{CanvasPoint, CanvasRect, CanvasSize};
 
 use super::{EdgeEndpoints, GraphOp, GraphTransaction};
 
-pub(crate) fn find_non_finite_in_tx(tx: &GraphTransaction) -> Option<(String, String)> {
+pub fn find_non_finite_in_tx(tx: &GraphTransaction) -> Option<(String, String)> {
     for (ix, op) in tx.ops.iter().enumerate() {
         if let Some(field) = op_non_finite_field(op) {
             return Some((
@@ -110,7 +110,7 @@ fn op_non_finite_field(op: &GraphOp) -> Option<&'static str> {
     }
 }
 
-pub(crate) fn find_invalid_size_in_tx(tx: &GraphTransaction) -> Option<(String, String)> {
+pub fn find_invalid_size_in_tx(tx: &GraphTransaction) -> Option<(String, String)> {
     for (ix, op) in tx.ops.iter().enumerate() {
         if let Some(field) = op_invalid_size_field(op) {
             return Some((
