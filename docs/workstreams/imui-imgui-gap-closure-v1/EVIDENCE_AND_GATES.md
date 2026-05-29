@@ -4037,8 +4037,8 @@ public-in-IMUI APIs.
 Evidence:
 
 - `ecosystem/fret-ui-kit/src/imui/floating_surface/layer.rs` keeps layer marker state, child
-  registration, activation dispatch, layer child mounting, rank sort application, and absolute fill
-  layout.
+  registration, activation dispatch, layer child mounting, and rank sort application; absolute fill
+  layout was later split into a narrower shell owner.
 - `ecosystem/fret-ui-kit/src/imui/floating_surface/layer/z_order.rs` owns
   `FloatWindowLayerZOrder`, z-order membership, bring-to-front reordering, missing-window pruning,
   and rank snapshot projection.
@@ -4054,6 +4054,34 @@ Focused gates:
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
   pass.
 - `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Floating Layer Layout Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI floating layer absolute shell layout moved out of the z-order/registration
+owner without changing child registration, bring-to-front activation, z-order sorting, hit-test
+order, visible overflow, root id stamping, or floating layer public-in-IMUI APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/layer/layout.rs` owns the absolute fill
+  visible-overflow layer container and assigns the layer root id.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/layer.rs` now keeps marker state, child
+  registration, activation dispatch, child mounting, z-order snapshot reconciliation, and rank sort
+  application.
+- `tools/gate_imui_workstream_source.py` now rejects direct container/layout shell construction
+  from drifting back into `floating_surface/layer.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating::movement_z_order --no-fail-fast`: pass.
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 

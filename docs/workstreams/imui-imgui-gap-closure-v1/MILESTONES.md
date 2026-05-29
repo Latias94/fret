@@ -812,8 +812,13 @@ registration, drag snapshot/state reconciliation, child mounting, final test-id 
 `ecosystem/fret-ui-kit/src/imui/floating_surface/layer/z_order.rs` now owns
 `FloatWindowLayerZOrder`, z-order membership, bring-to-front reordering, missing-window pruning,
 and rank snapshot projection. `floating_surface/layer.rs` keeps layer marker state, child
-registration, activation dispatch, layer child mounting, rank sort application, and absolute fill
-layout.
+registration, activation dispatch, layer child mounting, and rank sort application.
+
+2026-05-30 floating layer layout owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_surface/layer/layout.rs` now owns the absolute fill
+visible-overflow layer shell and root id stamping. `floating_surface/layer.rs` now keeps marker
+state, child registration, activation dispatch, child mounting, z-order snapshot reconciliation,
+and rank sort application.
 
 2026-05-28 shared item behavior install owner-split result:
 `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` now owns pressable pointer hook clearing,

@@ -1,11 +1,12 @@
-use fret_core::Px;
-use fret_ui::element::{AnyElement, ContainerProps, InsetStyle, Length, Overflow, PositionStyle};
+use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use super::super::ImUiFacade;
 
+mod layout;
 mod z_order;
 
+use layout::floating_layer_shell;
 use z_order::FloatWindowLayerZOrder;
 
 #[derive(Debug, Clone, Copy)]
@@ -82,20 +83,6 @@ pub(in crate::imui) fn floating_layer_element<H: UiHost>(
         indexed.sort_by_key(|(idx, original, _)| (*idx, *original));
         let windows_sorted: Vec<AnyElement> = indexed.into_iter().map(|(_, _, w)| w).collect();
 
-        let mut props = ContainerProps::default();
-        props.layout.position = PositionStyle::Absolute;
-        props.layout.inset = InsetStyle {
-            left: Some(Px(0.0)).into(),
-            right: Some(Px(0.0)).into(),
-            top: Some(Px(0.0)).into(),
-            bottom: Some(Px(0.0)).into(),
-        };
-        props.layout.overflow = Overflow::Visible;
-        props.layout.size.width = Length::Fill;
-        props.layout.size.height = Length::Fill;
-
-        let mut layer = cx.container(props, move |_cx| windows_sorted);
-        layer.id = layer_id;
-        layer
+        floating_layer_shell(cx, layer_id, windows_sorted)
     })
 }

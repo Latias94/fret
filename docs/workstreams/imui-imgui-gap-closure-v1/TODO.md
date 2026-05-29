@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-29
+Last updated: 2026-05-30
 
 ## Worktree Convergence - 2026-05-26
 
@@ -940,7 +940,16 @@ Last updated: 2026-05-29
       Result: `floating_surface/layer/z_order.rs` owns `FloatWindowLayerZOrder`, z-order
       membership, bring-to-front reordering, missing-window pruning, and rank snapshot projection.
       `layer.rs` keeps layer marker state, child registration, activation dispatch, layer child
-      mounting, rank sort application, and absolute fill layout.
+      mounting, and rank sort application.
+- [x] Split IMUI floating layer absolute shell layout out of
+      `ecosystem/fret-ui-kit/src/imui/floating_surface/layer.rs` into a private owner without
+      changing floating layer child registration, bring-to-front activation, z-order sorting,
+      hit-test order, absolute fill layout, visible overflow, or floating layer public-in-IMUI
+      APIs.
+      Result: `floating_surface/layer/layout.rs` owns the absolute fill visible-overflow layer
+      container and id stamping. `layer.rs` keeps layer marker state, child registration,
+      activation dispatch, layer child mounting, z-order snapshot reconciliation, and rank sort
+      application.
 - [x] Split shared IMUI pressable item hook installation out of
       `ecosystem/fret-ui-kit/src/imui/item_behavior.rs` into a private install owner without
       changing shared button, checkbox/radio, selectable, combo, image-item, debug-draw pressable,
