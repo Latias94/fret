@@ -59,6 +59,13 @@ elements, `flow/spacers.rs` owns dummy and spacing forwarding, and `flow/indent.
 forwarding. The public facade methods, build-focus forwarding, porting-sugar layout routing, and
 `container_methods` re-export paths remain unchanged.
 
+2026-05-29 facade container menu/tab-method sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/menu_tabs.rs` is now a
+module/re-export hub. `menu_tabs/menu.rs` owns menu-bar forwarding to
+`menu_family_controls::menu_bar_element`, and `menu_tabs/tabs.rs` owns tab-bar forwarding plus
+`TabBarResponse` return from `tab_family_controls::tab_bar_element`. The public facade methods,
+build-focus forwarding, menu/tab routing, and `container_methods` re-export paths remain unchanged.
+
 2026-05-29 facade floating surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but floating layer/area, popup open/drop/begin,

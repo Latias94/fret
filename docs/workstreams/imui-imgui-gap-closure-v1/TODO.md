@@ -91,6 +91,12 @@ Last updated: 2026-05-29
       Result: `facade_writer/container_methods/flow.rs` is now a module/re-export hub.
       `flow/sequences.rs` owns item-flow and same-line forwarding, `flow/spacers.rs` owns dummy and
       spacing forwarding, and `flow/indent.rs` owns indent forwarding.
+- [x] Split IMUI facade container menu/tab method behavior owner into menu-bar and tab-bar child
+      owners without changing public facade methods, build-focus forwarding, menu/tab element
+      routing, tab response return, or `container_methods` re-export paths.
+      Result: `facade_writer/container_methods/menu_tabs.rs` is now a module/re-export hub.
+      `menu_tabs/menu.rs` owns menu-bar forwarding, and `menu_tabs/tabs.rs` owns tab-bar forwarding
+      and response return.
 - [x] Split IMUI facade floating/popup/tooltip/drag/window trait default method declarations out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, floating area/window, popup, tooltip,

@@ -519,6 +519,8 @@
     "ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/layout/grid_scroll.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/layout/linear.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/menu_tabs.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/menu_tabs/menu.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/menu_tabs/tabs.rs",
     "ecosystem/fret-ui-kit/src/declarative/text.rs",
     "ecosystem/fret-ui-kit/src/declarative/file_tree.rs",
     "ecosystem/fret-ui-kit/src/declarative/table.rs",

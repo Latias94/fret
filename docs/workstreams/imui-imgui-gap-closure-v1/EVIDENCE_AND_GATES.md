@@ -215,6 +215,35 @@ Focused gates:
   porting_sugar_items_same_line_spacing_dummy_and_indent_use_imgui_style_layout_tokens
   --no-fail-fast`: pass (1 passed, 185 skipped).
 
+## Facade Container Menu/Tab Method Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade container menu/tab method behavior ownership split into menu-bar and
+tab-bar child owners without changing public facade methods, build-focus forwarding, menu/tab
+element routing, tab response return, or `container_methods` re-export paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/menu_tabs.rs` is now a
+  module/re-export hub for the two menu/tab method behavior owners.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/menu_tabs/menu.rs` owns menu-bar
+  forwarding to `menu_family_controls::menu_bar_element`.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/menu_tabs/tabs.rs` owns tab-bar
+  forwarding and `TabBarResponse` return from `tab_family_controls::tab_bar_element`.
+- `tools/gate_imui_workstream_source.py` checks the new sub-owners and rejects concrete menu/tab
+  element routing from drifting back into `container_methods/menu_tabs.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass (18 passed,
+  168 skipped).
+
 ## Facade Floating Surface Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI facade floating/popup/tooltip/drag/window trait default method declarations
