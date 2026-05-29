@@ -335,6 +335,12 @@ and alpha entrypoint re-exports. `picker/alpha.rs` owns horizontal and vertical 
 previews, gradient overlays, thumb overlays, pointer update application, and alpha coordinate/a11y
 helper math.
 
+2026-05-30 color-edit hue bar owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker.rs` keeps color picker composition
+and shared HSV color application. `picker/hue_bar.rs` owns hue bar previews, vertical hue
+gradient construction, thumb overlays, pointer update application, and hue coordinate helper
+wiring.
+
 2026-05-29 leaf control option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/selection.rs`,
 `ecosystem/fret-ui-kit/src/imui/options/controls/tab.rs`, and

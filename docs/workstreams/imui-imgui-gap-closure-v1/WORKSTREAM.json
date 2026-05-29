@@ -942,6 +942,7 @@
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/options.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/alpha.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/hue_bar.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/hue_wheel.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/tooltip.rs",

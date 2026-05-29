@@ -365,6 +365,12 @@ Last updated: 2026-05-30
       Result: `color_edit/popup/picker.rs` keeps picker composition and entrypoint re-exports,
       while `color_edit/popup/picker/alpha.rs` owns alpha gradients, thumb overlays, pointer
       updates, and alpha helper math.
+- [x] Split editor color-edit hue bar previews and interaction into a private owner without
+      changing HSV hue-bar picker entrypoints, option thumbnails, hue coordinate mapping, shared
+      HSV color application, or color-edit popup policy tests.
+      Result: `color_edit/popup/picker.rs` keeps picker composition and shared HSV apply logic,
+      while `color_edit/popup/picker/hue_bar.rs` owns hue-bar gradients, thumb overlays, pointer
+      updates, and vertical hue helper wiring.
 - [x] Split IMUI leaf control option records into selection, tab-item, and slider private owners
       without changing public option type names, fields, defaults, root re-exports, selectable
       smoke behavior, tab/menu behavior, or slider model behavior.
