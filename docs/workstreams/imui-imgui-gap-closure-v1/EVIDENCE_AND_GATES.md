@@ -41,6 +41,40 @@ Focused gates:
 - `cargo nextest run -p fret-imui interaction_shortcuts --no-fail-fast`: pass (10 passed,
   176 skipped).
 
+## Facade Disclosure Surface Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade disclosure surface macro ownership split into collapsing-header and
+tree-node child owners without changing public trait method names, stable identity/depth docs,
+response returns, macro expansion order, or concrete `disclosure_controls` behavior ownership.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/disclosure_surface.rs` is now a module/re-export
+  hub.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/disclosure_surface/collapsing_header.rs` owns
+  collapsing-header trait forwarding and stable-identity guidance.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/disclosure_surface/tree_node.rs` owns tree-node
+  trait forwarding and explicit depth guidance.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` expands the two child surface macros in the
+  previous public method order.
+- `tools/gate_imui_workstream_source.py` checks the new child owners and rejects disclosure
+  surface macro bodies from drifting back into `facade_writer/disclosure_surface.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke
+  --test imui_disclosure_smoke --no-fail-fast`: pass (4 passed).
+- `cargo nextest run -p fret-imui interaction_shortcuts --no-fail-fast`: pass (10 passed,
+  176 skipped).
+- `python tools\check_workstream_catalog.py`: pass; validated 473 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+
 ## Facade Basic Surface Sub-Owner Evidence - 2026-05-29
 
 Claim verified: IMUI facade basic surface macro ownership split into text, debug-draw, and

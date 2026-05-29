@@ -465,6 +465,8 @@
     "ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods/push_id.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/scope_surface.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/disclosure_surface.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/disclosure_surface/collapsing_header.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/disclosure_surface/tree_node.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/button_surface.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/button_surface/actions.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/button_surface/actions/action.rs",

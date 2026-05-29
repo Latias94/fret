@@ -59,6 +59,12 @@ Last updated: 2026-05-29
       text, wrapped text, and bullet text forwarding; `basic_surface/debug_draw.rs` owns
       debug-draw forwarding; and `basic_surface/separators.rs` owns separator and separator-text
       forwarding.
+- [x] Split IMUI facade disclosure surface macro owner into collapsing-header and tree-node child
+      owners without changing public trait method names, stable identity/depth docs, response
+      returns, macro expansion order, or concrete `disclosure_controls` behavior ownership.
+      Result: `disclosure_surface.rs` is now a module/re-export hub.
+      `disclosure_surface/collapsing_header.rs` owns collapsing-header forwarding, while
+      `disclosure_surface/tree_node.rs` owns tree-node forwarding and explicit depth guidance.
 - [x] Split IMUI facade scope method behavior owner into push-id and disabled-scope child owners
       without changing public facade method names, keyed identity scoping, disabled alpha/gating,
       runtime frame preparation, or `scope_surface` forwarding.

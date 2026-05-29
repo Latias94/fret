@@ -64,7 +64,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     floating_surface::popup_begin_surface_methods!();
 
-    disclosure_surface::disclosure_surface_methods!();
+    disclosure_surface::collapsing_header_surface_methods!();
+
+    disclosure_surface::tree_node_surface_methods!();
 
     floating_surface::tooltip_surface_methods!();
 

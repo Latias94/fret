@@ -28,6 +28,13 @@ and debug-draw, and disclosure/tree trait default method declarations now live i
 method names, default option forwarding, macro expansion order, response returns, and concrete
 `basic_items` behavior ownership remain unchanged.
 
+2026-05-29 facade disclosure surface sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/disclosure_surface.rs` is now a module/re-export
+hub. `disclosure_surface/collapsing_header.rs` owns collapsing-header trait forwarding, while
+`disclosure_surface/tree_node.rs` owns tree-node trait forwarding and explicit depth guidance.
+Public trait method names, stable identity docs, response returns, macro expansion order, and
+concrete `disclosure_controls` behavior ownership remain unchanged.
+
 2026-05-29 facade scope method sub-owner result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods.rs` is now a module/re-export hub.
 `scope_methods/push_id.rs` owns keyed child facade execution and result propagation, while
