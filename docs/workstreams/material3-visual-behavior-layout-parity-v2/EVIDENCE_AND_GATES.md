@@ -68,6 +68,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_fab_size_elevation_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_list_density_slots_semantics_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_progress_indicator_semantics_motion_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_checkbox_semantics_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -637,6 +638,29 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     ids, and a fixed-frame scene geometry gate for indeterminate draw-region movement. The gap was
     Material recipe/diagnostics wiring; no core or kit mechanism change was needed.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_progress_indicator_semantics_motion_packet_v2.md`
+- 2026-05-29: M3PV2-065 closed Checkbox tri-state semantics, part geometry, and checked-mark
+  motion coverage.
+  - Sources: Compose Material3 `Checkbox.kt` uses `triStateToggleable` with `Role.Checkbox`,
+    `minimumInteractiveComponentSize()`, a 40dp unbounded ripple/state-layer radius, and
+    `DefaultSpatial` for mark draw animation; Compose `CheckboxTokens.kt` defines 18dp container,
+    18dp icon, and 40dp state-layer sizes. Fret kit already had a checkbox a11y helper mapping
+    indeterminate state to `SemanticsCheckedState::Mixed`.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test checkbox_state`
+    failed because Checkbox did not expose `.box` / `.mark` test ids, did not write tri-state
+    `checked_state`, and emitted no animated mark opacity after toggle.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test checkbox_state`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_choice_controls_expose_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment checkbox_tristate_semantics_and_toggle_outcomes checkbox_pressed_scene_structure_is_stable material3_headless_controls_suite_goldens_v1`
+  - Workstream JSON, matrix JSON, catalog, and `git diff --check` gates passed.
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: Checkbox now writes binary and tri-state checked metadata, exposes `.chrome`, `.box`,
+    and `.mark` part ids, proves 48/40/18px Material geometry, and animates mark visibility through
+    the existing Material `DefaultSpatial` motion-scheme spring. The gap was Material recipe wiring
+    and proof density, not core or kit mechanism.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_checkbox_semantics_layout_motion_packet_v2.md`
 
 ## Proof Note Template
 

@@ -5,7 +5,8 @@
 use std::{rc::Rc, sync::Arc};
 
 use fret_core::{
-    AppWindowId, Point, PointerId, Px, Rect, SemanticsLive, SemanticsRole, Size, UiServices,
+    AppWindowId, Point, PointerId, Px, Rect, SemanticsCheckedState, SemanticsLive, SemanticsRole,
+    Size, UiServices,
 };
 use fret_runtime::{
     ModelHost, PlatformCapabilities,
@@ -149,6 +150,22 @@ fn semantics_node_role(ui: &UiTree<TestHost>, test_id: &str) -> SemanticsRole {
         })
         .unwrap_or_else(|| panic!("expected semantics node for test_id {test_id}"))
         .role
+}
+
+fn semantics_node_checked_state(
+    ui: &UiTree<TestHost>,
+    test_id: &str,
+) -> Option<SemanticsCheckedState> {
+    ui.semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.test_id.as_deref() == Some(test_id))
+        })
+        .unwrap_or_else(|| panic!("expected semantics node for test_id {test_id}"))
+        .flags
+        .checked_state
 }
 
 fn semantics_node_selected(ui: &UiTree<TestHost>, test_id: &str) -> bool {
@@ -622,6 +639,8 @@ fn material3_choice_controls_expose_stable_part_test_ids() {
     for id in [
         "m3-checkbox",
         "m3-checkbox.chrome",
+        "m3-checkbox.box",
+        "m3-checkbox.mark",
         "m3-radio-group",
         "m3-radio-alpha",
         "m3-radio-alpha.chrome",
@@ -648,6 +667,11 @@ fn material3_choice_controls_expose_stable_part_test_ids() {
             "expected live choice-control part test_id {id}"
         );
     }
+
+    assert_eq!(
+        semantics_node_checked_state(&ui, "m3-checkbox"),
+        Some(SemanticsCheckedState::True)
+    );
 }
 
 #[test]

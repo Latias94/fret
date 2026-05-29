@@ -153,6 +153,15 @@ determinate 0..1 numeric metadata, indeterminate busy state, circular `.track` /
 part ids, and a fixed-frame test proves indeterminate draw regions move across frames. Determinate
 value interpolation, linear default width policy, and wavy progress indicators remain residual.
 
+M3PV2-065 is complete: Checkbox layout, accessibility, and current checked-mark motion are now
+v2-covered. The packet found a Material recipe wiring gap, not a core mechanism gap:
+`SemanticsCheckedState::Mixed` and the kit checkbox a11y helper already existed, but Material
+Checkbox bypassed them and only wrote legacy binary `checked`. Checkbox now writes binary and
+tri-state checked metadata, exposes `.chrome`, `.box`, and `.mark` part ids, proves 48/40/18px
+touch/state-layer/box/mark geometry, and animates mark visibility with the Material
+`DefaultSpatial` motion scheme. Exact Compose path-draw geometry and a public error-state variant
+remain residual.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -164,7 +173,8 @@ value interpolation, linear default width policy, and wavy progress indicators r
 ## Next Recommended Action
 
 Continue with the next uncovered Material3 packet from the matrix. Higher-priority choice-control
-candidates remain Checkbox and Radio; NavigationRail/NavigationBar layout packets are also open.
+candidates now start with Radio, Switch, Slider, SegmentedButton, and chips; NavigationRail /
+NavigationBar layout packets are also open.
 
 ## Useful Gates
 

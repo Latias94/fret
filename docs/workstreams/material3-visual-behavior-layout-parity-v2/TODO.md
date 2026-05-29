@@ -506,6 +506,27 @@ Task IDs use `M3PV2-*`.
   Review: Pending.
   Handoff: Shared indication changes require at least two consumer proofs.
 
+- [x] M3PV2-065 [owner=codex] [deps=M3PV2-010,M3PV2-040] [scope=ecosystem/fret-ui-material3/src/checkbox.rs,ecosystem/fret-ui-material3/tests/{checkbox_state.rs,automation_surface.rs,radio_alignment.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close Checkbox tri-state semantics, touch/state-layer/box/mark layout proof, stable part
+  ids, and checked-mark motion against Compose Material3.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test checkbox_state`
+  failed because Checkbox did not expose `.box` / `.mark` test ids, did not write tri-state
+  `checked_state`, and emitted no animated mark opacity; green gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test checkbox_state`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_choice_controls_expose_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment checkbox_tristate_semantics_and_toggle_outcomes checkbox_pressed_scene_structure_is_stable material3_headless_controls_suite_goldens_v1`;
+  workstream JSON, matrix JSON, catalog, and `git diff --check`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`.
+  Review: DONE. This found a Material recipe wiring gap: core and kit already supported mixed
+  checked-state semantics, but Checkbox bypassed the kit helper and had no box/mark part contract
+  or mark motion gate.
+  Evidence: `artifacts/material3_checkbox_semantics_layout_motion_packet_v2.md`.
+  Handoff: Checkbox layout, accessibility, and current mark motion are v2-covered. Exact Compose
+  path-draw geometry and a public error-state checkbox variant remain residual.
+
 ## M4 - Overlay And Feedback Interaction Depth
 
 - [x] M3PV2-046 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/bottom_sheet.rs,ecosystem/fret-ui-material3/tests/bottom_sheet_motion.rs,goldens/material3-headless/v1/material3-bottom-sheet.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]
