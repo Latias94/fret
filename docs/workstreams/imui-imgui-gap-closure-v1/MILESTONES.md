@@ -136,6 +136,13 @@ owns input text, input text picker/history, and textarea forwarding. The public 
 points in `facade_writer.rs` now call these child macros directly, while `boolean_wrappers.rs`,
 `value_models.rs`, and `text_models.rs` remain the focusable-recording inherent wrapper owners.
 
+2026-05-29 facade boolean-control inherent-wrapper sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/boolean_wrappers.rs` is now a module hub.
+`boolean_wrappers/checkbox.rs` owns checkbox model inherent wrappers,
+`boolean_wrappers/radio.rs` owns radio inherent wrappers, and `boolean_wrappers/switch.rs` owns
+switch model inherent wrappers. Disabled checks, focusable recording, trait delegation paths, public
+inherent method names, and the `fret-imui` thin boundary remain unchanged.
+
 2026-05-29 facade button surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but button, small/arrow/invisible button, image item/button,

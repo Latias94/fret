@@ -173,6 +173,13 @@ Last updated: 2026-05-29
       `model_surface/boolean.rs` owns checkbox/radio/switch model forwarding,
       `model_surface/value_combo.rs` owns slider and combo-model forwarding, and
       `model_surface/text.rs` owns input text, input text picker/history, and textarea forwarding.
+- [x] Split IMUI facade boolean-control inherent wrapper behavior owner into checkbox, radio, and
+      switch child owners without changing public inherent method names, disabled checks,
+      focusable recording, trait delegation paths, or `fret-imui` thinness.
+      Result: `facade_writer/boolean_wrappers.rs` is now a module hub.
+      `boolean_wrappers/checkbox.rs` owns checkbox model wrappers,
+      `boolean_wrappers/radio.rs` owns radio wrappers, and `boolean_wrappers/switch.rs` owns switch
+      model wrappers.
 - [x] Split IMUI facade button/image/action trait default method declarations out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, button/image/action method names,

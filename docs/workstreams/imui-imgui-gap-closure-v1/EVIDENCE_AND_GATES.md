@@ -557,6 +557,38 @@ Focused gates:
 - `cargo nextest run -p fret-imui models_combo --no-fail-fast`: pass (11 passed, 175 skipped).
 - `cargo nextest run -p fret-imui models_text --no-fail-fast`: pass (29 passed, 157 skipped).
 
+## Facade Boolean-Control Inherent Wrapper Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade boolean-control inherent wrapper behavior ownership split into checkbox,
+radio, and switch child owners without changing public inherent method names, disabled checks,
+focusable recording, trait delegation paths, or `fret-imui` thinness.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/boolean_wrappers.rs` is now a module hub for the
+  three boolean-control inherent wrapper owners.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/boolean_wrappers/checkbox.rs` owns checkbox model
+  inherent wrappers, including disabled checks and focusable recording.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/boolean_wrappers/radio.rs` owns radio inherent
+  wrappers, including disabled checks and focusable recording.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/boolean_wrappers/switch.rs` owns switch model
+  inherent wrappers, including disabled checks and focusable recording.
+- `tools/gate_imui_workstream_source.py` checks the new child owners and rejects focusable-recording
+  wrapper bodies from drifting back into `boolean_wrappers.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke
+  --test imui_button_smoke --no-fail-fast`: pass (4 passed).
+- `cargo nextest run -p fret-imui models_controls --no-fail-fast`: pass (11 passed, 175 skipped).
+
 ## Facade Button Surface Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI facade button/image/action trait default method declarations split out of the
