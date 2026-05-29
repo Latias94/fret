@@ -187,6 +187,8 @@ update rather than an incidental refactor.
   - FNDX-058 adds target-port hit-testing and accepted store-backed reconnect commit/callback
     dispatch for active update-anchor drops while keeping endpoint-gated and empty-canvas drops
     cleanup-only.
+  - FNDX-059 emits reconnect gesture start/end callback aliases for successful arm plus committed,
+    rejected, empty/no-op, Escape, PointerCancel, and missed-left-button cleanup end paths.
   - Custom `NodeGraphPresenter` remains advanced/internal on the default path because it still mixes
     geometry, labels, context menus, and insertion/search policy.
   - Broader XyFlow edge-wrapper lifecycle parity remains follow-up work beyond click selection,

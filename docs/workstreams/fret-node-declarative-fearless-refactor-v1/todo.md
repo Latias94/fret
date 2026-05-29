@@ -772,6 +772,42 @@ Execution companion: `design.md` (surface map + next worktree order).
     - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
     - `cargo nextest run -p fret-node`: passed with 479 tests.
 
+- [x] FNDX-059 Emit default declarative reconnect gesture start/end callback aliases.
+  - Scope:
+    - `ecosystem/fret-node/src/runtime/callbacks.rs`
+    - `ecosystem/fret-node/src/runtime/events.rs`
+    - `ecosystem/fret-node/src/runtime/store.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`
+  - Exit note: default declarative update-anchor reconnect drags now emit UI gesture lifecycle
+    callbacks on the public callback surface. Successful left-button arm emits
+    `on_connect_start`, `on_reconnect_start`, and `on_edge_update_start` with
+    `ConnectDragKind::Reconnect`. A single matching end event is emitted for committed drops,
+    rejected endpoint-gated drops, empty/no-op drops, Escape, PointerCancel, and missed-left-button
+    cleanup; reconnect-only aliases mirror the base connect end event. This slice still does not
+    paint a reconnect preview wire or implement `reconnect_on_drop_empty`.
+  - Evidence:
+    - `ecosystem/fret-node/src/runtime/events.rs`
+    - `ecosystem/fret-node/src/runtime/callbacks.rs`
+    - `ecosystem/fret-node/src/runtime/store.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`:
+      passed.
+    - `cargo fmt`: passed.
+
 ## M0 - Decision gates and internal seam map
 
 - [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.

@@ -2,10 +2,12 @@
 //!
 //! This is intentionally small and headless-safe.
 
-use crate::core::CanvasPoint;
+use crate::core::{CanvasPoint, EdgeId, PortId};
+use crate::interaction::NodeGraphConnectionMode;
 use crate::io::{
     NodeGraphEditorConfig, NodeGraphInteractionConfig, NodeGraphRuntimeTuning, NodeGraphViewState,
 };
+use crate::rules::EdgeEndpoint;
 use crate::runtime::changes::{NodeGraphChanges, NodeGraphPatch};
 
 /// Subscription token returned by [`crate::runtime::store::NodeGraphStore::subscribe`].
@@ -57,6 +59,60 @@ pub enum ViewChange {
         edges: Vec<crate::core::EdgeId>,
         groups: Vec<crate::core::GroupId>,
     },
+}
+
+/// Connection start kind (UI-driven).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ConnectDragKind {
+    New {
+        from: PortId,
+        bundle: Vec<PortId>,
+    },
+    Reconnect {
+        edge: EdgeId,
+        endpoint: EdgeEndpoint,
+        fixed: PortId,
+    },
+    ReconnectMany {
+        edges: Vec<(EdgeId, EdgeEndpoint, PortId)>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConnectStart {
+    pub kind: ConnectDragKind,
+    pub mode: NodeGraphConnectionMode,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConnectEndOutcome {
+    /// A graph transaction was committed.
+    Committed,
+    /// A target was chosen but the connect plan was rejected.
+    Rejected,
+    /// The workflow opened a conversion picker (domain-specific UX).
+    OpenConversionPicker,
+    /// The workflow opened an insert-node picker (drop on empty background).
+    OpenInsertNodePicker,
+    /// The gesture was canceled (escape, focus lost, etc.).
+    Canceled,
+    /// Gesture ended without committing or opening a picker.
+    NoOp,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConnectEnd {
+    pub kind: ConnectDragKind,
+    pub mode: NodeGraphConnectionMode,
+    pub target: Option<PortId>,
+    pub outcome: ConnectEndOutcome,
+}
+
+/// Transient UI gesture event emitted to gesture subscribers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NodeGraphGestureEvent {
+    ConnectStart(ConnectStart),
+    ConnectEnd(ConnectEnd),
 }
 
 /// Store event emitted to subscribers.

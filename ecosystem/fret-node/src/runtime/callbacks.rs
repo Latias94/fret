@@ -10,13 +10,18 @@
 //! This module provides an object-safe callback trait and an adapter that can be installed into
 //! a store subscription.
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::core::{CanvasPoint, EdgeId, EdgeKind, GroupId, NodeId, PortId, StickyNoteId};
-use crate::interaction::NodeGraphConnectionMode;
 use crate::ops::{EdgeEndpoints, GraphOp, GraphTransaction};
-use crate::rules::EdgeEndpoint;
 use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges, NodeGraphPatch};
-use crate::runtime::events::{NodeGraphStoreEvent, SubscriptionToken, ViewChange};
+use crate::runtime::events::{
+    NodeGraphGestureEvent, NodeGraphStoreEvent, SubscriptionToken, ViewChange,
+};
 use crate::runtime::store::NodeGraphStore;
+
+pub use crate::runtime::events::{ConnectDragKind, ConnectEnd, ConnectEndOutcome, ConnectStart};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DeleteChange {
@@ -109,53 +114,6 @@ pub struct SelectionChange {
     pub nodes: Vec<NodeId>,
     pub edges: Vec<EdgeId>,
     pub groups: Vec<GroupId>,
-}
-
-/// Connection start kind (UI-driven).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ConnectDragKind {
-    New {
-        from: PortId,
-        bundle: Vec<PortId>,
-    },
-    Reconnect {
-        edge: EdgeId,
-        endpoint: EdgeEndpoint,
-        fixed: PortId,
-    },
-    ReconnectMany {
-        edges: Vec<(EdgeId, EdgeEndpoint, PortId)>,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ConnectStart {
-    pub kind: ConnectDragKind,
-    pub mode: NodeGraphConnectionMode,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ConnectEndOutcome {
-    /// A graph transaction was committed.
-    Committed,
-    /// A target was chosen but the connect plan was rejected.
-    Rejected,
-    /// The workflow opened a conversion picker (domain-specific UX).
-    OpenConversionPicker,
-    /// The workflow opened an insert-node picker (drop on empty background).
-    OpenInsertNodePicker,
-    /// The gesture was canceled (escape, focus lost, etc.).
-    Canceled,
-    /// Gesture ended without committing or opening a picker.
-    NoOp,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ConnectEnd {
-    pub kind: ConnectDragKind,
-    pub mode: NodeGraphConnectionMode,
-    pub target: Option<PortId>,
-    pub outcome: ConnectEndOutcome,
 }
 
 /// Headless/store commit callbacks for B-layer consumers.
@@ -297,13 +255,16 @@ pub fn install_callbacks(
     store: &mut NodeGraphStore,
     callbacks: impl NodeGraphCallbacks,
 ) -> SubscriptionToken {
-    let mut callbacks: Box<dyn NodeGraphCallbacks> = Box::new(callbacks);
-    store.subscribe(move |ev| match ev {
+    let callbacks: Rc<RefCell<Box<dyn NodeGraphCallbacks>>> =
+        Rc::new(RefCell::new(Box::new(callbacks)));
+    let event_callbacks = callbacks.clone();
+    let token = store.subscribe(move |ev| match ev {
         NodeGraphStoreEvent::DocumentReplaced { .. } => {}
         NodeGraphStoreEvent::GraphCommitted {
             patch,
             node_edge_changes,
         } => {
+            let mut callbacks = event_callbacks.borrow_mut();
             callbacks.on_graph_commit(patch);
             callbacks.on_node_edge_changes(node_edge_changes);
             if !node_edge_changes.nodes.is_empty() {
@@ -347,6 +308,7 @@ pub fn install_callbacks(
             }
         }
         NodeGraphStoreEvent::ViewChanged { changes, .. } => {
+            let mut callbacks = event_callbacks.borrow_mut();
             callbacks.on_view_change(changes);
             for change in changes.iter() {
                 match change {
@@ -366,7 +328,37 @@ pub fn install_callbacks(
                 }
             }
         }
-    })
+    });
+
+    let gesture_callbacks = callbacks;
+    store.subscribe_gesture_with_token(token, move |ev| {
+        let mut callbacks = gesture_callbacks.borrow_mut();
+        match ev {
+            NodeGraphGestureEvent::ConnectStart(ev) => {
+                let is_reconnect = matches!(
+                    ev.kind,
+                    ConnectDragKind::Reconnect { .. } | ConnectDragKind::ReconnectMany { .. }
+                );
+                callbacks.on_connect_start(ev.clone());
+                if is_reconnect {
+                    callbacks.on_reconnect_start(ev.clone());
+                    callbacks.on_edge_update_start(ev);
+                }
+            }
+            NodeGraphGestureEvent::ConnectEnd(ev) => {
+                let is_reconnect = matches!(
+                    ev.kind,
+                    ConnectDragKind::Reconnect { .. } | ConnectDragKind::ReconnectMany { .. }
+                );
+                callbacks.on_connect_end(ev.clone());
+                if is_reconnect {
+                    callbacks.on_reconnect_end(ev.clone());
+                    callbacks.on_edge_update_end(ev);
+                }
+            }
+        }
+    });
+    token
 }
 
 pub fn connection_changes_from_transaction(tx: &GraphTransaction) -> Vec<ConnectionChange> {

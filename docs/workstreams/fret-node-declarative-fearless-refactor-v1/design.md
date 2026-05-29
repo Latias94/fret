@@ -3,7 +3,7 @@
 Status: execution-oriented companion (last updated 2026-05-29)
 Scope: `ecosystem/fret-node` only
 
-Current note: the surface map and FNDX-058 follow-up guidance below are the active execution
+Current note: the surface map and FNDX-059 follow-up guidance below are the active execution
 authority. Deep retained-widget notes in older slice history are preserved only as historical
 context and must not be used to revive deleted retained compatibility files or features.
 
@@ -490,8 +490,10 @@ Status note (2026-05-28):
   connection-drag threshold and cancel/up cleanup policy.
 - FNDX-058 adds target-port hit-testing and accepted store-backed reconnect commit/callback
   dispatch for active update-anchor drops, while keeping endpoint-gated and empty-canvas drops
-  cleanup-only and still deferring preview wire paint, reconnect gesture start/end callbacks, and
-  `reconnect_on_drop_empty`.
+  cleanup-only.
+- FNDX-059 emits reconnect gesture start/end callback aliases for successful arm plus committed,
+  rejected, empty/no-op, Escape, PointerCancel, and missed-left-button cleanup end paths, while
+  still deferring preview wire paint and `reconnect_on_drop_empty`.
 
 Why this still matters:
 

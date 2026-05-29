@@ -13,30 +13,34 @@ declarative public-extension decision, and the custom edge path spatial, hit-tes
 edge-label, custom edge-label renderer, child-bounds interactive edge-label control, default
 declarative click-edge selection, selected-edge paint/diagnostics, update-anchor planning,
 rendered update-anchor controls, reconnect-drag lifecycle, and valid reconnect drop commit/callback
-slices. The current risk is
+slices, plus reconnect gesture start/end callback aliases. The current risk is
 consumer-facing drift where public extension or store surfaces look authoritative but bypass the
 store's contracts or imply unimplemented view-policy parity.
 
 ## Active Task
 
-- Task ID: FNDX-058.
+- Task ID: FNDX-059.
 - Owner: current Codex session.
 - Status: DONE.
-- Claim: default declarative EdgeWrapper update-anchor drags now commit accepted reconnect drops.
-  Active source/target drags hit-test nearby ports on pointer-up, reuse
-  `plan_reconnect_edge_with_mode`, commit accepted plans through the store-backed transaction path,
-  and dispatch the existing commit-derived `on_reconnect` / `on_edge_update` callbacks. Empty-canvas
-  or rejected drops, including endpoint-gated ports such as `connectable_start=false` while
-  reconnecting a source endpoint, clear transient state without committing. Preview wire paint,
-  reconnect gesture start/end callbacks, and `reconnect_on_drop_empty` remain follow-up work.
+- Claim: default declarative EdgeWrapper update-anchor reconnect drags now emit reconnect gesture
+  start/end callback aliases. Successful left-button arm emits `on_connect_start`,
+  `on_reconnect_start`, and `on_edge_update_start` with `ConnectDragKind::Reconnect`; committed
+  drops, rejected endpoint-gated drops, empty/no-op drops, Escape, PointerCancel, and
+  missed-left-button cleanup each emit one matching end event through `on_connect_end`,
+  `on_reconnect_end`, and `on_edge_update_end`. Preview wire paint and `reconnect_on_drop_empty`
+  remain follow-up work.
 - Review: use `review-workstream` before accepting broader lane closure.
 - Evidence:
   - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs` owns deterministic
     selected/focused edge update-anchor planning, hit-test rects, rendered controls, reconnect
     armed/active pointer lifecycle, target-port hit-testing, and accepted reconnect transaction
-    dispatch.
+    dispatch plus reconnect gesture start/end event emission.
+  - `ecosystem/fret-node/src/runtime/events.rs`, `ecosystem/fret-node/src/runtime/store.rs`, and
+    `ecosystem/fret-node/src/runtime/callbacks.rs` expose transient gesture events, store
+    gesture subscriptions, and reconnect-only callback alias fan-out.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs` routes surface-level
-    move/up/cancel/Escape events through reconnect drop/cleanup before other canvas gestures.
+    move/up/cancel/Escape events through reconnect drop/cleanup and lifecycle-end emission before
+    other canvas gestures.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/frame_plan.rs` and
     `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs` expose reconnect
     armed/active diagnostics.
@@ -138,14 +142,17 @@ store's contracts or imply unimplemented view-policy parity.
   default declarative update-anchor drags, while keeping empty-canvas drops as cleanup-only and
   respecting endpoint-specific `connectable_start` / `connectable_end` gates; it still defers
   preview wire paint, reconnect gesture start/end callbacks, and `reconnect_on_drop_empty`.
+- FNDX-059 emits default declarative reconnect gesture start/end callback aliases for successful
+  arm and all current end paths: committed drop, rejected endpoint-gated drop, empty/no-op drop,
+  Escape, PointerCancel, and missed-left-button cleanup. It still defers preview wire paint and
+  `reconnect_on_drop_empty`.
 
 ## Blockers
 
-- None for FNDX-058.
+- None for FNDX-059.
 
 ## Next Recommended Action
 
 - Pick the next reconnect lifecycle slice with a concrete gate. The strongest candidates are either
-  preview wire paint for active reconnect drags, reconnect gesture start/end callback aliases, or
-  `reconnect_on_drop_empty`; keep them separate unless one slice proves a shared implementation
-  point is required.
+  preview wire paint for active reconnect drags or `reconnect_on_drop_empty`; keep them separate
+  unless one slice proves a shared implementation point is required.

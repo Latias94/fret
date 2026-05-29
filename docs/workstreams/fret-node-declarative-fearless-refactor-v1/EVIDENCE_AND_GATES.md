@@ -5,25 +5,32 @@ Last updated: 2026-05-29
 
 ## Current Focus
 
-FNDX-058 advances default declarative EdgeWrapper reconnect/update-anchor parity from transient
-reconnect drags to accepted reconnect drops. Active source/target update-anchor drags now hit-test
-nearby target ports at pointer-up, reuse `plan_reconnect_edge_with_mode`, commit accepted plans
-through the existing store-backed transaction path, and therefore dispatch commit-derived
-`on_reconnect` / `on_edge_update` callbacks. Empty-canvas or rejected drops, including
-endpoint-gated ports such as `connectable_start=false` while reconnecting a source endpoint, clear
-transient state without committing. This slice still does not paint a preview wire, emit reconnect
-gesture start/end callbacks, or implement `reconnect_on_drop_empty`.
+FNDX-059 advances default declarative EdgeWrapper reconnect/update-anchor parity from committed
+reconnect drops to explicit UI gesture lifecycle callbacks. Successful left-button arm now emits
+`on_connect_start`, `on_reconnect_start`, and `on_edge_update_start` with
+`ConnectDragKind::Reconnect`; committed, rejected, empty/no-op, Escape, PointerCancel, and
+missed-left-button cleanup paths emit exactly one matching end event through
+`on_connect_end`, `on_reconnect_end`, and `on_edge_update_end`. This slice still does not paint a
+preview wire or implement `reconnect_on_drop_empty`.
 
 ## Targeted Iteration Gates
 
 ```bash
-cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit
+cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drag_cancel_paths_clear_transient
 ```
 
-This gate proves the FNDX-058 update-anchor reconnect-drop contract: FNDX-055 planning,
-FNDX-056 rendered controls, and FNDX-057 drag lifecycle still resolve and preempt correctly; valid
-active drops commit through the store-backed reconnect transaction/callback path; and endpoint-gated
-or empty-space drops only clear transient reconnect state.
+This gate proves the FNDX-059 update-anchor reconnect lifecycle callback contract: accepted drops
+still commit through the FNDX-058 store-backed reconnect transaction path; rejected endpoint-gated
+and empty-space drops remain non-committing; and Escape, PointerCancel, and missed-left-button
+cleanup produce reconnect end callbacks exactly once.
+
+Fresh evidence for FNDX-059 (2026-05-29):
+
+- `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed.
+- `git diff --check`: passed.
+- `cargo check -p fret-node --tests`: passed.
+- `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`: passed.
+- `cargo fmt`: passed.
 
 Fresh evidence for FNDX-058 (2026-05-29):
 

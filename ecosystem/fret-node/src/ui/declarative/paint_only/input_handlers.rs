@@ -20,8 +20,8 @@ use super::{
     NodeGraphDeclarativeInteractionHookRef, PendingSelectionState, PortalBoundsStore,
     PortalDebugFlags, ReconnectDragState, ReconnectDropContext, apply_pan_by_screen_delta,
     apply_zoom_about_screen_point, begin_left_pointer_down_action_host,
-    begin_pan_pointer_down_action_host, cancel_reconnect_drag_pointer_action_host,
-    clear_reconnect_drag_action_host, finish_reconnect_drag_pointer_up_action_host,
+    begin_pan_pointer_down_action_host, cancel_reconnect_drag_action_host,
+    cancel_reconnect_drag_pointer_action_host, finish_reconnect_drag_pointer_up_action_host,
     handle_declarative_diag_key_action_host, handle_declarative_escape_key_action_host,
     handle_declarative_keyboard_zoom_action_host, handle_declarative_pointer_cancel_action_host,
     handle_declarative_pointer_up_action_host, handle_marquee_pointer_move_action_host,
@@ -134,7 +134,12 @@ pub(super) fn build_key_down_capture_handler(params: KeyHandlerParams) -> OnKeyD
                 &params.marquee_drag,
                 &params.node_drag,
                 &params.pending_selection,
-            ) || clear_reconnect_drag_action_host(host, &params.reconnect_drag);
+            ) || cancel_reconnect_drag_action_host(
+                host,
+                action_cx,
+                &params.reconnect_drag,
+                &params.binding,
+            );
             if handled {
                 host.request_redraw(action_cx.window);
             }
@@ -386,8 +391,12 @@ pub(super) fn build_pointer_up_handler(params: PointerFinishHandlerParams) -> On
 
 pub(super) fn build_pointer_cancel_handler(params: PointerFinishHandlerParams) -> OnPointerCancel {
     Arc::new(move |host, action_cx: ActionCx, cancel: PointerCancelCx| {
-        let reconnect_cleared =
-            cancel_reconnect_drag_pointer_action_host(host, action_cx, &params.reconnect_drag);
+        let reconnect_cleared = cancel_reconnect_drag_pointer_action_host(
+            host,
+            action_cx,
+            &params.reconnect_drag,
+            &params.binding,
+        );
         handle_declarative_pointer_cancel_action_host(
             host,
             action_cx,

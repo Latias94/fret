@@ -16,8 +16,8 @@ use crate::profile::{ApplyPipelineError, GraphProfile, apply_transaction_with_pr
 use crate::rules::{Diagnostic, DiagnosticSeverity, DiagnosticTarget};
 use crate::runtime::changes::{ChangesToTransactionError, NodeGraphChanges, NodeGraphPatch};
 use crate::runtime::events::{
-    NodeGraphDocumentSnapshot, NodeGraphStoreEvent, NodeGraphStoreSnapshot, SubscriptionToken,
-    ViewChange,
+    NodeGraphDocumentSnapshot, NodeGraphGestureEvent, NodeGraphStoreEvent, NodeGraphStoreSnapshot,
+    SubscriptionToken, ViewChange,
 };
 use crate::runtime::lookups::NodeGraphLookups;
 use crate::runtime::middleware::NodeGraphStoreMiddleware;
@@ -81,6 +81,7 @@ pub struct NodeGraphStore {
         SubscriptionToken,
         Box<dyn for<'a> FnMut(NodeGraphStoreEvent<'a>)>,
     )>,
+    gesture_subscriptions: Vec<(SubscriptionToken, Box<dyn FnMut(NodeGraphGestureEvent)>)>,
     selector_subscriptions: Vec<SelectorSubscription>,
 }
 
@@ -111,6 +112,10 @@ impl std::fmt::Debug for NodeGraphStore {
             .field("has_profile", &self.profile.is_some())
             .field("event_subscription_count", &self.event_subscriptions.len())
             .field(
+                "gesture_subscription_count",
+                &self.gesture_subscriptions.len(),
+            )
+            .field(
                 "selector_subscription_count",
                 &self.selector_subscriptions.len(),
             )
@@ -140,6 +145,7 @@ impl NodeGraphStore {
             lookups,
             next_subscription: 1,
             event_subscriptions: Vec::new(),
+            gesture_subscriptions: Vec::new(),
             selector_subscriptions: Vec::new(),
         }
     }
@@ -167,6 +173,7 @@ impl NodeGraphStore {
             lookups,
             next_subscription: 1,
             event_subscriptions: Vec::new(),
+            gesture_subscriptions: Vec::new(),
             selector_subscriptions: Vec::new(),
         }
     }
@@ -187,6 +194,14 @@ impl NodeGraphStore {
         self.next_subscription = self.next_subscription.saturating_add(1).max(1);
         self.event_subscriptions.push((token, Box::new(f)));
         token
+    }
+
+    pub(crate) fn subscribe_gesture_with_token(
+        &mut self,
+        token: SubscriptionToken,
+        f: impl FnMut(NodeGraphGestureEvent) + 'static,
+    ) {
+        self.gesture_subscriptions.push((token, Box::new(f)));
     }
 
     /// Subscribes to a derived projection of store state and only fires when the derived value
@@ -254,6 +269,10 @@ impl NodeGraphStore {
         let before = self.event_subscriptions.len();
         self.event_subscriptions.retain(|(t, _)| *t != token);
         removed |= before != self.event_subscriptions.len();
+
+        let before = self.gesture_subscriptions.len();
+        self.gesture_subscriptions.retain(|(t, _)| *t != token);
+        removed |= before != self.gesture_subscriptions.len();
 
         let before = self.selector_subscriptions.len();
         self.selector_subscriptions.retain(|s| s.token != token);
@@ -813,6 +832,12 @@ impl NodeGraphStore {
     fn emit(&mut self, event: NodeGraphStoreEvent<'_>) {
         for (_, sub) in &mut self.event_subscriptions {
             sub(event);
+        }
+    }
+
+    pub(crate) fn emit_gesture(&mut self, event: NodeGraphGestureEvent) {
+        for (_, sub) in &mut self.gesture_subscriptions {
+            sub(event.clone());
         }
     }
 

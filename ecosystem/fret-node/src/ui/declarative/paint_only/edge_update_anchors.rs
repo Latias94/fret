@@ -5,7 +5,9 @@ use fret_canvas::view::PanZoom2D;
 use fret_core::{Corners, Edges, MouseButton, Point, PointerId, Px, Rect, SemanticsRole, Size};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
-use fret_ui::action::{ActionCx, PressablePointerDownResult, PressablePointerUpResult};
+use fret_ui::action::{
+    ActionCx, PressablePointerDownResult, PressablePointerUpResult, UiActionHost,
+};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetEdge, Length, PositionStyle, PressableProps,
     SemanticsDecoration,
@@ -16,6 +18,8 @@ use crate::core::{EdgeId, EdgeReconnectable, EdgeReconnectableEndpoint, Graph, P
 use crate::io::{NodeGraphInteractionState, NodeGraphViewState};
 use crate::ops::GraphTransaction;
 use crate::rules::{ConnectDecision, ConnectPlan, EdgeEndpoint, plan_reconnect_edge_with_mode};
+use crate::runtime::callbacks::{ConnectDragKind, ConnectEnd, ConnectEndOutcome, ConnectStart};
+use crate::runtime::events::NodeGraphGestureEvent;
 use crate::ui::NodeGraphSurfaceBinding;
 use crate::ui::canvas::CanvasGeometry;
 use crate::ui::internals::NodeGraphInternalsSnapshot;
@@ -58,6 +62,12 @@ pub(super) struct ReconnectDropContext {
     pub(super) geom: Option<Arc<CanvasGeometry>>,
     pub(super) view: PanZoom2D,
     pub(super) bounds: Rect,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ReconnectDropResult {
+    target: Option<PortId>,
+    outcome: ConnectEndOutcome,
 }
 
 impl ReconnectDragState {
@@ -251,11 +261,13 @@ fn edge_update_anchor_control<H: UiHost + 'static>(
 
     cx.pressable(pressable, move |cx, _state| {
         let reconnect_drag_for_down = reconnect_drag.clone();
+        let binding_for_down = binding.clone();
         cx.pressable_on_pointer_down(Arc::new(move |host, action_cx, down| {
             begin_reconnect_drag_pointer_down_action_host(
                 host,
                 action_cx,
                 &reconnect_drag_for_down,
+                &binding_for_down,
                 anchor,
                 down,
             )
@@ -305,6 +317,7 @@ pub(super) fn begin_reconnect_drag_pointer_down_action_host(
     host: &mut dyn fret_ui::action::UiPointerActionHost,
     action_cx: ActionCx,
     reconnect_drag: &Model<Option<ReconnectDragState>>,
+    binding: &NodeGraphSurfaceBinding,
     anchor: EdgeUpdateAnchorInfo,
     down: fret_ui::action::PointerDownCx,
 ) -> PressablePointerDownResult {
@@ -322,15 +335,90 @@ pub(super) fn begin_reconnect_drag_pointer_down_action_host(
         anchor_port: anchor.anchor_port,
         fixed_port: anchor.opposite_port,
     };
-    let _ = host.models_mut().update(reconnect_drag, |state| {
-        *state = Some(next);
-    });
+    let armed = host
+        .models_mut()
+        .update(reconnect_drag, |state| {
+            *state = Some(next);
+            true
+        })
+        .ok()
+        .unwrap_or(false);
+    if !armed {
+        return PressablePointerDownResult::Continue;
+    }
+    emit_reconnect_start_action_host(host, binding, next);
     host.request_focus(action_cx.target);
     host.capture_pointer();
     host.invalidate(Invalidation::Layout);
     host.notify(action_cx);
     host.request_redraw(action_cx.window);
     PressablePointerDownResult::SkipDefaultAndStopPropagation
+}
+
+fn emit_reconnect_start_action_host(
+    host: &mut dyn UiActionHost,
+    binding: &NodeGraphSurfaceBinding,
+    drag: ReconnectDragState,
+) {
+    let store = binding.store_model();
+    let _ = host.models_mut().update(&store, |store| {
+        let ev = ConnectStart {
+            kind: reconnect_drag_kind(drag),
+            mode: store.resolved_interaction_state().connection_mode,
+        };
+        store.emit_gesture(NodeGraphGestureEvent::ConnectStart(ev));
+    });
+}
+
+fn emit_reconnect_end_action_host(
+    host: &mut dyn UiActionHost,
+    binding: &NodeGraphSurfaceBinding,
+    drag: ReconnectDragState,
+    target: Option<PortId>,
+    outcome: ConnectEndOutcome,
+) {
+    let store = binding.store_model();
+    let _ = host.models_mut().update(&store, |store| {
+        let ev = ConnectEnd {
+            kind: reconnect_drag_kind(drag),
+            mode: store.resolved_interaction_state().connection_mode,
+            target,
+            outcome,
+        };
+        store.emit_gesture(NodeGraphGestureEvent::ConnectEnd(ev));
+    });
+}
+
+fn reconnect_drag_kind(drag: ReconnectDragState) -> ConnectDragKind {
+    ConnectDragKind::Reconnect {
+        edge: drag.edge,
+        endpoint: drag.endpoint,
+        fixed: drag.fixed_port,
+    }
+}
+
+pub(super) fn cancel_reconnect_drag_action_host(
+    host: &mut dyn UiActionHost,
+    action_cx: ActionCx,
+    reconnect_drag: &Model<Option<ReconnectDragState>>,
+    binding: &NodeGraphSurfaceBinding,
+) -> bool {
+    let current = host
+        .models_mut()
+        .read(reconnect_drag, |state| *state)
+        .ok()
+        .flatten();
+    let Some(current) = current else {
+        return false;
+    };
+
+    emit_reconnect_end_action_host(host, binding, current, None, ConnectEndOutcome::Canceled);
+    let cleared = clear_reconnect_drag_action_host(host, reconnect_drag);
+    if cleared {
+        host.notify(action_cx);
+        host.request_redraw(action_cx.window);
+    }
+    cleared
 }
 
 pub(super) fn handle_reconnect_drag_pointer_move_action_host(
@@ -354,12 +442,10 @@ pub(super) fn handle_reconnect_drag_pointer_move_action_host(
     }
 
     if !mv.buttons.left {
-        let cleared = clear_reconnect_drag_action_host(host, reconnect_drag);
+        let cleared = cancel_reconnect_drag_action_host(host, action_cx, reconnect_drag, binding);
         if cleared {
             host.release_pointer_capture();
             host.invalidate(Invalidation::Layout);
-            host.notify(action_cx);
-            host.request_redraw(action_cx.window);
         }
         return true;
     }
@@ -418,10 +504,21 @@ pub(super) fn finish_reconnect_drag_pointer_up_action_host(
         return true;
     }
 
-    if current.is_active() {
-        let _ =
-            commit_reconnect_drop_action_host(host, binding, drop_context, current, up.position);
-    }
+    let drop_result = if current.is_active() {
+        commit_reconnect_drop_action_host(host, binding, drop_context, current, up.position)
+    } else {
+        ReconnectDropResult {
+            target: None,
+            outcome: ConnectEndOutcome::NoOp,
+        }
+    };
+    emit_reconnect_end_action_host(
+        host,
+        binding,
+        current,
+        drop_result.target,
+        drop_result.outcome,
+    );
 
     let cleared = clear_reconnect_drag_action_host(host, reconnect_drag);
     if cleared {
@@ -437,13 +534,12 @@ pub(super) fn cancel_reconnect_drag_pointer_action_host(
     host: &mut dyn fret_ui::action::UiPointerActionHost,
     action_cx: ActionCx,
     reconnect_drag: &Model<Option<ReconnectDragState>>,
+    binding: &NodeGraphSurfaceBinding,
 ) -> bool {
-    let cleared = clear_reconnect_drag_action_host(host, reconnect_drag);
+    let cleared = cancel_reconnect_drag_action_host(host, action_cx, reconnect_drag, binding);
     if cleared {
         host.release_pointer_capture();
         host.invalidate(Invalidation::Layout);
-        host.notify(action_cx);
-        host.request_redraw(action_cx.window);
     }
     cleared
 }
@@ -468,48 +564,89 @@ fn commit_reconnect_drop_action_host(
     drop_context: &ReconnectDropContext,
     drag: ReconnectDragState,
     drop_screen: Point,
-) -> bool {
+) -> ReconnectDropResult {
     let Some(geom) = drop_context.geom.as_deref() else {
-        return false;
+        return ReconnectDropResult {
+            target: None,
+            outcome: ConnectEndOutcome::NoOp,
+        };
     };
-    let Some((target, plan)) = read_reconnect_target_plan_action_host(
+    let decision = read_reconnect_drop_decision_action_host(
         host,
         binding,
         geom,
         drop_context,
         drag,
         drop_screen,
-    ) else {
-        return false;
+    );
+    let ReconnectDropDecision::Accepted { target, plan } = decision else {
+        return decision.into_result();
     };
-    if target == drag.anchor_port || plan.ops.is_empty() {
-        return false;
-    }
 
     let tx = GraphTransaction {
         label: None,
         ops: plan.ops,
     }
     .with_label("Reconnect Edge");
-    commit_graph_transaction(host, binding, &tx)
+    ReconnectDropResult {
+        target: Some(target),
+        outcome: if commit_graph_transaction(host, binding, &tx) {
+            ConnectEndOutcome::Committed
+        } else {
+            ConnectEndOutcome::Rejected
+        },
+    }
 }
 
-fn read_reconnect_target_plan_action_host(
+enum ReconnectDropDecision {
+    Empty,
+    Rejected { target: PortId },
+    NoOp { target: Option<PortId> },
+    Accepted { target: PortId, plan: ConnectPlan },
+}
+
+impl ReconnectDropDecision {
+    fn into_result(self) -> ReconnectDropResult {
+        match self {
+            Self::Empty => ReconnectDropResult {
+                target: None,
+                outcome: ConnectEndOutcome::NoOp,
+            },
+            Self::Rejected { target } => ReconnectDropResult {
+                target: Some(target),
+                outcome: ConnectEndOutcome::Rejected,
+            },
+            Self::NoOp { target } => ReconnectDropResult {
+                target,
+                outcome: ConnectEndOutcome::NoOp,
+            },
+            Self::Accepted { target, .. } => ReconnectDropResult {
+                target: Some(target),
+                outcome: ConnectEndOutcome::Committed,
+            },
+        }
+    }
+}
+
+fn read_reconnect_drop_decision_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     binding: &NodeGraphSurfaceBinding,
     geom: &CanvasGeometry,
     drop_context: &ReconnectDropContext,
     drag: ReconnectDragState,
     drop_screen: Point,
-) -> Option<(PortId, ConnectPlan)> {
+) -> ReconnectDropDecision {
     let store = binding.store_model();
-    let (graph, interaction) = host
+    let Some((graph, interaction)) = host
         .models_mut()
         .read(&store, |store| {
             (store.graph().clone(), store.resolved_interaction_state())
         })
-        .ok()?;
-    hit_test_reconnect_target_plan(
+        .ok()
+    else {
+        return ReconnectDropDecision::Empty;
+    };
+    hit_test_reconnect_drop_decision(
         &graph,
         &interaction,
         geom,
@@ -520,7 +657,7 @@ fn read_reconnect_target_plan_action_host(
     )
 }
 
-fn hit_test_reconnect_target_plan(
+fn hit_test_reconnect_drop_decision(
     graph: &Graph,
     interaction: &NodeGraphInteractionState,
     geom: &CanvasGeometry,
@@ -528,51 +665,59 @@ fn hit_test_reconnect_target_plan(
     bounds: Rect,
     drag: ReconnectDragState,
     drop_screen: Point,
-) -> Option<(PortId, ConnectPlan)> {
+) -> ReconnectDropDecision {
     let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
     let radius_canvas = interaction.connection_radius.max(0.0) / zoom;
     if radius_canvas <= 0.0 {
-        return None;
+        return ReconnectDropDecision::Empty;
     }
     let radius2 = radius_canvas * radius_canvas;
     let drop_canvas = view.screen_to_canvas(bounds, drop_screen);
 
-    let mut best: Option<(f32, u32, PortId, ConnectPlan)> = None;
+    let mut best: Option<(f32, u32, PortId)> = None;
     for (port, handle) in &geom.ports {
-        if !port_allows_reconnect_endpoint(graph, interaction, *port, drag.endpoint) {
-            continue;
-        }
         let dx = handle.center.x.0 - drop_canvas.x.0;
         let dy = handle.center.y.0 - drop_canvas.y.0;
         let dist2 = dx * dx + dy * dy;
         if !dist2.is_finite() || dist2 > radius2 {
             continue;
         }
-        let plan = plan_reconnect_edge_with_mode(
-            graph,
-            drag.edge,
-            drag.endpoint,
-            *port,
-            interaction.connection_mode,
-        );
-        if plan.decision != ConnectDecision::Accept {
-            continue;
-        }
         let rank = geom.node_rank.get(&handle.node).copied().unwrap_or(0);
         let replace = match &best {
             None => true,
-            Some((best_dist2, best_rank, best_port, _)) => {
+            Some((best_dist2, best_rank, best_port)) => {
                 dist2 < *best_dist2
                     || ((dist2 - *best_dist2).abs() <= f32::EPSILON
                         && (rank > *best_rank || (rank == *best_rank && *port > *best_port)))
             }
         };
         if replace {
-            best = Some((dist2, rank, *port, plan));
+            best = Some((dist2, rank, *port));
         }
     }
 
-    best.map(|(_, _, port, plan)| (port, plan))
+    let Some((_, _, target)) = best else {
+        return ReconnectDropDecision::Empty;
+    };
+    if !port_allows_reconnect_endpoint(graph, interaction, target, drag.endpoint) {
+        return ReconnectDropDecision::Rejected { target };
+    }
+    let plan = plan_reconnect_edge_with_mode(
+        graph,
+        drag.edge,
+        drag.endpoint,
+        target,
+        interaction.connection_mode,
+    );
+    if plan.decision != ConnectDecision::Accept {
+        return ReconnectDropDecision::Rejected { target };
+    }
+    if target == drag.anchor_port || plan.ops.is_empty() {
+        return ReconnectDropDecision::NoOp {
+            target: Some(target),
+        };
+    }
+    ReconnectDropDecision::Accepted { target, plan }
 }
 
 fn port_allows_reconnect_endpoint(

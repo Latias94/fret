@@ -79,8 +79,8 @@ use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use crate::ops::{EdgeEndpoints, GraphOp, GraphTransaction};
 use crate::rules::EdgeEndpoint;
 use crate::runtime::callbacks::{
-    NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks, SelectionChange,
-    install_callbacks,
+    ConnectDragKind, ConnectEnd, ConnectEndOutcome, ConnectStart, NodeGraphCommitCallbacks,
+    NodeGraphGestureCallbacks, NodeGraphViewCallbacks, SelectionChange, install_callbacks,
 };
 use crate::runtime::changes::NodeGraphPatch;
 use crate::runtime::store::NodeGraphStore;
@@ -888,6 +888,12 @@ struct DeclarativeCallbackTrace {
     selection_changes: Vec<SelectionChange>,
     reconnects: Vec<(EdgeId, EdgeEndpoints, EdgeEndpoints)>,
     edge_updates: Vec<(EdgeId, EdgeEndpoints, EdgeEndpoints)>,
+    connect_starts: Vec<ConnectStart>,
+    connect_ends: Vec<ConnectEnd>,
+    reconnect_starts: Vec<ConnectStart>,
+    reconnect_ends: Vec<ConnectEnd>,
+    edge_update_starts: Vec<ConnectStart>,
+    edge_update_ends: Vec<ConnectEnd>,
 }
 
 #[derive(Clone)]
@@ -918,7 +924,31 @@ impl NodeGraphViewCallbacks for DeclarativeCallbackRecorder {
     }
 }
 
-impl NodeGraphGestureCallbacks for DeclarativeCallbackRecorder {}
+impl NodeGraphGestureCallbacks for DeclarativeCallbackRecorder {
+    fn on_connect_start(&mut self, ev: ConnectStart) {
+        self.trace.borrow_mut().connect_starts.push(ev);
+    }
+
+    fn on_connect_end(&mut self, ev: ConnectEnd) {
+        self.trace.borrow_mut().connect_ends.push(ev);
+    }
+
+    fn on_reconnect_start(&mut self, ev: ConnectStart) {
+        self.trace.borrow_mut().reconnect_starts.push(ev);
+    }
+
+    fn on_reconnect_end(&mut self, ev: ConnectEnd) {
+        self.trace.borrow_mut().reconnect_ends.push(ev);
+    }
+
+    fn on_edge_update_start(&mut self, ev: ConnectStart) {
+        self.trace.borrow_mut().edge_update_starts.push(ev);
+    }
+
+    fn on_edge_update_end(&mut self, ev: ConnectEnd) {
+        self.trace.borrow_mut().edge_update_ends.push(ev);
+    }
+}
 
 fn install_declarative_callback_trace(
     host: &mut TestActionHostImpl,
@@ -4153,6 +4183,7 @@ fn edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect() {
 #[test]
 fn edge_update_anchor_reconnect_drag_cancel_paths_clear_transient() {
     let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let edge_before = graph.edges.get(&edge).expect("edge present").clone();
     let geom = build_test_canvas_geometry(&graph, &draw_order);
     let source_center = graph
         .edges
@@ -4177,6 +4208,25 @@ fn edge_update_anchor_reconnect_drag_cancel_paths_clear_transient() {
         },
         default_editor_config(),
     );
+    let trace = install_declarative_callback_trace(&mut host, &binding.store_model());
+    let mode = default_editor_config()
+        .resolved_interaction_state()
+        .connection_mode;
+    let reconnect_kind = ConnectDragKind::Reconnect {
+        edge,
+        endpoint: EdgeEndpoint::From,
+        fixed: edge_before.to,
+    };
+    let expected_start = ConnectStart {
+        kind: reconnect_kind.clone(),
+        mode,
+    };
+    let expected_canceled_end = ConnectEnd {
+        kind: reconnect_kind,
+        mode,
+        target: None,
+        outcome: ConnectEndOutcome::Canceled,
+    };
 
     let source_test_id = format!("node_graph.edge_update_anchor.{}.source", edge.0);
     let arm_and_activate = |ui: &mut fret_ui::UiTree<TestActionHostImpl>,
@@ -4276,6 +4326,56 @@ fn edge_update_anchor_reconnect_drag_cancel_paths_clear_transient() {
     );
     assert!(canvas_semantics_value(&snapshot).contains("reconnect_dragging:false;"));
     assert!(!binding.internals_store().a11y_snapshot().connecting);
+
+    arm_and_activate(&mut ui, &mut host, &mut services);
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: PointerId(0),
+            position: Point::new(Px(source_center.x.0 + 12.0), source_center.y),
+            buttons: MouseButtons {
+                left: false,
+                right: false,
+                middle: false,
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    let snapshot = render_surface_frame_for_binding(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+    );
+    assert!(canvas_semantics_value(&snapshot).contains("reconnect_dragging:false;"));
+    assert!(!binding.internals_store().a11y_snapshot().connecting);
+
+    let got = trace.borrow();
+    assert_eq!(
+        got.connect_starts,
+        vec![
+            expected_start.clone(),
+            expected_start.clone(),
+            expected_start.clone()
+        ]
+    );
+    assert_eq!(&got.reconnect_starts, &got.connect_starts);
+    assert_eq!(&got.edge_update_starts, &got.connect_starts);
+    assert_eq!(
+        got.connect_ends,
+        vec![
+            expected_canceled_end.clone(),
+            expected_canceled_end.clone(),
+            expected_canceled_end.clone()
+        ]
+    );
+    assert_eq!(&got.reconnect_ends, &got.connect_ends);
+    assert_eq!(&got.edge_update_ends, &got.connect_ends);
 }
 
 #[test]
@@ -4400,10 +4500,34 @@ fn edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and
         from: new_source_port,
         to: edge_before.to,
     };
+    let mode = default_editor_config()
+        .resolved_interaction_state()
+        .connection_mode;
+    let reconnect_kind = ConnectDragKind::Reconnect {
+        edge,
+        endpoint: EdgeEndpoint::From,
+        fixed: edge_before.to,
+    };
+    let expected_start = ConnectStart {
+        kind: reconnect_kind.clone(),
+        mode,
+    };
+    let expected_end = ConnectEnd {
+        kind: reconnect_kind,
+        mode,
+        target: Some(new_source_port),
+        outcome: ConnectEndOutcome::Committed,
+    };
     let got = trace.borrow();
     assert_eq!(got.commit_labels, vec![Some("Reconnect Edge".to_string())]);
     assert_eq!(got.reconnects, vec![(edge, before, after)]);
     assert_eq!(got.edge_updates, vec![(edge, before, after)]);
+    assert_eq!(got.connect_starts, vec![expected_start.clone()]);
+    assert_eq!(got.reconnect_starts, vec![expected_start.clone()]);
+    assert_eq!(got.edge_update_starts, vec![expected_start]);
+    assert_eq!(got.connect_ends, vec![expected_end.clone()]);
+    assert_eq!(got.reconnect_ends, vec![expected_end.clone()]);
+    assert_eq!(got.edge_update_ends, vec![expected_end]);
 }
 
 #[test]
@@ -4523,6 +4647,30 @@ fn edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_withou
     assert!(got.commit_labels.is_empty());
     assert!(got.reconnects.is_empty());
     assert!(got.edge_updates.is_empty());
+    let mode = default_editor_config()
+        .resolved_interaction_state()
+        .connection_mode;
+    let reconnect_kind = ConnectDragKind::Reconnect {
+        edge,
+        endpoint: EdgeEndpoint::From,
+        fixed: edge_before.to,
+    };
+    let expected_start = ConnectStart {
+        kind: reconnect_kind.clone(),
+        mode,
+    };
+    let expected_end = ConnectEnd {
+        kind: reconnect_kind,
+        mode,
+        target: Some(new_source_port),
+        outcome: ConnectEndOutcome::Rejected,
+    };
+    assert_eq!(got.connect_starts, vec![expected_start.clone()]);
+    assert_eq!(got.reconnect_starts, vec![expected_start.clone()]);
+    assert_eq!(got.edge_update_starts, vec![expected_start]);
+    assert_eq!(got.connect_ends, vec![expected_end.clone()]);
+    assert_eq!(got.reconnect_ends, vec![expected_end.clone()]);
+    assert_eq!(got.edge_update_ends, vec![expected_end]);
     drop(got);
 
     let snapshot = render_surface_frame_for_binding(
@@ -4639,6 +4787,30 @@ fn edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit() {
     assert!(got.commit_labels.is_empty());
     assert!(got.reconnects.is_empty());
     assert!(got.edge_updates.is_empty());
+    let mode = default_editor_config()
+        .resolved_interaction_state()
+        .connection_mode;
+    let reconnect_kind = ConnectDragKind::Reconnect {
+        edge,
+        endpoint: EdgeEndpoint::From,
+        fixed: edge_before.to,
+    };
+    let expected_start = ConnectStart {
+        kind: reconnect_kind.clone(),
+        mode,
+    };
+    let expected_end = ConnectEnd {
+        kind: reconnect_kind,
+        mode,
+        target: None,
+        outcome: ConnectEndOutcome::NoOp,
+    };
+    assert_eq!(got.connect_starts, vec![expected_start.clone()]);
+    assert_eq!(got.reconnect_starts, vec![expected_start.clone()]);
+    assert_eq!(got.edge_update_starts, vec![expected_start]);
+    assert_eq!(got.connect_ends, vec![expected_end.clone()]);
+    assert_eq!(got.reconnect_ends, vec![expected_end.clone()]);
+    assert_eq!(got.edge_update_ends, vec![expected_end]);
     drop(got);
 
     let snapshot = render_surface_frame_for_binding(

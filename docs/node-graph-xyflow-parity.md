@@ -829,9 +829,9 @@ canonical data flow and invalidation boundaries:
       anchor-click priority, anchor drags reuse the existing connection-drag threshold/cancel
       lifecycle, accepted reconnect drops hit-test target ports and commit through the store-backed
       reconnect transaction/callback path, endpoint-gated or empty-canvas drops clear without
-      commit, and edge-label controls remain hit-test isolated
-    - follow-up: reconnect preview wire paint, reconnect gesture start/end callbacks, and
-      empty-canvas drop policy
+      commit, reconnect gesture start/end callback aliases fire for arm/commit/reject/no-op/cancel
+      end paths, and edge-label controls remain hit-test isolated
+    - follow-up: reconnect preview wire paint and empty-canvas drop policy
     - gating:
       - global: `NodeGraphInteractionState.edges_reconnectable` (XyFlow `edgesReconnectable`)
       - per-edge override: `Edge.reconnectable` (XyFlow `edge.reconnectable: boolean | 'source' | 'target'`)

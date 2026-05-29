@@ -118,7 +118,7 @@ use self::edge_hit_test::hit_test_edge_at_canvas_point;
 use self::edge_labels::push_edge_label_overlays;
 use self::edge_update_anchors::{
     EdgeUpdateAnchorInfo, ReconnectDragState, ReconnectDropContext,
-    cancel_reconnect_drag_pointer_action_host, clear_reconnect_drag_action_host,
+    cancel_reconnect_drag_action_host, cancel_reconnect_drag_pointer_action_host,
     finish_reconnect_drag_pointer_up_action_host, handle_reconnect_drag_pointer_move_action_host,
     push_edge_update_anchor_controls,
 };
