@@ -1399,6 +1399,12 @@ Last updated: 2026-05-30
       Result: `disclosure_controls/visual/header.rs` owns header row container/flex assembly,
       indicator glyph mounting, label text mounting, row padding, border, and radius props.
       `visual.rs` keeps disclosure a11y, content padding, and palette resolution.
+- [x] Split IMUI disclosure visual a11y and style policy into private child owners without changing
+      collapsing-header/tree-node roles, expanded/selected/level metadata, content padding, palette
+      fallback order, header-row rendering, or public disclosure facade behavior.
+      Result: `disclosure_controls/visual.rs` is now the header/a11y/style re-export hub.
+      `disclosure_controls/visual/a11y.rs` owns `PressableA11y` construction, while
+      `disclosure_controls/visual/style.rs` owns content padding and disclosure palette resolution.
 - [x] Split IMUI combo trigger behavior and visual chrome out of
       `ecosystem/fret-ui-kit/src/imui/combo_controls.rs` into a private owner module without
       changing the public combo/combo-model facade surface.

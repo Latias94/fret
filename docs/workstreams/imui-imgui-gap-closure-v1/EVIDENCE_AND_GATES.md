@@ -7277,6 +7277,40 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Disclosure Visual Sub-Owner Evidence - 2026-05-30
+
+Claim verified: disclosure visual a11y and style policy split into private child owners without
+changing collapsing-header/tree-node roles, expanded/selected/level metadata, content padding,
+palette fallback order, header-row rendering, or public disclosure facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual.rs` is now the header/a11y/style
+  re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/a11y.rs` owns collapsing-header and
+  tree-node `PressableA11y` construction.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/style.rs` owns content padding,
+  `DisclosurePalette`, theme fallback order, selected/hover/pressed resolution, and foreground
+  selection.
+- `tools/gate_imui_workstream_source.py` now rejects a11y and style policy from drifting back into
+  `disclosure_controls/visual.rs` while checking both child owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib disclosure_controls::tests
+  --no-fail-fast`: pass; 6 disclosure unit tests passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_disclosure_smoke --no-fail-fast`:
+  pass; 1 disclosure smoke test passed.
+- `cargo nextest run -p fret-imui interaction_shortcuts --no-fail-fast`: pass; 10 shortcut tests
+  passed, including disclosure tree shortcut coverage.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Popup Modal Layout Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI popup modal palette, centered panel geometry, layer/backdrop props, dialog

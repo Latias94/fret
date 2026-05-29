@@ -1434,6 +1434,12 @@ radius props. `disclosure_controls/visual.rs` keeps disclosure a11y, content pad
 resolution. Trigger pressable behavior, shortcut/context-menu handling, indicator glyphs, label
 text roles, indentation, and row chrome remain unchanged.
 
+2026-05-30 disclosure visual sub-owner split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual.rs` is now the header/a11y/style
+re-export hub. `visual/a11y.rs` owns collapsing-header/tree-node `PressableA11y` construction,
+while `visual/style.rs` owns content padding and palette resolution. Header-row rendering,
+trigger behavior, public disclosure facade calls, and a11y/palette outcomes remain unchanged.
+
 2026-05-26 combo trigger owner-split result:
 `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger.rs` now owns ComboBox pressable
 construction, accessibility label derivation, shortcut activation, context-menu key handling,
