@@ -321,6 +321,21 @@ layout, first-open fade-scale, and first-close fade-scale. Rich tooltip action r
 residual because `OverlayLayerKind::Tooltip` is intentionally non-hit-testable; a portable
 pane-title semantics field remains a future core a11y decision.
 
+M3PV2-081 is complete: Menu layout/behavior/accessibility and DropdownMenu
+layout/behavior/accessibility/current overlay motion are now v2-covered for the current plain item
+recipe surface. Compose Material3 was the layout/motion source: menu items use 48dp height,
+112..280dp width bounds, 12dp horizontal item padding, 8dp menu vertical padding, and menu overlay
+fade-scale motion from/to 0.8. Base UI Menu was the supporting headless reference for
+disabled-but-focusable menu navigation. The packet found a Material recipe/token gap, not a core
+or kit mechanism gap: core already had roles, collection metadata, transparent semantics
+overrides, disabled-but-focusable key activation suppression, opacity, transforms, and roving
+primitives; kit dismissal/focus-restore stayed green. Material Menu now applies the width/padding
+tokens, disabled items remain roving-focus targets without invoke/selection, DropdownMenu uses
+Material size estimation, and `menu_state` proves layout, disabled focus, first-item initial focus,
+and open/close fade-scale motion. Remaining menu breadth includes leading/trailing icons,
+supporting text, group labels, checkbox/radio items, submenu triggers, shortcut text, and
+scroll/max-height behavior.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -332,8 +347,8 @@ pane-title semantics field remains a future core a11y decision.
 ## Next Recommended Action
 
 Continue with the next uncovered Material3 packet from the matrix. Higher-priority candidates now
-move through remaining overlay surfaces: Menu/DropdownMenu item layout/focus packets are still
-open. Broader overlay-family policy comparison remains in M3PV2-050.
+move through remaining seeded rows such as NavigationDrawer motion or List behavior, or close the
+broader overlay-family policy comparison in M3PV2-050.
 
 ## Useful Gates
 

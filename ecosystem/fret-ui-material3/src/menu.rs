@@ -1,8 +1,8 @@
-//! Material 3 menu (MVP).
+//! Material 3 menu.
 //!
 //! Outcome-oriented implementation:
-//! - Token-driven container + list-item colors/sizing via `md.comp.menu.*` (subset).
-//! - Roving focus + APG-style up/down navigation + optional typeahead.
+//! - Token-driven container + list-item colors/sizing via `md.comp.menu.*`.
+//! - Roving focus + APG/Base UI-style navigation, including disabled-but-focusable items.
 //! - State layer + bounded ripple on items.
 
 use std::cell::RefCell;
@@ -15,7 +15,8 @@ use fret_core::{
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
-    PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, SemanticsProps, TextProps,
+    PointerRegionProps, PressableA11y, PressableKeyActivation, PressableProps, RovingFlexProps,
+    SemanticsDecoration, SemanticsProps, TextProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::elements::GlobalElementId;
@@ -33,6 +34,14 @@ use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{optional_chrome_part_test_id, part_test_id};
 use crate::tokens::menu as menu_tokens;
+
+#[derive(Debug, Clone, Copy)]
+struct MenuItemLayout {
+    height: Px,
+    min_width: Px,
+    max_width: Px,
+    horizontal_padding: Px,
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct MenuStyle {
@@ -226,9 +235,15 @@ impl Menu {
                 test_id,
                 style,
             } = self;
-            let (height, container_bg, shadow, corner) = {
+            let (item_layout, vertical_padding, container_bg, shadow, corner) = {
                 let theme = Theme::global(&*cx.app);
-                let height = menu_tokens::list_item_height(theme);
+                let item_layout = MenuItemLayout {
+                    height: menu_tokens::list_item_height(theme),
+                    min_width: menu_tokens::item_min_width(theme),
+                    max_width: menu_tokens::item_max_width(theme),
+                    horizontal_padding: menu_tokens::item_horizontal_padding(theme),
+                };
+                let vertical_padding = menu_tokens::container_vertical_padding(theme);
 
                 let container_bg = resolve_override_slot_with(
                     style.container_background.as_ref(),
@@ -256,7 +271,13 @@ impl Menu {
                     Some(shadow_color),
                     corner,
                 );
-                (height, surface.background, surface.shadow, corner)
+                (
+                    item_layout,
+                    vertical_padding,
+                    surface.background,
+                    surface.shadow,
+                    corner,
+                )
             };
 
             let chrome_test_id = test_id.as_ref().map(|id| part_test_id(id, "chrome"));
@@ -282,9 +303,8 @@ impl Menu {
                 }
             }
 
-            let first_enabled_idx = disabled.iter().position(|&d| !d).unwrap_or(0);
-            let disabled: Arc<[bool]> = Arc::from(disabled);
             let count = disabled.len();
+            let roving_disabled: Arc<[bool]> = Arc::from(vec![false; count]);
             let typeahead_items: Arc<[Arc<str>]> = Arc::from(typeahead_items);
 
             let mut roving = RovingFlexProps::default();
@@ -292,124 +312,138 @@ impl Menu {
             roving.flex.gap = Px(0.0).into();
             roving.flex.align = CrossAlign::Stretch;
             roving.flex.justify = MainAlign::Start;
+            roving.flex.layout.size.width = Length::Auto;
+            roving.flex.layout.size.min_width = Some(Length::Px(item_layout.min_width));
+            roving.flex.layout.size.max_width = Some(Length::Px(item_layout.max_width));
             roving.roving = fret_ui::element::RovingFocusProps {
                 enabled: true,
                 wrap: true,
-                disabled: disabled.clone(),
+                disabled: roving_disabled,
             };
             let style: Arc<MenuStyle> = Arc::new(style);
 
             cx.semantics(sem, move |cx| {
-                vec![cx.container(
-                    ContainerProps {
-                        background: Some(container_bg),
-                        shadow,
-                        corner_radii: corner,
-                        layout: {
-                            let mut l = fret_ui::element::LayoutStyle::default();
-                            l.size.width = Length::Fill;
-                            l.overflow = Overflow::Clip;
-                            l
+                vec![
+                    cx.container(
+                        ContainerProps {
+                            background: Some(container_bg),
+                            shadow,
+                            corner_radii: corner,
+                            layout: {
+                                let mut l = fret_ui::element::LayoutStyle::default();
+                                l.size.width = Length::Auto;
+                                l.size.min_width = Some(Length::Px(item_layout.min_width));
+                                l.size.max_width = Some(Length::Px(item_layout.max_width));
+                                l.overflow = Overflow::Clip;
+                                l
+                            },
+                            padding: Edges {
+                                left: Px(0.0),
+                                right: Px(0.0),
+                                top: vertical_padding,
+                                bottom: vertical_padding,
+                            }
+                            .into(),
+                            ..Default::default()
                         },
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        let mut children = Vec::new();
-                        if let Some(test_id) = chrome_test_id.clone() {
-                            children.push(absolute_fill_test_id_marker(cx, test_id));
-                        }
-                        children.push(cx.roving_flex(roving, move |cx| {
-                            cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
-                                use fret_ui::action::RovingNavigateResult;
+                        move |cx| {
+                            let mut children = Vec::new();
+                            if let Some(test_id) = chrome_test_id.clone() {
+                                children.push(absolute_fill_test_id_marker(cx, test_id));
+                            }
+                            children.push(cx.roving_flex(roving, move |cx| {
+                                cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
+                                    use fret_ui::action::RovingNavigateResult;
 
-                                let is_disabled = |idx: usize| -> bool {
-                                    it.disabled.get(idx).copied().unwrap_or(false)
-                                };
+                                    let is_disabled = |idx: usize| -> bool {
+                                        it.disabled.get(idx).copied().unwrap_or(false)
+                                    };
 
-                                let forward = match it.key {
-                                    KeyCode::ArrowDown => Some(true),
-                                    KeyCode::ArrowUp => Some(false),
-                                    _ => None,
-                                };
+                                    let forward = match it.key {
+                                        KeyCode::ArrowDown => Some(true),
+                                        KeyCode::ArrowUp => Some(false),
+                                        _ => None,
+                                    };
 
-                                if it.key == KeyCode::Home {
-                                    let target = (0..it.len).find(|&i| !is_disabled(i));
-                                    return RovingNavigateResult::Handled { target };
-                                }
-                                if it.key == KeyCode::End {
-                                    let target = (0..it.len).rev().find(|&i| !is_disabled(i));
-                                    return RovingNavigateResult::Handled { target };
-                                }
+                                    if it.key == KeyCode::Home {
+                                        let target = (0..it.len).find(|&i| !is_disabled(i));
+                                        return RovingNavigateResult::Handled { target };
+                                    }
+                                    if it.key == KeyCode::End {
+                                        let target = (0..it.len).rev().find(|&i| !is_disabled(i));
+                                        return RovingNavigateResult::Handled { target };
+                                    }
 
-                                let Some(forward) = forward else {
-                                    return RovingNavigateResult::NotHandled;
-                                };
+                                    let Some(forward) = forward else {
+                                        return RovingNavigateResult::NotHandled;
+                                    };
 
-                                let current = it
-                                    .current
-                                    .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
-                                let Some(current) = current else {
-                                    return RovingNavigateResult::Handled { target: None };
-                                };
+                                    let current = it
+                                        .current
+                                        .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
+                                    let Some(current) = current else {
+                                        return RovingNavigateResult::Handled { target: None };
+                                    };
 
-                                let len = it.len;
-                                let mut target: Option<usize> = None;
-                                if it.wrap {
-                                    for step in 1..=len {
-                                        let idx = if forward {
-                                            (current + step) % len
-                                        } else {
-                                            (current + len - (step % len)) % len
-                                        };
-                                        if !is_disabled(idx) {
-                                            target = Some(idx);
-                                            break;
+                                    let len = it.len;
+                                    let mut target: Option<usize> = None;
+                                    if it.wrap {
+                                        for step in 1..=len {
+                                            let idx = if forward {
+                                                (current + step) % len
+                                            } else {
+                                                (current + len - (step % len)) % len
+                                            };
+                                            if !is_disabled(idx) {
+                                                target = Some(idx);
+                                                break;
+                                            }
+                                        }
+                                    } else if forward {
+                                        target = ((current + 1)..len).find(|&i| !is_disabled(i));
+                                    } else if current > 0 {
+                                        target = (0..current).rev().find(|&i| !is_disabled(i));
+                                    }
+
+                                    RovingNavigateResult::Handled { target }
+                                }));
+
+                                // Prefix typeahead (best-effort): matches `RadioGroup` semantics in this crate.
+                                roving_typeahead_prefix_arc_str_always_wrap(
+                                    cx,
+                                    typeahead_items.clone(),
+                                    30,
+                                );
+
+                                let mut out: Vec<AnyElement> = Vec::with_capacity(items.len());
+                                let mut item_idx = 0usize;
+                                for entry in items.iter() {
+                                    match entry {
+                                        MenuEntry::Separator => {
+                                            out.push(menu_separator(cx));
+                                        }
+                                        MenuEntry::Item(it) => {
+                                            let tab_stop = item_idx == 0;
+                                            out.push(material_menu_item(
+                                                cx,
+                                                it.clone(),
+                                                item_layout,
+                                                style.clone(),
+                                                tab_stop,
+                                                item_idx,
+                                                count,
+                                                initial_focus_id_out.clone(),
+                                            ));
+                                            item_idx += 1;
                                         }
                                     }
-                                } else if forward {
-                                    target = ((current + 1)..len).find(|&i| !is_disabled(i));
-                                } else if current > 0 {
-                                    target = (0..current).rev().find(|&i| !is_disabled(i));
                                 }
-
-                                RovingNavigateResult::Handled { target }
+                                out
                             }));
-
-                            // Prefix typeahead (best-effort): matches `RadioGroup` semantics in this crate.
-                            roving_typeahead_prefix_arc_str_always_wrap(
-                                cx,
-                                typeahead_items.clone(),
-                                30,
-                            );
-
-                            let mut out: Vec<AnyElement> = Vec::with_capacity(items.len());
-                            let mut item_idx = 0usize;
-                            for entry in items.iter() {
-                                match entry {
-                                    MenuEntry::Separator => {
-                                        out.push(menu_separator(cx));
-                                    }
-                                    MenuEntry::Item(it) => {
-                                        let tab_stop = item_idx == first_enabled_idx;
-                                        out.push(material_menu_item(
-                                            cx,
-                                            it.clone(),
-                                            height,
-                                            style.clone(),
-                                            tab_stop,
-                                            item_idx,
-                                            count,
-                                            initial_focus_id_out.clone(),
-                                        ));
-                                        item_idx += 1;
-                                    }
-                                }
-                            }
-                            out
-                        }));
-                        children
-                    },
-                )]
+                            children
+                        },
+                    ),
+                ]
             })
         })
     }
@@ -462,7 +496,7 @@ fn menu_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 fn material_menu_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     item: MenuItem,
-    height: Px,
+    layout: MenuItemLayout,
     style: Arc<MenuStyle>,
     tab_stop: bool,
     idx: usize,
@@ -470,11 +504,12 @@ fn material_menu_item<H: UiHost>(
     initial_focus_id_out: Rc<std::cell::Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
     let chrome_test_id = optional_chrome_part_test_id(item.test_id.as_ref());
+    let item_disabled = item.disabled;
 
-    cx.pressable_with_id_props(move |cx, st, pressable_id| {
+    let mut element = cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !item.disabled;
 
-        if enabled && tab_stop && initial_focus_id_out.get().is_none() {
+        if tab_stop && initial_focus_id_out.get().is_none() {
             initial_focus_id_out.set(Some(pressable_id));
         }
 
@@ -487,19 +522,25 @@ fn material_menu_item<H: UiHost>(
             ..Default::default()
         };
 
-        if let Some(handler) = item.on_select.clone() {
+        if enabled && let Some(handler) = item.on_select.clone() {
             cx.pressable_on_activate(handler);
         }
 
         let pressable_props = PressableProps {
-            enabled,
-            focusable: enabled && tab_stop,
-            key_activation: Default::default(),
+            enabled: true,
+            focusable: tab_stop,
+            key_activation: if enabled {
+                PressableKeyActivation::EnterAndSpace
+            } else {
+                PressableKeyActivation::None
+            },
             a11y,
             layout: {
                 let mut l = fret_ui::element::LayoutStyle::default();
-                l.size.width = Length::Fill;
-                l.size.height = Length::Px(height);
+                l.size.width = Length::Auto;
+                l.size.height = Length::Px(layout.height);
+                l.size.min_width = Some(Length::Px(layout.min_width));
+                l.size.max_width = Some(Length::Px(layout.max_width));
                 l.overflow = Overflow::Visible;
                 {
                     let theme = Theme::global(&*cx.app);
@@ -515,8 +556,10 @@ fn material_menu_item<H: UiHost>(
         let pointer_region = cx.named("pointer_region", |cx| {
             let mut props = PointerRegionProps::default();
             props.enabled = enabled;
-            props.layout.size.width = Length::Fill;
+            props.layout.size.width = Length::Auto;
             props.layout.size.height = Length::Fill;
+            props.layout.size.min_width = Some(Length::Px(layout.min_width));
+            props.layout.size.max_width = Some(Length::Px(layout.max_width));
             cx.pointer_region(props, |cx| {
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
@@ -603,15 +646,17 @@ fn material_menu_item<H: UiHost>(
                 let label_el = menu_item_label(cx, &item.label, label_style, label_color);
 
                 let mut row = FlexProps::default();
-                row.layout.size.width = Length::Fill;
-                row.layout.size.height = Length::Px(height);
+                row.layout.size.width = Length::Auto;
+                row.layout.size.height = Length::Px(layout.height);
+                row.layout.size.min_width = Some(Length::Px(layout.min_width));
+                row.layout.size.max_width = Some(Length::Px(layout.max_width));
                 row.layout.overflow = Overflow::Clip;
                 row.direction = Axis::Horizontal;
                 row.justify = MainAlign::Start;
                 row.align = CrossAlign::Center;
                 row.padding = Edges {
-                    left: Px(12.0),
-                    right: Px(12.0),
+                    left: layout.horizontal_padding,
+                    right: layout.horizontal_padding,
                     top: Px(0.0),
                     bottom: Px(0.0),
                 }
@@ -626,7 +671,17 @@ fn material_menu_item<H: UiHost>(
         });
 
         (pressable_props, vec![pointer_region])
-    })
+    });
+
+    if item_disabled {
+        element = element.attach_semantics(
+            SemanticsDecoration::default()
+                .disabled(true)
+                .invokable(false),
+        );
+    }
+
+    element
 }
 
 fn menu_item_label<H: UiHost>(
@@ -638,10 +693,10 @@ fn menu_item_label<H: UiHost>(
     let mut props = TextProps::new(text.clone());
     props.style = Some(style);
     props.color = Some(color);
-    props.layout.size.width = Length::Fill;
+    props.layout.size.width = Length::Auto;
     props.layout.size.min_width = Some(Length::Px(Px(0.0)));
     props.layout.flex.grow = 1.0;
-    props.layout.flex.basis = Length::Px(Px(0.0));
+    props.layout.flex.basis = Length::Auto;
     props.wrap = TextWrap::None;
     props.overflow = TextOverflow::Clip;
     cx.text_props(props)
@@ -786,9 +841,9 @@ mod tests {
         let label = find_text_by_content(&el, label.as_ref()).expect("menu item label text");
         assert_eq!(label.wrap, TextWrap::None);
         assert_eq!(label.overflow, TextOverflow::Clip);
-        assert_eq!(label.layout.size.width, Length::Fill);
+        assert_eq!(label.layout.size.width, Length::Auto);
         assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(label.layout.flex.grow, 1.0);
-        assert_eq!(label.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(label.layout.flex.basis, Length::Auto);
     }
 }

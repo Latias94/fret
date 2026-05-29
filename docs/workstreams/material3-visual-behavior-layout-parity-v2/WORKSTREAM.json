@@ -93,6 +93,7 @@
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_dialog_layout_motion_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_snackbar_layout_motion_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_tooltip_layout_a11y_motion_packet_v2.md",
+    "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_menu_dropdown_layout_focus_motion_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_dotted_listbox_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_autocomplete_exposed_dropdown_listbox_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_semantics_chrome_packet_v2.md",

@@ -1012,6 +1012,27 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     trigger `described_by` wiring and shared overlay-motion fade-scale behavior. The gap was
     Material recipe/token proof density, not a core or kit mechanism gap.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_tooltip_layout_a11y_motion_packet_v2.md`
+- 2026-05-29: M3PV2-081 closed Menu and DropdownMenu layout, disabled-focus semantics, and
+  DropdownMenu current open/close fade-scale motion proof.
+  - Sources: Compose Material3 `Menu.kt` / `MenuDefaults.kt` define 48dp item height, 112..280dp
+    item width bounds, 12dp horizontal item padding, 8dp menu vertical padding, and fade+scale
+    menu overlay motion; Base UI Menu was used as the headless reference for disabled-but-focusable
+    menu navigation.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test menu_state`
+    failed because menu rows measured as 48px wide instead of Material's 112dp minimum,
+    DropdownMenu filled a 360px trigger instead of clamping to 280dp, and roving focus skipped
+    disabled menu items.
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test menu_state`
+  - `cargo nextest run -p fret-ui-material3 --lib dropdown_menu menu`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_menu_and_dropdown_expose_stable_part_test_ids`
+  - `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_menu_dialog_style_suite_goldens_v1; Remove-Item Env:\FRET_UPDATE_GOLDENS`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_menu_dialog_style_suite_goldens_v1 menu_pressed_scene_structure_is_stable menu_style_overrides_apply_to_container_and_label dropdown_menu_dismisses_and_restores_focus_across_schemes`
+  - Result: Menu now applies Material width/padding tokens and disabled-but-focusable semantics
+    without activating disabled items. DropdownMenu now uses Material min/max width estimation,
+    includes vertical menu padding in placement size, preserves kit dismissal/focus restore, and
+    has fixed-frame open/close fade-scale proof.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_menu_dropdown_layout_focus_motion_packet_v2.md`
 
 ## Proof Note Template
 

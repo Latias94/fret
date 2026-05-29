@@ -890,11 +890,36 @@ Task IDs use `M3PV2-*`.
   overlays are intentionally non-hit-testable; a dedicated pane-title semantics field remains a
   future core a11y decision.
 
+- [x] M3PV2-081 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{menu.rs,dropdown_menu.rs,tokens/menu.rs},ecosystem/fret-ui-material3/tests/{menu_state.rs,automation_surface.rs,radio_alignment.rs},goldens/material3-headless/v1/material3-menu-dialog-style.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close Menu and DropdownMenu item layout, disabled-focus semantics, and DropdownMenu
+  fade-scale motion proof against Compose Material3 Menu and Base UI menu behavior.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test menu_state`
+  failed because menu rows measured as 48px wide instead of respecting Material's 112dp minimum,
+  DropdownMenu filled a 360px trigger instead of clamping to 280dp, and roving focus skipped
+  disabled menu items; green gates:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test menu_state`;
+  `cargo nextest run -p fret-ui-material3 --lib dropdown_menu menu`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_menu_and_dropdown_expose_stable_part_test_ids`;
+  `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_menu_dialog_style_suite_goldens_v1; Remove-Item Env:\FRET_UPDATE_GOLDENS`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_menu_dialog_style_suite_goldens_v1 menu_pressed_scene_structure_is_stable menu_style_overrides_apply_to_container_and_label dropdown_menu_dismisses_and_restores_focus_across_schemes`.
+  Review: DONE. This found a Material recipe/token gap, not a core or kit mechanism gap. Core
+  already had transparent semantics overrides, disabled-but-focusable key activation suppression,
+  roles/collection metadata, opacity, transforms, and roving primitives; kit overlay
+  dismiss/focus-restore policy stayed green.
+  Evidence: `artifacts/material3_menu_dropdown_layout_focus_motion_packet_v2.md`.
+  Handoff: Menu layout, behavior, and accessibility are v2-covered for the current plain item
+  surface; DropdownMenu layout, behavior, accessibility, and current overlay motion are v2-covered.
+  Remaining menu breadth includes leading/trailing icons, supporting text, group labels,
+  checkbox/radio items, submenu triggers, shortcut text, and scroll/max-height behavior.
+
 - [ ] M3PV2-050 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{menu.rs,dropdown_menu.rs,dialog.rs,bottom_sheet.rs,tooltip.rs,snackbar.rs},ecosystem/fret-ui-kit,tools/diag-scripts/ui-gallery/material3]
   Goal: Audit dismissal, focus containment/restore, live region, action close parts, sheet motion,
   and rich tooltip interaction against Material/MUI/Compose/Base UI sources.
   Validation: interaction tests plus diagnostics bundles for at least one overlay family.
-  Review: Pending.
+  Review: Pending. Menu/DropdownMenu, Dialog, BottomSheet, Snackbar, and Tooltip now each have
+  focused v2 packets for their current recipe surfaces, but rich tooltip actions and broader
+  overlay-family policy comparison remain open.
   Handoff: Push only design-system-agnostic policy to `fret-ui-kit`.
 
 ## M5 - Surface, Data Display, And Low-Interaction Visual Matrix
