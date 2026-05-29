@@ -560,6 +560,28 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     explicit width/height is proven on root and `.chrome` nodes, and interactive items share the
     Material `foundation::elevation` runtime used by Button/Card.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_carousel_item_semantics_sizing_elevation_packet_v2.md`
+- 2026-05-29: M3PV2-062 closed standalone FAB sizing, extended token wiring, lowered elevation,
+  semantics, and hover elevation motion.
+  - Sources: Compose Material3 `FloatingActionButton.kt` separates default 56px FABs from 40px
+    small, 80px medium, 96px large, and size-specific extended FAB overloads; Compose elevation
+    animates hover/focus/press shadows; Material Web v30 exports the matching `md.comp.fab.*` and
+    `md.comp.extended-fab.*` regular/small/medium/large/lowered token paths.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --features diagnostics --test fab_state`
+    failed because small FAB `.chrome` stretched to 48px, medium/large extended FABs stayed 56px
+    high, primary hover elevation snapped on the first hover frame, and primary lowered FABs used
+    normal primary elevation.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test fab_state`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`
+  - `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_fab_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_fab_suite_goldens_v1`
+  - Workstream JSON, matrix JSON, catalog, `git diff --check`, `cargo check`, and `cargo clippy`
+    gates passed.
+  - Result: FAB visual chrome now stays token-sized inside the touch target, default 56px
+    `Regular` and explicit 80px `Medium` are distinct, extended FAB uses size-specific tokens,
+    primary lowered FABs resolve lowered elevation aliases, and FAB shares the Material
+    `foundation::elevation` runtime already used by Button/Card/CarouselItem.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_fab_size_elevation_motion_packet_v2.md`
 
 ## Proof Note Template
 

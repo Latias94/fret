@@ -123,6 +123,16 @@ and `.chrome` bounds, and interactive items share `foundation::elevation` animat
 Button/Card. Full carousel container scrolling, keyline sizing, masking/parallax, and
 `Role.Carousel` semantics remain outside this standalone item recipe.
 
+M3PV2-062 is complete: standalone FAB style/layout/accessibility/motion axes are now v2-covered
+for the current recipe surface. The packet found Material recipe/token wiring gaps: FAB chrome was
+using min-size layout and could stretch to the touch target, default 56px FABs were conflated with
+80px medium FABs, extended FAB ignored `size`, primary lowered elevation missed Material Web alias
+tokens, and hover elevation snapped instead of animating. FAB now separates touch target from
+visual chrome, has explicit default `Regular` and Material `Medium` sizes, applies size-specific
+extended FAB tokens, resolves lowered elevation aliases, and shares `foundation::elevation` with
+Button/Card/CarouselItem. Show/hide and extended collapsed/expanded choreography remain residual
+because the current Fret FAB API has no visibility/expanded state surface.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -134,7 +144,7 @@ Button/Card. Full carousel container scrolling, keyline sizing, masking/parallax
 ## Next Recommended Action
 
 Continue with the next uncovered Material3 packet from the matrix. Good M5 candidates are
-FAB, List, and ProgressIndicator; higher-priority choice-control candidates remain Checkbox and
+List and ProgressIndicator; higher-priority choice-control candidates remain Checkbox and
 Radio.
 
 ## Useful Gates

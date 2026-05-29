@@ -617,6 +617,29 @@ Task IDs use `M3PV2-*`.
   because Compose carousel keyline sizing, masking/parallax, snap/fling, and `Role.Carousel`
   semantics belong to a future Material carousel-container recipe rather than this standalone item.
 
+- [x] M3PV2-062 [owner=codex] [deps=M3PV2-010,M3PV2-047,M3PV2-049,M3PV2-061] [scope=ecosystem/fret-ui-material3/src/{fab.rs,tokens/fab.rs},ecosystem/fret-ui-material3/tests/fab_state.rs,goldens/material3-headless/v1/material3-fab.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close standalone FAB size/chrome, extended size-token, semantics, lowered-elevation, and
+  hover elevation motion drift against Compose Material3 and Material Web v30.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test fab_state`
+  failed because small FAB `.chrome` stretched to 48px, medium/large extended FABs stayed 56px
+  high, primary hover elevation snapped to the hover shadow on the first hover frame, and primary
+  lowered FABs did not use the lowered elevation token path; green gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test fab_state`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`;
+  `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_fab_suite_goldens_v1`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_fab_suite_goldens_v1`.
+  Review: DONE. This found Material recipe/token wiring gaps, not a core or kit mechanism gap.
+  FAB now separates 48px touch targets from token-sized visual chrome, distinguishes default
+  `Regular` 56px FABs from 80px `Medium` FABs, applies extended FAB size-specific tokens, resolves
+  primary lowered elevation through the Material alias token path, and shares the Material
+  `foundation::elevation` runtime used by Button/Card/CarouselItem.
+  Evidence: `artifacts/material3_fab_size_elevation_motion_packet_v2.md`.
+  Handoff: FAB style/layout/accessibility/motion are v2-covered for the current standalone recipe.
+  Show/hide and extended collapsed/expanded choreography remain residual because the current Fret
+  FAB API has no visibility/expanded state surface.
+
 - [ ] M3PV2-060 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{badge.rs,button.rs,card.rs,carousel_item.rs,divider.rs,fab.rs,list.rs,progress_indicator.rs},ecosystem/fret-ui-material3/tests,goldens/material3-headless/v1]
   Goal: Add style/layout proof for low-interaction components without overfitting gallery layout.
   Validation: targeted golden or scene assertions for chrome, shape, elevation, spacing, and canvas

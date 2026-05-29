@@ -23,7 +23,8 @@ pub(crate) fn container_size(theme: &Theme, size: FabSize) -> Px {
     let key = format!("{}.container.height", size_prefix(size));
     theme.metric_by_key(&key).unwrap_or(match size {
         FabSize::Small => Px(40.0),
-        FabSize::Medium => Px(56.0),
+        FabSize::Regular => Px(56.0),
+        FabSize::Medium => Px(80.0),
         FabSize::Large => Px(96.0),
     })
 }
@@ -32,7 +33,8 @@ pub(crate) fn icon_size(theme: &Theme, size: FabSize) -> Px {
     let key = format!("{}.icon.size", size_prefix(size));
     theme.metric_by_key(&key).unwrap_or(match size {
         FabSize::Small => Px(24.0),
-        FabSize::Medium => Px(24.0),
+        FabSize::Regular => Px(24.0),
+        FabSize::Medium => Px(28.0),
         FabSize::Large => Px(36.0),
     })
 }
@@ -43,57 +45,99 @@ pub(crate) fn container_shape(theme: &Theme, size: FabSize) -> Corners {
         .metric_by_key(&key)
         .or_else(|| match size {
             FabSize::Small => theme.metric_by_key("md.sys.shape.corner.medium"),
-            FabSize::Medium => theme.metric_by_key("md.sys.shape.corner.large"),
+            FabSize::Regular => theme.metric_by_key("md.sys.shape.corner.large"),
+            FabSize::Medium => theme.metric_by_key("md.sys.shape.corner.large-increased"),
             FabSize::Large => theme.metric_by_key("md.sys.shape.corner.extra-large"),
         })
         .unwrap_or(match size {
             FabSize::Small => Px(12.0),
-            FabSize::Medium => Px(16.0),
+            FabSize::Regular => Px(16.0),
+            FabSize::Medium => Px(20.0),
             FabSize::Large => Px(28.0),
         });
 
     Corners::all(radius)
 }
 
-pub(crate) fn extended_container_height(theme: &Theme) -> Px {
+pub(crate) fn extended_container_height(theme: &Theme, size: FabSize) -> Px {
     theme
-        .metric_by_key("md.comp.extended-fab.container.height")
-        .unwrap_or(Px(56.0))
+        .metric_by_key(&format!("{}.container.height", extended_size_prefix(size)))
+        .unwrap_or(match size {
+            FabSize::Small | FabSize::Regular => Px(56.0),
+            FabSize::Medium => Px(80.0),
+            FabSize::Large => Px(96.0),
+        })
 }
 
-pub(crate) fn extended_icon_size(theme: &Theme) -> Px {
+pub(crate) fn extended_min_width(theme: &Theme, size: FabSize) -> Px {
     theme
-        .metric_by_key("md.comp.extended-fab.icon.size")
-        .unwrap_or(Px(24.0))
+        .metric_by_key(&format!("{}.container.width", extended_size_prefix(size)))
+        .unwrap_or(match size {
+            FabSize::Regular => Px(80.0),
+            FabSize::Small => extended_container_height(theme, size),
+            FabSize::Medium => extended_container_height(theme, size),
+            FabSize::Large => extended_container_height(theme, size),
+        })
 }
 
-pub(crate) fn extended_container_shape(theme: &Theme) -> Corners {
+pub(crate) fn extended_icon_size(theme: &Theme, size: FabSize) -> Px {
+    theme
+        .metric_by_key(&format!("{}.icon.size", extended_size_prefix(size)))
+        .unwrap_or(match size {
+            FabSize::Small | FabSize::Regular => Px(24.0),
+            FabSize::Medium => Px(28.0),
+            FabSize::Large => Px(36.0),
+        })
+}
+
+pub(crate) fn extended_container_shape(theme: &Theme, size: FabSize) -> Corners {
     let radius = theme
-        .metric_by_key("md.comp.extended-fab.container.shape")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.large"))
-        .unwrap_or(Px(16.0));
+        .metric_by_key(&format!("{}.container.shape", extended_size_prefix(size)))
+        .or_else(|| match size {
+            FabSize::Small | FabSize::Regular => theme.metric_by_key("md.sys.shape.corner.large"),
+            FabSize::Medium => theme.metric_by_key("md.sys.shape.corner.large-increased"),
+            FabSize::Large => theme.metric_by_key("md.sys.shape.corner.extra-large"),
+        })
+        .unwrap_or(match size {
+            FabSize::Small | FabSize::Regular => Px(16.0),
+            FabSize::Medium => Px(20.0),
+            FabSize::Large => Px(28.0),
+        });
 
     Corners::all(radius)
 }
 
-pub(crate) fn extended_leading_space(theme: &Theme, has_icon: bool) -> Px {
+pub(crate) fn extended_leading_space(theme: &Theme, size: FabSize, has_icon: bool) -> Px {
     let leading = theme
-        .metric_by_key("md.comp.extended-fab.leading-space")
-        .unwrap_or(Px(16.0));
-    let trailing = extended_trailing_space(theme);
+        .metric_by_key(&format!("{}.leading-space", extended_size_prefix(size)))
+        .unwrap_or(match size {
+            FabSize::Small | FabSize::Regular => Px(16.0),
+            FabSize::Medium => Px(26.0),
+            FabSize::Large => Px(28.0),
+        });
+    let trailing = extended_trailing_space(theme, size);
     if has_icon { leading } else { trailing }
 }
 
-pub(crate) fn extended_trailing_space(theme: &Theme) -> Px {
+pub(crate) fn extended_trailing_space(theme: &Theme, size: FabSize) -> Px {
     theme
-        .metric_by_key("md.comp.extended-fab.trailing-space")
-        .unwrap_or(Px(20.0))
+        .metric_by_key(&format!("{}.trailing-space", extended_size_prefix(size)))
+        .unwrap_or(match size {
+            FabSize::Regular => Px(20.0),
+            FabSize::Small => Px(16.0),
+            FabSize::Medium => Px(26.0),
+            FabSize::Large => Px(28.0),
+        })
 }
 
-pub(crate) fn extended_icon_label_space(theme: &Theme) -> Px {
+pub(crate) fn extended_icon_label_space(theme: &Theme, size: FabSize) -> Px {
     theme
-        .metric_by_key("md.comp.extended-fab.icon-label-space")
-        .unwrap_or(Px(12.0))
+        .metric_by_key(&format!("{}.icon-label-space", extended_size_prefix(size)))
+        .unwrap_or(match size {
+            FabSize::Small => Px(8.0),
+            FabSize::Regular | FabSize::Medium => Px(12.0),
+            FabSize::Large => Px(16.0),
+        })
 }
 
 pub(crate) fn container_background(
@@ -143,17 +187,17 @@ pub(crate) fn container_elevation(
         variant_prefix(variant)
     };
 
-    let bases: [String; 2] = if lowered {
-        [format!("{prefix}.lowered"), prefix.to_string()]
-    } else {
-        [prefix.to_string(), String::new()]
-    };
+    let mut bases = Vec::new();
+    if lowered {
+        let lowered_prefix = lowered_variant_prefix(extended, variant);
+        bases.push(format!("{lowered_prefix}.lowered"));
+        if lowered_prefix != prefix {
+            bases.push(format!("{prefix}.lowered"));
+        }
+    }
+    bases.push(prefix.to_string());
 
     for base in bases {
-        if base.is_empty() {
-            continue;
-        }
-
         let keys = match interaction {
             Some(FabInteraction::Hovered) => [
                 format!("{base}.hovered.container.elevation"),
@@ -375,8 +419,18 @@ pub(crate) fn pressed_state_layer_opacity_for_variant(
 fn size_prefix(size: FabSize) -> &'static str {
     match size {
         FabSize::Small => "md.comp.fab.small",
-        FabSize::Medium => "md.comp.fab",
+        FabSize::Regular => "md.comp.fab",
+        FabSize::Medium => "md.comp.fab.medium",
         FabSize::Large => "md.comp.fab.large",
+    }
+}
+
+fn extended_size_prefix(size: FabSize) -> &'static str {
+    match size {
+        FabSize::Small => "md.comp.extended-fab.small",
+        FabSize::Regular => "md.comp.extended-fab",
+        FabSize::Medium => "md.comp.extended-fab.medium",
+        FabSize::Large => "md.comp.extended-fab.large",
     }
 }
 
@@ -395,5 +449,18 @@ fn extended_variant_prefix(variant: FabVariant) -> &'static str {
         FabVariant::Primary => "md.comp.extended-fab.primary-container",
         FabVariant::Secondary => "md.comp.extended-fab.secondary-container",
         FabVariant::Tertiary => "md.comp.extended-fab.tertiary-container",
+    }
+}
+
+fn lowered_variant_prefix(extended: bool, variant: FabVariant) -> &'static str {
+    match (extended, variant) {
+        (false, FabVariant::Surface) => "md.comp.fab.surface",
+        (false, FabVariant::Primary) => "md.comp.fab.primary",
+        (false, FabVariant::Secondary) => "md.comp.fab.secondary",
+        (false, FabVariant::Tertiary) => "md.comp.fab.tertiary",
+        (true, FabVariant::Surface) => "md.comp.extended-fab.surface",
+        (true, FabVariant::Primary) => "md.comp.extended-fab.primary",
+        (true, FabVariant::Secondary) => "md.comp.extended-fab.secondary",
+        (true, FabVariant::Tertiary) => "md.comp.extended-fab.tertiary",
     }
 }
