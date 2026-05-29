@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
+use fret_canvas::view::PanZoom2D;
 use fret_core::{Corners, Edges, MouseButton, Point, PointerId, Px, Rect, SemanticsRole, Size};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
@@ -13,11 +14,14 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::core::{EdgeId, EdgeReconnectable, EdgeReconnectableEndpoint, Graph, PortId};
 use crate::io::{NodeGraphInteractionState, NodeGraphViewState};
-use crate::rules::EdgeEndpoint;
+use crate::ops::GraphTransaction;
+use crate::rules::{ConnectDecision, ConnectPlan, EdgeEndpoint, plan_reconnect_edge_with_mode};
 use crate::ui::NodeGraphSurfaceBinding;
+use crate::ui::canvas::CanvasGeometry;
 use crate::ui::internals::NodeGraphInternalsSnapshot;
 use crate::ui::style::NodeGraphStyle;
 
+use super::commit_graph_transaction;
 use super::surface_math::pointer_crossed_threshold;
 use super::surface_support::read_authoritative_interaction_config_in_models;
 
@@ -47,6 +51,13 @@ pub(super) struct ReconnectDragState {
     pub(super) endpoint: EdgeEndpoint,
     pub(super) anchor_port: PortId,
     pub(super) fixed_port: PortId,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct ReconnectDropContext {
+    pub(super) geom: Option<Arc<CanvasGeometry>>,
+    pub(super) view: PanZoom2D,
+    pub(super) bounds: Rect,
 }
 
 impl ReconnectDragState {
@@ -164,6 +175,7 @@ pub(super) fn push_edge_update_anchor_controls<H: UiHost + 'static>(
     interactive_overlay_children: &mut Vec<AnyElement>,
     anchors: &[EdgeUpdateAnchorInfo],
     reconnect_drag: &Model<Option<ReconnectDragState>>,
+    drop_context: ReconnectDropContext,
     binding: &NodeGraphSurfaceBinding,
     bounds: Rect,
     style_tokens: &NodeGraphStyle,
@@ -185,6 +197,7 @@ pub(super) fn push_edge_update_anchor_controls<H: UiHost + 'static>(
 
         let style_tokens = style_tokens.clone();
         let reconnect_drag = reconnect_drag.clone();
+        let drop_context = drop_context.clone();
         let binding = binding.clone();
         interactive_overlay_children.push(cx.keyed(
             (
@@ -199,6 +212,7 @@ pub(super) fn push_edge_update_anchor_controls<H: UiHost + 'static>(
                     anchor,
                     rect,
                     reconnect_drag.clone(),
+                    drop_context.clone(),
                     binding.clone(),
                     style_tokens,
                 )
@@ -213,6 +227,7 @@ fn edge_update_anchor_control<H: UiHost + 'static>(
     anchor: EdgeUpdateAnchorInfo,
     rect: Rect,
     reconnect_drag: Model<Option<ReconnectDragState>>,
+    drop_context: ReconnectDropContext,
     binding: NodeGraphSurfaceBinding,
     style_tokens: NodeGraphStyle,
 ) -> AnyElement {
@@ -259,11 +274,15 @@ fn edge_update_anchor_control<H: UiHost + 'static>(
         }));
 
         let reconnect_drag_for_up = reconnect_drag.clone();
+        let drop_context_for_up = drop_context.clone();
+        let binding_for_up = binding.clone();
         cx.pressable_on_pointer_up(Arc::new(move |host, action_cx, up| {
             if finish_reconnect_drag_pointer_up_action_host(
                 host,
                 action_cx,
                 &reconnect_drag_for_up,
+                &binding_for_up,
+                &drop_context_for_up,
                 up,
             ) {
                 PressablePointerUpResult::SkipActivate
@@ -379,6 +398,8 @@ pub(super) fn finish_reconnect_drag_pointer_up_action_host(
     host: &mut dyn fret_ui::action::UiPointerActionHost,
     action_cx: ActionCx,
     reconnect_drag: &Model<Option<ReconnectDragState>>,
+    binding: &NodeGraphSurfaceBinding,
+    drop_context: &ReconnectDropContext,
     up: fret_ui::action::PointerUpCx,
 ) -> bool {
     if up.button != MouseButton::Left {
@@ -395,6 +416,11 @@ pub(super) fn finish_reconnect_drag_pointer_up_action_host(
     };
     if current.pointer_id != up.pointer_id {
         return true;
+    }
+
+    if current.is_active() {
+        let _ =
+            commit_reconnect_drop_action_host(host, binding, drop_context, current, up.position);
     }
 
     let cleared = clear_reconnect_drag_action_host(host, reconnect_drag);
@@ -434,6 +460,143 @@ pub(super) fn clear_reconnect_drag_action_host(
         })
         .ok()
         .unwrap_or(false)
+}
+
+fn commit_reconnect_drop_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    binding: &NodeGraphSurfaceBinding,
+    drop_context: &ReconnectDropContext,
+    drag: ReconnectDragState,
+    drop_screen: Point,
+) -> bool {
+    let Some(geom) = drop_context.geom.as_deref() else {
+        return false;
+    };
+    let Some((target, plan)) = read_reconnect_target_plan_action_host(
+        host,
+        binding,
+        geom,
+        drop_context,
+        drag,
+        drop_screen,
+    ) else {
+        return false;
+    };
+    if target == drag.anchor_port || plan.ops.is_empty() {
+        return false;
+    }
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: plan.ops,
+    }
+    .with_label("Reconnect Edge");
+    commit_graph_transaction(host, binding, &tx)
+}
+
+fn read_reconnect_target_plan_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    binding: &NodeGraphSurfaceBinding,
+    geom: &CanvasGeometry,
+    drop_context: &ReconnectDropContext,
+    drag: ReconnectDragState,
+    drop_screen: Point,
+) -> Option<(PortId, ConnectPlan)> {
+    let store = binding.store_model();
+    let (graph, interaction) = host
+        .models_mut()
+        .read(&store, |store| {
+            (store.graph().clone(), store.resolved_interaction_state())
+        })
+        .ok()?;
+    hit_test_reconnect_target_plan(
+        &graph,
+        &interaction,
+        geom,
+        drop_context.view,
+        drop_context.bounds,
+        drag,
+        drop_screen,
+    )
+}
+
+fn hit_test_reconnect_target_plan(
+    graph: &Graph,
+    interaction: &NodeGraphInteractionState,
+    geom: &CanvasGeometry,
+    view: PanZoom2D,
+    bounds: Rect,
+    drag: ReconnectDragState,
+    drop_screen: Point,
+) -> Option<(PortId, ConnectPlan)> {
+    let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
+    let radius_canvas = interaction.connection_radius.max(0.0) / zoom;
+    if radius_canvas <= 0.0 {
+        return None;
+    }
+    let radius2 = radius_canvas * radius_canvas;
+    let drop_canvas = view.screen_to_canvas(bounds, drop_screen);
+
+    let mut best: Option<(f32, u32, PortId, ConnectPlan)> = None;
+    for (port, handle) in &geom.ports {
+        if !port_allows_reconnect_endpoint(graph, interaction, *port, drag.endpoint) {
+            continue;
+        }
+        let dx = handle.center.x.0 - drop_canvas.x.0;
+        let dy = handle.center.y.0 - drop_canvas.y.0;
+        let dist2 = dx * dx + dy * dy;
+        if !dist2.is_finite() || dist2 > radius2 {
+            continue;
+        }
+        let plan = plan_reconnect_edge_with_mode(
+            graph,
+            drag.edge,
+            drag.endpoint,
+            *port,
+            interaction.connection_mode,
+        );
+        if plan.decision != ConnectDecision::Accept {
+            continue;
+        }
+        let rank = geom.node_rank.get(&handle.node).copied().unwrap_or(0);
+        let replace = match &best {
+            None => true,
+            Some((best_dist2, best_rank, best_port, _)) => {
+                dist2 < *best_dist2
+                    || ((dist2 - *best_dist2).abs() <= f32::EPSILON
+                        && (rank > *best_rank || (rank == *best_rank && *port > *best_port)))
+            }
+        };
+        if replace {
+            best = Some((dist2, rank, *port, plan));
+        }
+    }
+
+    best.map(|(_, _, port, plan)| (port, plan))
+}
+
+fn port_allows_reconnect_endpoint(
+    graph: &Graph,
+    interaction: &NodeGraphInteractionState,
+    port: PortId,
+    endpoint: EdgeEndpoint,
+) -> bool {
+    let Some(port_value) = graph.ports.get(&port) else {
+        return false;
+    };
+    let Some(node) = graph.nodes.get(&port_value.node) else {
+        return false;
+    };
+    let connectable = port_value
+        .connectable
+        .or(node.connectable)
+        .unwrap_or(interaction.nodes_connectable);
+    let endpoint_connectable = match endpoint {
+        EdgeEndpoint::From => port_value.connectable_start,
+        EdgeEndpoint::To => port_value.connectable_end,
+    }
+    .unwrap_or(true);
+    connectable && endpoint_connectable
 }
 
 fn edge_update_anchor_visual<H: UiHost>(

@@ -5,39 +5,42 @@ Last updated: 2026-05-29
 
 ## Current Focus
 
-FNDX-057 advances default declarative EdgeWrapper reconnect/update-anchor parity from rendered
-controls to the first reconnect drag lifecycle. Selected/focused edge update-anchor controls now
-arm reconnect drags on anchor pointer-down, reuse the authoritative connection-drag threshold before
-becoming active, surface armed/active diagnostics, mark internals `connecting` only once active, and
-clear transient state on pointer-up, Escape, or pointer cancel. This slice does not yet hit-test
-target ports, dispatch reconnect commits/callbacks, paint a preview wire, or implement
-`reconnect_on_drop_empty`.
+FNDX-058 advances default declarative EdgeWrapper reconnect/update-anchor parity from transient
+reconnect drags to accepted reconnect drops. Active source/target update-anchor drags now hit-test
+nearby target ports at pointer-up, reuse `plan_reconnect_edge_with_mode`, commit accepted plans
+through the existing store-backed transaction path, and therefore dispatch commit-derived
+`on_reconnect` / `on_edge_update` callbacks. Empty-canvas or rejected drops, including
+endpoint-gated ports such as `connectable_start=false` while reconnecting a source endpoint, clear
+transient state without committing. This slice still does not paint a preview wire, emit reconnect
+gesture start/end callbacks, or implement `reconnect_on_drop_empty`.
 
 ## Targeted Iteration Gates
 
 ```bash
-cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient
+cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit
 ```
 
-This gate proves the FNDX-057 update-anchor reconnect-drag contract: FNDX-055 planning and
-FNDX-056 rendered controls still resolve and preempt correctly, anchor pointer-down arms reconnect
-state, movement below `connection_drag_threshold` remains non-connecting, threshold crossing marks
-the drag active/connecting, and pointer-up/Escape/pointer-cancel clear transient reconnect state.
+This gate proves the FNDX-058 update-anchor reconnect-drop contract: FNDX-055 planning,
+FNDX-056 rendered controls, and FNDX-057 drag lifecycle still resolve and preempt correctly; valid
+active drops commit through the store-backed reconnect transaction/callback path; and endpoint-gated
+or empty-space drops only clear transient reconnect state.
 
-Fresh evidence for FNDX-057 (2026-05-29):
+Fresh evidence for FNDX-058 (2026-05-29):
 
-- `cargo nextest run -p fret-node edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`: passed.
+- `cargo check -p fret-node --tests`: passed.
+- `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks`: passed.
+- `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit`: passed.
+- `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit`: passed.
 - `cargo fmt -p fret-node`: passed.
-- `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`: passed.
+- `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit`: passed.
 - `cargo fmt -p fret-node --check`: passed.
 - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed.
 - `git diff --check`: passed.
 - `python3 tools/check_layering.py`: passed.
-- `cargo check -p fret-node --tests`: passed.
 - `cargo check -p fret-node --all-features --tests`: passed.
 - `cargo check -p fret-node --no-default-features`: passed.
 - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
-- `cargo nextest run -p fret-node`: passed with 476 tests.
+- `cargo nextest run -p fret-node`: passed with 479 tests.
 
 ```bash
 cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate

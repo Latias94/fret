@@ -6,10 +6,10 @@ use crate::ui::NodeGraphSurfaceBinding;
 use super::{
     KeyHandlerParams, PaintOnlySurfaceModels, PinchHandlerParams, PointerDownHandlerParams,
     PointerFinishHandlerParams, PointerMoveHandlerParams, PreparedPaintOnlySurfaceFrame,
-    SurfaceRegionChildrenParams, WheelHandlerParams, build_key_down_capture_handler,
-    build_pinch_handler, build_pointer_cancel_handler, build_pointer_down_handler,
-    build_pointer_move_handler, build_pointer_up_handler, build_surface_region_children,
-    build_wheel_handler,
+    ReconnectDropContext, SurfaceRegionChildrenParams, WheelHandlerParams,
+    build_key_down_capture_handler, build_pinch_handler, build_pointer_cancel_handler,
+    build_pointer_down_handler, build_pointer_move_handler, build_pointer_up_handler,
+    build_surface_region_children, build_wheel_handler,
 };
 
 pub(super) struct SurfaceShellParams<'a, H: UiHost> {
@@ -137,6 +137,11 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
         marquee_drag: marquee_drag.clone(),
         node_drag: node_drag.clone(),
         reconnect_drag: reconnect_drag.clone(),
+        reconnect_drop_context: ReconnectDropContext {
+            geom: prepared_frame.derived_cache_value.geom.clone(),
+            view: prepared_frame.view_for_paint,
+            bounds: prepared_frame.grid_cache_value.bounds,
+        },
         pending_selection: pending_selection.clone(),
         binding: binding.clone(),
     });
@@ -147,6 +152,11 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
         marquee_drag: marquee_drag.clone(),
         node_drag: node_drag.clone(),
         reconnect_drag: reconnect_drag.clone(),
+        reconnect_drop_context: ReconnectDropContext {
+            geom: prepared_frame.derived_cache_value.geom.clone(),
+            view: prepared_frame.view_for_paint,
+            bounds: prepared_frame.grid_cache_value.bounds,
+        },
         pending_selection: pending_selection.clone(),
         binding: binding.clone(),
     });

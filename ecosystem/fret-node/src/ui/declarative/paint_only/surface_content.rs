@@ -11,11 +11,12 @@ use crate::ui::style::NodeGraphStyle;
 
 use super::{
     HoverAnchorStore, HoverTooltipOverlayParams, MarqueeDragState, NodeDragState,
-    PortalMeasuredGeometryState, ReconnectDragState, apply_pending_fit_to_portals,
-    host_visible_portal_labels, paint_debug_grid_cached, paint_edges_cached, paint_nodes_cached,
-    push_edge_label_overlays, push_edge_update_anchor_controls,
-    push_hover_tooltip_overlay_if_needed, push_marquee_overlay_if_active,
-    push_overlay_layer_if_needed, sync_hover_anchor_store_in_models,
+    PortalMeasuredGeometryState, ReconnectDragState, ReconnectDropContext,
+    apply_pending_fit_to_portals, host_visible_portal_labels, paint_debug_grid_cached,
+    paint_edges_cached, paint_nodes_cached, push_edge_label_overlays,
+    push_edge_update_anchor_controls, push_hover_tooltip_overlay_if_needed,
+    push_marquee_overlay_if_active, push_overlay_layer_if_needed,
+    sync_hover_anchor_store_in_models,
 };
 
 pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
@@ -103,6 +104,7 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
 
     let node_draws_for_paint = node_draws.clone();
     let edge_draws_for_paint = edge_draws.clone();
+    let geom_for_paint_canvas = geom_for_paint.clone();
     let style_tokens_for_paint = style_tokens.clone();
     let selected_nodes_for_paint = selected_nodes.clone();
     let selected_edges_for_paint = selected_edges.clone();
@@ -138,7 +140,7 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
             view_for_paint,
             cull_margin_screen_px,
             edge_draws_for_paint.clone(),
-            geom_for_paint.clone(),
+            geom_for_paint_canvas.clone(),
             node_drag_for_paint.as_ref(),
             &selected_edges_for_paint,
             &style_tokens_for_paint,
@@ -165,6 +167,11 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         &mut interactive_overlay_children,
         &edge_update_anchors,
         &reconnect_drag_model,
+        ReconnectDropContext {
+            geom: geom_for_paint.clone(),
+            view: view_for_paint,
+            bounds: grid_bounds,
+        },
         &binding,
         grid_bounds,
         &style_tokens,

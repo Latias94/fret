@@ -76,7 +76,7 @@ use crate::core::{
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
 use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
-use crate::ops::{GraphOp, GraphTransaction};
+use crate::ops::{EdgeEndpoints, GraphOp, GraphTransaction};
 use crate::rules::EdgeEndpoint;
 use crate::runtime::callbacks::{
     NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks, SelectionChange,
@@ -886,6 +886,8 @@ fn declarative_node_drag_commit_supports_undo_and_redo_through_binding() {
 struct DeclarativeCallbackTrace {
     commit_labels: Vec<Option<String>>,
     selection_changes: Vec<SelectionChange>,
+    reconnects: Vec<(EdgeId, EdgeEndpoints, EdgeEndpoints)>,
+    edge_updates: Vec<(EdgeId, EdgeEndpoints, EdgeEndpoints)>,
 }
 
 #[derive(Clone)]
@@ -899,6 +901,14 @@ impl NodeGraphCommitCallbacks for DeclarativeCallbackRecorder {
             .borrow_mut()
             .commit_labels
             .push(patch.transaction.label.clone());
+    }
+
+    fn on_reconnect(&mut self, edge: EdgeId, from: EdgeEndpoints, to: EdgeEndpoints) {
+        self.trace.borrow_mut().reconnects.push((edge, from, to));
+    }
+
+    fn on_edge_update(&mut self, edge: EdgeId, from: EdgeEndpoints, to: EdgeEndpoints) {
+        self.trace.borrow_mut().edge_updates.push((edge, from, to));
     }
 }
 
@@ -4265,6 +4275,384 @@ fn edge_update_anchor_reconnect_drag_cancel_paths_clear_transient() {
         |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
     );
     assert!(canvas_semantics_value(&snapshot).contains("reconnect_dragging:false;"));
+    assert!(!binding.internals_store().a11y_snapshot().connecting);
+}
+
+#[test]
+fn edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks() {
+    let (mut graph, mut draw_order, edge) = make_graph_two_nodes_with_edge();
+    let edge_before = graph.edges.get(&edge).expect("edge present").clone();
+    let new_source_node = NodeId::from_u128(0xA140);
+    let new_source_port = PortId::from_u128(0xA141);
+    let mut node_c = test_node(CanvasPoint { x: 320.0, y: 20.0 });
+    node_c.ports = vec![new_source_port];
+    graph.nodes.insert(new_source_node, node_c);
+    graph.ports.insert(
+        new_source_port,
+        make_port(
+            new_source_node,
+            "out",
+            PortDirection::Out,
+            PortKind::Data,
+            PortCapacity::Multi,
+        ),
+    );
+    draw_order.push(new_source_node);
+
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let source_center = geom
+        .port_center(edge_before.from)
+        .expect("source port center");
+    let new_source_center = geom
+        .port_center(new_source_port)
+        .expect("new source port center");
+
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order,
+            selected_edges: vec![edge],
+            ..Default::default()
+        },
+        default_editor_config(),
+    );
+    let trace = install_declarative_callback_trace(&mut host, &binding.store_model());
+
+    let source_test_id = format!("node_graph.edge_update_anchor.{}.source", edge.0);
+    let _snapshot = render_default_surface_frame_until_test_id(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        &source_test_id,
+    );
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: PointerId(0),
+            position: source_center,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: PointerId(0),
+            position: new_source_center,
+            buttons: MouseButtons {
+                left: true,
+                right: false,
+                middle: false,
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            pointer_id: PointerId(0),
+            position: new_source_center,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: false,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    let edge_after = host
+        .models
+        .read(&binding.store_model(), |store| {
+            store
+                .graph()
+                .edges
+                .get(&edge)
+                .expect("edge after reconnect")
+                .clone()
+        })
+        .expect("store readable");
+    assert_eq!(edge_after.from, new_source_port);
+    assert_eq!(edge_after.to, edge_before.to);
+
+    let before = EdgeEndpoints {
+        from: edge_before.from,
+        to: edge_before.to,
+    };
+    let after = EdgeEndpoints {
+        from: new_source_port,
+        to: edge_before.to,
+    };
+    let got = trace.borrow();
+    assert_eq!(got.commit_labels, vec![Some("Reconnect Edge".to_string())]);
+    assert_eq!(got.reconnects, vec![(edge, before, after)]);
+    assert_eq!(got.edge_updates, vec![(edge, before, after)]);
+}
+
+#[test]
+fn edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit() {
+    let (mut graph, mut draw_order, edge) = make_graph_two_nodes_with_edge();
+    let edge_before = graph.edges.get(&edge).expect("edge present").clone();
+    let new_source_node = NodeId::from_u128(0xA150);
+    let new_source_port = PortId::from_u128(0xA151);
+    let mut node_c = test_node(CanvasPoint { x: 320.0, y: 20.0 });
+    node_c.ports = vec![new_source_port];
+    graph.nodes.insert(new_source_node, node_c);
+    let mut port = make_port(
+        new_source_node,
+        "out",
+        PortDirection::Out,
+        PortKind::Data,
+        PortCapacity::Multi,
+    );
+    port.connectable_start = Some(false);
+    graph.ports.insert(new_source_port, port);
+    draw_order.push(new_source_node);
+
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let source_center = geom
+        .port_center(edge_before.from)
+        .expect("source port center");
+    let new_source_center = geom
+        .port_center(new_source_port)
+        .expect("new source port center");
+
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order,
+            selected_edges: vec![edge],
+            ..Default::default()
+        },
+        default_editor_config(),
+    );
+    let trace = install_declarative_callback_trace(&mut host, &binding.store_model());
+
+    let source_test_id = format!("node_graph.edge_update_anchor.{}.source", edge.0);
+    let _snapshot = render_default_surface_frame_until_test_id(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        &source_test_id,
+    );
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: PointerId(0),
+            position: source_center,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: PointerId(0),
+            position: new_source_center,
+            buttons: MouseButtons {
+                left: true,
+                right: false,
+                middle: false,
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            pointer_id: PointerId(0),
+            position: new_source_center,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: false,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    let edge_after = host
+        .models
+        .read(&binding.store_model(), |store| {
+            store
+                .graph()
+                .edges
+                .get(&edge)
+                .expect("edge after rejected drop")
+                .clone()
+        })
+        .expect("store readable");
+    assert_eq!(edge_after.from, edge_before.from);
+    assert_eq!(edge_after.to, edge_before.to);
+
+    let got = trace.borrow();
+    assert!(got.commit_labels.is_empty());
+    assert!(got.reconnects.is_empty());
+    assert!(got.edge_updates.is_empty());
+    drop(got);
+
+    let snapshot = render_surface_frame_for_binding(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+    );
+    let value = canvas_semantics_value(&snapshot);
+    assert!(value.contains("reconnect_drag_armed:false;"));
+    assert!(value.contains("reconnect_dragging:false;"));
+    assert!(!binding.internals_store().a11y_snapshot().connecting);
+}
+
+#[test]
+fn edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit() {
+    let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let edge_before = graph.edges.get(&edge).expect("edge present").clone();
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let source_center = geom
+        .port_center(edge_before.from)
+        .expect("source port center");
+
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order,
+            selected_edges: vec![edge],
+            ..Default::default()
+        },
+        default_editor_config(),
+    );
+    let trace = install_declarative_callback_trace(&mut host, &binding.store_model());
+
+    let source_test_id = format!("node_graph.edge_update_anchor.{}.source", edge.0);
+    let _snapshot = render_default_surface_frame_until_test_id(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        &source_test_id,
+    );
+
+    let empty_space = Point::new(Px(bounds.origin.x.0 + 760.0), Px(bounds.origin.y.0 + 540.0));
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: PointerId(0),
+            position: source_center,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: PointerId(0),
+            position: empty_space,
+            buttons: MouseButtons {
+                left: true,
+                right: false,
+                middle: false,
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            pointer_id: PointerId(0),
+            position: empty_space,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: false,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    let edge_after = host
+        .models
+        .read(&binding.store_model(), |store| {
+            store
+                .graph()
+                .edges
+                .get(&edge)
+                .expect("edge after empty-space drop")
+                .clone()
+        })
+        .expect("store readable");
+    assert_eq!(edge_after.from, edge_before.from);
+    assert_eq!(edge_after.to, edge_before.to);
+
+    let got = trace.borrow();
+    assert!(got.commit_labels.is_empty());
+    assert!(got.reconnects.is_empty());
+    assert!(got.edge_updates.is_empty());
+    drop(got);
+
+    let snapshot = render_surface_frame_for_binding(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+    );
+    let value = canvas_semantics_value(&snapshot);
+    assert!(value.contains("reconnect_drag_armed:false;"));
+    assert!(value.contains("reconnect_dragging:false;"));
     assert!(!binding.internals_store().a11y_snapshot().connecting);
 }
 

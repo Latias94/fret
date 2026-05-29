@@ -183,13 +183,15 @@ update rather than an incidental refactor.
   - FNDX-056 renders those planned update anchors as hit-testable default declarative controls with
     anchor-click priority, while keeping reconnect drag lifecycle as follow-up work.
   - FNDX-057 starts reconnect drags from those rendered controls, reusing the existing connection
-    drag threshold and cancel/up cleanup policy while leaving target hit-testing, commit/callback
-    dispatch, preview paint, and `reconnect_on_drop_empty` for later slices.
+    drag threshold and cancel/up cleanup policy.
+  - FNDX-058 adds target-port hit-testing and accepted store-backed reconnect commit/callback
+    dispatch for active update-anchor drops while keeping endpoint-gated and empty-canvas drops
+    cleanup-only.
   - Custom `NodeGraphPresenter` remains advanced/internal on the default path because it still mixes
     geometry, labels, context menus, and insertion/search policy.
   - Broader XyFlow edge-wrapper lifecycle parity remains follow-up work beyond click selection,
-    the first child-bounds control contract, rendered update-anchor controls, and reconnect drag
-    start/cancel lifecycle.
+    the first child-bounds control contract, rendered update-anchor controls, reconnect drag
+    start/cancel lifecycle, and accepted reconnect commits.
 
 - **Ergonomic API fragmentation**
   - The surface naming is now closed around `NodeGraphSurfaceBinding` (instance-style app-facing

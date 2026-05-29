@@ -18,14 +18,14 @@ use super::{
     DeclarativeDiagKeyAction, DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState,
     GridPaintCacheState, MarqueeDragState, NodeDragState, NodeGraphDeclarativeInteractionContext,
     NodeGraphDeclarativeInteractionHookRef, PendingSelectionState, PortalBoundsStore,
-    PortalDebugFlags, ReconnectDragState, apply_pan_by_screen_delta, apply_zoom_about_screen_point,
-    begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
-    cancel_reconnect_drag_pointer_action_host, clear_reconnect_drag_action_host,
-    finish_reconnect_drag_pointer_up_action_host, handle_declarative_diag_key_action_host,
-    handle_declarative_escape_key_action_host, handle_declarative_keyboard_zoom_action_host,
-    handle_declarative_pointer_cancel_action_host, handle_declarative_pointer_up_action_host,
-    handle_marquee_pointer_move_action_host, handle_node_drag_pointer_move_action_host,
-    handle_reconnect_drag_pointer_move_action_host,
+    PortalDebugFlags, ReconnectDragState, ReconnectDropContext, apply_pan_by_screen_delta,
+    apply_zoom_about_screen_point, begin_left_pointer_down_action_host,
+    begin_pan_pointer_down_action_host, cancel_reconnect_drag_pointer_action_host,
+    clear_reconnect_drag_action_host, finish_reconnect_drag_pointer_up_action_host,
+    handle_declarative_diag_key_action_host, handle_declarative_escape_key_action_host,
+    handle_declarative_keyboard_zoom_action_host, handle_declarative_pointer_cancel_action_host,
+    handle_declarative_pointer_up_action_host, handle_marquee_pointer_move_action_host,
+    handle_node_drag_pointer_move_action_host, handle_reconnect_drag_pointer_move_action_host,
     invalidate_notify_and_redraw_pointer_action_host, mouse_buttons_contains,
     notify_and_redraw_action_host, read_left_pointer_down_snapshot_action_host,
     update_hovered_node_pointer_move_action_host, update_view_state_action_host,
@@ -88,6 +88,7 @@ pub(super) struct PointerFinishHandlerParams {
     pub(super) marquee_drag: Model<Option<MarqueeDragState>>,
     pub(super) node_drag: Model<Option<NodeDragState>>,
     pub(super) reconnect_drag: Model<Option<ReconnectDragState>>,
+    pub(super) reconnect_drop_context: ReconnectDropContext,
     pub(super) pending_selection: Model<Option<PendingSelectionState>>,
     pub(super) binding: NodeGraphSurfaceBinding,
 }
@@ -358,8 +359,14 @@ pub(super) fn build_pointer_move_handler(params: PointerMoveHandlerParams) -> On
 
 pub(super) fn build_pointer_up_handler(params: PointerFinishHandlerParams) -> OnPointerUp {
     Arc::new(move |host, action_cx: ActionCx, up: PointerUpCx| {
-        if finish_reconnect_drag_pointer_up_action_host(host, action_cx, &params.reconnect_drag, up)
-        {
+        if finish_reconnect_drag_pointer_up_action_host(
+            host,
+            action_cx,
+            &params.reconnect_drag,
+            &params.binding,
+            &params.reconnect_drop_context,
+            up,
+        ) {
             return true;
         }
 

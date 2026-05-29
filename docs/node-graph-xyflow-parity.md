@@ -827,9 +827,11 @@ canonical data flow and invalidation boundaries:
       selected edge state feeds default edge paint/diagnostics, update-anchor planning resolves
       selected/focused edge endpoints, rendered update-anchor controls are hit-testable with
       anchor-click priority, anchor drags reuse the existing connection-drag threshold/cancel
-      lifecycle, and edge-label controls remain hit-test isolated
-    - follow-up: target-port hit-testing, reconnect commit/callback dispatch, preview wire paint,
-      and empty-canvas drop policy
+      lifecycle, accepted reconnect drops hit-test target ports and commit through the store-backed
+      reconnect transaction/callback path, endpoint-gated or empty-canvas drops clear without
+      commit, and edge-label controls remain hit-test isolated
+    - follow-up: reconnect preview wire paint, reconnect gesture start/end callbacks, and
+      empty-canvas drop policy
     - gating:
       - global: `NodeGraphInteractionState.edges_reconnectable` (XyFlow `edgesReconnectable`)
       - per-edge override: `Edge.reconnectable` (XyFlow `edge.reconnectable: boolean | 'source' | 'target'`)
@@ -839,7 +841,9 @@ canonical data flow and invalidation boundaries:
         - fret-node planning: `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
         - fret-node pointer-path enforcement: rendered controls use the declarative pressable
           descendant seam to preempt the canvas surface pointer path and own the reconnect
-          armed/active drag lifecycle until release/cancel
+          armed/active drag lifecycle until release/cancel; active releases reuse the per-frame
+          canvas geometry and `plan_reconnect_edge_with_mode` to commit accepted reconnects through
+          the same store-backed transaction path as other graph edits
         - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
   - TODO: parity knobs:
     - cancel behavior:
