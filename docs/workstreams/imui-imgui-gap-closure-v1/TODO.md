@@ -185,6 +185,12 @@ Last updated: 2026-05-29
       focusable recording, trait delegation paths, or `fret-imui` thinness.
       Result: `facade_writer/value_models.rs` is now a module hub. `value_models/slider.rs` owns
       slider model wrappers, and `value_models/combo_model.rs` owns combo-model wrappers.
+- [x] Split IMUI facade text-model inherent wrapper behavior owner into input, picker, and textarea
+      child owners without changing public inherent method names, disabled/focusable checks, picker
+      focusable calculation, trait delegation paths, or `fret-imui` thinness.
+      Result: `facade_writer/text_models.rs` is now a module hub. `text_models/input.rs` owns
+      single-line input wrappers, `text_models/picker.rs` owns completion/history picker wrappers,
+      and `text_models/textarea.rs` owns textarea wrappers.
 - [x] Split IMUI facade button/image/action trait default method declarations out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, button/image/action method names,

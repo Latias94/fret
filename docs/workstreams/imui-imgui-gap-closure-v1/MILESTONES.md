@@ -150,6 +150,13 @@ inherent method names, and the `fret-imui` thin boundary remain unchanged.
 recording, trait delegation paths, public inherent method names, and the `fret-imui` thin boundary
 remain unchanged.
 
+2026-05-29 facade text-model inherent-wrapper sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/text_models.rs` is now a module hub.
+`text_models/input.rs` owns single-line input inherent wrappers, `text_models/picker.rs` owns
+completion/history picker inherent wrappers, and `text_models/textarea.rs` owns textarea inherent
+wrappers. Disabled/focusable checks, picker focusable calculation, trait delegation paths, public
+inherent method names, and the `fret-imui` thin boundary remain unchanged.
+
 2026-05-29 facade button surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but button, small/arrow/invisible button, image item/button,
