@@ -15,14 +15,14 @@ declarative click-edge selection, selected-edge paint/diagnostics, update-anchor
 rendered update-anchor controls, reconnect-drag lifecycle, valid reconnect drop commit/callback
 slices, reconnect gesture start/end callback aliases, active reconnect preview wire paint, and the
 minimal `reconnect_on_drop_empty` empty-drop event outcome plus the FNDX-062A store-first
-insert-node picker request seam and FNDX-062B reusable picker candidate state/provider seam. The
-current risk is
+insert-node picker request seam, FNDX-062B reusable picker candidate state/provider seam, and
+FNDX-062C mounted visual picker list. The current risk is
 consumer-facing drift where public extension or store surfaces look authoritative but bypass the
 store's contracts or imply unimplemented view-policy parity.
 
 ## Active Task
 
-- Task ID: FNDX-062B.
+- Task ID: FNDX-062C.
 - Owner: current Codex session.
 - Status: DONE; reconnect/update-anchor mechanism sub-lane remains closed; parent workstream
   remains active.
@@ -37,8 +37,11 @@ store's contracts or imply unimplemented view-policy parity.
   `NodeGraphDeclarativeInsertNodePickerState` plus
   `NodeGraphDeclarativeInsertNodePickerCandidateProvider`, so app policy can open candidate
   sessions from the request, cancel without graph commits, and explicitly plan an `Insert Node`
-  transaction that commits only when dispatched through the binding/controller/store path. Concrete
-  visual picker/searcher UI is split as FNDX-062C.
+  transaction that commits only when dispatched through the binding/controller/store path. FNDX-062C
+  mounts the default focusable visual candidate list through
+  `NodeGraphDeclarativeInsertNodePickerOverlayBinding` and
+  `node_graph_surface_with_insert_node_picker(...)`, with Escape cancel and Enter/row activation
+  routed through that same explicit path.
 - Review: `review-workstream` and `verify-rust-workstream` found no blocking closeout issues for
   FNDX-055 through FNDX-061.
 - Evidence:
@@ -64,7 +67,10 @@ store's contracts or imply unimplemented view-policy parity.
     to observe opt-in empty reconnect drops without taking raw graph ownership.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/insert_node_picker.rs` owns the reusable
     declarative insert-node picker state/provider seam, including candidate session opening,
-    cancel/no-commit behavior, and explicit selected-candidate transaction planning.
+    cancel/no-commit behavior, explicit selected-candidate transaction planning, and the default
+    mounted visual candidate list.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs` mounts the picker in the
+    interactive overlay layer when a surface renderer supplies a picker overlay binding.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/frame_plan.rs` and
     `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs` expose reconnect
     armed/active diagnostics.
@@ -90,6 +96,15 @@ store's contracts or imply unimplemented view-policy parity.
     `edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit`,
     `edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled`, and
     `edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit`.
+  - Fresh FNDX-062C gates passed:
+    `cargo nextest run -p fret-node insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate`,
+    `cargo nextest run -p fret-node insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate empty_reconnect_insert_picker_cancel_and_select_commit edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit declarative_interaction_hook_contract_stays_store_first public_node_graph_guides_teach_binding_first_surface`,
+    `cargo check -p fret-node --all-features --tests`,
+    `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`,
+    `cargo fmt --check`,
+    `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`,
+    `git diff --check`,
+    and `python3 tools/check_layering.py`.
   - Fresh FNDX-062B gates passed:
     `cargo nextest run -p fret-node empty_reconnect_insert_picker_cancel_and_select_commit`,
     `cargo nextest run -p fret-node empty_reconnect_insert_picker_cancel_and_select_commit edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit declarative_interaction_hook_contract_stays_store_first public_node_graph_guides_teach_binding_first_surface`,
@@ -194,11 +209,15 @@ store's contracts or imply unimplemented view-policy parity.
   graph changes on open/cancel and without auto-applying selected candidates; candidate selection
   produces an explicit `Insert Node` transaction that callers dispatch through the store-backed
   binding/controller path.
+- FNDX-062C maps that state/provider seam to a mounted default visual candidate list without
+  introducing another graph owner; Escape cancel and Enter/row activation stay on the explicit
+  state/provider/binding path.
 - Closeout review accepts FNDX-055 through FNDX-061 as a closed default declarative
   reconnect/update-anchor mechanism sub-lane.
-- FNDX-062C is split as the concrete visual insert-node picker/searcher UI follow-up and must not
-  reopen the closed mechanism-layer reconnect contract, the FNDX-062A request seam, or the FNDX-062B
-  candidate state/provider seam unless a concrete UI workload proves the seams are insufficient.
+- Richer candidate search/filter/typeahead behavior is split as optional follow-up and must not
+  reopen the closed mechanism-layer reconnect contract, the FNDX-062A request seam, the FNDX-062B
+  candidate state/provider seam, or the FNDX-062C mounted list seam unless a concrete UI workload
+  proves the seams are insufficient.
 
 ## Blockers
 
@@ -206,7 +225,6 @@ store's contracts or imply unimplemented view-policy parity.
 
 ## Next Recommended Action
 
-- Pick the next active slice. The most direct split follow-up is FNDX-062C: mount concrete visual
-  insert-node searcher/list UI over the FNDX-062B picker state, including keyboard/focus/cancel
-  behavior and explicit candidate selection through the existing binding/controller/store commit
-  path.
+- Pick the next active slice. A direct optional follow-up is FNDX-062D: richer search/filter/typeahead
+  behavior for large candidate sets, kept on the existing FNDX-062A request, FNDX-062B
+  state/provider, and FNDX-062C mounted list seams.

@@ -28,6 +28,8 @@ pub(super) struct SurfaceShellParams<'a, H: UiHost> {
     pub(super) portal_renderer: Option<&'a mut dyn super::NodeGraphDeclarativePortalRenderer<H>>,
     pub(super) edge_label_renderer:
         Option<&'a mut dyn super::NodeGraphDeclarativeEdgeLabelRenderer<H>>,
+    pub(super) insert_node_picker:
+        Option<super::NodeGraphDeclarativeInsertNodePickerOverlayBinding>,
     pub(super) surface_models: PaintOnlySurfaceModels,
     pub(super) prepared_frame: PreparedPaintOnlySurfaceFrame,
 }
@@ -52,6 +54,7 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
         interaction_hook,
         portal_renderer,
         edge_label_renderer,
+        insert_node_picker,
         surface_models,
         prepared_frame,
     } = params;
@@ -205,6 +208,8 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
                 portals_disabled: prepared_frame.portals_disabled,
                 portal_renderer,
                 edge_label_renderer,
+                insert_node_picker,
+                focus_target: element,
                 cull_margin_screen_px,
                 min_zoom,
                 max_zoom,

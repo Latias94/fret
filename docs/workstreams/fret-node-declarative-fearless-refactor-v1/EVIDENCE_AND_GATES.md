@@ -13,7 +13,10 @@ reconnect gesture callback aliases, active preview wire paint, and the opt-in
 store-first request seam that lets declarative policy hooks observe that outcome without committing
 graph changes. FNDX-062B adds reusable picker candidate state/provider policy so apps can cancel
 without graph commits and select a candidate by explicitly dispatching an `Insert Node`
-transaction. Concrete visual searcher/list UI remains split as FNDX-062C follow-up work.
+transaction. FNDX-062C mounts the default focusable visual candidate-list UI through
+`NodeGraphDeclarativeInsertNodePickerOverlayBinding` plus
+`node_graph_surface_with_insert_node_picker(...)`; richer search/filter/typeahead behavior remains
+split as optional follow-up work.
 
 ## Targeted Iteration Gates
 
@@ -56,10 +59,28 @@ Fresh evidence for FNDX-062B (2026-05-29):
 - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed.
 - `git diff --check`: passed.
 - `python3 tools/check_layering.py`: passed.
+- Broader package gate note: full `cargo nextest run -p fret-node` was not rerun for FNDX-062C
+  because the slice adds a bounded default overlay seam. The proof set is the focused mounted
+  picker behavior gate, the 5-test request/state/visual/source-policy guide gate, `cargo check`,
+  `cargo clippy`, format, JSON, diff, and layering.
 - Broader package gate note: full `cargo nextest run -p fret-node` was not rerun for FNDX-062B
   because the slice only adds a narrow public helper seam plus focused declarative behavior/source
   policy coverage. The current proof set is the focused picker behavior gate, the 4-test
   request/source-policy guide gate, `cargo check`, `cargo clippy`, format, JSON, diff, and layering.
+
+Fresh evidence for FNDX-062C (2026-05-29):
+
+- Red first: `cargo nextest run -p fret-node insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate`
+  failed before implementation because the visual picker overlay binding and
+  `node_graph_surface_with_insert_node_picker(...)` did not exist.
+- `cargo nextest run -p fret-node insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate`: passed.
+- `cargo nextest run -p fret-node insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate empty_reconnect_insert_picker_cancel_and_select_commit edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit declarative_interaction_hook_contract_stays_store_first public_node_graph_guides_teach_binding_first_surface`: passed.
+- `cargo check -p fret-node --all-features --tests`: passed.
+- `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+- `cargo fmt --check`: passed.
+- `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed.
+- `git diff --check`: passed.
+- `python3 tools/check_layering.py`: passed.
 
 Fresh evidence for FNDX-062A (2026-05-29):
 
@@ -105,9 +126,9 @@ Closeout decision (2026-05-29):
 - FNDX-055 through FNDX-061 are accepted as a closed sub-lane. The parent workstream remains
   active because broader `fret-node` declarative-first parity and public-surface cleanup work still
   exist outside reconnect/update-anchor mechanics.
-- Remaining visual picker work is split as FNDX-062C and must prove mounted searcher/list UI
-  behavior separately from the closed mechanism-layer outcome contract plus the FNDX-062A request
-  seam and FNDX-062B candidate state/provider seam.
+- Remaining rich picker behavior is split as optional search/filter/typeahead follow-up work and
+  must prove behavior separately from the closed mechanism-layer outcome contract plus the
+  FNDX-062A request seam, FNDX-062B candidate state/provider seam, and FNDX-062C mounted list seam.
 
 Fresh evidence for FNDX-060 (2026-05-29):
 

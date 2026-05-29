@@ -142,8 +142,14 @@ use self::input_handlers::{
 };
 pub use self::insert_node_picker::{
     NodeGraphDeclarativeInsertNodePickerCandidateProvider,
-    NodeGraphDeclarativeInsertNodePickerOpenOutcome, NodeGraphDeclarativeInsertNodePickerPlanError,
-    NodeGraphDeclarativeInsertNodePickerSession, NodeGraphDeclarativeInsertNodePickerState,
+    NodeGraphDeclarativeInsertNodePickerCandidateProviderRef,
+    NodeGraphDeclarativeInsertNodePickerOpenOutcome,
+    NodeGraphDeclarativeInsertNodePickerOverlayBinding,
+    NodeGraphDeclarativeInsertNodePickerPlanError, NodeGraphDeclarativeInsertNodePickerSession,
+    NodeGraphDeclarativeInsertNodePickerState, NodeGraphDeclarativeInsertNodePickerStateRef,
+};
+use self::insert_node_picker::{
+    NodeGraphDeclarativeInsertNodePickerOverlayParams, push_insert_node_picker_overlay,
 };
 pub use self::interaction_hooks::{
     NodeGraphDeclarativeInsertNodePickerRequest, NodeGraphDeclarativeInteractionContext,
@@ -339,6 +345,7 @@ pub trait NodeGraphDeclarativeEdgeLabelRenderer<H: UiHost> {
 pub struct NodeGraphDeclarativeSurfaceRenderers<'a, H: UiHost> {
     pub portal_renderer: Option<&'a mut dyn NodeGraphDeclarativePortalRenderer<H>>,
     pub edge_label_renderer: Option<&'a mut dyn NodeGraphDeclarativeEdgeLabelRenderer<H>>,
+    pub insert_node_picker: Option<NodeGraphDeclarativeInsertNodePickerOverlayBinding>,
 }
 
 impl<'a, H: UiHost> NodeGraphDeclarativeSurfaceRenderers<'a, H> {
@@ -346,6 +353,7 @@ impl<'a, H: UiHost> NodeGraphDeclarativeSurfaceRenderers<'a, H> {
         Self {
             portal_renderer: None,
             edge_label_renderer: None,
+            insert_node_picker: None,
         }
     }
 }
@@ -500,6 +508,7 @@ pub fn node_graph_surface_with_portal_renderer<H: UiHost + 'static>(
         NodeGraphDeclarativeSurfaceRenderers {
             portal_renderer: Some(portal_renderer),
             edge_label_renderer: None,
+            insert_node_picker: None,
         },
     )
 }
@@ -521,6 +530,25 @@ pub fn node_graph_surface_with_edge_label_renderer<H: UiHost + 'static>(
         NodeGraphDeclarativeSurfaceRenderers {
             portal_renderer: None,
             edge_label_renderer: Some(edge_label_renderer),
+            insert_node_picker: None,
+        },
+    )
+}
+
+/// Declarative node-graph surface with the default insert-node picker overlay mounted.
+#[track_caller]
+pub fn node_graph_surface_with_insert_node_picker<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    props: NodeGraphSurfaceProps,
+    picker: NodeGraphDeclarativeInsertNodePickerOverlayBinding,
+) -> AnyElement {
+    node_graph_surface_with_renderers(
+        cx,
+        props,
+        NodeGraphDeclarativeSurfaceRenderers {
+            portal_renderer: None,
+            edge_label_renderer: None,
+            insert_node_picker: Some(picker),
         },
     )
 }
@@ -546,6 +574,7 @@ fn node_graph_surface_impl<'a, H: UiHost + 'static>(
     let NodeGraphDeclarativeSurfaceRenderers {
         portal_renderer,
         edge_label_renderer,
+        insert_node_picker,
     } = renderers;
     let NodeGraphSurfaceProps {
         binding,
@@ -755,6 +784,7 @@ fn node_graph_surface_impl<'a, H: UiHost + 'static>(
                     pinch_zoom_speed,
                     portal_renderer,
                     edge_label_renderer,
+                    insert_node_picker,
                     surface_models: PaintOnlySurfaceModels {
                         drag: drag.clone(),
                         marquee_drag: marquee_drag.clone(),
@@ -952,6 +982,19 @@ where
     Cx: ElementContextAccess<'a, H>,
 {
     node_graph_surface_with_edge_label_renderer(cx.elements(), props, edge_label_renderer)
+}
+
+/// Capability-first adapter for [`node_graph_surface_with_insert_node_picker`].
+#[track_caller]
+pub fn node_graph_surface_with_insert_node_picker_in<'a, H: UiHost + 'static + 'a, Cx>(
+    cx: &mut Cx,
+    props: NodeGraphSurfaceProps,
+    picker: NodeGraphDeclarativeInsertNodePickerOverlayBinding,
+) -> AnyElement
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    node_graph_surface_with_insert_node_picker(cx.elements(), props, picker)
 }
 
 /// Capability-first adapter for [`node_graph_surface_with_renderers`].

@@ -507,6 +507,10 @@ Status note (2026-05-28):
   apps can open a candidate session, cancel it without graph commits, and turn an explicit
   candidate selection into an `Insert Node` transaction that is only applied when dispatched through
   the binding/controller/store path.
+- FNDX-062C mounts the default visual picker list for that state through
+  `NodeGraphDeclarativeInsertNodePickerOverlayBinding` and
+  `node_graph_surface_with_insert_node_picker(...)`, keeping Escape cancel and Enter/row activation
+  on the same explicit state/provider/binding path.
 
 Closeout note (2026-05-29):
 
@@ -515,9 +519,10 @@ Closeout note (2026-05-29):
   edge update anchors render, own reconnect drag lifecycle, commit valid target drops through the
   store transaction path, emit reconnect callback aliases, paint active preview wires, and surface
   opt-in empty-drop picker outcomes without graph commits.
-- Concrete visual insert-node searcher/list UI is split as FNDX-062C. Do not reopen the mechanism
-  sub-lane, the request seam, or the FNDX-062B candidate state/provider seam unless a concrete UI
-  workload proves the seams are insufficient.
+- Richer search/filter/typeahead behavior for large candidate sets is split as optional follow-up.
+  Do not reopen the mechanism sub-lane, the request seam, the FNDX-062B candidate state/provider
+  seam, or the FNDX-062C mounted list seam unless a concrete UI workload proves the seams are
+  insufficient.
 
 Why this still matters:
 

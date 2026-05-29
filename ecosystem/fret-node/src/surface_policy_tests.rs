@@ -559,9 +559,13 @@ fn declarative_interaction_hook_contract_stays_store_first() {
         UI_DECLARATIVE_MOD_RS.contains("NodeGraphDeclarativeInsertNodePickerCandidateProvider")
     );
     assert!(UI_DECLARATIVE_MOD_RS.contains("NodeGraphDeclarativeInsertNodePickerState"));
+    assert!(UI_DECLARATIVE_MOD_RS.contains("NodeGraphDeclarativeInsertNodePickerOverlayBinding"));
+    assert!(UI_DECLARATIVE_MOD_RS.contains("node_graph_surface_with_insert_node_picker"));
     assert!(UI_MOD_RS.contains("NodeGraphDeclarativeInsertNodePickerRequest"));
     assert!(UI_MOD_RS.contains("NodeGraphDeclarativeInsertNodePickerCandidateProvider"));
     assert!(UI_MOD_RS.contains("NodeGraphDeclarativeInsertNodePickerState"));
+    assert!(UI_MOD_RS.contains("NodeGraphDeclarativeInsertNodePickerOverlayBinding"));
+    assert!(UI_MOD_RS.contains("node_graph_surface_with_insert_node_picker"));
     assert!(
         UI_DECLARATIVE_INTERACTION_HOOKS_RS
             .contains("pub struct NodeGraphDeclarativeInteractionContext")
@@ -576,6 +580,10 @@ fn declarative_interaction_hook_contract_stays_store_first() {
         UI_DECLARATIVE_PAINT_ONLY_RS
             .contains("NodeGraphDeclarativeInsertNodePickerCandidateProvider")
     );
+    assert!(
+        UI_DECLARATIVE_PAINT_ONLY_RS.contains("NodeGraphDeclarativeInsertNodePickerOverlayBinding")
+    );
+    assert!(UI_DECLARATIVE_PAINT_ONLY_RS.contains("node_graph_surface_with_insert_node_picker"));
     assert!(
         UI_DECLARATIVE_INTERACTION_HOOKS_RS.contains("dispatch_transaction(\n")
             || UI_DECLARATIVE_INTERACTION_HOOKS_RS.contains("dispatch_transaction(&mut self")
@@ -602,6 +610,10 @@ fn declarative_interaction_hook_contract_stays_store_first() {
         NODE_GRAPH_XYFLOW_GUIDE_MD
             .contains("NodeGraphDeclarativeInsertNodePickerCandidateProvider")
     );
+    assert!(
+        NODE_GRAPH_XYFLOW_GUIDE_MD.contains("NodeGraphDeclarativeInsertNodePickerOverlayBinding")
+    );
+    assert!(NODE_GRAPH_XYFLOW_GUIDE_MD.contains("node_graph_surface_with_insert_node_picker"));
     assert!(NODE_GRAPH_XYFLOW_GUIDE_MD.contains("not mutable graph ownership"));
     assert!(NODE_GRAPH_CONTROLLED_MODE_MD.contains("NodeGraphSurfaceProps::interaction_hook"));
     assert!(

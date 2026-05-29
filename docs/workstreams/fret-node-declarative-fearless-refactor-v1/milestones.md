@@ -240,9 +240,13 @@ points rather than direct graph mutation.
   commits.
 - FNDX-062B adds reusable picker candidate state/provider policy for that request. It lets apps
   cancel without graph commits and turns an explicit candidate selection into an `Insert Node`
-  transaction that is only applied through the binding/controller/store dispatch path. Concrete
-  visual insert-node searcher/list UI remains split as FNDX-062C and is not required to accept the
-  closed mechanism contract above.
+  transaction that is only applied through the binding/controller/store dispatch path.
+- FNDX-062C mounts the default visual insert-node picker list through
+  `NodeGraphDeclarativeInsertNodePickerOverlayBinding` plus
+  `node_graph_surface_with_insert_node_picker(...)`. It handles focused Escape cancel without a
+  graph commit and Enter/row activation through the explicit FNDX-062B transaction path. Richer
+  search/filter/typeahead behavior remains optional follow-up work and is not required to accept
+  the closed mechanism contract above.
 
 ### Progress note (2026-03-07)
 

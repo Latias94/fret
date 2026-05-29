@@ -833,10 +833,12 @@ canonical data flow and invalidation boundaries:
       outcome without a graph transaction and raise a store-first
       `NodeGraphDeclarativeInsertNodePickerRequest` for policy hooks, expose reusable
       `NodeGraphDeclarativeInsertNodePickerState` + candidate-provider policy for cancel and
-      explicit candidate selection transactions, reconnect gesture start/end callback aliases fire
-      for arm/commit/reject/no-op/picker/cancel end paths, active drags paint a transient reconnect
-      preview wire, and edge-label controls remain hit-test isolated
-    - follow-up: concrete visual searcher/list UI for empty-canvas reconnect drops
+      explicit candidate selection transactions, mount a concrete default visual picker through
+      `NodeGraphDeclarativeInsertNodePickerOverlayBinding` +
+      `node_graph_surface_with_insert_node_picker(...)`, reconnect gesture start/end callback
+      aliases fire for arm/commit/reject/no-op/picker/cancel end paths, active drags paint a
+      transient reconnect preview wire, and edge-label controls remain hit-test isolated
+    - follow-up: richer search/filter/typeahead behavior for large candidate sets
     - gating:
       - global: `NodeGraphInteractionState.edges_reconnectable` (XyFlow `edgesReconnectable`)
       - per-edge override: `Edge.reconnectable` (XyFlow `edge.reconnectable: boolean | 'source' | 'target'`)
@@ -866,7 +868,8 @@ canonical data flow and invalidation boundaries:
       `NodeGraphSurfaceProps::interaction_hook` can observe the resulting
       `NodeGraphDeclarativeInsertNodePickerRequest`; `NodeGraphDeclarativeInsertNodePickerState`
       can hold candidates, cancel without committing, and plan an explicit selected-candidate
-      transaction; concrete visual searcher UI remains a follow-up
+      transaction; `node_graph_surface_with_insert_node_picker(...)` mounts the default focusable
+      candidate-list UI and routes Escape/Enter through that explicit state/provider/binding path
 
 ## 6.4 Edge split / reroute node
 

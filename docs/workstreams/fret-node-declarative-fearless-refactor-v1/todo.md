@@ -952,9 +952,10 @@ Execution companion: `design.md` (surface map + next worktree order).
     - `git diff --check`: passed.
     - `python3 tools/check_layering.py`: passed.
 
-- [ ] FNDX-062C Split follow-on: mount a concrete visual insert-node searcher/list UI for the
+- [x] FNDX-062C Split follow-on: mount a concrete visual insert-node searcher/list UI for the
       FNDX-062B picker state.
-  - Status: follow-up split after FNDX-062B established candidate state and explicit commit policy.
+  - Status: completed as the default focusable candidate-list UI over the FNDX-062B state/provider
+    seam.
   - Scope:
     - visual list/searcher element for active `NodeGraphDeclarativeInsertNodePickerState`
     - keyboard/focus/cancel behavior for the mounted picker UI
@@ -962,8 +963,45 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Non-goal: do not reopen update-anchor mechanics, request shape, or candidate planning unless
     the visual UI exposes a concrete mismatch.
   - Validation:
-    - add a focused declarative UI gate proving the mounted picker can focus, cancel without a
-      transaction, and choose a candidate through the explicit commit path.
+    - `cargo nextest run -p fret-node insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate`
+  - Exit note: the default visual picker mounts through
+    `NodeGraphDeclarativeInsertNodePickerOverlayBinding` plus
+    `node_graph_surface_with_insert_node_picker(...)`. It renders a focusable
+    `node_graph.insert_node_picker` candidate list, handles Escape by canceling without a graph
+    commit, and handles Enter/row activation by planning and dispatching the selected-candidate
+    `Insert Node` transaction through the FNDX-062B state/provider/binding path.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/insert_node_picker.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - Red first: `cargo nextest run -p fret-node insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate`
+      failed before implementation because the visual picker overlay binding and
+      `node_graph_surface_with_insert_node_picker(...)` did not exist.
+    - `cargo nextest run -p fret-node insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate`:
+      passed.
+    - `cargo nextest run -p fret-node insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate empty_reconnect_insert_picker_cancel_and_select_commit edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit declarative_interaction_hook_contract_stays_store_first public_node_graph_guides_teach_binding_first_surface`:
+      passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo fmt --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+
+- [ ] FNDX-062D Split follow-on: add richer candidate search/filter/typeahead behavior if large
+      picker workloads need it.
+  - Status: optional follow-up after FNDX-062C established the default mounted list UI.
+  - Scope:
+    - search/filter text or typeahead policy for large candidate sets
+    - keyboard active-index bounds/wrap behavior beyond the current Enter/Escape focused gate
+    - focused gate proving filtering does not bypass the explicit FNDX-062B commit path
+  - Non-goal: do not reopen reconnect mechanics, picker request shape, or the default candidate
+    state/provider seam without a concrete workload mismatch.
 
 ## M0 - Decision gates and internal seam map
 

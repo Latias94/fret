@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::element::CanvasProps;
-use fret_ui::{ElementContext, Invalidation, ThemeSnapshot, UiHost};
+use fret_ui::{ElementContext, GlobalElementId, Invalidation, ThemeSnapshot, UiHost};
 
 use crate::core::{EdgeId, NodeId};
 use crate::ui::paint_overrides::NodeGraphPaintOverridesRef;
@@ -11,12 +11,14 @@ use crate::ui::style::NodeGraphStyle;
 
 use super::{
     HoverAnchorStore, HoverTooltipOverlayParams, MarqueeDragState, NodeDragState,
-    NodeGraphDeclarativeInteractionHookRef, PortalMeasuredGeometryState, ReconnectDragState,
-    ReconnectDropContext, apply_pending_fit_to_portals, host_visible_portal_labels,
-    paint_debug_grid_cached, paint_edges_cached, paint_nodes_cached, paint_reconnect_preview_wire,
-    push_edge_label_overlays, push_edge_update_anchor_controls,
-    push_hover_tooltip_overlay_if_needed, push_marquee_overlay_if_active,
-    push_overlay_layer_if_needed, sync_hover_anchor_store_in_models,
+    NodeGraphDeclarativeInsertNodePickerOverlayBinding,
+    NodeGraphDeclarativeInsertNodePickerOverlayParams, NodeGraphDeclarativeInteractionHookRef,
+    PortalMeasuredGeometryState, ReconnectDragState, ReconnectDropContext,
+    apply_pending_fit_to_portals, host_visible_portal_labels, paint_debug_grid_cached,
+    paint_edges_cached, paint_nodes_cached, paint_reconnect_preview_wire, push_edge_label_overlays,
+    push_edge_update_anchor_controls, push_hover_tooltip_overlay_if_needed,
+    push_insert_node_picker_overlay, push_marquee_overlay_if_active, push_overlay_layer_if_needed,
+    sync_hover_anchor_store_in_models,
 };
 
 pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
@@ -37,6 +39,8 @@ pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
     pub(super) portal_renderer: Option<&'a mut dyn super::NodeGraphDeclarativePortalRenderer<H>>,
     pub(super) edge_label_renderer:
         Option<&'a mut dyn super::NodeGraphDeclarativeEdgeLabelRenderer<H>>,
+    pub(super) insert_node_picker: Option<NodeGraphDeclarativeInsertNodePickerOverlayBinding>,
+    pub(super) focus_target: GlobalElementId,
     pub(super) cull_margin_screen_px: f32,
     pub(super) min_zoom: f32,
     pub(super) max_zoom: f32,
@@ -82,6 +86,8 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         portals_disabled,
         portal_renderer,
         edge_label_renderer,
+        insert_node_picker,
+        focus_target,
         cull_margin_screen_px,
         min_zoom,
         max_zoom,
@@ -190,6 +196,19 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         grid_bounds,
         &style_tokens,
     );
+    if let Some(insert_node_picker) = insert_node_picker {
+        push_insert_node_picker_overlay(
+            cx,
+            &mut interactive_overlay_children,
+            NodeGraphDeclarativeInsertNodePickerOverlayParams {
+                binding: binding.clone(),
+                picker: insert_node_picker,
+                bounds: grid_bounds,
+                style_tokens: style_tokens.clone(),
+                focus_target,
+            },
+        );
+    }
     let hovered_portal_hosted = if portal_hosting.enabled && !portals_disabled {
         host_visible_portal_labels(
             cx,

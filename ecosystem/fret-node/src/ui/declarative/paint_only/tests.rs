@@ -8,10 +8,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use fret_canvas::view::PanZoom2D;
 use fret_core::scene::DashPatternV1;
 use fret_core::{
-    AppWindowId, Color, MaterialDescriptor, MaterialId, MaterialRegistrationError, Modifiers,
-    MouseButton, MouseButtons, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
-    PathStyle, Point, PointerId, PointerType, Px, Rect, SemanticsRole, Size, SvgId, SvgService,
-    TextConstraints, TextMetrics, TextService,
+    AppWindowId, Color, KeyCode, MaterialDescriptor, MaterialId, MaterialRegistrationError,
+    Modifiers, MouseButton, MouseButtons, PathCommand, PathConstraints, PathId, PathMetrics,
+    PathService, PathStyle, Point, PointerId, PointerType, Px, Rect, SemanticsRole, Size, SvgId,
+    SvgService, TextConstraints, TextMetrics, TextService,
 };
 use fret_runtime::{
     ClipboardToken, CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession, Effect,
@@ -39,13 +39,16 @@ use super::{
     MarqueePointerMoveOutcome, NodeDragPhase, NodeDragPointerMoveOutcome, NodeDragReleaseOutcome,
     NodeDragState, NodeGraphDeclarativeEdgeLabelRenderer,
     NodeGraphDeclarativeInsertNodePickerCandidateProvider,
-    NodeGraphDeclarativeInsertNodePickerOpenOutcome, NodeGraphDeclarativeInsertNodePickerRequest,
-    NodeGraphDeclarativeInsertNodePickerState, NodeGraphDeclarativeInteractionContext,
-    NodeGraphDeclarativeInteractionHook, NodeGraphDeclarativeInteractionOutcome,
-    NodeGraphDeclarativePortalRenderer, NodeGraphDiagnosticsConfig, NodeGraphEdgeLabelHitTestMode,
-    NodeGraphEdgeLabelLayout, NodeGraphVisibleSubsetPortalConfig, NodeRectDraw,
-    PaintOnlyInteractionFrameInputs, PendingSelectionState, PointerDownHandlerParams,
-    PortalBoundsStore, PortalDebugFlags, PortalMeasuredGeometryState, ReconnectDragState,
+    NodeGraphDeclarativeInsertNodePickerCandidateProviderRef,
+    NodeGraphDeclarativeInsertNodePickerOpenOutcome,
+    NodeGraphDeclarativeInsertNodePickerOverlayBinding,
+    NodeGraphDeclarativeInsertNodePickerRequest, NodeGraphDeclarativeInsertNodePickerState,
+    NodeGraphDeclarativeInteractionContext, NodeGraphDeclarativeInteractionHook,
+    NodeGraphDeclarativeInteractionOutcome, NodeGraphDeclarativePortalRenderer,
+    NodeGraphDiagnosticsConfig, NodeGraphEdgeLabelHitTestMode, NodeGraphEdgeLabelLayout,
+    NodeGraphVisibleSubsetPortalConfig, NodeRectDraw, PaintOnlyInteractionFrameInputs,
+    PendingSelectionState, PointerDownHandlerParams, PortalBoundsStore, PortalDebugFlags,
+    PortalMeasuredGeometryState, ReconnectDragState,
     apply_declarative_diag_view_preset_action_host, authoritative_surface_boundary_snapshot,
     begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
     build_click_selection_preview_edges, build_click_selection_preview_nodes,
@@ -97,8 +100,8 @@ use crate::ui::{
     PortalCommandOutcome, PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit,
     PortalTextCommand, PortalTextEditHandler, PortalTextEditSpec, PortalTextEditSubmit,
     PortalTextStepMode, node_graph_surface, node_graph_surface_with_edge_label_renderer,
-    node_graph_surface_with_portal_renderer, portal_cancel_text_command,
-    portal_step_text_command_with_mode, portal_submit_text_command,
+    node_graph_surface_with_insert_node_picker, node_graph_surface_with_portal_renderer,
+    portal_cancel_text_command, portal_step_text_command_with_mode, portal_submit_text_command,
 };
 use serde_json::Value;
 
@@ -1438,6 +1441,58 @@ fn render_surface_frame_for_binding_with_scene(
             .expect("semantics snapshot"),
         scene,
     )
+}
+
+fn render_surface_frame_with_insert_picker(
+    ui: &mut fret_ui::UiTree<TestActionHostImpl>,
+    host: &mut TestActionHostImpl,
+    services: &mut FakeUiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    binding: &NodeGraphSurfaceBinding,
+    picker: NodeGraphDeclarativeInsertNodePickerOverlayBinding,
+) -> fret_core::SemanticsSnapshot {
+    let root = fret_ui::declarative::render_root(
+        ui,
+        host,
+        services,
+        window,
+        bounds,
+        "node-graph-surface-insert-picker",
+        |cx| {
+            vec![node_graph_surface_with_insert_node_picker(
+                cx,
+                super::NodeGraphSurfaceProps::new(binding.clone()),
+                picker,
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(host, services, bounds, 1.0);
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(host, services, bounds, &mut scene, 1.0);
+    host.frame_id = fret_runtime::FrameId(host.frame_id.0.saturating_add(1));
+    ui.semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot")
+}
+
+fn dispatch_key_down(
+    ui: &mut fret_ui::UiTree<TestActionHostImpl>,
+    host: &mut TestActionHostImpl,
+    services: &mut FakeUiServices,
+    key: KeyCode,
+) {
+    ui.dispatch_event(
+        host,
+        services,
+        &fret_core::Event::KeyDown {
+            key,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
 }
 
 fn render_default_surface_frame_until_test_id(
@@ -5437,6 +5492,148 @@ fn empty_reconnect_insert_picker_cancel_and_select_commit() {
         trace.borrow().commit_labels,
         vec![Some("Insert Node".to_string())]
     );
+}
+
+#[test]
+fn insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate() {
+    let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let edge_before = graph.edges.get(&edge).expect("edge present").clone();
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let editor_config = test_editor_config(|editor_config| {
+        editor_config.interaction.reconnect_on_drop_empty = true;
+    });
+    let mode = editor_config.resolved_interaction_state().connection_mode;
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order,
+            selected_edges: vec![edge],
+            ..Default::default()
+        },
+        editor_config,
+    );
+    let trace = install_declarative_callback_trace(&mut host, &binding.store_model());
+    let picker_state = Rc::new(RefCell::new(
+        NodeGraphDeclarativeInsertNodePickerState::default(),
+    ));
+    let created_node = NodeId::from_u128(0x620C);
+    let planned_positions = Rc::new(RefCell::new(Vec::new()));
+    let picker_provider: NodeGraphDeclarativeInsertNodePickerCandidateProviderRef =
+        Rc::new(RefCell::new(Box::new(SingleInsertNodePickerProvider {
+            candidate: InsertNodeCandidate {
+                kind: NodeKindKey::new("test.visual_inserted"),
+                label: Arc::<str>::from("Visual Inserted Node"),
+                enabled: true,
+                template: None,
+                payload: Value::Null,
+            },
+            created_node,
+            planned_positions: planned_positions.clone(),
+        })));
+    let picker_binding = NodeGraphDeclarativeInsertNodePickerOverlayBinding::new(
+        picker_state.clone(),
+        picker_provider.clone(),
+    );
+    let request = NodeGraphDeclarativeInsertNodePickerRequest {
+        connect_end: ConnectEnd {
+            kind: ConnectDragKind::Reconnect {
+                edge,
+                endpoint: EdgeEndpoint::From,
+                fixed: edge_before.to,
+            },
+            mode,
+            target: None,
+            outcome: ConnectEndOutcome::OpenInsertNodePicker,
+        },
+        screen_position: Point::new(Px(bounds.origin.x.0 + 260.0), Px(bounds.origin.y.0 + 180.0)),
+        canvas_position: Point::new(Px(260.0), Px(180.0)),
+    };
+    let candidate = picker_provider
+        .borrow_mut()
+        .list_insert_node_candidates(
+            &host
+                .models
+                .read(&binding.store_model(), |store| store.graph().clone())
+                .expect("store graph readable"),
+            &request,
+        )
+        .into_iter()
+        .next()
+        .expect("test candidate");
+
+    assert!(matches!(
+        picker_state
+            .borrow_mut()
+            .open_with_candidates(request.clone(), vec![candidate.clone()]),
+        NodeGraphDeclarativeInsertNodePickerOpenOutcome::Opened { candidate_count: 1 }
+    ));
+    let snapshot = render_surface_frame_with_insert_picker(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        picker_binding.clone(),
+    );
+    let surface_node = surface_snapshot_node_id(&snapshot, "node_graph.canvas");
+    let picker_node = surface_snapshot_node_id(&snapshot, "node_graph.insert_node_picker");
+    assert!(
+        maybe_surface_snapshot_node_id(&snapshot, "node_graph.insert_node_picker.candidate.0")
+            .is_some()
+    );
+
+    ui.set_focus(Some(picker_node));
+    dispatch_key_down(&mut ui, &mut host, &mut services, KeyCode::Escape);
+    assert!(picker_state.borrow().active().is_none());
+    assert!(trace.borrow().commit_labels.is_empty());
+    assert_eq!(ui.focus(), Some(surface_node));
+
+    assert!(matches!(
+        picker_state
+            .borrow_mut()
+            .open_with_candidates(request, vec![candidate]),
+        NodeGraphDeclarativeInsertNodePickerOpenOutcome::Opened { candidate_count: 1 }
+    ));
+    let snapshot = render_surface_frame_with_insert_picker(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        picker_binding,
+    );
+    let surface_node = surface_snapshot_node_id(&snapshot, "node_graph.canvas");
+    let picker_node = surface_snapshot_node_id(&snapshot, "node_graph.insert_node_picker");
+    ui.set_focus(Some(picker_node));
+    dispatch_key_down(&mut ui, &mut host, &mut services, KeyCode::Enter);
+
+    assert!(picker_state.borrow().active().is_none());
+    assert_eq!(
+        planned_positions.borrow().as_slice(),
+        &[CanvasPoint { x: 260.0, y: 180.0 }]
+    );
+    let inserted = host
+        .models
+        .read(&binding.store_model(), |store| {
+            store.graph().nodes.get(&created_node).cloned()
+        })
+        .expect("store readable")
+        .expect("candidate inserted node");
+    assert_eq!(inserted.pos, CanvasPoint { x: 260.0, y: 180.0 });
+    assert_eq!(
+        trace.borrow().commit_labels,
+        vec![Some("Insert Node".to_string())]
+    );
+    assert_eq!(ui.focus(), Some(surface_node));
 }
 
 #[test]

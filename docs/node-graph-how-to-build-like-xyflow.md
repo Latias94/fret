@@ -40,7 +40,11 @@ This is the closest match to “useReactFlow + built-ins”:
   opt-in picker outcome and still leaves graph insertion uncommitted until app policy chooses a
   candidate. Use `NodeGraphDeclarativeInsertNodePickerState` with a
   `NodeGraphDeclarativeInsertNodePickerCandidateProvider` when you want a reusable candidate list,
-  cancel, and explicit selection-to-transaction flow.
+  cancel, and explicit selection-to-transaction flow. Mount the default visual list with
+  `NodeGraphDeclarativeInsertNodePickerOverlayBinding` and
+  `node_graph_surface_with_insert_node_picker(...)` when you want the surface to render a
+  focusable picker that handles Escape cancel and Enter/row activation through that same explicit
+  transaction path.
 - When lower-level imperative ownership is useful, derive it explicitly with
   `NodeGraphController::new(surface.store_model())`.
 

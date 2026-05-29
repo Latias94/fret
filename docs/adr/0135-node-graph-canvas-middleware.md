@@ -59,9 +59,12 @@ hook surface now also carries insert-node picker requests for opt-in empty recon
 `NodeGraphDeclarativeInsertNodePickerState` plus
 `NodeGraphDeclarativeInsertNodePickerCandidateProvider`: policy code can open a candidate session,
 cancel it without graph commits, and plan an explicit `Insert Node` transaction for caller dispatch
-through the binding/controller/store path. This remains intentionally small: it covers
-tool-mode/shortcut interception and picker-policy handoff without reopening retained widget
-authoring, mounting a concrete visual searcher, or adding a second graph owner.
+through the binding/controller/store path. The default visual list can be mounted with
+`NodeGraphDeclarativeInsertNodePickerOverlayBinding` and
+`node_graph_surface_with_insert_node_picker(...)`, which keeps Escape cancel and Enter/row
+activation on the same explicit state/provider/binding path. This remains intentionally small: it
+covers tool-mode/shortcut interception and picker-policy handoff without reopening retained widget
+authoring or adding a second graph owner.
 
 Hooks receive a `NodeGraphDeclarativeInteractionContext`, not a mutable `Graph` and not raw
 `ModelStore` access. The context may expose:
