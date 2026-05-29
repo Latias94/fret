@@ -1182,6 +1182,13 @@ Last updated: 2026-05-30
       Result: `draw_list_shapes/linear/line_poly.rs` owns line/polyline/filled-polygon command
       recording, `linear/rect_quad_triangle.rs` owns rect/quad/triangle command recording, and
       `linear.rs` is now a private module index.
+- [x] Split IMUI debug-draw draw-list rect/quad/triangle authoring out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear/rect_quad_triangle.rs`
+      into private rect, quad, and triangle owner modules without changing draw-list authoring
+      method names, command payloads, summary projection, paint behavior, or debug-draw smoke
+      coverage.
+      Result: `linear/rect_quad_triangle.rs` is now a private module index; `rect.rs`, `quad.rs`,
+      and `triangle.rs` own their corresponding command recording methods.
 - [x] Split IMUI debug-draw draw-list round shape authoring out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/round.rs` into private
       circle, ngon, and ellipse owner modules without changing draw-list authoring method names,

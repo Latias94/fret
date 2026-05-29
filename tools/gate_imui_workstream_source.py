@@ -27021,7 +27021,35 @@ def main() -> None:
                 "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear/rect_quad_triangle.rs"
             ),
             required=[
-                "use fret_core::{Color, Point, Px, Rect};",
+                "mod quad;",
+                "mod rect;",
+                "mod triangle;",
+            ],
+            forbidden=[
+                "impl ImUiDebugDrawList",
+                "pub fn add_rect",
+                "DebugDrawCommand::Rect",
+                "pub fn add_quad",
+                "DebugDrawCommand::Quad",
+                "pub fn add_triangle",
+                "DebugDrawCommand::Triangle",
+                "pub fn add_line",
+                "pub fn add_polyline",
+                "DebugDrawCommand::Line",
+                "DebugDrawCommand::Polyline",
+                "DebugDrawCommand::ConvexPolyFilled",
+                "DebugDrawCommand::ConcavePolyFilled",
+                "DebugDrawCommand::Image",
+                "DebugDrawCommand::Circle",
+                "DebugDrawCommand::Bezier",
+                "pub fn command_count",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear/rect_quad_triangle/rect.rs"
+            ),
+            required=[
                 "impl ImUiDebugDrawList",
                 "pub fn add_rect",
                 "pub fn add_rect_with_style",
@@ -27030,11 +27058,55 @@ def main() -> None:
                 "DebugDrawCommand::RectFilled",
                 "pub fn add_rect_filled_multi_color",
                 "DebugDrawCommand::RectFilledMultiColor",
+            ],
+            forbidden=[
+                "pub fn add_line",
+                "pub fn add_polyline",
+                "DebugDrawCommand::Line",
+                "DebugDrawCommand::Polyline",
+                "DebugDrawCommand::ConvexPolyFilled",
+                "DebugDrawCommand::ConcavePolyFilled",
+                "DebugDrawCommand::Image",
+                "DebugDrawCommand::Circle",
+                "DebugDrawCommand::Quad",
+                "DebugDrawCommand::Triangle",
+                "DebugDrawCommand::Bezier",
+                "pub fn command_count",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear/rect_quad_triangle/quad.rs"
+            ),
+            required=[
+                "impl ImUiDebugDrawList",
                 "pub fn add_quad",
                 "pub fn add_quad_with_style",
                 "DebugDrawCommand::Quad",
                 "pub fn add_quad_filled",
                 "DebugDrawCommand::QuadFilled",
+            ],
+            forbidden=[
+                "pub fn add_line",
+                "pub fn add_polyline",
+                "DebugDrawCommand::Line",
+                "DebugDrawCommand::Polyline",
+                "DebugDrawCommand::ConvexPolyFilled",
+                "DebugDrawCommand::ConcavePolyFilled",
+                "DebugDrawCommand::Image",
+                "DebugDrawCommand::Circle",
+                "DebugDrawCommand::Rect",
+                "DebugDrawCommand::Triangle",
+                "DebugDrawCommand::Bezier",
+                "pub fn command_count",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear/rect_quad_triangle/triangle.rs"
+            ),
+            required=[
+                "impl ImUiDebugDrawList",
                 "pub fn add_triangle",
                 "pub fn add_triangle_with_style",
                 "DebugDrawCommand::Triangle",
@@ -27050,6 +27122,8 @@ def main() -> None:
                 "DebugDrawCommand::ConcavePolyFilled",
                 "DebugDrawCommand::Image",
                 "DebugDrawCommand::Circle",
+                "DebugDrawCommand::Rect",
+                "DebugDrawCommand::Quad",
                 "DebugDrawCommand::Bezier",
                 "pub fn command_count",
             ],

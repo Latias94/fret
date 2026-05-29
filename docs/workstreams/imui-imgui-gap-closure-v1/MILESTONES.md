@@ -1109,6 +1109,11 @@ module index. `linear/line_poly.rs` owns line, polyline, convex polygon fill, an
 fill command recording. `linear/rect_quad_triangle.rs` owns rect, quad, triangle, and filled
 variants.
 
+2026-05-30 debug-draw draw-list rect/quad/triangle owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear/rect_quad_triangle.rs`
+is now a private module index. `rect.rs`, `quad.rs`, and `triangle.rs` own their corresponding
+command recording methods.
+
 2026-05-30 debug-draw draw-list round owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/round.rs` is now a private
 module index. `round/circle.rs` owns circle command recording, `round/ngon.rs` owns ngon command
