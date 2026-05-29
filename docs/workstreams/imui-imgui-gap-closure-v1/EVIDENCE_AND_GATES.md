@@ -4878,6 +4878,36 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Text-Picker Session Preparation Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI input-text picker session preparation moved into a private owner without
+changing model reads, candidate visibility, input enabled-scope checks, keyboard snapshot
+reconciliation, popup snapshot reads, expanded-state derivation, input-root mounting, popup open
+policy, popup rendering, or `InputTextPickerResponse`.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core/session.rs` owns model/candidate/
+  popup/keyboard snapshot preparation and `picker_expanded` derivation.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` keeps input-root mounting,
+  open-policy application, popup rendering, and pick response merging.
+- `tools/gate_imui_workstream_source.py` now rejects session-preparation bodies from drifting back
+  into `core.rs` while requiring the private session owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_input_text_picker_options_smoke
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Table Header-Cell Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI table header cell layout and resize wrapping moved into a private owner

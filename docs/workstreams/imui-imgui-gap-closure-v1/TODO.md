@@ -1127,6 +1127,14 @@ Last updated: 2026-05-30
       snapshot reconciliation, input root mounting, open-policy application, popup rendering, and
       pick response merging. `text_picker_controls.rs` is now a private module index and re-export
       hub for core and entry wrappers.
+- [x] Split IMUI input-text picker session preparation out of
+      `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` into a private session owner
+      without changing model reads, candidate visibility, input enabled-scope checks, keyboard
+      snapshot reconciliation, popup snapshot reads, expanded-state derivation, input-root
+      mounting, popup open policy, popup rendering, or `InputTextPickerResponse`.
+      Result: `text_picker_controls/core/session.rs` owns model/candidate/popup/keyboard snapshot
+      preparation and `picker_expanded` derivation. `core.rs` keeps input-root mounting,
+      open-policy application, popup rendering, and pick response merging.
 - [x] Split IMUI table header cell layout/resize wrapping out of
       `ecosystem/fret-ui-kit/src/imui/table_controls/header.rs` into a private cell owner without
       changing sortable/plain header behavior, resize handle wiring, header test IDs, table layout,

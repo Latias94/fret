@@ -965,6 +965,12 @@ mounting, open-policy application, popup rendering, and pick response merging.
 `text_picker_controls.rs` is now a private module index and re-export hub for the core picker and
 completion/history entry wrappers.
 
+2026-05-30 text-picker session preparation owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/core/session.rs` now owns model reads,
+candidate visibility, popup-open model lookup, enabled-scope checks, keyboard snapshot
+reconciliation, popup snapshot reads, and `picker_expanded` derivation. `core.rs` keeps input-root
+mounting, open-policy application, popup rendering, and pick response merging.
+
 2026-05-27 table header-cell owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/header/cell.rs` now owns header cell layout,
 resize-handle attachment, resize test-id suffixing, and header content flex wrapping.
