@@ -33,6 +33,19 @@ Fresh evidence for FNDX-061 (2026-05-29):
 - `git diff --check`: passed.
 - `python3 tools/check_layering.py`: passed.
 
+Review and verification evidence for the reconnect/update-anchor closeout (2026-05-29):
+
+- Scope reviewed: FNDX-055 through FNDX-061 (`aff74fa559..5985a47713`), covering update-anchor
+  planning/rendering, reconnect drag lifecycle, target-port drop commit/reject/no-op outcomes,
+  reconnect gesture callback aliases, preview wire paint, and the opt-in empty-drop picker outcome.
+- `review-workstream` result: no blocking workstream-compliance or code-quality findings. The
+  remaining risk is intentionally scoped to concrete insert-node picker UI/policy, not the
+  mechanism-layer reconnect event contract.
+- `cargo nextest run -p fret-node`: passed with 481 tests.
+- `cargo check -p fret-node --all-features --tests`: passed.
+- `cargo nextest run -p fret-node --no-default-features runtime`: passed with 48 tests.
+- `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+
 Fresh evidence for FNDX-060 (2026-05-29):
 
 - `cargo nextest run -p fret-node edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup`: red first, then passed after implementation.

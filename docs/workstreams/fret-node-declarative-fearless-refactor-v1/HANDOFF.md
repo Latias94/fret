@@ -78,6 +78,12 @@ store's contracts or imply unimplemented view-policy parity.
     `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`,
     `git diff --check`,
     and `python3 tools/check_layering.py`.
+  - Review/verification closeout:
+    `review-workstream` found no blocking compliance or code-quality issues for FNDX-055 through
+    FNDX-061; `cargo nextest run -p fret-node` passed with 481 tests;
+    `cargo check -p fret-node --all-features --tests` passed;
+    `cargo nextest run -p fret-node --no-default-features runtime` passed with 48 tests; and
+    `cargo clippy -p fret-node --all-targets --all-features -- -D warnings` passed.
   - Earlier closeout/package gates for FNDX-010 through FNDX-056 remain recorded in
     `EVIDENCE_AND_GATES.md`.
 
@@ -156,6 +162,6 @@ store's contracts or imply unimplemented view-policy parity.
 
 ## Next Recommended Action
 
-- Review the closed reconnect/update-anchor slice, then pick a narrow follow-up only if needed. The
-  next strongest candidate is concrete insert-node picker UI/policy for the opt-in empty-drop
-  outcome, kept separate from the mechanism-layer reconnect event contract.
+- This reconnect/update-anchor slice is ready for `close-workstream` consideration. If continuing
+  feature work instead, the next strongest candidate is concrete insert-node picker UI/policy for
+  the opt-in empty-drop outcome, kept separate from the mechanism-layer reconnect event contract.
