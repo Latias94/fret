@@ -1440,9 +1440,16 @@ that shadcn label through the shared `text_menu_group_label(...)` role.
 `ecosystem/fret-ui-kit/src/imui/button_controls/behavior.rs` now owns button action payload
 storage, command gating, pressable construction, shortcut/context-menu handling, command dispatch
 source metadata, payload forwarding, and `ResponseExt` population. `button_controls.rs` now keeps
-the public entry routing and label-identity scope only, while `button_controls/visual.rs` remains
-the layout/a11y/chrome owner. The public button, small-button, arrow-button, invisible-button, and
-action-button APIs remain unchanged.
+the public entry routing and label-identity scope only until the later 2026-05-30 entry split moved
+the shared implementation out. `button_controls/visual.rs` remains the layout/a11y/chrome owner.
+The public button, small-button, arrow-button, invisible-button, and action-button APIs remain
+unchanged.
+
+2026-05-30 button entry owner-split result:
+`ecosystem/fret-ui-kit/src/imui/button_controls/entry.rs` now owns `button_impl(...)`, label
+identity parsing, visible label projection, scoped `push_id`, and delegation to
+`behavior::button_pressable(...)`. `button_controls.rs` is now a wrapper hub for public-in-IMUI
+button entry points.
 
 2026-05-27 control chrome text owner-split result:
 `ecosystem/fret-ui-kit/src/imui/control_chrome/text.rs` now owns compact control text helpers,

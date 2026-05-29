@@ -8375,8 +8375,10 @@ Evidence:
 - `ecosystem/fret-ui-kit/src/imui/button_controls/behavior.rs` now owns `ButtonAction`,
   `button_pressable(...)`, command gating, pressable props, shortcut/context-menu handling, command
   dispatch source metadata, payload forwarding, and button `ResponseExt` population.
-- `ecosystem/fret-ui-kit/src/imui/button_controls.rs` keeps public entry routing for default,
-  small, arrow, invisible, action, and payload-action buttons plus label identity scoping.
+- `ecosystem/fret-ui-kit/src/imui/button_controls.rs` kept public entry routing for default,
+  small, arrow, invisible, action, and payload-action buttons plus label identity scoping at this
+  split; the later 2026-05-30 entry split moves label identity/push-id implementation to
+  `button_controls/entry.rs`.
 - `ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` remains the layout, a11y, and chrome
   owner and is consumed by the behavior owner.
 - `tools/gate_imui_workstream_source.py` now requires the behavior owner and rejects pressable
@@ -8393,6 +8395,37 @@ Focused gates:
 - `cargo nextest run -p fret-imui interaction_shortcuts::button_shortcuts
   interaction_shortcuts::command_metadata::button_command_uses_command_metadata_and_gating
   interaction_press --no-fail-fast`: pass; 12 tests, 169 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Button Entry Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI button shared entry implementation moved into a private owner without
+changing public button/small-button/arrow/invisible/action facade routing, label identity scoping,
+action payload forwarding, shortcut behavior, or response behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/button_controls/entry.rs` owns `button_impl(...)`, label identity
+  parsing, visible label projection, scoped `push_id`, and delegation to
+  `behavior::button_pressable(...)`.
+- `ecosystem/fret-ui-kit/src/imui/button_controls.rs` now keeps only public-in-IMUI wrapper routing
+  for default, small, arrow, invisible, action, and payload-action buttons.
+- `tools/gate_imui_workstream_source.py` now rejects label identity parsing and `button_impl(...)`
+  from drifting back into root `button_controls.rs` while requiring the dedicated entry owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --no-fail-fast`:
+  pass; 1 test.
+- `cargo nextest run -p fret-imui button_shortcuts --no-fail-fast`: pass; 2 button shortcut tests
+  passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
   pass.

@@ -1350,7 +1350,15 @@ Last updated: 2026-05-30
       Result: `button_controls/behavior.rs` owns button action payload storage, command gating,
       pressable props, shortcut/context-menu handling, action dispatch metadata/payload forwarding,
       and button `ResponseExt` population. The root file now keeps public entry routing plus
-      label-identity scoping, while `visual.rs` remains the layout/a11y/chrome owner.
+      label-identity scoping until the later entry split below moved the shared button
+      implementation out, while `visual.rs` remains the layout/a11y/chrome owner.
+- [x] Split IMUI button shared entry implementation out of
+      `ecosystem/fret-ui-kit/src/imui/button_controls.rs` into a private entry owner without
+      changing public button/small-button/arrow/invisible/action facade routing, label identity
+      scoping, action payload forwarding, shortcut behavior, or response behavior.
+      Result: `button_controls/entry.rs` owns `button_impl(...)`, label identity parsing, visible
+      label projection, scoped `push_id`, and delegation to `behavior::button_pressable(...)`.
+      `button_controls.rs` is now a wrapper hub for public-in-IMUI button entry points.
 - [x] Split IMUI shared control chrome text/pill helpers out of
       `ecosystem/fret-ui-kit/src/imui/control_chrome.rs` into a private owner module without
       changing compact button/control label text roles, caption text color routing, pill badge
