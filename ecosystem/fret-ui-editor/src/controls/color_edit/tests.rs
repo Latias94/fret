@@ -31,7 +31,7 @@ fn color_presets_are_unique_and_hex_formattable() {
         assert_eq!(formatted.len(), 7);
         assert!(formatted.starts_with('#'));
     }
-    assert_eq!(palette.len(), COLOR_PRESETS.len());
+    assert_eq!(palette.len(), 12);
 }
 
 #[test]

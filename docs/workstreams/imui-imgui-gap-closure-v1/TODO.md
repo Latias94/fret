@@ -390,6 +390,13 @@ Last updated: 2026-05-30
       Result: `controls/color_edit.rs` keeps public re-exports, payload/request records, the main
       control renderer, and shared local models, while `controls/color_edit/options.rs` owns
       option records, default construction, runtime defaults, and runtime sync semantics.
+- [x] Split editor color-edit palette/payload/eyedropper records into a private owner without
+      changing public record names, accessor behavior, default palette values, drag/drop payload
+      alpha semantics, palette slot drop semantics, or popup policy tests.
+      Result: `controls/color_edit.rs` keeps public re-exports, the main control renderer, and
+      shared local models, while `controls/color_edit/records.rs` owns default palette data,
+      palette entries, drag/drop payload records, palette slot drop requests, and eyedropper
+      request/callback records.
 - [x] Split IMUI leaf control option records into selection, tab-item, and slider private owners
       without changing public option type names, fields, defaults, root re-exports, selectable
       smoke behavior, tab/menu behavior, or slider model behavior.

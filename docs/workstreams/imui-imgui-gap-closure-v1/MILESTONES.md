@@ -357,6 +357,12 @@ wiring.
 records, the main control renderer, and shared local models. `controls/color_edit/options.rs` owns
 option records, default construction, popup runtime defaults, and runtime sync semantics.
 
+2026-05-30 color-edit records owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit.rs` keeps public record re-exports, the main
+control renderer, and shared local models. `controls/color_edit/records.rs` owns default palette
+data, palette entries, typed drag/drop payload records, palette slot drop requests, and eyedropper
+request/callback records.
+
 2026-05-29 leaf control option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/selection.rs`,
 `ecosystem/fret-ui-kit/src/imui/options/controls/tab.rs`, and
