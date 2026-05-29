@@ -35,6 +35,13 @@ tooltip, drag/drop, and in-window floating-window trait default method declarati
 `floating_popup/*` owners still delegate to the concrete floating, popup, tooltip, drag/drop, and
 window behavior modules.
 
+2026-05-29 facade floating surface sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/floating_surface.rs` is now a module/re-export hub.
+`floating_surface/popup.rs` owns floating layer/area and popup open/drop/begin trait forwarding,
+`floating_surface/tooltip_drag.rs` owns tooltip and drag/drop forwarding, and
+`floating_surface/window.rs` owns in-window floating-window forwarding. The public trait expansion
+points in `facade_writer.rs` and the concrete `floating_popup/*` behavior owners remain unchanged.
+
 2026-05-29 facade menu/selection surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but menu item, begin menu/submenu, selectable,
