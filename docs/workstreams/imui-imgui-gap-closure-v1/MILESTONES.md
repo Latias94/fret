@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-29 facade container surface owner-split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
+`UiWriterImUiFacadeExt` trait hub, but item-flow, same-line, dummy/spacing/indent, layout groups,
+menu/tab bars, ListBox, grid, table, virtual-list, scroll, and child-region trait default method
+declarations now live in `facade_writer/container_surface.rs` and are expanded into the public
+trait. Existing `container_methods/*` owners still carry the concrete layout/container behavior.
+
 2026-05-29 facade floating surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but floating layer/area, popup open/drop/begin,

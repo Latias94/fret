@@ -3,6 +3,45 @@
 Status: Active
 Last updated: 2026-05-29
 
+## Facade Container Surface Owner-Split Evidence - 2026-05-29
+
+Claim verified: IMUI facade container/layout trait default method declarations split out of the
+root facade writer without changing the public `UiWriterImUiFacadeExt` trait, caller import
+behavior, item-flow, same-line, dummy/spacing/indent, layout group, menu/tab bar, ListBox, grid,
+table, virtual-list, scroll, child-region method names, porting-sugar spacing docs, or container
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
+  `UiWriterImUiFacadeExt` trait hub and expands `container_surface::container_surface_methods!()`.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_surface.rs` owns item-flow, same-line,
+  dummy/spacing/indent, layout group, menu/tab bar, ListBox, grid, table, virtual-list, scroll, and
+  child-region trait default declarations/forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/*` still owns the concrete
+  layout/container behavior.
+- `tools/gate_imui_workstream_source.py` now rejects container trait default bodies from drifting
+  back into `facade_writer.rs` and checks the new container surface owner, including ListBox and
+  porting-sugar spacing anchors.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke
+  --test imui_virtual_list_smoke --test imui_sortable_recipe_smoke --no-fail-fast`: pass
+  (12 passed).
+- `cargo nextest run -p fret-imui layout_collections --no-fail-fast`: pass (28 passed,
+  158 skipped).
+- `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass (18 passed,
+  168 skipped).
+- `cargo nextest run -p fret-imui virtual_list --no-fail-fast`: pass (2 passed, 184 skipped).
+
 ## Facade Floating Surface Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI facade floating/popup/tooltip/drag/window trait default method declarations

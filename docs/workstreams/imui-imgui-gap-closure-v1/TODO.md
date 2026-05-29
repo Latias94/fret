@@ -44,6 +44,15 @@ Last updated: 2026-05-29
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI facade container/layout trait default method declarations out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
+      `UiWriterImUiFacadeExt` trait, caller import behavior, item-flow, same-line,
+      dummy/spacing/indent, layout group, menu/tab bar, ListBox, grid, table, virtual-list, scroll,
+      child-region method names, porting-sugar spacing docs, or container behavior.
+      Result: `facade_writer.rs` keeps the single public trait hub and expands
+      `facade_writer/container_surface.rs`. `container_surface.rs` owns container/layout trait
+      default declarations/forwarding, while existing `container_methods/*` owners still carry the
+      concrete layout/container behavior.
 - [x] Split IMUI facade floating/popup/tooltip/drag/window trait default method declarations out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, floating area/window, popup, tooltip,
