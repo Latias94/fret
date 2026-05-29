@@ -622,6 +622,26 @@ Task IDs use `M3PV2-*`.
   Exact Compose check-icon scale/content-offset motion and selected-interaction z-index draw-order
   assertions remain residual.
 
+- [x] M3PV2-070 [owner=codex] [deps=M3PV2-010,M3PV2-040,M3PV2-069] [scope=ecosystem/fret-ui-material3/src/icon_button.rs,ecosystem/fret-ui-material3/tests/{icon_button_state.rs,automation_surface.rs,radio_alignment.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close IconButton/IconToggleButton explicit checked-state semantics, 48/40/24px
+  touch/chrome/icon layout proof, stable icon part id, and pressed state-layer proof against
+  Compose Material3.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test icon_button_state`
+  failed because toggle IconButton/IconToggleButton did not publish explicit `checked_state` and
+  IconButton did not expose `.icon` part ids; pressed state-layer probe already passed; green
+  gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test icon_button_state`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_choice_controls_expose_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment icon_toggle_button_semantics_role_and_checked_state_are_stable icon_button_pressed_scene_structure_is_stable`.
+  Review: DONE. This found a Material recipe wiring/proof-density gap, not a core or kit
+  mechanism gap. Core already exposes explicit checked-state semantics and IconButton already had
+  Material 48/40/24px sizing, shape spring motion, ripple, and state-layer wiring.
+  Evidence: `artifacts/material3_icon_button_semantics_layout_motion_packet_v2.md`.
+  Handoff: IconButton layout, accessibility, and current state-layer motion are v2-covered. Larger
+  expressive icon-button sizes and dedicated corner-radius timeline assertions remain residual.
+
 ## M4 - Overlay And Feedback Interaction Depth
 
 - [x] M3PV2-046 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/bottom_sheet.rs,ecosystem/fret-ui-material3/tests/bottom_sheet_motion.rs,goldens/material3-headless/v1/material3-bottom-sheet.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]

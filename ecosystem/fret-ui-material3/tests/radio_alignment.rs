@@ -3177,6 +3177,11 @@ fn icon_toggle_button_semantics_role_and_checked_state_are_stable() {
             Some(false),
             "expected IconToggleButton checked=false initially"
         );
+        assert_eq!(
+            node.flags.checked_state,
+            Some(fret_core::SemanticsCheckedState::False),
+            "expected IconToggleButton checked_state=false initially"
+        );
         let bounds = ui
             .debug_node_visual_bounds(node.id)
             .expect("expected icon-toggle-button visual bounds");
@@ -3227,6 +3232,11 @@ fn icon_toggle_button_semantics_role_and_checked_state_are_stable() {
         node.flags.checked,
         Some(true),
         "expected IconToggleButton checked=true after click"
+    );
+    assert_eq!(
+        node.flags.checked_state,
+        Some(fret_core::SemanticsCheckedState::True),
+        "expected IconToggleButton checked_state=true after click"
     );
 
     // Sanity: the visual node should still be queryable.

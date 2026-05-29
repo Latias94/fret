@@ -656,8 +656,10 @@ fn material3_choice_controls_expose_stable_part_test_ids() {
         "m3-radio-beta.dot",
         "m3-icon-button",
         "m3-icon-button.chrome",
+        "m3-icon-button.icon",
         "m3-icon-toggle",
         "m3-icon-toggle.chrome",
+        "m3-icon-toggle.icon",
         "m3-slider",
         "m3-slider.track",
         "m3-slider.active-track",
@@ -686,6 +688,10 @@ fn material3_choice_controls_expose_stable_part_test_ids() {
     );
     assert_eq!(
         semantics_node_checked_state(&ui, "m3-radio-beta"),
+        Some(SemanticsCheckedState::False)
+    );
+    assert_eq!(
+        semantics_node_checked_state(&ui, "m3-icon-toggle"),
         Some(SemanticsCheckedState::False)
     );
 }

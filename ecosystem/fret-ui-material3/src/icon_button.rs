@@ -6,7 +6,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole, SvgFit};
+use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsCheckedState, SemanticsRole, SvgFit};
 use fret_icons::IconId;
 use fret_runtime::{ActionId, Model};
 use fret_ui::action::OnActivate;
@@ -37,6 +37,7 @@ use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
 };
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::test_id::optional_part_test_id;
 use crate::motion::{SpringAnimator, SpringSpec};
 use crate::tokens::icon_button as icon_button_tokens;
 
@@ -272,6 +273,11 @@ impl IconButton {
                         label: self.a11y_label.clone(),
                         test_id: self.test_id.clone(),
                         checked: self.toggle.then_some(self.selected),
+                        checked_state: self.toggle.then_some(if self.selected {
+                            SemanticsCheckedState::True
+                        } else {
+                            SemanticsCheckedState::False
+                        }),
                         ..Default::default()
                     },
                     layout,
@@ -359,7 +365,12 @@ impl IconButton {
 
                         let icon =
                             material_icon(cx, &self.icon, size_tokens.icon_size, colors.icon_color);
-                        let content = material_icon_button_content(cx, size_tokens, icon);
+                        let content = material_icon_button_content(
+                            cx,
+                            size_tokens,
+                            icon,
+                            pressable_props.a11y.test_id.as_ref(),
+                        );
                         let chrome = material_icon_button_chrome(
                             cx,
                             size_tokens,
@@ -588,6 +599,11 @@ impl IconToggleButton {
                         label: self.a11y_label.clone(),
                         test_id: self.test_id.clone(),
                         checked: Some(checked),
+                        checked_state: Some(if checked {
+                            SemanticsCheckedState::True
+                        } else {
+                            SemanticsCheckedState::False
+                        }),
                         ..Default::default()
                     },
                     layout,
@@ -679,7 +695,12 @@ impl IconToggleButton {
 
                         let icon =
                             material_icon(cx, &self.icon, size_tokens.icon_size, colors.icon_color);
-                        let content = material_icon_button_content(cx, size_tokens, icon);
+                        let content = material_icon_button_content(
+                            cx,
+                            size_tokens,
+                            icon,
+                            pressable_props.a11y.test_id.as_ref(),
+                        );
                         let chrome = material_icon_button_chrome(
                             cx,
                             size_tokens,
@@ -911,8 +932,13 @@ fn material_icon_button_chrome<H: UiHost>(
 fn material_icon_button_content<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     size: IconButtonSizeTokens,
-    icon: AnyElement,
+    mut icon: AnyElement,
+    base_test_id: Option<&Arc<str>>,
 ) -> AnyElement {
+    if let Some(test_id) = optional_part_test_id(base_test_id, "icon") {
+        icon = icon.test_id(test_id);
+    }
+
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.size.width = Length::Px(size.container);
     layout.size.height = Length::Px(size.container);

@@ -200,6 +200,15 @@ state-layer animation. SegmentedButton now writes explicit binary checked-state 
 chrome, and proves pressed state-layer animation. Exact Compose check-icon scale/content-offset
 motion and selected-interaction z-index draw-order assertions remain residual.
 
+M3PV2-070 is complete: IconButton layout, accessibility, and current state-layer motion are now
+v2-covered. The packet found a Material recipe wiring/proof-density gap, not a core or kit
+mechanism gap: explicit checked-state semantics already existed and IconButton already had 48px
+minimum touch targets, 40px chrome, 24px icon tokens, shape spring motion, ripple, and state-layer
+wiring. IconButton now writes explicit binary checked-state metadata for toggle surfaces, exposes
+`.chrome` and `.icon` part ids, proves 48/40/24px geometry, and proves pressed state-layer
+animation. Larger expressive icon-button sizes and dedicated corner-radius timeline assertions
+remain residual.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -211,7 +220,7 @@ motion and selected-interaction z-index draw-order assertions remain residual.
 ## Next Recommended Action
 
 Continue with the next uncovered Material3 packet from the matrix. Higher-priority choice-control
-candidates now start with IconButton/IconToggleButton and chips;
+candidates now start with chips;
 NavigationRail / NavigationBar layout packets are also open.
 
 ## Useful Gates

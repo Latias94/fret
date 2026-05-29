@@ -73,6 +73,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_switch_semantics_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_slider_semantics_draw_region_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_segmented_button_semantics_layout_motion_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_icon_button_semantics_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -763,6 +764,26 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     proves pressed state-layer animation over segment chrome. The gap was Material recipe wiring
     and proof density, not core or kit mechanism.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_segmented_button_semantics_layout_motion_packet_v2.md`
+- 2026-05-29: M3PV2-070 closed IconButton/IconToggleButton checked-state semantics, icon part
+  geometry, and pressed state-layer motion proof.
+  - Sources: Compose Material3 `IconButton.kt` uses `Role.Button` for ordinary icon buttons and
+    `Role.Checkbox` with checked state for icon toggle buttons; `SmallIconButtonTokens.kt` defines
+    40dp container, 24dp icon, 8dp horizontal padding, 1dp outline width, full default shape, small
+    pressed shape, and selected shape tokens.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test icon_button_state`
+    failed because toggle IconButton/IconToggleButton did not publish explicit `checked_state` and
+    IconButton did not expose `.icon` part ids. Pressed state-layer probes already passed, so the
+    implementation gap was recipe semantics/part wiring plus proof density.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test icon_button_state`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_choice_controls_expose_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment icon_toggle_button_semantics_role_and_checked_state_are_stable icon_button_pressed_scene_structure_is_stable`
+  - Result: IconButton now writes explicit binary checked-state metadata for toggle surfaces,
+    exposes `.chrome` and `.icon` part ids, proves 48px touch targets with 40px chrome and 24px
+    icon content, and proves pressed state-layer animation over chrome. The gap was Material recipe
+    wiring and proof density, not core or kit mechanism.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_icon_button_semantics_layout_motion_packet_v2.md`
 
 ## Proof Note Template
 
