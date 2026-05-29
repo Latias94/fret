@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    AppWindowId, KeyCode, Point, Px, Rect, Scene, SceneOp, SemanticsNode, SemanticsRole, Size,
-    UiServices,
+    AppWindowId, KeyCode, Paint, Point, PointerId, Px, Rect, Scene, SceneOp, SemanticsNode,
+    SemanticsRole, Size, UiServices,
 };
 use fret_runtime::{ModelHost, PlatformCapabilities};
 use fret_ui::element::{Length, PressableA11y, PressableProps};
@@ -17,7 +17,7 @@ use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 mod interaction_harness;
 mod support;
 
-use support::events::{key_down, key_up};
+use support::events::{key_down, key_up, pointer_down, pointer_move};
 use support::goldens::run_overlay_frame_with_scene_scaled;
 use support::host::{FakeUiServices, TestHost};
 use support::layout::{semantics_node_id_by_test_id, with_padding};
@@ -88,6 +88,43 @@ fn scene_has_intermediate_overlay_motion(scene: &Scene) -> bool {
         )
     });
     has_alpha && has_scale
+}
+
+fn paint(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    bounds: Rect,
+) -> Scene {
+    let mut scene = Scene::default();
+    ui.paint_all(app, services, bounds, &mut scene, 1.0);
+    scene
+}
+
+fn state_layer_alphas_for_chrome(scene: &Scene, chrome: Rect) -> Vec<f32> {
+    scene
+        .ops()
+        .iter()
+        .filter_map(|op| match *op {
+            SceneOp::Quad {
+                rect, background, ..
+            } if rect.origin.x.0 >= chrome.origin.x.0 - 0.1
+                && rect.origin.y.0 >= chrome.origin.y.0 - 0.1
+                && rect.origin.x.0 + rect.size.width.0
+                    <= chrome.origin.x.0 + chrome.size.width.0 + 0.1
+                && rect.origin.y.0 + rect.size.height.0
+                    <= chrome.origin.y.0 + chrome.size.height.0 + 0.1
+                && (rect.size.width.0 - chrome.size.width.0).abs() <= 2.1
+                && (rect.size.height.0 - chrome.size.height.0).abs() <= 2.1 =>
+            {
+                match background.paint {
+                    Paint::Solid(color) if color.a > 0.0 && color.a < 0.2 => Some(color.a),
+                    _ => None,
+                }
+            }
+            _ => None,
+        })
+        .collect()
 }
 
 #[test]
@@ -183,6 +220,80 @@ fn menu_matches_material_item_geometry_and_semantics() {
     assert_eq!(gamma.role, SemanticsRole::MenuItem);
     assert_eq!(gamma.pos_in_set, Some(3));
     assert_eq!(gamma.set_size, Some(3));
+}
+
+#[test]
+fn menu_pressed_state_layer_animates_over_item_chrome() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(260.0)),
+    );
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let menu = Menu::new()
+                    .a11y_label("Material menu")
+                    .test_id("m3-motion-menu")
+                    .entries(vec![MenuEntry::Item(
+                        MenuItem::new("Alpha").test_id("m3-motion-alpha"),
+                    )])
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), menu)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let chrome = live_test_id_layout_bounds(&ui, &app, window, "m3-motion-alpha.chrome");
+    assert!(
+        state_layer_alphas_for_chrome(&paint(&mut ui, &mut app, &mut services, bounds), chrome)
+            .is_empty(),
+        "idle menu item should not paint a visible state layer"
+    );
+
+    let press_at = Point::new(
+        Px(chrome.origin.x.0 + chrome.size.width.0 * 0.5),
+        Px(chrome.origin.y.0 + chrome.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_move(PointerId(1), press_at),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), press_at),
+    );
+
+    let mut animated = Vec::new();
+    for _ in 0..4 {
+        app.advance_frame();
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        animated.extend(state_layer_alphas_for_chrome(
+            &paint(&mut ui, &mut app, &mut services, bounds),
+            chrome,
+        ));
+    }
+
+    assert!(
+        animated.iter().any(|alpha| *alpha > 0.001 && *alpha < 0.2),
+        "expected pressed menu item state layer to animate through partial alpha, got {animated:?}"
+    );
 }
 
 #[test]

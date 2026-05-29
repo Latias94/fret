@@ -346,6 +346,12 @@ and open/close fade-scale motion. Remaining menu breadth includes leading/traili
 supporting text, group labels, checkbox/radio items, submenu triggers, shortcut text, and
 scroll/max-height behavior.
 
+M3PV2-083 is complete: standalone Menu item motion is now v2-covered for the current plain item
+recipe surface. The packet found a proof-density gap, not an implementation or infrastructure gap:
+Menu already used the shared Material bounded ink/state-layer runtime, and the new fixed-frame
+`menu_state` gate passed without recipe, token, kit, or core changes. DropdownMenu overlay motion
+remains covered by M3PV2-081; Menu style and broader component-surface breadth remain residual.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -356,9 +362,8 @@ scroll/max-height behavior.
 
 ## Next Recommended Action
 
-Continue with the next uncovered Material3 packet from the matrix. Remaining seeded rows are now
-NavigationDrawer motion and standalone Menu motion breadth, or close the broader overlay-family
-policy comparison in M3PV2-050.
+Continue with the next uncovered Material3 packet from the matrix. The only remaining seeded row is
+NavigationDrawer motion, or close the broader overlay-family policy comparison in M3PV2-050.
 
 ## Useful Gates
 

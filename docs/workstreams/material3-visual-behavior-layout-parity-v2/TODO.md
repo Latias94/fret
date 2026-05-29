@@ -913,6 +913,19 @@ Task IDs use `M3PV2-*`.
   Remaining menu breadth includes leading/trailing icons, supporting text, group labels,
   checkbox/radio items, submenu triggers, shortcut text, and scroll/max-height behavior.
 
+- [x] M3PV2-083 [owner=codex] [deps=M3PV2-081] [scope=ecosystem/fret-ui-material3/tests/menu_state.rs,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close standalone Menu item motion proof by adding a fixed-frame pressed state-layer gate
+  for the current plain item recipe surface.
+  Validation: proof gate:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test menu_state menu_pressed_state_layer_animates_over_item_chrome`.
+  Review: DONE. This found a proof-density gap, not an implementation or infrastructure gap:
+  Material Menu already used the shared bounded ink/state-layer runtime, and the new gate passed
+  without recipe, token, kit, or core changes.
+  Evidence: `artifacts/material3_menu_item_motion_packet_v2.md`.
+  Handoff: Menu motion is v2-covered for standalone item state-layer motion; DropdownMenu overlay
+  motion remains covered by M3PV2-081. Menu style and broader component-surface breadth remain
+  residual.
+
 - [ ] M3PV2-050 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{menu.rs,dropdown_menu.rs,dialog.rs,bottom_sheet.rs,tooltip.rs,snackbar.rs},ecosystem/fret-ui-kit,tools/diag-scripts/ui-gallery/material3]
   Goal: Audit dismissal, focus containment/restore, live region, action close parts, sheet motion,
   and rich tooltip interaction against Material/MUI/Compose/Base UI sources.

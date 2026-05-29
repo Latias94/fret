@@ -83,6 +83,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_dialog_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_snackbar_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_tooltip_layout_a11y_motion_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_menu_item_motion_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -1050,6 +1051,17 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     the roving group when the whole list is disabled, and falls back to the first enabled tab stop
     when the selected value points to a disabled item.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_list_roving_behavior_packet_v2.md`
+- 2026-05-29: M3PV2-083 closed standalone Menu item motion proof for the current plain item
+  recipe surface.
+  - Sources: Compose Material3 plain `DropdownMenuItemContent` applies `clickable(...,
+    indication = ripple(true))`; Fret Material tokens expose `md.comp.menu.list-item.*`
+    state-layer colors and opacity.
+  - Proof gate:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test menu_state menu_pressed_state_layer_animates_over_item_chrome`
+  - Result: The new fixed-frame `menu_state` gate passed without implementation changes, proving
+    the current Menu item recipe paints bounded pressed state-layer motion over item chrome through
+    the shared Material ink runtime.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_menu_item_motion_packet_v2.md`
 
 ## Proof Note Template
 
