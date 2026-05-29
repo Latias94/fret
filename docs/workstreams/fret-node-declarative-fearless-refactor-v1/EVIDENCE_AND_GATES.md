@@ -5,13 +5,23 @@ Last updated: 2026-05-29
 
 ## Current Focus
 
-FNDX-055 starts default declarative EdgeWrapper reconnect/update-anchor parity at the planning
-layer. Selected and focused edges now resolve source/target update anchors from authoritative port
-centers, with global `edges_reconnectable`, per-edge `Edge.reconnectable`, endpoint override, and
-`reconnect_radius` gates. Surface diagnostics expose the planned update-anchor count. This slice
-does not render the anchors or start reconnect drags yet.
+FNDX-056 advances default declarative EdgeWrapper reconnect/update-anchor parity from planning to
+rendered controls. Selected and focused edges now produce hit-testable source/target update-anchor
+controls from authoritative port centers. Those controls respect global `edges_reconnectable`,
+per-edge `Edge.reconnectable`, endpoint overrides, missing centers, and `reconnect_radius` gates,
+and anchor pointer-downs take priority over the canvas surface pointer path. This slice does not
+start reconnect drags or implement `reconnect_on_drop_empty` yet.
 
 ## Targeted Iteration Gates
+
+```bash
+cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate
+```
+
+This gate proves the FNDX-056 update-anchor control contract: FNDX-055 planning and diagnostics
+still resolve the right selected/focused source/target anchors, and the rendered default
+declarative controls appear at those port centers, expose stable test IDs/button semantics, intercept
+anchor pointer-downs before the canvas surface path, and fall through when an endpoint is gated off.
 
 ```bash
 cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count
@@ -578,5 +588,27 @@ closeout note must name those failures.
     update-anchor helper, frame diagnostics wiring, and tests are lint-clean.
   - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
     green with 472 tests.
+- FNDX-056:
+  - `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate`:
+    passed; proves update-anchor planning/diagnostics still resolve selected/focused endpoints and
+    the rendered controls appear at the planned port centers, expose button semantics, intercept
+    anchor pointer-down before the canvas surface path, and fall through when endpoint gating
+    suppresses a control.
+  - `cargo fmt -p fret-node --check`: passed; proves the touched crate remains formatted.
+  - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed;
+    proves the workstream metadata remains valid JSON.
+  - `git diff --check`: passed; proves the patch has no whitespace errors.
+  - `python3 tools/check_layering.py`: passed; proves the slice did not violate workspace layering
+    policy.
+  - `cargo check -p fret-node --tests`: passed; proves UI-enabled test targets compile with
+    rendered update-anchor controls.
+  - `cargo check -p fret-node --all-features --tests`: passed; proves optional UI/integration test
+    targets compile with rendered update-anchor controls.
+  - `cargo check -p fret-node --no-default-features`: passed; proves headless/runtime-facing
+    package compilation remains unaffected by the UI-only update-anchor control slice.
+  - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed; proves the
+    update-anchor control composition, frame threading, and tests are lint-clean.
+  - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
+    green with 474 tests.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

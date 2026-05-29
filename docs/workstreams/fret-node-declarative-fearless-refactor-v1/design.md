@@ -483,6 +483,9 @@ Status note (2026-05-28):
 - FNDX-055 adds the first default declarative update-anchor planning slice for selected/focused
   edges, resolving source/target anchors from authoritative port centers and reconnectability gates
   without rendering controls or starting reconnect drags yet.
+- FNDX-056 renders those planned source/target update anchors as hit-testable default declarative
+  controls with stable diagnostics semantics and anchor-click priority, while still deferring
+  reconnect drag lifecycle and `reconnect_on_drop_empty`.
 
 Why this still matters:
 

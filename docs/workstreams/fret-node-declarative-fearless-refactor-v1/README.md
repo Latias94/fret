@@ -180,10 +180,12 @@ update rather than an incidental refactor.
     diagnostics.
   - FNDX-055 plans selected/focused edge update anchors from authoritative port centers with
     global/per-edge reconnectability gates, without rendering controls or starting reconnect drags.
+  - FNDX-056 renders those planned update anchors as hit-testable default declarative controls with
+    anchor-click priority, while keeping reconnect drag lifecycle as follow-up work.
   - Custom `NodeGraphPresenter` remains advanced/internal on the default path because it still mixes
     geometry, labels, context menus, and insertion/search policy.
-  - Broader XyFlow edge-wrapper lifecycle parity remains follow-up work beyond click selection and
-    the first child-bounds control contract.
+  - Broader XyFlow edge-wrapper lifecycle parity remains follow-up work beyond click selection,
+    the first child-bounds control contract, and rendered update-anchor controls.
 
 - **Ergonomic API fragmentation**
   - The surface naming is now closed around `NodeGraphSurfaceBinding` (instance-style app-facing

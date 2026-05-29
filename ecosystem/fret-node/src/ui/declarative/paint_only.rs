@@ -116,9 +116,11 @@ use self::diag::{
 #[cfg(test)]
 use self::edge_hit_test::hit_test_edge_at_canvas_point;
 use self::edge_labels::push_edge_label_overlays;
+use self::edge_update_anchors::{EdgeUpdateAnchorInfo, push_edge_update_anchor_controls};
 #[cfg(test)]
 use self::edge_update_anchors::{
     collect_edge_update_anchor_infos, edge_reconnect_endpoint_enabled,
+    hit_test_edge_update_anchor_at_window_point,
 };
 use self::frame_plan::{PaintOnlyInteractionFrameInputs, plan_paint_only_interaction_frame};
 #[cfg(test)]
@@ -623,6 +625,7 @@ fn node_graph_surface_impl<'a, H: UiHost + 'static>(
     let derived_cache_value = prepared_frame.derived_cache_value;
     let nodes_cache_value = prepared_frame.nodes_cache_value;
     let edges_cache_value = prepared_frame.edges_cache_value;
+    let edge_update_anchors = prepared_frame.edge_update_anchors;
     let hovered_node_value = prepared_frame.hovered_node_value;
     let effective_selected_nodes = prepared_frame.effective_selected_nodes;
     let selected_edges = prepared_frame.selected_edges;
@@ -771,6 +774,7 @@ fn node_graph_surface_impl<'a, H: UiHost + 'static>(
                         derived_cache_value: derived_cache_value.clone(),
                         nodes_cache_value: nodes_cache_value.clone(),
                         edges_cache_value: edges_cache_value.clone(),
+                        edge_update_anchors: edge_update_anchors.clone(),
                         hovered_node_value,
                         effective_selected_nodes: effective_selected_nodes.clone(),
                         selected_edges: selected_edges.clone(),

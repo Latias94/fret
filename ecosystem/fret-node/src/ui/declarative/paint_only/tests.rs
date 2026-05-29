@@ -62,12 +62,13 @@ use super::{
     handle_marquee_pointer_move_action_host, handle_node_drag_left_pointer_release_action_host,
     handle_node_drag_pointer_move_action_host,
     handle_pending_selection_left_pointer_release_action_host, hit_test_edge_at_canvas_point,
-    node_drag_commit_delta, nodes_cache_key, plan_paint_only_interaction_frame,
-    pointer_cancel_declarative_interactions_action_host, pointer_crossed_threshold,
-    read_authoritative_view_state_in_models, record_portal_measured_node_size_in_state,
-    resolve_hover_tooltip_anchor, stable_hash_u64, sync_authoritative_surface_boundary_in_models,
-    sync_hover_anchor_store_in_models, sync_portal_canvas_bounds_in_models,
-    update_hovered_node_pointer_move_action_host, update_view_state_action_host, view_from_state,
+    hit_test_edge_update_anchor_at_window_point, node_drag_commit_delta, nodes_cache_key,
+    plan_paint_only_interaction_frame, pointer_cancel_declarative_interactions_action_host,
+    pointer_crossed_threshold, read_authoritative_view_state_in_models,
+    record_portal_measured_node_size_in_state, resolve_hover_tooltip_anchor, stable_hash_u64,
+    sync_authoritative_surface_boundary_in_models, sync_hover_anchor_store_in_models,
+    sync_portal_canvas_bounds_in_models, update_hovered_node_pointer_move_action_host,
+    update_view_state_action_host, view_from_state,
 };
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, EdgeReconnectable,
@@ -3678,6 +3679,262 @@ fn collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_a
     interaction.reconnect_radius = f32::NAN;
     assert!(
         collect_edge_update_anchor_infos(&graph, &view_state, &internals, &interaction).is_empty()
+    );
+}
+
+#[test]
+fn edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down() {
+    let (graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let edge_ref = graph.edges.get(&edge).expect("test edge");
+    let source_center = geom.port_center(edge_ref.from).expect("source port center");
+    let target_center = geom.port_center(edge_ref.to).expect("target port center");
+
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order,
+            selected_edges: vec![edge],
+            ..Default::default()
+        },
+        default_editor_config(),
+    );
+
+    let source_test_id = format!("node_graph.edge_update_anchor.{}.source", edge.0);
+    let target_test_id = format!("node_graph.edge_update_anchor.{}.target", edge.0);
+    let mut last = None;
+    for _ in 0..4 {
+        let snapshot = render_surface_frame_for_binding(
+            &mut ui,
+            &mut host,
+            &mut services,
+            window,
+            bounds,
+            &binding,
+            |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+        );
+        if snapshot
+            .nodes
+            .iter()
+            .any(|node| node.test_id.as_deref() == Some(source_test_id.as_str()))
+        {
+            last = Some(snapshot);
+            break;
+        }
+        last = Some(snapshot);
+    }
+    let snapshot = last.expect("at least one frame rendered");
+    let source = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some(source_test_id.as_str()))
+        .unwrap_or_else(|| {
+            let available = snapshot
+                .nodes
+                .iter()
+                .filter_map(|node| node.test_id.as_deref())
+                .collect::<Vec<_>>();
+            panic!("source update anchor control; available={available:?}")
+        });
+    let target = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some(target_test_id.as_str()))
+        .unwrap_or_else(|| {
+            let available = snapshot
+                .nodes
+                .iter()
+                .filter_map(|node| node.test_id.as_deref())
+                .collect::<Vec<_>>();
+            panic!("target update anchor control; available={available:?}")
+        });
+
+    assert_eq!(source.role, SemanticsRole::Button);
+    assert_eq!(target.role, SemanticsRole::Button);
+    assert!(source.value.as_deref().is_some_and(|value| {
+        value.contains("endpoint=source") && value.contains("anchor_port=")
+    }));
+    assert_point_near(
+        Point::new(
+            Px(source.bounds.origin.x.0 + source.bounds.size.width.0 / 2.0),
+            Px(source.bounds.origin.y.0 + source.bounds.size.height.0 / 2.0),
+        ),
+        source_center,
+        0.5,
+    );
+    assert_point_near(
+        Point::new(
+            Px(target.bounds.origin.x.0 + target.bounds.size.width.0 / 2.0),
+            Px(target.bounds.origin.y.0 + target.bounds.size.height.0 / 2.0),
+        ),
+        target_center,
+        0.5,
+    );
+
+    let anchors = host
+        .models
+        .read(&binding.store_model(), |store| {
+            collect_edge_update_anchor_infos(
+                store.graph(),
+                store.view_state(),
+                &binding.internals_store().snapshot(),
+                &store.resolved_interaction_state(),
+            )
+        })
+        .expect("read store anchors");
+    let source_hit = hit_test_edge_update_anchor_at_window_point(&anchors, source_center)
+        .expect("source anchor pure hit");
+    assert_eq!(source_hit.edge, edge);
+    assert_eq!(source_hit.endpoint, EdgeEndpoint::From);
+
+    assert_eq!(ui.debug_hit_test(source_center).hit, Some(source.id));
+    assert_eq!(
+        ui.debug_hit_test_routing(source_center).hit,
+        Some(source.id)
+    );
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: PointerId(0),
+            position: source_center,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        ui.focus(),
+        Some(source.id),
+        "anchor pointer down should focus the update-anchor control instead of the canvas surface"
+    );
+
+    let outside_anchor = Point::new(Px(bounds.origin.x.0 + 12.0), Px(bounds.origin.y.0 + 12.0));
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: PointerId(1),
+            position: outside_anchor,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    assert!(
+        ui.focus().is_some() && ui.focus() != Some(source.id),
+        "outside update-anchor controls should fall through to the canvas surface pointer path"
+    );
+}
+
+#[test]
+fn edge_update_anchor_controls_respect_endpoint_reconnectable_gate() {
+    let (mut graph, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let edge_ref = graph.edges.get_mut(&edge).expect("test edge");
+    let source_port = edge_ref.from;
+    edge_ref.reconnectable = Some(EdgeReconnectable::Endpoint(
+        EdgeReconnectableEndpoint::Target,
+    ));
+    let geom = build_test_canvas_geometry(&graph, &draw_order);
+    let source_center = geom.port_center(source_port).expect("source port center");
+
+    let mut editor_config = default_editor_config();
+    editor_config.interaction.edges_reconnectable = false;
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order,
+            selected_edges: vec![edge],
+            ..Default::default()
+        },
+        editor_config,
+    );
+
+    let source_test_id = format!("node_graph.edge_update_anchor.{}.source", edge.0);
+    let target_test_id = format!("node_graph.edge_update_anchor.{}.target", edge.0);
+    let mut last = None;
+    for _ in 0..4 {
+        let snapshot = render_surface_frame_for_binding(
+            &mut ui,
+            &mut host,
+            &mut services,
+            window,
+            bounds,
+            &binding,
+            |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+        );
+        if snapshot
+            .nodes
+            .iter()
+            .any(|node| node.test_id.as_deref() == Some(target_test_id.as_str()))
+        {
+            last = Some(snapshot);
+            break;
+        }
+        last = Some(snapshot);
+    }
+    let snapshot = last.expect("at least one frame rendered");
+
+    assert!(
+        maybe_surface_snapshot_node_id(&snapshot, &source_test_id).is_none(),
+        "source endpoint override should suppress the source update-anchor control"
+    );
+    assert!(
+        maybe_surface_snapshot_node_id(&snapshot, &target_test_id).is_some(),
+        "target endpoint override should still render the target update-anchor control"
+    );
+    assert!(
+        hit_test_edge_update_anchor_at_window_point(
+            &host
+                .models
+                .read(&binding.store_model(), |store| {
+                    collect_edge_update_anchor_infos(
+                        store.graph(),
+                        store.view_state(),
+                        &binding.internals_store().snapshot(),
+                        &store.resolved_interaction_state(),
+                    )
+                })
+                .expect("read store anchors"),
+            source_center,
+        )
+        .is_none(),
+        "missing source control should not create a pure update-anchor hit"
+    );
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: PointerId(0),
+            position: source_center,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    assert!(
+        ui.focus().is_some(),
+        "pointer down where the source anchor is gated off should fall through to the canvas"
     );
 }
 

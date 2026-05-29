@@ -198,6 +198,7 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
                 grid_ops: prepared_frame.grid_cache_value.ops.clone(),
                 node_draws: prepared_frame.nodes_cache_value.draws.clone(),
                 edge_draws: prepared_frame.edges_cache_value.draws.clone(),
+                edge_update_anchors: prepared_frame.edge_update_anchors.clone(),
                 geom_for_paint: prepared_frame.derived_cache_value.geom.clone(),
                 style_tokens: prepared_frame.style_tokens.clone(),
                 theme: prepared_frame.theme.clone(),

@@ -13,8 +13,9 @@ use super::{
     HoverAnchorStore, HoverTooltipOverlayParams, MarqueeDragState, NodeDragState,
     PortalMeasuredGeometryState, apply_pending_fit_to_portals, host_visible_portal_labels,
     paint_debug_grid_cached, paint_edges_cached, paint_nodes_cached, push_edge_label_overlays,
-    push_hover_tooltip_overlay_if_needed, push_marquee_overlay_if_active,
-    push_overlay_layer_if_needed, sync_hover_anchor_store_in_models,
+    push_edge_update_anchor_controls, push_hover_tooltip_overlay_if_needed,
+    push_marquee_overlay_if_active, push_overlay_layer_if_needed,
+    sync_hover_anchor_store_in_models,
 };
 
 pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
@@ -44,6 +45,7 @@ pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
     pub(super) grid_ops: Option<Arc<Vec<fret_core::SceneOp>>>,
     pub(super) node_draws: Option<Arc<Vec<super::NodeRectDraw>>>,
     pub(super) edge_draws: Option<Arc<Vec<super::cache::EdgePathDraw>>>,
+    pub(super) edge_update_anchors: Vec<super::EdgeUpdateAnchorInfo>,
     pub(super) geom_for_paint: Option<Arc<crate::ui::canvas::CanvasGeometry>>,
     pub(super) style_tokens: NodeGraphStyle,
     pub(super) theme: ThemeSnapshot,
@@ -85,6 +87,7 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         grid_ops,
         node_draws,
         edge_draws,
+        edge_update_anchors,
         geom_for_paint,
         style_tokens,
         theme,
@@ -152,6 +155,13 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         view_for_paint.zoom,
         &style_tokens,
         edge_label_renderer,
+    );
+    push_edge_update_anchor_controls(
+        cx,
+        &mut interactive_overlay_children,
+        &edge_update_anchors,
+        grid_bounds,
+        &style_tokens,
     );
     let hovered_portal_hosted = if portal_hosting.enabled && !portals_disabled {
         host_visible_portal_labels(

@@ -48,6 +48,7 @@ pub(super) struct PreparedPaintOnlySurfaceFrame {
     pub(super) derived_cache_value: super::DerivedGeometryCacheState,
     pub(super) nodes_cache_value: super::NodePaintCacheState,
     pub(super) edges_cache_value: super::EdgePaintCacheState,
+    pub(super) edge_update_anchors: Vec<super::EdgeUpdateAnchorInfo>,
     pub(super) hovered_node_value: Option<NodeId>,
     pub(super) effective_selected_nodes: Vec<NodeId>,
     pub(super) selected_edges: Vec<EdgeId>,
@@ -433,7 +434,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         &style_tokens,
     );
     let internals_snapshot = binding.internals_store().snapshot();
-    let edge_update_anchors_len =
+    let edge_update_anchors =
         read_authoritative_graph_in_models(cx.app.models_mut(), binding, |graph_value| {
             collect_edge_update_anchor_infos(
                 graph_value,
@@ -441,9 +442,8 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
                 &internals_snapshot,
                 &interaction_state,
             )
-            .len()
         })
-        .unwrap_or(0);
+        .unwrap_or_default();
 
     let hovered_node_value = cx
         .get_model_copied(hovered_node, Invalidation::Paint)
@@ -494,7 +494,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         nodes_rebuilds: nodes_cache_value.rebuilds,
         edges_rebuilds: edges_cache_value.rebuilds,
         edges: edge_paint_diagnostics,
-        edge_update_anchors_len,
+        edge_update_anchors_len: edge_update_anchors.len(),
         paint_overrides_rev,
         view_state: &view_value,
         portal: portal_diagnostics,
@@ -518,6 +518,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         derived_cache_value,
         nodes_cache_value,
         edges_cache_value,
+        edge_update_anchors,
         hovered_node_value: interaction_plan.hovered_node,
         effective_selected_nodes: interaction_plan.effective_selected_nodes,
         selected_edges: view_value.selected_edges.clone(),
