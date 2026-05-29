@@ -247,6 +247,9 @@ points rather than direct graph mutation.
   graph commit and Enter/row activation through the explicit FNDX-062B transaction path. Richer
   search/filter/typeahead behavior remains optional follow-up work and is not required to accept
   the closed mechanism contract above.
+- FNDX-063 closes the mounted picker commit-seam leak by adding `insert_node_picker.rs` to the
+  declarative runtime source-policy matrix and routing candidate activation through
+  `commit_graph_transaction(...)` in `paint_only/transactions.rs`.
 
 ### Progress note (2026-03-07)
 

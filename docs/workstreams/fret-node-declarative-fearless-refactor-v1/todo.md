@@ -1003,6 +1003,43 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Non-goal: do not reopen reconnect mechanics, picker request shape, or the default candidate
     state/provider seam without a concrete workload mismatch.
 
+- [x] FNDX-063 Close the insert-node picker graph-edit commit seam leak.
+  - Status: completed as a source-policy and commit-path correction for the mounted picker runtime.
+  - Scope:
+    - include `insert_node_picker.rs` in the declarative paint-only runtime source-policy matrix
+    - route mounted picker candidate activation through `paint_only/transactions.rs` rather than
+      calling the binding transaction helper directly
+    - keep the FNDX-062B explicit candidate transaction path and FNDX-062C visual list behavior
+      unchanged
+  - Non-goal: do not add picker search/filter/typeahead and do not reopen reconnect mechanics or
+    picker request/candidate state shapes.
+  - Validation:
+    - `cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam`
+    - `cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate`
+  - Exit note: the new picker runtime file is now covered by the same source-policy gate as the
+    rest of the default declarative runtime. Candidate activation still plans an explicit
+    `Insert Node` transaction, but the actual commit now flows through
+    `commit_graph_transaction(...)`, preserving the single declarative graph-edit commit seam.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/insert_node_picker.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/transactions.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+  - Fresh gates:
+    - Red first: `cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam`
+      failed after adding `insert_node_picker.rs` to the runtime source list because mounted picker
+      activation called `dispatch_transaction_action_host(...)` directly.
+    - `cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam`:
+      passed after routing picker activation through `commit_graph_transaction(...)`.
+    - `cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate`:
+      passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo fmt --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+
 ## M0 - Decision gates and internal seam map
 
 - [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.

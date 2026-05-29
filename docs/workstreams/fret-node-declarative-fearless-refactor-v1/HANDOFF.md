@@ -16,13 +16,15 @@ rendered update-anchor controls, reconnect-drag lifecycle, valid reconnect drop 
 slices, reconnect gesture start/end callback aliases, active reconnect preview wire paint, and the
 minimal `reconnect_on_drop_empty` empty-drop event outcome plus the FNDX-062A store-first
 insert-node picker request seam, FNDX-062B reusable picker candidate state/provider seam, and
-FNDX-062C mounted visual picker list. The current risk is
-consumer-facing drift where public extension or store surfaces look authoritative but bypass the
-store's contracts or imply unimplemented view-policy parity.
+FNDX-062C mounted visual picker list. FNDX-063 now also closes the mounted picker commit-seam leak:
+the picker runtime is covered by the declarative graph-edit source-policy gate and activation
+commits through `paint_only/transactions.rs`. The current risk is consumer-facing drift where
+public extension or store surfaces look authoritative but bypass the store's contracts or imply
+unimplemented view-policy parity.
 
 ## Active Task
 
-- Task ID: FNDX-062C.
+- Task ID: FNDX-063.
 - Owner: current Codex session.
 - Status: DONE; reconnect/update-anchor mechanism sub-lane remains closed; parent workstream
   remains active.
@@ -41,7 +43,10 @@ store's contracts or imply unimplemented view-policy parity.
   mounts the default focusable visual candidate list through
   `NodeGraphDeclarativeInsertNodePickerOverlayBinding` and
   `node_graph_surface_with_insert_node_picker(...)`, with Escape cancel and Enter/row activation
-  routed through that same explicit path.
+  routed through that same explicit path. FNDX-063 extends the declarative graph-edit seam gate to
+  include `insert_node_picker.rs` and routes mounted picker candidate activation through
+  `commit_graph_transaction(...)`, preserving `paint_only/transactions.rs` as the runtime commit
+  authority.
 - Review: `review-workstream` and `verify-rust-workstream` found no blocking closeout issues for
   FNDX-055 through FNDX-061.
 - Evidence:
@@ -68,7 +73,8 @@ store's contracts or imply unimplemented view-policy parity.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/insert_node_picker.rs` owns the reusable
     declarative insert-node picker state/provider seam, including candidate session opening,
     cancel/no-commit behavior, explicit selected-candidate transaction planning, and the default
-    mounted visual candidate list.
+    mounted visual candidate list; mounted activation commits through the shared
+    `paint_only/transactions.rs` seam.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs` mounts the picker in the
     interactive overlay layer when a surface renderer supplies a picker overlay binding.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/frame_plan.rs` and
@@ -104,6 +110,16 @@ store's contracts or imply unimplemented view-policy parity.
     `cargo fmt --check`,
     `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`,
     `git diff --check`,
+    and `python3 tools/check_layering.py`.
+  - Fresh FNDX-063 gates passed:
+    `cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam`
+    after first proving the source-policy leak red;
+    `cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate`;
+    `cargo check -p fret-node --all-features --tests`;
+    `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`;
+    `cargo fmt --check`;
+    `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`;
+    `git diff --check`;
     and `python3 tools/check_layering.py`.
   - Fresh FNDX-062B gates passed:
     `cargo nextest run -p fret-node empty_reconnect_insert_picker_cancel_and_select_commit`,

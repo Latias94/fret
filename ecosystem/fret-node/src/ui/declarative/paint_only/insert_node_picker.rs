@@ -15,7 +15,7 @@ use crate::ops::{GraphOp, GraphTransaction};
 use crate::runtime::events::ConnectDragKind;
 use crate::ui::{InsertNodeCandidate, NodeGraphPresenter, NodeGraphStyle, NodeGraphSurfaceBinding};
 
-use super::NodeGraphDeclarativeInsertNodePickerRequest;
+use super::{NodeGraphDeclarativeInsertNodePickerRequest, commit_graph_transaction};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NodeGraphDeclarativeInsertNodePickerOpenOutcome {
@@ -446,7 +446,7 @@ fn commit_insert_node_picker_candidate(
     let Ok(tx) = tx else {
         return false;
     };
-    if binding.dispatch_transaction_action_host(host, &tx).is_err() {
+    if !commit_graph_transaction(host, binding, &tx) {
         return false;
     }
     picker_state.borrow_mut().close_after_commit();

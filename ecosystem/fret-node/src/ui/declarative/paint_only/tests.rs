@@ -6110,13 +6110,17 @@ fn update_view_state_action_host_uses_authoritative_store_view_state_when_bound_
     assert_eq!(synced_node, Some(CanvasPoint { x: 8.0, y: 16.0 }));
 }
 
-fn declarative_paint_only_runtime_sources() -> [(&'static str, &'static str); 24] {
+fn declarative_paint_only_runtime_sources() -> [(&'static str, &'static str); 25] {
     [
         ("paint_only.rs", include_str!("../paint_only.rs")),
         ("cache.rs", include_str!("cache.rs")),
         ("diag.rs", include_str!("diag.rs")),
         ("frame_plan.rs", include_str!("frame_plan.rs")),
         ("hover_anchor.rs", include_str!("hover_anchor.rs")),
+        (
+            "insert_node_picker.rs",
+            include_str!("insert_node_picker.rs"),
+        ),
         ("input_handlers.rs", include_str!("input_handlers.rs")),
         ("interaction_hooks.rs", include_str!("interaction_hooks.rs")),
         ("overlay_elements.rs", include_str!("overlay_elements.rs")),

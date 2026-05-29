@@ -62,9 +62,10 @@ cancel it without graph commits, and plan an explicit `Insert Node` transaction 
 through the binding/controller/store path. The default visual list can be mounted with
 `NodeGraphDeclarativeInsertNodePickerOverlayBinding` and
 `node_graph_surface_with_insert_node_picker(...)`, which keeps Escape cancel and Enter/row
-activation on the same explicit state/provider/binding path. This remains intentionally small: it
-covers tool-mode/shortcut interception and picker-policy handoff without reopening retained widget
-authoring or adding a second graph owner.
+activation on the same explicit state/provider/binding path; mounted activation still commits
+through the declarative `paint_only/transactions.rs` seam rather than becoming a second graph-edit
+commit path. This remains intentionally small: it covers tool-mode/shortcut interception and
+picker-policy handoff without reopening retained widget authoring or adding a second graph owner.
 
 Hooks receive a `NodeGraphDeclarativeInteractionContext`, not a mutable `Graph` and not raw
 `ModelStore` access. The context may expose:

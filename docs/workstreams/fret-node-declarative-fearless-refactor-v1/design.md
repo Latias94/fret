@@ -154,7 +154,7 @@ First landing in this worktree:
 
 ### Slice 2 - declarative transaction closure
 
-Status note (2026-04-03):
+Status note (2026-05-29):
 
 - The selection/marquee/pointer-session reducer split is now landed.
 - Local-vs-store interaction boundaries are explicit: transient drag/marquee/pending-selection/
@@ -166,6 +166,9 @@ Status note (2026-04-03):
 - Declarative graph-edit commit authority is now also centralized in `paint_only/transactions.rs`:
   runtime files must not replace graph/document directly or dispatch/submit transactions outside
   that seam.
+- FNDX-063 widened that source-policy guard to include the mounted insert-node picker runtime and
+  routed picker activation through `commit_graph_transaction(...)`, so the FNDX-062C visual picker
+  does not become a second declarative graph-edit commit path.
 - The retained compatibility runtime no longer keeps a stale `cfg(test)` editor-config
   reconstruction fallback; retained runtime, retained tests, and `--all-features` builds now all
   use the same explicit editor-config seam.

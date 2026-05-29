@@ -16,7 +16,9 @@ without graph commits and select a candidate by explicitly dispatching an `Inser
 transaction. FNDX-062C mounts the default focusable visual candidate-list UI through
 `NodeGraphDeclarativeInsertNodePickerOverlayBinding` plus
 `node_graph_surface_with_insert_node_picker(...)`; richer search/filter/typeahead behavior remains
-split as optional follow-up work.
+split as optional follow-up work. FNDX-063 closes the commit-seam regression risk introduced by
+that mounted picker runtime: `insert_node_picker.rs` is now covered by the declarative runtime
+source-policy matrix, and mounted picker activation commits through `paint_only/transactions.rs`.
 
 ## Targeted Iteration Gates
 
@@ -46,6 +48,28 @@ This gate proves the FNDX-062B candidate policy seam: the picker state opens fro
 reconnect request, exposes provider candidates, canceling leaves the graph uncommitted, and choosing
 a candidate produces an explicit `Insert Node` transaction that commits only when the caller
 dispatches it through the binding/controller/store path.
+
+```bash
+cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam
+```
+
+This gate proves the FNDX-063 commit-seam guard: every default declarative runtime file, including
+the mounted insert-node picker runtime, stays off direct graph/document replacement and routes graph
+transaction commits through `paint_only/transactions.rs`.
+
+Fresh evidence for FNDX-063 (2026-05-29):
+
+- Red first: `cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam`
+  failed after adding `insert_node_picker.rs` to the runtime source list because mounted picker
+  activation called `dispatch_transaction_action_host(...)` directly.
+- `cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam`: passed.
+- `cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate`: passed.
+- `cargo check -p fret-node --all-features --tests`: passed.
+- `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+- `cargo fmt --check`: passed.
+- `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed.
+- `git diff --check`: passed.
+- `python3 tools/check_layering.py`: passed.
 
 Fresh evidence for FNDX-062B (2026-05-29):
 
