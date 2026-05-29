@@ -35,6 +35,14 @@ hub. `disclosure_surface/collapsing_header.rs` owns collapsing-header trait forw
 Public trait method names, stable identity docs, response returns, macro expansion order, and
 concrete `disclosure_controls` behavior ownership remain unchanged.
 
+2026-05-29 facade support sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_support.rs` is now a module/re-export hub.
+`facade_support/constants.rs` owns IMUI key and timing constants, `geometry.rs` owns point and
+device-pixel helpers, `runtime.rs` owns frame preparation, `state.rs` owns model-change
+tracking, and `ui_writer.rs` owns the `UiWriterUiKitExt` bridge trait implementation. Public
+IMUI key names, frame preparation, geometry helpers, model-change behavior, and
+`UiWriterUiKitExt` re-export paths remain unchanged.
+
 2026-05-29 facade scope method sub-owner result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods.rs` is now a module/re-export hub.
 `scope_methods/push_id.rs` owns keyed child facade execution and result propagation, while

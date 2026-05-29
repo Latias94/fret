@@ -75,6 +75,41 @@ Focused gates:
   standalone markdown files.
 - `git diff --check`: pass.
 
+## Facade Support Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade support ownership split into constants, geometry, runtime, state, and
+ui-writer child owners without changing public IMUI key names, frame preparation, geometry helper
+behavior, model-change tracking, slider math ownership, or `UiWriterUiKitExt` re-export paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_support.rs` is now a module/re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/facade_support/constants.rs` owns IMUI transient-event keys,
+  timing constants, disabled/drag defaults, and `fnv1a64`.
+- `ecosystem/fret-ui-kit/src/imui/facade_support/geometry.rs` owns point arithmetic and
+  device-pixel snapping helpers.
+- `ecosystem/fret-ui-kit/src/imui/facade_support/runtime.rs` owns frame preparation.
+- `ecosystem/fret-ui-kit/src/imui/facade_support/state.rs` owns model change tracking.
+- `ecosystem/fret-ui-kit/src/imui/facade_support/ui_writer.rs` owns `UiWriterUiKitExt`.
+- `ecosystem/fret-ui-kit/src/imui/facade_support/slider_math.rs` remains the slider math owner.
+- `tools/gate_imui_workstream_source.py` now checks the support hub and child owners, and rejects
+  constants/runtime/geometry/state/writer bodies from drifting back into `facade_support.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke
+  --test imui_disclosure_smoke --no-fail-fast`: pass (4 passed).
+- `cargo nextest run -p fret-imui interaction_shortcuts --no-fail-fast`: pass (10 passed,
+  176 skipped).
+- `python tools\check_workstream_catalog.py`: pass; validated 473 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+
 ## Facade Basic Surface Sub-Owner Evidence - 2026-05-29
 
 Claim verified: IMUI facade basic surface macro ownership split into text, debug-draw, and

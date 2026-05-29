@@ -65,6 +65,13 @@ Last updated: 2026-05-29
       Result: `disclosure_surface.rs` is now a module/re-export hub.
       `disclosure_surface/collapsing_header.rs` owns collapsing-header forwarding, while
       `disclosure_surface/tree_node.rs` owns tree-node forwarding and explicit depth guidance.
+- [x] Split IMUI facade support hub into constants, geometry, runtime, state, and ui-writer child
+      owners without changing public IMUI key names, frame preparation, point helpers, model
+      change tracking, or `UiWriterUiKitExt` re-export paths.
+      Result: `facade_support.rs` is now a module/re-export hub.
+      `facade_support/constants.rs` owns IMUI key/timing constants, `geometry.rs` owns point and
+      device-pixel helpers, `runtime.rs` owns frame preparation, `state.rs` owns model change
+      tracking, and `ui_writer.rs` owns the bridge trait implementation.
 - [x] Split IMUI facade scope method behavior owner into push-id and disabled-scope child owners
       without changing public facade method names, keyed identity scoping, disabled alpha/gating,
       runtime frame preparation, or `scope_surface` forwarding.
