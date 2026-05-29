@@ -410,6 +410,14 @@ Last updated: 2026-05-30
       Result: `controls/color_edit.rs` keeps the main control renderer and passes input arguments
       to `controls/color_edit/input.rs`, while the input owner owns text input props, key handling,
       draft/error updates, and pointer focus wrapping.
+- [x] Split editor color-edit swatch construction into a private owner without changing swatch
+      activation, original-color reference capture, right-click and keyboard copy-menu triggers,
+      drag-source/drop-hover behavior, tooltip hover-open synchronization, preview painting,
+      test-id/a11y value assignment, or popup/drop-delivery policy.
+      Result: `controls/color_edit.rs` keeps the main control renderer, popup requests, and
+      delivered drop application, while `controls/color_edit/swatch.rs` owns the swatch pressable,
+      context-menu triggers, drag hover state, frame visuals, preview container, and swatch style
+      resolution.
 - [x] Split IMUI leaf control option records into selection, tab-item, and slider private owners
       without changing public option type names, fields, defaults, root re-exports, selectable
       smoke behavior, tab/menu behavior, or slider model behavior.

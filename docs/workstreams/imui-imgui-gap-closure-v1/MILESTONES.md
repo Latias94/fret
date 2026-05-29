@@ -374,6 +374,12 @@ input arguments into `controls/color_edit/input.rs`. The input owner owns text i
 text-field chrome resolution, draft sync, Enter/Escape handling, parse/reset errors, and pointer
 focus wrapping.
 
+2026-05-30 color-edit swatch owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit.rs` keeps popup requests and delivered drop
+application. `controls/color_edit/swatch.rs` owns the swatch pressable, activation/reference
+capture, copy-menu triggers, drag source/drop hover state, tooltip hover synchronization, preview
+container, frame visuals, and swatch style resolution.
+
 2026-05-29 leaf control option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/selection.rs`,
 `ecosystem/fret-ui-kit/src/imui/options/controls/tab.rs`, and

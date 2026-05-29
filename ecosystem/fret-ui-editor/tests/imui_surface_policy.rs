@@ -11,6 +11,7 @@ const COLOR_EDIT_MODEL_RS: &str = include_str!("../src/controls/color_edit/model
 const COLOR_EDIT_OPTIONS_RS: &str = include_str!("../src/controls/color_edit/options.rs");
 const COLOR_EDIT_RECORDS_RS: &str = include_str!("../src/controls/color_edit/records.rs");
 const COLOR_EDIT_STATE_RS: &str = include_str!("../src/controls/color_edit/state.rs");
+const COLOR_EDIT_SWATCH_RS: &str = include_str!("../src/controls/color_edit/swatch.rs");
 const COLOR_EDIT_POPUP_RS: &str = include_str!("../src/controls/color_edit/popup.rs");
 const COLOR_EDIT_POPUP_NUMERIC_RS: &str =
     include_str!("../src/controls/color_edit/popup/numeric.rs");
@@ -51,6 +52,8 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_RS.contains("mod records;"));
     assert!(COLOR_EDIT_RS.contains("pub use self::records::{"));
     assert!(COLOR_EDIT_RS.contains("mod state;"));
+    assert!(COLOR_EDIT_RS.contains("mod swatch;"));
+    assert!(COLOR_EDIT_RS.contains("use self::swatch::{"));
     assert!(COLOR_EDIT_OPTIONS_RS.contains("pub struct ColorEditOptions"));
     assert!(COLOR_EDIT_INPUT_RS.contains("pub(super) struct ColorEditInputArgs"));
     assert!(COLOR_EDIT_INPUT_RS.contains("pub(super) fn color_hex_input<"));
@@ -60,6 +63,18 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_INPUT_RS.contains("KeyCode::Escape"));
     assert!(COLOR_EDIT_INPUT_RS.contains("PointerRegionProps"));
     assert!(COLOR_EDIT_INPUT_RS.contains("parse_hex("));
+    assert!(COLOR_EDIT_SWATCH_RS.contains("pub(super) struct ColorEditSwatchArgs"));
+    assert!(COLOR_EDIT_SWATCH_RS.contains("pub(super) fn color_swatch<"));
+    assert!(COLOR_EDIT_SWATCH_RS.contains("PressableProps"));
+    assert!(COLOR_EDIT_SWATCH_RS.contains("pressable_add_on_activate"));
+    assert!(COLOR_EDIT_SWATCH_RS.contains("pressable_add_on_pointer_down"));
+    assert!(COLOR_EDIT_SWATCH_RS.contains("ColorEditDragDropPayload::from_color"));
+    assert!(COLOR_EDIT_SWATCH_RS.contains("install_color_drag_source"));
+    assert!(COLOR_EDIT_SWATCH_RS.contains("update_color_drop_target"));
+    assert!(COLOR_EDIT_SWATCH_RS.contains("EditorWidgetVisuals"));
+    assert!(COLOR_EDIT_SWATCH_RS.contains("key_on_key_down_for"));
+    assert!(COLOR_EDIT_SWATCH_RS.contains("KeyCode::ContextMenu"));
+    assert!(COLOR_EDIT_SWATCH_RS.contains("color_preview_stack"));
     assert!(COLOR_EDIT_RECORDS_RS.contains("const COLOR_PRESETS:"));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("fn preset_swatch<"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn color_preview_stack<"));
