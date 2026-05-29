@@ -7,6 +7,10 @@ use fret_authoring::mark_immediate_render_frame;
 use fret_core::AppWindowId;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
+mod lifecycle;
+
+use lifecycle::prepare_popup_store_for_generation;
+
 #[derive(Clone)]
 pub(super) struct PopupStoreState {
     pub(super) open: fret_runtime::Model<bool>,
@@ -28,32 +32,6 @@ struct PopupStoreWindowState {
 #[derive(Default)]
 struct ImUiPopupStore {
     by_window: HashMap<AppWindowId, PopupStoreWindowState>,
-}
-
-fn prepare_popup_store_for_generation<H: UiHost>(
-    store: &mut ImUiPopupStore,
-    app: &mut H,
-    window: AppWindowId,
-    render_generation: u64,
-) {
-    let state = store.by_window.entry(window).or_default();
-    let min_live_generation = render_generation.saturating_sub(1);
-    for st in state.by_id.values_mut() {
-        let is_open = app.models().get_copied(&st.open).unwrap_or(false);
-        if !is_open {
-            continue;
-        }
-        if st
-            .keep_alive_generation
-            .is_some_and(|generation| generation >= min_live_generation)
-        {
-            continue;
-        }
-        let _ = app.models_mut().update(&st.open, |v| *v = false);
-        let _ = app.models_mut().update(&st.anchor, |v| *v = None);
-        st.panel_id = None;
-        st.keep_alive_generation = None;
-    }
 }
 
 pub(super) fn popup_render_generation_for_window<H: UiHost>(cx: &mut ElementContext<'_, H>) -> u64 {

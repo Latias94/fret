@@ -1478,6 +1478,11 @@ test-id derivation, and picked response semantics remain unchanged.
 ComboBox role normalization. `input.rs` keeps input-root request/result shapes, assistive
 semantics, root container construction, text input mounting, and keyboard handler installation.
 
+2026-05-30 popup-store lifecycle sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/popup_store/lifecycle.rs` now owns stale popup cleanup during
+render-generation preparation. `popup_store.rs` keeps popup store state, generation entry points,
+scoped entry lookup, and explicit scope dropping.
+
 2026-05-26 disclosure spec owner-split result:
 `ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs` now owns the private
 `DisclosureKind` / `DisclosureSpec` model, option normalization, level clamping, test-id routing,

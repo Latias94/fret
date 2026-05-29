@@ -1398,6 +1398,13 @@ Last updated: 2026-05-30
       `prepare_text_picker_input_options(...)`; `input.rs` keeps input-root request/result shapes,
       assistive semantics, root container construction, text input mounting, and keyboard handler
       installation.
+- [x] Split IMUI popup-store stale-generation cleanup out of
+      `ecosystem/fret-ui-kit/src/imui/popup_store.rs` into a private lifecycle owner without
+      changing per-window state shape, popup open/anchor drop semantics, keep-alive generation
+      handling, or explicit scope-drop redraw requests.
+      Result: `popup_store/lifecycle.rs` owns stale popup cleanup during render generation
+      preparation. `popup_store.rs` keeps popup store state, generation entry points, scoped entry
+      lookup, and explicit scope dropping.
 - [x] Split IMUI input-text picker popup open policy out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into a private owner module without
       changing popup open/panel-id reads, active-descendant wiring, open-on-focus behavior,

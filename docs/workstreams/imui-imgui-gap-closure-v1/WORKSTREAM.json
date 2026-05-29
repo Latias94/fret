@@ -656,6 +656,8 @@
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior/menubar.rs",
+    "ecosystem/fret-ui-kit/src/imui/popup_store.rs",
+    "ecosystem/fret-ui-kit/src/imui/popup_store/lifecycle.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/context_menu.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu.rs",
