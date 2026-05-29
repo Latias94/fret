@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-29 facade model surface owner-split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
+`UiWriterImUiFacadeExt` trait hub, but checkbox/radio/switch, slider/combo model, input text
+model, input text picker model, history text picker model, and textarea model trait default method
+declarations now live in `facade_writer/model_surface.rs` and are expanded into the public trait.
+Existing `boolean_wrappers.rs`, `value_models.rs`, and `text_models.rs` inherent wrapper owners
+still record focusable state and delegate through the public trait.
+
 2026-05-29 facade button surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but button, small/arrow/invisible button, image item/button,

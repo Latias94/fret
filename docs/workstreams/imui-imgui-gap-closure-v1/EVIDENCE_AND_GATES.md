@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-29
 
+## Facade Model Surface Owner-Split Evidence - 2026-05-29
+
+Claim verified: IMUI facade model/control trait default method declarations split out of the root
+facade writer without changing the public `UiWriterImUiFacadeExt` trait, caller import behavior,
+checkbox/radio/switch, slider/combo model, input text, picker/history text, textarea method names,
+focusable recording wrappers, or model-control behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
+  `UiWriterImUiFacadeExt` trait hub and expands `model_surface::model_surface_methods!()`.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/model_surface.rs` owns checkbox/radio/switch,
+  slider/combo model, input text model, input text picker/history model, and textarea model trait
+  default declarations/forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/boolean_wrappers.rs`,
+  `value_models.rs`, and `text_models.rs` still own focusable-recording inherent wrappers.
+- `tools/gate_imui_workstream_source.py` now rejects model/control trait default bodies from
+  drifting back into `facade_writer.rs` and checks the new model surface owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke
+  --test imui_combo_smoke --test imui_textarea_smoke --test imui_input_text_picker_options_smoke
+  --no-fail-fast`: pass (8 passed).
+- `cargo nextest run -p fret-imui models_controls --no-fail-fast`: pass (11 passed, 175 skipped).
+- `cargo nextest run -p fret-imui models_combo --no-fail-fast`: pass (11 passed, 175 skipped).
+- `cargo nextest run -p fret-imui models_text --no-fail-fast`: pass (29 passed, 157 skipped).
+
 ## Facade Button Surface Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI facade button/image/action trait default method declarations split out of the

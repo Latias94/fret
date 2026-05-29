@@ -44,6 +44,16 @@ Last updated: 2026-05-29
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI facade model/control trait default method declarations out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
+      `UiWriterImUiFacadeExt` trait, caller import behavior, checkbox/radio/switch,
+      slider/combo model, input text, picker/history text, textarea method names, focusable
+      recording wrappers, or model-control behavior.
+      Result: `facade_writer.rs` keeps the single public trait hub and expands
+      `facade_writer/model_surface.rs` inside it. `model_surface.rs` owns checkbox/radio/switch,
+      slider/combo model, input text model, input text picker/history model, and textarea model
+      trait default declarations/forwarding. Existing `boolean_wrappers.rs`, `value_models.rs`,
+      and `text_models.rs` inherent wrappers still own focusable recording.
 - [x] Split IMUI facade button/image/action trait default method declarations out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, button/image/action method names,
