@@ -411,6 +411,38 @@ Focused gates:
 - `cargo nextest run -p fret-imui floating --no-fail-fast`: pass (25 passed, 161 skipped).
 - `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass (21 passed, 165 skipped).
 
+## Facade Floating Popup Behavior Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade floating-popup popup behavior forwarding split into popup state and
+begin-popup child owners without changing public facade method names, popup open-model/drop/open/
+close forwarding, popup menu/modal/context-menu begin forwarding, or `floating_popup.rs` re-export
+paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup/popup.rs` is now a
+  module/re-export hub for popup behavior forwarding owners.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup/popup/state.rs` owns popup
+  open-model, drop, open, anchor-open, and close forwarding to `popup_overlay`.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup/popup/begin.rs` owns popup menu,
+  modal, and context-menu begin forwarding to `popup_overlay`.
+- `tools/gate_imui_workstream_source.py` checks the new child owners and rejects popup behavior
+  forwarding bodies from drifting back into `facade_writer/floating_popup/popup.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_popup_options_smoke
+  --no-fail-fast`: pass (1 passed).
+- `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass (21 passed, 165 skipped).
+- `python tools\check_workstream_catalog.py`: pass; validated 473 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+
 ## Facade Menu/Selection Surface Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI facade menu/selection trait default method declarations split out of the root

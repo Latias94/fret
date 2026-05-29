@@ -892,6 +892,13 @@ Last updated: 2026-05-29
       floating layer/area forwarding, `popup.rs` owns popup open/close/menu/modal/context
       forwarding, `tooltip.rs` owns tooltip forwarding, `drag_drop_facade.rs` owns drag/drop
       forwarding, and `window.rs` owns floating-window forwarding.
+- [x] Split IMUI facade floating-popup popup behavior forwarding into popup state and begin-popup
+      child owners without changing public facade method names, popup open-model/drop/open/close
+      forwarding, popup menu/modal/context-menu begin forwarding, or `floating_popup.rs`
+      re-export paths.
+      Result: `facade_writer/floating_popup/popup.rs` is now a module/re-export hub.
+      `popup/state.rs` owns open-model, drop, open, anchor-open, and close forwarding, while
+      `popup/begin.rs` owns menu, modal, and context-menu begin forwarding.
 - [x] Split IMUI button action payload and command dispatch out of
       `ecosystem/fret-ui-kit/src/imui/button_controls/behavior.rs` into a private action owner
       without changing button pressable behavior, shortcut activation, command gating, action
