@@ -692,6 +692,42 @@ Focused gates:
 - `cargo nextest run -p fret-imui image_item --no-fail-fast`: pass (2 passed, 184 skipped).
 - `cargo nextest run -p fret-imui control_geometry --no-fail-fast`: pass (4 passed, 182 skipped).
 
+## Facade Button/Action Inherent Wrapper Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade button/action inherent wrapper behavior ownership split into
+button-family and command-button child owners without changing public inherent method names,
+focusable recording, command metadata lookup, action/payload action wrappers, or `fret-imui`
+thinness.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs` now keeps module wiring and the
+  private button-command helper re-export only.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/buttons.rs` owns plain, small,
+  arrow, and invisible button inherent wrappers, including focusable recording.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/commands.rs` owns button-command
+  inherent wrappers, including focusable recording.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/action_methods.rs` still owns
+  action and payload-action inherent wrappers.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/button_command.rs` still owns
+  command metadata lookup and action-button helper routing.
+- `tools/gate_imui_workstream_source.py` checks the new child owners and rejects wrapper bodies
+  from drifting back into `button_actions.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --no-fail-fast`:
+  pass (1 passed).
+- `cargo nextest run -p fret-imui interaction_shortcuts control_geometry --no-fail-fast`: pass
+  (14 passed, 172 skipped).
+
 ## Facade Button Surface Sub-Owner Evidence - 2026-05-29
 
 Claim verified: IMUI facade button surface macro ownership split into plain-button, image-button,

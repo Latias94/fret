@@ -466,6 +466,8 @@
     "ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/action_methods.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/button_command.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/buttons.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/commands.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/menu_selection_surface.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/menu_selection_surface/context_popup.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/menu_selection_surface/menu_family.rs",

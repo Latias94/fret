@@ -211,6 +211,14 @@ Last updated: 2026-05-29
       `button_surface/images.rs` owns image item/button forwarding, and
       `button_surface/actions.rs` owns action button, payload action button, and button-command
       forwarding.
+- [x] Split IMUI facade button/action inherent wrapper behavior owner into button-family and
+      command-button child owners without changing public inherent method names, focusable
+      recording, command metadata lookup, action/payload action wrappers, or `fret-imui` thinness.
+      Result: `facade_writer/button_actions.rs` keeps only module wiring and the private
+      button-command helper re-export. `button_actions/buttons.rs` owns plain/small/arrow/invisible
+      button wrappers, `button_actions/commands.rs` owns command-button wrappers, and existing
+      `action_methods.rs` / `button_command.rs` now import directly from the facade parent instead
+      of relying on root hub imports.
 - [x] Split IMUI shared pressable item pointer hook bodies out of
       `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` without changing shared button,
       checkbox/radio, selectable, combo, image-item, debug-draw pressable, context-menu,

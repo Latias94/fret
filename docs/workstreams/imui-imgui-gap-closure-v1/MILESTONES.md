@@ -173,6 +173,15 @@ action button, payload action button, and button-command forwarding. The public 
 points in `facade_writer.rs` now call these child macros directly, while `button_actions.rs` /
 `button_actions/*` and `image_items.rs` remain the behavior/inherent wrapper owners.
 
+2026-05-29 facade button/action inherent-wrapper sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs` now keeps module wiring and the
+private button-command helper re-export only. `button_actions/buttons.rs` owns
+plain/small/arrow/invisible button inherent wrappers, and `button_actions/commands.rs` owns
+button-command inherent wrappers. Existing `action_methods.rs` and `button_command.rs` now import
+directly from the facade parent instead of relying on root hub imports. Public inherent method
+names, focusable recording, command metadata lookup, action/payload action wrappers, and the
+`fret-imui` thin boundary remain unchanged.
+
 2026-05-29 item behavior pointer hook owner-split result:
 `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` now keeps hook clearing, model capture,
 and behavior assembly. `item_behavior/install/pointer_down.rs` owns lifecycle activation and drag
