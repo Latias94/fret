@@ -341,6 +341,11 @@ and shared HSV color application. `picker/hue_bar.rs` owns hue bar previews, ver
 gradient construction, thumb overlays, pointer update application, and hue coordinate helper
 wiring.
 
+2026-05-30 color-edit saturation/value picker owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker.rs` keeps color picker composition
+and shared HSV color application. `picker/sv.rs` owns SV preview grid construction, thumb overlay
+layout, pointer update application, and SV coordinate helper wiring.
+
 2026-05-29 leaf control option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/selection.rs`,
 `ecosystem/fret-ui-kit/src/imui/options/controls/tab.rs`, and
