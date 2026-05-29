@@ -1390,6 +1390,14 @@ Last updated: 2026-05-30
       keyboard handler installation. The root file keeps candidate visibility, popup-open state,
       popup lifecycle policy, popup rendering delegation, and final `InputTextPickerResponse`
       merge.
+- [x] Split IMUI input-text picker input option preparation out of
+      `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input.rs` into a private options owner
+      without changing test-id fallback, `.input` suffix derivation, TextField-to-ComboBox role
+      normalization, assistive semantics, root fill sizing, or keyboard handler installation.
+      Result: `text_picker_controls/input/options.rs` owns `PreparedInputTextPickerInput` and
+      `prepare_text_picker_input_options(...)`; `input.rs` keeps input-root request/result shapes,
+      assistive semantics, root container construction, text input mounting, and keyboard handler
+      installation.
 - [x] Split IMUI input-text picker popup open policy out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into a private owner module without
       changing popup open/panel-id reads, active-descendant wiring, open-on-focus behavior,

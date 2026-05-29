@@ -7589,6 +7589,37 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Text Picker Input Options Sub-Owner Evidence - 2026-05-30
+
+Claim verified: IMUI input-text picker input option preparation moved into a private options owner
+without changing test-id fallback, `.input` suffix derivation, TextField-to-ComboBox role
+normalization, assistive semantics, root fill sizing, or keyboard handler installation.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input/options.rs` owns
+  `PreparedInputTextPickerInput`, test-id fallback/`.input` suffix derivation, and
+  TextField-to-ComboBox role normalization.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input.rs` keeps input-root request/result
+  shapes, assistive semantics, root container construction, text input mounting, and keyboard
+  handler installation.
+- `tools/gate_imui_workstream_source.py` now rejects option-preparation bodies from drifting back
+  into `input.rs` while requiring the private options owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_input_text_picker_options_smoke
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Disclosure Header Row Visual Owner-Split Evidence - 2026-05-27
 
 Claim verified: disclosure header row container/flex assembly, indicator glyph mounting, label

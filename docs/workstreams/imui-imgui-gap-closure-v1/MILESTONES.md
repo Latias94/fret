@@ -1472,6 +1472,12 @@ snapshot reconciliation, popup lifecycle policy, popup rendering delegation, and
 `InputTextPickerResponse` merge. Completion/history picker behavior, active-descendant wiring,
 test-id derivation, and picked response semantics remain unchanged.
 
+2026-05-30 text-picker input options sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/input/options.rs` now owns
+`PreparedInputTextPickerInput`, test-id fallback/`.input` suffix derivation, and TextField-to-
+ComboBox role normalization. `input.rs` keeps input-root request/result shapes, assistive
+semantics, root container construction, text input mounting, and keyboard handler installation.
+
 2026-05-26 disclosure spec owner-split result:
 `ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs` now owns the private
 `DisclosureKind` / `DisclosureSpec` model, option normalization, level clamping, test-id routing,
