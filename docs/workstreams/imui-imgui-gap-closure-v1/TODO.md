@@ -1009,6 +1009,13 @@ Last updated: 2026-05-30
       active-state lifecycle frame diffing, edited-state stamping, and activated/deactivated merge
       application. `interaction_runtime/lifecycle.rs` keeps pointer-down/up lifecycle mutation,
       instant edit mutation, lifecycle edit mutation, and private re-exports for callers.
+- [x] Split IMUI interaction lifecycle mutation owners into pointer-edge, edit, and instant child
+      modules without changing pointer activation/deactivation semantics, edited-during-active
+      state, instant activated/deactivated transient emission, response projection, or public-in-IMUI
+      re-export paths.
+      Result: `interaction_runtime/lifecycle.rs` is now a mutation/response re-export hub.
+      `lifecycle/pointer_edges.rs` owns pointer down/up lifecycle edges, `lifecycle/edit.rs` owns
+      edit marking, and `lifecycle/instant.rs` owns inactive instant lifecycle emission.
 - [x] Split IMUI tooltip overlay request assembly out of
       `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` into a private request owner
       without changing trigger-id validation, pointer-move open gating, hover/focus interaction

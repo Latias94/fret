@@ -876,6 +876,11 @@ activated/deactivated merge application. `interaction_runtime/lifecycle.rs` keep
 lifecycle mutation, instant edit mutation, lifecycle edit mutation, and private re-exports for
 callers.
 
+2026-05-30 interaction lifecycle mutation owner-split result:
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/lifecycle.rs` is now a mutation/response
+re-export hub. `lifecycle/pointer_edges.rs` owns pointer down/up lifecycle edges, `lifecycle/edit.rs`
+owns edit marking, and `lifecycle/instant.rs` owns inactive instant lifecycle emission.
+
 2026-05-28 tooltip overlay request owner-split result:
 `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/request.rs` now owns panel child construction,
 tooltip overlay request creation, trigger binding, dismiss close-request signaling, optional

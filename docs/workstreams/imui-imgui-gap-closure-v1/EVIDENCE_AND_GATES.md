@@ -4475,6 +4475,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Interaction Lifecycle Mutation Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI interaction lifecycle mutation ownership split into pointer-edge, edit, and
+instant child modules without changing pointer activation/deactivation semantics,
+edited-during-active state, instant activated/deactivated transient emission, response projection,
+or public-in-IMUI re-export paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/lifecycle.rs` is now a mutation/response
+  re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/lifecycle/pointer_edges.rs` owns left-pointer
+  activation/deactivation lifecycle edges and after-edit transient emission.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/lifecycle/edit.rs` owns edit marking and
+  inactive edit instant transient emission.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/lifecycle/instant.rs` owns inactive instant
+  activation/deactivation emission and active-session edited stamping.
+- `tools/gate_imui_workstream_source.py` now rejects lifecycle mutation bodies from drifting back
+  into `lifecycle.rs` while checking the three child owners and preserving the existing response
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui lifecycle --no-fail-fast`: pass; 13 lifecycle-focused tests
+  passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Tooltip Overlay Request Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI tooltip overlay request assembly moved into a private owner without changing
