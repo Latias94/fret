@@ -425,6 +425,12 @@ Last updated: 2026-05-30
       `controls/color_edit/drag_drop.rs`, while the drag/drop owner now owns delivered payload
       extraction, alpha-aware payload application, formatted draft synchronization, and error
       clearing.
+- [x] Split editor color-edit root layout/error rendering into a private owner without changing
+      error text styling, row/root flex direction, spacing, min-height fallback, root test-id
+      assignment, or popup policy tests.
+      Result: `controls/color_edit.rs` remains the state/owner orchestration hub, while
+      `controls/color_edit/layout.rs` owns error text rendering, root min-height fallback, vertical
+      root layout, horizontal swatch/input row layout, and root test-id assignment.
 - [x] Split IMUI leaf control option records into selection, tab-item, and slider private owners
       without changing public option type names, fields, defaults, root re-exports, selectable
       smoke behavior, tab/menu behavior, or slider model behavior.

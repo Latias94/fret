@@ -7,6 +7,7 @@ const COLOR_EDIT_POPUP_COPY_RS: &str = include_str!("../src/controls/color_edit/
 const COLOR_EDIT_POPUP_EYEDROPPER_RS: &str =
     include_str!("../src/controls/color_edit/popup/eyedropper.rs");
 const COLOR_EDIT_DRAG_DROP_RS: &str = include_str!("../src/controls/color_edit/drag_drop.rs");
+const COLOR_EDIT_LAYOUT_RS: &str = include_str!("../src/controls/color_edit/layout.rs");
 const COLOR_EDIT_MODEL_RS: &str = include_str!("../src/controls/color_edit/model.rs");
 const COLOR_EDIT_OPTIONS_RS: &str = include_str!("../src/controls/color_edit/options.rs");
 const COLOR_EDIT_RECORDS_RS: &str = include_str!("../src/controls/color_edit/records.rs");
@@ -47,6 +48,8 @@ fn count_occurrences(haystack: &str, needle: &str) -> usize {
 fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_RS.contains("mod input;"));
     assert!(COLOR_EDIT_RS.contains("use self::input::{"));
+    assert!(COLOR_EDIT_RS.contains("mod layout;"));
+    assert!(COLOR_EDIT_RS.contains("use self::layout::{"));
     assert!(COLOR_EDIT_RS.contains("mod options;"));
     assert!(COLOR_EDIT_RS.contains("pub use self::options::{"));
     assert!(COLOR_EDIT_RS.contains("mod records;"));
@@ -63,6 +66,13 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_INPUT_RS.contains("KeyCode::Escape"));
     assert!(COLOR_EDIT_INPUT_RS.contains("PointerRegionProps"));
     assert!(COLOR_EDIT_INPUT_RS.contains("parse_hex("));
+    assert!(COLOR_EDIT_LAYOUT_RS.contains("pub(super) struct ColorEditRootLayoutArgs"));
+    assert!(COLOR_EDIT_LAYOUT_RS.contains("pub(super) fn color_edit_root_layout<"));
+    assert!(COLOR_EDIT_LAYOUT_RS.contains("editor_inline_error_text_props"));
+    assert!(COLOR_EDIT_LAYOUT_RS.contains("Axis::Vertical"));
+    assert!(COLOR_EDIT_LAYOUT_RS.contains("Axis::Horizontal"));
+    assert!(COLOR_EDIT_LAYOUT_RS.contains("FlexProps"));
+    assert!(COLOR_EDIT_LAYOUT_RS.contains("el.test_id(test_id.clone())"));
     assert!(COLOR_EDIT_SWATCH_RS.contains("pub(super) struct ColorEditSwatchArgs"));
     assert!(COLOR_EDIT_SWATCH_RS.contains("pub(super) fn color_swatch<"));
     assert!(COLOR_EDIT_SWATCH_RS.contains("PressableProps"));

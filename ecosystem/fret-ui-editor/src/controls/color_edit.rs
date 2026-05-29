@@ -8,19 +8,17 @@
 
 use std::panic::Location;
 
-use fret_core::{Axis, Color, Edges, Px};
+use fret_core::{Color, Px};
 use fret_runtime::Model;
-use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacingLength,
-};
+use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::primitives::input_group::derived_test_id;
-use crate::primitives::readout::editor_inline_error_text_props;
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 mod drag_drop;
 mod input;
+mod layout;
 mod model;
 mod options;
 mod popup;
@@ -36,6 +34,7 @@ use self::drag_drop::{
     prune_color_drag_drop_store, resolve_color_drag_threshold,
 };
 use self::input::{ColorEditInputArgs, color_hex_input};
+use self::layout::{ColorEditRootLayoutArgs, color_edit_root_layout};
 use self::model::format_hex;
 pub(in crate::controls::color_edit) use self::options::ColorEditPopupRuntimeOptions;
 pub use self::options::{
@@ -291,64 +290,16 @@ impl ColorEdit {
             copy_menu_test_id,
         );
 
-        let error_msg = cx
-            .get_model_cloned(&error, Invalidation::Paint)
-            .unwrap_or(None);
-        let error_el = error_msg.map(|msg| {
-            cx.text_props(editor_inline_error_text_props(
-                msg,
-                Theme::global(&*cx.app).color_token("destructive"),
-                density.row_height,
-            ))
-        });
-
-        let mut root_layout = self.options.layout;
-        if root_layout.size.min_height.is_none() {
-            root_layout.size.min_height = Some(Length::Px(density.row_height));
-        }
-
-        let mut el = cx.flex(
-            FlexProps {
-                layout: root_layout,
-                direction: Axis::Vertical,
-                gap: SpacingLength::Px(Px(4.0)),
-                padding: Edges::all(Px(0.0)).into(),
-                justify: MainAlign::Start,
-                align: CrossAlign::Stretch,
-                wrap: false,
+        color_edit_root_layout(
+            cx,
+            ColorEditRootLayoutArgs {
+                swatch,
+                input,
+                error,
+                layout: self.options.layout,
+                test_id: self.options.test_id.clone(),
+                row_height: density.row_height,
             },
-            move |cx| {
-                let row = cx.flex(
-                    FlexProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Auto,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        direction: Axis::Horizontal,
-                        gap: SpacingLength::Px(Px(8.0)),
-                        padding: Edges::all(Px(0.0)).into(),
-                        justify: MainAlign::Start,
-                        align: CrossAlign::Center,
-                        wrap: false,
-                    },
-                    move |_cx| vec![swatch, input],
-                );
-
-                let mut out = vec![row];
-                if let Some(err) = error_el {
-                    out.push(err);
-                }
-                out
-            },
-        );
-
-        if let Some(test_id) = self.options.test_id.as_ref() {
-            el = el.test_id(test_id.clone());
-        }
-        el
+        )
     }
 }

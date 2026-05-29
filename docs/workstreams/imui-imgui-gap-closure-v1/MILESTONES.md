@@ -385,6 +385,11 @@ container, frame visuals, and swatch style resolution.
 drag/drop owner. `controls/color_edit/drag_drop.rs` owns delivered payload extraction,
 alpha-aware payload application, formatted draft synchronization, and error clearing.
 
+2026-05-30 color-edit layout owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit.rs` remains the state/owner orchestration hub.
+`controls/color_edit/layout.rs` owns error text rendering, root min-height fallback, vertical root
+layout, horizontal swatch/input row layout, and root test-id assignment.
+
 2026-05-29 leaf control option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/selection.rs`,
 `ecosystem/fret-ui-kit/src/imui/options/controls/tab.rs`, and

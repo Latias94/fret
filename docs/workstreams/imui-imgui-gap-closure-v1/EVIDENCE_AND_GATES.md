@@ -1869,6 +1869,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Editor Color-Edit Layout Owner-Split Evidence - 2026-05-30
+
+Claim verified: editor color-edit error text rendering and final root/row layout moved behind a
+private owner without changing error text styling, row/root flex direction, spacing, min-height
+fallback, root test-id assignment, popup policy tests, or the editor-owned color-edit surface
+boundary.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit.rs` remains the state/owner orchestration hub
+  and no longer owns final flex layout or inline error text rendering.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/layout.rs` owns error text rendering, root
+  min-height fallback, vertical root layout, horizontal swatch/input row layout, and root test-id
+  assignment.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now reads the layout owner directly
+  while keeping root module/import assertions.
+- `tools/gate_imui_workstream_source.py` now rejects final layout/error rendering code from
+  drifting back into `color_edit.rs` and rejects behavior/popup/swatch ownership from `layout.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor --check`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-editor color_edit --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Leaf Control Option Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI leaf control option records split into selection, tab-item, and slider private
