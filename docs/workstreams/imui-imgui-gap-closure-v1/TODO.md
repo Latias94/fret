@@ -1506,10 +1506,18 @@ Last updated: 2026-05-29
       `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` into a private owner module without
       changing floating-area position state, drag snapshot application, layer registration,
       no-input/pass-through gates, test ids, or `FloatingAreaResponse` semantics.
-      Result: `floating_surface/area.rs` owns area registration, drag position reconciliation,
-      state/test-id updates, facade content mounting, absolute area layout, interaction gates, and
-      response assembly. The root `floating_surface.rs` keeps drag-surface pointer-region behavior,
-      layer/kind/state re-exports, and module wiring.
+      Result: `floating_surface/area.rs` owns area registration, facade content mounting,
+      absolute area layout, interaction gates, and response assembly. The root
+      `floating_surface.rs` keeps drag-surface pointer-region behavior, layer/kind/state
+      re-exports, and module wiring.
+- [x] Split IMUI floating-area drag/state reconciliation out of
+      `ecosystem/fret-ui-kit/src/imui/floating_surface/area.rs` into a private owner module without
+      changing drag snapshot matching, device-pixel snapping, test-id overrides, child window
+      resize feedback, or `FloatingAreaResponse` dragging/position semantics.
+      Result: `floating_surface/area/drag_state.rs` owns drag snapshot discovery,
+      drag-position reconciliation, scale-factor snapping, test-id state updates, and final
+      placement readback. `floating_surface/area.rs` now only orchestrates layer registration,
+      context creation, IMUI child mounting, layout shell creation, and response assembly.
 - [x] Split IMUI floating-area drag-surface behavior out of
       `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` into a private owner module without
       changing drag setup delegation, focusable key stub installation, double-click hooks,

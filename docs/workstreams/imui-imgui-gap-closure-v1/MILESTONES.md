@@ -1395,11 +1395,17 @@ behavior remain unchanged.
 
 2026-05-27 floating-area composition owner-split result:
 `ecosystem/fret-ui-kit/src/imui/floating_surface/area.rs` now owns floating-area layer
-registration, drag snapshot application, state/test-id updates, IMUI facade content mounting,
-absolute area layout, no-input/pass-through gates, and `FloatingAreaResponse` assembly.
+registration, IMUI facade content mounting, absolute area layout, no-input/pass-through gates, and
+`FloatingAreaResponse` assembly.
 `floating_surface.rs` keeps drag-surface pointer-region behavior, layer/kind/state re-exports, and
 module wiring. Floating-area position, dragging, test-id, no-inputs, pointer pass-through, and
 response semantics remain unchanged.
+
+2026-05-29 floating-area drag/state sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state.rs` now owns drag snapshot
+discovery, drag-position reconciliation, scale-factor snapping, test-id state updates, and final
+placement readback. `floating_surface/area.rs` now only orchestrates layer registration, area
+context creation, IMUI child mounting, layout shell creation, and response assembly.
 
 2026-05-26 menu-family menu owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` now owns top-level

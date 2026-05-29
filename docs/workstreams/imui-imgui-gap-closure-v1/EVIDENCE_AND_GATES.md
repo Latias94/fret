@@ -6602,7 +6602,8 @@ semantics.
 Evidence:
 
 - `ecosystem/fret-ui-kit/src/imui/floating_surface/area.rs` now owns floating-area composition,
-  state reconciliation, interaction gates, and response assembly.
+  interaction gates, and response assembly; drag/state reconciliation was later split into a
+  narrower sub-owner.
 - `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` now keeps drag-surface pointer-region
   behavior, layer/kind/state re-exports, and module wiring.
 - `tools/gate_imui_workstream_source.py` now requires the area owner and rejects direct area
@@ -6617,6 +6618,38 @@ Focused gates:
 - `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
 - `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Floating-Area Drag State Sub-Owner Evidence - 2026-05-29
+
+Claim verified: floating-area drag snapshot discovery, position reconciliation, state/test-id
+updates, scale-factor snapping, and final placement readback moved out of the area composition owner
+without changing layer registration, child mounting, area shell layout, dragging response, or
+position response semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state.rs` owns active drag discovery,
+  drag-position reconciliation, `FloatingAreaState` updates, device-pixel snapping, test-id
+  overrides, and final state readback after child window resize feedback.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/area.rs` now orchestrates layer registration,
+  `FloatingAreaContext` creation, IMUI child mounting, layout shell creation, and
+  `FloatingAreaResponse` assembly.
+- `tools/gate_imui_workstream_source.py` now rejects drag snapshot/state reconcile helpers from
+  drifting back into `floating_surface/area.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_area_options_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui floating --no-fail-fast`: pass.
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 

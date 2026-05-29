@@ -771,6 +771,7 @@
     "ecosystem/fret-ui-kit/tests/imui_floating_window_options_smoke.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/area.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/area/layout.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/drag_surface.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/kinds.rs",
