@@ -44,7 +44,13 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     container_surface::menu_tab_surface_methods!();
 
-    container_surface::collection_surface_methods!();
+    container_surface::collection_list_box_surface_methods!();
+
+    container_surface::collection_grid_surface_methods!();
+
+    container_surface::collection_table_surface_methods!();
+
+    container_surface::collection_virtual_list_surface_methods!();
 
     container_surface::region_surface_methods!();
 

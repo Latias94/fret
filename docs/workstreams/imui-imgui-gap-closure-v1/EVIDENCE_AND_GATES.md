@@ -149,6 +149,45 @@ Focused gates:
 - `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass (18 passed,
   168 skipped).
 
+## Facade Container Collection Surface Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade container collection surface macro ownership split into ListBox, grid,
+Table, and VirtualList child owners without changing public trait method names, collection
+forwarding, response returns, macro expansion order, or concrete `container_methods/*` behavior
+ownership.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_surface/collections.rs` is now a
+  module/re-export hub for collection surface macros.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_surface/collections/list_box.rs` owns
+  ListBox trait forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_surface/collections/grid.rs` owns grid
+  trait forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_surface/collections/table.rs` owns Table
+  trait forwarding and response returns.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_surface/collections/virtual_list.rs`
+  owns VirtualList trait forwarding and response returns.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` expands ListBox, grid, Table, and VirtualList
+  surface macros in the previous public method order.
+- `tools/gate_imui_workstream_source.py` checks the new child owners and rejects collection surface
+  macro bodies from drifting back into `facade_writer/container_surface/collections.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke
+  --no-fail-fast`: pass (3 passed).
+- `cargo nextest run -p fret-imui layout_collections --no-fail-fast`: pass (28 passed,
+  158 skipped).
+- `python tools\check_workstream_catalog.py`: pass; validated 473 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+
 ## Facade Container Layout Surface Sub-Owner Evidence - 2026-05-29
 
 Claim verified: IMUI facade container layout surface macro ownership split into flow and group
