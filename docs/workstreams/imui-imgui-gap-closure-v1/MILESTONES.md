@@ -52,6 +52,13 @@ forwarding and response return from `virtual_list_controls::virtual_list_element
 facade methods, build-focus forwarding, element routing, and `container_methods` re-export paths
 remain unchanged.
 
+2026-05-29 facade container flow-method sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/flow.rs` is now a module/re-export
+hub. `flow/sequences.rs` owns item-flow and same-line forwarding to the scoped layout-sugar
+elements, `flow/spacers.rs` owns dummy and spacing forwarding, and `flow/indent.rs` owns indent
+forwarding. The public facade methods, build-focus forwarding, porting-sugar layout routing, and
+`container_methods` re-export paths remain unchanged.
+
 2026-05-29 facade floating surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but floating layer/area, popup open/drop/begin,

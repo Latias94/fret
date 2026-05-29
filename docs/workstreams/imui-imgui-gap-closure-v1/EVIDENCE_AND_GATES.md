@@ -183,6 +183,38 @@ Focused gates:
 - `cargo nextest run -p fret-imui layout_collections --no-fail-fast`: pass (28 passed,
   158 skipped).
 
+## Facade Container Flow Method Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade container flow method behavior ownership split into sequence, spacer,
+and indent child owners without changing public facade methods, build-focus forwarding,
+porting-sugar layout routing, or `container_methods` re-export paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/flow.rs` is now a
+  module/re-export hub for the three flow method behavior owners.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/flow/sequences.rs` owns
+  item-flow and same-line forwarding to the scoped layout-sugar elements.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/flow/spacers.rs` owns dummy and
+  spacing forwarding to the spacer layout-sugar elements.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/flow/indent.rs` owns indent
+  forwarding to the scoped layout-sugar indent element.
+- `tools/gate_imui_workstream_source.py` checks the new sub-owners and rejects concrete
+  layout-sugar routing from drifting back into `container_methods/flow.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui
+  porting_sugar_items_same_line_spacing_dummy_and_indent_use_imgui_style_layout_tokens
+  --no-fail-fast`: pass (1 passed, 185 skipped).
+
 ## Facade Floating Surface Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI facade floating/popup/tooltip/drag/window trait default method declarations
