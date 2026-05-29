@@ -232,6 +232,14 @@ action button, payload action button, and button-command forwarding. The public 
 points in `facade_writer.rs` now call these child macros directly, while `button_actions.rs` /
 `button_actions/*` and `image_items.rs` remain the behavior/inherent wrapper owners.
 
+2026-05-29 facade button action surface sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/button_surface/actions.rs` is now a module/re-export
+hub. `actions/action.rs` owns action button trait forwarding, `actions/payload.rs` owns
+payload-action button trait forwarding and payload bounds, and `actions/command.rs` owns
+command-button trait forwarding. Public trait method names, default option forwarding, macro
+expansion order, command presentation forwarding, focusable-recording inherent wrapper owners, and
+concrete button/action behavior owners remain unchanged.
+
 2026-05-29 facade button/action inherent-wrapper sub-owner result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs` now keeps module wiring and the
 private button-command helper re-export only. `button_actions/buttons.rs` owns

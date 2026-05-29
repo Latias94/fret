@@ -1051,6 +1051,45 @@ Focused gates:
 - `cargo nextest run -p fret-imui image_item --no-fail-fast`: pass (2 passed, 184 skipped).
 - `cargo nextest run -p fret-imui control_geometry --no-fail-fast`: pass (4 passed, 182 skipped).
 
+## Facade Button Action Surface Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade button action surface macro ownership split into action,
+payload-action, and command-button child owners without changing public trait method names,
+default option forwarding, payload bounds, command presentation forwarding, macro expansion order,
+focusable-recording inherent wrapper owners, or concrete button/action behavior ownership.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/button_surface/actions.rs` is now a
+  module/re-export hub for action button surface macros.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/button_surface/actions/action.rs` owns action
+  button trait forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/button_surface/actions/payload.rs` owns
+  payload-action button trait forwarding and payload bounds.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/button_surface/actions/command.rs` owns
+  command-button trait forwarding.
+- `ecosystem/fret-ui-kit/tests/imui_button_smoke.rs` now compile-checks action, payload-action,
+  and command-button public trait methods.
+- `tools/gate_imui_workstream_source.py` checks the new child owners and rejects action button
+  surface macro bodies from drifting back into `facade_writer/button_surface/actions.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke
+  --test imui_button_smoke --no-fail-fast`: pass (4 passed).
+- `$env:CARGO_INCREMENTAL = '0'; cargo nextest run -p fret-imui interaction_shortcuts
+  --no-fail-fast`: pass (10 passed, 176 skipped).
+- `$env:CARGO_INCREMENTAL = '0'; cargo nextest run -p fret-imui interaction_press
+  --no-fail-fast`: pass (9 passed, 177 skipped).
+- `python tools\check_workstream_catalog.py`: pass; validated 473 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+
 ## Item Behavior Pointer Hook Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI shared pressable item pointer hook bodies split into down/move/up private

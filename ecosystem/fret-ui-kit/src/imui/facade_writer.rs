@@ -82,6 +82,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     button_surface::action_button_surface_methods!();
 
+    button_surface::payload_action_button_surface_methods!();
+
+    button_surface::command_button_surface_methods!();
+
     model_surface::boolean_model_surface_methods!();
 
     model_surface::value_combo_model_surface_methods!();

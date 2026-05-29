@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use fret_core::Size;
+use fret_runtime::{ActionId, CommandId};
 use fret_ui::UiHost;
 use fret_ui_kit::imui::{
     ButtonArrowDirection, ButtonOptions, ButtonVariant, RadioOptions, UiWriterImUiFacadeExt,
@@ -43,6 +44,37 @@ fn button_family_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>)
         true,
         RadioOptions {
             test_id: Some(Arc::from("imui-button-smoke.radio")),
+            ..Default::default()
+        },
+    );
+    let _ = ui.action_button("button.action", ActionId::from("imui.button.action"));
+    let _ = ui.action_button_with_options(
+        "button.action.options",
+        ActionId::from("imui.button.action.options"),
+        ButtonOptions {
+            test_id: Some(Arc::from("imui-button-smoke.action")),
+            ..Default::default()
+        },
+    );
+    let _ = ui.action_payload_button(
+        "button.payload",
+        ActionId::from("imui.button.payload"),
+        Arc::<str>::from("payload"),
+    );
+    let _ = ui.action_payload_button_with_options(
+        "button.payload.options",
+        ActionId::from("imui.button.payload.options"),
+        Arc::<str>::from("payload-options"),
+        ButtonOptions {
+            test_id: Some(Arc::from("imui-button-smoke.payload")),
+            ..Default::default()
+        },
+    );
+    let _ = ui.button_command(CommandId::from("imui.button.command"));
+    let _ = ui.button_command_with_options(
+        CommandId::from("imui.button.command.options"),
+        ButtonOptions {
+            test_id: Some(Arc::from("imui-button-smoke.command")),
             ..Default::default()
         },
     );

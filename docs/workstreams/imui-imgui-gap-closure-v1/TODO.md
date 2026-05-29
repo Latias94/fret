@@ -258,6 +258,13 @@ Last updated: 2026-05-29
       `button_surface/images.rs` owns image item/button forwarding, and
       `button_surface/actions.rs` owns action button, payload action button, and button-command
       forwarding.
+- [x] Split IMUI facade button action surface macro owner into action, payload-action, and
+      command-button child owners without changing public trait method names, default option
+      forwarding, payload bounds, command presentation forwarding, macro expansion order,
+      focusable recording wrappers, or concrete button/action behavior ownership.
+      Result: `button_surface/actions.rs` is now a module/re-export hub.
+      `actions/action.rs` owns action button forwarding, `actions/payload.rs` owns payload action
+      button forwarding, and `actions/command.rs` owns command-button forwarding.
 - [x] Split IMUI facade button/action inherent wrapper behavior owner into button-family and
       command-button child owners without changing public inherent method names, focusable
       recording, command metadata lookup, action/payload action wrappers, or `fret-imui` thinness.
