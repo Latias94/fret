@@ -955,6 +955,13 @@ resize-handle attachment, resize test-id suffixing, and header content flex wrap
 `table_controls/header.rs` keeps sortable/plain header trigger orchestration and `BuiltHeaderCell`
 response assembly.
 
+2026-05-30 table header sortable/plain sub-owner split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/header.rs` is now the labels/cell/trigger re-export
+hub plus the `BuiltHeaderCell` response record. `header/sortable.rs` owns sortable-header trigger
+assembly and sort visual wiring, while `header/plain.rs` owns plain-header fallback labels and
+content-box assembly. Header trigger behavior, resize wrapping, table response collection, and
+public table facade behavior remain unchanged.
+
 2026-05-27 debug-draw path-family owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths.rs` is now a private path-family
 re-export hub. `paths/linear.rs` now indexes polyline/fill/primitive subowners; `paths/round.rs`

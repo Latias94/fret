@@ -1113,6 +1113,12 @@ Last updated: 2026-05-30
       Result: `table_controls/header/cell.rs` owns header cell layout, resize-handle attachment,
       resize test-id suffixing, and header content flex wrapping. `header.rs` keeps sortable/plain
       header trigger orchestration and `BuiltHeaderCell` response assembly.
+- [x] Split IMUI table sortable/plain header assembly into private child owners without changing
+      header trigger behavior, sortable a11y labels, plain fallback labels, visible label rendering,
+      resize handle wrapping, header test IDs, or `TableHeaderResponse` collection.
+      Result: `table_controls/header.rs` is now the labels/cell/trigger re-export hub plus
+      `BuiltHeaderCell` record. `table_controls/header/sortable.rs` owns sortable-header assembly,
+      while `table_controls/header/plain.rs` owns plain-header assembly.
 - [x] Split IMUI debug-draw path construction by shape family out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths.rs` into private linear, round,
       and bezier owner modules without changing path helper names, validation behavior, sampling

@@ -4808,6 +4808,37 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Table Header Sortable/Plain Sub-Owner Evidence - 2026-05-30
+
+Claim verified: IMUI table sortable/plain header assembly split into private child owners without
+changing header trigger behavior, sortable a11y labels, plain fallback labels, visible label
+rendering, resize handle wrapping, header test IDs, or `TableHeaderResponse` collection.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header.rs` is now the labels/cell/trigger
+  re-export hub plus the `BuiltHeaderCell` response record.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/sortable.rs` owns sortable-header key,
+  sort-direction, a11y label, sortable visual, trigger surface, and header-cell wrapping.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/plain.rs` owns plain-header key, fallback
+  a11y label, default empty-cell/label content, trigger surface, and header-cell wrapping.
+- `tools/gate_imui_workstream_source.py` now rejects sortable/plain header assembly from drifting
+  back into `table_controls/header.rs` while checking both child owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_controls::tests --no-fail-fast`:
+  pass; 7 filtered table/selectable unit tests passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`: pass;
+  9 table smoke tests passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Path-Family Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI debug-draw path construction moved into private shape-family owners without
