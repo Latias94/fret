@@ -537,6 +537,27 @@ Task IDs use `M3PV2-*`.
 
 ## M5 - Surface, Data Display, And Low-Interaction Visual Matrix
 
+- [x] M3PV2-047 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{button.rs,tokens/button.rs},ecosystem/fret-ui-material3/tests/button_state.rs,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close standalone Button style/layout/accessibility/motion drift by wiring Material
+  elevation shadows, state matrix, disabled semantics, min-width/layout proof, and Compose
+  `DefaultEffects` pressed-shape motion.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --test button_state`
+  failed because elevated buttons painted no Material shadow layers and filled hover never animated
+  to level1 shadow; green gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --test button_state`;
+  `cargo nextest run -p fret-ui-material3 --lib button`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_controls_suite_goldens_v1`.
+  Review: DONE. This found a Material recipe/token wiring gap, not a core or kit mechanism gap.
+  Button now resolves stateful elevation tokens, paints shadows through the existing Material
+  surface/elevation foundation, animates hover elevation, snaps disabled elevation, and keeps
+  pressed shape morphing on `DefaultEffects`.
+  Evidence: `artifacts/material3_button_elevation_state_motion_packet_v2.md`.
+  Handoff: Continue M3PV2-060 with Badge or Card, or use matrix priority to continue with
+  high-priority choice controls such as Checkbox.
+
 - [ ] M3PV2-060 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{badge.rs,button.rs,card.rs,carousel_item.rs,divider.rs,fab.rs,list.rs,progress_indicator.rs},ecosystem/fret-ui-material3/tests,goldens/material3-headless/v1]
   Goal: Add style/layout proof for low-interaction components without overfitting gallery layout.
   Validation: targeted golden or scene assertions for chrome, shape, elevation, spacing, and canvas

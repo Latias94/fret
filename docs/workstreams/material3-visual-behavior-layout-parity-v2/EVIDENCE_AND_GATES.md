@@ -48,6 +48,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/DESIGN.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/TODO.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_parity_axis_matrix_v2.json`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_button_elevation_state_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_dotted_listbox_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_autocomplete_exposed_dropdown_listbox_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_semantics_chrome_packet_v2.md`
@@ -489,6 +490,25 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     scrim / drag-handle semantics, and refreshes bottom sheet headless goldens for the intentional
     settled signature change.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_bottom_sheet_motion_semantics_packet_v2.md`
+- 2026-05-29: M3PV2-047 closed standalone Button elevation/state/motion/semantics coverage.
+  - Sources: Compose Material3 `Button.kt` hosts buttons in `Surface`, applies default min size and
+    content padding, and intentionally uses `DefaultEffects` for animated pressed shapes; Compose
+    `internal/Elevation.kt` defines incoming/outgoing elevation timing and disabled snap behavior;
+    Material Web v30 token exports provide button elevation, state-layer opacity, shadow-color,
+    outline, size, and shape keys.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --test button_state` failed
+    because elevated buttons emitted no `ShadowRRect` layers and filled hover never animated to a
+    level1 shadow.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --test button_state`
+  - `cargo nextest run -p fret-ui-material3 --lib button`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_controls_suite_goldens_v1`
+  - Result: Button now resolves per-variant elevation tokens, paints Material shadow layers through
+    the existing surface/elevation foundation, animates elevation into hover states, snaps disabled
+    elevation, keeps pressed shape morphing on `DefaultEffects`, and proves role/label/disabled
+    semantics. Existing controls goldens stayed green without refresh.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_button_elevation_state_motion_packet_v2.md`
 
 ## Proof Note Template
 

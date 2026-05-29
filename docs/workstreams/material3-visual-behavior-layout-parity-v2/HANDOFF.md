@@ -94,6 +94,13 @@ panel, and exposed the modal surface as `Group`; ModalBottomSheet now uses Mater
 `DefaultSpatial` / `DefaultEffects` motion, translates by the sheet surface's own height, keeps
 the panel opaque, and exposes dialog/scrim/drag-handle semantics.
 
+M3PV2-047 is complete: standalone Button style/layout/accessibility/motion axes are now v2-covered.
+The packet found a Material recipe/token wiring gap, not a core or kit mechanism gap: Button had
+state-layer/ripple support but did not feed stateful elevation into the existing Material
+surface/elevation foundation. Button now paints default Elevated shadows, animates Filled/Tonal
+hover elevation, snaps disabled elevation, exposes role/label/disabled semantics in a focused gate,
+and uses Compose-aligned `DefaultEffects` for pressed-shape motion.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.

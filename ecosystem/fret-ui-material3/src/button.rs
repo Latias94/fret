@@ -18,6 +18,7 @@ use fret_ui::element::{
     PointerRegionProps, PressableA11y, PressableProps, SvgIconProps, TextProps,
 };
 use fret_ui::elements::ElementContext;
+use fret_ui::theme::CubicBezier;
 use fret_ui::{Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -35,8 +36,8 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
-use crate::foundation::token_resolver::MaterialTokenResolver;
-use crate::motion::{SpringAnimator, SpringSpec};
+use crate::foundation::surface::material_surface_style;
+use crate::motion::{SpringAnimator, SpringSpec, cubic_bezier_ease, ms_to_frames};
 use crate::tokens::button as button_tokens;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -62,6 +63,7 @@ pub enum ButtonSize {
 #[derive(Debug, Clone, Default)]
 pub struct ButtonStyle {
     pub container_background: OverrideSlot<ColorRef>,
+    pub container_elevation: OverrideSlot<Px>,
     pub label_color: OverrideSlot<ColorRef>,
     pub outline_color: OverrideSlot<ColorRef>,
     pub state_layer_color: OverrideSlot<ColorRef>,
@@ -73,6 +75,11 @@ impl ButtonStyle {
         background: WidgetStateProperty<Option<ColorRef>>,
     ) -> Self {
         self.container_background = Some(background);
+        self
+    }
+
+    pub fn container_elevation(mut self, elevation: WidgetStateProperty<Option<Px>>) -> Self {
+        self.container_elevation = Some(elevation);
         self
     }
 
@@ -94,6 +101,9 @@ impl ButtonStyle {
     pub fn merged(mut self, other: Self) -> Self {
         if other.container_background.is_some() {
             self.container_background = other.container_background;
+        }
+        if other.container_elevation.is_some() {
+            self.container_elevation = other.container_elevation;
         }
         if other.label_color.is_some() {
             self.label_color = other.label_color;
@@ -239,9 +249,8 @@ impl Button {
                     let base_radius = button_shape_radius(theme, self.size);
                     let pressed_radius = button_pressed_shape_radius(theme, self.size);
                     let scheme_spring =
-                        sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
-                    let corner_spring =
-                        button_pressed_corner_spring(theme, self.size, scheme_spring);
+                        sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultEffects);
+                    let corner_spring = button_pressed_corner_spring(scheme_spring);
                     let size_tokens = button_size_tokens(theme, self.size);
                     let label_style = button_label_style(theme, self.size);
                     (
@@ -312,6 +321,8 @@ impl Button {
                     ripple_base_opacity,
                     config,
                     outline,
+                    elevation_target,
+                    shadow_color,
                 ) = {
                     let theme = Theme::global(&*cx.app);
 
@@ -340,6 +351,19 @@ impl Button {
                         |color| color.resolve(theme),
                         || container_bg,
                     );
+                    let elevation_target = button_tokens::container_elevation(
+                        theme,
+                        self.variant,
+                        enabled,
+                        token_interaction,
+                    );
+                    let elevation_target = resolve_override_slot_with(
+                        self.style.container_elevation.as_ref(),
+                        states,
+                        |elevation| *elevation,
+                        || elevation_target,
+                    );
+                    let shadow_color = button_tokens::container_shadow_color(theme, self.variant);
                     let state_layer_color = button_tokens::state_layer_color(
                         theme,
                         self.variant,
@@ -379,11 +403,29 @@ impl Button {
                         ripple_base_opacity,
                         config,
                         outline,
+                        elevation_target,
+                        shadow_color,
                     )
                 };
 
-                let chrome =
-                    material_button_chrome_props(container_bg, corner_radii, outline, size_tokens);
+                let (elevation, elevation_want_frames) = animated_button_elevation(
+                    cx,
+                    pressable_id,
+                    now_frame,
+                    enabled,
+                    token_interaction,
+                    elevation_target,
+                );
+
+                let chrome = material_button_chrome_props(
+                    cx,
+                    container_bg,
+                    corner_radii,
+                    outline,
+                    elevation,
+                    shadow_color,
+                    size_tokens,
+                );
 
                 let pointer_region = cx.named("pointer_region", |cx| {
                     let mut props = PointerRegionProps::default();
@@ -406,7 +448,7 @@ impl Button {
                             state_layer_target,
                             ripple_base_opacity,
                             config,
-                            corner_want_frames,
+                            corner_want_frames || elevation_want_frames,
                         );
 
                         let label =
@@ -448,14 +490,30 @@ impl Button {
     }
 }
 
-fn material_button_chrome_props(
+fn material_button_chrome_props<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
     background: Option<Color>,
     corner_radii: Corners,
     outline: Option<ButtonOutline>,
+    elevation: Px,
+    shadow_color: Color,
     size: ButtonSizeTokens,
 ) -> ContainerProps {
     let mut props = ContainerProps::default();
-    props.background = background;
+    if let Some(background) = background {
+        let surface = {
+            let theme = Theme::global(&*cx.app);
+            material_surface_style(
+                theme,
+                background,
+                elevation,
+                Some(shadow_color),
+                corner_radii,
+            )
+        };
+        props.background = Some(surface.background);
+        props.shadow = surface.shadow;
+    }
     props.corner_radii = corner_radii;
     props.layout.size.min_width = Some(Length::Px(size.min_width));
     props.layout.size.min_height = Some(Length::Px(size.container_height));
@@ -533,6 +591,35 @@ struct ButtonCornerRuntime {
     spring: SpringAnimator,
 }
 
+#[derive(Debug, Clone)]
+struct ButtonElevationRuntime {
+    initialized: bool,
+    current: f32,
+    from: f32,
+    to: f32,
+    start_frame: u64,
+    duration_frames: u64,
+    easing: CubicBezier,
+    active: bool,
+    last_interaction: Option<button_tokens::ButtonInteraction>,
+}
+
+impl Default for ButtonElevationRuntime {
+    fn default() -> Self {
+        Self {
+            initialized: false,
+            current: 0.0,
+            from: 0.0,
+            to: 0.0,
+            start_frame: 0,
+            duration_frames: 0,
+            easing: CUBIC_BEZIER_LINEAR,
+            active: false,
+            last_interaction: None,
+        }
+    }
+}
+
 fn button_label_text_key(size: ButtonSize) -> &'static str {
     match size {
         ButtonSize::XSmall => "md.comp.button.xsmall.label-text",
@@ -589,64 +676,10 @@ fn button_pressed_shape_radius(theme: &Theme, size: ButtonSize) -> f32 {
         .0
 }
 
-fn button_pressed_corner_spring_key_damping(size: ButtonSize) -> &'static str {
-    match size {
-        ButtonSize::XSmall => {
-            "md.comp.button.xsmall.pressed.container.corner-size.motion.spring.damping"
-        }
-        ButtonSize::Small => {
-            "md.comp.button.small.pressed.container.corner-size.motion.spring.damping"
-        }
-        ButtonSize::Medium => {
-            "md.comp.button.medium.pressed.container.corner-size.motion.spring.damping"
-        }
-        ButtonSize::Large => {
-            "md.comp.button.large.pressed.container.corner-size.motion.spring.damping"
-        }
-        ButtonSize::XLarge => {
-            "md.comp.button.xlarge.pressed.container.corner-size.motion.spring.damping"
-        }
-    }
-}
-
-fn button_pressed_corner_spring_key_stiffness(size: ButtonSize) -> &'static str {
-    match size {
-        ButtonSize::XSmall => {
-            "md.comp.button.xsmall.pressed.container.corner-size.motion.spring.stiffness"
-        }
-        ButtonSize::Small => {
-            "md.comp.button.small.pressed.container.corner-size.motion.spring.stiffness"
-        }
-        ButtonSize::Medium => {
-            "md.comp.button.medium.pressed.container.corner-size.motion.spring.stiffness"
-        }
-        ButtonSize::Large => {
-            "md.comp.button.large.pressed.container.corner-size.motion.spring.stiffness"
-        }
-        ButtonSize::XLarge => {
-            "md.comp.button.xlarge.pressed.container.corner-size.motion.spring.stiffness"
-        }
-    }
-}
-
-fn button_pressed_corner_spring(
-    theme: &Theme,
-    size: ButtonSize,
-    scheme_fallback: SpringSpec,
-) -> SpringSpec {
-    let tokens = MaterialTokenResolver::new(theme);
-    SpringSpec {
-        damping: tokens.number_comp_or_sys(
-            button_pressed_corner_spring_key_damping(size),
-            "md.sys.motion.spring.fast.spatial.damping",
-            scheme_fallback.damping,
-        ),
-        stiffness: tokens.number_comp_or_sys(
-            button_pressed_corner_spring_key_stiffness(size),
-            "md.sys.motion.spring.fast.spatial.stiffness",
-            scheme_fallback.stiffness,
-        ),
-    }
+fn button_pressed_corner_spring(scheme: SpringSpec) -> SpringSpec {
+    // Compose Material3 intentionally drives Button shape morphing with DefaultEffects to avoid
+    // the spatial spring bounce used by larger moving surfaces.
+    scheme
 }
 
 fn animated_button_corner_radii<H: UiHost>(
@@ -670,6 +703,129 @@ fn animated_button_corner_radii<H: UiHost>(
         rt.spring.advance(now_frame);
         (Corners::all(Px(rt.spring.value())), rt.spring.is_active())
     })
+}
+
+fn animated_button_elevation<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    pressable_id: fret_ui::elements::GlobalElementId,
+    now_frame: u64,
+    enabled: bool,
+    interaction: Option<button_tokens::ButtonInteraction>,
+    target: Px,
+) -> (Px, bool) {
+    cx.state_for(pressable_id, ButtonElevationRuntime::default, |rt| {
+        let target = target.0.max(0.0);
+        if !rt.initialized {
+            rt.reset(now_frame, target, interaction);
+            return (Px(rt.current), false);
+        }
+
+        rt.advance(now_frame);
+
+        if !enabled {
+            // Compose snaps elevation when entering disabled state.
+            rt.reset(now_frame, target, None);
+            return (Px(rt.current), false);
+        }
+
+        if (target - rt.to).abs() > 1e-6 {
+            let (duration_ms, easing) =
+                button_elevation_transition(rt.last_interaction, interaction);
+            rt.set_target(now_frame, target, duration_ms, easing);
+        }
+
+        rt.last_interaction = interaction;
+        (Px(rt.current.max(0.0)), rt.active)
+    })
+}
+
+impl ButtonElevationRuntime {
+    fn reset(
+        &mut self,
+        now_frame: u64,
+        value: f32,
+        interaction: Option<button_tokens::ButtonInteraction>,
+    ) {
+        self.initialized = true;
+        self.current = value;
+        self.from = value;
+        self.to = value;
+        self.start_frame = now_frame;
+        self.duration_frames = 0;
+        self.easing = CUBIC_BEZIER_LINEAR;
+        self.active = false;
+        self.last_interaction = interaction;
+    }
+
+    fn set_target(&mut self, now_frame: u64, target: f32, duration_ms: u32, easing: CubicBezier) {
+        if duration_ms == 0 {
+            self.reset(now_frame, target, self.last_interaction);
+            return;
+        }
+
+        self.from = self.current;
+        self.to = target;
+        self.start_frame = now_frame;
+        self.duration_frames = ms_to_frames(duration_ms).max(1);
+        self.easing = easing;
+        self.active = true;
+    }
+
+    fn advance(&mut self, now_frame: u64) {
+        if !self.active {
+            return;
+        }
+
+        let elapsed = now_frame.saturating_sub(self.start_frame);
+        if elapsed >= self.duration_frames {
+            self.current = self.to;
+            self.active = false;
+            return;
+        }
+
+        let t = elapsed as f32 / self.duration_frames as f32;
+        let eased = cubic_bezier_ease(self.easing, t);
+        self.current = self.from + (self.to - self.from) * eased;
+    }
+}
+
+const CUBIC_BEZIER_LINEAR: CubicBezier = CubicBezier {
+    x1: 0.0,
+    y1: 0.0,
+    x2: 1.0,
+    y2: 1.0,
+};
+
+fn button_elevation_transition(
+    from: Option<button_tokens::ButtonInteraction>,
+    to: Option<button_tokens::ButtonInteraction>,
+) -> (u32, CubicBezier) {
+    if to.is_some() {
+        return (120, fast_out_slow_in_easing());
+    }
+    match from {
+        Some(button_tokens::ButtonInteraction::Hovered) => (120, elevation_outgoing_easing()),
+        Some(_) => (150, elevation_outgoing_easing()),
+        None => (0, CUBIC_BEZIER_LINEAR),
+    }
+}
+
+fn fast_out_slow_in_easing() -> CubicBezier {
+    CubicBezier {
+        x1: 0.4,
+        y1: 0.0,
+        x2: 0.2,
+        y2: 1.0,
+    }
+}
+
+fn elevation_outgoing_easing() -> CubicBezier {
+    CubicBezier {
+        x1: 0.4,
+        y1: 0.0,
+        x2: 0.6,
+        y2: 1.0,
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -886,11 +1042,84 @@ mod tests {
 
     #[test]
     fn button_chrome_applies_material_min_width() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "m3-button", |cx| {
+            let theme = Theme::global(&*cx.app);
+            let tokens = button_size_tokens(theme, ButtonSize::Small);
+            let props = material_button_chrome_props(
+                cx,
+                None,
+                Corners::all(Px(20.0)),
+                None,
+                Px(0.0),
+                Color::TRANSPARENT,
+                tokens,
+            );
+
+            assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(64.0))));
+        });
+    }
+
+    #[test]
+    fn button_elevation_tokens_follow_material_state_matrix() {
         let app = App::new();
         let theme = Theme::global(&app);
-        let tokens = button_size_tokens(theme, ButtonSize::Small);
-        let props = material_button_chrome_props(None, Corners::all(Px(20.0)), None, tokens);
 
-        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(64.0))));
+        assert_eq!(
+            button_tokens::container_elevation(theme, ButtonVariant::Elevated, true, None),
+            Px(1.0)
+        );
+        assert_eq!(
+            button_tokens::container_elevation(
+                theme,
+                ButtonVariant::Elevated,
+                true,
+                Some(button_tokens::ButtonInteraction::Hovered),
+            ),
+            Px(3.0)
+        );
+        assert_eq!(
+            button_tokens::container_elevation(
+                theme,
+                ButtonVariant::Filled,
+                true,
+                Some(button_tokens::ButtonInteraction::Hovered),
+            ),
+            Px(1.0)
+        );
+        assert_eq!(
+            button_tokens::container_elevation(
+                theme,
+                ButtonVariant::Filled,
+                true,
+                Some(button_tokens::ButtonInteraction::Pressed),
+            ),
+            Px(0.0)
+        );
+    }
+
+    #[test]
+    fn button_pressed_shape_motion_uses_default_effects_spring() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let cfg =
+            crate::tokens::v30::theme_config(crate::tokens::v30::TypographyOptions::default());
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&cfg);
+        });
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "m3-button", |cx| {
+            let theme = Theme::global(&*cx.app);
+            let expected = sys_spring_in_scope(cx, theme, MotionSchemeKey::DefaultEffects);
+            let actual = button_pressed_corner_spring(expected);
+
+            assert_eq!(actual, expected);
+            assert!(
+                actual.damping >= 1.0,
+                "DefaultEffects should stay non-bouncy for button pressed shape motion"
+            );
+        });
     }
 }
