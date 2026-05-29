@@ -1200,6 +1200,14 @@ delta calculation, min/max clamping, left/top origin reconciliation, all eight h
 and `last_resize_position` advancement. `state.rs` keeps lifecycle state lookup, collapsed/non-drag
 reset policy, device-pixel snapping, resize output assembly, and handle test-id packaging.
 
+2026-05-29 floating-window resize state sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/initial.rs` now owns initial
+`FloatWindowState` construction and stable title/close/resize test-id generation.
+`floating_window_resize/state/output.rs` owns `FloatingWindowResizeStateOutput`. `state.rs` keeps
+`cx.state_for(...)`, snapshot/collapse orchestration, drag application, device-pixel snapping, and
+output assembly. Resize test-id strings, initial size defaults, handle packaging, and resize
+behavior remain unchanged.
+
 2026-05-27 table-column visibility snapshot owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/snapshot.rs` now owns
 `TableColumnVisibilitySnapshot`, `TableColumnVisibilityEntry`, serde derives, public data fields,

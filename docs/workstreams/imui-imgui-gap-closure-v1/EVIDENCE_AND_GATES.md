@@ -6164,6 +6164,40 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Floating-Window Resize State Sub-Owner Evidence - 2026-05-29
+
+Claim verified: floating-window resize initial state/test-id construction and resize output DTO
+split out of the resize state lifecycle owner without changing resize test-id strings, initial size
+defaults, active resize snapshots, drag application, collapsed reset policy, device-pixel snapping,
+or handle test-id packaging.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs` keeps `cx.state_for(...)`,
+  snapshot/collapse orchestration, drag application, device-pixel snapping, and output assembly.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/initial.rs` owns initial
+  `FloatWindowState` construction and stable title/close/resize test-id generation.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/output.rs` owns
+  `FloatingWindowResizeStateOutput` and handle test-id packaging fields.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply.rs` remains the resize
+  drag application owner.
+- `tools/gate_imui_workstream_source.py` now checks the initial/output child owners and rejects
+  test-id initialization and output DTO bodies from drifting back into `state.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke
+  --test imui_floating_area_options_smoke --no-fail-fast`: pass (5 passed).
+- `cargo nextest run -p fret-imui floating --no-fail-fast`: pass (25 passed, 161 skipped).
+- `python tools\check_workstream_catalog.py`: pass; validated 473 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+
 ## Table-Column Visibility Snapshot Owner-Split Evidence - 2026-05-27
 
 Claim verified: runtime table-column visibility state no longer owns the persistence-friendly

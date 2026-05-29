@@ -1542,6 +1542,14 @@ Last updated: 2026-05-29
       clamping, left/top origin reconciliation, all eight resize-handle branches, and
       `last_resize_position` advancement. `state.rs` keeps lifecycle state lookup, reset/snap
       policy, resize output assembly, and handle test-id packaging.
+- [x] Split IMUI floating-window resize initial state and output DTO out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs` into private child owners
+      without changing resize test-id strings, initial size defaults, collapsed reset policy,
+      device-pixel snapping, drag application, or handle test-id packaging.
+      Result: `floating_window_resize/state/initial.rs` owns initial `FloatWindowState` and stable
+      resize/title/close test-id construction, `state/output.rs` owns
+      `FloatingWindowResizeStateOutput`, and `state.rs` keeps `cx.state_for(...)`, snapshot/collapse
+      orchestration, pixel snapping, drag application, and output assembly.
 - [x] Split IMUI floating-window resize handle layout and pointer behavior out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles.rs` into private owner modules
       without changing resize handle placement, cursors, drag lifecycle, activation handoff, or
