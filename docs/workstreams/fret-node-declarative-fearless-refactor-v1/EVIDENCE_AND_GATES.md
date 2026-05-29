@@ -5,13 +5,22 @@ Last updated: 2026-05-29
 
 ## Current Focus
 
-FNDX-054 closes the first selected-edge rendering loop after FNDX-053: default declarative edge
-paint consumes the store-backed `selected_edges` list, selected edges apply the selected wire-width
-token, and surface diagnostics expose the selected edge count. This closes visible selected-edge
-state for the default paint path only; reconnect/update-anchor lifecycle parity remains follow-up
-work.
+FNDX-055 starts default declarative EdgeWrapper reconnect/update-anchor parity at the planning
+layer. Selected and focused edges now resolve source/target update anchors from authoritative port
+centers, with global `edges_reconnectable`, per-edge `Edge.reconnectable`, endpoint override, and
+`reconnect_radius` gates. Surface diagnostics expose the planned update-anchor count. This slice
+does not render the anchors or start reconnect drags yet.
 
 ## Targeted Iteration Gates
+
+```bash
+cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count
+```
+
+This gate proves the FNDX-055 update-anchor planning contract: global and per-edge reconnectable
+settings resolve like XyFlow's `edgesReconnectable` / `edge.reconnectable`, selected and focused
+edges produce deterministic source/target endpoint anchors from port centers, missing centers and
+invalid reconnect radii suppress anchors, and surface diagnostics report the planned anchor count.
 
 ```bash
 cargo nextest run -p fret-node edge_stroke_width_mul_for_selection_applies_selected_edge_width_token node_graph_surface_semantics_reports_selected_edges_count custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path
@@ -219,6 +228,7 @@ closeout note must name those failures.
 - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_hit_test.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_labels.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_path_geometry.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/pointer_down.rs`
@@ -548,5 +558,25 @@ closeout note must name those failures.
     paint/semantics/test changes are lint-clean.
   - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
     green with 469 tests.
+- FNDX-055:
+  - `cargo check -p fret-node --tests`: passed; proves UI-enabled test targets compile with
+    update-anchor planning and diagnostics wiring.
+  - `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count`:
+    passed; proves global/per-edge reconnectable resolution, selected/focused edge anchor
+    collection, endpoint override/missing-center/radius suppression, and diagnostics anchor count.
+  - `cargo fmt -p fret-node --check`: passed; proves the touched crate remains formatted.
+  - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed;
+    proves the workstream metadata remains valid JSON.
+  - `git diff --check`: passed; proves the patch has no whitespace errors.
+  - `python3 tools/check_layering.py`: passed; proves the slice did not violate workspace layering
+    policy.
+  - `cargo check -p fret-node --all-features --tests`: passed; proves optional UI/integration test
+    targets compile with update-anchor planning.
+  - `cargo check -p fret-node --no-default-features`: passed; proves headless/runtime-facing
+    package compilation remains unaffected by the UI-only update-anchor planning slice.
+  - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed; proves the
+    update-anchor helper, frame diagnostics wiring, and tests are lint-clean.
+  - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
+    green with 472 tests.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

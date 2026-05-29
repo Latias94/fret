@@ -11,36 +11,36 @@ canvas mirror cleanup, concrete declarative overlay/add-on parity gates, and now
 store/view-policy hazard found in the 2026-05-28 `fret-node` architecture audit, the first default
 declarative public-extension decision, and the custom edge path spatial, hit-test, anchor, toolbar,
 edge-label, custom edge-label renderer, child-bounds interactive edge-label control, default
-declarative click-edge selection, and selected-edge paint/diagnostics contract slices. The current
-risk is consumer-facing drift where public extension or store surfaces look authoritative but bypass
-the store's contracts or imply unimplemented view-policy parity.
+declarative click-edge selection, selected-edge paint/diagnostics, and update-anchor planning
+contract slices. The current risk is consumer-facing drift where public extension or store surfaces
+look authoritative but bypass the store's contracts or imply unimplemented view-policy parity.
 
 ## Active Task
 
-- Task ID: FNDX-054.
+- Task ID: FNDX-055.
 - Owner: current Codex session.
 - Status: DONE.
-- Claim: default declarative edge paint now receives the authoritative store-backed
-  `selected_edges` list and applies the selected wire-width token to selected edge strokes. Surface
-  diagnostics also expose selected edge count, so the FNDX-053 click-edge selection path now has a
-  visible default-paint/diagnostics loop. EdgeWrapper reconnect anchors and drag lifecycle parity
-  remain follow-up work.
+- Claim: default declarative EdgeWrapper update-anchor planning now resolves selected/focused edge
+  source/target anchors from authoritative port centers. Planning respects global
+  `edges_reconnectable`, per-edge `Edge.reconnectable`, endpoint-specific source/target overrides,
+  missing port centers, and invalid reconnect radii. Surface diagnostics expose planned anchor
+  count. Rendering controls and reconnect drag lifecycle remain follow-up work.
 - Review: use `review-workstream` before accepting broader lane closure.
 - Evidence:
-  - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs` derives selected edge stroke width
-    from `wire_width_selected_mul`.
-  - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs` /
-    `surface_shell.rs` / `surface_content.rs` thread authoritative `selected_edges` into edge
-    paint.
-  - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs` reports selected edge count in
-    surface diagnostics.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs` owns deterministic
+    selected/focused edge update-anchor planning and reconnectability resolution.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs` invokes anchor planning
+    after internals sync.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs` reports planned update-anchor
+    count in surface diagnostics.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs` carries
-    `edge_stroke_width_mul_for_selection_applies_selected_edge_width_token`,
-    `node_graph_surface_semantics_reports_selected_edges_count`, and the prior
-    `custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path` gate.
+    `edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides`,
+    `collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers`,
+    `collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius`, and
+    `node_graph_surface_semantics_reports_selected_edges_count`.
   - Fresh gates passed:
     `cargo check -p fret-node --tests`,
-    `cargo nextest run -p fret-node edge_stroke_width_mul_for_selection_applies_selected_edge_width_token node_graph_surface_semantics_reports_selected_edges_count custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path`,
+    `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count`,
     `cargo fmt -p fret-node --check`,
     `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`,
     `git diff --check`,
@@ -48,8 +48,8 @@ the store's contracts or imply unimplemented view-policy parity.
     `cargo check -p fret-node --all-features --tests`,
     `cargo check -p fret-node --no-default-features`,
     `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`, and
-    `cargo nextest run -p fret-node` (469 tests).
-  - Earlier closeout/package gates for FNDX-010 through FNDX-053 remain recorded in
+    `cargo nextest run -p fret-node` (472 tests).
+  - Earlier closeout/package gates for FNDX-010 through FNDX-054 remain recorded in
     `EVIDENCE_AND_GATES.md`.
 
 ## Decisions Since Last Update
@@ -99,14 +99,16 @@ the store's contracts or imply unimplemented view-policy parity.
   but does not claim reconnect/update-anchor lifecycle parity.
 - FNDX-054 feeds store-backed selected-edge state into default declarative edge paint and
   diagnostics, but still does not claim reconnect/update-anchor lifecycle parity.
+- FNDX-055 adds default declarative selected/focused edge update-anchor planning and diagnostics,
+  but still does not render anchors or start reconnect drags.
 
 ## Blockers
 
-- None for FNDX-054.
+- None for FNDX-055.
 
 ## Next Recommended Action
 
 - Pick the next view-policy/public-extension slice with a concrete gate. The strongest candidate is
-  now broader EdgeWrapper lifecycle parity, starting with focused/selected edge update anchors and
-  `NodeGraphInteractionState.reconnect_on_drop_empty`, or the broad `NodeGraphPresenter` split into
-  narrower label, geometry, menu, and insertion/search contracts.
+  rendering the planned update anchors as hit-testable controls with anchor-click priority, then
+  starting reconnect drags with the existing threshold/cancel policy. `reconnect_on_drop_empty`
+  remains a later lifecycle slice.

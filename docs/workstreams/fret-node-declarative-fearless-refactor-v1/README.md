@@ -178,6 +178,8 @@ update rather than an incidental refactor.
     selection through the store-backed view-state helper.
   - FNDX-054 feeds store-backed selected-edge state into default declarative edge paint and surface
     diagnostics.
+  - FNDX-055 plans selected/focused edge update anchors from authoritative port centers with
+    global/per-edge reconnectability gates, without rendering controls or starting reconnect drags.
   - Custom `NodeGraphPresenter` remains advanced/internal on the default path because it still mixes
     geometry, labels, context menus, and insertion/search policy.
   - Broader XyFlow edge-wrapper lifecycle parity remains follow-up work beyond click selection and

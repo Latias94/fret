@@ -46,6 +46,7 @@ pub(super) struct SurfaceSemanticsParams<'a> {
     pub(super) nodes_rebuilds: u64,
     pub(super) edges_rebuilds: u64,
     pub(super) edges: EdgePaintDiagnostics,
+    pub(super) edge_update_anchors_len: usize,
     pub(super) paint_overrides_rev: u64,
     pub(super) view_state: &'a NodeGraphViewState,
     pub(super) portal: PortalDiagnostics,
@@ -172,7 +173,7 @@ pub(super) fn build_surface_semantics_value(params: SurfaceSemanticsParams<'_>) 
         params.edges.total > 0 && params.edges.drawn > 0 && params.edges.missing_ports == 0;
 
     Arc::from(format!(
-        "panning {}; marquee_active:{}; node_drag_armed:{}; node_dragging:{}; hovered_node:{}; selected_nodes:{}; selected_edges:{}; grid_cached:{}; grid_rebuilds:{}; geom_cached:{}; geom_rebuilds:{}; nodes_cached:{}; nodes_rebuilds:{}; edges_cached:{}; edges_rebuilds:{}; edges_paint_total:{}; edges_paint_drawn:{}; edges_paint_culled:{}; edges_paint_dragged:{}; edges_paint_missing_ports:{}; edges_paint_ok:{}; paint_overrides_rev:{}; view_pan:{:.2},{:.2}; view_zoom:{:.4}; portal_fit_count:{}; portal_fit_pending:{}; portal_union_wh:{:.2}x{:.2}; portal_bounds_entries:{}; portals_disabled:{};",
+        "panning {}; marquee_active:{}; node_drag_armed:{}; node_dragging:{}; hovered_node:{}; selected_nodes:{}; selected_edges:{}; edge_update_anchors:{}; grid_cached:{}; grid_rebuilds:{}; geom_cached:{}; geom_rebuilds:{}; nodes_cached:{}; nodes_rebuilds:{}; edges_cached:{}; edges_rebuilds:{}; edges_paint_total:{}; edges_paint_drawn:{}; edges_paint_culled:{}; edges_paint_dragged:{}; edges_paint_missing_ports:{}; edges_paint_ok:{}; paint_overrides_rev:{}; view_pan:{:.2},{:.2}; view_zoom:{:.4}; portal_fit_count:{}; portal_fit_pending:{}; portal_union_wh:{:.2}x{:.2}; portal_bounds_entries:{}; portals_disabled:{};",
         params.panning,
         params.marquee_active,
         params.node_drag_armed,
@@ -180,6 +181,7 @@ pub(super) fn build_surface_semantics_value(params: SurfaceSemanticsParams<'_>) 
         params.hovered,
         params.selected_nodes_len,
         params.view_state.selected_edges.len(),
+        params.edge_update_anchors_len,
         params.grid_cached,
         params.grid_rebuilds,
         params.geom_cached,

@@ -49,14 +49,14 @@ use super::{
     build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
     build_edge_spatial_rect_overrides, build_edges_draws_paint_only,
     build_key_down_capture_handler, build_marquee_preview_selected_nodes,
-    build_node_drag_transaction, build_pointer_down_handler,
+    build_node_drag_transaction, build_pointer_down_handler, collect_edge_update_anchor_infos,
     collect_portal_label_infos_for_visible_subset, commit_edge_click_selection_action_host,
     commit_graph_transaction, commit_marquee_selection_action_host, commit_node_drag_transaction,
     commit_pending_selection_action_host, complete_left_pointer_release_action_host,
     complete_node_drag_release_action_host, derived_geometry_cache_key,
-    edge_stroke_width_mul_for_selection, edges_cache_key, effective_selected_nodes_for_paint,
-    escape_cancel_declarative_interactions_action_host, flush_portal_measured_geometry_state,
-    grid_cache_key, handle_declarative_diag_key_action_host,
+    edge_reconnect_endpoint_enabled, edge_stroke_width_mul_for_selection, edges_cache_key,
+    effective_selected_nodes_for_paint, escape_cancel_declarative_interactions_action_host,
+    flush_portal_measured_geometry_state, grid_cache_key, handle_declarative_diag_key_action_host,
     handle_declarative_keyboard_zoom_action_host, handle_declarative_pointer_cancel_action_host,
     handle_declarative_pointer_up_action_host, handle_marquee_left_pointer_release_action_host,
     handle_marquee_pointer_move_action_host, handle_node_drag_left_pointer_release_action_host,
@@ -70,17 +70,20 @@ use super::{
     update_hovered_node_pointer_move_action_host, update_view_state_action_host, view_from_state,
 };
 use crate::core::{
-    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group, GroupId,
-    Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
+    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, EdgeReconnectable,
+    EdgeReconnectableEndpoint, Graph, GraphId, Group, GroupId, Node, NodeId, NodeKindKey, Port,
+    PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
 use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use crate::ops::{GraphOp, GraphTransaction};
+use crate::rules::EdgeEndpoint;
 use crate::runtime::callbacks::{
     NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks, SelectionChange,
     install_callbacks,
 };
 use crate::runtime::changes::NodeGraphPatch;
 use crate::runtime::store::NodeGraphStore;
+use crate::ui::internals::NodeGraphInternalsSnapshot;
 use crate::ui::measured::MEASURED_GEOMETRY_EPSILON_PX;
 use crate::ui::paint_overrides::{NodeGraphPaintOverrides, NodeGraphPaintOverridesMap};
 use crate::ui::{
@@ -1571,6 +1574,13 @@ fn node_graph_surface_semantics_reports_selected_edges_count() {
             .as_deref()
             .is_some_and(|value| value.contains("selected_edges:1;")),
         "canvas semantics should expose selected edge count for diagnostics"
+    );
+    assert!(
+        canvas
+            .value
+            .as_deref()
+            .is_some_and(|value| value.contains("edge_update_anchors:2;")),
+        "selected reconnectable edge should plan source and target update anchors"
     );
 }
 
@@ -3530,6 +3540,145 @@ fn build_click_selection_preview_edges_multi_click_toggles_hit_membership() {
     assert_eq!(added.as_ref(), &[edge_a, edge_b]);
     assert_eq!(removed.as_ref(), &[edge_a]);
     assert_eq!(replaced.as_ref(), &[edge_b]);
+}
+
+#[test]
+fn edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides() {
+    assert!(edge_reconnect_endpoint_enabled(
+        None,
+        true,
+        EdgeEndpoint::From
+    ));
+    assert!(!edge_reconnect_endpoint_enabled(
+        None,
+        false,
+        EdgeEndpoint::From
+    ));
+    assert!(!edge_reconnect_endpoint_enabled(
+        Some(EdgeReconnectable::Bool(false)),
+        true,
+        EdgeEndpoint::From
+    ));
+    assert!(edge_reconnect_endpoint_enabled(
+        Some(EdgeReconnectable::Bool(true)),
+        false,
+        EdgeEndpoint::To
+    ));
+    assert!(edge_reconnect_endpoint_enabled(
+        Some(EdgeReconnectable::Endpoint(
+            EdgeReconnectableEndpoint::Source
+        )),
+        false,
+        EdgeEndpoint::From
+    ));
+    assert!(!edge_reconnect_endpoint_enabled(
+        Some(EdgeReconnectable::Endpoint(
+            EdgeReconnectableEndpoint::Source
+        )),
+        true,
+        EdgeEndpoint::To
+    ));
+    assert!(edge_reconnect_endpoint_enabled(
+        Some(EdgeReconnectable::Endpoint(
+            EdgeReconnectableEndpoint::Target
+        )),
+        false,
+        EdgeEndpoint::To
+    ));
+}
+
+#[test]
+fn collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers() {
+    let (mut graph, _a, _a_in, a_out, _b, b_in) = make_graph_two_nodes_with_ports();
+    let selected_edge = EdgeId::from_u128(0xA155);
+    let focused_edge = EdgeId::from_u128(0xA156);
+    for edge in [selected_edge, focused_edge] {
+        graph.edges.insert(
+            edge,
+            Edge {
+                kind: EdgeKind::Data,
+                from: a_out,
+                to: b_in,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+    }
+    let view_state = NodeGraphViewState {
+        selected_edges: vec![selected_edge],
+        ..Default::default()
+    };
+    let mut internals = NodeGraphInternalsSnapshot {
+        focused_edge: Some(focused_edge),
+        ..Default::default()
+    };
+    let source_center = Point::new(Px(12.0), Px(34.0));
+    let target_center = Point::new(Px(98.0), Px(76.0));
+    internals.port_centers_window.insert(a_out, source_center);
+    internals.port_centers_window.insert(b_in, target_center);
+    let mut interaction = default_editor_config().resolved_interaction_state();
+    interaction.edges_reconnectable = true;
+    interaction.reconnect_radius = 11.0;
+
+    let anchors = collect_edge_update_anchor_infos(&graph, &view_state, &internals, &interaction);
+
+    assert_eq!(anchors.len(), 4);
+    let selected_source = anchors
+        .iter()
+        .find(|anchor| anchor.edge == selected_edge && anchor.endpoint == EdgeEndpoint::From)
+        .expect("selected source anchor");
+    assert_eq!(selected_source.anchor_port, a_out);
+    assert_eq!(selected_source.opposite_port, b_in);
+    assert_eq!(selected_source.center_window, source_center);
+    assert_eq!(selected_source.radius, 11.0);
+    assert!(
+        anchors
+            .iter()
+            .any(|anchor| anchor.edge == focused_edge && anchor.endpoint == EdgeEndpoint::To)
+    );
+}
+
+#[test]
+fn collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius() {
+    let (mut graph, _a, _a_in, a_out, _b, b_in) = make_graph_two_nodes_with_ports();
+    let edge = EdgeId::from_u128(0xA157);
+    graph.edges.insert(
+        edge,
+        Edge {
+            kind: EdgeKind::Data,
+            from: a_out,
+            to: b_in,
+            selectable: None,
+            deletable: None,
+            reconnectable: Some(EdgeReconnectable::Endpoint(
+                EdgeReconnectableEndpoint::Target,
+            )),
+        },
+    );
+    let view_state = NodeGraphViewState {
+        selected_edges: vec![edge],
+        ..Default::default()
+    };
+    let mut internals = NodeGraphInternalsSnapshot::default();
+    let target_center = Point::new(Px(88.0), Px(42.0));
+    internals.port_centers_window.insert(b_in, target_center);
+    let mut interaction = default_editor_config().resolved_interaction_state();
+    interaction.edges_reconnectable = false;
+    interaction.reconnect_radius = 9.0;
+
+    let anchors = collect_edge_update_anchor_infos(&graph, &view_state, &internals, &interaction);
+
+    assert_eq!(anchors.len(), 1);
+    assert_eq!(anchors[0].endpoint, EdgeEndpoint::To);
+    assert_eq!(anchors[0].anchor_port, b_in);
+    assert_eq!(anchors[0].opposite_port, a_out);
+    assert_eq!(anchors[0].center_window, target_center);
+
+    interaction.reconnect_radius = f32::NAN;
+    assert!(
+        collect_edge_update_anchor_infos(&graph, &view_state, &internals, &interaction).is_empty()
+    );
 }
 
 #[test]

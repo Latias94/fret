@@ -605,6 +605,41 @@ Execution companion: `design.md` (surface map + next worktree order).
     - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
     - `cargo nextest run -p fret-node`: passed.
 
+- [x] FNDX-055 Add default declarative EdgeWrapper update-anchor planning.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count`
+  - Exit note: selected and focused edges now plan source/target update anchors from authoritative
+    port-center internals. Planning respects global `edges_reconnectable`, per-edge
+    `Edge.reconnectable`, endpoint-specific source/target overrides, missing port centers, and
+    invalid reconnect radii. Surface diagnostics report planned anchor count. This slice does not
+    render update-anchor controls or start reconnect drags.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count`:
+      passed.
+    - `cargo fmt -p fret-node --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo nextest run -p fret-node`: passed with 472 tests.
+
 ## M0 - Decision gates and internal seam map
 
 - [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.

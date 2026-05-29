@@ -480,6 +480,9 @@ Status note (2026-05-28):
 - FNDX-054 feeds store-backed `selected_edges` into default declarative edge paint and surface
   diagnostics, so click-edge selection now has a visible default-paint loop without claiming
   reconnect/update-anchor lifecycle parity.
+- FNDX-055 adds the first default declarative update-anchor planning slice for selected/focused
+  edges, resolving source/target anchors from authoritative port centers and reconnectability gates
+  without rendering controls or starting reconnect drags yet.
 
 Why this still matters:
 

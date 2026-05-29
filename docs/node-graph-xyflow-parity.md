@@ -824,17 +824,18 @@ canonical data flow and invalidation boundaries:
   - fret-node: reconnect model/config/callback contracts exist, but default declarative EdgeWrapper
     lifecycle parity is still being closed in slices
     - current default declarative slices: click-edge selection uses custom-path-aware hit-testing,
-      selected edge state feeds default edge paint/diagnostics, and edge-label controls remain
-      hit-test isolated
-    - follow-up: interactive update anchors for focused/selected edges, anchor-click priority,
-      drag-threshold reconnect start, and empty-canvas drop policy
+      selected edge state feeds default edge paint/diagnostics, update-anchor planning resolves
+      selected/focused edge endpoints, and edge-label controls remain hit-test isolated
+    - follow-up: render/interaction for update anchors, anchor-click priority, drag-threshold
+      reconnect start, and empty-canvas drop policy
     - gating:
       - global: `NodeGraphInteractionState.edges_reconnectable` (XyFlow `edgesReconnectable`)
       - per-edge override: `Edge.reconnectable` (XyFlow `edge.reconnectable: boolean | 'source' | 'target'`)
         - XyFlow resolution: `repo-ref/xyflow/packages/react/src/components/EdgeWrapper/index.tsx`
         - XyFlow endpoint gating: `repo-ref/xyflow/packages/react/src/components/EdgeWrapper/EdgeUpdateAnchors.tsx`
         - fret-node model: `ecosystem/fret-node/src/core/model.rs` (`Edge.reconnectable: Option<EdgeReconnectable>`)
-        - fret-node enforcement: still follow-up for the default declarative pointer path
+        - fret-node planning: `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+        - fret-node pointer-path enforcement: still follow-up for rendered update-anchor controls
         - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
   - TODO: parity knobs:
     - cancel behavior:

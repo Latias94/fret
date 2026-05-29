@@ -15,6 +15,7 @@ use crate::ui::{
 
 use super::cache::edge_commands_for_route;
 use super::edge_path_geometry::{EDGE_PATH_ANCHOR_STEPS, path_midpoint_and_normal};
+use super::edge_update_anchors::collect_edge_update_anchor_infos;
 use super::surface_support::{
     read_authoritative_interaction_config_in_models, read_authoritative_runtime_tuning_in_models,
 };
@@ -431,6 +432,18 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         &edges_cache_value,
         &style_tokens,
     );
+    let internals_snapshot = binding.internals_store().snapshot();
+    let edge_update_anchors_len =
+        read_authoritative_graph_in_models(cx.app.models_mut(), binding, |graph_value| {
+            collect_edge_update_anchor_infos(
+                graph_value,
+                &view_value,
+                &internals_snapshot,
+                &interaction_state,
+            )
+            .len()
+        })
+        .unwrap_or(0);
 
     let hovered_node_value = cx
         .get_model_copied(hovered_node, Invalidation::Paint)
@@ -481,6 +494,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         nodes_rebuilds: nodes_cache_value.rebuilds,
         edges_rebuilds: edges_cache_value.rebuilds,
         edges: edge_paint_diagnostics,
+        edge_update_anchors_len,
         paint_overrides_rev,
         view_state: &view_value,
         portal: portal_diagnostics,

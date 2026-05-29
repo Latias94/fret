@@ -52,6 +52,8 @@ mod edge_hit_test;
 mod edge_labels;
 #[path = "paint_only/edge_path_geometry.rs"]
 mod edge_path_geometry;
+#[path = "paint_only/edge_update_anchors.rs"]
+mod edge_update_anchors;
 #[path = "paint_only/frame_plan.rs"]
 mod frame_plan;
 #[path = "paint_only/hover_anchor.rs"]
@@ -114,6 +116,10 @@ use self::diag::{
 #[cfg(test)]
 use self::edge_hit_test::hit_test_edge_at_canvas_point;
 use self::edge_labels::push_edge_label_overlays;
+#[cfg(test)]
+use self::edge_update_anchors::{
+    collect_edge_update_anchor_infos, edge_reconnect_endpoint_enabled,
+};
 use self::frame_plan::{PaintOnlyInteractionFrameInputs, plan_paint_only_interaction_frame};
 #[cfg(test)]
 use self::hover_anchor::resolve_hover_tooltip_anchor;
