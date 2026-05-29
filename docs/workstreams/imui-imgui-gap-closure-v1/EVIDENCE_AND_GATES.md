@@ -41,6 +41,48 @@ Focused gates:
 - `cargo nextest run -p fret-imui interaction_shortcuts --no-fail-fast`: pass (10 passed,
   176 skipped).
 
+## Facade Basic Surface Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade basic surface macro ownership split into text, debug-draw, and
+separator child owners without changing public trait method names, default option forwarding,
+response returns, macro expansion order, or concrete `basic_items` behavior ownership.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/basic_surface.rs` is now a module/re-export hub
+  for basic surface macros.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/basic_surface/text.rs` owns text, wrapped text,
+  and bullet text trait forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/basic_surface/debug_draw.rs` owns debug-draw trait
+  forwarding and response returns.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/basic_surface/separators.rs` owns separator and
+  separator-text trait forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` expands text, debug-draw, and separator
+  surface macros in the previous public method order.
+- `tools/gate_imui_workstream_source.py` checks the new child owners and rejects basic surface
+  macro bodies from drifting back into `facade_writer/basic_surface.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui imui_text --no-fail-fast`: pass
+  (2 passed, 748 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke
+  --test imui_debug_draw_smoke --test imui_bullet_text_smoke --test imui_separator_text_smoke
+  --no-fail-fast`: pass (6 passed).
+- `python tools\check_workstream_catalog.py`: pass; validated 473 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+
+Skipped broader gate: `fret-imui` bullet/separator composition reruns were not used as evidence in
+this slice because the first broad command was user-interrupted and the later targeted rerun timed
+out under concurrent unrelated Cargo work. This slice is a macro forwarding owner split; source
+gate, lib check, and focused `fret-ui-kit` surface tests are the authoritative evidence here.
+
 ## Facade Scope Method Sub-Owner Evidence - 2026-05-29
 
 Claim verified: IMUI facade scope method behavior ownership split into push-id and disabled-scope

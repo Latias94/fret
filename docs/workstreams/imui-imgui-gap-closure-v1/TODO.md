@@ -52,6 +52,13 @@ Last updated: 2026-05-29
       only. `scope_surface.rs`, `basic_surface.rs`, and `disclosure_surface.rs` own the remaining
       trait default declarations/forwarding, while `scope_methods.rs`, `basic_items.rs`, and
       `disclosure_controls` remain the behavior owners.
+- [x] Split IMUI facade basic surface macro owner into text, debug-draw, and separator child
+      owners without changing public trait method names, default option forwarding, response
+      returns, macro expansion order, or concrete `basic_items` behavior ownership.
+      Result: `basic_surface.rs` is now a module/re-export hub. `basic_surface/text.rs` owns
+      text, wrapped text, and bullet text forwarding; `basic_surface/debug_draw.rs` owns
+      debug-draw forwarding; and `basic_surface/separators.rs` owns separator and separator-text
+      forwarding.
 - [x] Split IMUI facade scope method behavior owner into push-id and disabled-scope child owners
       without changing public facade method names, keyed identity scoping, disabled alpha/gating,
       runtime frame preparation, or `scope_surface` forwarding.

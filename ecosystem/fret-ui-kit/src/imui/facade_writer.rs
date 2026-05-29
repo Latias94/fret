@@ -36,7 +36,11 @@ pub use facade_core::ImUiFacade;
 pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     scope_surface::scope_surface_methods!();
 
-    basic_surface::basic_surface_methods!();
+    basic_surface::basic_text_surface_methods!();
+
+    basic_surface::basic_debug_draw_surface_methods!();
+
+    basic_surface::basic_separator_surface_methods!();
 
     container_surface::layout_flow_surface_methods!();
 

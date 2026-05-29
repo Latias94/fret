@@ -20,6 +20,14 @@ and debug-draw, and disclosure/tree trait default method declarations now live i
 `facade_writer/disclosure_surface.rs`. Existing `scope_methods.rs`, `basic_items.rs`, and
 `disclosure_controls` remain the behavior owners.
 
+2026-05-29 facade basic surface sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/basic_surface.rs` is now a module/re-export hub.
+`basic_surface/text.rs` owns text, wrapped text, and bullet text trait forwarding;
+`basic_surface/debug_draw.rs` owns debug-draw trait forwarding; and
+`basic_surface/separators.rs` owns separator and separator-text trait forwarding. Public trait
+method names, default option forwarding, macro expansion order, response returns, and concrete
+`basic_items` behavior ownership remain unchanged.
+
 2026-05-29 facade scope method sub-owner result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods.rs` is now a module/re-export hub.
 `scope_methods/push_id.rs` owns keyed child facade execution and result propagation, while
