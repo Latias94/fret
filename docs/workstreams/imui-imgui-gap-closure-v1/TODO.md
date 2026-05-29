@@ -44,6 +44,14 @@ Last updated: 2026-05-29
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split remaining IMUI facade root scope/basic/disclosure trait default method declarations out
+      of `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
+      `UiWriterImUiFacadeExt` trait, caller import behavior, push-id/disabled-scope, text,
+      separator, debug-draw, collapsing-header, or tree-node method names and behavior.
+      Result: `facade_writer.rs` keeps the single public trait hub plus surface macro expansion
+      only. `scope_surface.rs`, `basic_surface.rs`, and `disclosure_surface.rs` own the remaining
+      trait default declarations/forwarding, while `scope_methods.rs`, `basic_items.rs`, and
+      `disclosure_controls` remain the behavior owners.
 - [x] Split IMUI facade container/layout trait default method declarations out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, item-flow, same-line,

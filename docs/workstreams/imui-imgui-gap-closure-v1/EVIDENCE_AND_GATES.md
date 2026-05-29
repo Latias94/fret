@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-05-29
 
+## Facade Root Surface Owner-Split Evidence - 2026-05-29
+
+Claim verified: remaining IMUI facade root scope/basic/disclosure trait default method declarations
+split out of the root facade writer without changing the public `UiWriterImUiFacadeExt` trait,
+caller import behavior, push-id/disabled-scope, text, separator, debug-draw, collapsing-header, or
+tree-node method names and behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
+  `UiWriterImUiFacadeExt` trait hub plus surface macro expansion only.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/scope_surface.rs` owns `push_id` and
+  `disabled_scope` trait default declarations/forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/basic_surface.rs` owns text, wrapped text,
+  bullet text, debug-draw, separator, and separator-text trait default declarations/forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/disclosure_surface.rs` owns collapsing-header and
+  tree-node trait default declarations/forwarding.
+- `scope_methods.rs`, `basic_items.rs`, and `disclosure_controls` remain the behavior owners.
+- `tools/gate_imui_workstream_source.py` now rejects scope/basic/disclosure trait default bodies
+  from drifting back into `facade_writer.rs` and checks the new surface owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui imui_text --no-fail-fast`: pass
+  (2 passed, 748 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke
+  --test imui_disclosure_smoke --no-fail-fast`: pass (2 passed).
+- `cargo nextest run -p fret-imui label_identity --no-fail-fast`: pass (7 passed, 179 skipped).
+- `cargo nextest run -p fret-imui interaction_shortcuts --no-fail-fast`: pass (10 passed,
+  176 skipped).
+
 ## Facade Container Surface Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI facade container/layout trait default method declarations split out of the

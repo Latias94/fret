@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-29 facade root surface owner-split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer.rs` now keeps the single public
+`UiWriterImUiFacadeExt` trait hub plus surface macro expansion only. Scope, basic text/separator
+and debug-draw, and disclosure/tree trait default method declarations now live in
+`facade_writer/scope_surface.rs`, `facade_writer/basic_surface.rs`, and
+`facade_writer/disclosure_surface.rs`. Existing `scope_methods.rs`, `basic_items.rs`, and
+`disclosure_controls` remain the behavior owners.
+
 2026-05-29 facade container surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but item-flow, same-line, dummy/spacing/indent, layout groups,
