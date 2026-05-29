@@ -279,6 +279,21 @@ fractional color only for scroll-behavior-driven layouts. Flexible app bars, sub
 predictive-back integration, RTL-specific title placement, and exhaustive variant/theme visual
 matrices remain residual/future API work.
 
+M3PV2-077 is complete: Dialog layout/accessibility/current modal motion are now v2-covered for the
+current AlertDialog-style recipe surface. Compose Material3 and Base UI were the primary sources:
+dialogs constrain panel width to 280..560dp, use 24dp panel padding, 16dp title-to-text spacing,
+24dp text-to-actions spacing, 8dp action spacing, and expose the panel as a labelled/described
+dialog. The packet found Material recipe/proof-density gaps, not core or kit overlay policy gaps:
+focus containment/restore, scrim dismissal, and the shared modal fade/rise/scale foundation were
+already green, but Dialog lacked stable headline/supporting/actions parts, did not wire
+labelled/described relations, did not clamp the semantic panel to 560dp in the harness, and stacked
+content directly in the container instead of a vertical content column. Dialog now exposes
+`.headline`, `.supporting-text`, and `.actions`, centers a tokenized 280..560dp panel, proves
+spacing/relations/motion in `dialog_state`, and refreshes menu-dialog headless goldens for the
+intentional centered vertical content signature. Full-screen dialogs, compact pointer padding,
+predictive-back choreography, and broader overlay-family policy comparison remain residual/future
+API work.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -290,8 +305,8 @@ matrices remain residual/future API work.
 ## Next Recommended Action
 
 Continue with the next uncovered Material3 packet from the matrix. Higher-priority candidates now
-move through remaining overlay surfaces: Dialog/Snackbar motion/layout and Menu/DropdownMenu item
-layout/focus packets are still open.
+move through remaining overlay surfaces: Snackbar motion/layout, Tooltip motion, and
+Menu/DropdownMenu item layout/focus packets are still open.
 
 ## Useful Gates
 

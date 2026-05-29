@@ -15,7 +15,8 @@ use fret_runtime::{ActionId, Model};
 use fret_ui::action::{DismissReason, DismissRequestCx, OnActivate, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps, TextProps,
+    MarginEdge, Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps,
+    TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -532,6 +533,15 @@ impl Dialog {
                 let panel_chrome_test_id = panel_test_id
                     .as_ref()
                     .map(|id| part_test_id(id, "chrome"));
+                let headline_test_id = self
+                    .test_id
+                    .as_ref()
+                    .map(|id| part_test_id(id, "headline"));
+                let supporting_text_test_id = self
+                    .test_id
+                    .as_ref()
+                    .map(|id| part_test_id(id, "supporting-text"));
+                let actions_test_id = self.test_id.as_ref().map(|id| part_test_id(id, "actions"));
 
                 let (
                     scrim_color,
@@ -544,6 +554,9 @@ impl Dialog {
                     supporting_style,
                     action_cfg,
                     panel_padding,
+                    viewport_margin,
+                    container_min_width,
+                    container_max_width,
                 ) = {
                     let theme = Theme::global(&*cx.app);
 
@@ -630,6 +643,9 @@ impl Dialog {
                         corner_radii: dialog_tokens::action_corner_radii(theme),
                     };
                     let panel_padding = dialog_tokens::panel_padding(theme);
+                    let viewport_margin = dialog_tokens::viewport_margin(theme);
+                    let container_min_width = dialog_tokens::container_min_width(theme);
+                    let container_max_width = dialog_tokens::container_max_width(theme);
 
                     (
                         scrim_color,
@@ -642,6 +658,9 @@ impl Dialog {
                         supporting_style,
                         action_cfg,
                         panel_padding,
+                        viewport_margin,
+                        container_min_width,
+                        container_max_width,
                     )
                 };
 
@@ -729,105 +748,130 @@ impl Dialog {
                                 center.direction = Axis::Vertical;
                                 center.justify = MainAlign::Center;
                                 center.align = CrossAlign::Center;
-                                center.padding = panel_padding.into();
+                                center.padding = viewport_margin.into();
 
                                 let content = cx.flex(center, move |cx| {
-                                                let mut panel_layout = LayoutStyle::default();
-                                                panel_layout.size.width = Length::Fill;
-                                                panel_layout.size.max_width =
-                                                    Some(Length::Px(Px(560.0)));
-                                                panel_layout.size.min_width =
-                                                    Some(Length::Px(Px(280.0)));
-                                                panel_layout.overflow = Overflow::Clip;
+                                    let available_width = (cx.bounds.size.width.0
+                                        - viewport_margin.left.0
+                                        - viewport_margin.right.0)
+                                        .max(0.0);
+                                    let panel_width = Px(
+                                        available_width
+                                            .clamp(container_min_width.0, container_max_width.0),
+                                    );
+                                    let mut panel_layout = LayoutStyle::default();
+                                    panel_layout.size.width = Length::Px(panel_width);
+                                    panel_layout.overflow = Overflow::Clip;
 
-                                                let mut body = Vec::new();
-                                                if let Some(headline) = self.headline.clone() {
-                                                    let style = headline_style.clone();
-	                                                    body.push(cx.text_props(TextProps {
-	                                                        layout: LayoutStyle::default(),
-	                                                        text: headline,
-	                                                        style: Some(style),
-	                                                        color: Some(headline_color),
-	                                                        wrap: TextWrap::Word,
-	                                                        overflow: TextOverflow::Clip,
-	                                                        align: fret_core::TextAlign::Start,
-	                                                        ink_overflow: Default::default(),
-	                                                    }));
+                                    let mut body = Vec::new();
+                                    let mut headline_element_id = None;
+                                    let mut supporting_text_element_id = None;
+                                    if let Some(headline) = self.headline.clone() {
+                                        let style = headline_style.clone();
+                                        let mut layout = LayoutStyle::default();
+                                        layout.margin.bottom = MarginEdge::Px(Px(16.0));
+                                        let mut headline = cx.text_props(TextProps {
+                                            layout,
+                                            text: headline,
+                                            style: Some(style),
+                                            color: Some(headline_color),
+                                            wrap: TextWrap::Word,
+                                            overflow: TextOverflow::Clip,
+                                            align: fret_core::TextAlign::Start,
+                                            ink_overflow: Default::default(),
+                                        });
+                                        if let Some(test_id) = headline_test_id.clone() {
+                                            headline = headline.test_id(test_id);
+                                        }
+                                        headline_element_id = Some(headline.id.0);
+                                        body.push(headline);
+                                    }
+                                    if let Some(text) = self.supporting_text.clone() {
+                                        let style = supporting_style.clone();
+                                        let mut layout = LayoutStyle::default();
+                                        layout.margin.bottom = MarginEdge::Px(Px(24.0));
+                                        let mut supporting_text = cx.text_props(TextProps {
+                                            layout,
+                                            text,
+                                            style: Some(style),
+                                            color: Some(supporting_color),
+                                            wrap: TextWrap::Word,
+                                            overflow: TextOverflow::Clip,
+                                            align: fret_core::TextAlign::Start,
+                                            ink_overflow: Default::default(),
+                                        });
+                                        if let Some(test_id) = supporting_text_test_id.clone() {
+                                            supporting_text = supporting_text.test_id(test_id);
+                                        }
+                                        supporting_text_element_id = Some(supporting_text.id.0);
+                                        body.push(supporting_text);
+                                    }
+
+                                    body.extend(content(cx));
+
+                                    if !self.actions.is_empty() {
+                                        let mut row = FlexProps::default();
+                                        row.direction = Axis::Horizontal;
+                                        row.justify = MainAlign::End;
+                                        row.align = CrossAlign::Center;
+                                        row.gap = Px(8.0).into();
+                                        row.layout.size.width = Length::Fill;
+
+                                        let actions = self
+                                            .actions
+                                            .clone()
+                                            .into_iter()
+                                            .map(|a| a.into_element(cx, action_cfg))
+                                            .collect::<Vec<_>>();
+
+                                        let mut row = cx.flex(row, move |_cx| actions);
+                                        if let Some(test_id) = actions_test_id.clone() {
+                                            row = row.test_id(test_id);
+                                        }
+                                        body.push(row);
+                                    }
+
+                                    let mut body_column_props = FlexProps::default();
+                                    body_column_props.direction = Axis::Vertical;
+                                    body_column_props.align = CrossAlign::Stretch;
+                                    body_column_props.layout.size.width = Length::Fill;
+                                    let body_column = cx.flex(body_column_props, move |_cx| body);
+
+                                    let panel_test_id = panel_test_id.clone();
+                                    let panel_chrome_test_id = panel_chrome_test_id.clone();
+                                    vec![focus_scope_prim::focus_trap(cx, move |cx| {
+                                        let chrome = cx.container(
+                                            ContainerProps {
+                                                layout: panel_layout,
+                                                background: Some(container_bg),
+                                                shadow,
+                                                corner_radii: container_shape,
+                                                padding: panel_padding.into(),
+                                                ..Default::default()
+                                            },
+                                            move |cx| {
+                                                let mut children = Vec::new();
+                                                if let Some(test_id) = panel_chrome_test_id.clone() {
+                                                    children.push(absolute_fill_test_id_marker(
+                                                        cx, test_id,
+                                                    ));
                                                 }
-                                                if let Some(text) = self.supporting_text.clone() {
-                                                    let style = supporting_style.clone();
-	                                                    body.push(cx.text_props(TextProps {
-	                                                        layout: LayoutStyle::default(),
-	                                                        text,
-	                                                        style: Some(style),
-	                                                        color: Some(supporting_color),
-	                                                        wrap: TextWrap::Word,
-	                                                        overflow: TextOverflow::Clip,
-	                                                        align: fret_core::TextAlign::Start,
-	                                                        ink_overflow: Default::default(),
-	                                                    }));
-                                                }
-
-                                                body.extend(content(cx));
-
-                                                if !self.actions.is_empty() {
-                                                    let mut row = FlexProps::default();
-                                                    row.direction = Axis::Horizontal;
-                                                    row.justify = MainAlign::End;
-                                                    row.align = CrossAlign::Center;
-                                                    row.gap = Px(8.0).into();
-                                                    row.layout.size.width = Length::Fill;
-
-                                                    let actions = self
-                                                        .actions
-                                                        .clone()
-                                                        .into_iter()
-                                                        .map(|a| {
-                                                            a.into_element(cx, action_cfg)
-                                                        })
-                                                        .collect::<Vec<_>>();
-
-                                                    body.push(cx.flex(row, move |_cx| actions));
-                                                }
-
-                                                let panel_test_id = panel_test_id.clone();
-                                                let panel_chrome_test_id =
-                                                    panel_chrome_test_id.clone();
-                                                vec![focus_scope_prim::focus_trap(cx, move |cx| {
-                                                    let chrome = cx.container(
-                                                        ContainerProps {
-                                                            layout: panel_layout,
-                                                            background: Some(container_bg),
-                                                            shadow,
-                                                            corner_radii: container_shape,
-                                                            padding: panel_padding.into(),
-                                                            ..Default::default()
-                                                        },
-                                                        move |cx| {
-                                                            let mut children = Vec::new();
-                                                            if let Some(test_id) =
-                                                                panel_chrome_test_id.clone()
-                                                            {
-                                                                children.push(
-                                                                    absolute_fill_test_id_marker(
-                                                                        cx, test_id,
-                                                                    ),
-                                                                );
-                                                            }
-                                                            children.extend(body);
-                                                            children
-                                                        },
-                                                    );
-                                                    vec![cx.semantics(
-                                                        fret_ui::element::SemanticsProps {
-                                                            role: SemanticsRole::Dialog,
-                                                            test_id: panel_test_id.clone(),
-                                                            ..Default::default()
-                                                        },
-                                                        move |_cx| vec![chrome],
-                                                    )]
-                                                })]
-                                            });
+                                                children.push(body_column);
+                                                children
+                                            },
+                                        );
+                                        vec![cx.semantics(
+                                            fret_ui::element::SemanticsProps {
+                                                role: SemanticsRole::Dialog,
+                                                test_id: panel_test_id.clone(),
+                                                labelled_by_element: headline_element_id,
+                                                described_by_element: supporting_text_element_id,
+                                                ..Default::default()
+                                            },
+                                            move |_cx| vec![chrome],
+                                        )]
+                                    })]
+                                });
 
                                 fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
                                     cx,

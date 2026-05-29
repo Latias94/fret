@@ -816,6 +816,30 @@ Task IDs use `M3PV2-*`.
   partial expansion, predictive-back scaling, and cross-overlay policy comparison remain residual
   work for M3PV2-050 or a later overlay packet.
 
+- [x] M3PV2-077 [owner=codex] [deps=M3PV2-010,M3PV2-046] [scope=ecosystem/fret-ui-material3/src/{dialog.rs,tokens/dialog.rs},ecosystem/fret-ui-material3/tests/{dialog_state.rs,automation_surface.rs,radio_alignment.rs},goldens/material3-headless/v1/material3-menu-dialog-style.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close Dialog layout/accessibility/current-motion proof against Compose Material3 and Base
+  UI by enforcing 280..560dp panel width, real vertical content spacing, stable content part ids,
+  labelled/described relations, and fixed-frame modal fade/rise/scale evidence.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test dialog_state`
+  failed first because Dialog exposed no headline/supporting part ids, then because the panel
+  bounds were 592px wide in a 640px viewport, and then because headline/supporting text bounds
+  overlapped without an explicit vertical content column; green gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test dialog_state`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_dialog_and_bottom_sheet_expose_stable_part_test_ids`;
+  `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_menu_dialog_style_suite_goldens_v1; Remove-Item Env:\FRET_UPDATE_GOLDENS`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment dialog_focus_is_contained_and_restored_across_schemes dialog_style_overrides_apply_to_container_and_text dialog_scrim_dismisses_without_activating_underlay material3_headless_menu_dialog_style_suite_goldens_v1`;
+  `cargo nextest run -p fret-ui-material3 --lib dialog`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`.
+  Review: DONE. This found a Material recipe/proof-density gap, not a core or kit overlay policy
+  gap. The modal motion foundation already passed; the repair stayed in Dialog/tokens/tests.
+  Evidence: `artifacts/material3_dialog_layout_motion_packet_v2.md`.
+  Handoff: Dialog layout, accessibility, and current modal motion are v2-covered. Full-screen
+  dialogs, compact pointer padding, predictive-back choreography, and broader overlay-family
+  policy comparison remain residual.
+
 - [ ] M3PV2-050 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{menu.rs,dropdown_menu.rs,dialog.rs,bottom_sheet.rs,tooltip.rs,snackbar.rs},ecosystem/fret-ui-kit,tools/diag-scripts/ui-gallery/material3]
   Goal: Audit dismissal, focus containment/restore, live region, action close parts, sheet motion,
   and rich tooltip interaction against Material/MUI/Compose/Base UI sources.

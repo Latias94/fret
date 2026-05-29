@@ -79,6 +79,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_navigation_bar_rail_semantics_layout_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_navigation_drawer_modal_semantics_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_top_app_bar_scroll_layout_motion_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_dialog_layout_motion_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -938,6 +939,30 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     behavior supplies a fractional layout state. The gap was Material recipe/token proof density,
     not core or kit mechanism.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_top_app_bar_scroll_layout_motion_packet_v2.md`
+- 2026-05-29: M3PV2-077 closed Dialog panel layout, labelled/described relations, stable content
+  part ids, and current modal motion proof.
+  - Sources: Compose Material3 `AlertDialog.kt` uses `DialogMinWidth = 280.dp`,
+    `DialogMaxWidth = 560.dp`, 24dp content padding, 16dp title padding, 24dp text padding, and
+    8dp button spacing. Base UI Dialog confirms the dialog popup is labelled by Title and
+    described by Description.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test dialog_state`
+    failed first because `m3-dialog.headline` was missing, then because the panel measured 592px
+    wide in a 640px viewport, and then because headline/supporting text bounds overlapped without
+    an explicit vertical content column.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test dialog_state`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_dialog_and_bottom_sheet_expose_stable_part_test_ids`
+  - `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_menu_dialog_style_suite_goldens_v1; Remove-Item Env:\FRET_UPDATE_GOLDENS`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment dialog_focus_is_contained_and_restored_across_schemes dialog_style_overrides_apply_to_container_and_text dialog_scrim_dismisses_without_activating_underlay material3_headless_menu_dialog_style_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --lib dialog`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: Dialog now exposes `.headline`, `.supporting-text`, and `.actions`, clamps and centers
+    its panel to Material 280..560dp bounds with a 24dp viewport margin, proves 16/24dp content
+    spacing and panel labelled/described relations, and keeps shared modal fade/rise/scale motion
+    green. The gap was Material recipe/proof density, not core or kit overlay policy.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_dialog_layout_motion_packet_v2.md`
 
 ## Proof Note Template
 
