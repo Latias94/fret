@@ -479,6 +479,8 @@
     "ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items/command.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items/item_methods.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo/combo.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo/selectables.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/disclosure.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/text_models.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/boolean_wrappers.rs",

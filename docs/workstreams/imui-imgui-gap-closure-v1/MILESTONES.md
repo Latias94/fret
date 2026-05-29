@@ -113,6 +113,13 @@ forwarding, and `menu_selection_surface/context_popup.rs` owns context-menu popu
 public trait expansion points in `facade_writer.rs` now call these child macros directly, while
 the existing behavior/inherent wrapper owners remain unchanged.
 
+2026-05-29 facade selectable/combo inherent-wrapper sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo.rs` is now a module hub.
+`selection_combo/selectables.rs` owns selectable and multi-selectable inherent wrappers, including
+disabled checks and focusable recording, while `selection_combo/combo.rs` owns direct combo inherent
+wrappers with the same focusable recording behavior. The public inherent method names, trait
+delegation paths, and `fret-imui` thin boundary remain unchanged.
+
 2026-05-29 facade model surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but checkbox/radio/switch, slider/combo model, input text

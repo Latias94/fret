@@ -456,6 +456,38 @@ Focused gates:
 - `cargo nextest run -p fret-imui models_combo --no-fail-fast`: pass (11 passed, 175 skipped).
 - `cargo nextest run -p fret-imui multi_select --no-fail-fast`: pass (1 passed, 185 skipped).
 
+## Facade Selectable/Combo Inherent Wrapper Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade selectable/combo inherent wrapper behavior ownership split into
+selectable and combo child owners without changing public inherent method names, focusable
+recording, disabled checks, selectable/multi-selectable delegation, combo delegation, or
+`fret-imui` thinness.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo.rs` is now a module hub for the two
+  selectable/combo inherent wrapper owners.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo/selectables.rs` owns selectable and
+  multi-selectable inherent wrappers, including disabled checks and focusable recording.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo/combo.rs` owns direct combo
+  inherent wrappers, including disabled checks and focusable recording.
+- `tools/gate_imui_workstream_source.py` checks the new child owners and rejects focusable-recording
+  wrapper bodies from drifting back into `selection_combo.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke
+  --test imui_combo_smoke --no-fail-fast`: pass (3 passed).
+- `cargo nextest run -p fret-imui models_combo multi_select --no-fail-fast`: pass (12 passed,
+  174 skipped).
+
 ## Facade Model Surface Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI facade model/control trait default method declarations split out of the root
