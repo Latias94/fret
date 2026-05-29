@@ -66,6 +66,13 @@ module/re-export hub. `menu_tabs/menu.rs` owns menu-bar forwarding to
 `TabBarResponse` return from `tab_family_controls::tab_bar_element`. The public facade methods,
 build-focus forwarding, menu/tab routing, and `container_methods` re-export paths remain unchanged.
 
+2026-05-29 facade container wrapper ListBox routing result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections.rs` now delegates
+inherent `list_box_with_options(...)` to `container_methods::list_box_with_options(...)` instead of
+constructing `list_box_controls::list_box_element` directly. This keeps ListBox concrete routing in
+the collection method owner and makes inherent ListBox, Table, and VirtualList wrappers follow the
+same delegation shape.
+
 2026-05-29 facade floating surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but floating layer/area, popup open/drop/begin,

@@ -97,6 +97,12 @@ Last updated: 2026-05-29
       Result: `facade_writer/container_methods/menu_tabs.rs` is now a module/re-export hub.
       `menu_tabs/menu.rs` owns menu-bar forwarding, and `menu_tabs/tabs.rs` owns tab-bar forwarding
       and response return.
+- [x] Route the IMUI facade inherent ListBox wrapper through the collection method owner instead of
+      direct `list_box_controls` element construction without changing public inherent method names,
+      build-focus forwarding, or ListBox behavior.
+      Result: `facade_writer/container_wrappers/collections.rs` now delegates
+      `list_box_with_options(...)` to `container_methods::list_box_with_options(...)`, matching
+      the Table and VirtualList wrapper pattern.
 - [x] Split IMUI facade floating/popup/tooltip/drag/window trait default method declarations out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, floating area/window, popup, tooltip,

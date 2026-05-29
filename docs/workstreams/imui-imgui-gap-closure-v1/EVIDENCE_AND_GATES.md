@@ -244,6 +244,34 @@ Focused gates:
 - `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass (18 passed,
   168 skipped).
 
+## Facade Container Wrapper ListBox Routing Evidence - 2026-05-29
+
+Claim verified: the IMUI facade inherent ListBox wrapper now delegates through the collection
+method owner instead of constructing the ListBox element directly, without changing public inherent
+method names, build-focus forwarding, or ListBox behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections.rs` delegates
+  `list_box_with_options(...)` to `container_methods::list_box_with_options(...)`.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections/list_box.rs` remains
+  the concrete owner of `list_box_controls::list_box_element` routing.
+- `tools/gate_imui_workstream_source.py` now rejects `list_box_controls::list_box_element` from
+  drifting back into `container_wrappers/collections.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui
+  list_box_container_stamps_semantics_scroll_and_hosts_selectables --no-fail-fast`: pass
+  (1 passed, 185 skipped).
+
 ## Facade Floating Surface Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI facade floating/popup/tooltip/drag/window trait default method declarations

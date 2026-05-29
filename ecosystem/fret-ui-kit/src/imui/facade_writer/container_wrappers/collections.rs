@@ -24,9 +24,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
         let build_focus = self.build_focus.clone();
-        let element = self
-            .with_cx_mut(|cx| list_box_controls::list_box_element(cx, id, build_focus, options, f));
-        self.add(element);
+        container_methods::list_box_with_options(self, build_focus, id, options, f);
     }
 
     pub fn table(
