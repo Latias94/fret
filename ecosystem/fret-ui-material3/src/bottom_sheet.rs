@@ -12,8 +12,9 @@ use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::{DismissReason, DismissRequestCx, OnActivate, OnDismissRequest};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetEdge, LayoutStyle, Length, MainAlign,
-    Overflow, PressableA11y, PressableProps, RingPlacement, RingStyle,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, FractionalRenderTransformProps, InsetEdge,
+    InteractivityGateProps, LayoutStyle, Length, MainAlign, Overflow, PressableA11y,
+    PressableProps, RingPlacement, RingStyle,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
@@ -21,10 +22,15 @@ use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
+use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{absolute_region_layout, diagnostic_anchor, part_test_id};
-use crate::motion;
+use crate::motion::{self, SpringAnimator};
 use crate::tokens::sheet_bottom as sheet_tokens;
+
+const BOTTOM_SHEET_PANE_LABEL: &str = "Bottom sheet";
+const BOTTOM_SHEET_CLOSE_LABEL: &str = "Close sheet";
+const BOTTOM_SHEET_DRAG_HANDLE_LABEL: &str = "Drag handle";
 
 fn default_modal_bottom_sheet_test_id() -> Arc<str> {
     static ID: OnceLock<Arc<str>> = OnceLock::new();
@@ -176,9 +182,17 @@ impl DockedBottomSheet {
 
             let chrome_test_id = test_id.as_ref().map(|id| part_test_id(id, "chrome"));
 
+            let semantics_role = if is_modal {
+                SemanticsRole::Dialog
+            } else {
+                SemanticsRole::Group
+            };
+            let semantics_label = is_modal.then(|| Arc::<str>::from(BOTTOM_SHEET_PANE_LABEL));
+
             cx.semantics(
                 fret_ui::element::SemanticsProps {
-                    role: SemanticsRole::Group,
+                    role: semantics_role,
+                    label: semantics_label,
                     test_id,
                     ..Default::default()
                 },
@@ -241,7 +255,7 @@ impl ModalBottomSheet {
             scrim_opacity: 0.32,
             open_duration_ms: None,
             close_duration_ms: None,
-            easing_key: Some(Arc::<str>::from("md.sys.motion.easing.emphasized")),
+            easing_key: None,
             on_dismiss_request: None,
             drag_handle: true,
             test_id: None,
@@ -331,42 +345,21 @@ impl ModalBottomSheet {
                 .get_model_copied(&open, Invalidation::Layout)
                 .unwrap_or(false);
 
-            let (default_duration_ms, bezier, scrim_base) = {
+            let scrim_base = {
                 let theme = Theme::global(&*cx.app);
-                let default_duration_ms = theme
-                    .duration_ms_by_key("md.sys.motion.duration.medium2")
-                    .unwrap_or(300);
-                let easing_key = easing_key
-                    .as_deref()
-                    .unwrap_or("md.sys.motion.easing.emphasized");
-                let bezier =
-                    theme
-                        .easing_by_key(easing_key)
-                        .unwrap_or(fret_ui::theme::CubicBezier {
-                            x1: 0.0,
-                            y1: 0.0,
-                            x2: 1.0,
-                            y2: 1.0,
-                        });
-                let scrim_base = theme.color_token("md.sys.color.scrim");
-                (default_duration_ms, bezier, scrim_base)
+                theme.color_token("md.sys.color.scrim")
             };
 
-            let open_ms = open_duration_ms.unwrap_or(default_duration_ms);
-            let close_ms = close_duration_ms.unwrap_or(default_duration_ms);
-            let open_ticks = motion::ms_to_frames(open_ms);
-            let close_ticks = motion::ms_to_frames(close_ms);
-
-            let transition = OverlayController::transition_with_durations_and_cubic_bezier(
+            let motion = drive_modal_bottom_sheet_motion(
                 cx,
                 open_now,
-                open_ticks,
-                close_ticks,
-                bezier,
+                open_duration_ms,
+                close_duration_ms,
+                easing_key.as_deref(),
             );
             let presence = OverlayPresence {
-                present: transition.present,
-                interactive: open_now,
+                present: motion.present,
+                interactive: motion.interactive,
             };
 
             let underlay_el = underlay(cx);
@@ -376,8 +369,8 @@ impl ModalBottomSheet {
                     .number_by_key("md.sys.fret.material.sheet.bottom.docked.modal.scrim.opacity")
                     .unwrap_or(scrim_opacity)
                     .clamp(0.0, 1.0);
-                let scrim_alpha = (scrim_base.a * scrim_opacity * transition.progress)
-                    .clamp(0.0, 1.0);
+                let scrim_alpha =
+                    (scrim_base.a * scrim_opacity * motion.scrim_progress).clamp(0.0, 1.0);
                 let scrim_color = with_alpha(scrim_base, scrim_alpha);
 
                 let dismiss_handler: OnDismissRequest = on_dismiss_request.unwrap_or_else(|| {
@@ -399,21 +392,15 @@ impl ModalBottomSheet {
 
                 let (scrim_test_id, scrim_chrome_test_id, sheet_test_id) =
                     cx.slot_state(DerivedTestIds::default, |st| {
-                    if st.base.as_deref() != test_id.as_deref() {
-                        st.base = test_id.clone();
-                        st.scrim =
-                            st.base.as_ref().map(|id| part_test_id(id, "scrim"));
-                        st.scrim_chrome =
-                            st.scrim.as_ref().map(|id| part_test_id(id, "chrome"));
-                        st.sheet =
-                            st.base.as_ref().map(|id| part_test_id(id, "sheet"));
-                    }
-                    (
-                        st.scrim.clone(),
-                        st.scrim_chrome.clone(),
-                        st.sheet.clone(),
-                    )
-                });
+                        if st.base.as_deref() != test_id.as_deref() {
+                            st.base = test_id.clone();
+                            st.scrim = st.base.as_ref().map(|id| part_test_id(id, "scrim"));
+                            st.scrim_chrome =
+                                st.scrim.as_ref().map(|id| part_test_id(id, "chrome"));
+                            st.sheet = st.base.as_ref().map(|id| part_test_id(id, "sheet"));
+                        }
+                        (st.scrim.clone(), st.scrim_chrome.clone(), st.sheet.clone())
+                    });
 
                 let overlay_root = cx.named("modal_bottom_sheet_root", |cx| {
                     let mut layout = LayoutStyle::default();
@@ -434,6 +421,7 @@ impl ModalBottomSheet {
                                         focusable: false,
                                         a11y: PressableA11y {
                                             test_id: scrim_test_id.clone(),
+                                            label: Some(Arc::<str>::from(BOTTOM_SHEET_CLOSE_LABEL)),
                                             ..Default::default()
                                         },
                                         layout: absolute_fill_layout(),
@@ -445,7 +433,9 @@ impl ModalBottomSheet {
                                                 let dismiss_handler = dismiss_handler.clone();
                                                 Arc::new(move |host, action_cx, _reason| {
                                                     let mut dismiss_cx = DismissRequestCx::new(
-                                                        DismissReason::OutsidePress { pointer: None },
+                                                        DismissReason::OutsidePress {
+                                                            pointer: None,
+                                                        },
                                                     );
                                                     dismiss_handler(
                                                         host,
@@ -479,11 +469,7 @@ impl ModalBottomSheet {
                             });
 
                             let panel = cx.named("panel", |cx| {
-                                let opacity = transition.progress;
-                                let translate_y = Px((1.0 - transition.progress) * cx.bounds.size.height.0);
-                                let transform = fret_core::Transform2D::translation(
-                                    fret_core::Point::new(Px(0.0), translate_y),
-                                );
+                                let translate_y_fraction = 1.0 - motion.sheet_progress;
 
                                 let mut align = FlexProps::default();
                                 align.direction = Axis::Vertical;
@@ -493,27 +479,32 @@ impl ModalBottomSheet {
                                 align.layout.size.width = Length::Fill;
                                 align.layout.size.height = Length::Fill;
 
-                                let docked = DockedBottomSheet::new()
-                                    .variant(DockedBottomSheetVariant::Modal)
-                                    .drag_handle(drag_handle)
-                                    .test_id(sheet_test_id.clone().unwrap_or_else(|| {
-                                        default_modal_bottom_sheet_test_id()
-                                    }));
+                                let docked =
+                                    DockedBottomSheet::new()
+                                        .variant(DockedBottomSheetVariant::Modal)
+                                        .drag_handle(drag_handle)
+                                        .test_id(sheet_test_id.clone().unwrap_or_else(|| {
+                                            default_modal_bottom_sheet_test_id()
+                                        }));
 
                                 let content_el = docked.into_element(cx, move |cx| content(cx));
-                                let trapped = focus_scope_prim::focus_trap(cx, move |_cx| {
-                                    vec![content_el]
-                                });
+                                let trapped =
+                                    focus_scope_prim::focus_trap(cx, move |_cx| vec![content_el]);
 
-                                let stacked = cx.flex(align, move |_cx| vec![trapped]);
+                                let mut transform_layout = LayoutStyle::default();
+                                transform_layout.size.width = Length::Fill;
+                                let moving_sheet = cx.fractional_render_transform_props(
+                                    FractionalRenderTransformProps {
+                                        layout: transform_layout,
+                                        translate_x_fraction: 0.0,
+                                        translate_y_fraction,
+                                    },
+                                    move |_cx| vec![trapped],
+                                );
 
-                                fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
-                                    cx,
-                                    opacity,
-                                    transform,
-                                    presence.interactive,
-                                    vec![stacked],
-                                )
+                                let stacked = cx.flex(align, move |_cx| vec![moving_sheet]);
+
+                                wrap_interactivity_gated(cx, presence.interactive, vec![stacked])
                             });
 
                             vec![scrim, panel]
@@ -539,6 +530,129 @@ impl ModalBottomSheet {
             underlay_el
         })
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ModalBottomSheetMotion {
+    present: bool,
+    interactive: bool,
+    sheet_progress: f32,
+    scrim_progress: f32,
+}
+
+#[track_caller]
+fn drive_modal_bottom_sheet_motion<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_duration_ms: Option<u32>,
+    close_duration_ms: Option<u32>,
+    easing_key: Option<&str>,
+) -> ModalBottomSheetMotion {
+    if open_duration_ms.is_some() || close_duration_ms.is_some() || easing_key.is_some() {
+        let (default_duration_ms, bezier) = {
+            let theme = Theme::global(&*cx.app);
+            let default_duration_ms = theme
+                .duration_ms_by_key("md.sys.motion.duration.medium2")
+                .unwrap_or(300);
+            let easing_key = easing_key.unwrap_or("md.sys.motion.easing.emphasized");
+            let bezier = theme
+                .easing_by_key(easing_key)
+                .unwrap_or(fret_ui::theme::CubicBezier {
+                    x1: 0.0,
+                    y1: 0.0,
+                    x2: 1.0,
+                    y2: 1.0,
+                });
+            (default_duration_ms, bezier)
+        };
+
+        let open_ms = open_duration_ms.unwrap_or(default_duration_ms);
+        let close_ms = close_duration_ms.unwrap_or(default_duration_ms);
+        let transition = OverlayController::transition_with_durations_and_cubic_bezier(
+            cx,
+            open,
+            motion::ms_to_frames(open_ms),
+            motion::ms_to_frames(close_ms),
+            bezier,
+        );
+        return ModalBottomSheetMotion {
+            present: transition.present,
+            interactive: open,
+            sheet_progress: transition.progress,
+            scrim_progress: transition.progress,
+        };
+    }
+
+    #[derive(Default)]
+    struct State {
+        sheet: SpringAnimator,
+        scrim: SpringAnimator,
+    }
+
+    let now_frame = cx.frame_id.0;
+    let target = if open { 1.0 } else { 0.0 };
+    let (sheet_spec, scrim_spec) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultSpatial),
+            sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultEffects),
+        )
+    };
+
+    let (sheet_progress, scrim_progress, animating) = cx.slot_state(State::default, |st| {
+        if !st.sheet.is_initialized() {
+            st.sheet.reset(now_frame, target);
+        }
+        if !st.scrim.is_initialized() {
+            st.scrim.reset(now_frame, target);
+        }
+
+        st.sheet.set_target(now_frame, target, sheet_spec);
+        st.scrim.set_target(now_frame, target, scrim_spec);
+        st.sheet.advance(now_frame);
+        st.scrim.advance(now_frame);
+
+        (
+            st.sheet.value(),
+            st.scrim.value(),
+            st.sheet.is_active() || st.scrim.is_active(),
+        )
+    });
+
+    if animating {
+        cx.request_frame();
+    }
+
+    let present = open || animating || sheet_progress > 0.001 || scrim_progress > 0.001;
+    ModalBottomSheetMotion {
+        present,
+        interactive: open,
+        sheet_progress,
+        scrim_progress,
+    }
+}
+
+fn fullscreen_motion_layout() -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.height = Length::Fill;
+    layout
+}
+
+fn wrap_interactivity_gated<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    interactive: bool,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    let layout = fullscreen_motion_layout();
+    cx.interactivity_gate_props(
+        InteractivityGateProps {
+            layout,
+            present: true,
+            interactive,
+        },
+        move |_cx| children,
+    )
 }
 
 fn drag_handle_element<H: UiHost>(
@@ -586,6 +700,7 @@ fn drag_handle_element<H: UiHost>(
     cx.semantics(
         fret_ui::element::SemanticsProps {
             role: SemanticsRole::Generic,
+            label: Some(Arc::<str>::from(BOTTOM_SHEET_DRAG_HANDLE_LABEL)),
             test_id: drag_handle_test_id.cloned(),
             ..Default::default()
         },

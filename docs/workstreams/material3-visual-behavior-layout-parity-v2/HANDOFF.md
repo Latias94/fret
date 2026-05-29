@@ -1,7 +1,7 @@
 # Material 3 Visual Behavior Layout Parity v2 - Handoff
 
 Status: Active
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 ## Current State
 
@@ -88,6 +88,12 @@ M3PV2-045 is complete: TimePicker 24h hour mode now renders Compose-aligned oute
 inner `12..23` rings, uses the Compose ring split for pointer selection, and keeps selector radius
 in the spatial motion runtime. TimePicker layout remains v2-covered with the 24h ring gap closed.
 
+M3PV2-046 is complete: BottomSheet modal motion and semantics are now v2-covered for the current
+recipe surface. The packet found a recipe gap where the sheet slid by viewport height, faded the
+panel, and exposed the modal surface as `Group`; ModalBottomSheet now uses Material
+`DefaultSpatial` / `DefaultEffects` motion, translates by the sheet surface's own height, keeps
+the panel opaque, and exposes dialog/scrim/drag-handle semantics.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -98,7 +104,7 @@ in the spatial motion runtime. TimePicker layout remains v2-covered with the 24h
 
 ## Next Recommended Action
 
-Continue M3PV2-020 with the next uncovered Material3 packet.
+Continue with the next uncovered Material3 packet from the matrix.
 
 ## Useful Gates
 

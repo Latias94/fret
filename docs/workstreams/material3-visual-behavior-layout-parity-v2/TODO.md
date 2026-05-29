@@ -1,7 +1,7 @@
 # Material 3 Visual Behavior Layout Parity v2 - TODO
 
 Status: Active
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 Task IDs use `M3PV2-*`.
 
@@ -507,6 +507,26 @@ Task IDs use `M3PV2-*`.
   Handoff: Shared indication changes require at least two consumer proofs.
 
 ## M4 - Overlay And Feedback Interaction Depth
+
+- [x] M3PV2-046 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/bottom_sheet.rs,ecosystem/fret-ui-material3/tests/bottom_sheet_motion.rs,goldens/material3-headless/v1/material3-bottom-sheet.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close BottomSheet layout/motion/accessibility drift by matching Compose's own-height
+  hidden anchor, Material motion-scheme channels, and modal sheet/scrim/drag-handle semantics.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --test bottom_sheet_motion`
+  failed because the modal sheet slid by nearly a full viewport height and exposed its sheet
+  surface as `Group`; green gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --test bottom_sheet_motion`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics material3_dialog_and_bottom_sheet_expose_stable_part_test_ids --test automation_surface`;
+  `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_bottom_sheet_suite_goldens_v1`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_bottom_sheet_suite_goldens_v1`.
+  Review: DONE. This found a Material recipe gap, not a core or kit mechanism gap. The default
+  modal sheet now uses `DefaultSpatial` for sheet offset, `DefaultEffects` for scrim alpha, moves
+  via a surface-height fractional render transform, and exposes dialog/scrim/drag-handle semantics.
+  Evidence: `artifacts/material3_bottom_sheet_motion_semantics_packet_v2.md`.
+  Handoff: BottomSheet layout, motion, and current semantics are v2-covered. Drag gestures,
+  partial expansion, predictive-back scaling, and cross-overlay policy comparison remain residual
+  work for M3PV2-050 or a later overlay packet.
 
 - [ ] M3PV2-050 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{menu.rs,dropdown_menu.rs,dialog.rs,bottom_sheet.rs,tooltip.rs,snackbar.rs},ecosystem/fret-ui-kit,tools/diag-scripts/ui-gallery/material3]
   Goal: Audit dismissal, focus containment/restore, live region, action close parts, sheet motion,

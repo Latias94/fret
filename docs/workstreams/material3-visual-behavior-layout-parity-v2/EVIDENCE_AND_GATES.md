@@ -1,7 +1,7 @@
 # Material 3 Visual Behavior Layout Parity v2 - Evidence And Gates
 
 Status: Active
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 ## Smallest Current Repro
 
@@ -62,6 +62,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_search_view_a11y_relations_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_multiline_line_limits_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_motion_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_bottom_sheet_motion_semantics_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -470,6 +471,24 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
   - Result: 24h hour labels now render as two 12-position rings, selector radius participates in
     spatial motion, and pointer-driven 24h hour selection uses the Compose ring split.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_24h_clock_face_layout_packet_v2.md`
+- 2026-05-29: M3PV2-046 closed BottomSheet own-height slide, modal semantics, and default motion.
+  - Sources: Compose Material3 `ModalBottomSheet.kt` uses `DefaultEffects` for scrim alpha;
+    `BottomSheet.kt` uses `defaultSpatialSpec` for sheet offset and anchors `Hidden` one sheet
+    height below `Expanded`; `SheetDefaults.kt` and the English string table provide `Close sheet`,
+    `Bottom sheet`, and `Drag handle` semantics.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --test bottom_sheet_motion`
+    failed because the first open transform was `ty=500.95712` in a `520px` viewport and the modal
+    sheet exposed `Group` rather than `Dialog`.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --test bottom_sheet_motion`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics material3_dialog_and_bottom_sheet_expose_stable_part_test_ids --test automation_surface`
+  - `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_bottom_sheet_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_bottom_sheet_suite_goldens_v1`
+  - Result: ModalBottomSheet now uses Material spring channels by default, translates the sheet by
+    its own height via fractional render transform, keeps the panel from fading, exposes dialog /
+    scrim / drag-handle semantics, and refreshes bottom sheet headless goldens for the intentional
+    settled signature change.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_bottom_sheet_motion_semantics_packet_v2.md`
 
 ## Proof Note Template
 

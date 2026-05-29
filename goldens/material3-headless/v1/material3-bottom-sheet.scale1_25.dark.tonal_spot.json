@@ -189,9 +189,6 @@
           "order": 0
         },
         {
-          "kind": "push_transform"
-        },
-        {
           "kind": "shadow_r_rect",
           "order": 0
         },
@@ -230,9 +227,6 @@
         },
         {
           "kind": "pop_clip"
-        },
-        {
-          "kind": "pop_transform"
         }
       ],
       "quads": [

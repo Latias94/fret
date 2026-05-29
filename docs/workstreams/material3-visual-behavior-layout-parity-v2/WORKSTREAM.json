@@ -3,7 +3,7 @@
   "slug": "material3-visual-behavior-layout-parity-v2",
   "title": "Material 3 Visual Behavior Layout Parity v2",
   "status": "active",
-  "updated": "2026-05-28",
+  "updated": "2026-05-29",
   "scope_kind": "fearless_refactor",
   "problem": "Material3 v1 closed component coverage and follow-ons, but did not prove shadcn-level style, layout, behavior, accessibility, and motion parity. This lane turns that residual risk into an axis-driven refactor plan with bounded packets and gates.",
   "authoritative_docs": [
@@ -95,6 +95,7 @@
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_modal_motion_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_clock_face_motion_packet_v2.md",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_time_picker_24h_clock_face_layout_packet_v2.md",
+    "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_bottom_sheet_motion_semantics_packet_v2.md",
     "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md",
     "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json",
     "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_parity_suite_report_v1.json",

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_date": "2026-05-28",
+  "generated_date": "2026-05-29",
   "source_matrix": "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json",
   "source_closure_audit": "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md",
   "purpose": "Track shadcn-level Material3 parity maturity by axis: style chrome, layout density, behavior state, accessibility semantics, and motion interaction.",
@@ -23,7 +23,7 @@
   "components": [
     {"id":"autocomplete","family":"field","priority":"p0","style":"covered_v2","layout":"covered_v2","behavior":"covered_v1","accessibility":"covered_v2","motion":"covered_v2","first_v2_gate":"autocomplete listbox selector, combobox semantics, popup field-chrome width, selectable item, and popup/chevron motion packets","owner_bias":"material_recipe+kit_policy"},
     {"id":"badge","family":"surface","priority":"p2","style":"covered_v1","layout":"covered_v1","behavior":"low_risk","accessibility":"seeded","motion":"low_risk","first_v2_gate":"badge anchor and label semantics smoke","owner_bias":"material_recipe"},
-    {"id":"bottom_sheet","family":"overlay_feedback","priority":"p1","style":"covered_v1","layout":"needs_v2_packet","behavior":"covered_v1","accessibility":"seeded","motion":"needs_v2_packet","first_v2_gate":"bottom sheet drag handle, motion, and focus packet","owner_bias":"material_recipe+kit_policy"},
+    {"id":"bottom_sheet","family":"overlay_feedback","priority":"p1","style":"covered_v1","layout":"covered_v2","behavior":"covered_v1","accessibility":"covered_v2","motion":"covered_v2","first_v2_gate":"bottom sheet own-height slide, Material spring motion, scrim/sheet/drag-handle semantics packet","owner_bias":"material_recipe+kit_policy"},
     {"id":"button","family":"surface","priority":"p1","style":"seeded","layout":"seeded","behavior":"covered_v1","accessibility":"seeded","motion":"needs_v2_packet","first_v2_gate":"button state matrix and elevation/state-layer packet","owner_bias":"material_foundation+material_recipe"},
     {"id":"card","family":"surface","priority":"p2","style":"seeded","layout":"caller_owned_layout","behavior":"low_risk","accessibility":"seeded","motion":"seeded","first_v2_gate":"card shape elevation and interactive variant packet","owner_bias":"material_recipe"},
     {"id":"carousel_item","family":"surface","priority":"p2","style":"covered_v1","layout":"needs_v2_packet","behavior":"seeded","accessibility":"seeded","motion":"needs_v2_packet","first_v2_gate":"carousel item sizing and gesture/motion packet","owner_bias":"material_recipe"},
