@@ -27,6 +27,15 @@ menu/tab bars, ListBox, grid, table, virtual-list, scroll, and child-region trai
 declarations now live in `facade_writer/container_surface.rs` and are expanded into the public
 trait. Existing `container_methods/*` owners still carry the concrete layout/container behavior.
 
+2026-05-29 facade container surface sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/container_surface.rs` is now a module/re-export hub.
+`container_surface/layout.rs` owns item-flow, same-line, spacing, indent, horizontal, and vertical
+forwarding; `container_surface/menu_tabs.rs` owns menu-bar and tab-bar forwarding;
+`container_surface/collections.rs` owns ListBox, grid, table, and virtual-list forwarding; and
+`container_surface/regions.rs` owns scroll and child-region forwarding. The public trait expansion
+points in `facade_writer.rs` now call these child macros directly, while concrete
+`container_methods/*` behavior owners remain unchanged.
+
 2026-05-29 facade floating surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but floating layer/area, popup open/drop/begin,

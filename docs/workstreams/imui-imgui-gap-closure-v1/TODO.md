@@ -61,6 +61,15 @@ Last updated: 2026-05-29
       `facade_writer/container_surface.rs`. `container_surface.rs` owns container/layout trait
       default declarations/forwarding, while existing `container_methods/*` owners still carry the
       concrete layout/container behavior.
+- [x] Split IMUI facade container surface macro owner into layout, menu/tab, collection, and
+      region child owners without changing the public `UiWriterImUiFacadeExt` trait, caller import
+      behavior, item-flow, menu/tab bar, ListBox, grid, table, virtual-list, scroll, child-region,
+      or concrete `container_methods/*` behavior ownership.
+      Result: `facade_writer/container_surface.rs` is now a module/re-export hub.
+      `container_surface/layout.rs` owns layout/spacing forwarding,
+      `container_surface/menu_tabs.rs` owns menu-bar and tab-bar forwarding,
+      `container_surface/collections.rs` owns ListBox/grid/table/virtual-list forwarding, and
+      `container_surface/regions.rs` owns scroll and child-region forwarding.
 - [x] Split IMUI facade floating/popup/tooltip/drag/window trait default method declarations out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, floating area/window, popup, tooltip,
