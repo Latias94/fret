@@ -1031,6 +1031,12 @@ assembly, hidden-column filtering, fallback empty-cell insertion, body cell wrap
 selection, and body row wrapping. `table_controls/render.rs` keeps palette, visible-column,
 scroll/header decisions, root chrome, semantics, and final `TableResponse` assembly.
 
+2026-05-30 table render root owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/render/root.rs` now owns root container props,
+vertical stack mounting, optional group semantics, and root test-id forwarding.
+`table_controls/render.rs` keeps palette resolution, visible-column filtering, scroll/header/body
+dispatch, and final `TableResponse` aggregation.
+
 2026-05-27 table-column visibility response owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_column_visibility/response.rs` now owns
 `TableColumnVisibilityMenuResponse`, `TableColumnVisibilityHeaderContextMenuResponse`, and

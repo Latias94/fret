@@ -1835,6 +1835,13 @@ Last updated: 2026-05-30
       hidden-column filtering, fallback empty-cell insertion, body cell wrapping, and body row
       wrapping. `render.rs` keeps palette, visible-column, scroll/header decisions, root chrome,
       semantics, and final `TableResponse` assembly.
+- [x] Split IMUI table root chrome/semantics assembly out of
+      `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` into a private root owner without
+      changing palette resolution, visible-column/header/body decisions, row gaps, root test ID
+      semantics, chrome border/radius/background, or aggregate `TableResponse` headers.
+      Result: `table_controls/render/root.rs` owns root container props, vertical stack mounting,
+      optional group semantics, and root test-id forwarding. `render.rs` keeps palette,
+      visible-column, scroll/header/body dispatch, and final response aggregation.
 - [x] Split IMUI table builder row/cell collection out of
       `ecosystem/fret-ui-kit/src/imui/table_controls.rs` into a private builder owner without
       changing `table(...)`/`table_with_options(...)` facade calls, public `ImUiTable` /

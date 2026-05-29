@@ -5208,6 +5208,35 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Table Render Root Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI table root chrome/semantics assembly moved into a private root owner without
+changing palette resolution, visible-column/header/body decisions, row gaps, root test ID semantics,
+chrome border/radius/background, or aggregate `TableResponse` headers.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` keeps palette resolution,
+  visible-column filtering, scroll/header/body dispatch, and final `TableResponse` aggregation.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/render/root.rs` owns root container props, vertical
+  stack mounting, optional group semantics, row gap forwarding, and root test-id forwarding.
+- `tools/gate_imui_workstream_source.py` now rejects root chrome/semantics assembly from drifting
+  back into `render.rs` while checking the new root owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_controls::tests --no-fail-fast`:
+  pass; 7 filtered table/selectable unit tests passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`: pass;
+  9 table smoke tests passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Table-Column Visibility Response Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI table-column visibility response structs and accessors moved into a private

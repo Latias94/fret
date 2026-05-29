@@ -1,5 +1,4 @@
-use fret_core::{Corners, Edges, Px, SemanticsRole};
-use fret_ui::element::{AnyElement, ContainerProps, Length, SemanticsProps};
+use fret_ui::element::AnyElement;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -8,6 +7,7 @@ use super::{header_row, palette, test_ids};
 use crate::imui::TableColumnPin;
 
 mod body_rows;
+mod root;
 
 pub(super) fn render_table<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -76,33 +76,7 @@ pub(super) fn render_table<H: UiHost>(
     }
     children.extend(body_rows);
 
-    let mut root = ContainerProps::default();
-    root.layout.size.width = Length::Fill;
-    root.layout.size.height = Length::Auto;
-    root.background = Some(palette.table_bg);
-    root.border = Edges::all(Px(1.0));
-    root.border_color = Some(palette.border);
-    root.corner_radii = Corners::all(Px(6.0));
-
-    let table = cx.container(root, move |cx| {
-        vec![
-            crate::ui::v_flex(move |_cx| children)
-                .gap_metric(options.row_gap.clone())
-                .justify(crate::Justify::Start)
-                .items(crate::Items::Stretch)
-                .no_wrap()
-                .into_element(cx),
-        ]
-    });
-
-    let element = if let Some(test_id) = options.test_id {
-        let mut semantics = SemanticsProps::default();
-        semantics.role = SemanticsRole::Group;
-        semantics.test_id = Some(test_id);
-        cx.semantics(semantics, move |_cx| vec![table])
-    } else {
-        table
-    };
+    let element = root::table_root_element(cx, children, &palette, options);
 
     (
         element,
