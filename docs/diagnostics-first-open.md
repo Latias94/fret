@@ -217,6 +217,10 @@ current `diag stats`, `diag layout-perf-summary`, `diag memory-summary`, `diag t
 `imui-p3-multiwindow-parity` campaign validation command, and the real-host Wayland acceptance
 runbook at
 `docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md`.
+Route action objects also carry stable `id`, `category`, `primary`, and `requires_bundle` metadata
+owned by `docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/WORKSTREAM.json`, so GUI and
+future command-palette consumers can distinguish launch actions from bundle-backed drill-downs
+without parsing command strings.
 Local Wayland policy-skip evidence stays explicitly separate from compositor acceptance.
 
 Open:

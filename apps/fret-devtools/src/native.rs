@@ -207,6 +207,8 @@ const DEVTOOLS_DEBUG_TRACE_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json";
 const DEVTOOLS_DEMO_METRICS_DEBUG_OWNER_DOC: &str =
     "docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json";
+const DEVTOOLS_DEMO_METRICS_DEBUG_ACTION_METADATA_DOC: &str =
+    "docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/WORKSTREAM.json";
 const DEVTOOLS_DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC: &str =
     "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json";
 const DEVTOOLS_DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC: &str =
@@ -221,30 +223,54 @@ const CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS: &str =
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct DemoMetricsDebugActionSpec {
+    id: &'static str,
     label: &'static str,
     command: &'static str,
+    category: &'static str,
+    requires_bundle: bool,
+    primary: bool,
 }
 
 const DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS: &[DemoMetricsDebugActionSpec] = &[
     DemoMetricsDebugActionSpec {
+        id: "open_workbench",
         label: "open workbench",
         command: DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND,
+        category: "demo",
+        requires_bundle: false,
+        primary: true,
     },
     DemoMetricsDebugActionSpec {
+        id: "product_discovery",
         label: "run product discovery",
         command: IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND,
+        category: "product-gate",
+        requires_bundle: false,
+        primary: false,
     },
     DemoMetricsDebugActionSpec {
+        id: "inspect_metrics_stats",
         label: "inspect metrics stats",
         command: DEVTOOLS_METRICS_STATS_COMMAND,
+        category: "metrics",
+        requires_bundle: true,
+        primary: false,
     },
     DemoMetricsDebugActionSpec {
+        id: "inspect_debug_trace",
         label: "inspect debug trace",
         command: DEVTOOLS_DEBUG_TRACE_COMMAND,
+        category: "debug",
+        requires_bundle: true,
+        primary: false,
     },
     DemoMetricsDebugActionSpec {
+        id: "validate_docking_campaign",
         label: "validate docking campaign",
         command: DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND,
+        category: "handoff",
+        requires_bundle: false,
+        primary: false,
     },
 ];
 
@@ -254,6 +280,18 @@ fn demo_metrics_debug_action_command_text() -> String {
         .map(|action| format!("{}: {}", action.label, action.command))
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+fn demo_metrics_debug_action_metadata_lines() -> Vec<String> {
+    DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS
+        .iter()
+        .map(|action| {
+            format!(
+                "action metadata: {} | id={} | category={} | primary={} | requires_bundle={}",
+                action.label, action.id, action.category, action.primary, action.requires_bundle
+            )
+        })
+        .collect()
 }
 
 #[derive(Clone)]
@@ -9490,9 +9528,10 @@ fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
     } else {
         artifacts_root
     };
-    vec![
+    let mut lines = vec![
         format!("route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}"),
         format!("route owner: {DEVTOOLS_DEMO_METRICS_DEBUG_OWNER_DOC}"),
+        format!("action metadata owner: {DEVTOOLS_DEMO_METRICS_DEBUG_ACTION_METADATA_DOC}"),
         format!("docking owner: {DEVTOOLS_DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC}"),
         format!("wayland acceptance: {DEVTOOLS_DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC}"),
         format!("artifacts root: {artifacts_root}"),
@@ -9506,6 +9545,9 @@ fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
         format!("action: inspect metrics stats -> {DEVTOOLS_METRICS_STATS_COMMAND}"),
         format!("action: inspect debug trace -> {DEVTOOLS_DEBUG_TRACE_COMMAND}"),
         format!("action: validate docking campaign -> {DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND}"),
+    ];
+    lines.extend(demo_metrics_debug_action_metadata_lines());
+    lines.extend([
         format!("demo editor workbench: {DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND}"),
         format!("demo editor proof supporting: {DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND}"),
         format!("demo editor notes: {DEVTOOLS_DEMO_EDITOR_NOTES_COMMAND}"),
@@ -9519,7 +9561,8 @@ fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
         format!("docking arbitration supporting: {DEVTOOLS_DOCKING_ARBITRATION_COMMAND}"),
         format!("docking campaign validate: {DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND}"),
         format!("docking policy-skip local: {DEVTOOLS_DOCKING_POLICY_SKIP_COMMAND}"),
-    ]
+    ]);
+    lines
 }
 
 fn devtools_workflow_run_lines(artifacts_root: &str) -> Vec<String> {
@@ -12036,6 +12079,9 @@ mod tests {
             "route owner: docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json"
         ));
         assert!(text.contains(
+            "action metadata owner: docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/WORKSTREAM.json"
+        ));
+        assert!(text.contains(
             "docking owner: docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"
         ));
         assert!(text.contains(
@@ -12062,6 +12108,12 @@ mod tests {
         ));
         assert!(text.contains(
             "action: validate docking campaign -> cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json"
+        ));
+        assert!(text.contains(
+            "action metadata: open workbench | id=open_workbench | category=demo | primary=true | requires_bundle=false"
+        ));
+        assert!(text.contains(
+            "action metadata: inspect debug trace | id=inspect_debug_trace | category=debug | primary=false | requires_bundle=true"
         ));
         assert!(text.contains("demo editor workbench: cargo run -p fret-demo --bin imui_editor_workbench_demo"));
         assert!(text.contains(
@@ -12124,6 +12176,9 @@ mod tests {
             CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS,
             "fret.devtools.demo_metrics_debug.copy_actions"
         );
+        let metadata = demo_metrics_debug_action_metadata_lines();
+        assert!(metadata.contains(&"action metadata: open workbench | id=open_workbench | category=demo | primary=true | requires_bundle=false".to_string()));
+        assert!(metadata.contains(&"action metadata: inspect metrics stats | id=inspect_metrics_stats | category=metrics | primary=false | requires_bundle=true".to_string()));
     }
 
     #[test]

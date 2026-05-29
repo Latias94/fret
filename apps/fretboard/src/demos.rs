@@ -91,6 +91,8 @@ const DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug";
 const DEMO_METRICS_DEBUG_DOC: &str = DIAG_FIRST_OPEN_DOC;
 const DEMO_METRICS_DEBUG_OWNER_DOC: &str =
     "docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json";
+const DEMO_METRICS_DEBUG_ACTION_METADATA_DOC: &str =
+    "docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/WORKSTREAM.json";
 const DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC: &str =
     "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json";
 const DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC: &str = "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md";
@@ -119,84 +121,156 @@ const DEBUG_HOTSPOTS_COMMAND: &str =
 const DEBUG_TRACE_COMMAND: &str = "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json";
 const DEMO_METRICS_DEBUG_DEMO_COMMANDS: &[RouteCommand] = &[
     RouteCommand {
+        id: "imui_editor_workbench",
         label: "demo editor workbench",
         command: DEMO_EDITOR_WORKBENCH_COMMAND,
+        category: "demo",
+        requires_bundle: false,
+        primary: true,
     },
     RouteCommand {
+        id: "imui_editor_proof_supporting",
         label: "demo editor proof supporting",
         command: DEMO_EDITOR_PROOF_COMMAND,
+        category: "demo",
+        requires_bundle: false,
+        primary: false,
     },
     RouteCommand {
+        id: "editor_notes",
         label: "demo editor notes",
         command: DEMO_EDITOR_NOTES_COMMAND,
+        category: "demo",
+        requires_bundle: false,
+        primary: false,
     },
     RouteCommand {
+        id: "editor_notes_device_shell",
         label: "demo device shell",
         command: DEMO_DEVICE_SHELL_COMMAND,
+        category: "demo",
+        requires_bundle: false,
+        primary: false,
     },
 ];
 const DEMO_METRICS_DEBUG_METRICS_COMMANDS: &[RouteCommand] = &[
     RouteCommand {
+        id: "metrics_stats",
         label: "metrics stats",
         command: METRICS_STATS_COMMAND,
+        category: "metrics",
+        requires_bundle: true,
+        primary: false,
     },
     RouteCommand {
+        id: "metrics_layout_perf",
         label: "metrics layout perf",
         command: METRICS_LAYOUT_PERF_COMMAND,
+        category: "metrics",
+        requires_bundle: true,
+        primary: false,
     },
     RouteCommand {
+        id: "metrics_memory",
         label: "metrics memory",
         command: METRICS_MEMORY_COMMAND,
+        category: "metrics",
+        requires_bundle: true,
+        primary: false,
     },
 ];
 const DEMO_METRICS_DEBUG_DEBUG_COMMANDS: &[RouteCommand] = &[
     RouteCommand {
+        id: "debug_triage",
         label: "debug triage",
         command: DEBUG_TRIAGE_COMMAND,
+        category: "debug",
+        requires_bundle: true,
+        primary: false,
     },
     RouteCommand {
+        id: "debug_hotspots",
         label: "debug hotspots",
         command: DEBUG_HOTSPOTS_COMMAND,
+        category: "debug",
+        requires_bundle: true,
+        primary: false,
     },
     RouteCommand {
+        id: "debug_trace",
         label: "debug trace",
         command: DEBUG_TRACE_COMMAND,
+        category: "debug",
+        requires_bundle: true,
+        primary: false,
     },
 ];
 const DEMO_METRICS_DEBUG_HANDOFF_COMMANDS: &[RouteCommand] = &[
     RouteCommand {
+        id: "docking_arbitration_supporting",
         label: "docking arbitration supporting",
         command: DEMO_DOCKING_ARBITRATION_COMMAND,
+        category: "handoff",
+        requires_bundle: false,
+        primary: false,
     },
     RouteCommand {
+        id: "docking_campaign_validate",
         label: "docking campaign validate",
         command: DOCKING_CAMPAIGN_VALIDATE_COMMAND,
+        category: "handoff",
+        requires_bundle: false,
+        primary: false,
     },
     RouteCommand {
+        id: "docking_policy_skip_local",
         label: "docking policy-skip local",
         command: DOCKING_POLICY_SKIP_COMMAND,
+        category: "handoff",
+        requires_bundle: false,
+        primary: false,
     },
 ];
 const DEMO_METRICS_DEBUG_ACTION_COMMANDS: &[RouteCommand] = &[
     RouteCommand {
+        id: "open_workbench",
         label: "open workbench",
         command: DEMO_EDITOR_WORKBENCH_COMMAND,
+        category: "demo",
+        requires_bundle: false,
+        primary: true,
     },
     RouteCommand {
+        id: "product_discovery",
         label: "run product discovery",
         command: IMUI_PRODUCT_CHAIN_DISCOVERY_COMMAND,
+        category: "product-gate",
+        requires_bundle: false,
+        primary: false,
     },
     RouteCommand {
+        id: "inspect_metrics_stats",
         label: "inspect metrics stats",
         command: METRICS_STATS_COMMAND,
+        category: "metrics",
+        requires_bundle: true,
+        primary: false,
     },
     RouteCommand {
+        id: "inspect_debug_trace",
         label: "inspect debug trace",
         command: DEBUG_TRACE_COMMAND,
+        category: "debug",
+        requires_bundle: true,
+        primary: false,
     },
     RouteCommand {
+        id: "validate_docking_campaign",
         label: "validate docking campaign",
         command: DOCKING_CAMPAIGN_VALIDATE_COMMAND,
+        category: "handoff",
+        requires_bundle: false,
+        primary: false,
     },
 ];
 
@@ -227,7 +301,7 @@ pub(crate) fn list_tool_apps(args: Vec<String>) -> Result<(), String> {
         }
         for route in first_open_routes() {
             println!(
-                "route: {}    # {} | actions: {} | demos: {} | metrics: {} | debug: {} | handoff: {} | docs: {} | owner: {} | docking owner: {} | wayland acceptance: {}",
+                "route: {}    # {} | actions: {} | demos: {} | metrics: {} | debug: {} | handoff: {} | docs: {} | owner: {} | action metadata owner: {} | docking owner: {} | wayland acceptance: {}",
                 route.id,
                 route.purpose,
                 route_commands_human(route.action_commands),
@@ -237,6 +311,7 @@ pub(crate) fn list_tool_apps(args: Vec<String>) -> Result<(), String> {
                 route_commands_human(route.handoff_commands),
                 route.docs,
                 route.owner_doc,
+                route.action_metadata_doc,
                 route.docking_owner_doc,
                 route.wayland_acceptance_doc
             );
@@ -280,6 +355,7 @@ fn tool_apps_json_value() -> serde_json::Value {
                 "purpose": route.purpose,
                 "docs": route.docs,
                 "owner_doc": route.owner_doc,
+                "action_metadata_doc": route.action_metadata_doc,
                 "docking_owner_doc": route.docking_owner_doc,
                 "wayland_acceptance_doc": route.wayland_acceptance_doc,
                 "demo_commands": route_commands_json(route.demo_commands),
@@ -313,8 +389,12 @@ struct ToolApp {
 
 #[derive(Clone, Copy)]
 struct RouteCommand {
+    id: &'static str,
     label: &'static str,
     command: &'static str,
+    category: &'static str,
+    requires_bundle: bool,
+    primary: bool,
 }
 
 struct FirstOpenRoute {
@@ -322,6 +402,7 @@ struct FirstOpenRoute {
     purpose: &'static str,
     docs: &'static str,
     owner_doc: &'static str,
+    action_metadata_doc: &'static str,
     docking_owner_doc: &'static str,
     wayland_acceptance_doc: &'static str,
     demo_commands: &'static [RouteCommand],
@@ -361,6 +442,7 @@ fn first_open_routes() -> &'static [FirstOpenRoute] {
         purpose: DEMO_METRICS_DEBUG_PURPOSE,
         docs: DEMO_METRICS_DEBUG_DOC,
         owner_doc: DEMO_METRICS_DEBUG_OWNER_DOC,
+        action_metadata_doc: DEMO_METRICS_DEBUG_ACTION_METADATA_DOC,
         docking_owner_doc: DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC,
         wayland_acceptance_doc: DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC,
         demo_commands: DEMO_METRICS_DEBUG_DEMO_COMMANDS,
@@ -384,8 +466,12 @@ fn route_commands_json(commands: &[RouteCommand]) -> Vec<serde_json::Value> {
         .iter()
         .map(|command| {
             serde_json::json!({
+                "id": command.id,
                 "label": command.label,
                 "command": command.command,
+                "category": command.category,
+                "requires_bundle": command.requires_bundle,
+                "primary": command.primary,
             })
         })
         .collect()
@@ -764,6 +850,8 @@ mod tests {
                 && route.docs == "docs/diagnostics-first-open.md"
                 && route.owner_doc
                     == "docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json"
+                && route.action_metadata_doc
+                    == "docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/WORKSTREAM.json"
                 && route.docking_owner_doc
                     == "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"
                 && route.wayland_acceptance_doc
@@ -802,17 +890,29 @@ mod tests {
                         && command.command == "python tools/diag_gate_docking_wayland_policy_skip.py"
                 })
                 && route.action_commands.iter().any(|command| {
-                    command.label == "open workbench"
+                    command.id == "open_workbench"
+                        && command.category == "demo"
+                        && command.primary
+                        && !command.requires_bundle
+                        && command.label == "open workbench"
                         && command.command
                             == "cargo run -p fret-demo --bin imui_editor_workbench_demo"
                 })
                 && route.action_commands.iter().any(|command| {
-                    command.label == "run product discovery"
+                    command.id == "product_discovery"
+                        && command.category == "product-gate"
+                        && !command.primary
+                        && !command.requires_bundle
+                        && command.label == "run product discovery"
                         && command.command
                             == "python tools/diag_gate_imui_product_chain.py --only discovery"
                 })
                 && route.action_commands.iter().any(|command| {
-                    command.label == "validate docking campaign"
+                    command.id == "validate_docking_campaign"
+                        && command.category == "handoff"
+                        && !command.primary
+                        && !command.requires_bundle
+                        && command.label == "validate docking campaign"
                         && command.command
                             == "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json"
                 })
@@ -893,6 +993,8 @@ mod tests {
                 && route["docs"] == "docs/diagnostics-first-open.md"
                 && route["owner_doc"]
                     == "docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json"
+                && route["action_metadata_doc"]
+                    == "docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/WORKSTREAM.json"
                 && route["docking_owner_doc"]
                     == "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"
                 && route["wayland_acceptance_doc"]
@@ -928,17 +1030,29 @@ mod tests {
                             == "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json"
                 })
                 && actions.iter().any(|command| {
-                    command["label"] == "open workbench"
+                    command["id"] == "open_workbench"
+                        && command["category"] == "demo"
+                        && command["primary"] == true
+                        && command["requires_bundle"] == false
+                        && command["label"] == "open workbench"
                         && command["command"]
                             == "cargo run -p fret-demo --bin imui_editor_workbench_demo"
                 })
                 && actions.iter().any(|command| {
-                    command["label"] == "run product discovery"
+                    command["id"] == "product_discovery"
+                        && command["category"] == "product-gate"
+                        && command["primary"] == false
+                        && command["requires_bundle"] == false
+                        && command["label"] == "run product discovery"
                         && command["command"]
                             == "python tools/diag_gate_imui_product_chain.py --only discovery"
                 })
                 && actions.iter().any(|command| {
-                    command["label"] == "inspect debug trace"
+                    command["id"] == "inspect_debug_trace"
+                        && command["category"] == "debug"
+                        && command["primary"] == false
+                        && command["requires_bundle"] == true
+                        && command["label"] == "inspect debug trace"
                         && command["command"]
                             == "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json"
                 })

@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "slug": "imui-demo-metrics-debug-action-metadata-v1",
+  "title": "IMUI Demo Metrics Debug Action Metadata v1",
+  "status": "active",
+  "updated": "2026-05-30",
+  "scope_kind": "execution",
+  "follow_on_of": "imui-demo-metrics-debug-devtools-v1",
+  "problem": "The Demo/Metrics/Debug route is discoverable across CLI, DevTools GUI, and MCP, but richer GUI execution controls and future command-palette integration need stable action metadata instead of parsing action labels or command strings.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/HANDOFF.md"
+    },
+    {
+      "role": "prior_lane",
+      "path": "docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json"
+    }
+  ],
+  "repro": {
+    "summary": "Inspect the shared Demo/Metrics/Debug route and confirm action objects carry stable metadata.",
+    "commands": [
+      "cargo run -p fretboard-dev -- list tool-apps --json",
+      "cargo run -p fretboard-dev -- list tool-apps"
+    ]
+  },
+  "gates": [
+    {
+      "name": "fretboard-action-metadata",
+      "command": "cargo nextest run -p fretboard-dev demos::tests::tool_apps_list_names_first_open_routes demos::tests::tool_apps_json_value_exposes_stable_machine_readable_shape --no-fail-fast"
+    },
+    {
+      "name": "devtools-action-metadata",
+      "command": "cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates --no-fail-fast"
+    },
+    {
+      "name": "mcp-action-metadata",
+      "command": "cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain --no-fail-fast"
+    },
+    {
+      "name": "product-chain-discovery",
+      "command": "python tools/diag_gate_imui_product_chain.py --only discovery"
+    },
+    {
+      "name": "first-open-discovery",
+      "command": "python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built"
+    },
+    {
+      "name": "workstream-source",
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "apps/fretboard/src/demos.rs",
+    "apps/fret-devtools/src/native.rs",
+    "apps/fret-devtools-mcp/src/native.rs",
+    "docs/diagnostics-first-open.md",
+    "tools/diag_gate_imui_product_chain.py",
+    "tools/diag_gate_imui_p2_devtools_first_open.py",
+    "tools/gate_imui_workstream_source.py"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Keep this follow-on focused on Demo/Metrics/Debug action metadata and execution-control handoff. Do not move diagnostics UI into fret-imui; future real command-palette execution should start only after a shared DevTools command-palette contract exists."
+  }
+}

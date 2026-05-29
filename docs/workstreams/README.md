@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-05-25
+Catalog updated: 2026-05-30
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 473
+- Dedicated directories: 474
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2204,6 +2204,7 @@ Rule:
 - `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest 2026-05-25, 24 markdown docs
 - `docs/workstreams/imui-editor-workbench-golden-path-v1/` — first n/a, latest n/a, 6 markdown docs (closed canonical editor workbench golden path lane for promoting one product-facing IMUI route above the supporting proof demos; includes `WORKSTREAM.json`)
 - `docs/workstreams/imui-demo-metrics-debug-devtools-v1/` — first n/a, latest n/a, 7 markdown docs (closed DevTools/diagnostics owner lane for the Fret equivalent of Dear ImGui `ShowDemoWindow` / Metrics / Debug, keeping product diagnostics out of `fret-imui`)
+- `docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/` — first n/a, latest n/a, 6 markdown docs (active follow-on for stable Demo/Metrics/Debug route action metadata across CLI JSON, DevTools GUI, and MCP without widening `fret-imui`)
 - `docs/workstreams/imui-plot-adapter-proof-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow proof-led follow-on for optional declarative `fret-plot/imui` adapters without restoring retained plot facade or widening `fret-imui` / `fret-ui-kit::imui`)
 - `docs/workstreams/imui-style-theme-editor-proof-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow proof for Dear ImGui-style editor theme preset switching in `fret-ui-editor` without moving `GetStyle` / `PushStyleVar` / global style-stack policy into runtime or `fret-ui-kit::imui`)
 - `docs/workstreams/imui-interaction-inspector-v1/` — first n/a, latest n/a, 5 markdown docs (closed product-facing follow-on that added a live response inspector to `imui_interaction_showcase_demo` without replacing the proof-first `imui_response_signals_demo` or widening public IMUI/runtime contracts)
