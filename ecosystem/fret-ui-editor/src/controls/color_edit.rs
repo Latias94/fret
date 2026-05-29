@@ -32,8 +32,8 @@ mod swatch;
 mod tests;
 
 use self::drag_drop::{
-    apply_color_drop_payload, color_drag_drop_store_for, prune_color_drag_drop_store,
-    resolve_color_drag_threshold, take_delivered_color_drop,
+    ColorEditDeliveredDropArgs, apply_delivered_color_drop, color_drag_drop_store_for,
+    prune_color_drag_drop_store, resolve_color_drag_threshold,
 };
 use self::input::{ColorEditInputArgs, color_hex_input};
 use self::model::format_hex;
@@ -233,24 +233,19 @@ impl ColorEdit {
             },
         );
 
-        if drag_drop_enabled
-            && let Some(payload) = take_delivered_color_drop(cx, &drag_drop_store, swatch.id)
-        {
-            let current_for_drop = cx
-                .get_model_copied(&self.model, Invalidation::Paint)
-                .unwrap_or(current);
-            let next = apply_color_drop_payload(payload, current_for_drop, self.options.show_alpha);
-            let formatted = format_hex(next, self.options.show_alpha);
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&self.model, |color| *color = next);
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&draft, |s| *s = formatted.as_ref().to_string());
-            let _ = cx.app.models_mut().update(&error, |e| *e = None);
-        }
+        apply_delivered_color_drop(
+            cx,
+            ColorEditDeliveredDropArgs {
+                store: drag_drop_store.clone(),
+                target_id: swatch.id,
+                model: self.model.clone(),
+                draft: draft.clone(),
+                error: error.clone(),
+                current,
+                show_alpha: self.options.show_alpha,
+                enabled: drag_drop_enabled,
+            },
+        );
 
         request_popup_overlay(
             cx,

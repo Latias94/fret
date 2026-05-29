@@ -418,6 +418,13 @@ Last updated: 2026-05-30
       delivered drop application, while `controls/color_edit/swatch.rs` owns the swatch pressable,
       context-menu triggers, drag hover state, frame visuals, preview container, and swatch style
       resolution.
+- [x] Split editor color-edit delivered drop application into the drag/drop owner without changing
+      delivered payload tick filtering, target alpha rules, model/draft/error updates, or popup
+      policy tests.
+      Result: `controls/color_edit.rs` passes the swatch id and model context to
+      `controls/color_edit/drag_drop.rs`, while the drag/drop owner now owns delivered payload
+      extraction, alpha-aware payload application, formatted draft synchronization, and error
+      clearing.
 - [x] Split IMUI leaf control option records into selection, tab-item, and slider private owners
       without changing public option type names, fields, defaults, root re-exports, selectable
       smoke behavior, tab/menu behavior, or slider model behavior.

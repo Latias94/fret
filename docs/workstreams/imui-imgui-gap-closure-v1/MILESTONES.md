@@ -380,6 +380,11 @@ application. `controls/color_edit/swatch.rs` owns the swatch pressable, activati
 capture, copy-menu triggers, drag source/drop hover state, tooltip hover synchronization, preview
 container, frame visuals, and swatch style resolution.
 
+2026-05-30 color-edit delivered-drop owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit.rs` passes swatch id and model context into the
+drag/drop owner. `controls/color_edit/drag_drop.rs` owns delivered payload extraction,
+alpha-aware payload application, formatted draft synchronization, and error clearing.
+
 2026-05-29 leaf control option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/selection.rs`,
 `ecosystem/fret-ui-kit/src/imui/options/controls/tab.rs`, and

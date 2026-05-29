@@ -75,6 +75,8 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_SWATCH_RS.contains("key_on_key_down_for"));
     assert!(COLOR_EDIT_SWATCH_RS.contains("KeyCode::ContextMenu"));
     assert!(COLOR_EDIT_SWATCH_RS.contains("color_preview_stack"));
+    assert!(COLOR_EDIT_RS.contains("ColorEditDeliveredDropArgs"));
+    assert!(COLOR_EDIT_RS.contains("apply_delivered_color_drop("));
     assert!(COLOR_EDIT_RECORDS_RS.contains("const COLOR_PRESETS:"));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("fn preset_swatch<"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn color_preview_stack<"));
@@ -150,6 +152,10 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(!COLOR_EDIT_POPUP_EYEDROPPER_RS.contains("Effect::"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn install_color_drag_source<"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn update_color_drop_target<"));
+    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("pub(super) struct ColorEditDeliveredDropArgs"));
+    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn apply_delivered_color_drop<"));
+    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("take_delivered_color_drop(cx, &args.store"));
+    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("format_hex(next, args.show_alpha)"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn apply_color_drop_payload("));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn palette_slot_drop_from_payload("));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("COMPONENT_IMUI_DRAG_THRESHOLD_PX"));

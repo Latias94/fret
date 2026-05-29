@@ -1836,6 +1836,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Editor Color-Edit Delivered Drop Owner-Split Evidence - 2026-05-30
+
+Claim verified: editor color-edit delivered drop extraction, alpha-aware payload application,
+model/draft synchronization, and error clearing moved into the drag/drop owner without changing
+delivered payload tick filtering, target alpha rules, popup policy tests, or the editor-owned
+color-edit surface boundary.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit.rs` keeps public re-exports, the main
+  `ColorEdit` renderer, popup overlay requests, and root layout composition.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/drag_drop.rs` owns delivered payload
+  extraction, alpha-aware application, formatted draft synchronization, model updates, and error
+  clearing.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now checks the delivered-drop owner
+  callsite and implementation markers.
+- `tools/gate_imui_workstream_source.py` now rejects delivered-drop extraction/application code
+  from drifting back into `color_edit.rs` and checks the drag/drop owner directly.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor --check`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-editor color_edit --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Leaf Control Option Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI leaf control option records split into selection, tab-item, and slider private
