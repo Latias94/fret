@@ -97,6 +97,17 @@ Last updated: 2026-05-29
       item, begin menu/submenu, selectable, multi-selectable, combo, and context-menu trait default
       declarations/forwarding. Existing `menu_items.rs`, `selection_combo.rs`, and
       `floating_popup/*` owners still carry inherent wrappers and underlying behavior.
+- [x] Split IMUI facade menu/selection surface macro owner into menu-item, menu-family,
+      selection/combo, and context-popup child owners without changing the public
+      `UiWriterImUiFacadeExt` trait, caller import behavior, menu item, begin menu/submenu,
+      selectable, multi-selectable, combo, context-menu method names, or underlying behavior
+      owners.
+      Result: `facade_writer/menu_selection_surface.rs` is now a module/re-export hub.
+      `menu_selection_surface/menu_items.rs` owns menu item forwarding,
+      `menu_selection_surface/menu_family.rs` owns begin menu/submenu forwarding,
+      `menu_selection_surface/selection_combo.rs` owns selectable/multi-selectable/combo
+      forwarding, and `menu_selection_surface/context_popup.rs` owns context-menu popup
+      forwarding.
 - [x] Split IMUI facade model/control trait default method declarations out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, checkbox/radio/switch,

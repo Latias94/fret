@@ -52,7 +52,13 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     floating_surface::tooltip_drag_surface_methods!();
 
-    menu_selection_surface::menu_selection_surface_methods!();
+    menu_selection_surface::menu_item_surface_methods!();
+
+    menu_selection_surface::menu_family_surface_methods!();
+
+    menu_selection_surface::selection_combo_surface_methods!();
+
+    menu_selection_surface::context_popup_surface_methods!();
 
     button_surface::button_surface_methods!();
 

@@ -59,6 +59,15 @@ multi-selectable, combo, and context-menu trait default method declarations now 
 `menu_items.rs`, `selection_combo.rs`, and `floating_popup/*` owners still carry inherent wrappers
 and underlying behavior.
 
+2026-05-29 facade menu/selection surface sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/menu_selection_surface.rs` is now a module/re-export
+hub. `menu_selection_surface/menu_items.rs` owns menu item forwarding,
+`menu_selection_surface/menu_family.rs` owns begin menu/submenu forwarding,
+`menu_selection_surface/selection_combo.rs` owns selectable, multi-selectable, and combo
+forwarding, and `menu_selection_surface/context_popup.rs` owns context-menu popup forwarding. The
+public trait expansion points in `facade_writer.rs` now call these child macros directly, while
+the existing behavior/inherent wrapper owners remain unchanged.
+
 2026-05-29 facade model surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps the single public
 `UiWriterImUiFacadeExt` trait hub, but checkbox/radio/switch, slider/combo model, input text
