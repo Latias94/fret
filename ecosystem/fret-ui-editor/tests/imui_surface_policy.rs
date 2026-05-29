@@ -19,6 +19,8 @@ const COLOR_EDIT_POPUP_PICKER_HUE_BAR_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/hue_bar.rs");
 const COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/hue_wheel.rs");
+const COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS: &str =
+    include_str!("../src/controls/color_edit/popup/picker/hue_wheel_picker.rs");
 const COLOR_EDIT_POPUP_PICKER_SV_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/sv.rs");
 const COLOR_EDIT_POPUP_PREVIEW_RS: &str =
@@ -48,6 +50,8 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("mod hue_bar;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("use hue_bar::hue_bar;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("pub(super) use hue_bar::hue_bar_preview_stack;"));
+    assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("mod hue_wheel_picker;"));
+    assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("use hue_wheel_picker::hue_wheel_picker;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("mod sv;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("use sv::sv_picker;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("pub(super) use sv::sv_picker_preview_stack;"));
@@ -128,6 +132,12 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_TOOLTIP_RS.contains("fn color_tooltip_lines("));
     assert!(COLOR_EDIT_POPUP_TOOLTIP_RS.contains("radix_tooltip::tooltip_request("));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_hue_wheel_picker<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS.contains("fn hue_wheel_picker<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS.contains("fn apply_hue_wheel_position("));
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS
+            .contains("hue_wheel_target_from_local_position")
+    );
     assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_RS.contains("fn hue_wheel_canvas<"));
     assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_RS.contains("fn paint_hue_wheel_canvas("));
     assert!(COLOR_EDIT_POPUP_OPTIONS_RS.contains("fn picker_option_thumbnail<"));

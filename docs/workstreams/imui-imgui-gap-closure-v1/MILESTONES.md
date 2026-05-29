@@ -346,6 +346,12 @@ wiring.
 and shared HSV color application. `picker/sv.rs` owns SV preview grid construction, thumb overlay
 layout, pointer update application, and SV coordinate helper wiring.
 
+2026-05-30 color-edit hue-wheel interaction owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker.rs` keeps color picker composition
+and shared HSV color application. `picker/hue_wheel.rs` remains the pure canvas painting owner,
+while `picker/hue_wheel_picker.rs` owns hue-wheel pressable drag target tracking and HSV update
+wiring.
+
 2026-05-29 leaf control option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/selection.rs`,
 `ecosystem/fret-ui-kit/src/imui/options/controls/tab.rs`, and

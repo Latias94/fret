@@ -377,6 +377,13 @@ Last updated: 2026-05-30
       Result: `color_edit/popup/picker.rs` keeps picker composition and shared HSV apply logic,
       while `color_edit/popup/picker/sv.rs` owns the SV grid, thumb overlay, pointer updates, and
       SV helper wiring.
+- [x] Split editor color-edit hue-wheel picker interaction into a private owner without changing
+      hue-wheel picker composition, pure canvas painting ownership, hue-wheel target math, shared
+      HSV color application, or color-edit popup policy tests.
+      Result: `color_edit/popup/picker.rs` keeps picker composition and shared HSV apply logic,
+      `color_edit/popup/picker/hue_wheel.rs` remains the pure canvas owner, and
+      `color_edit/popup/picker/hue_wheel_picker.rs` owns pressable drag target tracking and HSV
+      update wiring.
 - [x] Split IMUI leaf control option records into selection, tab-item, and slider private owners
       without changing public option type names, fields, defaults, root re-exports, selectable
       smoke behavior, tab/menu behavior, or slider model behavior.
