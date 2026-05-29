@@ -64,6 +64,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_multiline_line_limits_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_text_field_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_bottom_sheet_motion_semantics_packet_v2.md`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_carousel_item_semantics_sizing_elevation_packet_v2.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
@@ -542,6 +543,23 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     interactive cards retain button semantics, and Button/Card share the new
     `foundation::elevation` animation runtime for Material hover/focus/press elevation.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_card_semantics_elevation_packet_v2.md`
+- 2026-05-29: M3PV2-061 closed standalone CarouselItem static/interactive semantics, explicit
+  sizing proof, and elevation motion.
+  - Sources: Compose Material3 `Carousel.kt` owns carousel pager state, keyline sizing, masking,
+    snap/fling, and `Role.Carousel` semantics at the container layer; `CarouselItemScope.kt` keeps
+    mask helpers scoped to carousel item content; Material Web v30 tokens define standalone
+    carousel-item surface and hover elevation outcomes.
+  - Red gate before fix: `cargo nextest run -p fret-ui-material3 --test carousel_item_state`
+    failed because static carousel items exposed `Button` semantics and interactive items snapped
+    hover elevation to a painted shadow on the first hover frame.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --test carousel_item_state`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_carousel_item_suite_goldens_v1`
+  - Result: Static carousel items now expose non-disabled `Group` semantics without invoke actions,
+    explicit width/height is proven on root and `.chrome` nodes, and interactive items share the
+    Material `foundation::elevation` runtime used by Button/Card.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_carousel_item_semantics_sizing_elevation_packet_v2.md`
 
 ## Proof Note Template
 

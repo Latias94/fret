@@ -592,9 +592,30 @@ Task IDs use `M3PV2-*`.
   present as non-disabled groups with no invoke action, interactive cards keep button semantics,
   and Button/Card share `foundation::elevation` animation behavior.
   Evidence: `artifacts/material3_card_semantics_elevation_packet_v2.md`.
-  Handoff: Card style/accessibility/motion are v2-covered; layout remains caller-owned. Continue
-  M3PV2-060 with CarouselItem, FAB, List, or ProgressIndicator, or use matrix priority to pick
-  Checkbox/Radio.
+  Handoff: Card style/accessibility/motion are v2-covered; layout remains caller-owned. CarouselItem
+  is covered by M3PV2-061; continue M3PV2-060 with FAB, List, or ProgressIndicator, or use matrix
+  priority to pick Checkbox/Radio.
+
+- [x] M3PV2-061 [owner=codex] [deps=M3PV2-010,M3PV2-049] [scope=ecosystem/fret-ui-material3/src/carousel_item.rs,ecosystem/fret-ui-material3/tests/carousel_item_state.rs,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close standalone CarouselItem static/interactive semantics, explicit sizing proof, and
+  Material hover elevation animation drift without pulling carousel-container policy into the item
+  recipe.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --test carousel_item_state`
+  failed because static carousel items exposed `Button` semantics and interactive items painted
+  hover shadows on the first hover frame; green gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --test carousel_item_state`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_carousel_item_suite_goldens_v1`.
+  Review: DONE. This found a Material recipe gap, not a core or kit mechanism gap. Static
+  CarouselItem surfaces now present as non-disabled groups with no invoke action, explicit
+  width/height is proven on root and `.chrome`, and interactive items use the shared
+  `foundation::elevation` runtime promoted by Button/Card.
+  Evidence: `artifacts/material3_carousel_item_semantics_sizing_elevation_packet_v2.md`.
+  Handoff: CarouselItem style/accessibility/motion are v2-covered; layout remains caller-owned
+  because Compose carousel keyline sizing, masking/parallax, snap/fling, and `Role.Carousel`
+  semantics belong to a future Material carousel-container recipe rather than this standalone item.
 
 - [ ] M3PV2-060 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{badge.rs,button.rs,card.rs,carousel_item.rs,divider.rs,fab.rs,list.rs,progress_indicator.rs},ecosystem/fret-ui-material3/tests,goldens/material3-headless/v1]
   Goal: Add style/layout proof for low-interaction components without overfitting gallery layout.

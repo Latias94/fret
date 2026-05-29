@@ -114,6 +114,15 @@ Compose-like elevation animation had not yet been promoted to shared foundation.
 present as non-disabled groups with no invoke action, interactive cards keep button semantics, and
 Button/Card share `foundation::elevation` animation behavior.
 
+M3PV2-061 is complete: standalone CarouselItem style/accessibility/motion axes are now v2-covered
+while layout is classified as caller-owned. The packet found a Material recipe gap: static carousel
+items leaked default button semantics through `Pressable`, and interactive items snapped hover
+elevation instead of animating through the shared Material elevation runtime. Static items now
+present as non-disabled groups with no invoke action, explicit width/height is proven against root
+and `.chrome` bounds, and interactive items share `foundation::elevation` animation behavior with
+Button/Card. Full carousel container scrolling, keyline sizing, masking/parallax, and
+`Role.Carousel` semantics remain outside this standalone item recipe.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -125,8 +134,8 @@ Button/Card share `foundation::elevation` animation behavior.
 ## Next Recommended Action
 
 Continue with the next uncovered Material3 packet from the matrix. Good M5 candidates are
-CarouselItem, FAB, List, and ProgressIndicator; higher-priority choice-control candidates remain
-Checkbox and Radio.
+FAB, List, and ProgressIndicator; higher-priority choice-control candidates remain Checkbox and
+Radio.
 
 ## Useful Gates
 

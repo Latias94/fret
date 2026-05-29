@@ -10,7 +10,7 @@ use fret_core::{Edges, Px, SemanticsRole};
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ContainerProps, Length, OpacityProps, Overflow, PointerRegionProps, PressableA11y,
-    PressableProps,
+    PressableProps, SemanticsDecoration,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
@@ -19,11 +19,14 @@ use fret_ui_kit::{
     resolve_override_slot_with,
 };
 
+use crate::foundation::elevation::{
+    AnimatedElevationRuntime, MaterialElevationInteraction, animate_material_elevation,
+};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
-use crate::foundation::interaction::pressable_interaction;
+use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::optional_chrome_part_test_id;
 use crate::tokens::carousel_item as carousel_item_tokens;
@@ -173,9 +176,10 @@ impl CarouselItem {
     {
         cx.scope(|cx| {
             let chrome_test_id = optional_chrome_part_test_id(self.test_id.as_ref());
-            cx.pressable_with_id_props(|cx, st, pressable_id| {
-                let interactive = self.on_activate.is_some();
-                let enabled = interactive && !self.disabled;
+            let interactive = self.on_activate.is_some();
+            let disabled = self.disabled;
+            let mut item = cx.pressable_with_id_props(|cx, st, pressable_id| {
+                let enabled = interactive && !disabled;
 
                 if let Some(handler) = self.on_activate.clone() {
                     cx.pressable_on_activate(handler);
@@ -200,7 +204,11 @@ impl CarouselItem {
                     focusable: enabled,
                     key_activation: Default::default(),
                     a11y: PressableA11y {
-                        role: interactive.then_some(SemanticsRole::Button),
+                        role: Some(if interactive {
+                            SemanticsRole::Button
+                        } else {
+                            SemanticsRole::Group
+                        }),
                         label: self.a11y_label.clone(),
                         test_id: self.test_id.clone(),
                         ..Default::default()
@@ -234,7 +242,9 @@ impl CarouselItem {
                         let states = WidgetStates::from_pressable(cx, st, enabled);
 
                         let (
-                            surface,
+                            container_bg,
+                            elevation_target,
+                            shadow_color,
                             outline,
                             state_layer_color,
                             state_layer_target,
@@ -245,7 +255,7 @@ impl CarouselItem {
                             let theme = Theme::global(&*cx.app);
 
                             let container_bg =
-                                carousel_item_tokens::container_background(theme, self.disabled);
+                                carousel_item_tokens::container_background(theme, disabled);
                             let container_bg = resolve_override_slot_with(
                                 self.style.container_background.as_ref(),
                                 states,
@@ -253,24 +263,17 @@ impl CarouselItem {
                                 || container_bg,
                             );
 
-                            let elevation = carousel_item_tokens::container_elevation(
+                            let elevation_target = carousel_item_tokens::container_elevation(
                                 theme,
-                                self.disabled,
+                                disabled,
                                 interaction,
                             );
                             let shadow_color = carousel_item_tokens::container_shadow_color(theme);
-                            let surface = material_surface_style(
-                                theme,
-                                container_bg,
-                                elevation,
-                                Some(shadow_color),
-                                corner_radii,
-                            );
 
                             let outline = carousel_item_tokens::outline(
                                 theme,
                                 self.variant == CarouselItemVariant::WithOutline,
-                                self.disabled,
+                                disabled,
                                 interaction,
                             );
                             let outline = resolve_override_slot_opt_with(
@@ -301,18 +304,52 @@ impl CarouselItem {
                                 carousel_item_tokens::pressed_state_layer_opacity(theme);
                             let config = material_pressable_indication_config(theme, None);
 
-                            let disabled_opacity = self
-                                .disabled
-                                .then(|| carousel_item_tokens::disabled_opacity(theme));
+                            let disabled_opacity =
+                                disabled.then(|| carousel_item_tokens::disabled_opacity(theme));
 
                             (
-                                surface,
+                                container_bg,
+                                elevation_target,
+                                shadow_color,
                                 outline,
                                 state_layer_color,
                                 state_layer_target,
                                 ripple_base_opacity,
                                 config,
                                 disabled_opacity,
+                            )
+                        };
+
+                        let elevation_interaction =
+                            interaction.map(|interaction| match interaction {
+                                PressableInteraction::Pressed => {
+                                    MaterialElevationInteraction::Pressed
+                                }
+                                PressableInteraction::Hovered => {
+                                    MaterialElevationInteraction::Hovered
+                                }
+                                PressableInteraction::Focused => {
+                                    MaterialElevationInteraction::Focused
+                                }
+                            });
+                        let (elevation, elevation_want_frames) =
+                            cx.state_for(pressable_id, AnimatedElevationRuntime::default, |rt| {
+                                animate_material_elevation(
+                                    rt,
+                                    now_frame,
+                                    enabled,
+                                    elevation_interaction,
+                                    elevation_target,
+                                )
+                            });
+                        let surface = {
+                            let theme = Theme::global(&*cx.app);
+                            material_surface_style(
+                                theme,
+                                container_bg,
+                                elevation,
+                                Some(shadow_color),
+                                corner_radii,
                             )
                         };
 
@@ -327,7 +364,7 @@ impl CarouselItem {
                             state_layer_target,
                             ripple_base_opacity,
                             config,
-                            false,
+                            elevation_want_frames,
                         );
 
                         let mut container = ContainerProps::default();
@@ -362,7 +399,17 @@ impl CarouselItem {
                 });
 
                 (pressable_props, vec![pointer_region])
-            })
+            });
+
+            if !interactive {
+                item = item.a11y(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Group)
+                        .disabled(disabled)
+                        .invokable(false),
+                );
+            }
+            item
         })
     }
 }
