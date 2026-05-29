@@ -3649,12 +3649,14 @@ layout/test-id contract tests into a dedicated test owner.
 
 - `ecosystem/fret-ui-kit/src/imui/containers.rs` now keeps the child-building helper plus
   horizontal, vertical, scroll, and grid container element builders.
-- `ecosystem/fret-ui-kit/src/imui/containers/tests.rs` now owns the local layout forwarding,
-  outer `test_id`, and scroll viewport `test_id` contract tests.
+- `ecosystem/fret-ui-kit/src/imui/containers/tests/mod.rs` now owns the shared local test harness,
+  with `tests/layout.rs` covering layout forwarding and `tests/identity.rs` covering outer
+  `test_id` plus scroll viewport `test_id` contracts.
 - `containers.rs` is a 146-line implementation file with only `#[cfg(test)] mod tests;` for the
-  local unit-test module; `containers/tests.rs` is a 207-line test owner.
+  local unit-test module; the split container test owners keep layout and identity assertions in
+  separate files.
 - The source gate now rejects local test harness and container contract test bodies from returning
-  to `containers.rs`, and checks the split test owner directly.
+  to `containers.rs`, and checks the split test owners directly.
 
 Focused gates:
 
