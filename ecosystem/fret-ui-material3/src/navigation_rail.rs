@@ -9,7 +9,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Axis, Color, Edges, KeyCode, Px, SemanticsOrientation, SemanticsRole, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -254,6 +255,7 @@ fn navigation_rail_impl<H: UiHost>(
             role: SemanticsRole::TabList,
             label: a11y_label.clone(),
             test_id: test_id.clone(),
+            orientation: Some(SemanticsOrientation::Vertical),
             disabled,
             ..Default::default()
         };
@@ -263,21 +265,22 @@ fn navigation_rail_impl<H: UiHost>(
             .as_ref()
             .map(|ids| ids.active_indicator.clone());
 
-        let (container_w, container_bg, container_shape) = {
+        let (container_w, container_bg, container_shape, vertical_padding) = {
             let theme = Theme::global(&*cx.app);
             (
                 rail_tokens::container_width(theme),
                 rail_tokens::container_background(theme),
                 rail_tokens::container_shape(theme),
+                rail_tokens::vertical_padding(theme),
             )
         };
 
         let mut props = RovingFlexProps::default();
         props.flex.direction = Axis::Vertical;
-        props.flex.gap = Px(4.0).into();
+        props.flex.gap = vertical_padding.into();
         props.flex.justify = MainAlign::Start;
         props.flex.align = CrossAlign::Stretch;
-        props.flex.padding = Edges::all(Px(4.0)).into();
+        props.flex.padding = Edges::symmetric(Px(0.0), vertical_padding).into();
         props.roving = fret_ui::element::RovingFocusProps {
             enabled: !disabled,
             wrap: loop_navigation,
@@ -451,6 +454,8 @@ fn navigation_rail_item<H: UiHost>(
     let (
         indicator_w,
         indicator_h,
+        item_w,
+        item_h,
         icon_size,
         ripple_base_opacity,
         config,
@@ -462,7 +467,9 @@ fn navigation_rail_item<H: UiHost>(
         let theme = Theme::global(&*cx.app);
 
         let indicator_w = rail_tokens::active_indicator_width(theme);
-        let indicator_h = rail_tokens::active_indicator_height(theme, always_show_label);
+        let indicator_h = rail_tokens::active_indicator_height(theme, true);
+        let item_w = rail_tokens::item_width(theme);
+        let item_h = rail_tokens::item_height(theme);
         let icon_size = rail_tokens::icon_size(theme);
 
         let ripple_base_opacity = rail_tokens::pressed_state_layer_opacity(theme);
@@ -480,6 +487,8 @@ fn navigation_rail_item<H: UiHost>(
         (
             indicator_w,
             indicator_h,
+            item_w,
+            item_h,
             icon_size,
             ripple_base_opacity,
             config,
@@ -489,10 +498,6 @@ fn navigation_rail_item<H: UiHost>(
             active_indicator_corner_radii,
         )
     };
-
-    let label_h = label_style_base
-        .line_height
-        .unwrap_or(Px(label_style_base.size.0 * 1.2));
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !disabled_group && !item.disabled;
@@ -520,11 +525,6 @@ fn navigation_rail_item<H: UiHost>(
         }
 
         let show_label = always_show_label || selected;
-        let item_h = if show_label {
-            Px(indicator_w.0 + label_h.0 + 12.0)
-        } else {
-            indicator_w
-        };
 
         let pressable_props = PressableProps {
             enabled,
@@ -541,7 +541,7 @@ fn navigation_rail_item<H: UiHost>(
             },
             layout: {
                 let mut l = fret_ui::element::LayoutStyle::default();
-                l.size.width = Length::Fill;
+                l.size.width = Length::Px(item_w);
                 l.size.height = Length::Px(item_h);
                 l.overflow = Overflow::Visible;
                 {
@@ -677,7 +677,7 @@ fn navigation_rail_item<H: UiHost>(
                 });
 
                 let mut col = FlexProps::default();
-                col.layout.size.width = Length::Fill;
+                col.layout.size.width = Length::Px(item_w);
                 col.layout.size.height = Length::Px(item_h);
                 col.layout.overflow = Overflow::Visible;
                 col.direction = Axis::Vertical;
@@ -710,15 +710,28 @@ fn navigation_rail_active_indicator<H: UiHost>(
     indicator_test_id: Option<Arc<str>>,
 ) -> AnyElement {
     cx.named("navigation_rail_active_indicator", move |cx| {
-        let id = cx.root_id();
-        let container_bounds = cx.last_bounds_for_element(id).unwrap_or(cx.bounds);
+        let container_bounds = cx
+            .last_bounds_for_element(container_id)
+            .unwrap_or(cx.bounds);
 
-        let (indicator_color, corner_radii, spring) = {
+        let (indicator_w, indicator_h, item_h, item_gap, indicator_color, corner_radii, spring) = {
             let theme = Theme::global(&*cx.app);
+            let indicator_w = rail_tokens::active_indicator_width(theme);
+            let indicator_h = rail_tokens::active_indicator_height(theme, true);
+            let item_h = rail_tokens::item_height(theme);
+            let item_gap = rail_tokens::vertical_padding(theme);
             let indicator_color = rail_tokens::active_indicator_color(theme);
             let corner_radii = rail_tokens::active_indicator_shape(theme);
             let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
-            (indicator_color, corner_radii, spring)
+            (
+                indicator_w,
+                indicator_h,
+                item_h,
+                item_gap,
+                indicator_color,
+                corner_radii,
+                spring,
+            )
         };
 
         let icon_slot_bounds = selected_idx
@@ -734,6 +747,10 @@ fn navigation_rail_active_indicator<H: UiHost>(
                 let x = b.origin.x.0 - container_bounds.origin.x.0;
                 let y = b.origin.y.0 - container_bounds.origin.y.0;
                 (x, y, b.size.width.0, b.size.height.0, indicator_color)
+            } else if let Some(idx) = selected_idx {
+                let x = ((container_bounds.size.width.0 - indicator_w.0) / 2.0).max(0.0);
+                let y = item_gap.0 + (item_h.0 + item_gap.0) * (idx as f32);
+                (x, y, indicator_w.0, indicator_h.0, indicator_color)
             } else {
                 (0.0, 0.0, 0.0, 0.0, Color::TRANSPARENT)
             }

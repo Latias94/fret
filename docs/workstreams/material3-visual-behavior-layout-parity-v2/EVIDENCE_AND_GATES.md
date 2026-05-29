@@ -861,6 +861,34 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     indicator quad instead of only exposing a live test id. The gap was Material recipe plus
     Material foundation; no core or kit mechanism change was required.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_tabs_indicator_semantics_layout_packet_v2.md`
+- 2026-05-29: M3PV2-074 closed NavigationBar and NavigationRail collapsed destination layout and
+  accessibility coverage.
+  - Sources: Compose Material3 `NavigationBar.kt` uses an 80dp container, 8dp horizontal
+    destination gap, `Role.Tab`, 64x32dp active indicator geometry, and a 12dp active-indicator
+    top offset; Compose Material3 `NavigationRail.kt` uses an 80dp collapsed rail/item width, 56dp
+    item height, 4dp vertical rail/item spacing, and `Role.Tab`; Base UI Tabs confirms tablist
+    orientation and selected-state semantics.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test navigation_state`
+    failed because both navigation roots had `TabList` orientation `None`, NavigationBar's item gap
+    was `0px` instead of `8px`, and NavigationRail item chrome collapsed to `48px` width instead of
+    the 80dp collapsed rail item width.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test navigation_state`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_navigation_bar_exposes_stable_part_test_ids material3_navigation_rail_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment navigation_bar_roving`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment navigation_rail_roving`
+  - `cargo nextest run -p fret-ui-material3 --lib navigation_bar`
+  - `cargo nextest run -p fret-ui-material3 --lib navigation_rail`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Workstream JSON, matrix JSON, catalog, and `git diff --check`
+  - Result: NavigationBar now writes horizontal orientation, uses the Compose 8dp destination gap,
+    places the active indicator in the 12dp top-icon lane, and resolves indicator fallback against
+    the container bounds. NavigationRail now writes vertical orientation, uses vertical-only 4dp
+    padding, keeps destination chrome at 80x56dp, and paints the 56x32dp active indicator. The gap
+    was Material recipe/token-accessor only; no core or kit mechanism change was required.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_navigation_bar_rail_semantics_layout_packet_v2.md`
 
 ## Proof Note Template
 

@@ -9,7 +9,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Axis, Color, Edges, KeyCode, Px, SemanticsOrientation, SemanticsRole, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -239,6 +240,7 @@ impl NavigationBar {
                 role: SemanticsRole::TabList,
                 label: a11y_label.clone(),
                 test_id: test_id.clone(),
+                orientation: Some(SemanticsOrientation::Horizontal),
                 disabled,
                 ..Default::default()
             };
@@ -248,7 +250,7 @@ impl NavigationBar {
                 .as_ref()
                 .map(|ids| ids.active_indicator.clone());
 
-            let (container_height, container_bg, shadow, corner_radii) = {
+            let (container_height, container_bg, shadow, corner_radii, item_gap) = {
                 let theme = Theme::global(&*cx.app);
 
                 let container_height = nav_tokens::container_height(theme);
@@ -268,12 +270,13 @@ impl NavigationBar {
                     surface.background,
                     surface.shadow,
                     corner_radii,
+                    nav_tokens::item_gap(theme),
                 )
             };
 
             let mut props = RovingFlexProps::default();
             props.flex.direction = Axis::Horizontal;
-            props.flex.gap = Px(0.0).into();
+            props.flex.gap = item_gap.into();
             props.flex.justify = MainAlign::Start;
             props.flex.align = fret_ui::element::CrossAlign::Stretch;
             props.roving = fret_ui::element::RovingFocusProps {
@@ -454,6 +457,7 @@ fn navigation_bar_item<H: UiHost>(
         height,
         indicator_w,
         indicator_h,
+        indicator_top_offset,
         icon_size,
         state_layer_shape,
         focus_ring,
@@ -468,6 +472,7 @@ fn navigation_bar_item<H: UiHost>(
         let height = nav_tokens::container_height(theme);
         let indicator_w = nav_tokens::active_indicator_width(theme);
         let indicator_h = nav_tokens::active_indicator_height(theme);
+        let indicator_top_offset = nav_tokens::active_indicator_top_offset(theme);
         let icon_size = nav_tokens::icon_size(theme);
 
         let state_layer_shape = nav_tokens::active_indicator_shape(theme);
@@ -488,6 +493,7 @@ fn navigation_bar_item<H: UiHost>(
             height,
             indicator_w,
             indicator_h,
+            indicator_top_offset,
             icon_size,
             state_layer_shape,
             focus_ring,
@@ -664,10 +670,16 @@ fn navigation_bar_item<H: UiHost>(
                 col.layout.size.height = Length::Px(height);
                 col.layout.overflow = Overflow::Clip;
                 col.direction = Axis::Vertical;
-                col.justify = MainAlign::Center;
+                col.justify = MainAlign::Start;
                 col.align = CrossAlign::Center;
                 col.gap = Px(4.0).into();
-                col.padding = Edges::all(Px(0.0)).into();
+                col.padding = Edges {
+                    top: indicator_top_offset,
+                    right: Px(0.0),
+                    bottom: Px(0.0),
+                    left: Px(0.0),
+                }
+                .into();
 
                 let mut chrome = cx.flex(col, move |_cx| vec![ink, icon_slot, label_el]);
                 if let Some(test_id) = chrome_test_id.clone() {
@@ -689,30 +701,33 @@ fn navigation_bar_active_indicator<H: UiHost>(
     indicator_test_id: Option<Arc<str>>,
 ) -> AnyElement {
     cx.named("navigation_bar_active_indicator", move |cx| {
-        let id = cx.root_id();
-        let container_bounds = cx.last_bounds_for_element(id).unwrap_or(cx.bounds);
+        let container_bounds = cx
+            .last_bounds_for_element(container_id)
+            .unwrap_or(cx.bounds);
 
-        let (indicator_w, indicator_h, indicator_color, corner_radii, label_h, spring) = {
+        let (
+            indicator_w,
+            indicator_h,
+            indicator_y,
+            indicator_color,
+            corner_radii,
+            item_gap,
+            spring,
+        ) = {
             let theme = Theme::global(&*cx.app);
             let indicator_w = nav_tokens::active_indicator_width(theme);
             let indicator_h = nav_tokens::active_indicator_height(theme);
+            let indicator_y = nav_tokens::active_indicator_top_offset(theme);
             let indicator_color = nav_tokens::active_indicator_color(theme);
             let corner_radii = nav_tokens::active_indicator_shape(theme);
-            let label_style = theme
-                .text_style_by_key("md.sys.typescale.label-medium")
-                .unwrap_or_default();
-            let label_style = typography::with_intent(label_style, TextIntent::Control);
-            let label_h = label_style
-                .line_height
-                .unwrap_or(Px(label_style.size.0 * 1.2))
-                .0;
             let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
             (
                 indicator_w,
                 indicator_h,
+                indicator_y,
                 indicator_color,
                 corner_radii,
-                label_h,
+                nav_tokens::item_gap(theme),
                 spring,
             )
         };
@@ -731,12 +746,17 @@ fn navigation_bar_active_indicator<H: UiHost>(
                 let y = b.origin.y.0 - container_bounds.origin.y.0;
                 (x, y, b.size.width.0, b.size.height.0, indicator_color)
             } else if let Some(idx) = selected_idx {
-                let content_h = indicator_h.0 + 4.0 + label_h;
-                let y = ((container_bounds.size.height.0 - content_h) / 2.0).max(0.0);
-
-                let item_w = container_bounds.size.width.0 / (item_count as f32);
-                let x = item_w * (idx as f32) + (item_w - indicator_w.0) / 2.0;
-                (x, y, indicator_w.0, indicator_h.0, indicator_color)
+                let total_gap = item_gap.0 * item_count.saturating_sub(1) as f32;
+                let item_w =
+                    ((container_bounds.size.width.0 - total_gap) / (item_count as f32)).max(0.0);
+                let x = (item_w + item_gap.0) * (idx as f32) + (item_w - indicator_w.0) / 2.0;
+                (
+                    x,
+                    indicator_y.0,
+                    indicator_w.0,
+                    indicator_h.0,
+                    indicator_color,
+                )
             } else {
                 (0.0, 0.0, 0.0, 0.0, Color::TRANSPARENT)
             }

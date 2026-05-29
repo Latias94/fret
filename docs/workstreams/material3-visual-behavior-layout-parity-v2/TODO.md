@@ -550,6 +550,33 @@ Task IDs use `M3PV2-*`.
   recipe. Leading-icon tabs, secondary tabs, panel-owning Material Tabs, and scroll-to-selected
   overflow behavior remain residual or future API work.
 
+- [x] M3PV2-074 [owner=codex] [deps=M3PV2-010,M3PV2-030,M3PV2-073] [scope=ecosystem/fret-ui-material3/src/{navigation_bar.rs,navigation_rail.rs,tokens/{navigation_bar.rs,navigation_rail.rs}},ecosystem/fret-ui-material3/tests/{navigation_state.rs,automation_surface.rs,radio_alignment.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close NavigationBar and NavigationRail settled destination semantics, item geometry,
+  spacing, and active-indicator layout against Compose Material3 collapsed navigation sources.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test navigation_state`
+  failed because both navigation roots had `TabList` orientation `None`, NavigationBar's item gap
+  was `0px` instead of `8px`, and NavigationRail item chrome collapsed to `48px` width instead of
+  the 80dp collapsed rail item width; green gates:
+  `cargo fmt --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test navigation_state`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_navigation_bar_exposes_stable_part_test_ids material3_navigation_rail_exposes_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment navigation_bar_roving`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment navigation_rail_roving`;
+  `cargo nextest run -p fret-ui-material3 --lib navigation_bar`;
+  `cargo nextest run -p fret-ui-material3 --lib navigation_rail`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`.
+  Review: DONE. This found Material recipe and typed-token accessor gaps, not core or kit
+  mechanism gaps. Core already had orientation/selection/collection semantics, and the existing
+  roving policy already covered keyboard behavior. NavigationBar now uses Compose's 8dp item gap
+  and 12dp active-indicator top offset; NavigationRail uses vertical-only 4dp rail padding and
+  80x56dp destination item geometry.
+  Evidence: `artifacts/material3_navigation_bar_rail_semantics_layout_packet_v2.md`.
+  Handoff: NavigationBar and NavigationRail layout/accessibility are v2-covered for the current
+  collapsed destination recipes. Adaptive NavigationSuite, wide rails, modal rails, headers, and
+  dedicated motion diagnostics remain residual/future API work.
+
 ## M3 - Choice Controls, Chips, And Motion
 
 - [ ] M3PV2-040 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{checkbox.rs,radio.rs,switch.rs,slider.rs,segmented_button.rs,chip*.rs,*chip.rs},ecosystem/fret-ui-material3/src/interaction,ecosystem/fret-ui-material3/tests]

@@ -61,6 +61,12 @@ pub(crate) fn active_indicator_height(theme: &Theme) -> Px {
         .unwrap_or(Px(32.0))
 }
 
+pub(crate) fn active_indicator_top_offset(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.navigation-bar.active-indicator.top-offset")
+        .unwrap_or(Px(12.0))
+}
+
 pub(crate) fn active_indicator_color(theme: &Theme) -> Color {
     MaterialTokenResolver::new(theme).color_comp_or_sys(
         "md.comp.navigation-bar.active-indicator.color",
@@ -173,6 +179,12 @@ pub(crate) fn icon_size(theme: &Theme) -> Px {
     theme
         .metric_by_key("md.comp.navigation-bar.icon.size")
         .unwrap_or(Px(24.0))
+}
+
+pub(crate) fn item_gap(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.navigation-bar.item.gap")
+        .unwrap_or(Px(8.0))
 }
 
 fn state_layer_color_key(active: bool, interaction: NavigationBarItemInteraction) -> &'static str {

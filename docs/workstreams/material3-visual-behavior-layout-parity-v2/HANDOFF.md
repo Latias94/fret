@@ -241,6 +241,18 @@ live indicator test id also produces a painted indicator quad. Leading-icon tabs
 panel-owning Material Tabs, and scroll-to-selected overflow behavior remain residual API/follow-on
 work.
 
+M3PV2-074 is complete: NavigationBar and NavigationRail layout/accessibility are now v2-covered
+for the current collapsed destination recipes. Compose Material3 was the primary source for this
+packet: NavigationBar uses an 80dp container, 8dp destination gap, 64x32dp active indicator, and
+12dp top indicator offset; NavigationRail uses an 80dp collapsed width, 56dp item height, and 4dp
+vertical rail/item spacing. Fret core already had `TabList` / `Tab` orientation, selected,
+disabled, and collection metadata mechanisms, and the existing Material roving behavior remained
+valid. The packet found Material recipe/token-accessor gaps: both roots omitted orientation,
+NavigationBar had no item gap and centered the destination stack instead of the top-icon lane,
+NavigationRail applied 4dp padding on all sides and let item chrome collapse to the interactive
+minimum, and active-indicator target fallback used the wrong bounds. Adaptive NavigationSuite, wide
+rails, modal rails, headers, and dedicated motion diagnostics remain residual/future API work.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
