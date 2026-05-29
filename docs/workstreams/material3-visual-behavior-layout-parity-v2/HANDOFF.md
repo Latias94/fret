@@ -1,12 +1,12 @@
 # Material 3 Visual Behavior Layout Parity v2 - Handoff
 
-Status: Active
+Status: Complete
 Last updated: 2026-05-29
 
 ## Current State
 
-The lane is open. M3PV2-010 is complete: the v2 parity-axis matrix exists and covers all 39
-components from the closed Material3 component sweep. M3PV2-021 is complete: Material3 Select now
+The lane is complete. M3PV2-010 opened the v2 parity-axis matrix for all 39 components from the
+closed Material3 component sweep. M3PV2-021 is complete: Material3 Select now
 uses dotted `<base>.listbox` ids for the listbox automation surface. M3PV2-022 is complete:
 Autocomplete fallback ids now use the same dotted listbox contract, ExposedDropdown proves
 combobox/listbox wiring through composition, and live Material3 Select diagnostics have been swept
@@ -359,6 +359,15 @@ runtime, and the new fixed-frame `navigation_drawer_state` gate passed without r
 or core changes. ModalNavigationDrawer panel/scrim motion remains covered by M3PV2-075; standard
 drawers are always-present navigation surfaces and have no open/close motion surface.
 
+M3PV2-085 is complete: the harness consolidation audit corrected the duplicate task id that had
+reused M3PV2-070 and found no broad test or golden deletion that was safe inside this closeout.
+The broad `radio_alignment` and headless golden fixtures remain referenced by closed packet
+evidence, so helper extraction should happen in a dedicated test-maintenance follow-on.
+
+M3PV2-080 is complete: the v2 matrix has no `seeded` or `needs_v2_packet` component-axis rows.
+Remaining items are residual API breadth or exhaustive visual-matrix follow-ons, not blockers for
+this component-axis parity lane.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -369,10 +378,9 @@ drawers are always-present navigation surfaces and have no open/close motion sur
 
 ## Next Recommended Action
 
-The v2 matrix now has no `seeded` or `needs_v2_packet` component-axis rows. Continue by closing the
-broader aggregate tasks still marked pending: M3PV2-050 overlay-family policy comparison,
-M3PV2-030/M3PV2-060 family umbrella review, then M3PV2-070 harness consolidation and M3PV2-080
-closeout.
+This lane is closed. Start a new workstream for any residual item that needs code: adaptive
+NavigationSuite, dismissible/predictive-back drawers, richer Menu item families/submenus, rich
+tooltip actions, advanced picker modes, full carousel containers, or exhaustive style matrices.
 
 ## Useful Gates
 

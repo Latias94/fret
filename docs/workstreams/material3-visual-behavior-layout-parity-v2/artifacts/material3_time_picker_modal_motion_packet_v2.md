@@ -61,9 +61,9 @@ git diff --check
 
 ## Matrix Impact
 
-- `time_picker.motion` remains `needs_v2_packet`.
-- First v2 gate text now records the modal motion packet and the remaining dial/crossfade motion
-  gap.
+- `time_picker.motion` was still open after this packet.
+- Later clock-face and 24h dial packets, plus the final closeout matrix, supersede that interim
+  state.
 
 ## Residual Risk
 

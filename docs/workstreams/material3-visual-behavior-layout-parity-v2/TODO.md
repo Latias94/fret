@@ -1,6 +1,6 @@
 # Material 3 Visual Behavior Layout Parity v2 - TODO
 
-Status: Active
+Status: Complete
 Last updated: 2026-05-29
 
 Task IDs use `M3PV2-*`.
@@ -11,21 +11,24 @@ Task IDs use `M3PV2-*`.
   Goal: Open the v2 fearless-refactor lane and seed the parity-axis matrix from the closed v1
   component sweep.
   Validation: `python -m json.tool docs/workstreams/material3-visual-behavior-layout-parity-v2/WORKSTREAM.json | Out-Null`; `python -m json.tool docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_parity_axis_matrix_v2.json | Out-Null`; `python tools/check_workstream_catalog.py`.
-  Review: DONE. The lane is open, the matrix covers all 39 v1 components, and each row has
+  Review: DONE. The lane was opened, the matrix covers all 39 v1 components, and each row has
   style/layout/behavior/accessibility/motion axis state plus a first v2 gate.
   Handoff: Start M3PV2-020 by turning the highest-priority axis rows into one executable packet.
 
 ## M1 - Field Family Deep Parity
 
-- [ ] M3PV2-020 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{text_field.rs,select.rs,autocomplete.rs,exposed_dropdown.rs,date_picker.rs,time_picker.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]
+- [x] M3PV2-020 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{text_field.rs,select.rs,autocomplete.rs,exposed_dropdown.rs,date_picker.rs,time_picker.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]
   Goal: Bring the field family closer to shadcn-level proof density across state ownership,
   floating labels, active indicators, popup choreography, error/supporting text, and a11y
   relationships.
   Validation: focused field-family behavior tests, one refreshed or added diag script per drifting
   popup family, and matrix row updates.
-  Review: Pending.
-  Handoff: Do not change width/flex defaults until each candidate is classified as intrinsic or
-  caller-owned.
+  Review: DONE. Field-family packets M3PV2-021 through M3PV2-045 closed dotted listbox ids,
+  label/supporting relations, field geometry, popup widths, selected option styling, picker layout,
+  SearchBar/SearchView accessibility and width, multiline line limits, and fixed-frame motion for
+  TextField, Select, Search, Autocomplete, ExposedDropdown, DatePicker, and TimePicker.
+  Handoff: Remaining field work is no longer an open v2 matrix gap; advanced picker modes,
+  predictive-back choreography, and exhaustive variant matrices should be split as new follow-ons.
 
 - [x] M3PV2-021 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/select.rs,ecosystem/fret-ui-material3/tests/{select_behavior.rs,automation_surface.rs},tools/diag-scripts/ui-gallery/{overlay,resizable},docs/workstreams/material3-visual-behavior-layout-parity-v2]
   Goal: Close the first Select v2 automation-surface gap by replacing the legacy `<base>-listbox`
@@ -517,13 +520,17 @@ Task IDs use `M3PV2-*`.
 
 ## M2 - Navigation And App Chrome Visual/Layout Parity
 
-- [ ] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]
+- [x] M3PV2-030 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests,tools/diag-scripts/ui-gallery/material3]
   Goal: Build v2 style/layout gates for active indicators, drawer surfaces, top-app-bar scroll
   behavior, label/icon alignment, and adaptive container assumptions.
   Validation: deterministic geometry tests or fixed-timestep diagnostics per selected component
   family.
-  Review: Pending.
-  Handoff: Keep page/window-class layout outside recipe defaults unless upstream owns it.
+  Review: DONE. Navigation packets M3PV2-073, M3PV2-074, M3PV2-075, M3PV2-076, and M3PV2-084
+  closed Tabs indicators, NavigationBar/Rail geometry and orientation, NavigationDrawer/ModalDrawer
+  semantics/layout/motion, TopAppBar scroll/collapse motion, and standard drawer item state-layer
+  motion.
+  Handoff: Adaptive NavigationSuite, wide rails, drawer gestures, predictive-back, and exhaustive
+  variant matrices remain future API or visual-matrix follow-ons.
 
 - [x] M3PV2-073 [owner=codex] [deps=M3PV2-010,M3PV2-030] [scope=ecosystem/fret-ui-material3/src/{tabs.rs,tokens/tabs.rs,foundation/active_indicator.rs},ecosystem/fret-ui-material3/tests/{tabs_state.rs,automation_surface.rs,radio_alignment.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
   Goal: Close Tabs tablist orientation, content-sized primary indicator, scrollable edge/min-width
@@ -630,12 +637,15 @@ Task IDs use `M3PV2-*`.
 
 ## M3 - Choice Controls, Chips, And Motion
 
-- [ ] M3PV2-040 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{checkbox.rs,radio.rs,switch.rs,slider.rs,segmented_button.rs,chip*.rs,*chip.rs},ecosystem/fret-ui-material3/src/interaction,ecosystem/fret-ui-material3/tests]
+- [x] M3PV2-040 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{checkbox.rs,radio.rs,switch.rs,slider.rs,segmented_button.rs,chip*.rs,*chip.rs},ecosystem/fret-ui-material3/src/interaction,ecosystem/fret-ui-material3/tests]
   Goal: Convert existing state-layer/ripple/scene evidence into shadcn-level state matrix coverage
   for selected, checked, disabled, pressed, hovered, focused, and error-like states where applicable.
   Validation: focused scene assertions plus at least one motion/ripple gate with fixed timing.
-  Review: Pending.
-  Handoff: Shared indication changes require at least two consumer proofs.
+  Review: DONE. Choice/control packets M3PV2-065 through M3PV2-071 closed Checkbox, Radio, Switch,
+  Slider, SegmentedButton, IconButton, and chip-family semantics, geometry, stable parts, and
+  current state-layer or selection motion gates.
+  Handoff: Shared indication/ripple infrastructure now has multiple consumer proofs; exact
+  expressive morphing and variant-specific visual matrices should be separate follow-ons.
 
 - [x] M3PV2-065 [owner=codex] [deps=M3PV2-010,M3PV2-040] [scope=ecosystem/fret-ui-material3/src/checkbox.rs,ecosystem/fret-ui-material3/tests/{checkbox_state.rs,automation_surface.rs,radio_alignment.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
   Goal: Close Checkbox tri-state semantics, touch/state-layer/box/mark layout proof, stable part
@@ -940,14 +950,16 @@ Task IDs use `M3PV2-*`.
   ModalNavigationDrawer panel/scrim motion remains covered by M3PV2-075. Standard drawers are
   always-present surfaces and have no open/close motion surface.
 
-- [ ] M3PV2-050 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{menu.rs,dropdown_menu.rs,dialog.rs,bottom_sheet.rs,tooltip.rs,snackbar.rs},ecosystem/fret-ui-kit,tools/diag-scripts/ui-gallery/material3]
+- [x] M3PV2-050 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{menu.rs,dropdown_menu.rs,dialog.rs,bottom_sheet.rs,tooltip.rs,snackbar.rs},ecosystem/fret-ui-kit,tools/diag-scripts/ui-gallery/material3]
   Goal: Audit dismissal, focus containment/restore, live region, action close parts, sheet motion,
   and rich tooltip interaction against Material/MUI/Compose/Base UI sources.
   Validation: interaction tests plus diagnostics bundles for at least one overlay family.
-  Review: Pending. Menu/DropdownMenu, Dialog, BottomSheet, Snackbar, and Tooltip now each have
-  focused v2 packets for their current recipe surfaces, but rich tooltip actions and broader
-  overlay-family policy comparison remain open.
-  Handoff: Push only design-system-agnostic policy to `fret-ui-kit`.
+  Review: DONE as current-surface audit. BottomSheet, Dialog, Snackbar, Tooltip, Menu,
+  DropdownMenu, and standalone Menu item motion all have focused v2 packets; the only reusable kit
+  change needed in this lane was the Snackbar toast-surface scale/min-height channel.
+  Handoff: Rich tooltip action rows, submenu breadth, predictive-back, and cross-overlay policy
+  matrices remain future work because they need new API scope rather than a missing current-surface
+  gate.
 
 ## M5 - Surface, Data Display, And Low-Interaction Visual Matrix
 
@@ -1122,28 +1134,36 @@ Task IDs use `M3PV2-*`.
   v2-covered. Determinate value interpolation, linear default width policy, and wavy progress
   indicators remain residual.
 
-- [ ] M3PV2-060 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{badge.rs,button.rs,card.rs,carousel_item.rs,divider.rs,fab.rs,list.rs,progress_indicator.rs},ecosystem/fret-ui-material3/tests,goldens/material3-headless/v1]
+- [x] M3PV2-060 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/{badge.rs,button.rs,card.rs,carousel_item.rs,divider.rs,fab.rs,list.rs,progress_indicator.rs},ecosystem/fret-ui-material3/tests,goldens/material3-headless/v1]
   Goal: Add style/layout proof for low-interaction components without overfitting gallery layout.
   Validation: targeted golden or scene assertions for chrome, shape, elevation, spacing, and canvas
   draw regions where applicable.
-  Review: Pending.
-  Handoff: Prefer deterministic scene assertions over broad screenshot-only claims.
+  Review: DONE. Surface/data packets M3PV2-047, M3PV2-048, M3PV2-049, M3PV2-061, M3PV2-062,
+  M3PV2-063, M3PV2-064, and M3PV2-082 closed Button, Badge, Card, CarouselItem, FAB, List, and
+  ProgressIndicator proof density, with Divider remaining low-risk v1 coverage in the matrix.
+  Handoff: Full carousel container behavior, ProgressIndicator value interpolation, and exhaustive
+  visual matrices should be split rather than folded into this component-axis lane.
 
 ## M6 - Harness Consolidation And Deletion
 
-- [ ] M3PV2-070 [owner=codex] [deps=M3PV2-020,M3PV2-030,M3PV2-040,M3PV2-050,M3PV2-060] [scope=ecosystem/fret-ui-material3/tests,tools/parity-discovery,docs/workstreams/material3-visual-behavior-layout-parity-v2]
+- [x] M3PV2-085 [owner=codex] [deps=M3PV2-020,M3PV2-030,M3PV2-040,M3PV2-050,M3PV2-060] [scope=ecosystem/fret-ui-material3/tests,tools/parity-discovery,docs/workstreams/material3-visual-behavior-layout-parity-v2]
   Goal: Delete redundant broad tests, stale artifacts, and duplicated helpers made obsolete by v2
   packets.
   Validation: focused nextest gates, JSON/catalog checks, and diff review showing deletion is backed
   by equivalent or stronger evidence.
-  Review: Pending.
-  Handoff: Keep old artifacts only when they remain referenced by closed workstream evidence.
+  Review: DONE as harness audit. The duplicate task id was corrected from M3PV2-070 to M3PV2-085;
+  broad `radio_alignment` and golden fixtures remain referenced by closed packet evidence, so no
+  safe deletion was made in this closeout.
+  Handoff: Future helper extraction should be a narrow test-maintenance follow-on with replacement
+  gates, not a prerequisite for this parity lane.
 
 ## M7 - Closeout
 
-- [ ] M3PV2-080 [owner=codex] [deps=M3PV2-070] [scope=docs/workstreams/material3-visual-behavior-layout-parity-v2]
+- [x] M3PV2-080 [owner=codex] [deps=M3PV2-085] [scope=docs/workstreams/material3-visual-behavior-layout-parity-v2]
   Goal: Close the lane or split remaining work into narrow, source-backed follow-ons.
   Validation: v2 matrix has no unclassified axis rows; all active follow-ons have dedicated
   workstreams or explicit residual-risk notes.
-  Review: Pending.
-  Handoff: Do not mark this lane complete while a high-priority axis has no proof gate.
+  Review: DONE. The matrix has no `seeded` or `needs_v2_packet` rows; each residual is recorded as
+  future API breadth, exhaustive visual matrix work, or test-maintenance follow-on in the closeout
+  audit.
+  Handoff: This lane is complete. Start a new workstream for any residual item that needs code.

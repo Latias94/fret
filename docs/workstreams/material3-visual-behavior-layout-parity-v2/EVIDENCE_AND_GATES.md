@@ -1,6 +1,6 @@
 # Material 3 Visual Behavior Layout Parity v2 - Evidence And Gates
 
-Status: Active
+Status: Complete
 Last updated: 2026-05-29
 
 ## Smallest Current Repro
@@ -48,6 +48,7 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/DESIGN.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/TODO.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_parity_axis_matrix_v2.json`
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_v2_closeout_audit.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_button_elevation_state_motion_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_select_dotted_listbox_packet_v2.md`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_autocomplete_exposed_dropdown_listbox_packet_v2.md`
@@ -1074,6 +1075,13 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     changes, proving the current NavigationDrawer destination recipe paints bounded pressed
     state-layer motion over item chrome through the shared Material ink runtime.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_navigation_drawer_item_motion_packet_v2.md`
+- 2026-05-29: M3PV2-080 closed the v2 component-axis parity lane.
+  - Matrix query: no `seeded` or `needs_v2_packet` component-axis rows remain.
+  - Harness audit: the duplicate task id for harness consolidation was corrected to M3PV2-085;
+    broad tests/goldens remain because they are still referenced by packet evidence.
+  - Result: family umbrella tasks M3PV2-020, M3PV2-030, M3PV2-040, M3PV2-050, and M3PV2-060 are
+    closed as aggregate audits, while residual API breadth is split into future workstream scope.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_v2_closeout_audit.md`
 
 ## Proof Note Template
 

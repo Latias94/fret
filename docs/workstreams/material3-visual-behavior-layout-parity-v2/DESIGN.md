@@ -1,7 +1,7 @@
 # Material 3 Visual Behavior Layout Parity v2 - Design
 
-Status: Active
-Last updated: 2026-05-28
+Status: Complete
+Last updated: 2026-05-29
 
 ## Problem
 

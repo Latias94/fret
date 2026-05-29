@@ -1,6 +1,6 @@
 # Material 3 Visual Behavior Layout Parity v2 - Milestones
 
-Status: Active
+Status: Complete
 Last updated: 2026-05-29
 
 ## M0 - Lane Opened

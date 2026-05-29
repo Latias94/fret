@@ -73,8 +73,8 @@ Results:
 
 - `autocomplete.layout`: `covered_v2`.
 - `exposed_dropdown.layout`: `covered_v2`.
-- `autocomplete.style` and `exposed_dropdown.style` remain `needs_v2_packet`; this packet did not
-  prove surface color, shape, elevation, shadow, or state-layer styling.
+- `autocomplete.style` and `exposed_dropdown.style` were still open after this packet; later
+  selectable-item and motion packets, plus the final closeout matrix, supersede that interim state.
 - Motion is covered later by `material3_autocomplete_exposed_dropdown_motion_packet_v2.md`; this
   packet only verifies settled geometry, not transition timing.
 
