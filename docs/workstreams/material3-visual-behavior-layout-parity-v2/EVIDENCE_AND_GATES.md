@@ -685,6 +685,35 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/material3/<scri
     the existing Material `FastSpatial` motion-scheme spring. The gap was Material recipe wiring
     and proof density, not core or kit mechanism.
   - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_radio_semantics_layout_motion_packet_v2.md`
+- 2026-05-29: M3PV2-067 closed Switch checked-state semantics, geometry, and handle-motion
+  coverage.
+  - Sources: Compose Material3 `Switch.kt` uses `toggleable(... role = Role.Switch)`,
+    `minimumInteractiveComponentSize()`, required 52x32dp visual size, 40dp thumb state-layer
+    ripple, and `FastSpatial` thumb offset/size animation; Compose `SwitchTokens.kt` defines
+    52x32dp track, 40dp state-layer, 24dp selected handle, 16dp unselected handle, 28dp pressed
+    handle, and 16dp icon sizes.
+  - Red gate before fix:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test switch_state`
+    failed because Switch did not write explicit binary `checked_state`; geometry and handle-motion
+    probes already passed, confirming the main implementation gap was semantics wiring.
+  - `cargo fmt --package fret-ui-kit --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test switch_state`
+  - First kit primitive test run timed out on Cargo locks; the immediate long-timeout rerun passed:
+    `cargo nextest run -p fret-ui-kit --lib switch_a11y_sets_role_and_checked switch_use_checked_model_prefers_controlled_and_does_not_call_default`
+  - First automation-surface rerun timed out on Cargo locks; the immediate long-timeout rerun passed:
+    `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_switch_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment switch_ripple_origin_tracks_pointer_down_position switch_keyboard_ripple_origin_ignores_stale_pointer_down switch_ripple_holds_for_minimum_press_duration_before_fade switch_pressed_scene_structure_is_stable switch_icons_pressed_scene_structure_is_stable switch_selected_only_icon_persists_during_toggle_animation material3_headless_controls_suite_goldens_v1`
+  - Workstream JSON, matrix JSON, catalog, and `git diff --check` gates passed.
+  - `cargo check -p fret-ui-kit --lib`
+  - `cargo clippy -p fret-ui-kit --lib --no-deps -- -D warnings`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: `fret-ui-kit::primitives::switch::switch_a11y` now writes explicit binary
+    checked-state metadata, Material Switch uses the kit helper, automation asserts the checked
+    state, and the new focused test proves Material 52/48/40/32/24px geometry plus fixed-frame
+    handle movement. The gap was kit primitive semantics plus Material recipe wiring/proof density,
+    not a core mechanism issue.
+  - Evidence note: `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_switch_semantics_layout_motion_packet_v2.md`
 
 ## Proof Note Template
 

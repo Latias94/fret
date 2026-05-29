@@ -171,6 +171,16 @@ Material ripple/state-layer wiring. Radio now writes explicit checked-state meta
 selected-dot growth with the Material `FastSpatial` motion scheme. Color interpolation and
 form-registration parity remain residual.
 
+M3PV2-067 is complete: Switch layout, accessibility, and current handle motion are now v2-covered.
+The packet found a shared kit primitive gap plus Material recipe wiring/proof-density gap, not a
+core mechanism gap: `SemanticsCheckedState::{True,False}` already existed, but
+`fret-ui-kit::primitives::switch::switch_a11y` only wrote legacy binary `checked`, and Material
+Switch bypassed that helper. Switch now writes explicit checked-state metadata through the kit
+helper, automation asserts it, and the new focused test proves 52/48/40/32/24px geometry plus
+fixed-frame handle movement. Existing pointer/keyboard/icon ripple and headless controls gates
+stayed green. Drag/swipe gestures and exact Compose `FastSpatial` replacement for the current
+Material Web-aligned motion remain residual.
+
 ## Decisions
 
 - This lane is about shadcn-level proof density, not shadcn visual styling.
@@ -182,7 +192,7 @@ form-registration parity remain residual.
 ## Next Recommended Action
 
 Continue with the next uncovered Material3 packet from the matrix. Higher-priority choice-control
-candidates now start with Switch, Slider, SegmentedButton, IconButton/IconToggleButton, and chips;
+candidates now start with Slider, SegmentedButton, IconButton/IconToggleButton, and chips;
 NavigationRail / NavigationBar layout packets are also open.
 
 ## Useful Gates

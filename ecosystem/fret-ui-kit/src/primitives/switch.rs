@@ -4,7 +4,8 @@
 //! - `repo-ref/primitives/packages/react/switch/src/switch.tsx`
 //!
 //! In Radix, `Switch` is a button-like control with `role="switch"` and a boolean checked state.
-//! In Fret, this maps onto [`fret_core::SemanticsRole::Switch`] and `checked: Some(bool)`.
+//! In Fret, this maps onto [`fret_core::SemanticsRole::Switch`], `checked: Some(bool)`, and an
+//! explicit binary `checked_state`.
 
 use std::sync::Arc;
 
@@ -18,6 +19,11 @@ pub fn switch_a11y(label: Option<Arc<str>>, checked: bool) -> PressableA11y {
         role: Some(fret_core::SemanticsRole::Switch),
         label,
         checked: Some(checked),
+        checked_state: Some(if checked {
+            fret_core::SemanticsCheckedState::True
+        } else {
+            fret_core::SemanticsCheckedState::False
+        }),
         ..Default::default()
     }
 }
@@ -74,6 +80,17 @@ mod tests {
         let a11y = switch_a11y(Some(Arc::from("Airplane mode")), true);
         assert_eq!(a11y.role, Some(fret_core::SemanticsRole::Switch));
         assert_eq!(a11y.checked, Some(true));
+        assert_eq!(
+            a11y.checked_state,
+            Some(fret_core::SemanticsCheckedState::True)
+        );
         assert_eq!(a11y.label.as_deref(), Some("Airplane mode"));
+
+        let a11y = switch_a11y(None, false);
+        assert_eq!(a11y.checked, Some(false));
+        assert_eq!(
+            a11y.checked_state,
+            Some(fret_core::SemanticsCheckedState::False)
+        );
     }
 }

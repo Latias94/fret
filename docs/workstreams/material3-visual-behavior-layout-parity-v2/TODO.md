@@ -551,6 +551,33 @@ Task IDs use `M3PV2-*`.
   Handoff: Radio layout, accessibility, and current selected-dot motion are v2-covered. Color
   interpolation and form-registration parity remain residual.
 
+- [x] M3PV2-067 [owner=codex] [deps=M3PV2-010,M3PV2-040,M3PV2-066] [scope=ecosystem/fret-ui-kit/src/primitives/switch.rs,ecosystem/fret-ui-material3/src/switch.rs,ecosystem/fret-ui-material3/tests/{switch_state.rs,automation_surface.rs,radio_alignment.rs},docs/workstreams/material3-visual-behavior-layout-parity-v2]
+  Goal: Close Switch checked-state semantics, touch/state-layer/track/handle layout proof, stable
+  part ids, and handle-motion proof against Compose Material3 and current Fret Material Web-aligned
+  switch behavior.
+  Validation: red gate before fix:
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test switch_state`
+  failed because Switch did not write explicit binary `checked_state`; geometry and handle-motion
+  probes already passed; green gates:
+  `cargo fmt --package fret-ui-kit --package fret-ui-material3`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test switch_state`;
+  `cargo nextest run -p fret-ui-kit --lib switch_a11y_sets_role_and_checked switch_use_checked_model_prefers_controlled_and_does_not_call_default`;
+  `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_switch_exposes_stable_part_test_ids`;
+  `cargo nextest run -p fret-ui-material3 --test radio_alignment switch_ripple_origin_tracks_pointer_down_position switch_keyboard_ripple_origin_ignores_stale_pointer_down switch_ripple_holds_for_minimum_press_duration_before_fade switch_pressed_scene_structure_is_stable switch_icons_pressed_scene_structure_is_stable switch_selected_only_icon_persists_during_toggle_animation material3_headless_controls_suite_goldens_v1`;
+  workstream JSON, matrix JSON, catalog, and `git diff --check`;
+  `cargo check -p fret-ui-kit --lib`;
+  `cargo clippy -p fret-ui-kit --lib --no-deps -- -D warnings`;
+  `cargo check -p fret-ui-material3 --features diagnostics --tests`;
+  `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`.
+  Review: DONE. This found a shared kit primitive gap plus Material recipe wiring/proof-density
+  gap: core already supported explicit checked-state semantics, but the kit switch helper only
+  wrote legacy binary `checked`, and Material Switch bypassed the helper. Switch already had the
+  Material geometry, stable part ids, ripple gates, icon persistence, and handle motion behavior.
+  Evidence: `artifacts/material3_switch_semantics_layout_motion_packet_v2.md`.
+  Handoff: Switch layout, accessibility, and current handle motion are v2-covered. Drag/swipe
+  gestures and exact Compose `FastSpatial` replacement for the current Material Web-aligned switch
+  motion remain residual.
+
 ## M4 - Overlay And Feedback Interaction Depth
 
 - [x] M3PV2-046 [owner=codex] [deps=M3PV2-010] [scope=ecosystem/fret-ui-material3/src/bottom_sheet.rs,ecosystem/fret-ui-material3/tests/bottom_sheet_motion.rs,goldens/material3-headless/v1/material3-bottom-sheet.*.json,docs/workstreams/material3-visual-behavior-layout-parity-v2]

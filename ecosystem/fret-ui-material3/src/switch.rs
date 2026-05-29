@@ -7,20 +7,19 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::{
-    Axis, Color, Corners, Edges, KeyCode, Point, Px, Rect, SemanticsRole, Size, SvgFit, Transform2D,
-};
+use fret_core::{Axis, Color, Corners, Edges, KeyCode, Point, Px, Rect, Size, SvgFit, Transform2D};
 use fret_icons::IconId;
 use fret_runtime::{ActionId, Model};
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PointerRegionProps, PressableA11y, PressableProps, SvgIconProps,
+    PointerRegionProps, PressableProps, SvgIconProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::controllable_state;
+use fret_ui_kit::primitives::switch::switch_a11y;
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
@@ -323,17 +322,13 @@ impl Switch {
 
                     (corner_radii, layout, focus_ring)
                 };
+                let mut a11y = switch_a11y(self.a11y_label.clone(), checked);
+                a11y.test_id = self.test_id.clone();
                 let pressable_props = PressableProps {
                     enabled,
                     focusable: enabled,
                     key_activation: Default::default(),
-                    a11y: PressableA11y {
-                        role: Some(SemanticsRole::Switch),
-                        label: self.a11y_label.clone(),
-                        test_id: self.test_id.clone(),
-                        checked: Some(checked),
-                        ..Default::default()
-                    },
+                    a11y,
                     layout,
                     focus_ring: Some(focus_ring),
                     focus_ring_always_paint: false,

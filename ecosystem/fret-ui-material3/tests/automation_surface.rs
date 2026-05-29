@@ -545,6 +545,10 @@ fn material3_switch_exposes_stable_part_test_ids() {
             "expected live Switch part test_id {id}"
         );
     }
+    assert_eq!(
+        semantics_node_checked_state(&ui, "m3-switch"),
+        Some(SemanticsCheckedState::False)
+    );
 }
 
 #[test]
