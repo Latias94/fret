@@ -153,10 +153,12 @@ use self::portal_measurement::{
 #[cfg(test)]
 use self::portals::collect_portal_label_infos_for_visible_subset;
 use self::portals::{apply_pending_fit_to_portals, host_visible_portal_labels};
+#[cfg(test)]
+use self::selection::build_click_selection_preview_edges;
 use self::selection::{
     build_click_selection_preview_nodes, build_marquee_preview_selected_nodes,
-    commit_marquee_selection_action_host, commit_pending_selection_action_host,
-    effective_selected_nodes_for_paint,
+    commit_edge_click_selection_action_host, commit_marquee_selection_action_host,
+    commit_pending_selection_action_host, effective_selected_nodes_for_paint,
 };
 use self::semantics::{
     SurfaceSemanticsParams, build_surface_semantics_value, collect_edge_paint_diagnostics,
@@ -749,6 +751,7 @@ fn node_graph_surface_impl<'a, H: UiHost + 'static>(
                         view_for_paint,
                         theme: theme.clone(),
                         style_tokens: style_tokens.clone(),
+                        edge_types: edge_types.clone(),
                         diagnostics,
                         diag_paint_overrides_value: diag_paint_overrides_value.clone(),
                         paint_overrides_ref: paint_overrides_ref.clone(),

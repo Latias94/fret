@@ -10,8 +10,9 @@ use fret_ui::action::{
 };
 
 use crate::core::NodeId;
-use crate::ui::NodeGraphSurfaceBinding;
 use crate::ui::paint_overrides::NodeGraphPaintOverridesMap;
+use crate::ui::style::NodeGraphStyle;
+use crate::ui::{NodeGraphEdgeTypesRef, NodeGraphSurfaceBinding};
 
 use super::{
     DeclarativeDiagKeyAction, DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState,
@@ -61,6 +62,8 @@ pub(super) struct PointerDownHandlerParams {
     pub(super) derived_cache: Model<DerivedGeometryCacheState>,
     pub(super) hovered_node: HoveredNodeModel,
     pub(super) hit_scratch: HoveredNodeScratch,
+    pub(super) style_tokens: NodeGraphStyle,
+    pub(super) edge_types: Option<NodeGraphEdgeTypesRef>,
 }
 
 pub(super) struct PointerMoveHandlerParams {
@@ -210,6 +213,8 @@ pub(super) fn build_pointer_down_handler(params: PointerDownHandlerParams) -> On
             &params.binding,
             &params.derived_cache,
             &params.hit_scratch,
+            &params.style_tokens,
+            params.edge_types.as_deref(),
             down,
             bounds,
         );
@@ -219,6 +224,7 @@ pub(super) fn build_pointer_down_handler(params: PointerDownHandlerParams) -> On
             &params.node_drag,
             &params.pending_selection,
             &params.hovered_node,
+            &params.binding,
             down,
             &snapshot,
         );

@@ -474,6 +474,9 @@ Status note (2026-05-28):
   custom edge-label control contract: renderer children remain transparent by default, but controls
   can opt into child-rect hit-testing while surrounding label-host space falls through to the
   canvas.
+- FNDX-053 feeds the custom-path-aware edge hit-test into default declarative pointer-down, so
+  click-edge selection now follows the active `edgeTypes` path and commits through the store-backed
+  view-state helper without claiming reconnect/update-anchor lifecycle parity.
 
 Why this still matters:
 

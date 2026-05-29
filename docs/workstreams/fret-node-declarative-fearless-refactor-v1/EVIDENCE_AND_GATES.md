@@ -5,14 +5,23 @@ Last updated: 2026-05-29
 
 ## Current Focus
 
-FNDX-052 adds the first pointer-interactive `NodeGraphDeclarativeEdgeLabelRenderer` child contract
-on the default declarative surface. Custom renderer output still consumes the same
-custom-path-derived `edge_centers_window` anchor as declarative EdgeToolbar and default
-`EdgeRenderHint.label` output, remains hit-test transparent by default, and can opt into
-`NodeGraphEdgeLabelHitTestMode::ChildBounds` so only the custom child rect intercepts pointer input
-while surrounding label-host space falls through to the canvas.
+FNDX-053 feeds the existing custom-path-aware edge hit-test into the default declarative
+pointer-down path for click-edge selection. Edge hits are resolved after node hits but before
+marquee/empty-canvas handling, selection commits through the store-backed view-state path, and the
+FNDX-052 child-bounds edge-label control bypass remains intact. This closes click-edge selection
+only; reconnect/update-anchor lifecycle parity remains follow-up work.
 
 ## Targeted Iteration Gates
+
+```bash
+cargo nextest run -p fret-node custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path build_click_selection_preview_edges_multi_click_toggles_hit_membership commit_edge_click_selection_action_host_multi_toggles_edge_without_clearing_other_kinds custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds
+```
+
+This gate proves the FNDX-053 edge-click selection contract: the default declarative pointer-down
+path receives `edgeTypes`/style policy, uses the custom-path-aware edge hit-test after node hits,
+commits single-click edge selection through the store-backed view-state helper, preserves
+multi-selection toggle semantics for other selected element kinds, and keeps pointer-interactive
+edge-label controls isolated from canvas hit-testing.
 
 ```bash
 cargo nextest run -p fret-node custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor custom_edge_path_feeds_declarative_edge_label_child_layer_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter
@@ -202,6 +211,8 @@ closeout note must name those failures.
 - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_labels.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_path_geometry.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/pointer_down.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/selection.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
@@ -483,5 +494,28 @@ closeout note must name those failures.
   - `git diff --check`: passed; proves the patch has no whitespace errors.
   - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
     green with 464 tests.
+- FNDX-053:
+  - `cargo nextest run -p fret-node custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path build_click_selection_preview_edges_multi_click_toggles_hit_membership commit_edge_click_selection_action_host_multi_toggles_edge_without_clearing_other_kinds custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds`:
+    passed; proves default declarative pointer-down consumes custom-path-aware edge hit-testing,
+    click-edge selection commits through the store-backed view-state path, multi edge-click toggles
+    preserve other element kinds, exact custom-path filtering still rejects misses, and
+    pointer-interactive edge-label controls remain isolated.
+  - `cargo check -p fret-node --tests`: passed; proves UI-enabled test targets compile with the
+    new pointer-down edge hit path.
+  - `cargo fmt -p fret-node --check`: passed; proves the touched crate remains formatted without
+    running a full-workspace formatter.
+  - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`: passed;
+    proves the workstream metadata remains valid JSON.
+  - `git diff --check`: passed; proves the patch has no whitespace errors.
+  - `python3 tools/check_layering.py`: passed; proves the slice did not violate workspace layering
+    policy.
+  - `cargo check -p fret-node --all-features --tests`: passed; proves optional UI/integration test
+    targets compile with the new input path.
+  - `cargo check -p fret-node --no-default-features`: passed; proves headless/runtime-facing
+    package compilation remains unaffected by the UI-only edge-click selection slice.
+  - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed; proves the
+    input-path and selection-helper changes are lint-clean.
+  - `cargo nextest run -p fret-node`: passed; proves the full `fret-node` package suite remains
+    green with 467 tests.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

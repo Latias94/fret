@@ -112,6 +112,8 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
         derived_cache: derived_cache.clone(),
         hovered_node: hovered_node.clone(),
         hit_scratch: hit_scratch.clone(),
+        style_tokens: prepared_frame.style_tokens.clone(),
+        edge_types: prepared_frame.edge_types.clone(),
     });
 
     let on_pointer_move = build_pointer_move_handler(PointerMoveHandlerParams {

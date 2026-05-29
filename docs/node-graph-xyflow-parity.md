@@ -539,7 +539,9 @@ canonical data flow and invalidation boundaries:
 - [~] **Select edge / edge focus**
   - XyFlow: edges are focusable and selectable; store fields `edgesFocusable`, `edgesReconnectable`, `elementsSelectable`
   - fret-node:
-    - pointer selection exists (click edge selects; drag edge starts reconnect)
+    - default declarative pointer selection now consumes the same custom-path-aware edge hit-test
+      used by paint/culling and commits click-edge selection through the store-backed view-state
+      path
     - keyboard focus is available via `Ctrl/Cmd+Tab` cycling (opt-in policy until per-edge focus nodes exist)
     - config gates: `NodeGraphInteractionState.{elements_selectable, edges_selectable, edges_focusable}`
     - reconnect gating: `NodeGraphInteractionState.edges_reconnectable`
@@ -809,19 +811,19 @@ canonical data flow and invalidation boundaries:
 
 - [~] **Reconnect edge workflow**
   - XyFlow: `edgesReconnectable` + edge update anchors (`components/EdgeWrapper/EdgeUpdateAnchors.tsx`)
-  - fret-node: reconnect implemented; conversion picker insertion exists in domain demo
-    - interactive update anchors exist (drawn for focused/selected edges) and have higher hover/click priority than edge strokes
-    - anchor click selects the edge; dragging the anchor beyond threshold enters reconnect (prevents “click starts reconnect” surprises)
+  - fret-node: reconnect model/config/callback contracts exist, but default declarative EdgeWrapper
+    lifecycle parity is still being closed in slices
+    - current default declarative slice: click-edge selection uses custom-path-aware hit-testing
+      and keeps edge-label controls hit-test isolated
+    - follow-up: interactive update anchors for focused/selected edges, anchor-click priority,
+      drag-threshold reconnect start, and empty-canvas drop policy
     - gating:
       - global: `NodeGraphInteractionState.edges_reconnectable` (XyFlow `edgesReconnectable`)
       - per-edge override: `Edge.reconnectable` (XyFlow `edge.reconnectable: boolean | 'source' | 'target'`)
         - XyFlow resolution: `repo-ref/xyflow/packages/react/src/components/EdgeWrapper/index.tsx`
         - XyFlow endpoint gating: `repo-ref/xyflow/packages/react/src/components/EdgeWrapper/EdgeUpdateAnchors.tsx`
         - fret-node model: `ecosystem/fret-node/src/core/model.rs` (`Edge.reconnectable: Option<EdgeReconnectable>`)
-        - fret-node enforcement:
-          - anchor hit-testing: declarative edge focus-anchor semantics and canvas geometry
-          - reconnect drag threshold: declarative surface input handlers
-          - ctrl-yank filtering: interaction-state policy in the same input path
+        - fret-node enforcement: still follow-up for the default declarative pointer path
         - conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
   - TODO: parity knobs:
     - cancel behavior:

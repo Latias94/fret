@@ -33,22 +33,24 @@ use super::pointer_down::read_left_pointer_down_snapshot_action_host;
 use super::surface_support::collect_node_label_and_ports;
 use super::{
     AuthoritativeSurfaceBoundarySnapshot, DeclarativeDiagKeyAction, DeclarativeDiagViewPreset,
-    DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState, HoverAnchorStore,
-    Invalidation, KeyHandlerParams, LeftPointerDownOutcome, LeftPointerDownSnapshot,
-    LeftPointerReleaseOutcome, MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase,
-    NodeDragPointerMoveOutcome, NodeDragReleaseOutcome, NodeDragState,
-    NodeGraphDeclarativeEdgeLabelRenderer, NodeGraphDeclarativeInteractionContext,
+    DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState, GridPaintCacheState,
+    HoverAnchorStore, Invalidation, KeyHandlerParams, LeftPointerDownOutcome,
+    LeftPointerDownSnapshot, LeftPointerReleaseOutcome, MarqueeDragState,
+    MarqueePointerMoveOutcome, NodeDragPhase, NodeDragPointerMoveOutcome, NodeDragReleaseOutcome,
+    NodeDragState, NodeGraphDeclarativeEdgeLabelRenderer, NodeGraphDeclarativeInteractionContext,
     NodeGraphDeclarativeInteractionHook, NodeGraphDeclarativeInteractionOutcome,
     NodeGraphDeclarativePortalRenderer, NodeGraphDiagnosticsConfig, NodeGraphEdgeLabelHitTestMode,
     NodeGraphEdgeLabelLayout, NodeGraphVisibleSubsetPortalConfig, NodeRectDraw,
-    PaintOnlyInteractionFrameInputs, PendingSelectionState, PortalBoundsStore, PortalDebugFlags,
-    PortalMeasuredGeometryState, apply_declarative_diag_view_preset_action_host,
-    authoritative_surface_boundary_snapshot, begin_left_pointer_down_action_host,
-    begin_pan_pointer_down_action_host, build_click_selection_preview_nodes,
+    PaintOnlyInteractionFrameInputs, PendingSelectionState, PointerDownHandlerParams,
+    PortalBoundsStore, PortalDebugFlags, PortalMeasuredGeometryState,
+    apply_declarative_diag_view_preset_action_host, authoritative_surface_boundary_snapshot,
+    begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
+    build_click_selection_preview_edges, build_click_selection_preview_nodes,
     build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
     build_edge_spatial_rect_overrides, build_edges_draws_paint_only,
     build_key_down_capture_handler, build_marquee_preview_selected_nodes,
-    build_node_drag_transaction, collect_portal_label_infos_for_visible_subset,
+    build_node_drag_transaction, build_pointer_down_handler,
+    collect_portal_label_infos_for_visible_subset, commit_edge_click_selection_action_host,
     commit_graph_transaction, commit_marquee_selection_action_host, commit_node_drag_transaction,
     commit_pending_selection_action_host, complete_left_pointer_release_action_host,
     complete_node_drag_release_action_host, derived_geometry_cache_key, edges_cache_key,
@@ -1029,6 +1031,15 @@ fn test_editor_config(f: impl FnOnce(&mut NodeGraphEditorConfig)) -> NodeGraphEd
 
 fn default_editor_config() -> NodeGraphEditorConfig {
     NodeGraphEditorConfig::default()
+}
+
+fn empty_test_binding(host: &mut TestActionHostImpl, graph_id: u128) -> NodeGraphSurfaceBinding {
+    NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        Graph::new(GraphId::from_u128(graph_id)),
+        NodeGraphViewState::default(),
+        default_editor_config(),
+    )
 }
 
 fn test_node_graph_surface_bounds() -> Rect {
@@ -2274,15 +2285,17 @@ fn begin_left_pointer_down_action_host_hit_node_selectable_arms_pending_selectio
         },
         base_selection: vec![NodeId::from_u128(9968)],
         hit: Some(hit),
+        edge_hit: None,
     };
     let down = test_pointer_down(
         MouseButton::Left,
         Point::new(Px(12.0), Px(13.0)),
         Modifiers::default(),
     );
+    let binding = empty_test_binding(&mut host, 9967);
 
     let outcome = begin_left_pointer_down_action_host(
-        &mut host, &marquee, &node_drag, &pending, &hovered, down, &snapshot,
+        &mut host, &marquee, &node_drag, &pending, &hovered, &binding, down, &snapshot,
     );
 
     assert_eq!(
@@ -2344,15 +2357,17 @@ fn begin_left_pointer_down_action_host_empty_space_arms_marquee() {
         },
         base_selection: vec![NodeId::from_u128(9972)],
         hit: None,
+        edge_hit: None,
     };
     let down = test_pointer_down(
         MouseButton::Left,
         Point::new(Px(20.0), Px(21.0)),
         Modifiers::default(),
     );
+    let binding = empty_test_binding(&mut host, 9969);
 
     let outcome = begin_left_pointer_down_action_host(
-        &mut host, &marquee, &node_drag, &pending, &hovered, down, &snapshot,
+        &mut host, &marquee, &node_drag, &pending, &hovered, &binding, down, &snapshot,
     );
 
     assert_eq!(outcome, LeftPointerDownOutcome::Marquee);
@@ -2396,15 +2411,17 @@ fn begin_left_pointer_down_action_host_empty_space_clear_arms_pending_clear() {
         },
         base_selection: Vec::new(),
         hit: None,
+        edge_hit: None,
     };
     let down = test_pointer_down(
         MouseButton::Left,
         Point::new(Px(30.0), Px(31.0)),
         Modifiers::default(),
     );
+    let binding = empty_test_binding(&mut host, 9973);
 
     let outcome = begin_left_pointer_down_action_host(
-        &mut host, &marquee, &node_drag, &pending, &hovered, down, &snapshot,
+        &mut host, &marquee, &node_drag, &pending, &hovered, &binding, down, &snapshot,
     );
 
     assert_eq!(outcome, LeftPointerDownOutcome::EmptySpaceClear);
@@ -2515,11 +2532,14 @@ fn read_left_pointer_down_snapshot_action_host_uses_authoritative_store_view_sta
         &binding,
         &derived_cache,
         &hit_scratch,
+        &crate::ui::style::NodeGraphStyle::default(),
+        None,
         down,
         bounds,
     );
 
     assert_eq!(snapshot.hit, Some(node_a));
+    assert_eq!(snapshot.edge_hit, None);
     assert_eq!(snapshot.base_selection, vec![node_b]);
 }
 
@@ -3458,6 +3478,87 @@ fn build_click_selection_preview_nodes_multi_click_toggles_hit_membership() {
 
     assert_eq!(added.as_ref(), &[node_a, node_b]);
     assert_eq!(removed.as_ref(), &[node_a]);
+}
+
+#[test]
+fn build_click_selection_preview_edges_multi_click_toggles_hit_membership() {
+    let edge_a = EdgeId::from_u128(9503);
+    let edge_b = EdgeId::from_u128(9504);
+
+    let added = build_click_selection_preview_edges(&[edge_a], edge_b, true);
+    let removed = build_click_selection_preview_edges(&[edge_a, edge_b], edge_b, true);
+    let replaced = build_click_selection_preview_edges(&[edge_a], edge_b, false);
+
+    assert_eq!(added.as_ref(), &[edge_a, edge_b]);
+    assert_eq!(removed.as_ref(), &[edge_a]);
+    assert_eq!(replaced.as_ref(), &[edge_b]);
+}
+
+#[test]
+fn commit_edge_click_selection_action_host_multi_toggles_edge_without_clearing_other_kinds() {
+    let mut host = TestActionHostImpl::default();
+    let node = NodeId::from_u128(9505);
+    let edge = EdgeId::from_u128(9506);
+    let group = GroupId::from_u128(9507);
+    let view_value = NodeGraphViewState {
+        selected_nodes: vec![node],
+        selected_edges: vec![edge],
+        selected_groups: vec![group],
+        ..Default::default()
+    };
+    let mut graph_value = Graph::new(GraphId::from_u128(9505));
+    graph_value
+        .nodes
+        .insert(node, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
+    graph_value.groups.insert(
+        group,
+        Group {
+            title: "group".into(),
+            rect: CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 80.0,
+                },
+            },
+            color: None,
+        },
+    );
+    graph_value.edges.insert(
+        edge,
+        Edge {
+            kind: EdgeKind::Data,
+            from: PortId::new(),
+            to: PortId::new(),
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
+        },
+    );
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph_value,
+        view_value,
+        default_editor_config(),
+    );
+
+    assert!(commit_edge_click_selection_action_host(
+        &mut host, &binding, edge, true,
+    ));
+
+    let selection = host
+        .models
+        .read(&binding.view_state_model(), |state| {
+            (
+                state.selected_nodes.clone(),
+                state.selected_edges.clone(),
+                state.selected_groups.clone(),
+            )
+        })
+        .expect("read view state");
+    assert_eq!(selection.0, vec![node]);
+    assert!(selection.1.is_empty());
+    assert_eq!(selection.2, vec![group]);
 }
 
 #[test]
@@ -5985,6 +6086,120 @@ fn custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate
         None,
         "coarse AABB candidates must still be rejected when the point is outside the custom path interaction width"
     );
+}
+
+#[test]
+fn custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path() {
+    let mut host = TestActionHostImpl::default();
+    let action_cx = test_action_cx();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(960.0), Px(720.0)),
+    );
+    host.bounds = bounds;
+
+    let (graph_value, draw_order, edge) = make_graph_two_nodes_with_edge();
+    let geom = build_test_canvas_geometry(&graph_value, &draw_order);
+    let style = crate::ui::style::NodeGraphStyle::default();
+    let edge_types = Rc::new(NodeGraphEdgeTypes::new().register_path(
+        EdgeTypeKey::new("data"),
+        move |_graph, _edge_id, _style, _hint, input| {
+            let corner_x = Point::new(Px(input.from.x.0 + 320.0), input.from.y);
+            let corner_y = Point::new(corner_x.x, Px(input.from.y.0 + 280.0));
+            let return_x = Point::new(input.to.x, corner_y.y);
+            Some(EdgeCustomPath {
+                cache_key: 90,
+                commands: vec![
+                    PathCommand::MoveTo(input.from),
+                    PathCommand::LineTo(corner_x),
+                    PathCommand::LineTo(corner_y),
+                    PathCommand::LineTo(return_x),
+                    PathCommand::LineTo(input.to),
+                ],
+            })
+        },
+    ));
+    let edge_value = graph_value.edges.get(&edge).expect("edge present");
+    let from = geom.port_center(edge_value.from).expect("from port center");
+    let hit = Point::new(Px(from.x.0 + 320.0), Px(from.y.0 + 180.0));
+
+    let mut editor_config = default_editor_config();
+    editor_config.interaction.edge_interaction_width = 12.0;
+    editor_config.interaction.bezier_hit_test_steps = 24;
+    let interaction = editor_config.resolved_interaction_state();
+    let mut spatial =
+        crate::ui::canvas::CanvasSpatialDerived::build(&graph_value, &geom, 1.0, 0.0, 64.0);
+    for (edge_id, rect) in build_edge_spatial_rect_overrides(
+        &graph_value,
+        1.0,
+        &geom,
+        &interaction,
+        &style,
+        Some(edge_types.as_ref()),
+    ) {
+        spatial.update_edge_rect(edge_id, rect);
+    }
+    let derived_cache = host.models.insert(DerivedGeometryCacheState {
+        key: None,
+        rebuilds: 1,
+        geom: Some(Arc::new(geom)),
+        index: Some(Arc::new(spatial)),
+    });
+
+    let stale_edge = EdgeId::from_u128(0xBAD);
+    let group = GroupId::from_u128(0xBEEF);
+    let view_value = NodeGraphViewState {
+        selected_nodes: vec![draw_order[0]],
+        selected_edges: vec![stale_edge],
+        selected_groups: vec![group],
+        ..Default::default()
+    };
+    let graph = host.models.insert(graph_value.clone());
+    let view_state = host.models.insert(view_value.clone());
+    let store = host
+        .models
+        .insert(NodeGraphStore::new(graph_value, view_value, editor_config));
+    let controller = NodeGraphController::new(store.clone());
+    let binding = test_binding(&mut host, &graph, &view_state, &controller);
+    let handler = build_pointer_down_handler(PointerDownHandlerParams {
+        focus_target: action_cx.target,
+        pan_button: MouseButton::Middle,
+        drag: host.models.insert(None::<DragState>),
+        marquee_drag: host.models.insert(None::<MarqueeDragState>),
+        node_drag: host.models.insert(None::<NodeDragState>),
+        pending_selection: host.models.insert(None::<PendingSelectionState>),
+        binding: binding.clone(),
+        grid_cache: host.models.insert(GridPaintCacheState::default()),
+        derived_cache,
+        hovered_node: host.models.insert(None::<NodeId>),
+        hit_scratch: host.models.insert(Vec::<NodeId>::new()),
+        style_tokens: style,
+        edge_types: Some(edge_types),
+    });
+
+    assert!(handler(
+        &mut host,
+        action_cx,
+        test_pointer_down(MouseButton::Left, hit, Modifiers::default()),
+    ));
+
+    let selection = host
+        .models
+        .read(&store, |store| {
+            (
+                store.view_state().selected_nodes.clone(),
+                store.view_state().selected_edges.clone(),
+                store.view_state().selected_groups.clone(),
+            )
+        })
+        .expect("store readable");
+    assert!(selection.0.is_empty());
+    assert_eq!(selection.1, vec![edge]);
+    assert!(selection.2.is_empty());
+    assert_eq!(host.capture_pointer_count, 0);
+    assert_eq!(host.requested_focus, vec![action_cx.target]);
+    assert_eq!(host.notifications, vec![action_cx]);
+    assert_eq!(host.redraw_requests, vec![action_cx.window]);
 }
 
 fn polyline_midpoint(points: &[Point]) -> Point {

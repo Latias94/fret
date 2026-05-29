@@ -174,10 +174,12 @@ update rather than an incidental refactor.
     renderers.
   - FNDX-052 adds `NodeGraphEdgeLabelHitTestMode::ChildBounds` for the first pointer-interactive
     custom edge-label control contract while keeping transparent labels as the default.
+  - FNDX-053 feeds the same custom-path-aware edge hit-test into default declarative click-edge
+    selection through the store-backed view-state helper.
   - Custom `NodeGraphPresenter` remains advanced/internal on the default path because it still mixes
     geometry, labels, context menus, and insertion/search policy.
-  - Broader XyFlow edge-wrapper lifecycle parity remains follow-up work beyond this first
-    child-bounds control contract.
+  - Broader XyFlow edge-wrapper lifecycle parity remains follow-up work beyond click selection and
+    the first child-bounds control contract.
 
 - **Ergonomic API fragmentation**
   - The surface naming is now closed around `NodeGraphSurfaceBinding` (instance-style app-facing

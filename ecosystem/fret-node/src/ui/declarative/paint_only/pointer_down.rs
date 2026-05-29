@@ -1,16 +1,22 @@
-use super::surface_support::read_authoritative_interaction_config_in_models;
+use super::edge_hit_test::hit_test_edge_at_canvas_point;
+use super::surface_support::{
+    read_authoritative_interaction_config_in_models, read_authoritative_interaction_state_in_models,
+};
 use super::*;
+use crate::ui::NodeGraphEdgeTypes;
 
 #[derive(Debug, Clone)]
 pub(super) struct LeftPointerDownSnapshot {
     pub(super) interaction: crate::io::NodeGraphInteractionConfig,
     pub(super) base_selection: Vec<crate::core::NodeId>,
     pub(super) hit: Option<crate::core::NodeId>,
+    pub(super) edge_hit: Option<crate::core::EdgeId>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum LeftPointerDownOutcome {
     HitNode { capture_pointer: bool },
+    HitEdge { selection_committed: bool },
     Marquee,
     EmptySpaceClear,
     Idle,
@@ -51,11 +57,16 @@ pub(super) fn read_left_pointer_down_snapshot_action_host(
     binding: &NodeGraphSurfaceBinding,
     derived_cache: &Model<DerivedGeometryCacheState>,
     hit_scratch: &Model<Vec<crate::core::NodeId>>,
+    style: &NodeGraphStyle,
+    edge_types: Option<&NodeGraphEdgeTypes>,
     down: fret_ui::action::PointerDownCx,
     bounds: Rect,
 ) -> LeftPointerDownSnapshot {
     let interaction =
         read_authoritative_interaction_config_in_models(host.models_mut(), binding, Clone::clone)
+            .unwrap_or_default();
+    let interaction_state =
+        read_authoritative_interaction_state_in_models(host.models_mut(), binding, Clone::clone)
             .unwrap_or_default();
     let (base_selection, view) =
         read_authoritative_view_state_action_host(host, binding, |state| {
@@ -90,11 +101,38 @@ pub(super) fn read_left_pointer_down_snapshot_action_host(
     } else {
         None
     };
+    let edge_hit = if hit.is_none() {
+        let point_canvas = view.screen_to_canvas(bounds, down.position);
+        let mut edge_scratch = Vec::new();
+        match (geom.as_deref(), index.as_deref()) {
+            (Some(geom), Some(index)) => {
+                read_authoritative_graph_in_models(host.models_mut(), binding, |graph| {
+                    hit_test_edge_at_canvas_point(
+                        graph,
+                        view.zoom,
+                        geom,
+                        index,
+                        &interaction_state,
+                        style,
+                        edge_types,
+                        point_canvas,
+                        &mut edge_scratch,
+                    )
+                    .map(|hit| hit.edge)
+                })
+                .flatten()
+            }
+            _ => None,
+        }
+    } else {
+        None
+    };
 
     LeftPointerDownSnapshot {
         interaction,
         base_selection,
         hit,
+        edge_hit,
     }
 }
 
@@ -104,6 +142,7 @@ pub(super) fn begin_left_pointer_down_action_host(
     node_drag: &Model<Option<NodeDragState>>,
     pending_selection: &Model<Option<PendingSelectionState>>,
     hovered: &Model<Option<crate::core::NodeId>>,
+    binding: &NodeGraphSurfaceBinding,
     down: fret_ui::action::PointerDownCx,
     snapshot: &LeftPointerDownSnapshot,
 ) -> LeftPointerDownOutcome {
@@ -150,6 +189,20 @@ pub(super) fn begin_left_pointer_down_action_host(
         }
         return LeftPointerDownOutcome::HitNode {
             capture_pointer: snapshot.interaction.elements_selectable,
+        };
+    }
+
+    if let Some(edge) = snapshot.edge_hit {
+        let _ = host.models_mut().update(marquee, |state| *state = None);
+        let _ = host.models_mut().update(node_drag, |state| *state = None);
+        let _ = host
+            .models_mut()
+            .update(pending_selection, |state| *state = None);
+        let _ = host.models_mut().update(hovered, |state| *state = None);
+        let selection_committed =
+            commit_edge_click_selection_action_host(host, binding, edge, multi);
+        return LeftPointerDownOutcome::HitEdge {
+            selection_committed,
         };
     }
 
