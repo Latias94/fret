@@ -404,6 +404,12 @@ Last updated: 2026-05-30
       while `controls/color_edit/state.rs` owns popup/tooltip/copy-menu open models,
       draft/error/reference models, popup runtime option model allocation, and runtime default
       sync.
+- [x] Split editor color-edit hex input construction into a private owner without changing draft
+      synchronization, Enter/Escape parse/reset behavior, invalid color errors, pointer focus
+      routing, test-id assignment, text-field chrome resolution, or popup policy tests.
+      Result: `controls/color_edit.rs` keeps the main control renderer and passes input arguments
+      to `controls/color_edit/input.rs`, while the input owner owns text input props, key handling,
+      draft/error updates, and pointer focus wrapping.
 - [x] Split IMUI leaf control option records into selection, tab-item, and slider private owners
       without changing public option type names, fields, defaults, root re-exports, selectable
       smoke behavior, tab/menu behavior, or slider model behavior.

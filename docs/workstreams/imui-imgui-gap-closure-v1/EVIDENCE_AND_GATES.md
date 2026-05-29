@@ -1766,6 +1766,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Editor Color-Edit Input Owner-Split Evidence - 2026-05-30
+
+Claim verified: editor color-edit hex input construction, draft sync, keyboard parse/reset, invalid
+color error updates, and pointer focus wrapping moved behind a private owner without changing
+text-field chrome resolution, model update behavior, test-id assignment, popup policy tests, or
+the editor-owned color-edit surface boundary.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit.rs` keeps public re-exports, the main
+  `ColorEdit` renderer, swatch/popup wiring, drag/drop callsites, and root layout composition.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/input.rs` owns text input props, editor
+  text-field chrome resolution, draft synchronization while unfocused, Enter/Escape handling,
+  invalid color error writes, and pointer focus wrapping.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now reads the input owner directly while
+  keeping root module/import assertions.
+- `tools/gate_imui_workstream_source.py` now rejects input props/key handling from drifting back
+  into `color_edit.rs` and rejects swatch/popup/drag-drop ownership from `input.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor --check`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-editor color_edit --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Leaf Control Option Owner-Split Evidence - 2026-05-29
 
 Claim verified: IMUI leaf control option records split into selection, tab-item, and slider private

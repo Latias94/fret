@@ -368,6 +368,12 @@ request/callback records.
 renderer. `controls/color_edit/state.rs` owns popup, tooltip, copy-menu, reference, draft, error,
 and popup runtime option local models plus runtime default sync.
 
+2026-05-30 color-edit input owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit.rs` keeps the main control renderer and passes
+input arguments into `controls/color_edit/input.rs`. The input owner owns text input props,
+text-field chrome resolution, draft sync, Enter/Escape handling, parse/reset errors, and pointer
+focus wrapping.
+
 2026-05-29 leaf control option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/selection.rs`,
 `ecosystem/fret-ui-kit/src/imui/options/controls/tab.rs`, and

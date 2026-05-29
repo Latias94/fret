@@ -937,6 +937,7 @@
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs",
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/options.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/input.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/options.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/records.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/state.rs",

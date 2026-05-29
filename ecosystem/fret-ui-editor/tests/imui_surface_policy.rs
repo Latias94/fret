@@ -2,6 +2,7 @@
 
 const IMUI_RS: &str = include_str!("../src/imui.rs");
 const COLOR_EDIT_RS: &str = include_str!("../src/controls/color_edit.rs");
+const COLOR_EDIT_INPUT_RS: &str = include_str!("../src/controls/color_edit/input.rs");
 const COLOR_EDIT_POPUP_COPY_RS: &str = include_str!("../src/controls/color_edit/popup/copy.rs");
 const COLOR_EDIT_POPUP_EYEDROPPER_RS: &str =
     include_str!("../src/controls/color_edit/popup/eyedropper.rs");
@@ -43,12 +44,22 @@ fn count_occurrences(haystack: &str, needle: &str) -> usize {
 
 #[test]
 fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
+    assert!(COLOR_EDIT_RS.contains("mod input;"));
+    assert!(COLOR_EDIT_RS.contains("use self::input::{"));
     assert!(COLOR_EDIT_RS.contains("mod options;"));
     assert!(COLOR_EDIT_RS.contains("pub use self::options::{"));
     assert!(COLOR_EDIT_RS.contains("mod records;"));
     assert!(COLOR_EDIT_RS.contains("pub use self::records::{"));
     assert!(COLOR_EDIT_RS.contains("mod state;"));
     assert!(COLOR_EDIT_OPTIONS_RS.contains("pub struct ColorEditOptions"));
+    assert!(COLOR_EDIT_INPUT_RS.contains("pub(super) struct ColorEditInputArgs"));
+    assert!(COLOR_EDIT_INPUT_RS.contains("pub(super) fn color_hex_input<"));
+    assert!(COLOR_EDIT_INPUT_RS.contains("TextInputProps::new"));
+    assert!(COLOR_EDIT_INPUT_RS.contains("key_add_on_key_down_capture_for"));
+    assert!(COLOR_EDIT_INPUT_RS.contains("KeyCode::Enter"));
+    assert!(COLOR_EDIT_INPUT_RS.contains("KeyCode::Escape"));
+    assert!(COLOR_EDIT_INPUT_RS.contains("PointerRegionProps"));
+    assert!(COLOR_EDIT_INPUT_RS.contains("parse_hex("));
     assert!(COLOR_EDIT_RECORDS_RS.contains("const COLOR_PRESETS:"));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("fn preset_swatch<"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn color_preview_stack<"));

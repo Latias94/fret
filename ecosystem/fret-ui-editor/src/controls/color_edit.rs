@@ -14,12 +14,10 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, PressablePointerDownResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PointerRegionProps, PressableA11y, PressableProps, SizeStyle, SpacingLength, TextInputProps,
+    PressableA11y, PressableProps, SizeStyle, SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::{ChromeRefinement, Size};
 
-use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::input_group::derived_test_id;
 use crate::primitives::readout::editor_inline_error_text_props;
 use crate::primitives::style::EditorStyle;
@@ -27,6 +25,7 @@ use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, Edi
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 mod drag_drop;
+mod input;
 mod model;
 mod options;
 mod popup;
@@ -41,7 +40,8 @@ use self::drag_drop::{
     prune_color_drag_drop_store, resolve_color_drag_threshold, take_delivered_color_drop,
     update_color_drop_target,
 };
-use self::model::{format_hex, parse_hex};
+use self::input::{ColorEditInputArgs, color_hex_input};
+use self::model::format_hex;
 pub(in crate::controls::color_edit) use self::options::ColorEditPopupRuntimeOptions;
 pub use self::options::{
     ColorEditAlphaPreview, ColorEditCopyOptions, ColorEditDragDropOptions, ColorEditOptions,
@@ -202,114 +202,20 @@ impl ColorEdit {
                 || copy_enabled
                 || eyedropper_enabled);
 
-        let input = {
-            let (chrome, text_style) = {
-                let theme = Theme::global(&*cx.app);
-                let (chrome, text_style) = resolve_editor_text_field_style(
-                    theme,
-                    Size::default(),
-                    &ChromeRefinement::default(),
-                );
-                (chrome, text_style)
-            };
-
-            // Keep the draft synced while not focused so external updates (undo, scripts) show up.
-            let mut props = TextInputProps::new(draft.clone());
-            props.layout = LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Auto,
-                    min_height: Some(Length::Px(density.row_height)),
-                    ..Default::default()
-                },
-                ..Default::default()
-            };
-            props.enabled = self.options.enabled;
-            props.focusable = self.options.focusable;
-            props.test_id = input_test_id.clone();
-            props.chrome = chrome;
-            props.text_style = text_style;
-
-            let input = cx.text_input(props);
-            let input_id = input.id;
-            let is_focused = cx.is_focused_element(input_id);
-
-            if !is_focused {
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&draft, |s| *s = current_hex.as_ref().to_string());
-                let _ = cx.app.models_mut().update(&error, |e| *e = None);
-            }
-
-            let model_for_key = self.model.clone();
-            let draft_for_key = draft.clone();
-            let error_for_key = error.clone();
-            let show_alpha = self.options.show_alpha;
-            cx.key_add_on_key_down_capture_for(
-                input_id,
-                Arc::new(move |host, action_cx: ActionCx, down| match down.key {
-                    KeyCode::Enter | KeyCode::NumpadEnter => {
-                        let text = host
-                            .models_mut()
-                            .read(&draft_for_key, |s| s.clone())
-                            .unwrap_or_default();
-                        let current = host
-                            .models_mut()
-                            .get_copied(&model_for_key)
-                            .unwrap_or(Color::TRANSPARENT);
-                        if let Some(next) = parse_hex(&text, show_alpha, current) {
-                            let _ = host.models_mut().update(&model_for_key, |c| *c = next);
-                            let _ = host.models_mut().update(&error_for_key, |e| *e = None);
-                        } else {
-                            let _ = host
-                                .models_mut()
-                                .update(&error_for_key, |e| *e = Some(Arc::from("Invalid color")));
-                        }
-                        host.request_redraw(action_cx.window);
-                        true
-                    }
-                    KeyCode::Escape => {
-                        let current = host
-                            .models_mut()
-                            .get_copied(&model_for_key)
-                            .unwrap_or_else(|| Color::from_srgb_hex_rgb(0x00_00_00));
-                        let formatted = format_hex(current, show_alpha);
-                        let _ = host
-                            .models_mut()
-                            .update(&draft_for_key, |s| *s = formatted.as_ref().to_string());
-                        let _ = host.models_mut().update(&error_for_key, |e| *e = None);
-                        host.request_redraw(action_cx.window);
-                        true
-                    }
-                    _ => false,
-                }),
-            );
-
-            cx.pointer_region(
-                PointerRegionProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Auto,
-                            min_height: Some(Length::Px(density.row_height)),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    enabled: self.options.enabled && self.options.focusable,
-                    capture_phase_pointer_moves: false,
-                },
-                move |cx| {
-                    cx.pointer_region_on_pointer_down(Arc::new(move |host, action_cx, _down| {
-                        host.request_focus(input_id);
-                        host.request_redraw(action_cx.window);
-                        false
-                    }));
-                    vec![input]
-                },
-            )
-        };
+        let input = color_hex_input(
+            cx,
+            ColorEditInputArgs {
+                model: self.model.clone(),
+                draft: draft.clone(),
+                error: error.clone(),
+                current_hex: current_hex.clone(),
+                show_alpha: self.options.show_alpha,
+                enabled: self.options.enabled,
+                focusable: self.options.focusable,
+                test_id: input_test_id.clone(),
+                row_height: density.row_height,
+            },
+        );
 
         let swatch = {
             let open_for_activate = open.clone();
