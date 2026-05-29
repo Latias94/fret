@@ -180,6 +180,14 @@ owns input text, input text picker/history, and textarea forwarding. The public 
 points in `facade_writer.rs` now call these child macros directly, while `boolean_wrappers.rs`,
 `value_models.rs`, and `text_models.rs` remain the focusable-recording inherent wrapper owners.
 
+2026-05-29 facade text model surface sub-owner result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/model_surface/text.rs` is now a module/re-export hub.
+`text/input.rs` owns input-text model trait forwarding, `text/picker.rs` owns completion/history
+picker trait forwarding, and `text/textarea.rs` owns textarea trait forwarding. Public trait method
+names, default option forwarding, macro expansion order, response returns, focusable-recording
+inherent wrapper owners, and concrete `text_controls` / `text_picker_controls` behavior owners
+remain unchanged.
+
 2026-05-29 facade boolean-control inherent-wrapper sub-owner result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/boolean_wrappers.rs` is now a module hub.
 `boolean_wrappers/checkbox.rs` owns checkbox model inherent wrappers,

@@ -763,6 +763,49 @@ Focused gates:
 - `cargo nextest run -p fret-imui models_combo --no-fail-fast`: pass (11 passed, 175 skipped).
 - `cargo nextest run -p fret-imui models_text --no-fail-fast`: pass (29 passed, 157 skipped).
 
+## Facade Text Model Surface Sub-Owner Evidence - 2026-05-29
+
+Claim verified: IMUI facade text model surface macro ownership split into input, picker/history,
+and textarea child owners without changing public trait method names, default option forwarding,
+response returns, macro expansion order, focusable-recording inherent wrapper owners, or concrete
+`text_controls` / `text_picker_controls` behavior ownership.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/model_surface/text.rs` is now a module/re-export
+  hub for text model surface macros.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/model_surface/text/input.rs` owns input-text model
+  trait forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/model_surface/text/picker.rs` owns completion and
+  history picker trait forwarding plus picker response returns.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/model_surface/text/textarea.rs` owns textarea
+  trait forwarding.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` expands input, picker/history, and textarea
+  surface macros in the previous public method order.
+- `tools/gate_imui_workstream_source.py` checks the new child owners and rejects text model
+  surface macro bodies from drifting back into `facade_writer/model_surface/text.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke
+  --test imui_textarea_smoke --test imui_input_text_options_smoke
+  --test imui_input_text_picker_options_smoke --no-fail-fast`: pass (8 passed).
+- `$env:CARGO_INCREMENTAL = '0'; cargo nextest run -p fret-imui models_text --no-fail-fast`:
+  pass (29 passed, 157 skipped).
+- `python tools\check_workstream_catalog.py`: pass; validated 473 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+
+Recovery note: an initial parallel `cargo nextest` attempt only reported Cargo package/build lock
+waiting, and a later `fret-imui` attempt hit an MSVC linker failure with stale incremental symbols.
+`cargo clean -p fret-imui` removed the affected test artifacts, and the incremental-disabled
+rerun above passed.
+
 ## Facade Boolean-Control Inherent Wrapper Sub-Owner Evidence - 2026-05-29
 
 Claim verified: IMUI facade boolean-control inherent wrapper behavior ownership split into checkbox,

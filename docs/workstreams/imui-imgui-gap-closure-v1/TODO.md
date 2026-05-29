@@ -206,6 +206,13 @@ Last updated: 2026-05-29
       `model_surface/boolean.rs` owns checkbox/radio/switch model forwarding,
       `model_surface/value_combo.rs` owns slider and combo-model forwarding, and
       `model_surface/text.rs` owns input text, input text picker/history, and textarea forwarding.
+- [x] Split IMUI facade text model surface macro owner into input, picker/history, and textarea
+      child owners without changing public trait method names, default option forwarding,
+      response returns, macro expansion order, focusable recording wrappers, or concrete
+      text-control behavior ownership.
+      Result: `model_surface/text.rs` is now a module/re-export hub. `text/input.rs` owns
+      input-text model forwarding, `text/picker.rs` owns completion/history picker forwarding, and
+      `text/textarea.rs` owns textarea forwarding.
 - [x] Split IMUI facade boolean-control inherent wrapper behavior owner into checkbox, radio, and
       switch child owners without changing public inherent method names, disabled checks,
       focusable recording, trait delegation paths, or `fret-imui` thinness.

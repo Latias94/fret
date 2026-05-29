@@ -84,7 +84,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     model_surface::value_combo_model_surface_methods!();
 
-    model_surface::text_model_surface_methods!();
+    model_surface::input_text_model_surface_methods!();
+
+    model_surface::picker_text_model_surface_methods!();
+
+    model_surface::textarea_text_model_surface_methods!();
 
     floating_surface::window_surface_methods!();
 }
