@@ -214,6 +214,12 @@ child-owner routing. `controls/axis_drag_value/tests.rs` owns presentation forma
 coverage. `AxisDragValue::from_presentation`, NumericPresentation adoption, axis tint routing, and
 model child-owner boundaries remain unchanged.
 
+2026-05-31 editor axis-drag-value model tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value/model.rs` now keeps model/type definitions
+and test-owner routing. `controls/axis_drag_value/model/tests.rs` owns density line-height coverage.
+Typing line-height resolution, default options, reset action packaging, outcome callback aliases,
+and control routing remain unchanged.
+
 2026-05-30 editor slider chrome child-owner result:
 `ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider state, value flow, pointer/input
 switching, and layout orchestration. `controls/slider/chrome.rs` owns token fallback, color mixing,

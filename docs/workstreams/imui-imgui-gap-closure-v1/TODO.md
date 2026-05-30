@@ -216,6 +216,11 @@ Last updated: 2026-05-31
       or axis-drag-value model child-owner boundaries.
       Result: `controls/axis_drag_value.rs` keeps control orchestration plus child-owner routing.
       `controls/axis_drag_value/tests.rs` owns presentation format/parse/chrome-affix coverage.
+- [x] Split editor axis-drag-value model regressions into a private test owner without changing
+      typing line-height resolution, default options, reset action, outcome callback, or control
+      routing.
+      Result: `controls/axis_drag_value/model.rs` keeps model/type definitions plus test-owner
+      routing. `controls/axis_drag_value/model/tests.rs` owns density line-height coverage.
 - [x] Split editor slider chrome/color resolution into a private child owner without changing
       pointer/typing behavior, value formatting, theme token precedence, hover/pressed/disabled
       color mixing, or slider option/public constructor behavior.

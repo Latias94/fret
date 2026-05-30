@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Axis-Drag-Value Model Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor axis-drag-value model regressions split into a private test owner without
+changing typing line-height resolution, default options, reset action packaging, outcome callback
+aliases, or control routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/model.rs` now keeps model/type definitions
+  and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/model/tests.rs` owns density line-height
+  coverage.
+- `tools/gate_imui_workstream_source.py` now checks the axis-drag-value model root/test split and
+  keeps the migrated regression test name out of the root owner file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the model test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  axis_drag_value_input_text_style_uses_density_row_height_for_typing_line_box --no-fail-fast`:
+  pass (1 passed, 197 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Slider Chrome Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor slider chrome precedence regressions split into a private test owner without

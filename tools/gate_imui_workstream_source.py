@@ -31268,6 +31268,7 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/axis_drag_value/model.rs"),
             required=[
+                "mod tests;",
                 "pub(super) fn axis_drag_value_input_text_style",
                 "pub(super) enum AxisDragValueMode",
                 "pub struct AxisDragValueResetAction",
@@ -31276,7 +31277,18 @@ def main() -> None:
                 "pub type AxisDragValueOutcome",
                 "pub type OnAxisDragValueOutcome",
                 "NumericInputSelectionBehavior::ReplaceAllOnFocus",
+            ],
+            forbidden=[
                 "axis_drag_value_input_text_style_uses_density_row_height_for_typing_line_box",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/axis_drag_value/model/tests.rs"),
+            required=[
+                "axis_drag_value_input_text_style_uses_density_row_height_for_typing_line_box",
+                "axis_drag_value_input_text_style(",
+                "TextStyle",
+                "Px(24.0)",
             ],
             forbidden=[],
         ),
