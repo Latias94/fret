@@ -47,6 +47,12 @@ scroll wrapping, listbox semantics, popup chrome, and rendered panel packaging. 
 listbox semantics, active/disabled row palette, option activation, scroll threshold, popup surface
 chrome, item test-id derivation, and rendered panel handoff remain unchanged.
 
+2026-05-31 text-assist field root tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now keeps input/key orchestration,
+accept flow, helper policy, and test-owner routing. `controls/text_assist_field/tests.rs` owns
+inline empty-label and anchored-overlay default-height coverage. Panel and overlay child-owner
+boundaries remain unchanged.
+
 2026-05-30 property-row reset child-owner result:
 `ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the row layout and value
 orchestration plus reset delegation only. `composites/property_row/reset.rs` owns

@@ -74,6 +74,12 @@ Last updated: 2026-05-31
       Result: `controls/text_assist_field.rs` keeps input/key orchestration and accept flow.
       `controls/text_assist_field/panel.rs` owns suggestion panel content, option rows, scroll
       wrapping, listbox semantics, popup chrome, and rendered panel packaging.
+- [x] Split editor text-assist field root helper regressions into a private test owner without
+      changing inline empty-label gating, anchored-overlay default content height, accept commit
+      flow, key handling, panel routing, or overlay routing.
+      Result: `controls/text_assist_field.rs` keeps input/key orchestration, accept flow, helper
+      policy, and test-owner routing. `controls/text_assist_field/tests.rs` owns root helper
+      coverage.
 - [x] Split editor-owned property-row reset affordance handling into a private child owner without
       changing row layout, value-slot growth, reset keying, glyph render, accessibility label, or
       property chrome semantics.

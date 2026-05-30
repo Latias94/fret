@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Text-Assist Field Root Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor text-assist field root helper regressions split into a private test owner
+without changing inline empty-label gating, anchored-overlay default content height, accept commit
+flow, key handling, panel routing, or overlay routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now keeps input/key orchestration,
+  accept flow, helper policy, and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field/tests.rs` owns inline empty-label and
+  anchored-overlay default-height coverage.
+- `tools/gate_imui_workstream_source.py` now checks the text-assist root/test split and keeps
+  migrated root helper regression test names out of the root owner file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the root test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor empty_label_is_inline_only
+  anchored_overlay_defaults_to_capped_content_height --no-fail-fast`: pass (2 passed, 196 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test
+  imui_surface_policy --no-fail-fast`: pass (3 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Text-Assist Field Model Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor text-assist field model regressions split into a private test owner without
