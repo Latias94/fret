@@ -25,7 +25,6 @@ use crate::primitives::numeric_text_entry::{
     NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
     sync_numeric_text_entry_focus_handoff,
 };
-use crate::primitives::numeric_value::NumericValueConstraints;
 use crate::primitives::readout::EditorCompactReadoutStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use crate::primitives::{NumericPresentation, style::EditorStyle};
@@ -41,8 +40,10 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 mod chrome;
+mod value_math;
 
 use chrome::{alpha_mul, mix, resolve_slider_chrome};
+use value_math::{quantize_value, t_from_value, value_from_x};
 
 fn compose_affixed_value_text(
     value: &Arc<str>,
@@ -63,48 +64,6 @@ fn compose_affixed_value_text(
             Arc::from(out)
         }
     }
-}
-
-fn quantize_value(min: f64, max: f64, clamp: bool, step: Option<f64>, v: f64) -> f64 {
-    NumericValueConstraints {
-        min: Some(min),
-        max: Some(max),
-        clamp,
-        step,
-    }
-    .apply_f64(v)
-}
-
-fn t_from_value(min: f64, max: f64, clamp: bool, v: f64) -> f32 {
-    let range = max - min;
-    if !range.is_finite() || range.abs() <= f64::EPSILON {
-        return 0.0;
-    }
-    let mut out = (v - min) / range;
-    if clamp {
-        out = out.clamp(0.0, 1.0);
-    }
-    out as f32
-}
-
-fn value_from_x(
-    min: f64,
-    max: f64,
-    clamp: bool,
-    step: Option<f64>,
-    x: f64,
-    width: f64,
-    thumb_d: f64,
-) -> f64 {
-    let avail = (width - thumb_d).max(0.0);
-    if avail <= f64::EPSILON {
-        return quantize_value(min, max, clamp, step, min);
-    }
-    let thumb_r = thumb_d * 0.5;
-    let thumb_left = (x - thumb_r).clamp(0.0, avail);
-    let t = thumb_left / avail;
-    let v = min + (max - min) * t;
-    quantize_value(min, max, clamp, step, v)
 }
 
 fn hidden_layout(mut layout: LayoutStyle) -> LayoutStyle {

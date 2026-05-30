@@ -52,6 +52,13 @@ alpha attenuation, resolved chrome fields, and the focused chrome precedence tes
 behavior, value formatting, theme token precedence, hover/pressed/disabled color mixing, and public
 slider options remain unchanged.
 
+2026-05-30 editor slider value-math child-owner result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider state, event handling, typing
+handoff, and layout orchestration. `controls/slider/value_math.rs` owns value quantization,
+normalized progress, pointer-position projection, and focused value-math tests. Pointer-x mapping,
+clamp/step quantization, thumb-radius compensation, track-degenerate behavior, typing fallback, and
+public slider options remain unchanged.
+
 2026-05-30 editor enum-select row child-owner result:
 `ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps public control/options, trigger
 composition, and overlay orchestration. `controls/enum_select/row.rs` owns option-row rendering,

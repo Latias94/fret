@@ -80,6 +80,12 @@ Last updated: 2026-05-30
       Result: `controls/slider.rs` keeps slider state, value flow, pointer/input switching, and
       layout orchestration. `controls/slider/chrome.rs` owns slider token fallback, color mixing,
       alpha attenuation, resolved chrome fields, and the focused chrome precedence test.
+- [x] Split editor slider value-domain math into a private child owner without changing pointer-x
+      mapping, clamp/step quantization, thumb-radius compensation, track-degenerate behavior,
+      typing fallback, or public slider options.
+      Result: `controls/slider.rs` keeps slider state, event handling, typing handoff, and layout
+      orchestration. `controls/slider/value_math.rs` owns value quantization, normalized progress,
+      pointer-position projection, and focused value-math tests.
 - [x] Split editor enum-select row rendering, selection commit policy, and item test-id
       sanitization into a private child owner without changing trigger composition, overlay
       dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row

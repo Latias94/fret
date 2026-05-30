@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Editor Slider Value-Math Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: editor slider value-domain math split into a private child owner without changing
+pointer-x mapping, clamp/step quantization, thumb-radius compensation, track-degenerate behavior,
+typing fallback, or public slider options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider state, event handling, typing
+  handoff, value text, and layout orchestration.
+- `ecosystem/fret-ui-editor/src/controls/slider/value_math.rs` owns value quantization,
+  normalized progress, pointer-position projection, and focused value-math tests.
+- `tools/gate_imui_workstream_source.py` now checks the slider root/value-math split and keeps
+  pointer-to-value math bodies out of the root slider owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new slider
+  value-math owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  slider_t_from_value_returns_zero_for_degenerate_ranges
+  slider_t_from_value_clamps_when_requested
+  slider_value_from_x_accounts_for_thumb_radius_and_step_quantization
+  slider_value_from_x_returns_quantized_min_when_track_has_no_available_width
+  slider_chrome_prefers_editor_owned_tokens_over_generic_palette
+  slider_from_presentation_adopts_format_parse_and_chrome_affixes --no-fail-fast`: pass (6
+  passed, 186 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Editor Slider Chrome Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: editor slider chrome/color resolution split into a private child owner without
