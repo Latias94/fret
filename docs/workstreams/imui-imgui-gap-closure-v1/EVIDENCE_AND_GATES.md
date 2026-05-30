@@ -3758,6 +3758,41 @@ Focused gates:
 - `cargo nextest run -p fret-imui interaction_menu_tabs::tabs --no-fail-fast`: timed out while
   waiting on Cargo build locks; not used as evidence.
 
+## Disclosure Trigger Hook-Family Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI disclosure trigger activation, keyboard, and pointer hook families split into
+private owners without changing activation toggles, activate-shortcut repeat/IME gating,
+ContextMenu/Shift+F10 requests, right-click anchor capture, double-click signaling, trigger
+response projection, or public disclosure facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior.rs` keeps hook clearing,
+  context-menu anchor model handoff, hook installation order, and response-owner dispatch.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior/activation.rs` owns
+  pressable activation click transient recording and open-model toggling.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior/keyboard.rs` owns activate
+  shortcut handling and context-menu key requests.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior/pointer.rs` owns right-click
+  anchor capture, secondary-click/context-menu transients, and double-click transient signaling.
+- `tools/gate_imui_workstream_source.py` now rejects activation/keyboard/pointer hook logic from
+  drifting back into the disclosure trigger behavior hub and checks the new dedicated owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib disclosure_controls --no-fail-fast`:
+  pass; 6 disclosure behavior/visual tests passed.
+- `cargo nextest run -p fret-imui interaction_shortcuts::disclosure_tree --no-fail-fast`: pass;
+  4 disclosure shortcut/tree interaction tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Slider Pointer Value-Update Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI slider pointer value-update logic split into a private owner without changing

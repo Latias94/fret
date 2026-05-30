@@ -723,6 +723,13 @@ trigger-response projection, hover query hook attachment, active-item hover bloc
 response sanitization. `behavior.rs` keeps pressable/key/pointer hook installation and delegates
 the projection to the dedicated response owner.
 
+2026-05-30 disclosure trigger hook-family owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior.rs` now keeps hook clearing,
+context-menu anchor model handoff, installation order, and response-owner dispatch only.
+`behavior/activation.rs` owns activate-click toggling, `behavior/keyboard.rs` owns activate
+shortcuts plus ContextMenu/Shift+F10 requests, and `behavior/pointer.rs` owns right-click anchor
+capture plus double-click transient signaling.
+
 2026-05-28 slider pointer value-update owner-split result:
 `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/pointer/value_update.rs` now owns
 pointer-to-value projection, clamp/snap, and changed-detection writes. `pointer.rs` keeps

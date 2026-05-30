@@ -833,6 +833,13 @@ Last updated: 2026-05-30
       Result: `disclosure_controls/trigger/behavior/response.rs` owns trigger response
       population. `behavior.rs` keeps pressable/key/pointer hook installation and delegates the
       response projection to the new owner.
+- [x] Split IMUI disclosure trigger hook families into private activation, keyboard, and pointer
+      owners without changing click toggle behavior, activate-shortcut repeat/IME gating,
+      ContextMenu/Shift+F10 context-menu requests, right-click anchor capture, double-click
+      signaling, hook clearing order, response projection, or public disclosure facade behavior.
+      Result: `disclosure_controls/trigger/behavior.rs` now only clears/reinstalls the trigger
+      hook family in order and delegates to `behavior/activation.rs`, `behavior/keyboard.rs`,
+      `behavior/pointer.rs`, and `behavior/response.rs`.
 - [x] Split IMUI slider pointer value-update logic into a private owner without changing pointer
       down/move/up capture, active-item mutation, lifecycle activation/deactivation, changed
       response emission, or slider pointer behavior.
