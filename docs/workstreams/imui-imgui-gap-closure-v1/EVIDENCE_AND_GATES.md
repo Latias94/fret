@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Disclosure Control Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI disclosure control regression tests split into private entry/tree/visual
+owners without changing collapsing-header body mounting coverage, tree-item semantics/defaults,
+hover palette precedence, tree-row text role, or disclosure indicator text-role assertions.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests.rs` keeps the shared test harness and
+  module routing only.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/entry.rs` owns collapsing-header body
+  mounting coverage.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/tree.rs` owns tree-node semantics and
+  default-option coverage.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/visual.rs` owns hover palette and
+  tree-row/indicator text-role coverage.
+- `tools/gate_imui_workstream_source.py` now checks the disclosure test hub/sub-owner split and
+  rejects migrated regression tests from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the disclosure test
+  owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui
+  collapsing_header_default_open_mounts_body tree_node_leaf_uses_tree_item_semantics
+  tree_node_default_options_start_at_level_one
+  tree_node_hover_palette_prefers_accent_chrome_over_popover_fill
+  tree_row_label_uses_shared_list_row_text_role
+  disclosure_indicator_uses_shared_chrome_glyph_text_role --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_disclosure_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Popup Store State/Entry/Drop Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI popup-store state, entry lookup, and explicit scope-drop behavior split into

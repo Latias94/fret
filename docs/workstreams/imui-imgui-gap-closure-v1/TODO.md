@@ -1247,6 +1247,12 @@ Last updated: 2026-05-31
       Result: `disclosure_controls/trigger/behavior.rs` now only clears/reinstalls the trigger
       hook family in order and delegates to `behavior/activation.rs`, `behavior/keyboard.rs`,
       `behavior/pointer.rs`, and `behavior/response.rs`.
+- [x] Split IMUI disclosure control regression tests into private entry/tree/visual owners without
+      changing collapsing-header body mounting coverage, tree-item semantics/defaults, hover
+      palette precedence, tree-row text role, or disclosure indicator text-role assertions.
+      Result: `disclosure_controls/tests.rs` now keeps the shared test harness and module routing
+      only. `tests/entry.rs` owns collapsing-header body mounting coverage, `tests/tree.rs` owns
+      tree-node semantics/defaults, and `tests/visual.rs` owns palette and text-role coverage.
 - [x] Split IMUI slider pointer value-update logic into a private owner without changing pointer
       down/move/up capture, active-item mutation, lifecycle activation/deactivation, changed
       response emission, or slider pointer behavior.

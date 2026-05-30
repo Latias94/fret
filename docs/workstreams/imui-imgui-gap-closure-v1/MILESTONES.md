@@ -1254,6 +1254,12 @@ context-menu anchor model handoff, installation order, and response-owner dispat
 shortcuts plus ContextMenu/Shift+F10 requests, and `behavior/pointer.rs` owns right-click anchor
 capture plus double-click transient signaling.
 
+2026-05-31 disclosure control test owner split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests.rs` now keeps the shared test harness and
+module routing only. `tests/entry.rs` owns collapsing-header body mounting coverage,
+`tests/tree.rs` owns tree-node semantics/default coverage, and `tests/visual.rs` owns hover palette
+plus tree-row/indicator text-role coverage.
+
 2026-05-28 slider pointer value-update owner-split result:
 `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/pointer/value_update.rs` now owns
 pointer-to-value projection, clamp/snap, and changed-detection writes. `pointer.rs` keeps
