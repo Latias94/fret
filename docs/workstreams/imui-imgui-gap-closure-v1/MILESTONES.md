@@ -45,6 +45,13 @@ reset action packaging, axis group rendering, and the focused axis-outcome test.
 constructors, reset options, outcome accessors, transform-edit routing, identity derivation, and
 row/column auto layout remain unchanged.
 
+2026-05-30 editor slider chrome child-owner result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider state, value flow, pointer/input
+switching, and layout orchestration. `controls/slider/chrome.rs` owns token fallback, color mixing,
+alpha attenuation, resolved chrome fields, and the focused chrome precedence test. Pointer/typing
+behavior, value formatting, theme token precedence, hover/pressed/disabled color mixing, and public
+slider options remain unchanged.
+
 2026-05-30 editor enum-select row child-owner result:
 `ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps public control/options, trigger
 composition, and overlay orchestration. `controls/enum_select/row.rs` owns option-row rendering,

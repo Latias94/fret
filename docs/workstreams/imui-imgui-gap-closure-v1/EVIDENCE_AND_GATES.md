@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Editor Slider Chrome Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: editor slider chrome/color resolution split into a private child owner without
+changing pointer/typing behavior, value formatting, theme token precedence, hover/pressed/disabled
+color mixing, or slider option/public constructor behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider state, value flow,
+  pointer/input switching, value text, and layout orchestration.
+- `ecosystem/fret-ui-editor/src/controls/slider/chrome.rs` owns slider token fallback, color
+  mixing, alpha attenuation, resolved chrome fields, and the focused chrome precedence test.
+- `tools/gate_imui_workstream_source.py` now checks the slider root/chrome split and keeps chrome
+  token fallback code out of the root slider owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the slider root and new
+  chrome owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  slider_chrome_prefers_editor_owned_tokens_over_generic_palette
+  compose_affixed_value_text_keeps_plain_value_when_no_affix
+  compose_affixed_value_text_joins_prefix_and_suffix_without_extra_spacing
+  compose_affixed_value_text_can_skip_duplicate_suffix_chrome
+  slider_from_presentation_adopts_format_parse_and_chrome_affixes --no-fail-fast`: pass (5
+  passed, 183 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Editor VecEdit Axis Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: editor vector axis/reset/outcome policy and axis group rendering split into a

@@ -74,6 +74,12 @@ Last updated: 2026-05-30
       Result: `controls/vec_edit.rs` keeps Vec2/Vec3/Vec4 public control orchestration.
       `controls/vec_edit/axis.rs` owns `VecEditAxis`, `VecEditAxisOutcome`, axis reset options,
       reset action packaging, axis group rendering, and the focused axis-outcome test.
+- [x] Split editor slider chrome/color resolution into a private child owner without changing
+      pointer/typing behavior, value formatting, theme token precedence, hover/pressed/disabled
+      color mixing, or slider option/public constructor behavior.
+      Result: `controls/slider.rs` keeps slider state, value flow, pointer/input switching, and
+      layout orchestration. `controls/slider/chrome.rs` owns slider token fallback, color mixing,
+      alpha attenuation, resolved chrome fields, and the focused chrome precedence test.
 - [x] Split editor enum-select row rendering, selection commit policy, and item test-id
       sanitization into a private child owner without changing trigger composition, overlay
       dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row

@@ -30595,6 +30595,42 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/slider.rs"),
+            required=[
+                "mod chrome;",
+                "use chrome::{alpha_mul, mix, resolve_slider_chrome};",
+                "resolve_slider_chrome(theme)",
+                "mix(track_bg, accent",
+                "alpha_mul(track_bg",
+                "compose_affixed_value_text_keeps_plain_value_when_no_affix",
+                "slider_from_presentation_adopts_format_parse_and_chrome_affixes",
+            ],
+            forbidden=[
+                "fn lerp(",
+                "fn resolve_slider_chrome(",
+                "struct ResolvedSliderChrome",
+                "slider_chrome_prefers_editor_owned_tokens_over_generic_palette",
+                "EditorTokenKeys::SLIDER_TRACK_BG.to_string()",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/slider/chrome.rs"),
+            required=[
+                "fn lerp(",
+                "pub(super) fn mix(",
+                "pub(super) fn alpha_mul(",
+                "pub(super) struct ResolvedSliderChrome",
+                "pub(super) track_bg: Color",
+                "pub(super) fn resolve_slider_chrome",
+                "EditorTokenKeys::SLIDER_TRACK_BG",
+                "editor_subtle_bg(theme)",
+                "editor_accent(theme)",
+                "editor_border(theme)",
+                "slider_chrome_prefers_editor_owned_tokens_over_generic_palette",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/transform_edit.rs"),
             required=[
                 "pub struct TransformEditAxisOutcome {\n    section: TransformEditSection,\n    axis: VecEditAxis,\n    outcome: AxisDragValueOutcome,\n}",

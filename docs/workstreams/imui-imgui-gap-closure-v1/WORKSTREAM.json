@@ -1071,6 +1071,8 @@
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/tooltip.rs",
     "ecosystem/fret-ui-editor/src/controls/drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs",
+    "ecosystem/fret-ui-editor/src/controls/slider.rs",
+    "ecosystem/fret-ui-editor/src/controls/slider/chrome.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select/row.rs",
