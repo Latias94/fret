@@ -1073,6 +1073,7 @@
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/tooltip.rs",
     "ecosystem/fret-ui-editor/src/controls/drag_value.rs",
+    "ecosystem/fret-ui-editor/src/controls/drag_value/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value/model.rs",

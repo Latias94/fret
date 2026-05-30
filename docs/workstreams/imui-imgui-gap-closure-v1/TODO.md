@@ -170,6 +170,11 @@ Last updated: 2026-05-31
       Result: `editor_theme_preset_picker.rs` now keeps preset installation, theme resolution, and
       render dispatch only. `editor_theme_preset_picker/render.rs` owns the listbox semantics,
       header row, preset rows, and color mixing.
+- [x] Split editor drag-value presentation regression into a private test owner without changing
+      `DragValue::from_presentation`, NumericPresentation adoption, duplicate chrome affix
+      suppression, scrub/typing behavior, or drag-value value text-role routing.
+      Result: `controls/drag_value.rs` keeps drag-value control orchestration plus test-owner
+      routing. `controls/drag_value/tests.rs` owns presentation format/parse/chrome-affix coverage.
 - [x] Split IMUI textarea lifecycle/element assembly from textarea props/style resolution without
       changing textarea facade calls, enabled gating, focus tracking, select-all policy, response
       lifecycle, submit command behavior, IMUI chrome, or layout semantics.

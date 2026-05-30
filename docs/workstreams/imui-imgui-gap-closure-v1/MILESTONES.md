@@ -155,6 +155,12 @@ installation, theme resolution, and render dispatch only. `render.rs` owns listb
 header row, preset rows, and color mixing. Selected preset sync, item test IDs, activation
 behavior, and theme replay semantics remain unchanged.
 
+2026-05-31 editor drag-value tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps drag-value control orchestration and
+test-owner routing. `controls/drag_value/tests.rs` owns presentation format/parse/chrome-affix
+coverage. `DragValue::from_presentation`, NumericPresentation adoption, duplicate chrome affix
+suppression, scrub/typing behavior, and value text-role routing remain unchanged.
+
 2026-05-30 textarea element and props child-owner result:
 `ecosystem/fret-ui-kit/src/imui/text_controls/textarea.rs` now only owns the public wrapper and
 `ResponseExt` plumbing. `text_controls/textarea/element.rs` owns lifecycle, select-all, policy

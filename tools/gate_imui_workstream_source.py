@@ -30539,6 +30539,7 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/drag_value.rs"),
             required=[
+                "mod tests;",
                 "hovered: resp.hovered(),",
                 "pressed: resp.dragging() || resp.pressed(),",
                 "focused: resp.focused() || cx.is_focused_element(scrub_id),",
@@ -30549,6 +30550,22 @@ def main() -> None:
                 "pressed: resp.dragging || resp.pressed,",
                 "focused: resp.focused || cx.is_focused_element(scrub_id),",
                 "let value_text_el = cx.text_props(TextProps {",
+                "drag_value_from_presentation_adopts_format_parse_and_chrome_affixes",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/drag_value/tests.rs"),
+            required=[
+                "drag_value_from_presentation_adopts_format_parse_and_chrome_affixes",
+                "DragValue::from_presentation",
+                "NumericPresentation::<f64>::fixed_decimals(2)",
+                'with_chrome_prefix("$")',
+                'with_chrome_suffix("ms")',
+            ],
+            forbidden=[
+                "hovered: resp.hovered(),",
+                "pressed: resp.dragging() || resp.pressed(),",
+                "editor_input_value_text(",
             ],
         ),
         SourceCheck(

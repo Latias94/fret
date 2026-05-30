@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor DragValue Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor drag-value presentation regression split into a private test owner without
+changing `DragValue::from_presentation`, NumericPresentation adoption, duplicate chrome affix
+suppression, scrub/typing behavior, or drag-value value text-role routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps drag-value control orchestration
+  and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/controls/drag_value/tests.rs` owns presentation
+  format/parse/chrome-affix coverage.
+- `tools/gate_imui_workstream_source.py` now checks the drag-value root/test split and keeps
+  migrated regression test names out of the root control file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the drag-value test
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  drag_value_from_presentation_adopts_format_parse_and_chrome_affixes --no-fail-fast`: pass (2
+  passed, 196 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Editor AxisDragValue Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor axis-drag-value presentation regression split into a private test owner
