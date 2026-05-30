@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Table-Column Visibility Menu-Items Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI table-column visibility repeated menu item composition moved into a private
+items owner without changing stable column-id filtering, visible-label filtering, generated test-id
+suffixes, menu item state updates, runtime visibility reads, response aggregation, public helper
+forwarding, or header context-menu behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu.rs` now keeps header context-menu
+  trigger selection and popup orchestration.
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu/items.rs` owns repeated column-menu
+  item composition, generated item test IDs, runtime visibility reads, and
+  `TableColumnVisibilityMenuResponse` aggregation.
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu/item.rs` remains the single
+  checkbox item mutation owner.
+- `tools/gate_imui_workstream_source.py` now checks the menu root/items/item/identity split.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass after tightening
+  `table_column_visibility_menu_items` visibility to `crate::imui::table_column_visibility` so the
+  menu hub can re-export it without widening beyond the table-column visibility owner.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_column_visibility
+  --no-fail-fast`: pass (4 passed, 5 skipped).
+- `cargo nextest run -p fret-imui table_column_visibility --no-fail-fast`: pass (4 passed,
+  182 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_column_visibility::tests
+  --no-fail-fast`: timed out once while earlier cargo/rustc/nextest processes were still draining;
+  rerun after they exited passed (7 passed, 683 skipped).
+
 ## Input-Text Element Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI input-text ElementContext assembly moved into a private element owner without

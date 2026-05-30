@@ -1,20 +1,19 @@
-use std::sync::Arc;
-
 use fret_runtime::Model;
 use fret_ui::UiHost;
 
 use super::{
     ImUiTableColumnVisibilityState, TableColumnVisibilityHeaderContextMenuOptions,
-    TableColumnVisibilityHeaderContextMenuResponse, TableColumnVisibilityMenuItemResponse,
-    TableColumnVisibilityMenuOptions, TableColumnVisibilityMenuResponse,
+    TableColumnVisibilityHeaderContextMenuResponse, TableColumnVisibilityMenuResponse,
 };
 use crate::imui::{TableColumn, TableResponse, UiWriterImUiFacadeExt};
 
 mod identity;
 mod item;
+mod items;
 
 pub(super) use identity::{menu_column_id, menu_test_id_suffix, visible_menu_label};
 pub(super) use item::table_column_visibility_menu_item;
+pub(super) use items::table_column_visibility_menu_items;
 
 pub(super) fn table_column_visibility_header_context_menu<
     H: UiHost,
@@ -47,52 +46,4 @@ pub(super) fn table_column_visibility_header_context_menu<
     });
 
     TableColumnVisibilityHeaderContextMenuResponse { open, items }
-}
-
-pub(super) fn table_column_visibility_menu_items<
-    H: UiHost,
-    W: UiWriterImUiFacadeExt<H> + ?Sized,
->(
-    ui: &mut W,
-    columns: &[TableColumn],
-    model: &Model<ImUiTableColumnVisibilityState>,
-    options: TableColumnVisibilityMenuOptions,
-) -> TableColumnVisibilityMenuResponse {
-    let mut items = Vec::new();
-
-    for (index, column) in columns.iter().enumerate() {
-        let Some(column_id) = menu_column_id(column) else {
-            continue;
-        };
-        if visible_menu_label(column).is_none() {
-            continue;
-        }
-
-        let mut item_options = options.item_options.clone();
-        if let Some(prefix) = options.test_id_prefix.as_ref() {
-            item_options.test_id = Some(Arc::from(format!(
-                "{}{}",
-                prefix,
-                menu_test_id_suffix(column_id.as_ref(), index)
-            )));
-        }
-
-        let Some(response) = table_column_visibility_menu_item(ui, column, model, item_options)
-        else {
-            continue;
-        };
-        let visible = ui.with_cx_mut(|cx| {
-            cx.read_model(model, fret_ui::Invalidation::Paint, |_app, state| {
-                state.is_visible(column_id.as_ref(), column.visible())
-            })
-            .unwrap_or(column.visible())
-        });
-        items.push(TableColumnVisibilityMenuItemResponse {
-            column_id,
-            visible,
-            response,
-        });
-    }
-
-    TableColumnVisibilityMenuResponse { items }
 }

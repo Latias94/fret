@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 table-column visibility menu-items child-owner result:
+`ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu.rs` now keeps header context-menu
+trigger selection and popup orchestration. `menu/items.rs` owns repeated column-menu item
+composition, generated item test IDs, runtime visibility reads, and `TableColumnVisibilityMenuResponse`
+aggregation, while `menu/item.rs` still owns the single checkbox item mutation. Public helper
+forwarding, model updates, filtering, and header context-menu response semantics remain unchanged.
+
 2026-05-30 input-text element child-owner result:
 `ecosystem/fret-ui-kit/src/imui/text_controls/input.rs` now keeps the public input-text wrapper,
 assistive-semantics re-export, and shared model-changed helper. `input/element.rs` owns
