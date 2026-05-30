@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 floating-window on-area state child-owner result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_on_area/state.rs` now keeps the on-area state
+preparation flow, resize snapshot/prepare calls, scale-factor lookup, and chrome response assembly.
+`state/collapsed.rs` owns collapsed-model toggle/readback, while `state/position.rs` owns area
+position feedback after resize. Collapsed toggles, resize state preparation, area position feedback,
+and `FloatingWindowChromeResponse` semantics remain unchanged.
+
 2026-05-30 interaction-runtime element-model child-owner result:
 `ecosystem/fret-ui-kit/src/imui/interaction_runtime/models/element.rs` is now a private
 module/re-export hub. `element/context_menu.rs` owns context-menu anchor models,

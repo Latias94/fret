@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Floating-Window On-Area State Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI floating-window on-area state details split into collapsed and position
+feedback child owners without changing collapsed toggle/readback behavior, resize-state
+preparation, area position feedback after resize, scale-factor lookup, or
+`FloatingWindowChromeResponse` semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_on_area/state.rs` keeps on-area state preparation,
+  resize snapshot/prepare owner calls, scale-factor lookup, and chrome response assembly.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_on_area/state/collapsed.rs` owns collapsed-model
+  toggle/readback.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_on_area/state/position.rs` owns resize-driven
+  floating area position feedback.
+- `tools/gate_imui_workstream_source.py` now checks the state/collapsed/position split and keeps
+  title/content/shell assembly out of the state owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-imui
+  floating::window_options::floating_window_title_bar_double_click_toggles_collapsed
+  floating::window_options::floating_window_resizes_when_dragging_corner_handle
+  floating::window_options::floating_window_resizes_from_left_updates_origin_and_width
+  floating::input_modes::floating_window_activate_on_click_can_be_disabled_for_resize_handles
+  --no-fail-fast`: pass (4 passed, 182 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke
+  --no-fail-fast`: pass (3 passed).
+
 ## Interaction-Runtime Element-Model Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI interaction-runtime element-scoped model helpers split into context-menu,

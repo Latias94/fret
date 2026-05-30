@@ -3778,6 +3778,14 @@ opening the slice.
       collapse toggle/readback, scale-factor lookup, resize owner calls, area position feedback,
       and chrome response assembly. `floating_window_on_area.rs` now only wires the prepared state
       into title bar, content, shell, and facade output.
+- [x] Split floating-window on-area state collapsed and position feedback details into private
+      child owners without changing collapsed toggle/readback behavior, resize-state preparation,
+      area position feedback after resize, scale-factor lookup, or `FloatingWindowChromeResponse`
+      semantics.
+      Result: `floating_window_on_area/state.rs` keeps the on-area preparation flow,
+      resize snapshot/prepare calls, scale-factor lookup, and chrome response assembly.
+      `state/collapsed.rs` owns collapsed-model toggle/readback, while `state/position.rs` owns
+      resize-driven area position feedback.
 - [x] Split the floating-window shell/container composition out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into a dedicated internal helper
       without changing the public IMUI surface.
