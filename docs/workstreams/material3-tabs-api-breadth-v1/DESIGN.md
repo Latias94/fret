@@ -1,6 +1,6 @@
 # Material3 Tabs API Breadth v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-30
 
 ## Why This Lane Exists
@@ -79,3 +79,9 @@ This lane can close when:
 - existing primary Tabs behavior remains covered,
 - targeted Material3 Tabs gates pass,
 - remaining richer tabs breadth is split into narrow follow-ons instead of hidden in this lane.
+
+Closeout status (2026-05-30): closed. The shipped slice meets the target state with
+`TabsVariant::Secondary`, Compose-backed secondary token aliases, focused fixed/scrollable geometry
+tests, v30 token-resolution gates, and source-backed residual follow-ons. Secondary token visual
+fixture rows were intentionally skipped because they would duplicate the existing v30 alias and
+geometry evidence without adding API breadth coverage.

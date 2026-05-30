@@ -2,11 +2,15 @@
   "schema_version": 1,
   "slug": "material3-tabs-api-breadth-v1",
   "title": "Material3 Tabs API Breadth v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-30",
   "scope_kind": "follow_on",
   "problem": "Closed Material3 token visual matrix coverage proved the current primary Tabs token outcomes, but Compose Material3 exposes secondary tab rows with different public API taxonomy, token aliases, and active-indicator geometry. This lane adds that breadth without reopening the token matrix.",
   "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-tabs-api-breadth-v1/CLOSEOUT_AUDIT_2026-05-30.md"
+    },
     {
       "role": "design",
       "path": "docs/workstreams/material3-tabs-api-breadth-v1/DESIGN.md"
@@ -68,14 +72,15 @@
     "ecosystem/fret-ui-material3/src/tabs.rs",
     "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
     "ecosystem/fret-ui-material3/src/tokens/v30.rs",
-    "ecosystem/fret-ui-material3/tests/tabs_state.rs"
+    "ecosystem/fret-ui-material3/tests/tabs_state.rs",
+    "docs/workstreams/material3-tabs-api-breadth-v1/CLOSEOUT_AUDIT_2026-05-30.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
     "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue through M3TAB-020 before deciding whether secondary fixture rows or richer tab breadth deserve separate follow-ons."
+    "default_action": "start_follow_on",
+    "notes": "This narrow API breadth lane is closed. Start separate follow-ons for icon-and-label tabs, divider rendering, gallery snippets, RTL/auto-scroll polish, richer overflow behavior, or future generated secondary token-source replacement."
   }
 }

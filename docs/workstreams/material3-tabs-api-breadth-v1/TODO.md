@@ -1,6 +1,6 @@
 # Material3 Tabs API Breadth v1 - TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-30
 
 Task IDs use `M3TAB-*`.
@@ -31,18 +31,23 @@ Task IDs use `M3TAB-*`.
   Handoff: Decide whether to close with this API/geometry evidence or add optional secondary token
   fixture rows in M3TAB-030.
 
-- [ ] M3TAB-030 [owner=codex] [deps=M3TAB-020] [scope=ecosystem/fret-ui-material3/src/tokens,ecosystem/fret-ui-material3/tests/fixtures,docs/workstreams/material3-tabs-api-breadth-v1]
+- [x] M3TAB-030 [owner=codex] [deps=M3TAB-020] [scope=ecosystem/fret-ui-material3/src/tokens,ecosystem/fret-ui-material3/tests/fixtures,docs/workstreams/material3-tabs-api-breadth-v1]
   Goal: Add secondary tabs token fixture coverage only if M3TAB-020 introduces secondary literal
   tokens that are not already protected by v30 and geometry gates.
   Validation: `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures`.
-  Review: Pending.
-  Handoff: Keep this skipped if it would duplicate M3TVM token-matrix evidence without new API
-  breadth value.
+  Review: SKIPPED_WITH_SOURCE_BACKING. M3TAB-020 added secondary aliases and API/geometry behavior,
+  but the new literal token surface is already protected by `tokens::v30`, and the behavior drift is
+  protected by `tabs_state`. Adding secondary rows to the M3TVM fixture suite would duplicate token
+  alias evidence without proving new API breadth.
+  Handoff: No fixture work remains in this lane.
 
 ## M2 - Closeout
 
-- [ ] M3TAB-090 [owner=codex] [deps=M3TAB-020] [scope=docs/workstreams/material3-tabs-api-breadth-v1]
+- [x] M3TAB-090 [owner=codex] [deps=M3TAB-020] [scope=docs/workstreams/material3-tabs-api-breadth-v1]
   Goal: Close the lane or split richer tab breadth into follow-ons.
   Validation: all lane gates pass or residuals are source-backed and split.
-  Review: Pending.
-  Handoff: Candidate residuals are icon-and-label tabs, divider rendering, and gallery snippets.
+  Review: DONE. The lane closes with M3TAB-010/M3TAB-020 complete and M3TAB-030 intentionally
+  skipped. Residual richer tab breadth is split as future work: icon-and-label tabs, divider
+  rendering, gallery snippets, RTL/auto-scroll polish, and richer overflow behavior.
+  Handoff: Start a new narrow follow-on only for those residuals; do not reopen this lane for token
+  fixture duplication.

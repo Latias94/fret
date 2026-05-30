@@ -1,6 +1,6 @@
 # Material3 Tabs API Breadth v1 - Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-30
 
 ## M0 - Lane Setup
@@ -35,3 +35,6 @@ Exit criteria:
 - TODO reviews are current.
 - Evidence log includes fresh command results.
 - Remaining work is explicitly out of scope or assigned to follow-ons.
+
+Result: complete. M3TAB-010 and M3TAB-020 shipped; M3TAB-030 was skipped with source-backed
+justification; M3TAB-090 closed the lane.

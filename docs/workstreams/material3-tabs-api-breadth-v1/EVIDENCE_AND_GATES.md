@@ -1,6 +1,6 @@
 # Material3 Tabs API Breadth v1 - Evidence And Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-30
 
 ## Smallest Current Repro
@@ -68,6 +68,12 @@ cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures
   - `cargo nextest run -p fret-ui-material3 --lib tokens::v30`
   - `cargo check -p fret-ui-material3 --features diagnostics --tests`
   - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures`
+  - `python -m json.tool docs/workstreams/material3-tabs-api-breadth-v1/WORKSTREAM.json | Out-Null`
+  - `python tools/check_workstream_catalog.py`
+- 2026-05-30: Closed M3TAB-090.
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test tabs_state`
+  - `cargo nextest run -p fret-ui-material3 --lib tokens::v30`
   - `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures`
   - `python -m json.tool docs/workstreams/material3-tabs-api-breadth-v1/WORKSTREAM.json | Out-Null`
   - `python tools/check_workstream_catalog.py`
