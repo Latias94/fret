@@ -19198,6 +19198,7 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize/x.rs"),
             required=[
+                "mod tests;",
                 "use fret_core::Px;",
                 "use super::super::super::super::drag::DragResponse;",
                 "pub struct ChildRegionResizeXResponse",
@@ -19211,9 +19212,9 @@ def main() -> None:
                 "pub fn drag_delta_x(&self) -> f32",
                 "pub fn drag_total_x(&self) -> f32",
                 "pub fn width_from_start(&self, start_width: Px) -> Px",
-                "child_region_resize_x_width_from_start_clamps_to_min_and_max",
             ],
             forbidden=[
+                "child_region_resize_x_width_from_start_clamps_to_min_and_max",
                 "ChildRegionResizeYResponse",
                 "pub(crate) min_height: Option<Px>",
                 "pub(crate) max_height: Option<Px>",
@@ -19230,8 +19231,23 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize/x/tests.rs"),
+            required=[
+                "child_region_resize_x_width_from_start_clamps_to_min_and_max",
+                "ChildRegionResizeXResponse",
+                "min_width: Some(Px(80.0))",
+                "max_width: Some(Px(320.0))",
+                "width_from_start(Px(160.0))",
+            ],
+            forbidden=[
+                "ChildRegionResizeYResponse",
+                "height_from_start",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize/y.rs"),
             required=[
+                "mod tests;",
                 "use fret_core::Px;",
                 "use super::super::super::super::drag::DragResponse;",
                 "pub struct ChildRegionResizeYResponse",
@@ -19245,9 +19261,9 @@ def main() -> None:
                 "pub fn drag_delta_y(&self) -> f32",
                 "pub fn drag_total_y(&self) -> f32",
                 "pub fn height_from_start(&self, start_height: Px) -> Px",
-                "child_region_resize_y_height_from_start_clamps_to_min_and_max",
             ],
             forbidden=[
+                "child_region_resize_y_height_from_start_clamps_to_min_and_max",
                 "ChildRegionResizeXResponse",
                 "pub(crate) min_width: Option<Px>",
                 "pub(crate) max_width: Option<Px>",
@@ -19261,6 +19277,20 @@ def main() -> None:
                 "TableResponse",
                 "VirtualListResponse",
                 "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize/y/tests.rs"),
+            required=[
+                "child_region_resize_y_height_from_start_clamps_to_min_and_max",
+                "ChildRegionResizeYResponse",
+                "min_height: Some(Px(48.0))",
+                "max_height: Some(Px(160.0))",
+                "height_from_start(Px(100.0))",
+            ],
+            forbidden=[
+                "ChildRegionResizeXResponse",
+                "width_from_start",
             ],
         ),
         SourceCheck(

@@ -1351,6 +1351,12 @@ Last updated: 2026-05-31
       Result: `response/widgets/child_region/resize.rs` is now a private module/re-export index.
       `resize/x.rs` owns width-axis response projection and tests, while `resize/y.rs` owns
       height-axis response projection and tests.
+- [x] Split IMUI child-region resize response clamp regressions into private X/Y test owners
+      without changing public resize response re-exports, enabled/min/max accessors, drag
+      delta/total projection, clamp-from-start math, or opaque response fields.
+      Result: `resize/x.rs` and `resize/y.rs` keep response projection plus test-owner routing.
+      `resize/x/tests.rs` owns width clamp coverage, while `resize/y/tests.rs` owns height clamp
+      coverage.
 - [x] Split IMUI input-text filter options into private built-in and custom-filter owners without
       changing `InputTextFilters` constructors, public filter flags, character filtering,
       uppercase/no-blank behavior, `InputTextCustomFilter` closure storage, debug output, or public

@@ -1339,6 +1339,12 @@ module/re-export index. `resize/x.rs` owns width-axis response projection and te
 `resize/y.rs` owns height-axis response projection and tests. `ChildRegionResponse` still re-exports
 both public response types from the same public IMUI surface.
 
+2026-05-31 child-region resize response tests child-owner result:
+`ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize/x.rs` and `resize/y.rs` now
+keep response projection plus test-owner routing. `resize/x/tests.rs` owns width clamp coverage,
+while `resize/y/tests.rs` owns height clamp coverage. Public resize response re-exports,
+enabled/min/max accessors, drag delta/total projection, and clamp-from-start math remain unchanged.
+
 2026-05-28 input-text filter owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/text/filters.rs` is now a private
 module/re-export index. `filters/builtin.rs` owns `InputTextFilters` plus

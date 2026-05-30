@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Child-Region Resize Response Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI child-region resize response regressions split into private X/Y test owners
+without changing public resize response re-exports, enabled/min/max accessors, drag delta/total
+projection, clamp-from-start math, or opaque response fields.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize/x.rs` and `y.rs` now keep
+  response projection and thin `mod tests;` hooks.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize/x/tests.rs` owns width
+  clamp coverage.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize/y/tests.rs` owns height
+  clamp coverage.
+- `tools/gate_imui_workstream_source.py` now checks the child-region resize root/test split and
+  keeps migrated clamp regression test names out of the root owner files.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the resize test owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui
+  child_region_resize_x_width_from_start_clamps_to_min_and_max
+  child_region_resize_y_height_from_start_clamps_to_min_and_max --no-fail-fast`: pass (2 passed,
+  749 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test
+  imui_response_contract_smoke --no-fail-fast`: pass (5 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Text-Assist Field Root Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor text-assist field root helper regressions split into a private test owner
