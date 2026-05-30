@@ -30471,10 +30471,30 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/enum_select.rs"),
             required=[
-                "use crate::primitives::readout::{",
+                "mod row;",
                 "editor_input_value_text(",
                 "editor_popup_empty_text_props(",
+                "row::enum_select_row(",
+            ],
+            forbidden=[
+                "TextProps::new(",
+                "TextProps {",
+                "TextStyle {",
+                "wrap: TextWrap::None,",
+                "use fret_ui_kit::typography;",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/enum_select/row.rs"),
+            required=[
+                "pub(super) fn enum_select_row",
+                "fn enum_select_selection_commit_policy",
+                "fn sanitize_test_id_segment",
+                "EditorPopupListRowState",
+                "editor_popup_list_row_palette(",
                 "editor_popup_list_row_text_props(",
+                "enum_select_item_test_id_segment_is_stable_ascii",
+                "enum_select_commit_policy_does_not_toggle_selected_to_none",
             ],
             forbidden=[
                 "TextProps::new(",

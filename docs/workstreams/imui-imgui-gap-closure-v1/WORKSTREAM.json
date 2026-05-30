@@ -1071,6 +1071,7 @@
     "ecosystem/fret-ui-editor/src/controls/drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select.rs",
+    "ecosystem/fret-ui-editor/src/controls/enum_select/row.rs",
     "ecosystem/fret-ui-editor/src/controls/text_assist_field.rs",
     "ecosystem/fret-ui-editor/src/controls/vec_edit.rs",
     "ecosystem/fret-ui-editor/src/controls/transform_edit.rs",

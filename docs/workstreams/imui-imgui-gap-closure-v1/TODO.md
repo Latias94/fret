@@ -61,6 +61,13 @@ Last updated: 2026-05-30
       Result: `primitives/readout.rs` now keeps the non-popup editor readout helpers only.
       `primitives/readout/popup_list.rs` owns the popup-list row, centered-row, option-caption, and
       empty-state text helpers plus their focused tests.
+- [x] Split editor enum-select row rendering, selection commit policy, and item test-id
+      sanitization into a private child owner without changing trigger composition, overlay
+      dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row
+      reveal.
+      Result: `controls/enum_select.rs` now keeps public control/options, trigger composition, and
+      overlay orchestration. `controls/enum_select/row.rs` owns option-row rendering, selection
+      commit policy, item test-id normalization, and the focused row-policy tests.
 - [x] Split editor theme preset picker policy/installation from listbox rendering and row chrome
       assembly without changing preset installation, selected preset sync, label fallback,
       listbox semantics, preset activation, item test IDs, or theme replay behavior.
