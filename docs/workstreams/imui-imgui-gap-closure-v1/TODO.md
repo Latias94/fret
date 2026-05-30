@@ -56,6 +56,11 @@ Last updated: 2026-05-30
       Result: `composites/property_row.rs` now keeps the row layout and value orchestration only.
       `composites/property_row/reset.rs` owns `OnPropertyRowReset`,
       `PropertyRowResetOptions`, `PropertyRowReset`, and the reset pressable/activation helpers.
+- [x] Split the shared editor popup-list readout helpers into a private child owner without
+      changing popup row geometry, alignment, empty-state copy, or popup-list text-role coverage.
+      Result: `primitives/readout.rs` now keeps the non-popup editor readout helpers only.
+      `primitives/readout/popup_list.rs` owns the popup-list row, centered-row, option-caption, and
+      empty-state text helpers plus their focused tests.
 - [x] Split editor theme preset picker policy/installation from listbox rendering and row chrome
       assembly without changing preset installation, selected preset sync, label fallback,
       listbox semantics, preset activation, item test IDs, or theme replay behavior.

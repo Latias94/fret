@@ -1036,6 +1036,7 @@
     "ecosystem/fret-ui-editor/src/primitives/input_group.rs",
     "ecosystem/fret-ui-editor/src/primitives/popup_list.rs",
     "ecosystem/fret-ui-editor/src/primitives/readout.rs",
+    "ecosystem/fret-ui-editor/src/primitives/readout/popup_list.rs",
     "ecosystem/fret-ui-editor/src/composites/inspector_panel.rs",
     "ecosystem/fret-ui-editor/src/composites/property_group.rs",
     "ecosystem/fret-ui-editor/src/composites/property_grid.rs",

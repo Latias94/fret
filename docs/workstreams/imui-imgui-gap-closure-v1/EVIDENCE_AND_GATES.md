@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Editor Readout Popup-List Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: shared editor popup-list readout helpers split into a private child owner without
+changing popup row geometry, alignment, empty-state copy, or popup-list text-role coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the non-popup editor readout
+  helpers only.
+- `ecosystem/fret-ui-editor/src/primitives/readout/popup_list.rs` owns the popup-list row,
+  centered-row, option-caption, and empty-state text helpers plus their focused tests.
+- `tools/gate_imui_workstream_source.py` now checks the readout popup-list child owner and keeps
+  popup-list text-role ownership out of the root readout hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new popup-list
+  readout owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor popup_list_row_text_is_single_line_and_shrinkable
+  popup_empty_text_is_single_line_and_shrinkable
+  popup_list_centered_row_text_keeps_row_fill_and_center_alignment
+  popup_list_option_caption_text_keeps_fixed_caption_line_box --no-fail-fast`: pass (4 passed,
+  184 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `python tools/gate_imui_workstream_source.py`: pass.
+
 ## Property Row Reset Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: editor-owned property-row reset affordance handling split into a private child owner

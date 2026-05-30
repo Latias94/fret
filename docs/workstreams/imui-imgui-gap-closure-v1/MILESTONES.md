@@ -26,6 +26,12 @@ orchestration plus reset delegation only. `composites/property_row/reset.rs` own
 activation helpers. Row layout, value-slot growth, reset keying, and property chrome semantics
 remain unchanged.
 
+2026-05-30 editor readout popup-list child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the non-popup editor readout
+helpers only. `primitives/readout/popup_list.rs` owns the popup-list row, centered-row,
+option-caption, and empty-state text helpers plus the focused popup-list tests. Popup row geometry,
+alignment, empty-state copy, and popup-list text-role coverage remain unchanged.
+
 2026-05-30 editor theme preset picker render child-owner result:
 `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs` now keeps preset
 installation, theme resolution, and render dispatch only. `render.rs` owns listbox semantics,
