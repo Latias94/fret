@@ -1,6 +1,6 @@
 # Material3 Token Visual Matrix v1 - Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-30
 
 ## M0 - Lane Opened
@@ -49,11 +49,11 @@ Exit criteria:
 
 ## M4 - Closeout
 
-Status: In progress as of M3TVM-080. Shared token helper consolidation is complete; final closeout
-or residual split remains in M3TVM-090.
+Status: Complete as of M3TVM-090. Shared token helper consolidation is complete and the closeout
+audit records no blocking residual token visual breadth.
 
 Exit criteria:
 
 - Matrix rows are no longer `inventory_seeded` without a follow-on reason.
 - Obsolete fallback helpers and stale tests are deleted or explicitly retained as evidence.
-- Residual breadth is split into new workstreams.
+- Residual breadth is split into new workstreams or classified as source-backed scope boundaries.

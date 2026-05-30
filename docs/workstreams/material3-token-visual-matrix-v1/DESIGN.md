@@ -1,6 +1,6 @@
 # Material3 Token Visual Matrix v1 - Design
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-30
 
 ## Problem

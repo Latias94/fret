@@ -1,6 +1,6 @@
 # Material3 Token Visual Matrix v1 - TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-30
 
 Task IDs use `M3TVM-*`.
@@ -139,7 +139,9 @@ Task IDs use `M3TVM-*`.
   Handoff: Start M3TVM-090 by closing the lane or splitting any residual breadth into narrow
   follow-ons.
 
-- [ ] M3TVM-090 [owner=codex] [deps=M3TVM-080] [scope=docs/workstreams/material3-token-visual-matrix-v1]
+- [x] M3TVM-090 [owner=codex] [deps=M3TVM-080] [scope=docs/workstreams/material3-token-visual-matrix-v1]
   Goal: Close the lane or split residual visual-matrix breadth into narrow follow-ons.
   Validation: matrix rows have explicit state; all residuals have source-backed notes.
-  Review: Pending.
+  Review: DONE. Closeout audit confirms all 39 matrix rows are `covered_fixture`, all 38 component
+  token modules map to matrix rows, shared helper modules are explicitly tracked, and residual
+  notes are source-backed scope boundaries rather than missing token coverage.

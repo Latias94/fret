@@ -1,6 +1,6 @@
 # Material3 Token Visual Matrix v1 - Evidence And Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-30
 
 ## Smallest Current Repro
@@ -310,3 +310,21 @@ cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D
       standalone markdown files.
     - `git diff --check`: passed with the existing CRLF/LF warning for
       `material3_token_visual_matrix_v1.json`.
+- 2026-05-30: M3TVM-090 closed the token visual matrix lane.
+  - Closeout artifact:
+    `docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_closeout_audit.md`.
+  - Result:
+    - All 39 matrix rows are `covered_fixture`.
+    - All 38 component token modules map to matrix rows.
+    - Shared helper modules are tracked as `shape` and `typography`.
+    - Residual notes are source-backed scope boundaries rather than missing token coverage.
+  - Fresh verification:
+    - `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json | Out-Null`; `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null`; `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null`; `python -m json.tool ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json | Out-Null`: passed.
+    - Matrix closeout assertion (`covered_fixture` for every row and fixture evidence on every
+      row): passed.
+    - `python tools/check_workstream_catalog.py`: passed with 511 dedicated directories and 47
+      standalone markdown files.
+    - `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures`: passed, 1
+      test run.
+    - `cargo nextest run -p fret-ui-material3 --lib tokens::v30`: passed, 6 tests run.
+    - `git diff --check`: passed.
