@@ -753,6 +753,13 @@ for ComboBox trigger visuals. `trigger/visual/props.rs` owns `PressableProps` co
 a11y label derivation, while `trigger/visual/children.rs` owns the label/preview row and Open/Menu
 state badge assembly. Public combo behavior remains unchanged.
 
+2026-05-30 combo trigger behavior sub-owner split result:
+`ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/behavior.rs` now keeps behavior input
+normalization, shared pressable item behavior installation, and owner dispatch only.
+`trigger/behavior/activation.rs` owns activate click recording and keyboard lifecycle marking,
+`trigger/behavior/keyboard.rs` owns activate shortcuts plus ContextMenu/Shift+F10 requests, and
+`trigger/behavior/response.rs` owns pressable trigger response projection.
+
 2026-05-28 popup-menu overlay request owner-split result:
 `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/request.rs` now owns popup-menu open model
 lookup, trigger fallback, auto-focus target construction, focus-outside submenu preservation,

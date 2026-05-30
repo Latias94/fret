@@ -866,6 +866,14 @@ Last updated: 2026-05-30
       `combo_controls/trigger/visual/props.rs` owns trigger `PressableProps` and a11y label
       derivation, while `combo_controls/trigger/visual/children.rs` owns the label/preview row and
       Open/Menu state badge assembly.
+- [x] Split IMUI combo trigger behavior into activation, keyboard, and response owners without
+      changing ComboBox trigger clicks, keyboard lifecycle marking, activate-shortcut repeat/IME
+      gating, ContextMenu/Shift+F10 requests, pressable response projection, or public direct/model
+      combo facade behavior.
+      Result: `combo_controls/trigger/behavior.rs` keeps input normalization, shared pressable item
+      behavior installation, and owner dispatch. `behavior/activation.rs` owns activate click
+      recording, `behavior/keyboard.rs` owns shortcut/context-menu key handling, and
+      `behavior/response.rs` owns pressable trigger response projection.
 - [x] Split IMUI popup-menu overlay request assembly into a private request owner without changing
       overlay id/root naming, popup open model forwarding, trigger fallback, auto-focus targets,
       focus-outside submenu preservation, menubar close-auto-focus suppression, submenu pointer
