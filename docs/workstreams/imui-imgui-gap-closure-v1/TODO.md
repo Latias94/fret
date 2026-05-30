@@ -1628,6 +1628,14 @@ Last updated: 2026-05-30
       transient clicked reads, and `ResponseExt` population. `radio.rs` keeps label identity,
       `RadioOptions` a11y wiring, field chrome, radio indicator mounting, boolean label mounting,
       and fill-row visual assembly.
+- [x] Split IMUI radio behavior into activation, keyboard, and response owners without changing
+      click transient emission, keyboard lifecycle marking, activate-shortcut repeat/IME gating,
+      ContextMenu/Shift+F10 requests, pressable response projection, or public radio facade
+      behavior.
+      Result: `boolean_controls/radio/behavior.rs` keeps option normalization, shared pressable
+      item behavior installation, and owner dispatch. `behavior/activation.rs` owns click
+      activation, `behavior/keyboard.rs` owns shortcut/context-menu key handling, and
+      `behavior/response.rs` owns clicked response projection.
 - [x] Split IMUI switch pressable behavior out of
       `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs` into a private owner module
       without changing label identity, switch a11y, model toggling, shortcut gating, active-trigger

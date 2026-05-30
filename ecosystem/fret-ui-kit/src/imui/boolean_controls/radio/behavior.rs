@@ -1,14 +1,12 @@
-use std::sync::Arc;
-
-use fret_core::KeyCode;
 use fret_runtime::KeyChord;
 use fret_ui::element::PressableState;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
-use super::super::super::{
-    KEY_CLICKED, KEY_CONTEXT_MENU_REQUESTED, ResponseExt, item_behavior,
-    mark_lifecycle_instant_if_inactive,
-};
+use super::super::super::{ResponseExt, item_behavior};
+
+mod activation;
+mod keyboard;
+mod response;
 
 pub(super) struct RadioBehaviorOptions {
     pub(super) enabled: bool,
@@ -23,64 +21,26 @@ pub(super) fn install_radio_behavior<H: UiHost>(
     options: RadioBehaviorOptions,
     response: &mut ResponseExt,
 ) {
+    let RadioBehaviorOptions {
+        enabled,
+        activate_shortcut,
+        shortcut_repeat,
+    } = options;
     let behavior = item_behavior::install_pressable_item_behavior(cx, id);
-    let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
 
-    cx.pressable_on_activate(crate::on_activate(move |host, acx, _reason| {
-        mark_lifecycle_instant_if_inactive(host, acx, &lifecycle_model_for_activate, false);
-        host.record_transient_event(acx, KEY_CLICKED);
-        host.notify(acx);
-    }));
+    activation::install_radio_activation(cx, behavior.lifecycle_model.clone());
 
-    if options.enabled {
-        let lifecycle_model_for_shortcut = behavior.lifecycle_model.clone();
-        cx.key_on_key_down_for(
+    if enabled {
+        keyboard::install_radio_keyboard(
+            cx,
             id,
-            Arc::new(move |host, acx, down| {
-                if let Some(shortcut) = options.activate_shortcut {
-                    let matches_shortcut =
-                        down.key == shortcut.key && down.modifiers == shortcut.mods;
-                    if matches_shortcut
-                        && (!down.repeat || options.shortcut_repeat)
-                        && !down.ime_composing
-                    {
-                        mark_lifecycle_instant_if_inactive(
-                            host,
-                            acx,
-                            &lifecycle_model_for_shortcut,
-                            false,
-                        );
-                        host.record_transient_event(acx, KEY_CLICKED);
-                        host.notify(acx);
-                        return true;
-                    }
-                }
-
-                let is_menu_key = down.key == KeyCode::ContextMenu;
-                let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
-                if !(is_menu_key || is_shift_f10) {
-                    return false;
-                }
-
-                host.record_transient_event(acx, KEY_CONTEXT_MENU_REQUESTED);
-                host.notify(acx);
-                true
-            }),
+            keyboard::RadioKeyboardInput {
+                activate_shortcut,
+                shortcut_repeat,
+                lifecycle_model: behavior.lifecycle_model.clone(),
+            },
         );
     }
 
-    let clicked = cx.take_transient_for(id, KEY_CLICKED);
-    item_behavior::populate_pressable_item_response(
-        cx,
-        id,
-        state,
-        &behavior,
-        item_behavior::PressableItemResponseInput {
-            enabled: options.enabled,
-            clicked,
-            changed: false,
-            lifecycle_edited: false,
-        },
-        response,
-    );
+    response::populate_radio_response(cx, id, state, &behavior, enabled, response);
 }

@@ -1142,6 +1142,13 @@ installation, activate/shortcut click signaling, context-menu key handling, tran
 reads, and `ResponseExt` population. `radio.rs` keeps label identity, `RadioOptions` a11y wiring,
 field chrome, radio indicator mounting, boolean label mounting, and fill-row visual assembly.
 
+2026-05-30 radio behavior sub-owner split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/radio/behavior.rs` now keeps option
+normalization, shared pressable item behavior installation, and owner dispatch only.
+`radio/behavior/activation.rs` owns click activation and lifecycle marking,
+`radio/behavior/keyboard.rs` owns activate shortcuts plus ContextMenu/Shift+F10 requests, and
+`radio/behavior/response.rs` owns clicked response projection.
+
 2026-05-27 debug-draw media paint owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` kept
 `paint_debug_draw_media_command(...)` routing for this slice. `paint/media/raster.rs` owns image,

@@ -5942,6 +5942,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Radio Behavior Sub-Owner Evidence - 2026-05-30
+
+Claim verified: IMUI radio activation, keyboard, and response projection split into private owners
+without changing click transient emission, keyboard lifecycle marking, activate-shortcut repeat/IME
+gating, ContextMenu/Shift+F10 requests, pressable response projection, or public radio facade
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio/behavior.rs` keeps option normalization,
+  shared pressable item behavior installation, and owner dispatch.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio/behavior/activation.rs` owns click
+  activation, lifecycle instant marking, and clicked transient emission.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio/behavior/keyboard.rs` owns activate
+  shortcut repeat/IME gating plus ContextMenu/Shift+F10 context-menu requests.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio/behavior/response.rs` owns clicked
+  transient extraction and pressable item response projection.
+- `tools/gate_imui_workstream_source.py` now rejects activation, keyboard, and response projection
+  logic from drifting back into the radio behavior hub and checks the three child owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_controls::radio --no-fail-fast`: pass; 3 radio behavior
+  tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Image Item Behavior Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI image-item pressable behavior moved into a private owner without changing
