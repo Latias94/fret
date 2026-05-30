@@ -1943,6 +1943,14 @@ Last updated: 2026-05-30
       `floating_window_resize/handles/pointer.rs` owns pointer-region wiring, pointer capture,
       runtime drag begin/update/cancel, cursor updates, and activation handoff. `handles.rs` now
       only stacks the body/blocker with the eight resize handles.
+- [x] Split IMUI floating-window resize handle pointer events out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/pointer.rs` into a private
+      owner module without changing pointer down/move/up semantics, cursor updates, drag lifecycle,
+      pointer capture/release, activation handoff, or front-most layer ordering.
+      Result: `floating_window_resize/handles/pointer.rs` now owns element/layout/cursor
+      composition and bring-to-front handoff; `handles/pointer/events.rs` owns pointer hook
+      clearing, down/move/up callbacks, runtime drag begin/update/cancel, pointer capture, cursor
+      updates, and resize-handle activation events.
 - [x] Split IMUI floating-window resize cursor mapping out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout.rs` into a private
       owner module without changing handle placement, cursor icons, pointer capture/release,

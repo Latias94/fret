@@ -860,6 +860,7 @@
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout/corner.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout/edge.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/pointer.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/pointer/events.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/snapshot.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/commit.rs",

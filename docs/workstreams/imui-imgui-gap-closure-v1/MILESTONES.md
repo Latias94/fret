@@ -990,6 +990,12 @@ four 6 px edge handles and `floating_window_resize/handles/layout/corner.rs` own
 corner handles. `floating_window_resize/handles/pointer.rs` still composes layout, cursor, pointer
 capture, and activation behavior without public IMUI API changes.
 
+2026-05-30 floating-window resize handle pointer-events owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/pointer.rs` now owns
+element/layout/cursor composition and bring-to-front handoff. `handles/pointer/events.rs` owns
+pointer hook clearing, down/move/up callbacks, runtime drag begin/update/cancel, pointer capture,
+cursor updates, and resize-handle activation events.
+
 2026-05-28 shared item behavior install owner-split result:
 `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` now owns pressable pointer hook clearing,
 active-item/long-press/lifecycle model capture, and assembly. Later pointer-hook sub-owner splits

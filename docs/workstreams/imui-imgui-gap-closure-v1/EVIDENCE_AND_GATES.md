@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Floating Window Resize Handle Pointer Events Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI floating-window resize handle pointer events split without changing pointer
+down/move/up semantics, cursor updates, drag lifecycle, pointer capture/release, activation
+handoff, or front-most layer ordering.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/pointer.rs` now owns
+  element/layout/cursor composition and bring-to-front handoff.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/pointer/events.rs` owns pointer
+  hook clearing, down/move/up callbacks, runtime drag begin/update/cancel, pointer capture, cursor
+  updates, and resize-handle activation events.
+- `tools/gate_imui_workstream_source.py` now rejects pointer event bodies from drifting back into
+  the pointer element owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating::window_options::floating_window_resizable_false_hides_resize_handles
+  floating::window_options::floating_window_resizes_when_dragging_corner_handle
+  floating::window_options::floating_window_resizes_from_left_updates_origin_and_width
+  floating::window_options::floating_window_title_bar_double_click_toggles_collapsed
+  floating::input_modes::floating_window_activate_on_click_can_be_disabled_for_resize_handles
+  --no-fail-fast`: pass (5 passed, 181 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke
+  --no-fail-fast`: pass (3 passed).
+
 ## Floating Window Resize State Commit Owner-Split Evidence - 2026-05-30
 
 Claim verified: IMUI floating-window resize state commit ownership split without changing resize
