@@ -123,6 +123,12 @@ normalized progress, pointer-position projection, and focused value-math tests. 
 clamp/step quantization, thumb-radius compensation, track-degenerate behavior, typing fallback, and
 public slider options remain unchanged.
 
+2026-05-31 editor slider tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider control orchestration and
+child-owner routing. `controls/slider/tests.rs` owns affixed-value composition and presentation
+adoption tests. Slider public constructors, NumericPresentation adoption, duplicate chrome affix
+suppression, and slider chrome/value-math child-owner boundaries remain unchanged.
+
 2026-05-30 editor enum-select row child-owner result:
 `ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps public control/options, trigger
 composition, and overlay orchestration. `controls/enum_select/row.rs` owns option-row rendering,

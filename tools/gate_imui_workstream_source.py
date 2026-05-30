@@ -30819,6 +30819,7 @@ def main() -> None:
             Path("ecosystem/fret-ui-editor/src/controls/slider.rs"),
             required=[
                 "mod chrome;",
+                "mod tests;",
                 "mod value_math;",
                 "use chrome::{alpha_mul, mix, resolve_slider_chrome};",
                 "use value_math::{quantize_value, t_from_value, value_from_x};",
@@ -30827,8 +30828,6 @@ def main() -> None:
                 "t_from_value(min, max, clamp, value_f)",
                 "mix(track_bg, accent",
                 "alpha_mul(track_bg",
-                "compose_affixed_value_text_keeps_plain_value_when_no_affix",
-                "slider_from_presentation_adopts_format_parse_and_chrome_affixes",
             ],
             forbidden=[
                 "fn lerp(",
@@ -30837,8 +30836,29 @@ def main() -> None:
                 "fn quantize_value(",
                 "fn t_from_value(",
                 "fn value_from_x(",
+                "compose_affixed_value_text_keeps_plain_value_when_no_affix",
+                "compose_affixed_value_text_joins_prefix_and_suffix_without_extra_spacing",
+                "compose_affixed_value_text_can_skip_duplicate_suffix_chrome",
+                "slider_from_presentation_adopts_format_parse_and_chrome_affixes",
                 "slider_chrome_prefers_editor_owned_tokens_over_generic_palette",
                 "EditorTokenKeys::SLIDER_TRACK_BG.to_string()",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/slider/tests.rs"),
+            required=[
+                "compose_affixed_value_text_keeps_plain_value_when_no_affix",
+                "compose_affixed_value_text_joins_prefix_and_suffix_without_extra_spacing",
+                "compose_affixed_value_text_can_skip_duplicate_suffix_chrome",
+                "slider_from_presentation_adopts_format_parse_and_chrome_affixes",
+            ],
+            forbidden=[
+                "fn lerp(",
+                "fn resolve_slider_chrome(",
+                "fn quantize_value(",
+                "fn t_from_value(",
+                "fn value_from_x(",
+                "slider_chrome_prefers_editor_owned_tokens_over_generic_palette",
             ],
         ),
         SourceCheck(

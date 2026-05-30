@@ -141,6 +141,11 @@ Last updated: 2026-05-31
       Result: `controls/slider.rs` keeps slider state, event handling, typing handoff, and layout
       orchestration. `controls/slider/value_math.rs` owns value quantization, normalized progress,
       pointer-position projection, and focused value-math tests.
+- [x] Split editor slider affixed-value and presentation regression tests into a private test owner
+      without changing slider public constructors, NumericPresentation adoption, duplicate chrome
+      affix suppression, or slider chrome/value-math child owner boundaries.
+      Result: `controls/slider.rs` keeps the slider control orchestration plus child-owner routing.
+      `controls/slider/tests.rs` owns affixed-value composition and presentation adoption tests.
 - [x] Split editor enum-select row rendering, selection commit policy, and item test-id
       sanitization into a private child owner without changing trigger composition, overlay
       dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row
