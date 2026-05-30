@@ -86,6 +86,11 @@ Last updated: 2026-05-31
       wrapping value growth, or layout-query coverage.
       Result: `composites/property_row.rs` keeps implementation only plus `mod tests;`.
       `composites/property_row/tests.rs` owns the wrapping/value-slot regression harness.
+- [x] Split editor chrome text-field/text-area style regressions into a private test owner without
+      changing editor token precedence, legacy component fallback behavior, line-height policy, or
+      focus ring token routing.
+      Result: `primitives/chrome.rs` keeps editor chrome/style resolution plus test-owner routing.
+      `primitives/chrome/tests.rs` owns text-field/text-area chrome policy coverage.
 - [x] Split editor drag-value core session/response regressions into a private test owner without
       changing scrub session commit/cancel semantics, response accessor privacy, or drag-value
       response construction.

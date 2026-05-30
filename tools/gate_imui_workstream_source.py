@@ -30120,6 +30120,40 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/chrome.rs"),
+            required=[
+                "mod tests;",
+                "pub(crate) fn resolve_editor_text_field_frame_chrome",
+                "pub(crate) fn resolve_editor_text_field_style",
+                "pub(crate) fn resolve_editor_text_area_field_style",
+                "EditorTokenKeys::TEXT_FIELD_BG",
+                "editor_focus_ring(theme)",
+                "component.text_field.bg",
+            ],
+            forbidden=[
+                "editor_text_field_style_uses_control_intent_defaults",
+                "editor_text_area_style_uses_content_intent_defaults",
+                "editor_text_area_style_uses_editor_focus_ring_token",
+                "editor_text_field_style_prefers_editor_tokens_over_legacy_component_tokens",
+                "editor_text_field_style_keeps_legacy_component_text_field_fallback",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/chrome/tests.rs"),
+            required=[
+                "editor_text_field_style_uses_control_intent_defaults",
+                "editor_text_area_style_uses_content_intent_defaults",
+                "editor_text_area_style_uses_editor_focus_ring_token",
+                "editor_text_field_style_prefers_editor_tokens_over_legacy_component_tokens",
+                "editor_text_field_style_keeps_legacy_component_text_field_fallback",
+                "TextLineHeightPolicy::FixedFromStyle",
+                "TextLineHeightPolicy::ExpandToFit",
+                "EditorTokenKeys::TEXT_FIELD_BG",
+                "EditorTokenKeys::CHROME_RING",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/readout.rs"),
             required=[
                 "mod tests;",

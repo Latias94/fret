@@ -63,6 +63,12 @@ harness, including value-slot marker lookup, wrapping text services, and layout-
 Public row options, label line-box behavior, wrapping value growth, and value-slot overflow
 contracts remain unchanged.
 
+2026-05-31 editor chrome tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/chrome.rs` now keeps editor chrome/style resolution and
+test-owner routing. `primitives/chrome/tests.rs` owns text-field/text-area chrome policy coverage.
+Editor token precedence, legacy component fallback behavior, line-height policy, and focus ring
+token routing remain unchanged.
+
 2026-05-31 editor drag-value core tests child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs` now keeps drag-to-edit primitive
 implementation and test-owner routing. `primitives/drag_value_core/tests.rs` owns session and

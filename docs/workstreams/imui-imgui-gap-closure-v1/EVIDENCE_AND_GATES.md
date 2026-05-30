@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Chrome Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor chrome text-field/text-area style regressions split into a private test
+owner without changing editor token precedence, legacy component fallback behavior, line-height
+policy, or focus ring token routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/chrome.rs` now keeps editor chrome/style resolution and
+  a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/primitives/chrome/tests.rs` owns text-field/text-area chrome policy
+  coverage.
+- `tools/gate_imui_workstream_source.py` now checks the chrome root/test split and adds source
+  coverage for the editor chrome primitive.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the chrome root and test
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  editor_text_field_style_uses_control_intent_defaults
+  editor_text_area_style_uses_content_intent_defaults
+  editor_text_area_style_uses_editor_focus_ring_token
+  editor_text_field_style_prefers_editor_tokens_over_legacy_component_tokens
+  editor_text_field_style_keeps_legacy_component_text_field_fallback --no-fail-fast`: pass (5
+  passed, 193 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Editor DragValueCore Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor drag-value core session/response regressions split into a private test owner

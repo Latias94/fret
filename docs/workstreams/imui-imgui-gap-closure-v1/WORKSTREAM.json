@@ -1032,6 +1032,8 @@
     "ecosystem/fret-ui-editor/src/imui.rs",
     "ecosystem/fret-ui-editor/src/theme.rs",
     "ecosystem/fret-ui-editor/src/theme/patches.rs",
+    "ecosystem/fret-ui-editor/src/primitives/chrome.rs",
+    "ecosystem/fret-ui-editor/src/primitives/chrome/tests.rs",
     "ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs",
     "ecosystem/fret-ui-editor/src/primitives/drag_value_core/tests.rs",
     "ecosystem/fret-ui-editor/src/primitives/input_group.rs",
