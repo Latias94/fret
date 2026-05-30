@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Control-Chrome Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI control-chrome regression tests split into private text-role and layout
+owners without changing control/fill text shrink semantics, inherited foreground assertions,
+row/stack direction, fill-width behavior, gap tokens, justification, or alignment coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/tests.rs` is now a thin hub with shared imports
+  and `test_bounds` only.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/tests/text_roles.rs` owns control/fill text
+  single-line shrink coverage.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/tests/layout.rs` owns row/stack dense layout
+  helper coverage.
+- `tools/gate_imui_workstream_source.py` now checks the hub and both private test owners and
+  rejects text-role or layout regression bodies from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the control-chrome
+  test-owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  imui_control_text_uses_shared_button_label_role
+  imui_fill_text_is_single_line_and_shrinkable
+  imui_control_chrome_layout_props_keep_dense_defaults --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Text-Control Chrome Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI text-control chrome regression tests split into private input and textarea

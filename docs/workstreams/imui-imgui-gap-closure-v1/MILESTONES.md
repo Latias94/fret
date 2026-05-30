@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 control-chrome test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/control_chrome/tests.rs` is now a thin test hub.
+`tests/text_roles.rs` owns control/fill text single-line shrink coverage, while `tests/layout.rs`
+owns row/stack dense layout helper coverage. Public control chrome behavior remains unchanged.
+
 2026-05-31 text-control chrome test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/text_controls/tests.rs` is now a thin test hub.
 `tests/input_chrome.rs` owns input-text fixed-height chrome coverage, while

@@ -1943,6 +1943,12 @@ Last updated: 2026-05-31
       `chrome/button.rs` owns button theme resolution and chrome props, `chrome/field.rs` owns
       field theme resolution and chrome props, and `chrome.rs` is now a private module/re-export
       index.
+- [x] Split IMUI control chrome regression tests into private text-role and layout owners without
+      changing control/fill text shrink semantics, inherited foreground assertions, row/stack
+      direction, fill-width behavior, gap tokens, justification, or alignment coverage.
+      Result: `control_chrome/tests.rs` now keeps shared imports and `test_bounds` only.
+      `tests/text_roles.rs` owns control/fill text coverage, while `tests/layout.rs` owns
+      row/stack dense layout coverage.
 - [x] Split IMUI input-text picker candidate visibility and keyboard state reconciliation out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into private owner modules without
       changing the public IMUI surface.
