@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Drag/Drop Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI drag/drop no-trigger regression coverage split into private source and target
+owners without changing inactive source returns, empty target responses, payload accessors, or
+no-output behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/tests.rs` is now a thin hub with `TestWriter` and
+  module routing only.
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/tests/source.rs` owns source no-trigger fallback
+  coverage.
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/tests/target.rs` owns target no-trigger fallback and
+  payload-accessor coverage.
+- `tools/gate_imui_workstream_source.py` now checks the hub and both private test owners and
+  rejects source/target fallback bodies from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the drag/drop test-owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  drag_source_returns_inactive_without_trigger_id
+  drop_target_returns_empty_without_trigger_id --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_drag_drop_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Bullet-Text Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI bullet-text compact paragraph regression coverage split into a private

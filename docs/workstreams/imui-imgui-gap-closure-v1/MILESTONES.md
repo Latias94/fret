@@ -17,6 +17,11 @@ Exit criteria:
 `tests/text_role.rs` owns compact paragraph text-role coverage for bullet labels. Public
 bullet-text behavior remains unchanged.
 
+2026-05-31 drag/drop test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/drag_drop/tests.rs` is now a thin test hub.
+`tests/source.rs` owns source no-trigger fallback coverage, while `tests/target.rs` owns target
+no-trigger fallback coverage. Public drag/drop behavior remains unchanged.
+
 2026-05-31 facade-writer text test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` is now a thin test hub.
 `tests/text.rs` owns `ui.text(...)` dense single-line coverage, while `tests/wrapped.rs` owns
