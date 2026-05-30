@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Popup Modal Layout Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI popup-modal layout owner split into palette/geometry and element-props child
+owners without changing modal palette tokens, dim opacity, centered panel geometry, absolute
+layer/backdrop sizing, dialog semantics test id, panel chrome, or public popup modal facade
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layout.rs` is now a private hub that
+  re-exports the modal layout owner surface.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layout/types.rs` owns
+  `PopupModalPalette`, `PopupModalPanelLayout`, modal palette token resolution, dim color, and
+  centered panel geometry.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layout/props.rs` owns modal stack/backdrop
+  props, dialog semantics layout/test id, panel chrome, and full-inset construction.
+- `tools/gate_imui_workstream_source.py` now checks the hub/types/props split and prevents palette
+  or prop construction from drifting back into the hub.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_popup_options_smoke
+  --no-fail-fast`: pass (1 passed).
+- `cargo nextest run -p fret-imui popup_hover::lifecycle_modal --no-fail-fast`: pass on
+  single-command rerun after an earlier parallel attempt timed out while waiting on cargo locks
+  (4 passed, 182 skipped).
+
 ## Debug Draw Element Canvas/Pressable Owner-Split Evidence - 2026-05-30
 
 Claim verified: IMUI debug-draw element canvas and pressable composition split without changing

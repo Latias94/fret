@@ -1838,6 +1838,13 @@ press dismissal policy, focus handoff, IMUI facade content mounting, and `Overla
 assembly. Modal open/close behavior, barrier semantics, centered placement, and test ids remain
 unchanged.
 
+2026-05-30 popup modal layout child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layout.rs` is now a private hub.
+`layout/types.rs` owns modal palette resolution, dim color, and centered panel geometry.
+`layout/props.rs` owns absolute layer/backdrop props, dialog semantics layout/test id, panel chrome,
+and full-inset construction. Modal open/close behavior, barrier semantics, centered placement, and
+test ids remain unchanged.
+
 2026-05-26 menu-item interaction owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` now owns menu item enabled/action
 gating, pressable props, activation and shortcut handlers, popup menu roving focus, menubar

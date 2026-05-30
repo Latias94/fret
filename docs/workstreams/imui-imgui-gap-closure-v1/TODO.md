@@ -658,6 +658,14 @@ Last updated: 2026-05-30
       optional outside press, and default prevention. `popup_overlay/modal.rs` keeps open-state
       gating, keep-alive writeback, layer/panel assembly, overlay request assembly, and focus
       initialization.
+- [x] Split IMUI popup-modal layout owner into palette/geometry and element-props child owners
+      without changing modal palette tokens, dim opacity, centered panel geometry, absolute
+      layer/backdrop sizing, dialog semantics test id, panel chrome, or public popup modal facade
+      behavior.
+      Result: `popup_overlay/modal/layout.rs` is now a private re-export hub.
+      `layout/types.rs` owns modal palette resolution and centered panel geometry, while
+      `layout/props.rs` owns modal stack/backdrop props, dialog semantics layout, panel chrome, and
+      full-inset construction.
 - [x] Split IMUI button pressable props and a11y assembly into a private owner without changing
       enabled/focusable projection, variant layout application, button a11y metadata, chrome
       assembly, activation/keyboard/response dispatch, or public button facade behavior.
