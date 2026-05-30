@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Popup-Modal Layer Backdrop/Panel Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI popup-modal layer backdrop and panel assembly split into private child owners
+without changing modal root naming, layer stack layout, backdrop barrier dismissal, panel semantics,
+facade child mounting, focus-state handoff, overlay request assembly, or public popup modal facade
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer.rs` keeps layer input/output,
+  root-name mounting, stack wiring, child-owner dispatch, and panel-focus handoff.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer/backdrop.rs` owns modal backdrop visual
+  construction and modal barrier dismissal wiring.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer/panel.rs` owns panel semantics,
+  panel props application, child `ImUiFacade` mounting, and panel id capture.
+- `tools/gate_imui_workstream_source.py` now checks the modal layer/backdrop/panel split.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass after relaxing one rustfmt-sensitive marker
+  to check `panel::popup_modal_panel(` and `panel::PopupModalPanelInput {` separately.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui popup_hover::lifecycle_modal --no-fail-fast`: pass (4 passed,
+  182 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui primitives::dialog::tests::modal_barrier
+  --no-fail-fast`: pass (3 passed, 748 skipped).
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Disclosure Entry State/Body Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI disclosure entry state reads and root-child assembly split into private child

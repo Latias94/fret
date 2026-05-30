@@ -44,6 +44,13 @@ Last updated: 2026-05-30
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI popup-modal layer backdrop and panel assembly into private child owners without
+      changing modal root naming, layer stack layout, backdrop barrier dismissal, panel semantics,
+      facade child mounting, focus-state handoff, overlay request assembly, or public popup modal
+      facade behavior.
+      Result: `popup_overlay/modal/layer.rs` keeps layer input/output, root-name mounting, stack
+      wiring, and panel-focus handoff. `layer/backdrop.rs` owns modal barrier construction, while
+      `layer/panel.rs` owns panel semantics, child `ImUiFacade` mounting, and panel id capture.
 - [x] Split IMUI disclosure entry state reads and root-child assembly into private child owners
       without changing collapsing-header/tree-node label identity parsing, open-model setup,
       trigger/content mounting, root layout, open/toggled response reporting, or public disclosure

@@ -6,9 +6,11 @@ use fret_ui::action::OnDismissRequest;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
+mod backdrop;
+mod panel;
+
 use super::layout::{self, PopupModalPalette, PopupModalPanelLayout};
 use crate::imui::popup_overlay::ImUiFacade;
-use crate::primitives::dialog;
 
 pub(super) struct PopupModalLayerInput<'a, Build> {
     pub(super) id: &'a str,
@@ -53,42 +55,28 @@ pub(super) fn build_popup_modal_layer<H: UiHost>(
     let layer = cx.with_root_name(root_name, |cx| {
         cx.named("fret-ui-kit.imui.popup_modal.layer", |cx| {
             cx.stack_props(layout::modal_layer_stack_props(), |cx| {
-                let backdrop_visual = cx
-                    .container(layout::modal_backdrop_props(palette.dim), |_cx| {
-                        Vec::<AnyElement>::new()
-                    });
-                let backdrop = dialog::modal_barrier_with_dismiss_handler(
+                let backdrop = backdrop::popup_modal_backdrop(
                     cx,
                     open.clone(),
+                    palette.dim,
                     close_on_outside_press,
-                    Some(on_dismiss_request.clone()),
-                    [backdrop_visual],
+                    on_dismiss_request.clone(),
                 );
+                let panel = panel::popup_modal_panel(
+                    cx,
+                    panel::PopupModalPanelInput {
+                        id,
+                        palette: &palette,
+                        panel_layout,
+                        focus_state_for_build: focus_state_for_build.clone(),
+                        build: build
+                            .take()
+                            .expect("popup modal body builder should be available"),
+                    },
+                );
+                panel_id_for_focus = panel.panel_id_for_focus;
 
-                let panel = cx.named("fret-ui-kit.imui.popup_modal.panel", |cx| {
-                    let semantics = layout::modal_panel_semantics(id, panel_layout);
-                    let panel_props = layout::modal_panel_props(&palette);
-                    let modal = cx.semantics_with_id(semantics, move |cx, _id| {
-                        vec![cx.container(panel_props, move |cx| {
-                            let mut out: Vec<AnyElement> = Vec::new();
-                            {
-                                let mut ui = ImUiFacade {
-                                    cx,
-                                    out: &mut out,
-                                    build_focus: Some(focus_state_for_build.clone()),
-                                };
-                                if let Some(f) = build.take() {
-                                    f(&mut ui);
-                                }
-                            }
-                            out
-                        })]
-                    });
-                    panel_id_for_focus = Some(modal.id);
-                    modal
-                });
-
-                vec![backdrop, panel]
+                vec![backdrop, panel.element]
             })
         })
     });

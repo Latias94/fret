@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 popup-modal layer child-owner result:
+`ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer.rs` now keeps layer input/output,
+root-name mounting, stack wiring, and panel-focus handoff. `layer/backdrop.rs` owns modal barrier
+construction and outside-press dismissal plumbing, while `layer/panel.rs` owns panel semantics,
+child `ImUiFacade` mounting, and panel id capture. Modal root naming, layer stack layout, panel
+semantics, focus handoff, and public popup modal facade behavior remain unchanged.
+
 2026-05-30 disclosure entry child-owner result:
 `ecosystem/fret-ui-kit/src/imui/disclosure_controls/entry.rs` now keeps public
 collapsing-header/tree-node wrappers, label identity normalization, and aggregate
