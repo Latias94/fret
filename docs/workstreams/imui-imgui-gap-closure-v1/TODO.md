@@ -1214,6 +1214,13 @@ Last updated: 2026-05-30
       `items/panel.rs` owns selected tab-panel semantics and panel child mounting. `items.rs`
       keeps `BuiltTabItem`, selected-model normalization, build-focus propagation, final column
       assembly, and `TabBarResponse` construction.
+- [x] Split IMUI tab-list owner into trigger collection and list element child owners without
+      changing tab trigger rendering, selected/first-focusable trigger tracking,
+      `TabTriggerResponse` collection, tab-list semantics/test id, row/h-flex layout, or public
+      tab-bar APIs.
+      Result: `tab_family_controls/items/list.rs` is now a private tab-list hub.
+      `list/triggers.rs` owns trigger rendering and response bookkeeping, while
+      `list/element.rs` owns tab-list semantics, root row layout, and trigger h-flex composition.
 - [x] Split IMUI input-text picker core orchestration out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into a private core owner without
       changing completion/history wrapper calls, candidate filtering, keyboard navigation, input

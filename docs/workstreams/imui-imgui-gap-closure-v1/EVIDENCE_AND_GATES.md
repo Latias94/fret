@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Tab-List Trigger/Element Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI tab-list owner split into trigger collection and list element child owners
+without changing tab trigger rendering, selected/first-focusable trigger tracking,
+`TabTriggerResponse` collection, tab-list semantics/test id, row/h-flex layout, label identity, or
+public tab-bar APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items/list.rs` is now a private tab-list hub
+  that coordinates trigger build output and element build output.
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items/list/triggers.rs` owns trigger
+  rendering, selected/first-focusable trigger tracking, set-size/position projection, and
+  `TabTriggerResponse` collection.
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items/list/element.rs` owns tab-list
+  semantics/test id, root row layout, and h-flex trigger composition.
+- `tools/gate_imui_workstream_source.py` now checks the hub/triggers/element split.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui tab_bar --no-fail-fast`: pass (3 passed, 183 skipped).
+- `cargo nextest run -p fret-imui label_identity_explicit_id_controls_hide_suffixes_from_visible_labels
+  --no-fail-fast`: pass (1 passed, 185 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_leaf_control_options_smoke
+  tab_item_option_defaults_compile --no-fail-fast`: pass (1 passed, 2 skipped).
+
 ## Drag-Source Payload Lifecycle Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI drag-source payload lifecycle split into pointer-move and pointer-up child

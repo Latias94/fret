@@ -1433,6 +1433,8 @@
     "ecosystem/fret-ui-kit/tests/imui_table_smoke.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls/items.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls/items/list.rs",
+    "ecosystem/fret-ui-kit/src/imui/tab_family_controls/items/list/element.rs",
+    "ecosystem/fret-ui-kit/src/imui/tab_family_controls/items/list/triggers.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls/items/panel.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls/items/selection.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger.rs",
