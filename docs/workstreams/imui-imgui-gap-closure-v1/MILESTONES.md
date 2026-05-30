@@ -87,6 +87,13 @@ implementation and test-owner routing. `primitives/edit_session/tests.rs` owns d
 coverage. Pre-edit capture, commit/cancel clearing, active-state reporting, and changed-from
 semantics remain unchanged.
 
+2026-05-31 editor numeric-format tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/numeric_format.rs` now keeps numeric format
+implementation and test-owner routing. `primitives/numeric_format/tests.rs` owns formatting and
+presentation coverage. Fixed decimal formatting, plain parsing, affix format/parse semantics,
+duplicate chrome affix suppression, presentation chrome layering, and degrees helper behavior
+remain unchanged.
+
 2026-05-31 editor numeric-value tests child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/numeric_value.rs` now keeps numeric constraint
 implementation and test-owner routing. `primitives/numeric_value/tests.rs` owns bounds and

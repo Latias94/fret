@@ -105,6 +105,11 @@ Last updated: 2026-05-31
       pre-edit capture, commit/cancel clearing, active-state reporting, or changed-from semantics.
       Result: `primitives/edit_session.rs` keeps edit-session primitive implementation plus
       test-owner routing. `primitives/edit_session/tests.rs` owns dirty-state coverage.
+- [x] Split editor numeric-format helper regressions into a private test owner without changing
+      fixed decimal formatting, plain parsing, affix format/parse semantics, duplicate chrome affix
+      suppression, presentation chrome layering, or degrees helper behavior.
+      Result: `primitives/numeric_format.rs` keeps numeric format implementation plus test-owner
+      routing. `primitives/numeric_format/tests.rs` owns formatting and presentation coverage.
 - [x] Split editor numeric-value constraint regressions into a private test owner without changing
       bound normalization, finite-step filtering, clamp ordering, quantization origin, or scalar
       conversion behavior.

@@ -3,6 +3,47 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Numeric-Format Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor numeric-format helper regressions split into a private test owner without
+changing fixed decimal formatting, plain parsing, affix format/parse semantics, duplicate chrome
+affix suppression, presentation chrome layering, or degrees helper behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/numeric_format.rs` now keeps numeric format
+  implementation and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/primitives/numeric_format/tests.rs` owns formatting and
+  presentation coverage.
+- `tools/gate_imui_workstream_source.py` now checks the numeric-format root/test split and keeps
+  migrated regression test names out of the root primitive file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the numeric-format root
+  and test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  fixed_decimals_format_renders_requested_precision
+  plain_number_parse_trims_whitespace
+  affixed_number_format_wraps_base_text
+  affixed_number_parse_accepts_plain_and_suffixed_text
+  degrees_helpers_share_suffix_semantics
+  suppress_duplicate_chrome_affixes_hides_existing_prefix_and_suffix
+  suppress_duplicate_chrome_affixes_keeps_missing_prefix_and_suffix
+  numeric_presentation_keeps_chrome_affixes_outside_format_and_parse
+  numeric_presentation_parts_clone_text_and_chrome_layers_together
+  numeric_presentation_degrees_keep_unit_in_text_layer --no-fail-fast`: pass (10 passed, 188
+  skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Popup-Surface Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor popup-surface chrome regressions split into a private test owner without

@@ -1040,6 +1040,8 @@
     "ecosystem/fret-ui-editor/src/primitives/density/tests.rs",
     "ecosystem/fret-ui-editor/src/primitives/edit_session.rs",
     "ecosystem/fret-ui-editor/src/primitives/edit_session/tests.rs",
+    "ecosystem/fret-ui-editor/src/primitives/numeric_format.rs",
+    "ecosystem/fret-ui-editor/src/primitives/numeric_format/tests.rs",
     "ecosystem/fret-ui-editor/src/primitives/numeric_value.rs",
     "ecosystem/fret-ui-editor/src/primitives/numeric_value/tests.rs",
     "ecosystem/fret-ui-editor/src/primitives/popup_surface.rs",
