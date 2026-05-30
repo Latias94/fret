@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Popup-List Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor popup-list palette/height regressions split into a private test owner
+without changing popup-list state records, row gap/height helpers, default max-height budget,
+highlight palette, disabled foreground, or text-role ownership in the readout child owner.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/popup_list.rs` now keeps popup-list
+  state/dimensions/palette policy and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/primitives/popup_list/tests.rs` owns palette and height coverage.
+- `tools/gate_imui_workstream_source.py` now checks the popup-list root/test split and keeps
+  migrated regression test names out of the root primitive file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the popup-list test
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  popup_list_row_palette_uses_editor_highlight_and_muted_disabled_foreground
+  popup_list_height_helpers_share_the_same_row_gap_budget --no-fail-fast`: pass (2 passed, 196
+  skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Numeric-Text-Entry Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor numeric-text-entry replacement-plan regressions split into a private test

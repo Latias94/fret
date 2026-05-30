@@ -126,6 +126,11 @@ Last updated: 2026-05-31
       color fallback, or dense preset popup chrome.
       Result: `primitives/popup_surface.rs` keeps popup chrome implementation plus test-owner
       routing. `primitives/popup_surface/tests.rs` owns popup surface chrome coverage.
+- [x] Split editor popup-list palette/height regressions into a private test owner without
+      changing popup-list state records, row gap/height helpers, default max-height budget,
+      highlight palette, disabled foreground, or text-role ownership in the readout child owner.
+      Result: `primitives/popup_list.rs` keeps popup-list state/dimensions/palette policy plus
+      test-owner routing. `primitives/popup_list/tests.rs` owns palette and height coverage.
 - [x] Split editor widget-visuals selection/focus/invalid/hover regressions into a private test
       owner without changing shared visual policy, selected-frame fill/foreground behavior,
       disabled alpha attenuation, invalid chrome routing, or icon-button hover overlay source.

@@ -30758,20 +30758,36 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/popup_list.rs"),
             required=[
+                "mod tests;",
                 "pub(crate) struct EditorPopupListRowState",
                 "pub(crate) struct EditorPopupListRowPalette",
                 "pub(crate) fn editor_popup_list_content_height",
                 "pub(crate) fn editor_popup_list_row_palette",
-                "popup_list_row_palette_uses_editor_highlight_and_muted_disabled_foreground",
-                "popup_list_height_helpers_share_the_same_row_gap_budget",
             ],
             forbidden=[
+                "popup_list_row_palette_uses_editor_highlight_and_muted_disabled_foreground",
+                "popup_list_height_helpers_share_the_same_row_gap_budget",
                 "TextProps::new(",
                 "TextProps {",
                 "TextStyle {",
                 "TextWrap::",
                 "TextOverflow::",
                 "use fret_ui_kit::typography;",
+                "editor_popup_list_row_text_style",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/popup_list/tests.rs"),
+            required=[
+                "popup_list_row_palette_uses_editor_highlight_and_muted_disabled_foreground",
+                "popup_list_height_helpers_share_the_same_row_gap_budget",
+                "EditorPopupListRowState",
+                "editor_popup_list_default_max_content_height",
+                "EditorTokenKeys::CHROME_ACCENT",
+            ],
+            forbidden=[
+                "TextProps::new(",
+                "TextStyle {",
                 "editor_popup_list_row_text_style",
             ],
         ),

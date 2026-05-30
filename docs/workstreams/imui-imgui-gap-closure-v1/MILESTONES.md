@@ -113,6 +113,13 @@ and test-owner routing. `primitives/popup_surface/tests.rs` owns popup surface c
 Overlay/inline shadow policy, popup token precedence, radius/shadow metric resolution, shadow color
 fallback, and dense preset popup chrome remain unchanged.
 
+2026-05-31 editor popup-list tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/popup_list.rs` now keeps popup-list
+state/dimensions/palette policy and test-owner routing. `primitives/popup_list/tests.rs` owns
+palette and height coverage. Popup-list state records, row gap/height helpers, default max-height
+budget, highlight palette, disabled foreground, and text-role ownership in the readout child owner
+remain unchanged.
+
 2026-05-31 editor visuals tests child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/visuals.rs` now keeps editor widget visual policy and
 test-owner routing. `primitives/visuals/tests.rs` owns visual-state policy coverage. Shared visual
