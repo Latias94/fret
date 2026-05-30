@@ -1496,6 +1496,12 @@ reset policy, device-pixel snapping, resize output assembly, and handle test-id 
 output assembly. Resize test-id strings, initial size defaults, handle packaging, and resize
 behavior remain unchanged.
 
+2026-05-30 floating-window resize state commit owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/commit.rs` now owns
+`cx.state_for(...)`, collapsed/non-drag reset policy, drag application, device-pixel snapping, state
+tuple extraction, and `FloatingWindowResizeStateOutput` packaging. `state.rs` keeps the public
+`prepare_resize_state(...)` parameter surface and active `resizing` derivation.
+
 2026-05-27 table-column visibility snapshot owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/snapshot.rs` now owns
 `TableColumnVisibilitySnapshot`, `TableColumnVisibilityEntry`, serde derives, public data fields,

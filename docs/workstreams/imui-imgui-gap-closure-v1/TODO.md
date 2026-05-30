@@ -1928,6 +1928,13 @@ Last updated: 2026-05-30
       resize/title/close test-id construction, `state/output.rs` owns
       `FloatingWindowResizeStateOutput`, and `state.rs` keeps `cx.state_for(...)`, snapshot/collapse
       orchestration, pixel snapping, drag application, and output assembly.
+- [x] Split IMUI floating-window resize state commit out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs` into a private owner module
+      without changing resize state lookup, collapsed reset policy, drag application, device-pixel
+      snapping, handle test-id packaging, or resize output semantics.
+      Result: `floating_window_resize/state/commit.rs` owns `cx.state_for(...)`, reset/snap/drag
+      orchestration, state tuple extraction, and output packaging. `state.rs` now keeps public
+      `prepare_resize_state(...)` parameters plus active `resizing` derivation.
 - [x] Split IMUI floating-window resize handle layout and pointer behavior out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles.rs` into private owner modules
       without changing resize handle placement, cursors, drag lifecycle, activation handoff, or
