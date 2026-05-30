@@ -86,6 +86,11 @@ Last updated: 2026-05-31
       wrapping value growth, or layout-query coverage.
       Result: `composites/property_row.rs` keeps implementation only plus `mod tests;`.
       `composites/property_row/tests.rs` owns the wrapping/value-slot regression harness.
+- [x] Split editor drag-value core session/response regressions into a private test owner without
+      changing scrub session commit/cancel semantics, response accessor privacy, or drag-value
+      response construction.
+      Result: `primitives/drag_value_core.rs` keeps drag-to-edit primitive implementation plus
+      test-owner routing. `primitives/drag_value_core/tests.rs` owns session and response coverage.
 - [x] Split editor inspector-panel narrow-header title regression into a private test owner without
       changing panel composition, title text-role routing, toolbar/body slots, or layout query
       coverage.

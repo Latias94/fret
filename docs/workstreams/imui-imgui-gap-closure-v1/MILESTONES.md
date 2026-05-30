@@ -63,6 +63,12 @@ harness, including value-slot marker lookup, wrapping text services, and layout-
 Public row options, label line-box behavior, wrapping value growth, and value-slot overflow
 contracts remain unchanged.
 
+2026-05-31 editor drag-value core tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs` now keeps drag-to-edit primitive
+implementation and test-owner routing. `primitives/drag_value_core/tests.rs` owns session and
+response coverage. Scrub session commit/cancel semantics, response accessor privacy, and response
+construction remain unchanged.
+
 2026-05-31 editor inspector-panel tests child-owner result:
 `ecosystem/fret-ui-editor/src/composites/inspector_panel.rs` now keeps panel composition and
 test-owner routing. `composites/inspector_panel/tests.rs` owns the single-line title layout

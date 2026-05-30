@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor DragValueCore Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor drag-value core session/response regressions split into a private test owner
+without changing scrub session commit/cancel semantics, response accessor privacy, or drag-value
+response construction.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs` now keeps drag-to-edit primitive
+  implementation and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/primitives/drag_value_core/tests.rs` owns session and response
+  coverage.
+- `tools/gate_imui_workstream_source.py` now checks the drag-value core root/test split and keeps
+  migrated regression test names out of the root primitive file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the drag-value core test
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  drag_state_commit_requires_a_live_value_change
+  drag_state_commit_remembers_any_live_edit_in_the_session
+  drag_state_cancel_clears_live_edit_tracking
+  drag_value_core_response_exposes_read_only_signals --no-fail-fast`: pass (4 passed, 194 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Editor InspectorPanel Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor inspector-panel narrow-header title regression split into a private test

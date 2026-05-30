@@ -30081,6 +30081,7 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs"),
             required=[
+                "mod tests;",
                 "#[derive(Debug, Clone, Copy)]\npub struct DragValueCoreResponse",
                 "pub struct DragValueCoreResponse {\n    dragging: bool,\n    hovered: bool,\n    pressed: bool,\n    focused: bool,\n}",
                 "pub(crate) fn new(dragging: bool, hovered: bool, pressed: bool, focused: bool) -> Self",
@@ -30089,7 +30090,6 @@ def main() -> None:
                 "pub fn pressed(self) -> bool",
                 "pub fn focused(self) -> bool",
                 "DragValueCoreResponse::new(",
-                "drag_value_core_response_exposes_read_only_signals",
             ],
             forbidden=[
                 "pub struct DragValueCoreResponse {\n    pub dragging",
@@ -30099,6 +30099,24 @@ def main() -> None:
                 "#[derive(Debug, Clone, Copy, Default)]\npub struct DragValueCoreResponse",
                 "DragValueCoreResponse::default()",
                 "DragValueCoreResponse {\n                        dragging,",
+                "drag_state_commit_requires_a_live_value_change",
+                "drag_state_commit_remembers_any_live_edit_in_the_session",
+                "drag_state_cancel_clears_live_edit_tracking",
+                "drag_value_core_response_exposes_read_only_signals",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/drag_value_core/tests.rs"),
+            required=[
+                "drag_state_commit_requires_a_live_value_change",
+                "drag_state_commit_remembers_any_live_edit_in_the_session",
+                "drag_state_cancel_clears_live_edit_tracking",
+                "drag_value_core_response_exposes_read_only_signals",
+                "DragValueCoreResponse::new(true, true, false, true)",
+            ],
+            forbidden=[
+                "pub struct DragValueCoreResponse {\n    pub dragging",
+                "DragValueCoreResponse::default()",
             ],
         ),
         SourceCheck(
