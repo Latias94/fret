@@ -30510,6 +30510,7 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/readout/popup_list.rs"),
             required=[
+                "mod tests;",
                 "fn editor_popup_list_row_text_style",
                 "pub(crate) fn editor_popup_list_row_text_props",
                 "pub(crate) fn editor_popup_list_centered_row_text_props",
@@ -30518,10 +30519,26 @@ def main() -> None:
                 "wrap: TextWrap::None,",
                 "overflow: TextOverflow::Ellipsis,",
                 "TextAlign::Center",
+            ],
+            forbidden=[
                 "popup_list_row_text_is_single_line_and_shrinkable",
                 "popup_empty_text_is_single_line_and_shrinkable",
                 "popup_list_centered_row_text_keeps_row_fill_and_center_alignment",
                 "popup_list_option_caption_text_keeps_fixed_caption_line_box",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/readout/popup_list/tests.rs"),
+            required=[
+                "popup_list_row_text_is_single_line_and_shrinkable",
+                "popup_empty_text_is_single_line_and_shrinkable",
+                "popup_list_centered_row_text_keeps_row_fill_and_center_alignment",
+                "popup_list_option_caption_text_keeps_fixed_caption_line_box",
+                "editor_popup_list_row_text_props",
+                "editor_popup_list_centered_row_text_props",
+                "editor_popup_list_option_caption_text_props",
+                "editor_popup_empty_text_props",
+                "TextOverflow::Ellipsis",
             ],
             forbidden=[],
         ),

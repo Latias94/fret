@@ -1059,6 +1059,7 @@
     "ecosystem/fret-ui-editor/src/primitives/readout.rs",
     "ecosystem/fret-ui-editor/src/primitives/readout/tests.rs",
     "ecosystem/fret-ui-editor/src/primitives/readout/popup_list.rs",
+    "ecosystem/fret-ui-editor/src/primitives/readout/popup_list/tests.rs",
     "ecosystem/fret-ui-editor/src/primitives/readout/theme_preset.rs",
     "ecosystem/fret-ui-editor/src/composites/inspector_panel.rs",
     "ecosystem/fret-ui-editor/src/composites/inspector_panel/tests.rs",

@@ -156,6 +156,12 @@ Last updated: 2026-05-31
       Result: `primitives/readout.rs` now keeps the non-popup editor readout helpers only.
       `primitives/readout/popup_list.rs` owns the popup-list row, centered-row, option-caption, and
       empty-state text helpers plus their focused tests.
+- [x] Split the shared editor popup-list readout helper regressions into a private test owner
+      without changing popup row text props, empty text props, centered row alignment, fixed caption
+      line boxes, or direct `TextProps` allowance for the readout child owner.
+      Result: `primitives/readout/popup_list.rs` keeps popup-list readout helper implementation
+      plus test-owner routing. `primitives/readout/popup_list/tests.rs` owns popup-list readout
+      text-role coverage.
 - [x] Split the editor theme-preset picker readout text roles into a private child owner without
       changing compact header sizing, fixed row label/status line boxes, re-export paths, or
       style/theme picker rendering.

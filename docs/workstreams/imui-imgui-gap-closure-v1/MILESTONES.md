@@ -150,6 +150,12 @@ helpers only. `primitives/readout/popup_list.rs` owns the popup-list row, center
 option-caption, and empty-state text helpers plus the focused popup-list tests. Popup row geometry,
 alignment, empty-state copy, and popup-list text-role coverage remain unchanged.
 
+2026-05-31 editor readout popup-list tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout/popup_list.rs` now keeps popup-list readout helper
+implementation and test-owner routing. `primitives/readout/popup_list/tests.rs` owns popup-list
+readout text-role coverage. Popup row text props, empty text props, centered row alignment, fixed
+caption line boxes, and direct `TextProps` allowance for the readout child owner remain unchanged.
+
 2026-05-30 editor readout theme-preset child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the shared non-popup readout hub and
 re-exports theme preset picker text helpers. `primitives/readout/theme_preset.rs` owns the theme
