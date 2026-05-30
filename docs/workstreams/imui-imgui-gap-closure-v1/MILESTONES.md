@@ -690,6 +690,13 @@ active payload tracking, hovered-target preservation, and pointer-up delivery in
 `drag_drop/source/hooks.rs` keeps enabled gating, cross-window drag upgrade policy, and the private
 payload-lifecycle delegation.
 
+2026-05-30 drag-source payload lifecycle child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks/payload_lifecycle.rs` is now a private hook
+installer hub. `payload_lifecycle/move_hook.rs` owns active payload tracking and hovered-target
+preservation, while `payload_lifecycle/up_delivery.rs` owns pointer-up target resolution and
+delivered payload insertion. Cross-window drag upgrade policy and public drag/drop response
+behavior remain unchanged.
+
 2026-05-28 table-column visibility menu-item owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu/item.rs` now owns single checkbox item
 rendering, visible-state reads, model mutation, and changed/edited response flags. `menu.rs` keeps

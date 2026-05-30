@@ -770,6 +770,8 @@
     "ecosystem/fret-ui-kit/src/imui/drag_drop/source.rs",
     "ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks.rs",
     "ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks/payload_lifecycle.rs",
+    "ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks/payload_lifecycle/move_hook.rs",
+    "ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks/payload_lifecycle/up_delivery.rs",
     "ecosystem/fret-ui-kit/src/imui/drag_drop/store.rs",
     "ecosystem/fret-ui-kit/src/imui/drag_drop/store/lifecycle.rs",
     "ecosystem/fret-ui-kit/src/imui/drag_drop/store/source_response.rs",

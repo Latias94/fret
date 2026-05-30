@@ -806,6 +806,14 @@ Last updated: 2026-05-30
       Result: `drag_drop/source/hooks/payload_lifecycle.rs` owns pointer-move active payload
       tracking and pointer-up delivery insertion. `drag_drop/source/hooks.rs` keeps enabled gating,
       cross-window drag upgrade policy, and the private payload-lifecycle delegation.
+- [x] Split IMUI drag-source payload lifecycle owner into pointer-move and pointer-up child owners
+      without changing drag-session filtering, active payload publication, hovered-target
+      preservation, delivered payload insertion, tick/position/source metadata, cross-window drag
+      upgrade policy, or public drag/drop response behavior.
+      Result: `drag_drop/source/hooks/payload_lifecycle.rs` is now a private hook installer hub.
+      `payload_lifecycle/move_hook.rs` owns active payload tracking and hovered-target
+      preservation, while `payload_lifecycle/up_delivery.rs` owns pointer-up target resolution and
+      delivered payload insertion.
 - [x] Split IMUI table-column visibility menu-item toggle behavior into a private owner without
       changing header context-menu trigger selection, menu item group composition, test-id suffix
       generation, shared visibility state updates, changed/edited response flags, or public

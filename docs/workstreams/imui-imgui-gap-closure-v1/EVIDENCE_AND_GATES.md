@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Drag-Source Payload Lifecycle Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI drag-source payload lifecycle split into pointer-move and pointer-up child
+owners without changing drag-session filtering, active payload publication, hovered-target
+preservation, delivered payload insertion, tick/position/source metadata, cross-window drag upgrade
+policy, or public drag/drop response behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks/payload_lifecycle.rs` is now a private
+  hook installer hub for payload lifecycle phases.
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks/payload_lifecycle/move_hook.rs` owns
+  pointer-move drag-session filtering, active payload publication, and hovered-target preservation.
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks/payload_lifecycle/up_delivery.rs` owns
+  pointer-up target resolution and delivered payload insertion with tick/source/position metadata.
+- `tools/gate_imui_workstream_source.py` now checks the hub/move/up-delivery split.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_drag --no-fail-fast`: pass (8 passed, 178 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_drag_drop_smoke --test
+  imui_drag_preview_smoke --no-fail-fast`: pass (2 passed).
+
 ## Pressable Drag Phase Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI pressable drag pointer phases split into down, move, and up child owners
