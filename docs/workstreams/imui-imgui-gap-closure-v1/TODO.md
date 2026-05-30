@@ -750,8 +750,18 @@ Last updated: 2026-05-30
       interaction update, open model synchronization, overlay request submission, or public tooltip
       facade behavior.
       Result: `tooltip_overlay/runtime/layout.rs` owns anchor bounds, measured/estimated panel
-      sizing, and floating bounds calculation. `tooltip_overlay/runtime.rs` keeps trigger gates,
-      interaction updates, open state writeback, and overlay request submission.
+      sizing, and floating bounds calculation. `tooltip_overlay/runtime.rs` kept trigger gates,
+      interaction updates, open state writeback, and overlay request submission until the later
+      runtime-interaction split below moved hover/focus/open synchronization into a child owner.
+- [x] Split IMUI tooltip runtime hover/focus interaction update out of
+      `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` into a private interaction owner
+      without changing trigger-id validation, event/open model setup, pointer-move open gate
+      installation, layout projection, provider option defaults, open model synchronization,
+      overlay request submission, or public tooltip facade behavior.
+      Result: `tooltip_overlay/runtime/interaction.rs` owns trigger hover/focus gating,
+      `TooltipInteractionConfig` construction, continuous-frame scheduling, and open model
+      synchronization. `tooltip_overlay/runtime.rs` keeps trigger-id validation, runtime model
+      creation, pointer-move gate installation, layout resolution, and overlay request submission.
 - [x] Split IMUI button-command presentation and enabled gating into a private owner without
       changing public button wrapper methods, focusable-recording behavior, command metadata
       lookup, or action button dispatch.
@@ -1054,9 +1064,10 @@ Last updated: 2026-05-30
       semantics, or public-in-IMUI APIs.
       Result: `tooltip_overlay/request.rs` owns panel child construction, tooltip overlay request
       creation, trigger binding, dismiss close-request signaling, optional hoverable-content pointer
-      tracker installation, and request submission. `tooltip_overlay/runtime.rs` keeps trigger-id validation,
-      event/open models, pointer-move open gate installation, hover/focus update gates,
-      interaction updates, panel-size/anchor projection, and open-state synchronization.
+      tracker installation, and request submission. `tooltip_overlay/runtime.rs` keeps trigger-id
+      validation, event/open models, pointer-move open gate installation, panel-size/anchor
+      projection, and now delegates hover/focus/open synchronization to
+      `tooltip_overlay/runtime/interaction.rs`.
 - [x] Split IMUI floating area shell layout and hit-test gate selection out of
       `ecosystem/fret-ui-kit/src/imui/floating_surface/area.rs` into a private layout owner without
       changing floating-area registration, drag position reconciliation, no-input behavior,

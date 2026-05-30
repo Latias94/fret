@@ -1,16 +1,16 @@
 use fret_core::Px;
 use fret_ui::{GlobalElementId, UiHost};
 
-use crate::declarative::ModelWatchExt;
-use crate::declarative::scheduling;
 use crate::imui::{ImUiFacade, ResponseExt, TooltipOptions, UiWriterImUiFacadeExt};
 use crate::primitives::tooltip as radix_tooltip;
 
 use super::request::{TooltipOverlayRequestModels, request_tooltip_overlay};
 use super::trigger::install_pointer_move_open_gate_for;
 
+mod interaction;
 mod layout;
 
+use interaction::update_tooltip_runtime_interaction;
 use layout::resolve_tooltip_runtime_layout;
 
 pub(in crate::imui) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
@@ -28,7 +28,7 @@ pub(in crate::imui) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
         let overlay_key = format!("fret-ui-kit.imui.tooltip.overlay.{id}");
         cx.named(overlay_key.as_str(), |cx| {
             let tooltip_id = cx.root_id();
-            let open = cx.local_model_keyed("open", || false);
+            let open_model = cx.local_model_keyed("open", || false);
             let panel_id = cx.local_model_keyed("panel_id", || None::<GlobalElementId>);
             let event_models = radix_tooltip::tooltip_trigger_event_models(cx);
             let last_pointer = radix_tooltip::tooltip_last_pointer_model(cx);
@@ -50,42 +50,23 @@ pub(in crate::imui) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
             let disable_hoverable_content = options
                 .disable_hoverable_content
                 .unwrap_or(provider_cfg.disable_hoverable_content);
-            let gates = radix_tooltip::tooltip_trigger_update_gates(
-                cx,
-                trigger.pointer_hovered_raw(),
-                trigger.focused(),
-                &event_models,
-            );
 
             let tooltip_layout =
                 resolve_tooltip_runtime_layout(cx, trigger_id, trigger.rect(), &panel_id, &options);
 
-            let update = radix_tooltip::tooltip_update_interaction(
+            let open = update_tooltip_runtime_interaction(
                 cx,
-                gates.trigger_hovered,
-                gates.trigger_focused,
-                gates.force_close,
-                last_pointer.clone(),
+                trigger.pointer_hovered_raw(),
+                trigger.focused(),
                 tooltip_layout.anchor_bounds,
                 tooltip_layout.floating_bounds,
-                radix_tooltip::TooltipInteractionConfig {
-                    disable_hoverable_content,
-                    open_delay_ticks_override: options.open_delay_frames_override.map(u64::from),
-                    close_delay_ticks_override: options.close_delay_frames_override.map(u64::from),
-                    safe_hover_buffer: Px(5.0),
-                },
+                &open_model,
+                &event_models,
+                last_pointer.clone(),
+                &options,
+                disable_hoverable_content,
             );
-            scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
-
-            let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
-            if open_now != update.open {
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&open, |value| *value = update.open);
-            }
-
-            if !update.open {
+            if !open {
                 return false;
             }
 
@@ -98,7 +79,7 @@ pub(in crate::imui) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
                 disable_hoverable_content,
                 &options,
                 TooltipOverlayRequestModels {
-                    open,
+                    open: open_model,
                     panel_id,
                     event_models,
                     last_pointer,

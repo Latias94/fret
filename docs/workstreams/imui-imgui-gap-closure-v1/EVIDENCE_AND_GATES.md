@@ -3376,7 +3376,8 @@ facade behavior.
 Evidence:
 
 - `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` keeps trigger gates, interaction
-  updates, open state writeback, and overlay request submission.
+  updates, open state writeback, and overlay request submission for this slice; the 2026-05-30
+  runtime-interaction split below moves hover/focus/open synchronization into a child owner.
 - `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime/layout.rs` owns anchor bounds,
   measured/estimated panel sizing, and floating bounds calculation.
 - `tools/gate_imui_workstream_source.py` now rejects tooltip layout/placement calculation from
@@ -3393,6 +3394,42 @@ Focused gates:
 - `cargo check -p fret-ui-kit --features imui --lib`: pass.
 - `cargo nextest run -p fret-ui-kit --features imui tooltip --no-fail-fast`: pass; 32 tooltip
   tests passed.
+
+## Tooltip Runtime Interaction Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI tooltip runtime hover/focus interaction update moved into a private owner
+without changing trigger-id validation, event/open model setup, pointer-move open gate installation,
+layout projection, provider option defaults, open model synchronization, overlay request
+submission, or public tooltip facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime/interaction.rs` owns trigger hover/focus
+  gating, `TooltipInteractionConfig` construction, continuous-frame scheduling, and open model
+  synchronization.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` keeps trigger-id validation, runtime
+  model creation, pointer-move gate installation, layout resolution, and overlay request
+  submission.
+- `tools/gate_imui_workstream_source.py` now rejects tooltip trigger gate/update interaction and
+  scheduling/open-model synchronization from drifting back into `tooltip_overlay/runtime.rs` while
+  requiring the private `runtime/interaction.rs` owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_tooltip_smoke --no-fail-fast`:
+  pass; 1 test.
+- `cargo nextest run -p fret-ui-kit --features imui --lib tooltip_overlay --no-fail-fast`:
+  pass; 3 tests, 686 skipped.
+- `cargo nextest run -p fret-imui
+  popup_hover::hover_flags::hovered_for_tooltip_requires_stationary_and_delay_short_even_when_disabled
+  --no-fail-fast`: pass; 1 test, 185 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
 
 ## Button-Command Helper Owner-Split Evidence - 2026-05-28
 
@@ -4669,8 +4706,8 @@ APIs.
 Evidence:
 
 - `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` keeps trigger-id validation,
-  event/open models, pointer-move open gate installation, hover/focus update gates, interaction
-  updates, panel-size/anchor projection, and open-state synchronization.
+  event/open models, pointer-move open gate installation, panel-size/anchor projection, and now
+  delegates hover/focus/open synchronization to `tooltip_overlay/runtime/interaction.rs`.
 - `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/request.rs` owns panel child construction,
   tooltip overlay request creation, trigger binding, dismiss close-request signaling, optional
   hoverable-content pointer tracker installation, and request submission.

@@ -651,7 +651,14 @@ public menu item wrappers, focusable recording, and the private helper re-export
 2026-05-28 tooltip runtime layout owner-split result:
 `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime/layout.rs` now owns anchor bounds,
 measured/estimated panel sizing, and floating bounds calculation. `tooltip_overlay/runtime.rs`
-keeps trigger gates, interaction updates, open state writeback, and overlay request submission.
+kept trigger gates, interaction updates, open state writeback, and overlay request submission until
+the later runtime-interaction split.
+
+2026-05-30 tooltip runtime interaction owner-split result:
+`ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime/interaction.rs` now owns trigger
+hover/focus gating, `TooltipInteractionConfig` construction, continuous-frame scheduling, and open
+model synchronization. `tooltip_overlay/runtime.rs` keeps trigger-id validation, runtime model
+creation, pointer-move gate installation, layout resolution, and overlay request submission.
 
 2026-05-28 button-command helper owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions/button_command.rs` now owns command
