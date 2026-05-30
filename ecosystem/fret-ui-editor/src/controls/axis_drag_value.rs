@@ -41,6 +41,8 @@ use crate::primitives::{
 };
 
 mod model;
+#[cfg(test)]
+mod tests;
 
 use model::{AxisDragValueMode, AxisDragValueState, axis_drag_value_input_text_style};
 pub use model::{
@@ -777,34 +779,4 @@ fn draft_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
 #[track_caller]
 fn error_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Arc<str>>> {
     cx.local_model(|| None::<Arc<str>>)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::AxisDragValue;
-    use crate::primitives::NumericPresentation;
-    use fret_app::App;
-    use fret_core::Color;
-    use std::sync::Arc;
-
-    #[test]
-    fn axis_drag_value_from_presentation_adopts_format_parse_and_chrome_affixes() {
-        let mut app = App::new();
-        let model = app.models_mut().insert(1.25f64);
-        let presentation = NumericPresentation::<f64>::fixed_decimals(2)
-            .with_chrome_prefix("$")
-            .with_chrome_suffix("ms");
-
-        let drag_value = AxisDragValue::from_presentation(
-            Arc::from("X"),
-            Color::from_srgb_hex_rgb(0xf2_59_59),
-            model,
-            presentation,
-        );
-
-        assert_eq!((drag_value.format)(1.25).as_ref(), "1.25");
-        assert_eq!((drag_value.parse)("1.25"), Some(1.25));
-        assert_eq!(drag_value.options.prefix, Some(Arc::from("$")));
-        assert_eq!(drag_value.options.suffix, Some(Arc::from("ms")));
-    }
 }

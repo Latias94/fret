@@ -129,6 +129,11 @@ Last updated: 2026-05-31
       Result: `controls/axis_drag_value.rs` keeps the `AxisDragValue<T>` control orchestration.
       `controls/axis_drag_value/model.rs` owns public option/reset/outcome records, internal
       mode/state records, and the focused input text-style test.
+- [x] Split editor axis-drag-value presentation regression into a private test owner without
+      changing `AxisDragValue::from_presentation`, NumericPresentation adoption, axis tint routing,
+      or axis-drag-value model child-owner boundaries.
+      Result: `controls/axis_drag_value.rs` keeps control orchestration plus child-owner routing.
+      `controls/axis_drag_value/tests.rs` owns presentation format/parse/chrome-affix coverage.
 - [x] Split editor slider chrome/color resolution into a private child owner without changing
       pointer/typing behavior, value formatting, theme token precedence, hover/pressed/disabled
       color mixing, or slider option/public constructor behavior.

@@ -109,6 +109,12 @@ internal scrub/typing mode/state records, and the focused input text-style test.
 fields, reset action packaging, outcome callback aliases, focus handoff behavior, mode transitions,
 and input text line-box policy remain unchanged.
 
+2026-05-31 editor axis-drag-value tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps control orchestration and
+child-owner routing. `controls/axis_drag_value/tests.rs` owns presentation format/parse/chrome-affix
+coverage. `AxisDragValue::from_presentation`, NumericPresentation adoption, axis tint routing, and
+model child-owner boundaries remain unchanged.
+
 2026-05-30 editor slider chrome child-owner result:
 `ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider state, value flow, pointer/input
 switching, and layout orchestration. `controls/slider/chrome.rs` owns token fallback, color mixing,

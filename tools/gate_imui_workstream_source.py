@@ -30780,6 +30780,7 @@ def main() -> None:
             Path("ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs"),
             required=[
                 "mod model;",
+                "mod tests;",
                 "pub use model::{",
                 "AxisDragValueOptions",
                 "AxisDragValueOutcome",
@@ -30787,7 +30788,6 @@ def main() -> None:
                 "OnAxisDragValueOutcome",
                 "use model::{AxisDragValueMode, AxisDragValueState, axis_drag_value_input_text_style};",
                 "pub struct AxisDragValue<T>",
-                "axis_drag_value_from_presentation_adopts_format_parse_and_chrome_affixes",
             ],
             forbidden=[
                 "pub struct AxisDragValueOptions",
@@ -30796,6 +30796,23 @@ def main() -> None:
                 "enum AxisDragValueMode",
                 "pub type AxisDragValueOutcome",
                 "pub type OnAxisDragValueOutcome",
+                "fn axis_drag_value_input_text_style",
+                "axis_drag_value_input_text_style_uses_density_row_height_for_typing_line_box",
+                "axis_drag_value_from_presentation_adopts_format_parse_and_chrome_affixes",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/axis_drag_value/tests.rs"),
+            required=[
+                "axis_drag_value_from_presentation_adopts_format_parse_and_chrome_affixes",
+                "AxisDragValue::from_presentation",
+                "NumericPresentation::<f64>::fixed_decimals(2)",
+                'with_chrome_prefix("$")',
+                'with_chrome_suffix("ms")',
+            ],
+            forbidden=[
+                "pub struct AxisDragValueOptions",
+                "pub struct AxisDragValueResetAction",
                 "fn axis_drag_value_input_text_style",
                 "axis_drag_value_input_text_style_uses_density_row_height_for_typing_line_box",
             ],
