@@ -91,6 +91,11 @@ Last updated: 2026-05-31
       focus ring token routing.
       Result: `primitives/chrome.rs` keeps editor chrome/style resolution plus test-owner routing.
       `primitives/chrome/tests.rs` owns text-field/text-area chrome policy coverage.
+- [x] Split editor widget-visuals selection/focus/invalid/hover regressions into a private test
+      owner without changing shared visual policy, selected-frame fill/foreground behavior,
+      disabled alpha attenuation, invalid chrome routing, or icon-button hover overlay source.
+      Result: `primitives/visuals.rs` keeps editor widget visual policy plus test-owner routing.
+      `primitives/visuals/tests.rs` owns visual-state policy coverage.
 - [x] Split editor drag-value core session/response regressions into a private test owner without
       changing scrub session commit/cancel semantics, response accessor privacy, or drag-value
       response construction.

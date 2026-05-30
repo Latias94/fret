@@ -30154,6 +30154,43 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/visuals.rs"),
+            required=[
+                "mod tests;",
+                "pub(crate) struct EditorWidgetVisuals",
+                "pub(crate) fn selection_frame_visuals",
+                "pub(crate) fn frame_visuals",
+                "pub(crate) fn hover_overlay_bg",
+                "pub(crate) fn editor_icon_button_bg",
+                "editor_accent",
+                "editor_subtle_bg",
+            ],
+            forbidden=[
+                "selection_frame_visuals_use_selected_fill_and_foreground",
+                "selection_frame_visuals_use_focus_border_when_focused",
+                "selection_frame_visuals_reduce_alpha_when_disabled",
+                "frame_visuals_tint_typing_state_more_than_focus_only",
+                "frame_visuals_use_shared_invalid_chrome",
+                "icon_button_bg_prefers_editor_subtle_bg_over_host_background",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/visuals/tests.rs"),
+            required=[
+                "selection_frame_visuals_use_selected_fill_and_foreground",
+                "selection_frame_visuals_use_focus_border_when_focused",
+                "selection_frame_visuals_reduce_alpha_when_disabled",
+                "frame_visuals_tint_typing_state_more_than_focus_only",
+                "frame_visuals_use_shared_invalid_chrome",
+                "icon_button_bg_prefers_editor_subtle_bg_over_host_background",
+                "EditorWidgetVisuals::new(theme).selection_frame_visuals",
+                "EditorWidgetVisuals::new(theme).frame_visuals",
+                "EditorTokenKeys::TEXT_FIELD_BG",
+                "EditorTokenKeys::CHROME_ACCENT",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/readout.rs"),
             required=[
                 "mod tests;",

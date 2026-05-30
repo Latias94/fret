@@ -69,6 +69,12 @@ test-owner routing. `primitives/chrome/tests.rs` owns text-field/text-area chrom
 Editor token precedence, legacy component fallback behavior, line-height policy, and focus ring
 token routing remain unchanged.
 
+2026-05-31 editor visuals tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/visuals.rs` now keeps editor widget visual policy and
+test-owner routing. `primitives/visuals/tests.rs` owns visual-state policy coverage. Shared visual
+policy, selected-frame fill/foreground behavior, disabled alpha attenuation, invalid chrome
+routing, and icon-button hover overlay source remain unchanged.
+
 2026-05-31 editor drag-value core tests child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs` now keeps drag-to-edit primitive
 implementation and test-owner routing. `primitives/drag_value_core/tests.rs` owns session and

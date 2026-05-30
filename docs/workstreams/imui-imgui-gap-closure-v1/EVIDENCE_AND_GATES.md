@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Visuals Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor widget-visuals selection/focus/invalid/hover regressions split into a
+private test owner without changing shared visual policy, selected-frame fill/foreground behavior,
+disabled alpha attenuation, invalid chrome routing, or icon-button hover overlay source.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/visuals.rs` now keeps editor widget visual policy and a
+  thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/primitives/visuals/tests.rs` owns visual-state policy coverage.
+- `tools/gate_imui_workstream_source.py` now checks the visuals root/test split and adds source
+  coverage for the editor visuals primitive.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the visuals root and
+  test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  selection_frame_visuals_use_selected_fill_and_foreground
+  selection_frame_visuals_use_focus_border_when_focused
+  selection_frame_visuals_reduce_alpha_when_disabled
+  frame_visuals_tint_typing_state_more_than_focus_only
+  frame_visuals_use_shared_invalid_chrome
+  icon_button_bg_prefers_editor_subtle_bg_over_host_background --no-fail-fast`: pass (6 passed, 192
+  skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Editor Chrome Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor chrome text-field/text-area style regressions split into a private test
