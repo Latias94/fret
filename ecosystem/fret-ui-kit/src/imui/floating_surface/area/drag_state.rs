@@ -6,6 +6,9 @@ use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use super::super::super::{FloatingAreaOptions, point_add, point_sub, snap_point_to_device_pixels};
 use super::super::state::FloatingAreaState;
+use snapshot::floating_area_drag_snapshot;
+
+mod snapshot;
 
 pub(super) struct PreparedFloatingAreaState {
     pub(super) position: Point,
@@ -21,16 +24,9 @@ pub(super) fn prepare_floating_area_state<H: UiHost>(
     options: &FloatingAreaOptions,
     drag_kind: fret_runtime::DragKindId,
 ) -> PreparedFloatingAreaState {
-    let drag_snapshot = cx
-        .app
-        .find_drag_pointer_id(|d| {
-            d.kind == drag_kind && d.source_window == cx.window && d.current_window == cx.window
-        })
-        .and_then(|pointer_id| cx.app.drag(pointer_id))
-        .filter(|drag| drag.kind == drag_kind)
-        .map(|drag| (drag.dragging, drag.position, drag.start_position));
+    let drag_snapshot = floating_area_drag_snapshot(cx, drag_kind);
     let dragging = drag_snapshot
-        .map(|(dragging, _, _)| dragging)
+        .map(|snapshot| snapshot.dragging)
         .unwrap_or(false);
 
     let scale_factor = cx
@@ -54,12 +50,12 @@ pub(super) fn prepare_floating_area_state<H: UiHost>(
                 st.test_id = test_id;
             }
 
-            if let Some((dragging, current, start)) = drag_snapshot {
-                if dragging {
-                    let prev = st.last_drag_position.unwrap_or(start);
-                    st.position = point_add(st.position, point_sub(current, prev));
+            if let Some(snapshot) = drag_snapshot {
+                if snapshot.dragging {
+                    let prev = st.last_drag_position.unwrap_or(snapshot.start_position);
+                    st.position = point_add(st.position, point_sub(snapshot.position, prev));
                     st.position = snap_point_to_device_pixels(scale_factor, st.position);
-                    st.last_drag_position = Some(current);
+                    st.last_drag_position = Some(snapshot.position);
                 } else {
                     st.last_drag_position = None;
                 }

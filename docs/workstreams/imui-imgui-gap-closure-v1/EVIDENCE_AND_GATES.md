@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Floating-Area Drag Snapshot Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI floating-area active drag snapshot discovery split into a private child owner
+without changing same-window drag filtering, dragging flag readback, start/current pointer position
+reconciliation, device-pixel snapping, test-id refresh, final state readback, or public
+`FloatingAreaResponse` movement semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state.rs` keeps position/test-id state
+  reconciliation, scale-factor lookup, device-pixel snapping, and final state readback.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state/snapshot.rs` owns active drag
+  lookup, same-window drag filtering, and drag snapshot projection.
+- `tools/gate_imui_workstream_source.py` now checks the drag_state/snapshot split and keeps raw
+  drag lookup out of the state reconciliation owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new snapshot owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-imui
+  floating::movement_z_order::floating_area_moves_when_dragging_drag_surface --no-fail-fast`:
+  pass (1 passed, 185 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_area_options_smoke
+  --no-fail-fast`: pass (2 passed).
+
 ## Button Visual Content Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI button visual content children split into a private child owner without

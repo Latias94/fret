@@ -44,6 +44,13 @@ Last updated: 2026-05-30
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI floating-area active drag snapshot discovery out of the drag-state owner without
+      changing same-window drag filtering, dragging flag readback, start/current pointer position
+      reconciliation, device-pixel snapping, test-id refresh, final state readback, or public
+      `FloatingAreaResponse` movement semantics.
+      Result: `floating_surface/area/drag_state.rs` keeps position/test-id state reconciliation and
+      final readback. `drag_state/snapshot.rs` owns active drag lookup and same-window drag snapshot
+      projection.
 - [x] Split IMUI button visual content children out of the visual hub without changing button
       chrome resolution, variant sizing, visible/invisible visual selection, centered-row text
       mounting, arrow glyph rendering, or public button response behavior.

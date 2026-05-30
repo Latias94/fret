@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 floating-area drag snapshot child-owner result:
+`ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state.rs` now keeps position/test-id
+state reconciliation, scale-factor lookup, device-pixel snapping, and final state readback.
+`drag_state/snapshot.rs` owns active drag lookup, same-window drag filtering, and drag snapshot
+projection. Floating-area drag movement, snapping, test-id refresh, and `FloatingAreaResponse`
+movement semantics remain unchanged.
+
 2026-05-30 button visual content child-owner result:
 `ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` now keeps `ButtonVisual`, chrome
 resolution, and visible/invisible selection only. `button_controls/visual/content.rs` owns
