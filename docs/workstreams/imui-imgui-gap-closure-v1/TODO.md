@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-30
+Last updated: 2026-05-31
 
 ## Worktree Convergence - 2026-05-26
 
@@ -97,6 +97,12 @@ Last updated: 2026-05-30
       Result: `primitives/readout.rs` now keeps the shared non-popup readout hub and re-exports the
       theme-preset helpers. `primitives/readout/theme_preset.rs` owns the theme picker header, row
       label, row status text props, and focused fixed-line tests.
+- [x] Split shared editor readout text-role regression tests into a private test owner without
+      changing non-popup readout helper names, text-role layout policy, compact readout sizing, or
+      popup/theme-preset child owner boundaries.
+      Result: `primitives/readout.rs` keeps the non-popup readout helper hub plus child-owner
+      re-exports. `primitives/readout/tests.rs` owns the compact readout and editor text-role
+      regression tests.
 - [x] Split editor vector axis/reset/outcome policy and axis group rendering into a private child
       owner without changing Vec2/Vec3/Vec4 public constructors, reset options, axis outcome
       accessors, transform-edit outcome routing, id-source/test-id derivation, or row/column auto

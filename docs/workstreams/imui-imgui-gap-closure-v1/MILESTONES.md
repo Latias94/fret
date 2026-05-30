@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-30
+Last updated: 2026-05-31
 
 ## M6 - Continuing IMUI Owner-Split Pressure
 
@@ -74,6 +74,12 @@ alignment, empty-state copy, and popup-list text-role coverage remain unchanged.
 re-exports theme preset picker text helpers. `primitives/readout/theme_preset.rs` owns the theme
 picker header, row label, row status text props, and fixed-line tests. Compact header sizing, row
 label/status line boxes, re-export paths, and style/theme picker rendering remain unchanged.
+
+2026-05-31 editor readout tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the non-popup readout helper hub and
+child-owner re-exports. `primitives/readout/tests.rs` owns compact readout sizing and editor
+text-role regression tests. Non-popup helper names, text-role layout policy, compact readout
+sizing, and popup/theme-preset child-owner boundaries remain unchanged.
 
 2026-05-30 editor vec-edit axis child-owner result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps Vec2/Vec3/Vec4 public control

@@ -1,7 +1,54 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-30
+Last updated: 2026-05-31
+
+## Editor Readout Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: shared editor readout text-role regression tests split into a private test owner
+without changing non-popup readout helper names, text-role layout policy, compact readout sizing, or
+popup/theme-preset child-owner boundaries.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the non-popup readout helper hub,
+  popup/theme-preset child-owner re-exports, and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/primitives/readout/tests.rs` owns compact readout sizing and editor
+  text-role regression tests.
+- `tools/gate_imui_workstream_source.py` now checks the readout root/test split and keeps the
+  regression test names out of the root readout helper file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the readout test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  compact_readout_text_px_keeps_floor_for_small_base_sizes
+  compact_readout_text_px_trims_one_step_from_primary_text
+  editor_status_badge_text_uses_compact_single_line_readout_role
+  editor_inline_error_text_is_single_line_and_shrinkable
+  editor_validation_message_text_wraps_and_shrinks
+  editor_section_badge_text_is_single_line_centered_badge_label
+  editor_section_heading_text_is_single_line_and_shrinkable
+  editor_property_group_header_text_is_single_line_and_shrinkable
+  editor_inspector_panel_title_text_is_single_line_and_shrinkable
+  editor_inline_control_label_text_is_single_line_and_shrinkable
+  editor_input_segment_text_keeps_fixed_segment_line_box
+  editor_input_value_text_props_are_single_line_and_shrinkable
+  editor_axis_marker_text_keeps_fixed_centered_line_box
+  editor_property_row_label_text_is_single_line_and_shrinkable
+  editor_property_row_reset_glyph_text_keeps_fixed_button_line_box
+  editor_preview_caption_text_is_single_line_and_shrinkable
+  editor_empty_state_text_is_single_line_and_shrinkable
+  editor_tooltip_readout_text_is_single_line_and_shrinkable --no-fail-fast`: pass (19 passed, 179
+  skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
 
 ## Editor TextAssistField Panel Child-Owner Split Evidence - 2026-05-30
 
