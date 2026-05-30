@@ -110,6 +110,11 @@ Last updated: 2026-05-31
       conversion behavior.
       Result: `primitives/numeric_value.rs` keeps numeric constraint implementation plus
       test-owner routing. `primitives/numeric_value/tests.rs` owns bounds and quantization coverage.
+- [x] Split editor popup-surface chrome regressions into a private test owner without changing
+      overlay/inline shadow policy, popup token precedence, radius/shadow metric resolution, shadow
+      color fallback, or dense preset popup chrome.
+      Result: `primitives/popup_surface.rs` keeps popup chrome implementation plus test-owner
+      routing. `primitives/popup_surface/tests.rs` owns popup surface chrome coverage.
 - [x] Split editor widget-visuals selection/focus/invalid/hover regressions into a private test
       owner without changing shared visual policy, selected-frame fill/foreground behavior,
       disabled alpha attenuation, invalid chrome routing, or icon-button hover overlay source.

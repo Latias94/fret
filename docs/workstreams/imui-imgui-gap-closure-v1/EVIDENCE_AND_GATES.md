@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Popup-Surface Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor popup-surface chrome regressions split into a private test owner without
+changing overlay/inline shadow policy, popup token precedence, radius/shadow metric resolution,
+shadow color fallback, or dense preset popup chrome.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/popup_surface.rs` now keeps popup chrome implementation
+  and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/primitives/popup_surface/tests.rs` owns popup surface chrome
+  coverage.
+- `tools/gate_imui_workstream_source.py` now checks the popup-surface root/test split and keeps
+  migrated regression test names out of the root primitive file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the popup-surface root
+  and test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  overlay_popup_surface_adds_shadow
+  inline_popup_surface_skips_shadow
+  editor_popup_surface_prefers_editor_owned_popup_tokens
+  popup_surface_respects_editor_popup_radius_and_shadow_metrics
+  popup_surface_respects_editor_shadow_color_token
+  dense_preset_uses_tighter_popup_radius_than_default --no-fail-fast`: pass (6 passed, 192
+  skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Numeric-Value Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor numeric-value constraint regressions split into a private test owner without

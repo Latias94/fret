@@ -30272,6 +30272,39 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/popup_surface.rs"),
+            required=[
+                "mod tests;",
+                "pub(crate) struct EditorPopupSurfaceChrome",
+                "pub(crate) fn resolve_editor_popup_surface_chrome",
+                "EditorTokenKeys::POPUP_RADIUS",
+                "EditorTokenKeys::POPUP_SHADOW_COLOR",
+                "sanitize_editor_surface_bg(theme, bg)",
+            ],
+            forbidden=[
+                "overlay_popup_surface_adds_shadow",
+                "inline_popup_surface_skips_shadow",
+                "editor_popup_surface_prefers_editor_owned_popup_tokens",
+                "popup_surface_respects_editor_popup_radius_and_shadow_metrics",
+                "popup_surface_respects_editor_shadow_color_token",
+                "dense_preset_uses_tighter_popup_radius_than_default",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/popup_surface/tests.rs"),
+            required=[
+                "overlay_popup_surface_adds_shadow",
+                "inline_popup_surface_skips_shadow",
+                "editor_popup_surface_prefers_editor_owned_popup_tokens",
+                "popup_surface_respects_editor_popup_radius_and_shadow_metrics",
+                "popup_surface_respects_editor_shadow_color_token",
+                "dense_preset_uses_tighter_popup_radius_than_default",
+                "EditorThemePresetV1::ImguiLikeDense",
+                "EditorTokenKeys::POPUP_SHADOW_COLOR",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/visuals.rs"),
             required=[
                 "mod tests;",

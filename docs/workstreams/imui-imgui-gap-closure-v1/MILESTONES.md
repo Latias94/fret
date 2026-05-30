@@ -93,6 +93,12 @@ implementation and test-owner routing. `primitives/numeric_value/tests.rs` owns 
 quantization coverage. Bound normalization, finite-step filtering, clamp ordering, quantization
 origin, and scalar conversion behavior remain unchanged.
 
+2026-05-31 editor popup-surface tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/popup_surface.rs` now keeps popup chrome implementation
+and test-owner routing. `primitives/popup_surface/tests.rs` owns popup surface chrome coverage.
+Overlay/inline shadow policy, popup token precedence, radius/shadow metric resolution, shadow color
+fallback, and dense preset popup chrome remain unchanged.
+
 2026-05-31 editor visuals tests child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/visuals.rs` now keeps editor widget visual policy and
 test-owner routing. `primitives/visuals/tests.rs` owns visual-state policy coverage. Shared visual
