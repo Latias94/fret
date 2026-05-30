@@ -1917,6 +1917,12 @@ fn inject_comp_filled_autocomplete_scalars(cfg: &mut ThemeConfig) {
 fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_primary_navigation_tab_scalars(cfg);
     cfg.metrics
+        .entry(
+            "md.comp.primary-navigation-tab.with-stacked-icon-and-label-text.container.height"
+                .to_string(),
+        )
+        .or_insert(72.0);
+    cfg.metrics
         .entry("md.comp.primary-navigation-tab.active-indicator.min-width".to_string())
         .or_insert(24.0);
     cfg.metrics
@@ -1941,6 +1947,12 @@ fn inject_comp_secondary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
     cfg.metrics
         .entry("md.comp.secondary-navigation-tab.with-icon.icon.size".to_string())
         .or_insert(24.0);
+    cfg.metrics
+        .entry(
+            "md.comp.secondary-navigation-tab.with-stacked-icon-and-label-text.container.height"
+                .to_string(),
+        )
+        .or_insert(72.0);
     cfg.numbers
         .entry("md.comp.secondary-navigation-tab.with-label-text.label-text.weight".to_string())
         .or_insert(500.0);
@@ -4098,6 +4110,22 @@ mod tests {
                 .get("md.comp.secondary-navigation-tab.with-icon.icon.size")
                 .copied(),
             Some(24.0)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get(
+                    "md.comp.primary-navigation-tab.with-stacked-icon-and-label-text.container.height"
+                )
+                .copied(),
+            Some(72.0)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get(
+                    "md.comp.secondary-navigation-tab.with-stacked-icon-and-label-text.container.height"
+                )
+                .copied(),
+            Some(72.0)
         );
         assert_eq!(
             cfg.metrics

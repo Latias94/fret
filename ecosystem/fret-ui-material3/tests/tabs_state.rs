@@ -207,6 +207,64 @@ fn settle_leading_icon_tabs(
     scene
 }
 
+fn render_stacked_icon_tabs(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+    scrollable: bool,
+    variant: TabsVariant,
+) {
+    let root =
+        fret_ui::declarative::render_root(ui, app, services, window, bounds(), "root", |cx| {
+            let tabs = Tabs::new(selected)
+                .a11y_label("Material tabs")
+                .test_id("m3-tabs")
+                .scrollable(scrollable)
+                .variant(variant)
+                .items(vec![
+                    TabItem::new("a", "Workspace Settings")
+                        .stacked_icon(ids::ui::SEARCH)
+                        .test_id("m3-tab-a"),
+                    TabItem::new("b", "History")
+                        .stacked_icon(ids::ui::SETTINGS)
+                        .test_id("m3-tab-b"),
+                ])
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), tabs)]
+        });
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(app, services, bounds(), 1.0);
+}
+
+fn settle_stacked_icon_tabs(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+    scrollable: bool,
+    variant: TabsVariant,
+) -> Scene {
+    let mut scene = Scene::default();
+    for _ in 0..6 {
+        render_stacked_icon_tabs(
+            ui,
+            app,
+            services,
+            window,
+            selected.clone(),
+            scrollable,
+            variant,
+        );
+        scene = paint(ui, app, services);
+        app.advance_frame();
+    }
+    scene
+}
+
 fn semantics_node<'a>(ui: &'a UiTree<TestHost>, test_id: &str) -> &'a SemanticsNode {
     ui.semantics_snapshot()
         .and_then(|snapshot| {
@@ -412,6 +470,51 @@ fn primary_leading_icon_tabs_use_material_icon_size_and_content_indicator() {
         (indicator.origin.x.0 - icon.origin.x.0).abs() <= 1.5
             && (indicator.size.width.0 - expected_indicator_width).abs() <= 2.5,
         "expected primary leading-icon tab indicator to match icon+gap+label content width; icon={icon:?} label={label:?} indicator={indicator:?}"
+    );
+}
+
+#[test]
+fn primary_stacked_icon_tabs_use_large_height_and_vertical_content_indicator() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    let scene = settle_stacked_icon_tabs(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        selected,
+        false,
+        TabsVariant::Primary,
+    );
+
+    let tab = ui
+        .debug_node_visual_bounds(semantics_node(&ui, "m3-tab-a").id)
+        .expect("expected selected tab visual bounds");
+    let icon = layout_bounds_by_test_id(&ui, &app, window, "m3-tab-a.icon");
+    let label = layout_bounds_by_test_id(&ui, &app, window, "m3-tab-a.label");
+    let indicator = active_indicator_rect(&scene);
+    let content_left = icon.origin.x.0.min(label.origin.x.0);
+    let content_right =
+        (icon.origin.x.0 + icon.size.width.0).max(label.origin.x.0 + label.size.width.0);
+    let expected_indicator_width = (content_right - content_left).max(24.0);
+    let icon_center_x = icon.origin.x.0 + icon.size.width.0 * 0.5;
+    let label_center_x = label.origin.x.0 + label.size.width.0 * 0.5;
+
+    assert!(
+        (tab.size.height.0 - 72.0).abs() <= 0.5,
+        "expected stacked icon tab to use the Compose 72px large height, got {tab:?}"
+    );
+    assert!(
+        (icon.size.width.0 - 24.0).abs() <= 0.5 && (icon.size.height.0 - 24.0).abs() <= 0.5,
+        "expected stacked tab icon to use the Material 24px icon size, got {icon:?}"
+    );
+    assert!(
+        icon.origin.y.0 < label.origin.y.0 && (icon_center_x - label_center_x).abs() <= 1.0,
+        "expected stacked icon to be centered above the label; icon={icon:?} label={label:?}"
+    );
+    assert!(
+        (indicator.origin.x.0 - content_left).abs() <= 1.5
+            && (indicator.size.width.0 - expected_indicator_width).abs() <= 2.5,
+        "expected primary stacked-icon tab indicator to match the stacked icon/label content width; icon={icon:?} label={label:?} indicator={indicator:?}"
     );
 }
 

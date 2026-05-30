@@ -61,11 +61,23 @@ impl TabPartTestIds {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TabIconPlacement {
+    Leading,
+    Stacked,
+}
+
+#[derive(Debug, Clone)]
+struct TabItemIcon {
+    icon: IconId,
+    placement: TabIconPlacement,
+}
+
 #[derive(Debug, Clone)]
 pub struct TabItem {
     value: Arc<str>,
     label: Arc<str>,
-    leading_icon: Option<IconId>,
+    icon: Option<TabItemIcon>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
@@ -76,7 +88,7 @@ impl TabItem {
         Self {
             value: value.into(),
             label: label.into(),
-            leading_icon: None,
+            icon: None,
             disabled: false,
             a11y_label: None,
             test_id: None,
@@ -88,9 +100,17 @@ impl TabItem {
         self
     }
 
-    pub fn leading_icon(mut self, icon: IconId) -> Self {
-        self.leading_icon = Some(icon);
+    pub fn icon(mut self, icon: IconId, placement: TabIconPlacement) -> Self {
+        self.icon = Some(TabItemIcon { icon, placement });
         self
+    }
+
+    pub fn leading_icon(self, icon: IconId) -> Self {
+        self.icon(icon, TabIconPlacement::Leading)
+    }
+
+    pub fn stacked_icon(self, icon: IconId) -> Self {
+        self.icon(icon, TabIconPlacement::Stacked)
     }
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
@@ -101,6 +121,12 @@ impl TabItem {
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
         self
+    }
+
+    fn uses_stacked_icon(&self) -> bool {
+        self.icon
+            .as_ref()
+            .is_some_and(|icon| icon.placement == TabIconPlacement::Stacked)
     }
 }
 
@@ -294,6 +320,7 @@ impl Tabs {
             let selected_idx = items
                 .iter()
                 .position(|it| it.value.as_ref() == selected_value.as_ref());
+            let has_stacked_tabs = items.iter().any(TabItem::uses_stacked_icon);
 
             let tab_stop = items
                 .iter()
@@ -324,7 +351,11 @@ impl Tabs {
             };
             let (container_height, container_bg) = {
                 let theme = Theme::global(&*cx.app);
-                let container_height = tabs_tokens::container_height_for(theme, token_kind);
+                let container_height = if has_stacked_tabs {
+                    tabs_tokens::stacked_container_height_for(theme, token_kind)
+                } else {
+                    tabs_tokens::container_height_for(theme, token_kind)
+                };
                 let container_bg = resolve_override_slot_with(
                     style.container_background.as_ref(),
                     container_states,
@@ -483,6 +514,7 @@ impl Tabs {
                                         disabled,
                                         scrollable,
                                         token_kind,
+                                        container_height,
                                         selected_idx.is_some_and(|t| t == idx),
                                         &style,
                                     )
@@ -522,12 +554,13 @@ fn material_tab<H: UiHost>(
     disabled_group: bool,
     scrollable: bool,
     token_kind: tabs_tokens::NavigationTabKind,
+    height: Px,
     selected: bool,
     style_override: &TabsStyle,
 ) -> AnyElement {
     let value = item.value.clone();
     let label = item.label.clone();
-    let leading_icon = item.leading_icon.clone();
+    let item_icon = item.icon.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
 
@@ -539,7 +572,7 @@ fn material_tab<H: UiHost>(
             rt.labels.ensure_len(set_size);
             rt.icons.ensure_len(set_size);
             rt.tabs.set(idx, pressable_id);
-            if leading_icon.is_none() {
+            if item_icon.is_none() {
                 rt.icons.set(idx, GlobalElementId(0));
             }
         });
@@ -563,11 +596,6 @@ fn material_tab<H: UiHost>(
         }
 
         let corner_radii = Corners::all(Px(0.0));
-        let height = {
-            let theme = Theme::global(&*cx.app);
-            tabs_tokens::container_height_for(theme, token_kind)
-        };
-
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled && tab_stop,
@@ -738,7 +766,7 @@ fn material_tab<H: UiHost>(
 
                 let content = tab_content(
                     cx,
-                    leading_icon.clone(),
+                    item_icon.clone(),
                     icon_size,
                     icon_color,
                     label_el,
@@ -794,7 +822,7 @@ fn material_tab<H: UiHost>(
 
 fn tab_content<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    leading_icon: Option<IconId>,
+    item_icon: Option<TabItemIcon>,
     icon_size: Px,
     icon_color: Color,
     label_el: AnyElement,
@@ -806,13 +834,13 @@ fn tab_content<H: UiHost>(
 ) -> AnyElement {
     cx.named("tab_content", move |cx| {
         let mut children = Vec::new();
-        if let Some(icon) = leading_icon.clone() {
+        if let Some(item_icon) = item_icon.clone() {
             let mut icon_el = tab_icon(
                 cx,
                 container_id,
                 idx,
                 set_size,
-                &icon,
+                &item_icon.icon,
                 icon_size,
                 icon_color,
             );
@@ -828,13 +856,16 @@ fn tab_content<H: UiHost>(
         content.layout.size.min_width = Some(Length::Px(Px(0.0)));
         content.layout.size.max_width = Some(Length::Fill);
         content.layout.flex.shrink = 1.0;
-        content.direction = Axis::Horizontal;
+        content.direction = match item_icon.as_ref().map(|icon| icon.placement) {
+            Some(TabIconPlacement::Stacked) => Axis::Vertical,
+            _ => Axis::Horizontal,
+        };
         content.justify = MainAlign::Center;
         content.align = CrossAlign::Center;
-        content.gap = if leading_icon.is_some() {
-            gap.into()
-        } else {
-            Px(0.0).into()
+        content.gap = match item_icon.as_ref().map(|icon| icon.placement) {
+            Some(TabIconPlacement::Leading) => gap.into(),
+            Some(TabIconPlacement::Stacked) => tabs_tokens::stacked_icon_label_gap().into(),
+            None => Px(0.0).into(),
         };
         content.padding = Edges::all(Px(0.0)).into();
 

@@ -36,6 +36,12 @@ pub(crate) fn container_height_for(theme: &Theme, kind: NavigationTabKind) -> Px
         .unwrap_or(Px(48.0))
 }
 
+pub(crate) fn stacked_container_height_for(theme: &Theme, kind: NavigationTabKind) -> Px {
+    theme
+        .metric_by_key(stacked_container_height_key(kind))
+        .unwrap_or(Px(72.0))
+}
+
 pub(crate) fn container_background_for(theme: &Theme, kind: NavigationTabKind) -> Color {
     theme
         .color_by_key(container_color_key(kind))
@@ -65,6 +71,10 @@ pub(crate) fn horizontal_text_padding() -> fret_core::Edges {
 }
 
 pub(crate) fn leading_icon_label_gap() -> Px {
+    Px(8.0)
+}
+
+pub(crate) fn stacked_icon_label_gap() -> Px {
     Px(8.0)
 }
 
@@ -246,6 +256,17 @@ fn container_height_key(kind: NavigationTabKind) -> &'static str {
     match kind {
         NavigationTabKind::Primary => "md.comp.primary-navigation-tab.container.height",
         NavigationTabKind::Secondary => "md.comp.secondary-navigation-tab.container.height",
+    }
+}
+
+fn stacked_container_height_key(kind: NavigationTabKind) -> &'static str {
+    match kind {
+        NavigationTabKind::Primary => {
+            "md.comp.primary-navigation-tab.with-stacked-icon-and-label-text.container.height"
+        }
+        NavigationTabKind::Secondary => {
+            "md.comp.secondary-navigation-tab.with-stacked-icon-and-label-text.container.height"
+        }
     }
 }
 
