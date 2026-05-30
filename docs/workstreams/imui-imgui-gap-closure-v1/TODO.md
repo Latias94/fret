@@ -66,6 +66,11 @@ Last updated: 2026-05-31
       Result: `image_item_controls/tests.rs` now keeps shared imports and module routing only.
       `tests/helpers.rs` owns normalization coverage, while `tests/props.rs` owns image props
       fill/fit/sampling/UV coverage.
+- [x] Split IMUI radio entry and props owners without changing label identity, `RadioOptions`
+      a11y/test-id wiring, radio behavior installation, field chrome, or visual row layout.
+      Result: `boolean_controls/radio.rs` is now a thin module/re-export hub,
+      `radio/entry.rs` owns label identity, behavior installation, field chrome, and visual row
+      assembly, and `radio/props.rs` owns `PressableProps` plus radio semantics wiring.
 - [x] Split IMUI debug-draw path-builder regression coverage into private sub-owners without
       changing path stroke/fill command recording, rectangle/rounded-rectangle sampling, Bezier
       defaults, circular/elliptical arc defaults, or invalid finished-path cleanup.

@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Radio Entry/Props Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI radio entry and props owners split without changing label identity,
+`RadioOptions` a11y/test-id wiring, radio behavior installation, field chrome, or visual row
+layout.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio.rs` is now a thin module/re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio/entry.rs` owns label identity, behavior
+  installation, field chrome, and visual row assembly.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio/props.rs` owns `PressableProps` plus radio
+  semantics wiring.
+- `tools/gate_imui_workstream_source.py` now checks the hub, entry owner, and props owner and
+  rejects props/a11y construction or behavior bodies from drifting back into the wrong owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the radio entry/props owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui models_controls::radio label_identity::model_controls
+  composition::control_geometry::button_family_variants_and_radio_mount_with_expected_bounds
+  --no-fail-fast`: pass.
+
 ## IMUI Debug-Draw Core Command-Order Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI debug-draw broad command-order regression coverage split into private linear,

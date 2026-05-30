@@ -32,6 +32,12 @@ no-trigger fallback coverage. Public drag/drop behavior remains unchanged.
 `tests/helpers.rs` owns size/opacity/UV normalization coverage, while `tests/props.rs` owns image
 props fill/fit/sampling/UV coverage. Public image-item behavior remains unchanged.
 
+2026-05-31 radio entry/props owner-split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/radio.rs` is now a thin module/re-export hub.
+`radio/entry.rs` owns label identity, behavior installation, field chrome, and visual row assembly,
+while `radio/props.rs` owns `PressableProps` plus radio semantics wiring. Public radio behavior
+remains unchanged.
+
 2026-05-31 facade-writer text test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` is now a thin test hub.
 `tests/text.rs` owns `ui.text(...)` dense single-line coverage, while `tests/wrapped.rs` owns
