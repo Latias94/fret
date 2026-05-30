@@ -27,6 +27,13 @@ owns `OnTextAssistFieldAccept`, `TextAssistFieldSurface`, `TextAssistFieldOption
 unbuffered input policy, item test-id prefix fallback, rendered panel handoff, inline empty-label
 behavior, and anchored-overlay height policy remain unchanged.
 
+2026-05-30 text-assist field overlay child-owner result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now keeps input and panel
+orchestration. `controls/text_assist_field/overlay.rs` owns anchored placement, diagnostics
+placement recording, dismissible popover request construction, branch registration, query
+dismissal writeback, and overlay open-state model creation. Anchor fallback, popper placement,
+overlay diagnostics, dismiss behavior, and local open model behavior remain unchanged.
+
 2026-05-30 property-row reset child-owner result:
 `ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the row layout and value
 orchestration plus reset delegation only. `composites/property_row/reset.rs` owns

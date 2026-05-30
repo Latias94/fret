@@ -57,6 +57,12 @@ Last updated: 2026-05-30
       request, key handling, and accept commits. `controls/text_assist_field/model.rs` owns
       `OnTextAssistFieldAccept`, `TextAssistFieldSurface`, `TextAssistFieldOptions`,
       `RenderedTextAssistPanel`, and the focused option/default tests.
+- [x] Split editor text-assist anchored-overlay request/placement into a private child owner
+      without changing anchor fallback, popper placement, diagnostics placement recording,
+      dismissible branch wiring, query dismissal writeback, or overlay-open local model behavior.
+      Result: `controls/text_assist_field.rs` keeps input and panel orchestration.
+      `controls/text_assist_field/overlay.rs` owns anchored placement, dismissible popover request,
+      and overlay open-state model creation.
 - [x] Split editor-owned property-row reset affordance handling into a private child owner without
       changing row layout, value-slot growth, reset keying, glyph render, accessibility label, or
       property chrome semantics.
