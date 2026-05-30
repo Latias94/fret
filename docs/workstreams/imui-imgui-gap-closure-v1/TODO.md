@@ -86,6 +86,13 @@ Last updated: 2026-05-30
       Result: `controls/transform_edit.rs` keeps TransformEdit public surface and Vec3
       composition. `controls/transform_edit/sync.rs` owns linked-scale local model creation,
       sync-slot allocation, uniform-scale projection, model writeback, and focused sync tests.
+- [x] Split editor axis-drag-value options/reset/outcome records and scrub/typing state into a
+      private child owner without changing public option fields, reset action packaging,
+      outcome callback aliases, focus handoff behavior, scrub/typing mode transitions, or
+      input text line-box policy.
+      Result: `controls/axis_drag_value.rs` keeps the `AxisDragValue<T>` control orchestration.
+      `controls/axis_drag_value/model.rs` owns public option/reset/outcome records, internal
+      mode/state records, and the focused input text-style test.
 - [x] Split editor slider chrome/color resolution into a private child owner without changing
       pointer/typing behavior, value formatting, theme token precedence, hover/pressed/disabled
       color mixing, or slider option/public constructor behavior.

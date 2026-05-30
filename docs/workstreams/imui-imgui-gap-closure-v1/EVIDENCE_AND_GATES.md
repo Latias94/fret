@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Editor AxisDragValue Model Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: editor axis-drag-value options/reset/outcome records and scrub/typing state split
+into a private child owner without changing public option fields, reset action packaging, outcome
+callback aliases, focus handoff behavior, scrub/typing mode transitions, or input text line-box
+policy.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps the `AxisDragValue<T>` control
+  orchestration.
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/model.rs` owns public option/reset/outcome
+  records, internal mode/state records, and the focused input text-style test.
+- `tools/gate_imui_workstream_source.py` now checks the axis-drag-value root/model split and keeps
+  option/state records out of the root control file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new axis-drag-value
+  model owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  axis_drag_value_input_text_style_uses_density_row_height_for_typing_line_box
+  axis_drag_value_from_presentation_adopts_format_parse_and_chrome_affixes
+  editor_input_value_text_is_single_line_and_shrinkable
+  drag_value
+  axis_drag_value --no-fail-fast`: pass (8 passed, 187 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Editor Transform Sync Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: editor transform linked-scale model/slot and uniform-scale synchronization split

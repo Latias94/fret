@@ -59,6 +59,13 @@ sync-slot allocation, uniform-scale projection, model writeback, and focused syn
 options, link toggle behavior, single-axis uniform projection, multi-axis edit rejection, and
 near-equal threshold policy remain unchanged.
 
+2026-05-30 editor axis-drag-value model child-owner result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps the `AxisDragValue<T>` control
+orchestration. `controls/axis_drag_value/model.rs` owns public option/reset/outcome records,
+internal scrub/typing mode/state records, and the focused input text-style test. Public option
+fields, reset action packaging, outcome callback aliases, focus handoff behavior, mode transitions,
+and input text line-box policy remain unchanged.
+
 2026-05-30 editor slider chrome child-owner result:
 `ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider state, value flow, pointer/input
 switching, and layout orchestration. `controls/slider/chrome.rs` owns token fallback, color mixing,

@@ -6,23 +6,18 @@
 use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
-use fret_core::{Color, Edges, KeyCode, Px, SemanticsInvalid, TextStyle};
+use fret_core::{Color, Edges, KeyCode, Px, SemanticsInvalid};
 use fret_runtime::Model;
 use fret_ui::action::{
-    ActionCx, OnActivate, PointerDownCx, PressablePointerDownResult, UiActionHost,
-    UiFocusActionHost,
+    ActionCx, PointerDownCx, PressablePointerDownResult, UiActionHost, UiFocusActionHost,
 };
 use fret_ui::element::{
-    AnyElement, FlexItemStyle, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle,
-    TextInputProps,
+    AnyElement, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle, TextInputProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, Size};
+use fret_ui_kit::ChromeRefinement;
 
-use crate::controls::numeric_input::{
-    NumericFormatFn, NumericInputSelectionBehavior, NumericParseFn, NumericValidateFn,
-};
+use crate::controls::numeric_input::{NumericFormatFn, NumericParseFn, NumericValidateFn};
 use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::colors::{editor_invalid_border, editor_muted_foreground};
 use crate::primitives::drag_value_core::DragValueScalar;
@@ -42,102 +37,15 @@ use crate::primitives::numeric_text_entry::{
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use crate::primitives::{
-    DragValueCore, DragValueCoreOptions, EditSessionOutcome, NumericPresentation,
-    NumericValueConstraints, constrain_numeric_value,
+    DragValueCore, DragValueCoreOptions, NumericPresentation, constrain_numeric_value,
 };
 
-fn axis_drag_value_input_text_style(base: TextStyle, row_height: Px) -> TextStyle {
-    typography::as_control_text(TextStyle {
-        line_height: Some(row_height),
-        ..base
-    })
-}
+mod model;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum AxisDragValueMode {
-    Scrub,
-    Typing,
-}
-
-#[derive(Clone)]
-pub struct AxisDragValueResetAction {
-    pub icon: fret_icons::IconId,
-    pub a11y_label: Arc<str>,
-    pub test_id: Option<Arc<str>>,
-    pub on_activate: OnActivate,
-}
-
-#[derive(Debug)]
-struct AxisDragValueState {
-    mode: AxisDragValueMode,
-    scrub_id: Option<fret_ui::GlobalElementId>,
-    scrub_revision: u64,
-    seen_input_focus: bool,
-}
-
-impl Default for AxisDragValueState {
-    fn default() -> Self {
-        Self {
-            mode: AxisDragValueMode::Scrub,
-            scrub_id: None,
-            scrub_revision: 0,
-            seen_input_focus: false,
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct AxisDragValueOptions {
-    pub layout: LayoutStyle,
-    pub prefix: Option<Arc<str>>,
-    pub suffix: Option<Arc<str>>,
-    /// Shared numeric edit constraints applied to scrub and typed commit paths.
-    pub constraints: NumericValueConstraints,
-    /// Explicit identity source for internal state (scrub/typing focus restore, draft string).
-    ///
-    /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
-    pub id_source: Option<Arc<str>>,
-    pub test_id: Option<Arc<str>>,
-    pub reset: Option<AxisDragValueResetAction>,
-    pub enabled: bool,
-    pub focusable: bool,
-    pub size: Size,
-    pub selection_behavior: NumericInputSelectionBehavior,
-}
-
-impl Default for AxisDragValueOptions {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Auto,
-                    ..Default::default()
-                },
-                flex: FlexItemStyle {
-                    grow: 1.0,
-                    basis: Length::Px(Px(0.0)),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            prefix: None,
-            suffix: None,
-            constraints: NumericValueConstraints::default(),
-            id_source: None,
-            test_id: None,
-            reset: None,
-            enabled: true,
-            focusable: true,
-            size: Size::Small,
-            selection_behavior: NumericInputSelectionBehavior::ReplaceAllOnFocus,
-        }
-    }
-}
-
-pub type AxisDragValueOutcome = EditSessionOutcome;
-pub type OnAxisDragValueOutcome =
-    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, AxisDragValueOutcome) + 'static>;
+use model::{AxisDragValueMode, AxisDragValueState, axis_drag_value_input_text_style};
+pub use model::{
+    AxisDragValueOptions, AxisDragValueOutcome, AxisDragValueResetAction, OnAxisDragValueOutcome,
+};
 
 #[derive(Clone)]
 pub struct AxisDragValue<T> {
@@ -873,25 +781,11 @@ fn error_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Arc<st
 
 #[cfg(test)]
 mod tests {
-    use super::{AxisDragValue, axis_drag_value_input_text_style};
+    use super::AxisDragValue;
     use crate::primitives::NumericPresentation;
     use fret_app::App;
-    use fret_core::{Color, Px, TextStyle};
+    use fret_core::Color;
     use std::sync::Arc;
-
-    #[test]
-    fn axis_drag_value_input_text_style_uses_density_row_height_for_typing_line_box() {
-        let style = axis_drag_value_input_text_style(
-            TextStyle {
-                size: Px(12.0),
-                line_height: Some(Px(16.0)),
-                ..Default::default()
-            },
-            Px(24.0),
-        );
-
-        assert_eq!(style.line_height, Some(Px(24.0)));
-    }
 
     #[test]
     fn axis_drag_value_from_presentation_adopts_format_parse_and_chrome_affixes() {
