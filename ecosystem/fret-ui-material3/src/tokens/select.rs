@@ -13,6 +13,25 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
+fn blend_over(base: Color, overlay: Color, opacity: f32) -> Color {
+    let a = (overlay.a * opacity).clamp(0.0, 1.0);
+    if a <= 0.0 {
+        return base;
+    }
+
+    let inv = 1.0 - a;
+    Color {
+        r: overlay.r * a + base.r * inv,
+        g: overlay.g * a + base.g * inv,
+        b: overlay.b * a + base.b * inv,
+        a: a + base.a * inv,
+    }
+}
+
+fn uniform_corners_from_metric(theme: &Theme, key: &str) -> Option<Corners> {
+    theme.metric_by_key(key).map(Corners::all)
+}
+
 fn container_height_key(variant: SelectVariant) -> &'static str {
     match variant {
         SelectVariant::Outlined => "md.comp.outlined-select.text-field.container.height",
@@ -27,14 +46,19 @@ pub(crate) fn container_height(theme: &Theme, variant: SelectVariant) -> Px {
 }
 
 fn outlined_container_corner(theme: &Theme) -> Corners {
+    let key = "md.comp.outlined-select.text-field.container.shape";
     theme
-        .corners_by_key("md.comp.outlined-select.text-field.container.shape")
+        .corners_by_key(key)
+        .or_else(|| uniform_corners_from_metric(theme, key))
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
         .unwrap_or_else(|| Corners::all(Px(4.0)))
 }
 
 fn filled_container_corner(theme: &Theme) -> Corners {
-    if let Some(corners) = theme.corners_by_key("md.comp.filled-select.text-field.container.shape")
+    let key = "md.comp.filled-select.text-field.container.shape";
+    if let Some(corners) = theme
+        .corners_by_key(key)
+        .or_else(|| uniform_corners_from_metric(theme, key))
     {
         return corners;
     }
@@ -62,30 +86,22 @@ pub(crate) fn container_corner(theme: &Theme, variant: SelectVariant) -> Corners
 pub(crate) fn container_background(theme: &Theme, variant: SelectVariant, disabled: bool) -> Color {
     let key = match variant {
         SelectVariant::Outlined => "md.comp.outlined-select.text-field.container.color",
-        SelectVariant::Filled => {
-            if disabled {
-                "md.comp.filled-select.text-field.disabled.container.color"
-            } else {
-                "md.comp.filled-select.text-field.container.color"
-            }
-        }
+        SelectVariant::Filled => "md.comp.filled-select.text-field.container.color",
     };
-    let mut color = theme
+    let color = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.surface-container-highest"))
         .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-highest"));
 
-    if disabled {
-        let opacity_key = match variant {
-            SelectVariant::Outlined => None,
-            SelectVariant::Filled => {
-                Some("md.comp.filled-select.text-field.disabled.container.opacity")
-            }
-        };
-        if let Some(opacity_key) = opacity_key {
-            let opacity = theme.number_by_key(opacity_key).unwrap_or(0.04);
-            color = alpha_mul(color, opacity);
-        }
+    if disabled && variant == SelectVariant::Filled {
+        let overlay = theme
+            .color_by_key("md.comp.filled-select.text-field.disabled.container.color")
+            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
+        let opacity = theme
+            .number_by_key("md.comp.filled-select.text-field.disabled.container.opacity")
+            .unwrap_or(0.04);
+        return blend_over(color, overlay, opacity);
     }
 
     color
@@ -869,6 +885,7 @@ pub(crate) fn menu_container_shape(theme: &Theme, variant: SelectVariant) -> Cor
     };
     theme
         .corners_by_key(key)
+        .or_else(|| uniform_corners_from_metric(theme, key))
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
         .unwrap_or_else(|| Corners::all(Px(4.0)))
 }

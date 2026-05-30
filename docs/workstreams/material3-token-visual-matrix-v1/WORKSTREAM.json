@@ -106,6 +106,6 @@
   ],
   "continue_policy": {
     "default_action": "run_next_task",
-    "notes": "Continue with M3TVM-040 field-family fixture expansion or M3TVM-050 control/chip fixture expansion before deleting broader fallback logic."
+    "notes": "M3TVM-040A completed Select/Autocomplete/ExposedDropdown field-overlay fixture coverage. Continue with the remaining M3TVM-040 field-family subset or M3TVM-050 control/chip fixture expansion before deleting broader fallback logic."
   }
 }

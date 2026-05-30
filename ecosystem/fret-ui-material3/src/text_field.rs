@@ -703,11 +703,22 @@ impl TextField {
                             let state_layer = (hovered && !disabled)
                                 .then(|| {
                                     let theme = Theme::global(&*cx.app);
-                                    text_field_tokens::hover_state_layer(
-                                        theme,
-                                        variant_for_children,
-                                        error,
-                                    )
+                                    match token_namespace {
+                                        TextFieldTokenNamespace::TextField => {
+                                            text_field_tokens::hover_state_layer(
+                                                theme,
+                                                variant_for_children,
+                                                error,
+                                            )
+                                        }
+                                        TextFieldTokenNamespace::Autocomplete => {
+                                            autocomplete_tokens::hover_state_layer(
+                                                theme,
+                                                variant_for_children,
+                                                error,
+                                            )
+                                        }
+                                    }
                                 })
                                 .flatten()
                                 .map(|(color, opacity)| {
@@ -1475,6 +1486,7 @@ impl TextField {
                         if let Some(label) = label.as_ref() {
                             children.push(text_field_label(
                                 cx,
+                                token_namespace,
                                 variant_for_children,
                                 label.clone(),
                                 float_progress,
@@ -1496,6 +1508,7 @@ impl TextField {
                         if let Some(text) = supporting_text.as_ref() {
                             children.push(text_field_supporting_text(
                                 cx,
+                                token_namespace,
                                 variant_for_children,
                                 text.clone(),
                                 states,
@@ -1520,6 +1533,7 @@ impl TextField {
 
 fn text_field_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    token_namespace: TextFieldTokenNamespace,
     variant: TextFieldVariant,
     text: Arc<str>,
     progress: f32,
@@ -1546,7 +1560,14 @@ fn text_field_label<H: UiHost>(
             style_override.label_color.as_ref(),
             states,
             |color| color.resolve(theme),
-            || text_field_tokens::label_color(theme, variant, hovered, disabled, error, focused),
+            || match token_namespace {
+                TextFieldTokenNamespace::TextField => text_field_tokens::label_color(
+                    theme, variant, hovered, disabled, error, focused,
+                ),
+                TextFieldTokenNamespace::Autocomplete => autocomplete_tokens::label_color(
+                    theme, variant, hovered, disabled, error, focused,
+                ),
+            },
         );
 
         (style, color)
@@ -1618,6 +1639,7 @@ fn text_field_label<H: UiHost>(
 
 fn text_field_supporting_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    token_namespace: TextFieldTokenNamespace,
     variant: TextFieldVariant,
     text: Arc<str>,
     states: WidgetStates,
@@ -1639,10 +1661,15 @@ fn text_field_supporting_text<H: UiHost>(
             style_override.supporting_text_color.as_ref(),
             states,
             |color| color.resolve(theme),
-            || {
-                text_field_tokens::supporting_text_color(
+            || match token_namespace {
+                TextFieldTokenNamespace::TextField => text_field_tokens::supporting_text_color(
                     theme, variant, hovered, disabled, error, focused,
-                )
+                ),
+                TextFieldTokenNamespace::Autocomplete => {
+                    autocomplete_tokens::supporting_text_color(
+                        theme, variant, hovered, disabled, error, focused,
+                    )
+                }
             },
         );
 

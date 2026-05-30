@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "suite": "material3-token-visual-cases-v1",
-  "notes": "Fixture-driven token outcome cases for Material3 token visual matrix M3TVM-030.",
+  "notes": "Fixture-driven token outcome cases for Material3 token visual matrix M3TVM-030 and M3TVM-040A.",
   "cases": [
     {
       "id": "button-filled-enabled-light",
@@ -144,6 +144,163 @@
         { "role": "text_input_style.border_color", "kind": "color_alpha", "color_token": "md.comp.filled-text-field.disabled.active-indicator.color", "opacity_token": "md.comp.filled-text-field.disabled.active-indicator.opacity" },
         { "role": "text_input_style.text_color", "kind": "color_alpha", "color_token": "md.comp.filled-text-field.disabled.input-text.color", "opacity_token": "md.comp.filled-text-field.disabled.input-text.opacity" },
         { "role": "label_color", "kind": "color_alpha", "color_token": "md.comp.filled-text-field.disabled.label-text.color", "opacity_token": "md.comp.filled-text-field.disabled.label-text.opacity" }
+      ]
+    },
+    {
+      "id": "select-outlined-enabled-light",
+      "component": "select",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "outlined", "hovered": false, "focused": false, "disabled": false, "error": false, "enabled": true, "selected": false },
+      "assertions": [
+        { "role": "container_height", "kind": "metric", "token": "md.comp.outlined-select.text-field.container.height" },
+        { "role": "container_color", "kind": "color", "token": "md.comp.outlined-select.text-field.container.color" },
+        { "role": "container_corner", "kind": "corners_metric", "token": "md.comp.outlined-select.text-field.container.shape" },
+        { "role": "outline_width", "kind": "metric", "token": "md.comp.outlined-select.text-field.outline.width" },
+        { "role": "outline_color", "kind": "color", "token": "md.comp.outlined-select.text-field.outline.color" },
+        { "role": "input_text_color", "kind": "color", "token": "md.comp.outlined-select.text-field.input-text.color" },
+        { "role": "label_color", "kind": "color", "token": "md.comp.outlined-select.text-field.label-text.color" },
+        { "role": "supporting_text_color", "kind": "color", "token": "md.comp.outlined-select.text-field.supporting-text.color" },
+        { "role": "leading_icon_size", "kind": "metric", "token": "md.comp.outlined-select.text-field.leading-icon.size" },
+        { "role": "leading_icon_color", "kind": "color", "token": "md.comp.outlined-select.text-field.leading-icon.color" },
+        { "role": "trailing_icon_size", "kind": "metric", "token": "md.comp.outlined-select.text-field.trailing-icon.size" },
+        { "role": "trailing_icon_color", "kind": "color", "token": "md.comp.outlined-select.text-field.trailing-icon.color" },
+        { "role": "menu_container_background", "kind": "color", "token": "md.comp.outlined-select.menu.container.color" },
+        { "role": "menu_container_elevation", "kind": "metric", "token": "md.comp.outlined-select.menu.container.elevation" },
+        { "role": "menu_container_shadow_color", "kind": "color", "token": "md.comp.outlined-select.menu.container.shadow-color" },
+        { "role": "menu_container_shape", "kind": "corners_metric", "token": "md.comp.outlined-select.menu.container.shape" },
+        { "role": "menu_list_item_height", "kind": "metric", "token": "md.comp.outlined-select.menu.list-item.container.height" },
+        { "role": "menu_list_item_label_text_color", "kind": "color", "token": "md.comp.outlined-select.menu.list-item.label-text.color" },
+        { "role": "menu_list_item_leading_icon_size", "kind": "metric", "token": "md.comp.outlined-select.menu.list-item.with-leading-icon.leading-icon.size" },
+        { "role": "menu_list_item_leading_icon_color", "kind": "color", "token": "md.comp.outlined-select.menu.list-item.with-leading-icon.leading-icon.color" },
+        { "role": "menu_list_item_trailing_icon_size", "kind": "metric", "token": "md.comp.outlined-select.menu.list-item.with-trailing-icon.trailing-icon.size" },
+        { "role": "menu_list_item_trailing_icon_color", "kind": "color", "token": "md.comp.outlined-select.menu.list-item.with-trailing-icon.trailing-icon.color" },
+        { "role": "input_text_style", "kind": "text_style_source", "source_token": "md.sys.typescale.body-large" },
+        { "role": "menu_list_item_label_text_style", "kind": "text_style_source", "source_token": "md.sys.typescale.label-large" }
+      ]
+    },
+    {
+      "id": "select-filled-hovered-light",
+      "component": "select",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "filled", "hovered": true, "focused": false, "disabled": false, "error": false },
+      "assertions": [
+        { "role": "container_height", "kind": "metric", "token": "md.comp.filled-select.text-field.container.height" },
+        { "role": "container_color", "kind": "color", "token": "md.comp.filled-select.text-field.container.color" },
+        { "role": "container_corner", "kind": "corners", "token": "md.comp.filled-select.text-field.container.shape" },
+        { "role": "active_indicator_height", "kind": "metric", "token": "md.comp.filled-select.text-field.hover.active-indicator.height" },
+        { "role": "active_indicator_color", "kind": "color", "token": "md.comp.filled-select.text-field.hover.active-indicator.color" },
+        { "role": "hover_state_layer_color", "kind": "color", "token": "md.comp.filled-select.text-field.hover.state-layer.color" },
+        { "role": "hover_state_layer_opacity", "kind": "number", "token": "md.comp.filled-select.text-field.hover.state-layer.opacity" },
+        { "role": "label_color", "kind": "color", "token": "md.comp.filled-select.text-field.hover.label-text.color" },
+        { "role": "leading_icon_color", "kind": "color", "token": "md.comp.filled-select.text-field.hover.leading-icon.color" },
+        { "role": "trailing_icon_color", "kind": "color", "token": "md.comp.filled-select.text-field.hover.trailing-icon.color" }
+      ]
+    },
+    {
+      "id": "select-filled-disabled-light",
+      "component": "select",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "filled", "hovered": false, "focused": false, "disabled": true, "error": false },
+      "assertions": [
+        { "role": "container_color", "kind": "blend_over", "base_color_token": "md.comp.filled-select.text-field.container.color", "overlay_color_token": "md.comp.filled-select.text-field.disabled.container.color", "opacity_token": "md.comp.filled-select.text-field.disabled.container.opacity" },
+        { "role": "active_indicator_height", "kind": "metric", "token": "md.comp.filled-select.text-field.disabled.active-indicator.height" },
+        { "role": "active_indicator_color", "kind": "color_alpha", "color_token": "md.comp.filled-select.text-field.disabled.active-indicator.color", "opacity_token": "md.comp.filled-select.text-field.disabled.active-indicator.opacity" },
+        { "role": "active_indicator_opacity", "kind": "number", "token": "md.comp.filled-select.text-field.disabled.active-indicator.opacity" },
+        { "role": "input_text_color", "kind": "color_alpha", "color_token": "md.comp.filled-select.text-field.disabled.input-text.color", "opacity_token": "md.comp.filled-select.text-field.disabled.input-text.opacity" },
+        { "role": "label_color", "kind": "color_alpha", "color_token": "md.comp.filled-select.text-field.disabled.label-text.color", "opacity_token": "md.comp.filled-select.text-field.disabled.label-text.opacity" },
+        { "role": "supporting_text_color", "kind": "color_alpha", "color_token": "md.comp.filled-select.text-field.disabled.supporting-text.color", "opacity_token": "md.comp.filled-select.text-field.disabled.supporting-text.opacity" },
+        { "role": "leading_icon_color", "kind": "color_alpha", "color_token": "md.comp.filled-select.text-field.disabled.leading-icon.color", "opacity_token": "md.comp.filled-select.text-field.disabled.leading-icon.opacity" },
+        { "role": "trailing_icon_color", "kind": "color_alpha", "color_token": "md.comp.filled-select.text-field.disabled.trailing-icon.color", "opacity_token": "md.comp.filled-select.text-field.disabled.trailing-icon.opacity" }
+      ]
+    },
+    {
+      "id": "select-outlined-disabled-light",
+      "component": "select",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "outlined", "hovered": false, "focused": false, "disabled": true, "error": false },
+      "assertions": [
+        { "role": "outline_width", "kind": "metric", "token": "md.comp.outlined-select.text-field.disabled.outline.width" },
+        { "role": "outline_color", "kind": "color_alpha", "color_token": "md.comp.outlined-select.text-field.disabled.outline.color", "opacity_token": "md.comp.outlined-select.text-field.disabled.outline.opacity" },
+        { "role": "outline_opacity", "kind": "number", "token": "md.comp.outlined-select.text-field.disabled.outline.opacity" },
+        { "role": "input_text_color", "kind": "color_alpha", "color_token": "md.comp.outlined-select.text-field.disabled.input-text.color", "opacity_token": "md.comp.outlined-select.text-field.disabled.input-text.opacity" },
+        { "role": "label_color", "kind": "color_alpha", "color_token": "md.comp.outlined-select.text-field.disabled.label-text.color", "opacity_token": "md.comp.outlined-select.text-field.disabled.label-text.opacity" },
+        { "role": "leading_icon_color", "kind": "color_alpha", "color_token": "md.comp.outlined-select.text-field.disabled.leading-icon.color", "opacity_token": "md.comp.outlined-select.text-field.disabled.leading-icon.opacity" },
+        { "role": "trailing_icon_color", "kind": "color_alpha", "color_token": "md.comp.outlined-select.text-field.disabled.trailing-icon.color", "opacity_token": "md.comp.outlined-select.text-field.disabled.trailing-icon.opacity" }
+      ]
+    },
+    {
+      "id": "autocomplete-outlined-enabled-light",
+      "component": "autocomplete",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "outlined", "hovered": false, "focused": false, "disabled": false, "error": false, "enabled": true, "selected": false },
+      "assertions": [
+        { "role": "container_height", "kind": "metric", "token": "md.comp.outlined-autocomplete.text-field.container.height" },
+        { "role": "text_input_style.background", "kind": "color", "token": "md.comp.outlined-autocomplete.text-field.container.color" },
+        { "role": "text_input_style.border_color", "kind": "color", "token": "md.comp.outlined-autocomplete.text-field.outline.color" },
+        { "role": "text_input_style.border_all", "kind": "metric", "token": "md.comp.outlined-autocomplete.text-field.outline.width" },
+        { "role": "text_input_style.corner_radii", "kind": "corners_metric", "token": "md.comp.outlined-autocomplete.text-field.container.shape" },
+        { "role": "label_color", "kind": "color", "token": "md.comp.outlined-autocomplete.text-field.label-text.color" },
+        { "role": "supporting_text_color", "kind": "color", "token": "md.comp.outlined-autocomplete.text-field.supporting-text.color" },
+        { "role": "leading_icon_size", "kind": "metric", "token": "md.comp.outlined-autocomplete.text-field.leading-icon.size" },
+        { "role": "leading_icon_color", "kind": "color", "token": "md.comp.outlined-autocomplete.text-field.leading-icon.color" },
+        { "role": "trailing_icon_size", "kind": "metric", "token": "md.comp.outlined-autocomplete.text-field.trailing-icon.size" },
+        { "role": "trailing_icon_color", "kind": "color", "token": "md.comp.outlined-autocomplete.text-field.trailing-icon.color" },
+        { "role": "menu_container_background", "kind": "color", "token": "md.comp.outlined-autocomplete.menu.container.color" },
+        { "role": "menu_container_elevation", "kind": "metric", "token": "md.comp.outlined-autocomplete.menu.container.elevation" },
+        { "role": "menu_container_shadow_color", "kind": "color", "token": "md.comp.outlined-autocomplete.menu.container.shadow-color" },
+        { "role": "menu_container_shape", "kind": "corners_metric", "token": "md.comp.outlined-autocomplete.menu.container.shape" },
+        { "role": "menu_list_item_height", "kind": "metric", "token": "md.comp.outlined-autocomplete.menu.list-item.container.height" },
+        { "role": "menu_list_item_label_text_color", "kind": "color", "token": "md.comp.outlined-autocomplete.menu.list-item.label-text.color" },
+        { "role": "menu_list_item_selected_container_color", "kind": "color", "token": "md.comp.outlined-autocomplete.menu.list-item.selected.container.color" },
+        { "role": "menu_list_item_label_text_style", "kind": "text_style_source", "source_token": "md.sys.typescale.label-large" }
+      ]
+    },
+    {
+      "id": "autocomplete-filled-hovered-light",
+      "component": "autocomplete",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "filled", "hovered": true, "focused": false, "disabled": false, "error": false },
+      "assertions": [
+        { "role": "container_height", "kind": "metric", "token": "md.comp.filled-autocomplete.text-field.container.height" },
+        { "role": "text_input_style.background", "kind": "color", "token": "md.comp.filled-autocomplete.text-field.container.color" },
+        { "role": "text_input_style.border_bottom", "kind": "metric", "token": "md.comp.filled-autocomplete.text-field.hover.active-indicator.height" },
+        { "role": "text_input_style.border_color", "kind": "color", "token": "md.comp.filled-autocomplete.text-field.hover.active-indicator.color" },
+        { "role": "hover_state_layer_color", "kind": "color", "token": "md.comp.filled-autocomplete.text-field.hover.state-layer.color" },
+        { "role": "hover_state_layer_opacity", "kind": "number", "token": "md.comp.filled-autocomplete.text-field.hover.state-layer.opacity" },
+        { "role": "label_color", "kind": "color", "token": "md.comp.filled-autocomplete.text-field.hover.label-text.color" },
+        { "role": "leading_icon_color", "kind": "color", "token": "md.comp.filled-autocomplete.text-field.hover.leading-icon.color" },
+        { "role": "trailing_icon_color", "kind": "color", "token": "md.comp.filled-autocomplete.text-field.hover.trailing-icon.color" }
+      ]
+    },
+    {
+      "id": "autocomplete-filled-disabled-light",
+      "component": "autocomplete",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "filled", "hovered": false, "focused": false, "disabled": true, "error": false },
+      "assertions": [
+        { "role": "text_input_style.background", "kind": "blend_over", "base_color_token": "md.comp.filled-autocomplete.text-field.container.color", "overlay_color_token": "md.comp.filled-autocomplete.text-field.disabled.container.color", "opacity_token": "md.comp.filled-autocomplete.text-field.disabled.container.opacity" },
+        { "role": "text_input_style.border_bottom", "kind": "metric", "token": "md.comp.filled-autocomplete.text-field.disabled.active-indicator.height" },
+        { "role": "text_input_style.border_color", "kind": "color_alpha", "color_token": "md.comp.filled-autocomplete.text-field.disabled.active-indicator.color", "opacity_token": "md.comp.filled-autocomplete.text-field.disabled.active-indicator.opacity" },
+        { "role": "text_input_style.text_color", "kind": "color_alpha", "color_token": "md.comp.filled-autocomplete.text-field.disabled.input-text.color", "opacity_token": "md.comp.filled-autocomplete.text-field.disabled.input-text.opacity" },
+        { "role": "label_color", "kind": "color_alpha", "color_token": "md.comp.filled-autocomplete.text-field.disabled.label-text.color", "opacity_token": "md.comp.filled-autocomplete.text-field.disabled.label-text.opacity" },
+        { "role": "supporting_text_color", "kind": "color_alpha", "color_token": "md.comp.filled-autocomplete.text-field.disabled.supporting-text.color", "opacity_token": "md.comp.filled-autocomplete.text-field.disabled.supporting-text.opacity" },
+        { "role": "leading_icon_color", "kind": "color_alpha", "color_token": "md.comp.filled-autocomplete.text-field.disabled.leading-icon.color", "opacity_token": "md.comp.filled-autocomplete.text-field.disabled.leading-icon.opacity" },
+        { "role": "trailing_icon_color", "kind": "color_alpha", "color_token": "md.comp.filled-autocomplete.text-field.disabled.trailing-icon.color", "opacity_token": "md.comp.filled-autocomplete.text-field.disabled.trailing-icon.opacity" }
+      ]
+    },
+    {
+      "id": "exposed-dropdown-outlined-enabled-light",
+      "component": "exposed_dropdown",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "outlined", "hovered": false, "focused": false, "disabled": false, "error": false, "enabled": true, "selected": true },
+      "assertions": [
+        { "role": "container_height", "kind": "metric", "token": "md.comp.outlined-autocomplete.text-field.container.height" },
+        { "role": "text_input_style.border_color", "kind": "color", "token": "md.comp.outlined-autocomplete.text-field.outline.color" },
+        { "role": "label_color", "kind": "color", "token": "md.comp.outlined-autocomplete.text-field.label-text.color" },
+        { "role": "trailing_icon_color", "kind": "color", "token": "md.comp.outlined-autocomplete.text-field.trailing-icon.color" },
+        { "role": "menu_container_background", "kind": "color", "token": "md.comp.outlined-autocomplete.menu.container.color" },
+        { "role": "menu_list_item_height", "kind": "metric", "token": "md.comp.outlined-autocomplete.menu.list-item.container.height" },
+        { "role": "menu_list_item_selected_container_color", "kind": "color", "token": "md.comp.outlined-autocomplete.menu.list-item.selected.container.color" }
       ]
     }
   ]

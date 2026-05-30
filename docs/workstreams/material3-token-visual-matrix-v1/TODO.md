@@ -42,11 +42,25 @@ Task IDs use `M3TVM-*`.
 
 ## M2 - Family Token Matrix Packets
 
+- [x] M3TVM-040A [owner=codex] [deps=M3TVM-030] [scope=ecosystem/fret-ui-material3/src/{tokens,select.rs,autocomplete.rs,exposed_dropdown.rs,text_field.rs},ecosystem/fret-ui-material3/tests/fixtures,docs/workstreams/material3-token-visual-matrix-v1]
+  Goal: Close the field-overlay subset for Select, Autocomplete, and ExposedDropdown with
+  fixture-driven token outcomes before continuing the broader field-family packet.
+  Validation: fixture rows for filled/outlined field chrome, disabled alpha, state-layer,
+  shape, menu chrome, menu item, and typography source outcomes; narrow material3 token gates.
+  Review: DONE. The fixture runner now covers Select directly and covers Autocomplete plus
+  ExposedDropdown through the Autocomplete token surface. It also fixed Autocomplete namespace
+  routing for label/supporting/state-layer tokens, Autocomplete disabled input-text opacity
+  double-application, Select disabled filled-container blending, and metric-backed shape token
+  resolution for Select/Autocomplete field/menu shapes.
+  Handoff: Continue M3TVM-040 with SearchBar/SearchView, DatePicker, and TimePicker, or switch to
+  M3TVM-050 now that the fixture runner has field-overlay coverage.
+
 - [ ] M3TVM-040 [owner=codex] [deps=M3TVM-030] [scope=ecosystem/fret-ui-material3/src/{tokens,foundation,text_field.rs,select.rs,autocomplete.rs,exposed_dropdown.rs,search_bar.rs,search_view.rs,date_picker.rs,time_picker.rs},ecosystem/fret-ui-material3/tests]
   Goal: Close field-family token visual matrix rows for TextField, Select, Autocomplete,
   ExposedDropdown, SearchBar, SearchView, DatePicker, and TimePicker.
   Validation: fixture rows plus existing field-family M3PV2 gates.
-  Review: Pending.
+  Review: Pending. M3TVM-040A completed the Select/Autocomplete/ExposedDropdown field-overlay
+  subset; SearchBar/SearchView, DatePicker, and TimePicker remain.
 
 - [ ] M3TVM-050 [owner=codex] [deps=M3TVM-030] [scope=ecosystem/fret-ui-material3/src/{tokens,foundation,button.rs,checkbox.rs,radio.rs,switch.rs,slider.rs,segmented_button.rs,icon_button.rs,chip*.rs,*chip.rs},ecosystem/fret-ui-material3/tests]
   Goal: Close action/control/chip token visual matrix rows for state layers, checked/selected

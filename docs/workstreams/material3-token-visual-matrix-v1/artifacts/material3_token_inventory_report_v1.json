@@ -2,57 +2,58 @@
   "component_token_modules": [
     {
       "component_family_counts": {
-        "filled-autocomplete": 49,
-        "outlined-autocomplete": 46,
+        "filled-autocomplete": 68,
+        "outlined-autocomplete": 65,
         "system": 10
       },
       "fallback_pattern_counts": {
-        "closure_unwrap_or_else": 18,
-        "literal_unwrap_or": 28,
-        "theme_or_else_chain": 19
+        "closure_unwrap_or_else": 21,
+        "literal_unwrap_or": 29,
+        "theme_or_else_chain": 24
       },
       "fallback_samples": [
         {
           "kind": "literal_unwrap_or",
-          "line": 38,
+          "line": 42,
           "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
           "text": "theme.metric_by_key(key).unwrap_or(Px(56.0))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 48,
+          "line": 52,
+          "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
+          "text": ".or_else(|| uniform_corners_from_metric(theme, key))"
+        },
+        {
+          "kind": "theme_or_else_chain",
+          "line": 53,
           "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
           "text": ".or_else(|| theme.corners_by_key(\"md.sys.shape.corner.extra-small\"))"
         },
         {
           "kind": "closure_unwrap_or_else",
-          "line": 49,
+          "line": 54,
           "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
           "text": ".unwrap_or_else(|| Corners::all(Px(4.0)))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 75,
+          "line": 80,
           "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
           "text": "theme.metric_by_key(key).unwrap_or(Px(24.0))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 83,
+          "line": 88,
           "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
           "text": "theme.metric_by_key(key).unwrap_or(Px(24.0))"
-        },
-        {
-          "kind": "theme_or_else_chain",
-          "line": 189,
-          "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
-          "text": ".or_else(|| theme.color_by_key(\"md.sys.color.on-surface-variant\"))"
         }
       ],
-      "fallback_site_count": 65,
-      "magic_visual_constant_count": 31,
+      "fallback_site_count": 74,
+      "magic_visual_constant_count": 32,
       "magic_visual_constant_role_counts": {
         "metric": 29,
+        "opacity": 1,
         "shape": 2
       },
       "magic_visual_constant_samples": [
@@ -61,7 +62,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 38,
+          "line": 42,
           "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
           "role": "metric",
           "text": "theme.metric_by_key(key).unwrap_or(Px(56.0))",
@@ -72,7 +73,7 @@
             "px_literal"
           ],
           "kind": "px_literal",
-          "line": 49,
+          "line": 54,
           "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
           "role": "shape",
           "text": ".unwrap_or_else(|| Corners::all(Px(4.0)))",
@@ -83,7 +84,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 75,
+          "line": 80,
           "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
           "role": "metric",
           "text": "theme.metric_by_key(key).unwrap_or(Px(24.0))",
@@ -94,7 +95,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 83,
+          "line": 88,
           "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
           "role": "metric",
           "text": "theme.metric_by_key(key).unwrap_or(Px(24.0))",
@@ -105,7 +106,7 @@
             "fallback"
           ],
           "kind": "number_fallback",
-          "line": 193,
+          "line": 198,
           "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
           "role": "metric",
           "text": ".unwrap_or(1.0);",
@@ -116,7 +117,7 @@
             "fallback"
           ],
           "kind": "number_fallback",
-          "line": 304,
+          "line": 309,
           "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
           "role": "metric",
           "text": ".unwrap_or(1.0);",
@@ -130,10 +131,10 @@
       "module": "autocomplete",
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "token_domain_counts": {
-        "component": 95,
+        "component": 133,
         "system": 10
       },
-      "token_key_count": 105
+      "token_key_count": 143
     },
     {
       "component_family_counts": {
@@ -3137,53 +3138,53 @@
         "system": 10
       },
       "fallback_pattern_counts": {
-        "closure_unwrap_or_else": 18,
+        "closure_unwrap_or_else": 19,
         "literal_unwrap_or": 20,
-        "theme_or_else_chain": 17
+        "theme_or_else_chain": 21
       },
       "fallback_samples": [
         {
           "kind": "literal_unwrap_or",
-          "line": 26,
+          "line": 45,
           "path": "ecosystem/fret-ui-material3/src/tokens/select.rs",
           "text": ".unwrap_or(Px(56.0))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 32,
+          "line": 52,
+          "path": "ecosystem/fret-ui-material3/src/tokens/select.rs",
+          "text": ".or_else(|| uniform_corners_from_metric(theme, key))"
+        },
+        {
+          "kind": "theme_or_else_chain",
+          "line": 53,
           "path": "ecosystem/fret-ui-material3/src/tokens/select.rs",
           "text": ".or_else(|| theme.corners_by_key(\"md.sys.shape.corner.extra-small\"))"
         },
         {
           "kind": "closure_unwrap_or_else",
-          "line": 33,
+          "line": 54,
           "path": "ecosystem/fret-ui-material3/src/tokens/select.rs",
           "text": ".unwrap_or_else(|| Corners::all(Px(4.0)))"
         },
         {
+          "kind": "theme_or_else_chain",
+          "line": 61,
+          "path": "ecosystem/fret-ui-material3/src/tokens/select.rs",
+          "text": ".or_else(|| uniform_corners_from_metric(theme, key))"
+        },
+        {
           "kind": "literal_unwrap_or",
-          "line": 46,
+          "line": 70,
           "path": "ecosystem/fret-ui-material3/src/tokens/select.rs",
           "text": ".unwrap_or(Px(4.0));"
-        },
-        {
-          "kind": "theme_or_else_chain",
-          "line": 75,
-          "path": "ecosystem/fret-ui-material3/src/tokens/select.rs",
-          "text": ".or_else(|| theme.color_by_key(\"md.sys.color.surface-container-highest\"))"
-        },
-        {
-          "kind": "closure_unwrap_or_else",
-          "line": 76,
-          "path": "ecosystem/fret-ui-material3/src/tokens/select.rs",
-          "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.surface-container-highest\"));"
         }
       ],
-      "fallback_site_count": 55,
+      "fallback_site_count": 60,
       "magic_visual_constant_count": 24,
       "magic_visual_constant_role_counts": {
-        "metric": 19,
-        "opacity": 3,
+        "metric": 20,
+        "opacity": 2,
         "shape": 2
       },
       "magic_visual_constant_samples": [
@@ -3192,7 +3193,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 26,
+          "line": 45,
           "path": "ecosystem/fret-ui-material3/src/tokens/select.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(56.0))",
@@ -3203,7 +3204,7 @@
             "px_literal"
           ],
           "kind": "px_literal",
-          "line": 33,
+          "line": 54,
           "path": "ecosystem/fret-ui-material3/src/tokens/select.rs",
           "role": "shape",
           "text": ".unwrap_or_else(|| Corners::all(Px(4.0)))",
@@ -3214,7 +3215,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 46,
+          "line": 70,
           "path": "ecosystem/fret-ui-material3/src/tokens/select.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(4.0));",
@@ -3225,7 +3226,7 @@
             "px_literal"
           ],
           "kind": "px_literal",
-          "line": 50,
+          "line": 74,
           "path": "ecosystem/fret-ui-material3/src/tokens/select.rs",
           "role": "metric",
           "text": "bottom_right: Px(0.0),",
@@ -3236,7 +3237,7 @@
             "px_literal"
           ],
           "kind": "px_literal",
-          "line": 51,
+          "line": 75,
           "path": "ecosystem/fret-ui-material3/src/tokens/select.rs",
           "role": "metric",
           "text": "bottom_left: Px(0.0),",
@@ -3247,10 +3248,10 @@
             "fallback"
           ],
           "kind": "number_fallback",
-          "line": 86,
+          "line": 103,
           "path": "ecosystem/fret-ui-material3/src/tokens/select.rs",
-          "role": "opacity",
-          "text": "let opacity = theme.number_by_key(opacity_key).unwrap_or(0.04);",
+          "role": "metric",
+          "text": ".unwrap_or(0.04);",
           "value": "0.04"
         }
       ],
@@ -4860,251 +4861,251 @@
   "fallback_sample_index": [
     {
       "kind": "literal_unwrap_or",
-      "line": 38,
+      "line": 42,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": "theme.metric_by_key(key).unwrap_or(Px(56.0))"
     },
     {
       "kind": "theme_or_else_chain",
-      "line": 48,
+      "line": 52,
+      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
+      "text": ".or_else(|| uniform_corners_from_metric(theme, key))"
+    },
+    {
+      "kind": "theme_or_else_chain",
+      "line": 53,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".or_else(|| theme.corners_by_key(\"md.sys.shape.corner.extra-small\"))"
     },
     {
       "kind": "closure_unwrap_or_else",
-      "line": 49,
+      "line": 54,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or_else(|| Corners::all(Px(4.0)))"
     },
     {
       "kind": "literal_unwrap_or",
-      "line": 75,
+      "line": 80,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": "theme.metric_by_key(key).unwrap_or(Px(24.0))"
     },
     {
       "kind": "literal_unwrap_or",
-      "line": 83,
+      "line": 88,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": "theme.metric_by_key(key).unwrap_or(Px(24.0))"
     },
     {
       "kind": "theme_or_else_chain",
-      "line": 189,
+      "line": 194,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".or_else(|| theme.color_by_key(\"md.sys.color.on-surface-variant\"))"
     },
     {
       "kind": "closure_unwrap_or_else",
-      "line": 190,
+      "line": 195,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.on-surface-variant\"));"
     },
     {
       "kind": "literal_unwrap_or",
-      "line": 193,
+      "line": 198,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or(1.0);"
     },
     {
       "kind": "theme_or_else_chain",
-      "line": 300,
+      "line": 305,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".or_else(|| theme.color_by_key(\"md.sys.color.on-surface-variant\"))"
     },
     {
       "kind": "closure_unwrap_or_else",
-      "line": 301,
+      "line": 306,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.on-surface-variant\"));"
     },
     {
       "kind": "literal_unwrap_or",
-      "line": 304,
+      "line": 309,
+      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
+      "text": ".unwrap_or(1.0);"
+    },
+    {
+      "kind": "theme_or_else_chain",
+      "line": 339,
+      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
+      "text": ".or_else(|| theme.color_by_key(\"md.sys.color.on-surface\"))"
+    },
+    {
+      "kind": "closure_unwrap_or_else",
+      "line": 340,
+      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
+      "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.on-surface\"));"
+    },
+    {
+      "kind": "literal_unwrap_or",
+      "line": 341,
+      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
+      "text": "let opacity = theme.number_by_key(opacity_key).unwrap_or(0.08);"
+    },
+    {
+      "kind": "theme_or_else_chain",
+      "line": 448,
+      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
+      "text": ".or_else(|| theme.color_by_key(\"md.sys.color.on-surface-variant\"))"
+    },
+    {
+      "kind": "closure_unwrap_or_else",
+      "line": 449,
+      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
+      "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.on-surface-variant\"));"
+    },
+    {
+      "kind": "literal_unwrap_or",
+      "line": 452,
+      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
+      "text": ".unwrap_or(1.0);"
+    },
+    {
+      "kind": "theme_or_else_chain",
+      "line": 559,
+      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
+      "text": ".or_else(|| theme.color_by_key(\"md.sys.color.on-surface-variant\"))"
+    },
+    {
+      "kind": "closure_unwrap_or_else",
+      "line": 560,
+      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
+      "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.on-surface-variant\"));"
+    },
+    {
+      "kind": "literal_unwrap_or",
+      "line": 563,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or(1.0);"
     },
     {
       "kind": "literal_unwrap_or",
-      "line": 319,
+      "line": 578,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or(Px(1.0));"
     },
     {
       "kind": "literal_unwrap_or",
-      "line": 322,
+      "line": 581,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or(outline_width);"
     },
     {
       "kind": "literal_unwrap_or",
-      "line": 325,
+      "line": 584,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or(Px(2.0));"
     },
     {
       "kind": "literal_unwrap_or",
-      "line": 328,
+      "line": 587,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or(outline_width);"
     },
     {
       "kind": "theme_or_else_chain",
-      "line": 342,
+      "line": 601,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".or_else(|| theme.color_by_key(\"md.sys.color.surface\"))"
     },
     {
       "kind": "closure_unwrap_or_else",
-      "line": 343,
+      "line": 602,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.surface\"));"
     },
     {
       "kind": "literal_unwrap_or",
-      "line": 363,
+      "line": 622,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or(style.placeholder_color);"
     },
     {
       "kind": "literal_unwrap_or",
-      "line": 367,
+      "line": 626,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or(style.selection_color);"
     },
     {
       "kind": "literal_unwrap_or",
-      "line": 371,
+      "line": 630,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or(style.preedit_color);"
     },
     {
       "kind": "literal_unwrap_or",
-      "line": 377,
+      "line": 636,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or(0.38);"
     },
     {
       "kind": "literal_unwrap_or",
-      "line": 383,
+      "line": 642,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or(0.12);"
     },
     {
       "kind": "theme_or_else_chain",
-      "line": 434,
+      "line": 693,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".or_else(|| theme.color_by_key(\"md.sys.color.outline\"))"
     },
     {
       "kind": "closure_unwrap_or_else",
-      "line": 435,
+      "line": 694,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.outline\"));"
     },
     {
       "kind": "theme_or_else_chain",
-      "line": 438,
+      "line": 697,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".or_else(|| theme.color_by_key(\"md.sys.color.outline\"))"
     },
     {
       "kind": "closure_unwrap_or_else",
-      "line": 439,
+      "line": 698,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.outline\"));"
     },
     {
       "kind": "theme_or_else_chain",
-      "line": 461,
+      "line": 720,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".or_else(|| theme.color_by_key(\"md.sys.color.on-surface\"))"
     },
     {
       "kind": "closure_unwrap_or_else",
-      "line": 462,
+      "line": 721,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
-      "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.on-surface\"));"
-    },
-    {
-      "kind": "literal_unwrap_or",
-      "line": 467,
-      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
-      "text": ".unwrap_or(0.38);"
+      "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.on-surface\"))"
     },
     {
       "kind": "theme_or_else_chain",
-      "line": 481,
+      "line": 732,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".or_else(|| theme.color_by_key(\"md.sys.color.primary\"))"
     },
     {
       "kind": "closure_unwrap_or_else",
-      "line": 482,
+      "line": 733,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.primary\"))"
-    },
-    {
-      "kind": "literal_unwrap_or",
-      "line": 496,
-      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
-      "text": ".unwrap_or(Px(1.0));"
-    },
-    {
-      "kind": "literal_unwrap_or",
-      "line": 499,
-      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
-      "text": ".unwrap_or(active_height);"
-    },
-    {
-      "kind": "literal_unwrap_or",
-      "line": 502,
-      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
-      "text": ".unwrap_or(Px(2.0));"
-    },
-    {
-      "kind": "literal_unwrap_or",
-      "line": 505,
-      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
-      "text": ".unwrap_or(active_height);"
-    },
-    {
-      "kind": "theme_or_else_chain",
-      "line": 519,
-      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
-      "text": ".or_else(|| theme.color_by_key(\"md.sys.color.surface-container-highest\"))"
-    },
-    {
-      "kind": "theme_or_else_chain",
-      "line": 520,
-      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
-      "text": ".or_else(|| theme.color_by_key(\"md.sys.color.surface\"))"
-    },
-    {
-      "kind": "closure_unwrap_or_else",
-      "line": 521,
-      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
-      "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.surface\"));"
-    },
-    {
-      "kind": "theme_or_else_chain",
-      "line": 526,
-      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
-      "text": ".or_else(|| theme.color_by_key(\"md.sys.color.on-surface\"))"
-    },
-    {
-      "kind": "closure_unwrap_or_else",
-      "line": 527,
-      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
-      "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.on-surface\"));"
     }
   ],
   "findings": [
     {
       "evidence": [
         {
-          "fallback_site_count": 65,
-          "magic_visual_constant_count": 31,
+          "fallback_site_count": 74,
+          "magic_visual_constant_count": 32,
           "module": "autocomplete"
         },
         {
@@ -6319,7 +6320,7 @@
         "fallback"
       ],
       "kind": "px_literal",
-      "line": 38,
+      "line": 42,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": "theme.metric_by_key(key).unwrap_or(Px(56.0))",
@@ -6330,7 +6331,7 @@
         "px_literal"
       ],
       "kind": "px_literal",
-      "line": 49,
+      "line": 54,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "shape",
       "text": ".unwrap_or_else(|| Corners::all(Px(4.0)))",
@@ -6341,7 +6342,7 @@
         "fallback"
       ],
       "kind": "px_literal",
-      "line": 75,
+      "line": 80,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": "theme.metric_by_key(key).unwrap_or(Px(24.0))",
@@ -6352,7 +6353,7 @@
         "fallback"
       ],
       "kind": "px_literal",
-      "line": 83,
+      "line": 88,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": "theme.metric_by_key(key).unwrap_or(Px(24.0))",
@@ -6363,7 +6364,7 @@
         "fallback"
       ],
       "kind": "number_fallback",
-      "line": 193,
+      "line": 198,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": ".unwrap_or(1.0);",
@@ -6374,7 +6375,40 @@
         "fallback"
       ],
       "kind": "number_fallback",
-      "line": 304,
+      "line": 309,
+      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
+      "role": "metric",
+      "text": ".unwrap_or(1.0);",
+      "value": "1.0"
+    },
+    {
+      "contexts": [
+        "fallback"
+      ],
+      "kind": "number_fallback",
+      "line": 341,
+      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
+      "role": "opacity",
+      "text": "let opacity = theme.number_by_key(opacity_key).unwrap_or(0.08);",
+      "value": "0.08"
+    },
+    {
+      "contexts": [
+        "fallback"
+      ],
+      "kind": "number_fallback",
+      "line": 452,
+      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
+      "role": "metric",
+      "text": ".unwrap_or(1.0);",
+      "value": "1.0"
+    },
+    {
+      "contexts": [
+        "fallback"
+      ],
+      "kind": "number_fallback",
+      "line": 563,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": ".unwrap_or(1.0);",
@@ -6385,7 +6419,7 @@
         "fallback"
       ],
       "kind": "px_literal",
-      "line": 319,
+      "line": 578,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": ".unwrap_or(Px(1.0));",
@@ -6396,7 +6430,7 @@
         "fallback"
       ],
       "kind": "px_literal",
-      "line": 325,
+      "line": 584,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": ".unwrap_or(Px(2.0));",
@@ -6407,7 +6441,7 @@
         "px_literal"
       ],
       "kind": "px_literal",
-      "line": 334,
+      "line": 593,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": "top: Px(18.0),",
@@ -6418,7 +6452,7 @@
         "px_literal"
       ],
       "kind": "px_literal",
-      "line": 335,
+      "line": 594,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": "right: Px(16.0),",
@@ -6429,7 +6463,7 @@
         "px_literal"
       ],
       "kind": "px_literal",
-      "line": 336,
+      "line": 595,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": "bottom: Px(14.0),",
@@ -6440,7 +6474,7 @@
         "px_literal"
       ],
       "kind": "px_literal",
-      "line": 337,
+      "line": 596,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": "left: Px(16.0),",
@@ -6451,7 +6485,7 @@
         "fallback"
       ],
       "kind": "number_fallback",
-      "line": 377,
+      "line": 636,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": ".unwrap_or(0.38);",
@@ -6462,7 +6496,7 @@
         "fallback"
       ],
       "kind": "number_fallback",
-      "line": 383,
+      "line": 642,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": ".unwrap_or(0.12);",
@@ -6472,19 +6506,8 @@
       "contexts": [
         "fallback"
       ],
-      "kind": "number_fallback",
-      "line": 467,
-      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
-      "role": "metric",
-      "text": ".unwrap_or(0.38);",
-      "value": "0.38"
-    },
-    {
-      "contexts": [
-        "fallback"
-      ],
       "kind": "px_literal",
-      "line": 496,
+      "line": 747,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": ".unwrap_or(Px(1.0));",
@@ -6495,7 +6518,7 @@
         "fallback"
       ],
       "kind": "px_literal",
-      "line": 502,
+      "line": 753,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": ".unwrap_or(Px(2.0));",
@@ -6506,7 +6529,7 @@
         "px_literal"
       ],
       "kind": "px_literal",
-      "line": 511,
+      "line": 762,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": "top: Px(18.0),",
@@ -6517,7 +6540,7 @@
         "px_literal"
       ],
       "kind": "px_literal",
-      "line": 512,
+      "line": 763,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": "right: Px(16.0),",
@@ -6528,7 +6551,7 @@
         "px_literal"
       ],
       "kind": "px_literal",
-      "line": 513,
+      "line": 764,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": "bottom: Px(14.0),",
@@ -6539,7 +6562,7 @@
         "px_literal"
       ],
       "kind": "px_literal",
-      "line": 514,
+      "line": 765,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": "left: Px(16.0),",
@@ -6550,7 +6573,7 @@
         "fallback"
       ],
       "kind": "number_fallback",
-      "line": 530,
+      "line": 781,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": ".unwrap_or(0.04);",
@@ -6561,7 +6584,7 @@
         "px_literal"
       ],
       "kind": "px_literal",
-      "line": 549,
+      "line": 800,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": "top: Px(0.0),",
@@ -6572,7 +6595,7 @@
         "px_literal"
       ],
       "kind": "px_literal",
-      "line": 550,
+      "line": 801,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": "right: Px(0.0),",
@@ -6583,7 +6606,7 @@
         "px_literal"
       ],
       "kind": "px_literal",
-      "line": 552,
+      "line": 803,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": "left: Px(0.0),",
@@ -6594,7 +6617,7 @@
         "fallback"
       ],
       "kind": "number_fallback",
-      "line": 574,
+      "line": 825,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": ".unwrap_or(0.38);",
@@ -6605,18 +6628,7 @@
         "fallback"
       ],
       "kind": "number_fallback",
-      "line": 614,
-      "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
-      "role": "metric",
-      "text": ".unwrap_or(0.38);",
-      "value": "0.38"
-    },
-    {
-      "contexts": [
-        "fallback"
-      ],
-      "kind": "number_fallback",
-      "line": 644,
+      "line": 865,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": ".unwrap_or(0.38);",
@@ -6627,7 +6639,7 @@
         "fallback"
       ],
       "kind": "px_literal",
-      "line": 678,
+      "line": 921,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": "theme.metric_by_key(key).unwrap_or(Px(3.0))",
@@ -6638,7 +6650,7 @@
         "px_literal"
       ],
       "kind": "px_literal",
-      "line": 700,
+      "line": 944,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "shape",
       "text": ".unwrap_or_else(|| Corners::all(Px(4.0)))",
@@ -6649,7 +6661,7 @@
         "fallback"
       ],
       "kind": "px_literal",
-      "line": 710,
+      "line": 954,
       "path": "ecosystem/fret-ui-material3/src/tokens/autocomplete.rs",
       "role": "metric",
       "text": "theme.metric_by_key(key).unwrap_or(Px(48.0))",
@@ -6742,17 +6754,6 @@
       "role": "shape",
       "text": ".unwrap_or_else(|| Corners::all(Px(12.0)))",
       "value": "12.0"
-    },
-    {
-      "contexts": [
-        "fallback"
-      ],
-      "kind": "number_fallback",
-      "line": 72,
-      "path": "ecosystem/fret-ui-material3/src/tokens/card.rs",
-      "role": "metric",
-      "text": ".unwrap_or(0.12);",
-      "value": "0.12"
     }
   ],
   "material_web_generated_snapshot": {
@@ -6818,18 +6819,18 @@
   },
   "summary": {
     "component_token_fallback_pattern_counts": {
-      "closure_unwrap_or_else": 248,
+      "closure_unwrap_or_else": 252,
       "component_to_system_color": 48,
       "component_to_system_number": 2,
       "default_unwrap": 16,
-      "literal_unwrap_or": 425,
+      "literal_unwrap_or": 426,
       "system_color_resolver": 39,
-      "theme_or_else_chain": 358
+      "theme_or_else_chain": 367
     },
-    "component_token_fallback_site_count": 1136,
-    "component_token_magic_visual_constant_count": 504,
+    "component_token_fallback_site_count": 1150,
+    "component_token_magic_visual_constant_count": 505,
     "component_token_magic_visual_constant_role_counts": {
-      "metric": 457,
+      "metric": 458,
       "opacity": 9,
       "shape": 38
     },

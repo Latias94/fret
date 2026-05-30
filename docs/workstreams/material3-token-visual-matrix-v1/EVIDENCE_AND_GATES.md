@@ -108,3 +108,35 @@ cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D
     - `python tools/check_workstream_catalog.py`: passed with 511 dedicated directories and 47
       standalone markdown files.
     - `git diff --check`: passed.
+- 2026-05-30: M3TVM-040A extended the fixture-driven token visual harness to the field-overlay
+  subset.
+  - Fixture suite:
+    `ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json`.
+  - Runner:
+    `ecosystem/fret-ui-material3/src/tokens/visual_fixtures.rs`.
+  - Result: Select, Autocomplete, and ExposedDropdown matrix rows moved to `covered_fixture`.
+    The suite now covers Select field chrome, disabled alpha, filled/outlined shape, outline,
+    active-indicator, hover state-layer, menu surface/list item/icon outcomes, and typography
+    source outcomes. Autocomplete and ExposedDropdown are covered through the Autocomplete token
+    namespace and menu surface/list item outcomes.
+  - Bugs fixed:
+    - Autocomplete label, supporting text, and hover state-layer rendering were still routed through
+      ordinary TextField tokens despite using `TextFieldTokenNamespace::Autocomplete`.
+    - Autocomplete disabled input text applied disabled opacity in both the private token helper and
+      the style assembly path.
+    - Select filled disabled container color used a transparent disabled color directly instead of
+      blending the disabled overlay token over the filled container token.
+    - Select and Autocomplete shape accessors now consume metric-backed Material Web `*.shape`
+      tokens where generated tokens are scalar metrics rather than `Corners`.
+  - Fresh verification:
+    - `python -m json.tool ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json | Out-Null`: passed.
+    - `cargo fmt -p fret-ui-material3 -- --check`: passed.
+    - `cargo check -p fret-ui-material3`: passed.
+    - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`: passed.
+    - `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures`: passed, 1 test run.
+    - `cargo nextest run -p fret-ui-material3 --lib tokens::v30`: passed, 6 tests run.
+    - `python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json`: passed.
+    - `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json | Out-Null`; `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null`; `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null`: passed.
+    - `python tools/check_workstream_catalog.py`: passed with 511 dedicated directories and 47
+      standalone markdown files.
+    - `git diff --check`: passed.
