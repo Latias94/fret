@@ -73,6 +73,7 @@ enum CleanGeometrySolveSkipRejectionReason {
     NonPxMargin,
     FlexWrap,
     FlexDirection,
+    FlexLayoutDirection,
     FlexMainAlign,
     FlexCrossAlign,
     FlexHeightDelta,
@@ -223,6 +224,7 @@ impl CleanGeometrySolveSkipRejectionReason {
             Self::NonPxMargin => "non_px_margin",
             Self::FlexWrap => "flex_wrap",
             Self::FlexDirection => "flex_direction",
+            Self::FlexLayoutDirection => "flex_layout_direction",
             Self::FlexMainAlign => "flex_main_align",
             Self::FlexCrossAlign => "flex_cross_align",
             Self::FlexHeightDelta => "flex_height_delta",
@@ -1194,8 +1196,7 @@ impl<H: UiHost> UiTree<H> {
             .map(|entry| entry.children.as_slice())?;
         crate::declarative::frame::with_element_record_for_node(app, window, node, |record| {
             let kind = record.instance.kind_name();
-            let Ok(contract) = Self::clean_geometry_node_contract(&record.instance, children, kind)
-            else {
+            let Ok(contract) = Self::clean_geometry_node_contract(record, children, kind) else {
                 return None;
             };
             if matches!(
@@ -1250,7 +1251,7 @@ impl<H: UiHost> UiTree<H> {
                 .at_node(node)
             })?;
         let kind = record.instance.kind_name();
-        let contract = Self::clean_geometry_node_contract(&record.instance, children, kind)
+        let contract = Self::clean_geometry_node_contract(&record, children, kind)
             .map_err(|rejection| rejection.at_node_if_missing(node))?;
         self.clean_manual_geometry_child_bounds_for_contract_checked(
             app,
@@ -1418,10 +1419,11 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn clean_geometry_node_contract(
-        instance: &crate::declarative::frame::ElementInstance,
+        record: &crate::declarative::frame::ElementRecord,
         children: &[NodeId],
         kind: &'static str,
     ) -> Result<CleanGeometryNodeContract, CleanGeometrySolveSkipRejection> {
+        let instance = &record.instance;
         match instance {
             crate::declarative::frame::ElementInstance::InteractivityGate(props)
                 if !props.present =>
@@ -1461,19 +1463,29 @@ impl<H: UiHost> UiTree<H> {
                     CleanGeometryChildBoundsStrategy::ContainerPxInsets(*props),
                 ))
             }
-            crate::declarative::frame::ElementInstance::Flex(props) => Ok(
-                CleanGeometryNodeContract::pure(Self::clean_flex_child_bounds_strategy(*props)),
-            ),
+            crate::declarative::frame::ElementInstance::Flex(props) => {
+                Ok(CleanGeometryNodeContract::pure(
+                    Self::clean_flex_child_bounds_strategy(*props, record.layout_direction, kind)?,
+                ))
+            }
             crate::declarative::frame::ElementInstance::Grid(props) => {
                 Ok(CleanGeometryNodeContract::pure(
                     CleanGeometryChildBoundsStrategy::SingleColumnAutoRowsGrid(props.clone()),
                 ))
             }
             crate::declarative::frame::ElementInstance::SemanticFlex(props) => Ok(
-                CleanGeometryNodeContract::pure(Self::clean_flex_child_bounds_strategy(props.flex)),
+                CleanGeometryNodeContract::pure(Self::clean_flex_child_bounds_strategy(
+                    props.flex,
+                    record.layout_direction,
+                    kind,
+                )?),
             ),
             crate::declarative::frame::ElementInstance::RovingFlex(props) => Ok(
-                CleanGeometryNodeContract::pure(Self::clean_flex_child_bounds_strategy(props.flex)),
+                CleanGeometryNodeContract::pure(Self::clean_flex_child_bounds_strategy(
+                    props.flex,
+                    record.layout_direction,
+                    kind,
+                )?),
             ),
             crate::declarative::frame::ElementInstance::Text(_)
             | crate::declarative::frame::ElementInstance::StyledText(_)
@@ -1515,7 +1527,7 @@ impl<H: UiHost> UiTree<H> {
             Self::clean_geometry_explicit_zero_driver_leaf_for_record(record, children_is_empty);
         let contract_eval_started = debug_enabled.then(Instant::now);
         let contract = (!absent_interactivity_gate_leaf && !explicit_zero_driver_leaf)
-            .then(|| Self::clean_geometry_node_contract(&record.instance, children, kind));
+            .then(|| Self::clean_geometry_node_contract(record, children, kind));
         let contract_eval_elapsed = contract_eval_started
             .map(|started| started.elapsed())
             .unwrap_or_default();
@@ -1957,13 +1969,23 @@ impl<H: UiHost> UiTree<H> {
 
     fn clean_flex_child_bounds_strategy(
         props: crate::element::FlexProps,
-    ) -> CleanGeometryChildBoundsStrategy {
+        layout_direction: fret_core::LayoutDirection,
+        element_kind: &'static str,
+    ) -> Result<CleanGeometryChildBoundsStrategy, CleanGeometrySolveSkipRejection> {
+        if props.direction == fret_core::Axis::Horizontal
+            && layout_direction == fret_core::LayoutDirection::Rtl
+        {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::FlexLayoutDirection,
+                element_kind,
+            ));
+        }
         match props.direction {
             fret_core::Axis::Vertical => {
-                CleanGeometryChildBoundsStrategy::VerticalNoWrapFlex(props)
+                Ok(CleanGeometryChildBoundsStrategy::VerticalNoWrapFlex(props))
             }
             fret_core::Axis::Horizontal => {
-                CleanGeometryChildBoundsStrategy::HorizontalFixedFlex(props)
+                Ok(CleanGeometryChildBoundsStrategy::HorizontalFixedFlex(props))
             }
         }
     }

@@ -558,6 +558,7 @@ where
                             inherited_text_style: None,
                             semantics_decoration: None,
                             key_context: None,
+                            layout_direction: fret_core::LayoutDirection::default(),
                         },
                     )
                     .is_none();
@@ -1100,6 +1101,7 @@ where
                             inherited_text_style: None,
                             semantics_decoration: None,
                             key_context: None,
+                            layout_direction: fret_core::LayoutDirection::default(),
                         },
                     )
                     .is_none();
@@ -1479,6 +1481,7 @@ fn mount_element<H: UiHost + 'static>(
         .map(crate::text_props::text_style_refinement_fingerprint);
     let semantics_decoration = element.semantics_decoration.clone();
     let key_context = element.key_context.clone();
+    let layout_direction = element.layout_direction;
     let mut children = std::mem::take(&mut element.children);
     let parent_effective_opacity = if parent_effective_opacity.is_finite() {
         parent_effective_opacity
@@ -1772,6 +1775,7 @@ fn mount_element<H: UiHost + 'static>(
                 inherited_text_style: inherited_text_style.clone(),
                 semantics_decoration,
                 key_context,
+                layout_direction,
             },
         )
         .is_none();

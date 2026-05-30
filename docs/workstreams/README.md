@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 517
+- Dedicated directories: 518
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2009,6 +2009,7 @@ Rule:
 - `docs/workstreams/external-texture-imports-v1/` — first 2026-02-13, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/external-texture-imports-v2-zero-low-copy/` — first 2026-02-16, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/executor-backed-mutation-surface-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow closeout lane for the default app-facing async submit/mutation split on `fret-mutation` + `fret`; keeps `fret-query` read-only and records why GenUI/Sonner executor-backed side flows stay recipe/app-owned exceptions)
+- `docs/workstreams/flex-rtl-physical-placement-v1/` — first n/a, latest n/a, 6 markdown docs (closed mechanism-layer follow-on for capturing layout direction on element records and placing horizontal Flex rows from the right edge under RTL; includes `WORKSTREAM.json`)
 - `docs/workstreams/mutation-toast-feedback-golden-path-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow closeout lane that turns the closed submit-owner verdict into a copyable cookbook + docs + screenshot path while keeping Sonner as feedback-only chrome above the authoritative mutation lane)
 - `docs/workstreams/foreground-inheritance-late-binding-v2/` — first 2026-02-24, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/foreground-style-context-fearless-refactor-v1/` — first 2026-03-06, latest 2026-03-06, 3 markdown docs

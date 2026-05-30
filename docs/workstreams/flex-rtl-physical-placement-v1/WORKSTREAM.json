@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "slug": "flex-rtl-physical-placement-v1",
+  "title": "Flex RTL Physical Placement v1",
+  "status": "closed",
+  "updated": "2026-05-30",
+  "scope_kind": "refactor",
+  "problem": "Direction-aware components can consume RTL policy, but fret-ui Flex rows still compute physical geometry as LTR.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/flex-rtl-physical-placement-v1/CLOSEOUT_AUDIT_2026-05-30.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/flex-rtl-physical-placement-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/flex-rtl-physical-placement-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/flex-rtl-physical-placement-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/flex-rtl-physical-placement-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/flex-rtl-physical-placement-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run focused fret-ui Flex RTL layout tests and mechanism layout oracle tests.",
+    "commands": [
+      "cargo nextest run -p fret-ui --lib flex_row_uses_provided_rtl_layout_direction_for_physical_order flex_row_uses_nested_ltr_provider_inside_rtl_scope mechanism_harness_layout_primitives_match_oracles mechanism_harness_layout_primitives_rtl_physical_edges_match_oracles"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/flex-rtl-physical-placement-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "crates/fret-core/src/layout_direction.rs",
+    "crates/fret-ui/src/element.rs",
+    "crates/fret-ui/src/elements/cx.rs",
+    "crates/fret-ui/src/declarative/frame.rs",
+    "crates/fret-ui/src/declarative/taffy_layout.rs",
+    "crates/fret-ui/src/layout/engine/flow.rs",
+    "crates/fret-ui/src/declarative/host_widget/measure.rs",
+    "crates/fret-ui/src/tree/layout/clean_geometry.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "After this lane, split logical-edge and column cross-axis RTL semantics into separate follow-ons."
+  }
+}

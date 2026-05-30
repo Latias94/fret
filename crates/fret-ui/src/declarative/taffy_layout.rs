@@ -157,6 +157,17 @@ pub(crate) fn taffy_justify(justify: MainAlign) -> JustifyContent {
     }
 }
 
+pub(crate) fn taffy_flex_direction(
+    axis: fret_core::Axis,
+    layout_direction: fret_core::LayoutDirection,
+) -> FlexDirection {
+    match (axis, layout_direction) {
+        (fret_core::Axis::Horizontal, fret_core::LayoutDirection::Rtl) => FlexDirection::RowReverse,
+        (fret_core::Axis::Horizontal, _) => FlexDirection::Row,
+        (fret_core::Axis::Vertical, _) => FlexDirection::Column,
+    }
+}
+
 pub(crate) fn apply_grid_item_fill_semantics(
     style: &mut TaffyStyle,
     layout_style: crate::element::LayoutStyle,

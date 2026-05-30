@@ -304,7 +304,11 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         kind: ElementKind,
         children: Vec<AnyElement>,
     ) -> AnyElement {
-        AnyElement::new(id, kind, children)
+        let layout_direction = self
+            .provided::<fret_core::LayoutDirection>()
+            .copied()
+            .unwrap_or_default();
+        AnyElement::new(id, kind, children).with_layout_direction(layout_direction)
     }
 
     /// Returns the nearest ancestor state value of type `S` in the current element scope stack.

@@ -1,7 +1,8 @@
 use crate::UiHost;
 use crate::declarative::frame::{
-    ElementInstance, element_record_for_node, inherited_text_style_for_node, layout_style_for_node,
-    ordered_flex_children, with_element_record_for_node,
+    ElementInstance, element_record_for_node, inherited_text_style_for_node,
+    layout_direction_for_node, layout_style_for_node, ordered_flex_children,
+    with_element_record_for_node,
 };
 use crate::layout_engine::TaffyLayoutEngine;
 use crate::tree::UiTree;
@@ -11,9 +12,9 @@ use taffy::geometry::{
     Line as TaffyLine, Point as TaffyPoint, Rect as TaffyRect, Size as TaffySize,
 };
 use taffy::style::{
-    AlignItems, AlignSelf, Dimension, Display, FlexDirection, FlexWrap, GridPlacement,
-    GridTemplateComponent, JustifyContent, LengthPercentage, LengthPercentageAuto,
-    Overflow as TaffyOverflow, Position as TaffyPosition, Style,
+    AlignItems, AlignSelf, Dimension, Display, FlexWrap, GridPlacement, GridTemplateComponent,
+    JustifyContent, LengthPercentage, LengthPercentageAuto, Overflow as TaffyOverflow,
+    Position as TaffyPosition, Style,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -422,10 +423,10 @@ fn build_flow_subtree_impl<H: UiHost>(
                 Display::Flex,
                 root_override_size,
             );
-            style.flex_direction = match props.direction {
-                fret_core::Axis::Horizontal => FlexDirection::Row,
-                fret_core::Axis::Vertical => FlexDirection::Column,
-            };
+            style.flex_direction = crate::declarative::taffy_layout::taffy_flex_direction(
+                props.direction,
+                layout_direction_for_node(app, window, node),
+            );
             style.flex_wrap = if props.wrap {
                 FlexWrap::Wrap
             } else {
@@ -478,10 +479,10 @@ fn build_flow_subtree_impl<H: UiHost>(
                 Display::Flex,
                 root_override_size,
             );
-            style.flex_direction = match props.direction {
-                fret_core::Axis::Horizontal => FlexDirection::Row,
-                fret_core::Axis::Vertical => FlexDirection::Column,
-            };
+            style.flex_direction = crate::declarative::taffy_layout::taffy_flex_direction(
+                props.direction,
+                layout_direction_for_node(app, window, node),
+            );
             style.flex_wrap = if props.wrap {
                 FlexWrap::Wrap
             } else {
@@ -534,10 +535,10 @@ fn build_flow_subtree_impl<H: UiHost>(
                 Display::Flex,
                 root_override_size,
             );
-            style.flex_direction = match props.direction {
-                fret_core::Axis::Horizontal => FlexDirection::Row,
-                fret_core::Axis::Vertical => FlexDirection::Column,
-            };
+            style.flex_direction = crate::declarative::taffy_layout::taffy_flex_direction(
+                props.direction,
+                layout_direction_for_node(app, window, node),
+            );
             style.flex_wrap = if props.wrap {
                 FlexWrap::Wrap
             } else {
