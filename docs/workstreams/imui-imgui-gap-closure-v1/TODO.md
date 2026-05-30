@@ -83,6 +83,11 @@ Last updated: 2026-05-31
       Result: `text_controls/policy_commands/input.rs` now installs the focused key handler and
       dispatches resolved commands only. `input/resolve.rs` owns command capture, empty-command
       checks, and key-to-command resolution.
+- [x] Split IMUI table body-row cell preparation into a private owner without changing keyed row
+      wrapping, hidden-column filtering, fallback empty cells, default/explicit test-id precedence,
+      prepared-cell wrapping, row striping/background, or horizontal scroll wrapping.
+      Result: `table_controls/render/body_rows.rs` now keeps row iteration, keying, striping, and
+      row wrapping only. `body_rows/cells.rs` owns per-row cell preparation and test-id resolution.
 - [x] Split IMUI debug-draw path-builder regression coverage into private sub-owners without
       changing path stroke/fill command recording, rectangle/rounded-rectangle sampling, Bezier
       defaults, circular/elliptical arc defaults, or invalid finished-path cleanup.

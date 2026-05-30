@@ -1587,6 +1587,7 @@
     "ecosystem/fret-ui-kit/src/imui/table_controls/palette.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/render.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/render/body_rows.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls/render/body_rows/cells.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/render/root.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/row_groups/layout.rs",

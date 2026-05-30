@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Table Body-Row Cell Preparation Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI table body-row cell preparation split into a private owner without changing
+keyed row wrapping, hidden-column filtering, fallback empty cells, default/explicit test-id
+precedence, prepared-cell wrapping, row striping/background, or horizontal scroll wrapping.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/render/body_rows.rs` now keeps row iteration,
+  keyed row wrapping, striping, and row-level scroll handling only.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/render/body_rows/cells.rs` owns per-row cell
+  preparation, fallback empty-cell creation, hidden-column filtering, and test-id resolution.
+- `tools/gate_imui_workstream_source.py` now checks both the body-row hub and the private cell
+  owner and rejects cell-preparation bodies from drifting back into the row wrapper.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new body-row cell owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib hidden_table_columns_do_not_render_header_body_or_response horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Input-Text Policy Command Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI input-text policy command resolution split into a private owner without

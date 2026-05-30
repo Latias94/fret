@@ -49,6 +49,12 @@ key handler and dispatches resolved commands only. `input/resolve.rs` owns compl
 undo/redo command capture, repeat gating, IME/meta/alt suppression, and key-to-command resolution.
 Public input-text command behavior remains unchanged.
 
+2026-05-31 table body-row cell-preparation owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/render/body_rows.rs` now keeps row iteration,
+keying, striping, and row wrapping only. `body_rows/cells.rs` owns hidden-column filtering,
+fallback empty-cell creation, default/explicit test-id precedence, and prepared-cell wrapping.
+Public table rendering behavior remains unchanged.
+
 2026-05-31 facade-writer text test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` is now a thin test hub.
 `tests/text.rs` owns `ui.text(...)` dense single-line coverage, while `tests/wrapped.rs` owns
