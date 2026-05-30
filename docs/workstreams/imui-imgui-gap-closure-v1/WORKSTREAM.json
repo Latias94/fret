@@ -651,6 +651,7 @@
     "ecosystem/fret-ui-kit/src/imui/slider_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/slider_controls/a11y.rs",
     "ecosystem/fret-ui-kit/src/imui/slider_controls/entry.rs",
+    "ecosystem/fret-ui-kit/src/imui/slider_controls/entry/element.rs",
     "ecosystem/fret-ui-kit/src/imui/slider_controls/interaction.rs",
     "ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/pointer.rs",

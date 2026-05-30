@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 slider entry element child-owner result:
+`ecosystem/fret-ui-kit/src/imui/slider_controls/entry.rs` now owns label identity parsing,
+visible-label suffix stripping, and scoped facade routing only.
+`slider_controls/entry/element.rs` owns slider element construction, response population,
+interaction installation, chrome resolution, and visual child mounting. Slider facade calls,
+push-id scoping, enabled/disabled gating, a11y range semantics, pointer/keyboard behavior, and
+response lifecycle reporting remain unchanged.
+
 2026-05-30 virtual-list rendered-range child-owner result:
 `ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs` now keeps virtual-list element assembly,
 row wrapping, build-focus forwarding, runtime option resolution, and response packaging.

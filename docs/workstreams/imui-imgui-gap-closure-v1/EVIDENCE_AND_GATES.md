@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Slider Entry Element Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI slider entry label-identity routing split from element/response assembly
+without changing slider facade calls, visible-label suffix stripping, push-id scoping,
+enabled/disabled gating, a11y range semantics, pointer/keyboard handlers, hover query hooks, field
+chrome, visual children, or response lifecycle reporting.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/entry.rs` owns label identity parsing,
+  visible-label suffix stripping, and scoped facade routing only.
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/entry/element.rs` owns slider element
+  construction, response population, interaction installation, chrome resolution, and visual child
+  mounting.
+- `tools/gate_imui_workstream_source.py` now checks the entry/element split and keeps slider
+  element assembly out of the label-identity entry owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new element owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-imui slider --no-fail-fast`: pass (2 passed, 184 skipped).
+- `cargo nextest run -p fret-imui label_identity::model_controls --no-fail-fast`: pass
+  (1 passed, 185 skipped).
+- `cargo nextest run -p fret-imui composition::control_geometry --no-fail-fast`: pass (4 passed,
+  182 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_leaf_control_options_smoke
+  slider_option_defaults_compile --no-fail-fast`: pass (1 passed, 2 skipped).
+
 ## Virtual-List Rendered-Range Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI virtual-list rendered-range tracking split into a private child owner without

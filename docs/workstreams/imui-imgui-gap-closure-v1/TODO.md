@@ -44,6 +44,13 @@ Last updated: 2026-05-30
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI slider entry label-identity routing from element/response assembly without
+      changing slider facade calls, visible-label suffix stripping, push-id scoping, enabled/
+      disabled gating, a11y range semantics, pointer/keyboard handlers, hover query hooks, field
+      chrome, visual children, or response lifecycle reporting.
+      Result: `slider_controls/entry.rs` now owns label identity and scoped facade routing only.
+      `slider_controls/entry/element.rs` owns slider element construction, response population,
+      interaction installation, chrome resolution, and visual child mounting.
 - [x] Split IMUI virtual-list rendered-range tracking out of the root element without changing
       keyed list assembly, row height resolution, build-focus forwarding, row test IDs, clipping
       semantics, runtime options, or public `VirtualListResponse` reporting.
