@@ -105,6 +105,11 @@ Last updated: 2026-05-31
       pre-edit capture, commit/cancel clearing, active-state reporting, or changed-from semantics.
       Result: `primitives/edit_session.rs` keeps edit-session primitive implementation plus
       test-owner routing. `primitives/edit_session/tests.rs` owns dirty-state coverage.
+- [x] Split editor numeric-value constraint regressions into a private test owner without changing
+      bound normalization, finite-step filtering, clamp ordering, quantization origin, or scalar
+      conversion behavior.
+      Result: `primitives/numeric_value.rs` keeps numeric constraint implementation plus
+      test-owner routing. `primitives/numeric_value/tests.rs` owns bounds and quantization coverage.
 - [x] Split editor widget-visuals selection/focus/invalid/hover regressions into a private test
       owner without changing shared visual policy, selected-frame fill/foreground behavior,
       disabled alpha attenuation, invalid chrome routing, or icon-button hover overlay source.

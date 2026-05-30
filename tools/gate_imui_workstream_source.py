@@ -30244,6 +30244,34 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/numeric_value.rs"),
+            required=[
+                "mod tests;",
+                "pub struct NumericValueConstraints",
+                "pub fn normalized(self) -> Self",
+                "pub fn contains_f64(self, value: f64) -> bool",
+                "pub fn apply_f64(self, value: f64) -> f64",
+                "pub fn constrain_numeric_value<T>(constraints: NumericValueConstraints, value: T) -> T",
+                "T: DragValueScalar",
+            ],
+            forbidden=[
+                "numeric_constraints_swap_inverted_bounds",
+                "numeric_constraints_quantize_from_min_origin_then_clamp",
+                "numeric_constraints_quantize_without_range_uses_zero_origin",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/numeric_value/tests.rs"),
+            required=[
+                "numeric_constraints_swap_inverted_bounds",
+                "numeric_constraints_quantize_from_min_origin_then_clamp",
+                "numeric_constraints_quantize_without_range_uses_zero_origin",
+                "step: Some(0.125)",
+                "constrain_numeric_value(constraints, 3_i32)",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/visuals.rs"),
             required=[
                 "mod tests;",

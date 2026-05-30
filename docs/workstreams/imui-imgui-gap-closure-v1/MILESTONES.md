@@ -87,6 +87,12 @@ implementation and test-owner routing. `primitives/edit_session/tests.rs` owns d
 coverage. Pre-edit capture, commit/cancel clearing, active-state reporting, and changed-from
 semantics remain unchanged.
 
+2026-05-31 editor numeric-value tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/numeric_value.rs` now keeps numeric constraint
+implementation and test-owner routing. `primitives/numeric_value/tests.rs` owns bounds and
+quantization coverage. Bound normalization, finite-step filtering, clamp ordering, quantization
+origin, and scalar conversion behavior remain unchanged.
+
 2026-05-31 editor visuals tests child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/visuals.rs` now keeps editor widget visual policy and
 test-owner routing. `primitives/visuals/tests.rs` owns visual-state policy coverage. Shared visual

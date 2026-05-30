@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Numeric-Value Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor numeric-value constraint regressions split into a private test owner without
+changing bound normalization, finite-step filtering, clamp ordering, quantization origin, or scalar
+conversion behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/numeric_value.rs` now keeps numeric constraint
+  implementation and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/primitives/numeric_value/tests.rs` owns bounds and quantization
+  coverage.
+- `tools/gate_imui_workstream_source.py` now checks the numeric-value root/test split and keeps
+  migrated regression test names out of the root primitive file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the numeric-value root
+  and test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  numeric_constraints_swap_inverted_bounds
+  numeric_constraints_quantize_from_min_origin_then_clamp
+  numeric_constraints_quantize_without_range_uses_zero_origin --no-fail-fast`: pass (3 passed, 195
+  skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Edit-Session Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor edit-session dirty-state regressions split into a private test owner without
