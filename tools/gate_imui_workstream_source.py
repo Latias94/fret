@@ -30471,10 +30471,31 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/enum_select.rs"),
             required=[
+                "mod overlay;",
                 "mod row;",
                 "editor_input_value_text(",
-                "editor_popup_empty_text_props(",
+                "overlay::request_overlay(",
+            ],
+            forbidden=[
+                "TextProps::new(",
+                "TextProps {",
+                "TextStyle {",
+                "wrap: TextWrap::None,",
+                "use fret_ui_kit::typography;",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs"),
+            required=[
+                "pub(super) fn request_overlay",
                 "row::enum_select_row(",
+                "editor_popup_empty_text_props(",
+                "fn enum_select_close_auto_focus_policy",
+                "fn enum_select_viewport_test_id",
+                "fn rect_visible_within_viewport_y",
+                "enum_select_close_focus_policy_matches_trigger_owned_combobox",
+                "enum_select_viewport_test_id_suffixes_list_test_id",
+                "rect_visible_within_viewport_y_matches_nearest_visibility_contract",
             ],
             forbidden=[
                 "TextProps::new(",

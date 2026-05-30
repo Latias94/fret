@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-30
 
+## EnumSelect Overlay Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: editor enum-select overlay request, popup panel/list composition, selected-row
+reveal, and overlay helper tests split into a private child owner without changing trigger
+composition, search/filter behavior, popup placement, dismissal policy, row routing, or focus
+restore.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps public control/options plus
+  trigger composition.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` owns overlay request assembly,
+  popup panel/list layout, selected-row reveal, close-focus policy, viewport test-id derivation,
+  and overlay helper tests.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/row.rs` remains the option-row rendering and
+  selection policy owner consumed by the overlay child.
+- `tools/gate_imui_workstream_source.py` now checks the enum-select root/overlay/row split and
+  keeps popup panel/list ownership out of the root control file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new enum-select
+  overlay owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor enum_select_item_test_id_segment_is_stable_ascii
+  enum_select_commit_policy_does_not_toggle_selected_to_none
+  enum_select_close_focus_policy_matches_trigger_owned_combobox
+  enum_select_viewport_test_id_suffixes_list_test_id
+  rect_visible_within_viewport_y_matches_nearest_visibility_contract --no-fail-fast`: pass
+  (5 passed, 183 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `python tools/gate_imui_workstream_source.py`: pass.
+
 ## EnumSelect Row Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: editor enum-select row rendering, selection commit policy, and item test-id

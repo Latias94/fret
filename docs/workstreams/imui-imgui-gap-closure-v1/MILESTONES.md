@@ -39,6 +39,13 @@ selection commit policy, item test-id normalization, and the focused row-policy 
 composition, overlay dismissal, filter/search behavior, popup empty-state rendering, row chrome,
 and selected-row reveal remain unchanged.
 
+2026-05-30 editor enum-select overlay child-owner result:
+`ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps public control/options and trigger
+composition. `controls/enum_select/overlay.rs` owns overlay request assembly, popup panel/list
+layout, selected-row reveal, close-focus policy, viewport test-id derivation, and overlay helper
+tests. Trigger composition, search/filter behavior, popup placement, dismissal policy, row routing,
+and focus restore remain unchanged.
+
 2026-05-30 editor theme preset picker render child-owner result:
 `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs` now keeps preset
 installation, theme resolution, and render dispatch only. `render.rs` owns listbox semantics,
