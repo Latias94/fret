@@ -3,9 +3,12 @@
 //! This module centralizes token key mapping and fallback chains so dialog outcomes remain stable
 //! and drift-resistant during refactors.
 
-use fret_core::{Color, Corners, Edges, Px};
+use fret_core::{Color, Corners, Edges, Px, TextStyle};
 use fret_ui::Theme;
 use fret_ui::theme::CubicBezier;
+use fret_ui_kit::typography::TextIntent;
+
+use crate::tokens::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DialogActionInteraction {
@@ -21,6 +24,13 @@ pub(crate) fn scrim_color(theme: &Theme) -> Color {
         .unwrap_or_else(|| theme.color_token("md.sys.color.scrim"))
 }
 
+pub(crate) fn scrim_opacity(theme: &Theme, fallback: f32) -> f32 {
+    theme
+        .number_by_key("md.sys.fret.material.dialog.scrim.opacity")
+        .unwrap_or(fallback)
+        .clamp(0.0, 1.0)
+}
+
 pub(crate) fn container_background(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.dialog.container.color")
@@ -30,8 +40,9 @@ pub(crate) fn container_background(theme: &Theme) -> Color {
 
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
     theme
-        .corners_by_key("md.comp.dialog.container.shape")
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-large"))
+        .metric_by_key("md.comp.dialog.container.shape")
+        .or_else(|| theme.metric_by_key("md.sys.shape.corner.extra-large"))
+        .map(Corners::all)
         .unwrap_or_else(|| Corners::all(Px(28.0)))
 }
 
@@ -60,6 +71,26 @@ pub(crate) fn supporting_text_color(theme: &Theme) -> Color {
         .color_by_key("md.comp.dialog.supporting-text.color")
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
         .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
+}
+
+pub(crate) fn headline_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        None,
+        "md.sys.typescale.headline-small",
+        Some("md.comp.dialog.headline.weight"),
+        TextIntent::Content,
+    )
+}
+
+pub(crate) fn supporting_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        None,
+        "md.sys.typescale.body-medium",
+        Some("md.comp.dialog.supporting-text.weight"),
+        TextIntent::Content,
+    )
 }
 
 pub(crate) fn default_open_duration_ms(theme: &Theme) -> u32 {
@@ -122,6 +153,16 @@ pub(crate) fn action_padding(theme: &Theme) -> Edges {
 pub(crate) fn action_corner_radii(theme: &Theme) -> Corners {
     let _ = theme;
     Corners::all(Px(9999.0))
+}
+
+pub(crate) fn action_label_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        None,
+        "md.sys.typescale.label-large",
+        Some("md.comp.dialog.action.label-text.weight"),
+        TextIntent::Control,
+    )
 }
 
 fn action_label_color_key(interaction: DialogActionInteraction) -> &'static str {

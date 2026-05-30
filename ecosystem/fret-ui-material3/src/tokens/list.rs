@@ -5,8 +5,10 @@
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::content::MaterialContentDefaults;
+use crate::tokens::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ListItemInteraction {
@@ -229,6 +231,16 @@ pub(crate) fn trailing_supporting_text_style(theme: &Theme, _selected: bool) -> 
 
 pub(crate) fn overline_text_style(theme: &Theme, _selected: bool) -> Option<TextStyle> {
     theme.text_style_by_key("md.sys.typescale.label-small")
+}
+
+pub(crate) fn label_text_style(theme: &Theme, _selected: bool) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        None,
+        "md.sys.typescale.body-large",
+        Some("md.comp.list.list-item.label-text.weight"),
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn supporting_text_color(theme: &Theme, enabled: bool, selected: bool) -> Color {

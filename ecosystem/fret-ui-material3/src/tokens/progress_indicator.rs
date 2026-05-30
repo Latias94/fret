@@ -49,15 +49,17 @@ pub(crate) fn four_color_palette(theme: &Theme) -> [Color; 4] {
 
 pub(crate) fn track_shape(theme: &Theme) -> Corners {
     theme
-        .corners_by_key("md.comp.progress-indicator.track.shape")
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
+        .metric_by_key("md.comp.progress-indicator.track.shape")
+        .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
+        .map(Corners::all)
         .unwrap_or_else(|| Corners::all(Px(9999.0)))
 }
 
 pub(crate) fn active_shape(theme: &Theme) -> Corners {
     theme
-        .corners_by_key("md.comp.progress-indicator.active-indicator.shape")
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
+        .metric_by_key("md.comp.progress-indicator.active-indicator.shape")
+        .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
+        .map(Corners::all)
         .unwrap_or_else(|| Corners::all(Px(9999.0)))
 }
 

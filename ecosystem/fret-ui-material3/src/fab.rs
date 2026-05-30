@@ -18,7 +18,6 @@ use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
 };
@@ -400,7 +399,11 @@ impl Fab {
                                 icon_label_space: fab_tokens::extended_icon_label_space(
                                     theme, self.size,
                                 ),
-                                label_style: extended_fab_label_style(theme, self.size),
+                                label_style: fab_tokens::extended_label_text_style(
+                                    theme,
+                                    self.size,
+                                    self.variant,
+                                ),
                             };
 
                             let chrome_tokens = ExtendedFabChromeTokens {
@@ -549,24 +552,6 @@ fn state_layer_target_opacity(
     };
 
     fab_tokens::state_layer_opacity(theme, extended, variant, interaction)
-}
-
-fn extended_fab_label_style(theme: &Theme, size: FabSize) -> fret_core::TextStyle {
-    let primary_key = match size {
-        FabSize::Small => "md.sys.typescale.title-medium",
-        FabSize::Regular => "md.comp.extended-fab.label-text",
-        FabSize::Medium => "md.sys.typescale.title-large",
-        FabSize::Large => "md.sys.typescale.headline-small",
-    };
-
-    typography::with_intent(
-        theme
-            .text_style_by_key(primary_key)
-            .or_else(|| theme.text_style_by_key("md.comp.extended-fab.label-text"))
-            .or_else(|| theme.text_style_by_key("md.sys.typescale.label-large"))
-            .unwrap_or_default(),
-        TextIntent::Control,
-    )
 }
 
 fn material_fab_chrome<H: UiHost>(

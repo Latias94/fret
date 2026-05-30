@@ -5,11 +5,11 @@ Last updated: 2026-05-30
 
 ## Current State
 
-M3TVM-010 through M3TVM-060 are complete. The workstream exists, the matrix covers all 39 M3PV2
+M3TVM-010 through M3TVM-070 are complete. The workstream exists, the matrix covers all 39 M3PV2
 components, the generated inventory report maps all 38 component token modules to matrix rows, and
 the fixture-driven token visual harness covers Button, the full field-family packet,
-Checkbox/Radio/Switch/Slider/SegmentedButton/IconButton, the chip family, and the navigation/app
-chrome family.
+Checkbox/Radio/Switch/Slider/SegmentedButton/IconButton, the chip family, the navigation/app
+chrome family, and the overlay/surface/data-display family.
 
 ## Decisions
 
@@ -22,10 +22,9 @@ chrome family.
 
 ## Next Recommended Action
 
-Start M3TVM-070 for overlay/surface/data-display rows: Menu/DropdownMenu, Dialog, BottomSheet,
-Tooltip, Snackbar, Card, Badge, FAB, List, ProgressIndicator, Divider, and CarouselItem. Extend
-`material3_token_visual_cases_v1.json` first, let fixture failures identify route/fallback bugs,
-then update the matrix and evidence after the narrow gates pass.
+Start M3TVM-080 and use the now-covered matrix to delete or consolidate redundant fallback helpers
+and stale tests. Keep the scope narrow: remove only helpers made obsolete by typed token outcomes
+or fixture-backed paths, then refresh the inventory and run the narrow Material3 gates.
 
 ## Useful Gates
 

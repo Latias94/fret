@@ -14,6 +14,19 @@ pub(crate) fn docked_container_color(theme: &Theme) -> Color {
     )
 }
 
+pub(crate) fn modal_scrim_color(theme: &Theme) -> Color {
+    theme
+        .color_by_key("md.sys.color.scrim")
+        .unwrap_or_else(|| theme.color_token("md.sys.color.scrim"))
+}
+
+pub(crate) fn modal_scrim_opacity(theme: &Theme, fallback: f32) -> f32 {
+    theme
+        .number_by_key("md.sys.fret.material.sheet.bottom.docked.modal.scrim.opacity")
+        .unwrap_or(fallback)
+        .clamp(0.0, 1.0)
+}
+
 pub(crate) fn docked_container_shape(theme: &Theme) -> Corners {
     theme
         .corners_by_key("md.comp.sheet.bottom.docked.container.shape")

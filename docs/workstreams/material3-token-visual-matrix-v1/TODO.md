@@ -116,11 +116,16 @@ Task IDs use `M3TVM-*`.
   active-indicator and scrollable metrics are seeded in the v30 theme.
   Handoff: M3TVM-060 is closed; continue with M3TVM-070 overlay/surface/data-display rows.
 
-- [ ] M3TVM-070 [owner=codex] [deps=M3TVM-030] [scope=ecosystem/fret-ui-material3/src/{tokens,foundation,dialog.rs,bottom_sheet.rs,tooltip.rs,snackbar.rs,menu.rs,dropdown_menu.rs,card.rs,badge.rs,fab.rs,list.rs,progress_indicator.rs,divider.rs,carousel_item.rs},ecosystem/fret-ui-material3/tests,goldens/material3-headless/v1]
+- [x] M3TVM-070 [owner=codex] [deps=M3TVM-030] [scope=ecosystem/fret-ui-material3/src/{tokens,foundation,dialog.rs,bottom_sheet.rs,tooltip.rs,snackbar.rs,menu.rs,dropdown_menu.rs,card.rs,badge.rs,fab.rs,list.rs,progress_indicator.rs,divider.rs,carousel_item.rs},ecosystem/fret-ui-material3/tests,goldens/material3-headless/v1]
   Goal: Close overlay/surface/data-display token visual matrix rows for container color, shape,
   elevation, scrim, outline, typography, and draw-region colors.
   Validation: fixture rows plus existing overlay/surface M3PV2 gates.
-  Review: Pending.
+  Review: DONE. The fixture runner now covers Menu/DropdownMenu, Dialog, BottomSheet, Tooltip,
+  Snackbar, Card, Badge, FAB, List, ProgressIndicator, Divider, and CarouselItem token outcomes.
+  It also fixed metric-backed shape resolution for Menu/Dialog/ProgressIndicator, moved several
+  recipe typography paths through typed token accessors, seeded Snackbar component text-style
+  aliases, and routed Dialog/BottomSheet scrim opacity through token modules.
+  Handoff: M3TVM-070 is closed; continue with M3TVM-080 fallback/helper consolidation.
 
 ## M3 - Consolidation And Closeout
 

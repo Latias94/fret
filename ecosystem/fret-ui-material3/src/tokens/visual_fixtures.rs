@@ -5,6 +5,8 @@ use fret_ui_kit::typography::{self, TextIntent};
 use serde::Deserialize;
 
 use crate::button::ButtonVariant;
+use crate::card::CardVariant;
+use crate::fab::{FabSize, FabVariant};
 use crate::foundation::interaction::PressableInteraction;
 use crate::icon_button::{IconButtonSize, IconButtonVariant};
 use crate::navigation_drawer::NavigationDrawerVariant;
@@ -12,10 +14,11 @@ use crate::select::SelectVariant;
 use crate::text_field::TextFieldVariant;
 use crate::tokens::date_picker::DatePickerTokenVariant;
 use crate::tokens::{
-    autocomplete, button, checkbox, chip, date_picker, filter_chip,
-    icon_button as icon_button_tokens, input_chip, navigation_bar, navigation_drawer,
-    navigation_rail, radio, search_bar, search_view, segmented_button, select, slider,
-    suggestion_chip, switch, tabs, text_field, time_input, time_picker, top_app_bar,
+    autocomplete, badge, button, card, carousel_item, checkbox, chip, date_picker, dialog, divider,
+    dropdown_menu, fab, filter_chip, icon_button as icon_button_tokens, input_chip, list, menu,
+    navigation_bar, navigation_drawer, navigation_rail, progress_indicator, radio, search_bar,
+    search_view, segmented_button, select, sheet_bottom, slider, snackbar, suggestion_chip, switch,
+    tabs, text_field, time_input, time_picker, tooltip, top_app_bar,
 };
 use crate::top_app_bar::TopAppBarVariant;
 
@@ -48,29 +51,42 @@ struct Case {
 #[serde(rename_all = "snake_case")]
 enum Component {
     Autocomplete,
+    Badge,
+    BottomSheet,
     Button,
+    Card,
+    CarouselItem,
     Checkbox,
     Chip,
     DatePicker,
+    Dialog,
+    Divider,
+    DropdownMenu,
     ExposedDropdown,
+    Fab,
     FilterChip,
     IconButton,
     InputChip,
+    List,
+    Menu,
     ModalNavigationDrawer,
     NavigationBar,
     NavigationDrawer,
     NavigationRail,
+    ProgressIndicator,
     Radio,
     SearchBar,
     SearchView,
     SegmentedButton,
     Select,
     Slider,
+    Snackbar,
     SuggestionChip,
     Switch,
     Tabs,
     TextField,
     TimePicker,
+    Tooltip,
     TopAppBar,
 }
 
@@ -137,29 +153,42 @@ fn material3_token_visual_fixtures_match_expected_token_outcomes() {
         let theme = theme_for(&case.scheme);
         match case.component {
             Component::Autocomplete => run_autocomplete_case(case, &theme),
+            Component::Badge => run_badge_case(case, &theme),
+            Component::BottomSheet => run_bottom_sheet_case(case, &theme),
             Component::Button => run_button_case(case, &theme),
+            Component::Card => run_card_case(case, &theme),
+            Component::CarouselItem => run_carousel_item_case(case, &theme),
             Component::Checkbox => run_checkbox_case(case, &theme),
             Component::Chip => run_chip_case(case, &theme),
             Component::DatePicker => run_date_picker_case(case, &theme),
+            Component::Dialog => run_dialog_case(case, &theme),
+            Component::Divider => run_divider_case(case, &theme),
+            Component::DropdownMenu => run_dropdown_menu_case(case, &theme),
             Component::ExposedDropdown => run_autocomplete_case(case, &theme),
+            Component::Fab => run_fab_case(case, &theme),
             Component::FilterChip => run_filter_chip_case(case, &theme),
             Component::IconButton => run_icon_button_case(case, &theme),
             Component::InputChip => run_input_chip_case(case, &theme),
+            Component::List => run_list_case(case, &theme),
+            Component::Menu => run_menu_case(case, &theme),
             Component::ModalNavigationDrawer => run_navigation_drawer_case(case, &theme),
             Component::NavigationBar => run_navigation_bar_case(case, &theme),
             Component::NavigationDrawer => run_navigation_drawer_case(case, &theme),
             Component::NavigationRail => run_navigation_rail_case(case, &theme),
+            Component::ProgressIndicator => run_progress_indicator_case(case, &theme),
             Component::Radio => run_radio_case(case, &theme),
             Component::SearchBar => run_search_bar_case(case, &theme),
             Component::SearchView => run_search_view_case(case, &theme),
             Component::SegmentedButton => run_segmented_button_case(case, &theme),
             Component::Select => run_select_case(case, &theme),
             Component::Slider => run_slider_case(case, &theme),
+            Component::Snackbar => run_snackbar_case(case, &theme),
             Component::SuggestionChip => run_suggestion_chip_case(case, &theme),
             Component::Switch => run_switch_case(case, &theme),
             Component::Tabs => run_tabs_case(case, &theme),
             Component::TextField => run_text_field_case(case, &theme),
             Component::TimePicker => run_time_picker_case(case, &theme),
+            Component::Tooltip => run_tooltip_case(case, &theme),
             Component::TopAppBar => run_top_app_bar_case(case, &theme),
         }
     }
@@ -1637,6 +1666,675 @@ fn run_top_app_bar_case(case: &Case, theme: &Theme) {
                 control_text_style(theme, require_token(assertion, "source_token")),
             ),
             "text_style_alias" => assert_text_style_alias(theme, case, assertion),
+            other => panic!(
+                "{}:{} unsupported assertion kind {other}",
+                case.id, assertion.role
+            ),
+        }
+    }
+}
+
+fn run_menu_case(case: &Case, theme: &Theme) {
+    let enabled = enabled_input(case);
+    let interaction = menu_interaction(case.input.interaction.as_deref(), &case.id);
+
+    for assertion in &case.assertions {
+        match assertion.kind.as_str() {
+            "color" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_menu_color(theme, enabled, interaction, &assertion.role),
+                token_color(theme, require_token(assertion, "token")),
+            ),
+            "color_alpha" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_menu_color(theme, enabled, interaction, &assertion.role),
+                color_with_alpha(
+                    theme,
+                    require_token(assertion, "color_token"),
+                    require_token(assertion, "opacity_token"),
+                ),
+            ),
+            "metric" => assert_px_eq(
+                &case.id,
+                &assertion.role,
+                actual_menu_metric(theme, &assertion.role),
+                token_metric(theme, require_token(assertion, "token")),
+            ),
+            "number" => assert_number_close(
+                &case.id,
+                &assertion.role,
+                actual_menu_number(theme, enabled, interaction, &assertion.role),
+                token_number(theme, require_token(assertion, "token")),
+            ),
+            "corners_metric" => assert_corners_eq(
+                &case.id,
+                &assertion.role,
+                actual_menu_corners(theme, &assertion.role),
+                Corners::all(token_metric(theme, require_token(assertion, "token"))),
+            ),
+            "text_style_weight_source" => assert_text_style_eq(
+                &case.id,
+                &assertion.role,
+                actual_menu_text_style(theme, &assertion.role),
+                control_text_style_with_weight(
+                    theme,
+                    require_token(assertion, "source_token"),
+                    require_token(assertion, "token"),
+                ),
+            ),
+            "text_style_alias" => assert_text_style_alias(theme, case, assertion),
+            other => panic!(
+                "{}:{} unsupported assertion kind {other}",
+                case.id, assertion.role
+            ),
+        }
+    }
+}
+
+fn run_dropdown_menu_case(case: &Case, theme: &Theme) {
+    let enabled = enabled_input(case);
+    let interaction = menu_interaction(case.input.interaction.as_deref(), &case.id);
+
+    for assertion in &case.assertions {
+        match assertion.kind.as_str() {
+            "color" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_menu_color(theme, enabled, interaction, &assertion.role),
+                token_color(theme, require_token(assertion, "token")),
+            ),
+            "metric" => assert_px_eq(
+                &case.id,
+                &assertion.role,
+                actual_dropdown_menu_metric(theme, &assertion.role),
+                token_metric(theme, require_token(assertion, "token")),
+            ),
+            "number" => assert_number_close(
+                &case.id,
+                &assertion.role,
+                actual_menu_number(theme, enabled, interaction, &assertion.role),
+                token_number(theme, require_token(assertion, "token")),
+            ),
+            "corners_metric" => assert_corners_eq(
+                &case.id,
+                &assertion.role,
+                actual_menu_corners(theme, &assertion.role),
+                Corners::all(token_metric(theme, require_token(assertion, "token"))),
+            ),
+            "text_style_weight_source" => assert_text_style_eq(
+                &case.id,
+                &assertion.role,
+                actual_menu_text_style(theme, &assertion.role),
+                control_text_style_with_weight(
+                    theme,
+                    require_token(assertion, "source_token"),
+                    require_token(assertion, "token"),
+                ),
+            ),
+            other => panic!(
+                "{}:{} unsupported assertion kind {other}",
+                case.id, assertion.role
+            ),
+        }
+    }
+}
+
+fn run_dialog_case(case: &Case, theme: &Theme) {
+    let interaction = dialog_action_interaction(case.input.interaction.as_deref(), &case.id);
+
+    for assertion in &case.assertions {
+        match assertion.kind.as_str() {
+            "color" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_dialog_color(theme, interaction, &assertion.role),
+                token_color(theme, require_token(assertion, "token")),
+            ),
+            "color_alpha" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_dialog_color(theme, interaction, &assertion.role),
+                color_with_alpha(
+                    theme,
+                    require_token(assertion, "color_token"),
+                    require_token(assertion, "opacity_token"),
+                ),
+            ),
+            "metric" => assert_px_eq(
+                &case.id,
+                &assertion.role,
+                actual_dialog_metric(theme, &assertion.role),
+                token_metric(theme, require_token(assertion, "token")),
+            ),
+            "number" => assert_number_close(
+                &case.id,
+                &assertion.role,
+                actual_dialog_number(theme, interaction, &assertion.role),
+                token_number(theme, require_token(assertion, "token")),
+            ),
+            "corners_metric" => assert_corners_eq(
+                &case.id,
+                &assertion.role,
+                actual_dialog_corners(theme, &assertion.role),
+                Corners::all(token_metric(theme, require_token(assertion, "token"))),
+            ),
+            "text_style_weight_source" => assert_text_style_eq(
+                &case.id,
+                &assertion.role,
+                actual_dialog_text_style(theme, &assertion.role),
+                text_style_with_weight(
+                    theme,
+                    require_token(assertion, "source_token"),
+                    require_token(assertion, "token"),
+                    text_intent_for_role(&assertion.role),
+                ),
+            ),
+            other => panic!(
+                "{}:{} unsupported assertion kind {other}",
+                case.id, assertion.role
+            ),
+        }
+    }
+}
+
+fn run_bottom_sheet_case(case: &Case, theme: &Theme) {
+    for assertion in &case.assertions {
+        match assertion.kind.as_str() {
+            "color" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_bottom_sheet_color(theme, &assertion.role),
+                token_color(theme, require_token(assertion, "token")),
+            ),
+            "color_alpha" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_bottom_sheet_color(theme, &assertion.role),
+                color_with_alpha(
+                    theme,
+                    require_token(assertion, "color_token"),
+                    require_token(assertion, "opacity_token"),
+                ),
+            ),
+            "metric" => assert_px_eq(
+                &case.id,
+                &assertion.role,
+                actual_bottom_sheet_metric(theme, &assertion.role),
+                token_metric(theme, require_token(assertion, "token")),
+            ),
+            "number" => assert_number_close(
+                &case.id,
+                &assertion.role,
+                actual_bottom_sheet_number(theme, &assertion.role),
+                token_number(theme, require_token(assertion, "token")),
+            ),
+            "corners" => assert_corners_eq(
+                &case.id,
+                &assertion.role,
+                actual_bottom_sheet_corners(theme, &assertion.role),
+                token_corners(theme, require_token(assertion, "token")),
+            ),
+            other => panic!(
+                "{}:{} unsupported assertion kind {other}",
+                case.id, assertion.role
+            ),
+        }
+    }
+}
+
+fn run_tooltip_case(case: &Case, theme: &Theme) {
+    for assertion in &case.assertions {
+        match assertion.kind.as_str() {
+            "color" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_tooltip_color(theme, &case.input.variant, &assertion.role),
+                token_color(theme, require_token(assertion, "token")),
+            ),
+            "metric" => assert_px_eq(
+                &case.id,
+                &assertion.role,
+                actual_tooltip_metric(theme, &case.input.variant, &assertion.role),
+                token_metric(theme, require_token(assertion, "token")),
+            ),
+            "metric_literal" => assert_px_eq(
+                &case.id,
+                &assertion.role,
+                actual_tooltip_metric(theme, &case.input.variant, &assertion.role),
+                Px(require_value(assertion)),
+            ),
+            "corners_metric" => assert_corners_eq(
+                &case.id,
+                &assertion.role,
+                actual_tooltip_corners(theme, &case.input.variant, &assertion.role),
+                Corners::all(token_metric(theme, require_token(assertion, "token"))),
+            ),
+            "text_style_weight_source" => assert_text_style_eq(
+                &case.id,
+                &assertion.role,
+                actual_tooltip_text_style(theme, &case.input.variant, &assertion.role),
+                content_text_style_with_weight(
+                    theme,
+                    require_token(assertion, "source_token"),
+                    require_token(assertion, "token"),
+                ),
+            ),
+            "text_style_alias" => assert_text_style_alias(theme, case, assertion),
+            other => panic!(
+                "{}:{} unsupported assertion kind {other}",
+                case.id, assertion.role
+            ),
+        }
+    }
+}
+
+fn run_snackbar_case(case: &Case, theme: &Theme) {
+    let interaction = snackbar_interaction(case.input.interaction.as_deref(), &case.id);
+
+    for assertion in &case.assertions {
+        match assertion.kind.as_str() {
+            "color" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_snackbar_color(theme, interaction, &assertion.role),
+                token_color(theme, require_token(assertion, "token")),
+            ),
+            "metric" => assert_px_eq(
+                &case.id,
+                &assertion.role,
+                actual_snackbar_metric(theme, &case.input.variant, &assertion.role),
+                token_metric(theme, require_token(assertion, "token")),
+            ),
+            "number" => assert_number_close(
+                &case.id,
+                &assertion.role,
+                actual_snackbar_number(theme, interaction, &assertion.role),
+                token_number(theme, require_token(assertion, "token")),
+            ),
+            "corners_metric" => assert_corners_eq(
+                &case.id,
+                &assertion.role,
+                actual_snackbar_corners(theme, &assertion.role),
+                Corners::all(token_metric(theme, require_token(assertion, "token"))),
+            ),
+            "text_style_weight_source" => assert_text_style_eq(
+                &case.id,
+                &assertion.role,
+                actual_snackbar_text_style(theme, &assertion.role),
+                text_style_with_weight(
+                    theme,
+                    require_token(assertion, "source_token"),
+                    require_token(assertion, "token"),
+                    text_intent_for_role(&assertion.role),
+                ),
+            ),
+            "text_style_alias" => assert_text_style_alias(theme, case, assertion),
+            other => panic!(
+                "{}:{} unsupported assertion kind {other}",
+                case.id, assertion.role
+            ),
+        }
+    }
+}
+
+fn run_card_case(case: &Case, theme: &Theme) {
+    let variant = card_variant(&case.input.variant, &case.id);
+    let enabled = enabled_input(case);
+    let interaction = pressable_interaction(case.input.interaction.as_deref(), &case.id);
+
+    for assertion in &case.assertions {
+        match assertion.kind.as_str() {
+            "color" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_card_color(theme, variant, enabled, interaction, &assertion.role),
+                token_color(theme, require_token(assertion, "token")),
+            ),
+            "color_alpha" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_card_color(theme, variant, enabled, interaction, &assertion.role),
+                color_with_alpha(
+                    theme,
+                    require_token(assertion, "color_token"),
+                    require_token(assertion, "opacity_token"),
+                ),
+            ),
+            "metric" => assert_px_eq(
+                &case.id,
+                &assertion.role,
+                actual_card_metric(theme, variant, enabled, interaction, &assertion.role),
+                token_metric(theme, require_token(assertion, "token")),
+            ),
+            "number" => assert_number_close(
+                &case.id,
+                &assertion.role,
+                actual_card_number(theme, variant, interaction, &assertion.role),
+                token_number(theme, require_token(assertion, "token")),
+            ),
+            "corners_metric" => assert_corners_eq(
+                &case.id,
+                &assertion.role,
+                actual_card_corners(theme, variant, &assertion.role),
+                Corners::all(token_metric(theme, require_token(assertion, "token"))),
+            ),
+            other => panic!(
+                "{}:{} unsupported assertion kind {other}",
+                case.id, assertion.role
+            ),
+        }
+    }
+}
+
+fn run_badge_case(case: &Case, theme: &Theme) {
+    for assertion in &case.assertions {
+        match assertion.kind.as_str() {
+            "color" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_badge_color(theme, &assertion.role),
+                token_color(theme, require_token(assertion, "token")),
+            ),
+            "metric" => assert_px_eq(
+                &case.id,
+                &assertion.role,
+                actual_badge_metric(theme, &assertion.role),
+                token_metric(theme, require_token(assertion, "token")),
+            ),
+            "corners_metric" => assert_corners_eq(
+                &case.id,
+                &assertion.role,
+                actual_badge_corners(theme, &assertion.role),
+                Corners::all(token_metric(theme, require_token(assertion, "token"))),
+            ),
+            "text_style_weight_source" => assert_text_style_eq(
+                &case.id,
+                &assertion.role,
+                actual_badge_text_style(theme, &assertion.role),
+                control_text_style_with_weight(
+                    theme,
+                    require_token(assertion, "source_token"),
+                    require_token(assertion, "token"),
+                ),
+            ),
+            "text_style_alias" => assert_text_style_alias(theme, case, assertion),
+            other => panic!(
+                "{}:{} unsupported assertion kind {other}",
+                case.id, assertion.role
+            ),
+        }
+    }
+}
+
+fn run_fab_case(case: &Case, theme: &Theme) {
+    let (extended, variant, size) = fab_case_variant(&case.input.variant, &case.id);
+    let enabled = enabled_input(case);
+    let interaction = fab_interaction(case.input.interaction.as_deref(), &case.id);
+
+    for assertion in &case.assertions {
+        match assertion.kind.as_str() {
+            "color" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_fab_color(
+                    theme,
+                    extended,
+                    variant,
+                    enabled,
+                    interaction,
+                    &assertion.role,
+                ),
+                token_color(theme, require_token(assertion, "token")),
+            ),
+            "color_alpha" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_fab_color(
+                    theme,
+                    extended,
+                    variant,
+                    enabled,
+                    interaction,
+                    &assertion.role,
+                ),
+                color_with_alpha(
+                    theme,
+                    require_token(assertion, "color_token"),
+                    require_token(assertion, "opacity_token"),
+                ),
+            ),
+            "metric" => assert_px_eq(
+                &case.id,
+                &assertion.role,
+                actual_fab_metric(
+                    theme,
+                    extended,
+                    size,
+                    variant,
+                    enabled,
+                    interaction,
+                    &assertion.role,
+                ),
+                token_metric(theme, require_token(assertion, "token")),
+            ),
+            "number" => assert_number_close(
+                &case.id,
+                &assertion.role,
+                actual_fab_number(theme, extended, variant, interaction, &assertion.role),
+                token_number(theme, require_token(assertion, "token")),
+            ),
+            "corners_metric" => assert_corners_eq(
+                &case.id,
+                &assertion.role,
+                actual_fab_corners(theme, extended, size, &assertion.role),
+                Corners::all(token_metric(theme, require_token(assertion, "token"))),
+            ),
+            "text_style_weight_source" => assert_text_style_eq(
+                &case.id,
+                &assertion.role,
+                actual_fab_text_style(theme, size, variant, &assertion.role),
+                control_text_style_with_weight(
+                    theme,
+                    require_token(assertion, "source_token"),
+                    require_token(assertion, "token"),
+                ),
+            ),
+            "text_style_alias" => assert_text_style_alias(theme, case, assertion),
+            other => panic!(
+                "{}:{} unsupported assertion kind {other}",
+                case.id, assertion.role
+            ),
+        }
+    }
+}
+
+fn run_list_case(case: &Case, theme: &Theme) {
+    let selected = case.input.selected;
+    let enabled = enabled_input(case);
+    let interaction = list_interaction(case.input.interaction.as_deref(), &case.id);
+    let expressive = matches!(case.scheme.variant, DynamicVariantFixture::Expressive);
+
+    for assertion in &case.assertions {
+        match assertion.kind.as_str() {
+            "color" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_list_color(theme, selected, enabled, interaction, &assertion.role),
+                token_color(theme, require_token(assertion, "token")),
+            ),
+            "color_alpha" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_list_color(theme, selected, enabled, interaction, &assertion.role),
+                color_with_alpha(
+                    theme,
+                    require_token(assertion, "color_token"),
+                    require_token(assertion, "opacity_token"),
+                ),
+            ),
+            "metric" => assert_px_eq(
+                &case.id,
+                &assertion.role,
+                actual_list_metric(theme, &case.input.variant, expressive, &assertion.role),
+                token_metric(theme, require_token(assertion, "token")),
+            ),
+            "number" => assert_number_close(
+                &case.id,
+                &assertion.role,
+                actual_list_number(theme, selected, interaction, &assertion.role),
+                token_number(theme, require_token(assertion, "token")),
+            ),
+            "corners" => assert_corners_eq(
+                &case.id,
+                &assertion.role,
+                actual_list_corners(
+                    theme,
+                    selected,
+                    enabled,
+                    interaction,
+                    expressive,
+                    &assertion.role,
+                ),
+                token_corners(theme, require_token(assertion, "token")),
+            ),
+            "text_style_weight_source" => assert_text_style_eq(
+                &case.id,
+                &assertion.role,
+                actual_list_text_style(theme, selected, &assertion.role),
+                control_text_style_with_weight(
+                    theme,
+                    require_token(assertion, "source_token"),
+                    require_token(assertion, "token"),
+                ),
+            ),
+            "text_style_source" => assert_text_style_eq(
+                &case.id,
+                &assertion.role,
+                actual_list_text_style(theme, selected, &assertion.role),
+                control_text_style(theme, require_token(assertion, "source_token")),
+            ),
+            other => panic!(
+                "{}:{} unsupported assertion kind {other}",
+                case.id, assertion.role
+            ),
+        }
+    }
+}
+
+fn run_progress_indicator_case(case: &Case, theme: &Theme) {
+    for assertion in &case.assertions {
+        match assertion.kind.as_str() {
+            "color" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_progress_indicator_color(theme, &assertion.role),
+                token_color(theme, require_token(assertion, "token")),
+            ),
+            "metric" => assert_px_eq(
+                &case.id,
+                &assertion.role,
+                actual_progress_indicator_metric(theme, &case.input.variant, &assertion.role),
+                token_metric(theme, require_token(assertion, "token")),
+            ),
+            "corners_metric" => assert_corners_eq(
+                &case.id,
+                &assertion.role,
+                actual_progress_indicator_corners(theme, &assertion.role),
+                Corners::all(token_metric(theme, require_token(assertion, "token"))),
+            ),
+            other => panic!(
+                "{}:{} unsupported assertion kind {other}",
+                case.id, assertion.role
+            ),
+        }
+    }
+}
+
+fn run_divider_case(case: &Case, theme: &Theme) {
+    for assertion in &case.assertions {
+        match assertion.kind.as_str() {
+            "color" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_divider_color(theme, &assertion.role),
+                token_color(theme, require_token(assertion, "token")),
+            ),
+            "metric" => assert_px_eq(
+                &case.id,
+                &assertion.role,
+                actual_divider_metric(theme, &assertion.role),
+                token_metric(theme, require_token(assertion, "token")),
+            ),
+            other => panic!(
+                "{}:{} unsupported assertion kind {other}",
+                case.id, assertion.role
+            ),
+        }
+    }
+}
+
+fn run_carousel_item_case(case: &Case, theme: &Theme) {
+    let with_outline = matches!(case.input.variant.as_str(), "with_outline" | "outlined");
+    let enabled = enabled_input(case);
+    let disabled = !enabled;
+    let interaction = pressable_interaction(case.input.interaction.as_deref(), &case.id);
+
+    for assertion in &case.assertions {
+        match assertion.kind.as_str() {
+            "color" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_carousel_item_color(
+                    theme,
+                    with_outline,
+                    disabled,
+                    interaction,
+                    &assertion.role,
+                ),
+                token_color(theme, require_token(assertion, "token")),
+            ),
+            "color_alpha" => assert_color_close(
+                &case.id,
+                &assertion.role,
+                actual_carousel_item_color(
+                    theme,
+                    with_outline,
+                    disabled,
+                    interaction,
+                    &assertion.role,
+                ),
+                color_with_alpha(
+                    theme,
+                    require_token(assertion, "color_token"),
+                    require_token(assertion, "opacity_token"),
+                ),
+            ),
+            "metric" => assert_px_eq(
+                &case.id,
+                &assertion.role,
+                actual_carousel_item_metric(
+                    theme,
+                    with_outline,
+                    disabled,
+                    interaction,
+                    &assertion.role,
+                ),
+                token_metric(theme, require_token(assertion, "token")),
+            ),
+            "number" => assert_number_close(
+                &case.id,
+                &assertion.role,
+                actual_carousel_item_number(theme, interaction, &assertion.role),
+                token_number(theme, require_token(assertion, "token")),
+            ),
+            "corners_metric" => assert_corners_eq(
+                &case.id,
+                &assertion.role,
+                actual_carousel_item_corners(theme, &assertion.role),
+                Corners::all(token_metric(theme, require_token(assertion, "token"))),
+            ),
             other => panic!(
                 "{}:{} unsupported assertion kind {other}",
                 case.id, assertion.role
@@ -3283,6 +3981,652 @@ fn actual_top_app_bar_text_style(
     }
 }
 
+fn actual_menu_color(
+    theme: &Theme,
+    enabled: bool,
+    interaction: menu::MenuItemInteraction,
+    role: &str,
+) -> Color {
+    let (label, state_layer, _) = menu::item_outcomes(theme, enabled, interaction);
+    match role {
+        "container_color" => menu::container_background(theme),
+        "container_shadow_color" => menu::container_shadow_color(theme),
+        "divider_color" => menu::divider_color(theme),
+        "item_label_color" | "label_color" => label,
+        "state_layer_color" => state_layer,
+        other => panic!("unsupported menu color role {other}"),
+    }
+}
+
+fn actual_menu_metric(theme: &Theme, role: &str) -> Px {
+    match role {
+        "item_height" => menu::list_item_height(theme),
+        "item_min_width" => menu::item_min_width(theme),
+        "item_max_width" => menu::item_max_width(theme),
+        "container_vertical_padding" => menu::container_vertical_padding(theme),
+        "item_horizontal_padding" => menu::item_horizontal_padding(theme),
+        "container_elevation" => menu::container_elevation(theme),
+        "divider_height" => menu::divider_height(theme),
+        other => panic!("unsupported menu metric role {other}"),
+    }
+}
+
+fn actual_dropdown_menu_metric(theme: &Theme, role: &str) -> Px {
+    match role {
+        "divider_margin_total" => dropdown_menu::divider_margin_total(theme),
+        "collision_padding" => dropdown_menu::collision_padding(theme).left,
+        other => actual_menu_metric(theme, other),
+    }
+}
+
+fn actual_menu_number(
+    theme: &Theme,
+    enabled: bool,
+    interaction: menu::MenuItemInteraction,
+    role: &str,
+) -> f32 {
+    let (_, _, state_layer_opacity) = menu::item_outcomes(theme, enabled, interaction);
+    match role {
+        "state_layer_opacity" => state_layer_opacity,
+        "pressed_state_layer_opacity" => menu::pressed_state_layer_opacity(theme),
+        other => panic!("unsupported menu number role {other}"),
+    }
+}
+
+fn actual_menu_corners(theme: &Theme, role: &str) -> Corners {
+    match role {
+        "container_shape" => menu::container_shape(theme),
+        other => panic!("unsupported menu corners role {other}"),
+    }
+}
+
+fn actual_menu_text_style(theme: &Theme, role: &str) -> TextStyle {
+    match role {
+        "item_label_text_style" | "label_text_style" => menu::item_label_text_style(theme),
+        other => panic!("unsupported menu text style role {other}"),
+    }
+}
+
+fn actual_dialog_color(
+    theme: &Theme,
+    interaction: dialog::DialogActionInteraction,
+    role: &str,
+) -> Color {
+    match role {
+        "scrim_color" => dialog::scrim_color(theme),
+        "scrim_color_alpha" => alpha_color(
+            dialog::scrim_color(theme),
+            dialog::scrim_opacity(theme, 0.32),
+        ),
+        "container_color" => dialog::container_background(theme),
+        "container_shadow_color" => dialog::container_shadow_color(theme),
+        "headline_color" => dialog::headline_color(theme),
+        "supporting_text_color" => dialog::supporting_text_color(theme),
+        "action_label_color" => dialog::action_label_color(theme, interaction),
+        "action_state_layer_color" => dialog::action_state_layer_color(theme, interaction),
+        other => panic!("unsupported dialog color role {other}"),
+    }
+}
+
+fn actual_dialog_metric(theme: &Theme, role: &str) -> Px {
+    match role {
+        "container_elevation" => dialog::container_elevation(theme),
+        "action_height" => dialog::action_height(theme),
+        "container_min_width" => dialog::container_min_width(theme),
+        "container_max_width" => dialog::container_max_width(theme),
+        other => panic!("unsupported dialog metric role {other}"),
+    }
+}
+
+fn actual_dialog_number(
+    theme: &Theme,
+    interaction: dialog::DialogActionInteraction,
+    role: &str,
+) -> f32 {
+    match role {
+        "scrim_opacity" => dialog::scrim_opacity(theme, 0.32),
+        "action_state_layer_opacity" => {
+            dialog::action_state_layer_target_opacity(theme, interaction)
+        }
+        "action_pressed_state_layer_opacity" => dialog::action_pressed_state_layer_opacity(theme),
+        other => panic!("unsupported dialog number role {other}"),
+    }
+}
+
+fn actual_dialog_corners(theme: &Theme, role: &str) -> Corners {
+    match role {
+        "container_shape" => dialog::container_shape(theme),
+        "action_corner_radii" => dialog::action_corner_radii(theme),
+        other => panic!("unsupported dialog corners role {other}"),
+    }
+}
+
+fn actual_dialog_text_style(theme: &Theme, role: &str) -> TextStyle {
+    match role {
+        "headline_text_style" => dialog::headline_text_style(theme),
+        "supporting_text_style" => dialog::supporting_text_style(theme),
+        "action_label_text_style" => dialog::action_label_text_style(theme),
+        other => panic!("unsupported dialog text style role {other}"),
+    }
+}
+
+fn actual_bottom_sheet_color(theme: &Theme, role: &str) -> Color {
+    match role {
+        "scrim_color" => sheet_bottom::modal_scrim_color(theme),
+        "scrim_color_alpha" => alpha_color(
+            sheet_bottom::modal_scrim_color(theme),
+            sheet_bottom::modal_scrim_opacity(theme, 0.32),
+        ),
+        "container_color" => sheet_bottom::docked_container_color(theme),
+        "drag_handle_color" => sheet_bottom::docked_drag_handle_color(theme),
+        "drag_handle_color_alpha" => alpha_color(
+            sheet_bottom::docked_drag_handle_color(theme),
+            sheet_bottom::docked_drag_handle_opacity(theme),
+        ),
+        "focus_indicator_color" => sheet_bottom::focus_indicator_color(theme),
+        other => panic!("unsupported bottom sheet color role {other}"),
+    }
+}
+
+fn actual_bottom_sheet_metric(theme: &Theme, role: &str) -> Px {
+    match role {
+        "modal_container_elevation" => sheet_bottom::docked_modal_elevation(theme),
+        "standard_container_elevation" => sheet_bottom::docked_standard_elevation(theme),
+        "drag_handle_width" => sheet_bottom::docked_drag_handle_width(theme),
+        "drag_handle_height" => sheet_bottom::docked_drag_handle_height(theme),
+        "focus_indicator_thickness" => sheet_bottom::focus_indicator_thickness(theme),
+        "focus_indicator_outline_offset" => sheet_bottom::focus_indicator_outline_offset(theme),
+        other => panic!("unsupported bottom sheet metric role {other}"),
+    }
+}
+
+fn actual_bottom_sheet_number(theme: &Theme, role: &str) -> f32 {
+    match role {
+        "scrim_opacity" => sheet_bottom::modal_scrim_opacity(theme, 0.32),
+        "drag_handle_opacity" => sheet_bottom::docked_drag_handle_opacity(theme),
+        other => panic!("unsupported bottom sheet number role {other}"),
+    }
+}
+
+fn actual_bottom_sheet_corners(theme: &Theme, role: &str) -> Corners {
+    match role {
+        "container_shape" => sheet_bottom::docked_container_shape(theme),
+        other => panic!("unsupported bottom sheet corners role {other}"),
+    }
+}
+
+fn actual_tooltip_color(theme: &Theme, variant: &str, role: &str) -> Color {
+    match (variant, role) {
+        ("plain", "container_color") => tooltip::plain_container_background(theme),
+        ("plain", "supporting_text_color") => tooltip::plain_supporting_text_color(theme),
+        ("rich", "container_color") => tooltip::rich_container_background(theme),
+        ("rich", "container_shadow_color") => tooltip::rich_container_shadow_color(theme),
+        ("rich", "subhead_color") => tooltip::rich_subhead_color(theme),
+        ("rich", "supporting_text_color") => tooltip::rich_supporting_text_color(theme),
+        (_, "shadow_color") => tooltip::shadow_color(theme),
+        _ => panic!("unsupported tooltip color role {variant}:{role}"),
+    }
+}
+
+fn actual_tooltip_metric(theme: &Theme, variant: &str, role: &str) -> Px {
+    match (variant, role) {
+        ("plain", "container_shape") => tooltip::plain_container_shape_radius(theme),
+        ("plain", "container_max_width") => tooltip::plain_container_max_width(theme),
+        ("rich", "container_shape") => tooltip::rich_container_shape_radius(theme),
+        ("rich", "container_max_width") => tooltip::rich_container_max_width(theme),
+        ("rich", "container_elevation") => tooltip::rich_container_elevation(theme),
+        (_, "container_min_width") => tooltip::container_min_width(theme),
+        (_, "container_min_height") => tooltip::container_min_height(theme),
+        _ => panic!("unsupported tooltip metric role {variant}:{role}"),
+    }
+}
+
+fn actual_tooltip_corners(theme: &Theme, variant: &str, role: &str) -> Corners {
+    match role {
+        "container_shape" => Corners::all(actual_tooltip_metric(theme, variant, role)),
+        other => panic!("unsupported tooltip corners role {other}"),
+    }
+}
+
+fn actual_tooltip_text_style(theme: &Theme, variant: &str, role: &str) -> TextStyle {
+    match (variant, role) {
+        ("plain", "supporting_text_style") => tooltip::plain_supporting_text_style(theme),
+        ("rich", "subhead_text_style") => tooltip::rich_subhead_text_style(theme),
+        ("rich", "supporting_text_style") => tooltip::rich_supporting_text_style(theme),
+        _ => panic!("unsupported tooltip text style role {variant}:{role}"),
+    }
+}
+
+fn actual_snackbar_color(
+    theme: &Theme,
+    interaction: snackbar::SnackbarActionInteraction,
+    role: &str,
+) -> Color {
+    match role {
+        "container_color" => snackbar::container_background(theme),
+        "container_shadow_color" => snackbar::container_shadow_color(theme),
+        "supporting_text_color" => snackbar::supporting_text_color(theme),
+        "action_label_color" => snackbar::action_label_color(theme, interaction),
+        "action_state_layer_color" => snackbar::action_state_layer_color(theme, interaction),
+        "icon_color" => snackbar::icon_color(theme, interaction),
+        "icon_state_layer_color" => snackbar::icon_state_layer_color(theme, interaction),
+        other => panic!("unsupported snackbar color role {other}"),
+    }
+}
+
+fn actual_snackbar_metric(theme: &Theme, variant: &str, role: &str) -> Px {
+    match (variant, role) {
+        (_, "icon_size") => snackbar::icon_size(theme),
+        (_, "container_elevation") => snackbar::container_elevation(theme),
+        ("single_line", "container_height") => snackbar::single_line_min_height(theme)
+            .unwrap_or_else(|| panic!("expected single line snackbar height")),
+        ("two_line", "container_height") => snackbar::two_line_min_height(theme)
+            .unwrap_or_else(|| panic!("expected two line snackbar height")),
+        _ => panic!("unsupported snackbar metric role {variant}:{role}"),
+    }
+}
+
+fn actual_snackbar_number(
+    theme: &Theme,
+    interaction: snackbar::SnackbarActionInteraction,
+    role: &str,
+) -> f32 {
+    match role {
+        "action_state_layer_opacity" => snackbar::action_state_layer_opacity(theme, interaction),
+        "icon_state_layer_opacity" => snackbar::icon_state_layer_opacity(theme, interaction),
+        other => panic!("unsupported snackbar number role {other}"),
+    }
+}
+
+fn actual_snackbar_corners(theme: &Theme, role: &str) -> Corners {
+    match role {
+        "container_shape" => Corners::all(snackbar::container_shape_radius(theme)),
+        other => panic!("unsupported snackbar corners role {other}"),
+    }
+}
+
+fn actual_snackbar_text_style(theme: &Theme, role: &str) -> TextStyle {
+    match role {
+        "supporting_text_style" => snackbar::supporting_text_style(theme),
+        "action_label_text_style" => snackbar::action_label_text_style(theme),
+        other => panic!("unsupported snackbar text style role {other}"),
+    }
+}
+
+fn actual_card_color(
+    theme: &Theme,
+    variant: CardVariant,
+    enabled: bool,
+    interaction: Option<PressableInteraction>,
+    role: &str,
+) -> Color {
+    match role {
+        "container_color" => card::container_background(theme, variant, enabled),
+        "container_shadow_color" => card::container_shadow_color(theme, variant),
+        "outline_color" => {
+            card::outline(theme, variant, enabled, interaction)
+                .unwrap_or_else(|| panic!("expected card outline"))
+                .color
+        }
+        "state_layer_color" => card::state_layer_color(theme, variant, interaction),
+        other => panic!("unsupported card color role {other}"),
+    }
+}
+
+fn actual_card_metric(
+    theme: &Theme,
+    variant: CardVariant,
+    enabled: bool,
+    interaction: Option<PressableInteraction>,
+    role: &str,
+) -> Px {
+    match role {
+        "container_elevation" => card::container_elevation(theme, variant, enabled, interaction),
+        "outline_width" => {
+            card::outline(theme, variant, enabled, interaction)
+                .unwrap_or_else(|| panic!("expected card outline"))
+                .width
+        }
+        other => panic!("unsupported card metric role {other}"),
+    }
+}
+
+fn actual_card_number(
+    theme: &Theme,
+    variant: CardVariant,
+    interaction: Option<PressableInteraction>,
+    role: &str,
+) -> f32 {
+    match role {
+        "state_layer_opacity" => card::state_layer_opacity(theme, variant, interaction),
+        "pressed_state_layer_opacity" => card::pressed_state_layer_opacity(theme, variant),
+        other => panic!("unsupported card number role {other}"),
+    }
+}
+
+fn actual_card_corners(theme: &Theme, variant: CardVariant, role: &str) -> Corners {
+    match role {
+        "container_shape" => card::container_shape(theme, variant),
+        other => panic!("unsupported card corners role {other}"),
+    }
+}
+
+fn actual_badge_color(theme: &Theme, role: &str) -> Color {
+    match role {
+        "dot_color" => badge::dot_color(theme),
+        "large_color" => badge::large_color(theme),
+        "large_label_color" => badge::large_label_color(theme),
+        other => panic!("unsupported badge color role {other}"),
+    }
+}
+
+fn actual_badge_metric(theme: &Theme, role: &str) -> Px {
+    match role {
+        "dot_size" => badge::dot_size(theme),
+        "large_size" => badge::large_size(theme),
+        other => panic!("unsupported badge metric role {other}"),
+    }
+}
+
+fn actual_badge_corners(theme: &Theme, role: &str) -> Corners {
+    match role {
+        "dot_shape" => badge::shape(theme),
+        "large_shape" => badge::large_shape(theme),
+        other => panic!("unsupported badge corners role {other}"),
+    }
+}
+
+fn actual_badge_text_style(theme: &Theme, role: &str) -> TextStyle {
+    match role {
+        "large_label_text_style" => badge::large_label_text_style(theme),
+        other => panic!("unsupported badge text style role {other}"),
+    }
+}
+
+fn actual_fab_color(
+    theme: &Theme,
+    extended: bool,
+    variant: FabVariant,
+    enabled: bool,
+    interaction: Option<fab::FabInteraction>,
+    role: &str,
+) -> Color {
+    match role {
+        "container_color" => fab::container_background(theme, extended, variant, enabled, false),
+        "container_shadow_color" => fab::container_shadow_color(theme, extended, variant),
+        "icon_color" => fab::icon_color(theme, extended, variant, enabled, interaction),
+        "label_color" => fab::label_color(theme, variant, enabled, interaction),
+        "state_layer_color" => fab::state_layer_color(
+            theme,
+            extended,
+            variant,
+            interaction.unwrap_or(fab::FabInteraction::Pressed),
+        ),
+        other => panic!("unsupported fab color role {other}"),
+    }
+}
+
+fn actual_fab_metric(
+    theme: &Theme,
+    extended: bool,
+    size: FabSize,
+    variant: FabVariant,
+    enabled: bool,
+    interaction: Option<fab::FabInteraction>,
+    role: &str,
+) -> Px {
+    match role {
+        "container_size" => fab::container_size(theme, size),
+        "icon_size" => fab::icon_size(theme, size),
+        "extended_container_height" => fab::extended_container_height(theme, size),
+        "extended_min_width" => fab::extended_min_width(theme, size),
+        "extended_icon_size" => fab::extended_icon_size(theme, size),
+        "extended_leading_space" => fab::extended_leading_space(theme, size, true),
+        "extended_trailing_space" => fab::extended_trailing_space(theme, size),
+        "extended_icon_label_space" => fab::extended_icon_label_space(theme, size),
+        "container_elevation" => {
+            fab::container_elevation(theme, extended, variant, enabled, false, interaction)
+        }
+        other => panic!("unsupported fab metric role {other}"),
+    }
+}
+
+fn actual_fab_number(
+    theme: &Theme,
+    extended: bool,
+    variant: FabVariant,
+    interaction: Option<fab::FabInteraction>,
+    role: &str,
+) -> f32 {
+    match role {
+        "state_layer_opacity" => fab::state_layer_opacity(
+            theme,
+            extended,
+            variant,
+            interaction.unwrap_or(fab::FabInteraction::Pressed),
+        ),
+        "pressed_state_layer_opacity" => {
+            fab::pressed_state_layer_opacity_for_variant(theme, extended, variant)
+        }
+        other => panic!("unsupported fab number role {other}"),
+    }
+}
+
+fn actual_fab_corners(theme: &Theme, extended: bool, size: FabSize, role: &str) -> Corners {
+    match (extended, role) {
+        (false, "container_shape") => fab::container_shape(theme, size),
+        (true, "container_shape") => fab::extended_container_shape(theme, size),
+        _ => panic!("unsupported fab corners role {role}"),
+    }
+}
+
+fn actual_fab_text_style(
+    theme: &Theme,
+    size: FabSize,
+    variant: FabVariant,
+    role: &str,
+) -> TextStyle {
+    match role {
+        "label_text_style" => fab::extended_label_text_style(theme, size, variant),
+        other => panic!("unsupported fab text style role {other}"),
+    }
+}
+
+fn actual_list_color(
+    theme: &Theme,
+    selected: bool,
+    enabled: bool,
+    interaction: list::ListItemInteraction,
+    role: &str,
+) -> Color {
+    let (label, icon, state_layer, _) = list::item_outcomes(theme, selected, enabled, interaction);
+    match role {
+        "selected_container_color" => list::selected_container_background(theme, enabled),
+        "label_color" => label,
+        "leading_icon_color" | "icon_color" => icon,
+        "state_layer_color" => state_layer,
+        "supporting_text_color" => list::supporting_text_color(theme, enabled, selected),
+        "overline_text_color" => list::overline_text_color(theme, enabled, selected),
+        "trailing_supporting_text_color" => {
+            list::trailing_supporting_text_color(theme, enabled, selected)
+        }
+        other => panic!("unsupported list color role {other}"),
+    }
+}
+
+fn actual_list_metric(theme: &Theme, variant: &str, expressive: bool, role: &str) -> Px {
+    match role {
+        "container_height" => match variant {
+            "one_line" => list::one_line_container_height(theme),
+            "two_line" => list::two_line_container_height(theme),
+            "three_line" => list::three_line_container_height(theme),
+            other => panic!("unsupported list variant {other}"),
+        },
+        "item_between_space" => list::item_between_space(theme),
+        "item_leading_space" => list::item_leading_space(theme),
+        "item_trailing_space" => list::item_trailing_space(theme),
+        "item_top_space" => list::item_top_space(theme),
+        "item_bottom_space" => list::item_bottom_space(theme),
+        "leading_icon_size" => list::leading_icon_size_with_variant(theme, expressive),
+        "trailing_icon_size" => list::trailing_icon_size_with_variant(theme, expressive),
+        other => panic!("unsupported list metric role {other}"),
+    }
+}
+
+fn actual_list_number(
+    theme: &Theme,
+    selected: bool,
+    interaction: list::ListItemInteraction,
+    role: &str,
+) -> f32 {
+    let (_, _, _, state_layer_opacity) = list::item_outcomes(theme, selected, true, interaction);
+    match role {
+        "state_layer_opacity" => state_layer_opacity,
+        "pressed_state_layer_opacity" => list::pressed_state_layer_opacity(theme, selected),
+        other => panic!("unsupported list number role {other}"),
+    }
+}
+
+fn actual_list_corners(
+    theme: &Theme,
+    selected: bool,
+    enabled: bool,
+    interaction: list::ListItemInteraction,
+    expressive: bool,
+    role: &str,
+) -> Corners {
+    match role {
+        "container_shape" => list::item_container_shape_for_interaction(
+            theme,
+            selected,
+            enabled,
+            interaction,
+            expressive,
+        ),
+        other => panic!("unsupported list corners role {other}"),
+    }
+}
+
+fn actual_list_text_style(theme: &Theme, selected: bool, role: &str) -> TextStyle {
+    match role {
+        "label_text_style" => list::label_text_style(theme, selected),
+        "supporting_text_style" => list::supporting_text_style(theme, selected)
+            .map(|style| typography::with_intent(style, TextIntent::Control))
+            .unwrap_or_default(),
+        "overline_text_style" => list::overline_text_style(theme, selected)
+            .map(|style| typography::with_intent(style, TextIntent::Control))
+            .unwrap_or_default(),
+        "trailing_supporting_text_style" => list::trailing_supporting_text_style(theme, selected)
+            .map(|style| typography::with_intent(style, TextIntent::Control))
+            .unwrap_or_default(),
+        other => panic!("unsupported list text style role {other}"),
+    }
+}
+
+fn actual_progress_indicator_color(theme: &Theme, role: &str) -> Color {
+    match role {
+        "track_color" => progress_indicator::track_color(theme),
+        "active_color" => progress_indicator::active_color(theme),
+        "four_color_1" => progress_indicator::four_color_palette(theme)[0],
+        "four_color_2" => progress_indicator::four_color_palette(theme)[1],
+        "four_color_3" => progress_indicator::four_color_palette(theme)[2],
+        "four_color_4" => progress_indicator::four_color_palette(theme)[3],
+        other => panic!("unsupported progress indicator color role {other}"),
+    }
+}
+
+fn actual_progress_indicator_metric(theme: &Theme, variant: &str, role: &str) -> Px {
+    match (variant, role) {
+        ("linear", "height") => progress_indicator::linear_height(theme),
+        ("linear", "track_thickness") => progress_indicator::linear_track_thickness(theme),
+        ("linear", "active_thickness") => progress_indicator::linear_active_thickness(theme),
+        ("circular", "size") => progress_indicator::circular_size(theme),
+        ("circular", "track_thickness") => progress_indicator::circular_track_thickness(theme),
+        ("circular", "active_thickness") => progress_indicator::circular_active_thickness(theme),
+        _ => panic!("unsupported progress indicator metric role {variant}:{role}"),
+    }
+}
+
+fn actual_progress_indicator_corners(theme: &Theme, role: &str) -> Corners {
+    match role {
+        "track_shape" => progress_indicator::track_shape(theme),
+        "active_shape" => progress_indicator::active_shape(theme),
+        other => panic!("unsupported progress indicator corners role {other}"),
+    }
+}
+
+fn actual_divider_color(theme: &Theme, role: &str) -> Color {
+    match role {
+        "color" | "divider_color" => divider::color(theme),
+        other => panic!("unsupported divider color role {other}"),
+    }
+}
+
+fn actual_divider_metric(theme: &Theme, role: &str) -> Px {
+    match role {
+        "thickness" => divider::thickness(theme),
+        other => panic!("unsupported divider metric role {other}"),
+    }
+}
+
+fn actual_carousel_item_color(
+    theme: &Theme,
+    with_outline: bool,
+    disabled: bool,
+    interaction: Option<PressableInteraction>,
+    role: &str,
+) -> Color {
+    match role {
+        "container_color" => carousel_item::container_background(theme, disabled),
+        "container_shadow_color" => carousel_item::container_shadow_color(theme),
+        "state_layer_color" => carousel_item::state_layer_color(theme, interaction),
+        "outline_color" => {
+            carousel_item::outline(theme, with_outline, disabled, interaction)
+                .unwrap_or_else(|| panic!("expected carousel item outline"))
+                .color
+        }
+        other => panic!("unsupported carousel item color role {other}"),
+    }
+}
+
+fn actual_carousel_item_metric(
+    theme: &Theme,
+    with_outline: bool,
+    disabled: bool,
+    interaction: Option<PressableInteraction>,
+    role: &str,
+) -> Px {
+    match role {
+        "container_elevation" => carousel_item::container_elevation(theme, disabled, interaction),
+        "outline_width" => {
+            carousel_item::outline(theme, with_outline, disabled, interaction)
+                .unwrap_or_else(|| panic!("expected carousel item outline"))
+                .width
+        }
+        other => panic!("unsupported carousel item metric role {other}"),
+    }
+}
+
+fn actual_carousel_item_number(
+    theme: &Theme,
+    interaction: Option<PressableInteraction>,
+    role: &str,
+) -> f32 {
+    match role {
+        "state_layer_opacity" => carousel_item::state_layer_opacity(theme, interaction),
+        "pressed_state_layer_opacity" => carousel_item::pressed_state_layer_opacity(theme),
+        "disabled_opacity" => carousel_item::disabled_opacity(theme),
+        other => panic!("unsupported carousel item number role {other}"),
+    }
+}
+
+fn actual_carousel_item_corners(theme: &Theme, role: &str) -> Corners {
+    match role {
+        "container_shape" => carousel_item::container_shape(theme),
+        other => panic!("unsupported carousel item corners role {other}"),
+    }
+}
+
 fn enabled_input(case: &Case) -> bool {
     case.input.enabled.unwrap_or(!case.input.disabled)
 }
@@ -3485,6 +4829,92 @@ fn top_app_bar_variant(value: &str, case_id: &str) -> TopAppBarVariant {
     }
 }
 
+fn menu_interaction(value: Option<&str>, case_id: &str) -> menu::MenuItemInteraction {
+    match value.unwrap_or("none") {
+        "none" => menu::MenuItemInteraction::Default,
+        "hovered" => menu::MenuItemInteraction::Hovered,
+        "focused" => menu::MenuItemInteraction::Focused,
+        "pressed" => menu::MenuItemInteraction::Pressed,
+        other => panic!("{case_id}: unsupported menu interaction {other}"),
+    }
+}
+
+fn dialog_action_interaction(
+    value: Option<&str>,
+    case_id: &str,
+) -> dialog::DialogActionInteraction {
+    match value.unwrap_or("none") {
+        "none" => dialog::DialogActionInteraction::Default,
+        "hovered" => dialog::DialogActionInteraction::Hovered,
+        "focused" => dialog::DialogActionInteraction::Focused,
+        "pressed" => dialog::DialogActionInteraction::Pressed,
+        other => panic!("{case_id}: unsupported dialog action interaction {other}"),
+    }
+}
+
+fn snackbar_interaction(value: Option<&str>, case_id: &str) -> snackbar::SnackbarActionInteraction {
+    match value.unwrap_or("none") {
+        "none" => snackbar::SnackbarActionInteraction::Default,
+        "hovered" => snackbar::SnackbarActionInteraction::Hovered,
+        "focused" => snackbar::SnackbarActionInteraction::Focused,
+        "pressed" => snackbar::SnackbarActionInteraction::Pressed,
+        other => panic!("{case_id}: unsupported snackbar interaction {other}"),
+    }
+}
+
+fn card_variant(value: &str, case_id: &str) -> CardVariant {
+    match value {
+        "filled" => CardVariant::Filled,
+        "elevated" => CardVariant::Elevated,
+        "outlined" => CardVariant::Outlined,
+        other => panic!("{case_id}: unsupported card variant {other}"),
+    }
+}
+
+fn fab_case_variant(value: &str, case_id: &str) -> (bool, FabVariant, FabSize) {
+    let mut extended = false;
+    let mut variant = FabVariant::Surface;
+    let mut size = FabSize::Regular;
+
+    for part in value.split('_') {
+        match part {
+            "extended" => extended = true,
+            "surface" => variant = FabVariant::Surface,
+            "primary" => variant = FabVariant::Primary,
+            "secondary" => variant = FabVariant::Secondary,
+            "tertiary" => variant = FabVariant::Tertiary,
+            "regular" => size = FabSize::Regular,
+            "small" => size = FabSize::Small,
+            "medium" => size = FabSize::Medium,
+            "large" => size = FabSize::Large,
+            "" => {}
+            other => panic!("{case_id}: unsupported fab variant part {other}"),
+        }
+    }
+
+    (extended, variant, size)
+}
+
+fn fab_interaction(value: Option<&str>, case_id: &str) -> Option<fab::FabInteraction> {
+    match value.unwrap_or("none") {
+        "none" => None,
+        "hovered" => Some(fab::FabInteraction::Hovered),
+        "focused" => Some(fab::FabInteraction::Focused),
+        "pressed" => Some(fab::FabInteraction::Pressed),
+        other => panic!("{case_id}: unsupported fab interaction {other}"),
+    }
+}
+
+fn list_interaction(value: Option<&str>, case_id: &str) -> list::ListItemInteraction {
+    match value.unwrap_or("none") {
+        "none" => list::ListItemInteraction::Default,
+        "hovered" => list::ListItemInteraction::Hovered,
+        "focused" => list::ListItemInteraction::Focused,
+        "pressed" => list::ListItemInteraction::Pressed,
+        other => panic!("{case_id}: unsupported list interaction {other}"),
+    }
+}
+
 fn require_token<'a>(assertion: &'a Assertion, field: &str) -> &'a str {
     let token = match field {
         "token" => assertion.token.as_deref(),
@@ -3565,10 +4995,34 @@ fn control_text_style(theme: &Theme, key: &str) -> TextStyle {
 }
 
 fn control_text_style_with_weight(theme: &Theme, source_key: &str, weight_key: &str) -> TextStyle {
-    let mut style = control_text_style(theme, source_key);
+    text_style_with_weight(theme, source_key, weight_key, TextIntent::Control)
+}
+
+fn content_text_style_with_weight(theme: &Theme, source_key: &str, weight_key: &str) -> TextStyle {
+    text_style_with_weight(theme, source_key, weight_key, TextIntent::Content)
+}
+
+fn text_style_with_weight(
+    theme: &Theme,
+    source_key: &str,
+    weight_key: &str,
+    intent: TextIntent,
+) -> TextStyle {
+    let mut style = match intent {
+        TextIntent::Control => control_text_style(theme, source_key),
+        TextIntent::Content => content_text_style(theme, source_key),
+    };
     let weight = token_number(theme, weight_key);
     style.weight = FontWeight(weight.round().clamp(1.0, 1000.0) as u16);
     style
+}
+
+fn text_intent_for_role(role: &str) -> TextIntent {
+    if role.contains("action") || role.contains("label") {
+        TextIntent::Control
+    } else {
+        TextIntent::Content
+    }
 }
 
 fn content_text_style(theme: &Theme, key: &str) -> TextStyle {

@@ -3,10 +3,12 @@
 //! This module centralizes token key mapping and fallback chains so menu visuals remain stable and
 //! drift-resistant during refactors.
 
-use fret_core::{Color, Corners, Px};
+use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::content::MaterialContentDefaults;
+use crate::tokens::typography;
 
 pub(crate) const ITEM_MIN_WIDTH_FALLBACK: Px = Px(112.0);
 pub(crate) const ITEM_MAX_WIDTH_FALLBACK: Px = Px(280.0);
@@ -51,6 +53,16 @@ pub(crate) fn item_horizontal_padding(theme: &Theme) -> Px {
         .unwrap_or(ITEM_HORIZONTAL_PADDING_FALLBACK)
 }
 
+pub(crate) fn item_label_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        Some("md.comp.menu.list-item.label-text"),
+        "md.sys.typescale.label-large",
+        Some("md.comp.menu.list-item.label-text.weight"),
+        TextIntent::Control,
+    )
+}
+
 pub(crate) fn container_background(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.menu.container.color")
@@ -73,8 +85,9 @@ pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
 
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
     theme
-        .corners_by_key("md.comp.menu.container.shape")
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
+        .metric_by_key("md.comp.menu.container.shape")
+        .or_else(|| theme.metric_by_key("md.sys.shape.corner.extra-small"))
+        .map(Corners::all)
         .unwrap_or_else(|| Corners::all(Px(4.0)))
 }
 

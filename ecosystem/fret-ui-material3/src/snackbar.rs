@@ -292,11 +292,11 @@ fn snackbar_toast_layer_style(theme: &Theme) -> ToastLayerStyle {
         container_padding: Some(snackbar_tokens::container_padding(theme)),
         container_radius: Some(container_shape),
         title: ToastTextStyle {
-            style_key: Some("md.sys.typescale.body-medium".to_string()),
+            style_key: Some("md.comp.snackbar.supporting-text".to_string()),
             color_key: Some("md.comp.snackbar.supporting-text.color".to_string()),
         },
         description: ToastTextStyle {
-            style_key: Some("md.sys.typescale.body-medium".to_string()),
+            style_key: Some("md.comp.snackbar.supporting-text".to_string()),
             color_key: Some("md.comp.snackbar.supporting-text.color".to_string()),
         },
         action: snackbar_tokens::action_button_style(theme),

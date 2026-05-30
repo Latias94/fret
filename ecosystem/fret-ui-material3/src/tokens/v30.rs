@@ -115,6 +115,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_menu_text_styles(cfg);
     inject_comp_primary_navigation_tab_text_styles(cfg);
     inject_comp_tooltip_text_styles(cfg);
+    inject_comp_snackbar_text_styles(cfg);
     inject_comp_date_picker_text_styles(cfg);
     inject_comp_time_picker_text_styles(cfg);
     inject_comp_time_input_text_styles(cfg);
@@ -382,6 +383,19 @@ fn inject_comp_tooltip_text_styles(cfg: &mut ThemeConfig) {
         cfg.text_styles.insert(
             "md.comp.rich-tooltip.supporting-text".to_string(),
             body_medium,
+        );
+    }
+}
+
+fn inject_comp_snackbar_text_styles(cfg: &mut ThemeConfig) {
+    if let Some(body_medium) = cfg.text_styles.get("md.sys.typescale.body-medium").cloned() {
+        cfg.text_styles
+            .insert("md.comp.snackbar.supporting-text".to_string(), body_medium);
+    }
+    if let Some(label_large) = cfg.text_styles.get("md.sys.typescale.label-large").cloned() {
+        cfg.text_styles.insert(
+            "md.comp.snackbar.action.label-text".to_string(),
+            label_large,
         );
     }
 }

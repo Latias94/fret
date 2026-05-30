@@ -3,8 +3,11 @@
 //! This module centralizes token key mapping and fallback chains so tooltip outcomes remain stable
 //! and drift-resistant during refactors.
 
-use fret_core::{Color, Edges, Px};
+use fret_core::{Color, Edges, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::TextIntent;
+
+use crate::tokens::typography;
 
 pub(crate) fn plain_container_background(theme: &Theme) -> Color {
     theme
@@ -18,6 +21,16 @@ pub(crate) fn plain_supporting_text_color(theme: &Theme) -> Color {
         .color_by_key("md.comp.plain-tooltip.supporting-text.color")
         .or_else(|| theme.color_by_key("md.sys.color.inverse-on-surface"))
         .unwrap_or_else(|| theme.color_token("md.sys.color.inverse-on-surface"))
+}
+
+pub(crate) fn plain_supporting_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        Some("md.comp.plain-tooltip.supporting-text"),
+        "md.sys.typescale.body-small",
+        Some("md.comp.plain-tooltip.supporting-text.weight"),
+        TextIntent::Content,
+    )
 }
 
 pub(crate) fn plain_container_shape_radius(theme: &Theme) -> Px {
@@ -106,11 +119,31 @@ pub(crate) fn rich_subhead_color(theme: &Theme) -> Color {
         .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
 }
 
+pub(crate) fn rich_subhead_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        Some("md.comp.rich-tooltip.subhead"),
+        "md.sys.typescale.title-small",
+        Some("md.comp.rich-tooltip.subhead.weight"),
+        TextIntent::Content,
+    )
+}
+
 pub(crate) fn rich_supporting_text_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.rich-tooltip.supporting-text.color")
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
         .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
+}
+
+pub(crate) fn rich_supporting_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        Some("md.comp.rich-tooltip.supporting-text"),
+        "md.sys.typescale.body-medium",
+        Some("md.comp.rich-tooltip.supporting-text.weight"),
+        TextIntent::Content,
+    )
 }
 
 pub(crate) fn shadow_color(theme: &Theme) -> Color {

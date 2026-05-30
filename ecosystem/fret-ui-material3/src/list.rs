@@ -541,10 +541,7 @@ fn list_item<H: UiHost>(
                     let trailing_icon_size =
                         list_tokens::trailing_icon_size_with_variant(theme, expressive);
 
-                    let label_style = theme
-                        .text_style_by_key("md.sys.typescale.body-large")
-                        .unwrap_or_default();
-                    let label_style = typography::with_intent(label_style, TextIntent::Control);
+                    let label_style = list_tokens::label_text_style(theme, selected);
 
                     let overline_color = list_tokens::overline_text_color(theme, enabled, selected);
                     let overline_style = list_tokens::overline_text_style(theme, selected)

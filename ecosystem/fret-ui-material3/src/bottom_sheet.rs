@@ -347,7 +347,7 @@ impl ModalBottomSheet {
 
             let scrim_base = {
                 let theme = Theme::global(&*cx.app);
-                theme.color_token("md.sys.color.scrim")
+                sheet_tokens::modal_scrim_color(theme)
             };
 
             let motion = drive_modal_bottom_sheet_motion(
@@ -365,10 +365,10 @@ impl ModalBottomSheet {
             let underlay_el = underlay(cx);
 
             if presence.present {
-                let scrim_opacity = Theme::global(&*cx.app)
-                    .number_by_key("md.sys.fret.material.sheet.bottom.docked.modal.scrim.opacity")
-                    .unwrap_or(scrim_opacity)
-                    .clamp(0.0, 1.0);
+                let scrim_opacity = {
+                    let theme = Theme::global(&*cx.app);
+                    sheet_tokens::modal_scrim_opacity(theme, scrim_opacity)
+                };
                 let scrim_alpha =
                     (scrim_base.a * scrim_opacity * motion.scrim_progress).clamp(0.0, 1.0);
                 let scrim_color = with_alpha(scrim_base, scrim_alpha);

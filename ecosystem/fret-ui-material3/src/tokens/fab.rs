@@ -3,11 +3,13 @@
 //! This module centralizes key mapping and fallback chains so FAB outcomes remain stable and
 //! drift-resistant while the component surface evolves.
 
-use fret_core::{Color, Corners, Px};
+use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::TextIntent;
 
 use crate::fab::{FabSize, FabVariant};
 use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::tokens::typography;
 
 pub(crate) const DISABLED_CONTAINER_OPACITY: f32 = 0.12;
 pub(crate) const DISABLED_CONTENT_OPACITY: f32 = 0.38;
@@ -309,6 +311,27 @@ pub(crate) fn label_color(
     color
 }
 
+pub(crate) fn extended_label_text_style(
+    theme: &Theme,
+    size: FabSize,
+    variant: FabVariant,
+) -> TextStyle {
+    let source_key = match size {
+        FabSize::Small => "md.sys.typescale.title-medium",
+        FabSize::Regular => "md.comp.extended-fab.label-text",
+        FabSize::Medium => "md.sys.typescale.title-large",
+        FabSize::Large => "md.sys.typescale.headline-small",
+    };
+
+    typography::text_style_with_weight(
+        theme,
+        Some(source_key),
+        "md.sys.typescale.label-large",
+        Some(extended_label_text_weight_key(variant)),
+        TextIntent::Control,
+    )
+}
+
 pub(crate) fn state_layer_color(
     theme: &Theme,
     extended: bool,
@@ -462,5 +485,14 @@ fn lowered_variant_prefix(extended: bool, variant: FabVariant) -> &'static str {
         (true, FabVariant::Primary) => "md.comp.extended-fab.primary",
         (true, FabVariant::Secondary) => "md.comp.extended-fab.secondary",
         (true, FabVariant::Tertiary) => "md.comp.extended-fab.tertiary",
+    }
+}
+
+fn extended_label_text_weight_key(variant: FabVariant) -> &'static str {
+    match variant {
+        FabVariant::Surface => "md.comp.extended-fab.surface.label-text.weight",
+        FabVariant::Primary => "md.comp.extended-fab.primary.label-text.weight",
+        FabVariant::Secondary => "md.comp.extended-fab.secondary.label-text.weight",
+        FabVariant::Tertiary => "md.comp.extended-fab.tertiary.label-text.weight",
     }
 }

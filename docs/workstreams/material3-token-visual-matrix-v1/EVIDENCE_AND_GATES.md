@@ -247,3 +247,32 @@ cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D
     - `python tools/check_workstream_catalog.py`: passed with 511 dedicated directories and 47
       standalone markdown files.
     - `git diff --check`: passed.
+- 2026-05-30: M3TVM-070 completed the overlay/surface/data-display token visual harness coverage.
+  - Fixture suite:
+    `ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json`.
+  - Runner:
+    `ecosystem/fret-ui-material3/src/tokens/visual_fixtures.rs`.
+  - Result: Menu, DropdownMenu, Dialog, BottomSheet, Tooltip, Snackbar, Card, Badge, FAB, List,
+    ProgressIndicator, Divider, and CarouselItem matrix rows moved to `covered_fixture`, closing
+    M3TVM-070. The suite covers surface/container colors, shape, elevation/shadow, scrim color and
+    opacity, outline color/width, state-layer color/opacity, disabled alpha, selected list rows,
+    draw-region colors, and typography aliases/weight outcomes.
+  - Bugs fixed:
+    - Menu, Dialog, and ProgressIndicator shape accessors now consume metric-backed Material Web
+      `*.shape` tokens where generated tokens are scalar metrics rather than `Corners`.
+    - Menu, Dialog, Badge, FAB, List, and Tooltip typography now routes through typed token
+      accessors instead of recipe-local sys typescale reads.
+    - Dialog and BottomSheet scrim opacity/color paths now flow through their token modules.
+    - Snackbar component text-style aliases are seeded in the v30 theme and the Toast style keys now
+      use component tokens instead of raw sys typescale keys.
+  - Fresh verification:
+    - `cargo fmt -p fret-ui-material3 -- --check`: passed.
+    - `cargo check -p fret-ui-material3`: passed.
+    - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`: passed.
+    - `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures`: passed, 1 test run.
+    - `cargo nextest run -p fret-ui-material3 --lib tokens::v30`: passed, 6 tests run.
+    - `python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json`: passed.
+    - `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json | Out-Null`; `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null`; `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null`; `python -m json.tool ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json | Out-Null`: passed.
+    - `python tools/check_workstream_catalog.py`: passed with 511 dedicated directories and 47
+      standalone markdown files.
+    - `git diff --check`: passed.

@@ -166,9 +166,12 @@
       "state_axis": [
         "enabled"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-070",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-070",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json",
+      "notes": "Fixture covers dot and large badge size/color/shape, large label color/style alias, and label weight."
     },
     {
       "id": "bottom_sheet",
@@ -184,9 +187,12 @@
         "open",
         "closed"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-070",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-070",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json",
+      "notes": "Fixture covers modal scrim color/opacity, docked sheet container color/shape/elevation, drag handle color/opacity/size, and focus indicator tokens."
     },
     {
       "id": "button",
@@ -234,9 +240,12 @@
         "pressed",
         "disabled"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-070",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-070",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json",
+      "notes": "Fixture covers elevated, outlined, and filled-disabled card surface/elevation/shape/outline/state-layer outcomes."
     },
     {
       "id": "carousel_item",
@@ -255,9 +264,12 @@
         "pressed",
         "disabled"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-070",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-070",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json",
+      "notes": "Fixture covers standard pressed surface/state-layer/elevation and outlined disabled outline/container outcomes."
     },
     {
       "id": "checkbox",
@@ -380,9 +392,12 @@
         "open",
         "closed"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-070",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-070",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json",
+      "notes": "Fixture covers modal scrim, panel surface/elevation/shape/shadow, headline/supporting typography, and action label/state-layer outcomes."
     },
     {
       "id": "divider",
@@ -398,9 +413,12 @@
       "state_axis": [
         "enabled"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-070",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-070",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json",
+      "notes": "Fixture covers divider thickness and color tokens."
     },
     {
       "id": "dropdown_menu",
@@ -418,9 +436,12 @@
         "closed",
         "focused"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-070",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-070",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json",
+      "notes": "Fixture covers dropdown menu through the shared Material menu token surface; overlay mechanics remain policy-layer behavior outside this token row."
     },
     {
       "id": "exposed_dropdown",
@@ -472,9 +493,12 @@
         "pressed",
         "disabled"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-070",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-070",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json",
+      "notes": "Fixture covers regular, large, and extended FAB size/shape/container/icon/label/state-layer/elevation outcomes."
     },
     {
       "id": "filter_chip",
@@ -574,9 +598,12 @@
         "disabled",
         "selected"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-070",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-070",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json",
+      "notes": "Fixture covers one-line selected expressive, two-line disabled, and three-line supporting/overline/trailing token outcomes."
     },
     {
       "id": "menu",
@@ -596,9 +623,12 @@
         "disabled",
         "selected"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-070",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-070",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json",
+      "notes": "Fixture covers menu container, divider, list item label/state-layer, metric-backed shape, and typography alias/weight outcomes."
     },
     {
       "id": "modal_navigation_drawer",
@@ -712,9 +742,12 @@
         "enabled",
         "disabled"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-070",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-070",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json",
+      "notes": "Fixture covers linear and circular progress track/active colors, shape, thickness, size, and four-color palette outcomes."
     },
     {
       "id": "radio",
@@ -881,9 +914,12 @@
         "open",
         "closed"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-070",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-070",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json",
+      "notes": "Fixture covers single-line and two-line snackbar container, typography, action, icon, state-layer, height, shape, shadow, and elevation outcomes."
     },
     {
       "id": "suggestion_chip",
@@ -1029,9 +1065,12 @@
         "open",
         "closed"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-070",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-070",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json",
+      "notes": "Fixture covers plain and rich tooltip container/text colors, shape/elevation/shadow, and typography alias/weight outcomes."
     },
     {
       "id": "top_app_bar",

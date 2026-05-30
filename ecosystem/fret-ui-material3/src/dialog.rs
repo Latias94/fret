@@ -8,9 +8,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{
-    Axis, Color, Corners, Edges, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::{ActionId, Model};
 use fret_ui::action::{DismissReason, DismissRequestCx, OnActivate, OnDismissRequest};
 use fret_ui::element::{
@@ -24,7 +22,6 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
-use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverlayController, OverlayPresence, OverrideSlot, WidgetStateProperty, WidgetStates,
     merge_override_slot, resolve_override_slot_with,
@@ -261,16 +258,7 @@ impl DialogAction {
                             dialog_tokens::action_pressed_state_layer_opacity(theme);
                         let indication_config = material_pressable_indication_config(theme, None);
 
-                        let label_style = theme
-                            .text_style_by_key("md.sys.typescale.label-large")
-                            .unwrap_or_else(|| {
-                                let mut style = TextStyle::default();
-                                style.size = Px(14.0);
-                                style.line_height = Some(Px(style.size.0 * 1.2));
-                                style.weight = fret_core::FontWeight::MEDIUM;
-                                style
-                            });
-                        let label_style = typography::with_intent(label_style, TextIntent::Control);
+                        let label_style = dialog_tokens::action_label_text_style(theme);
 
                         (
                             label_color,
@@ -566,10 +554,7 @@ impl Dialog {
                         |color| color.resolve(theme),
                         || dialog_tokens::scrim_color(theme),
                     );
-                    let scrim_opacity = theme
-                        .number_by_key("md.sys.fret.material.dialog.scrim.opacity")
-                        .unwrap_or(self.scrim_opacity)
-                        .clamp(0.0, 1.0);
+                    let scrim_opacity = dialog_tokens::scrim_opacity(theme, self.scrim_opacity);
                     let scrim_alpha = (scrim_color.a
                         * scrim_opacity
                         * transition.progress)
@@ -618,24 +603,8 @@ impl Dialog {
                         || dialog_tokens::supporting_text_color(theme),
                     );
 
-                    let headline_style = theme
-                        .text_style_by_key("md.sys.typescale.headline-small")
-                        .unwrap_or_else(|| {
-                            let mut style = TextStyle::default();
-                            style.size = Px(24.0);
-                            style
-                        });
-                    let headline_style =
-                        typography::with_intent(headline_style, TextIntent::Content);
-                    let supporting_style = theme
-                        .text_style_by_key("md.sys.typescale.body-medium")
-                        .unwrap_or_else(|| {
-                            let mut style = TextStyle::default();
-                            style.size = Px(14.0);
-                            style
-                        });
-                    let supporting_style =
-                        typography::with_intent(supporting_style, TextIntent::Content);
+                    let headline_style = dialog_tokens::headline_text_style(theme);
+                    let supporting_style = dialog_tokens::supporting_text_style(theme);
 
                     let action_cfg = DialogActionConfig {
                         height: dialog_tokens::action_height(theme),

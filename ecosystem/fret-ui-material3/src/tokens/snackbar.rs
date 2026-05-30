@@ -3,14 +3,20 @@
 //! This module centralizes token key mapping and fallback chains so snackbar outcomes remain
 //! stable and drift-resistant during refactors.
 
+#[cfg(test)]
+use fret_core::TextStyle;
 use fret_core::{Color, Corners, Edges, Px};
 use fret_ui::Theme;
 use fret_ui::theme::CubicBezier;
+#[cfg(test)]
+use fret_ui_kit::typography::TextIntent;
 use fret_ui_kit::{
     ToastButtonStyle, ToastIconButtonStyle, ToastVariantColors, ToastVariantPalette,
 };
 
 use crate::foundation::elevation::shadow_for_elevation_with_color;
+#[cfg(test)]
+use crate::tokens::typography;
 
 pub(crate) fn icon_size(theme: &Theme) -> Px {
     theme
@@ -42,6 +48,33 @@ pub(crate) fn container_shadow(theme: &Theme) -> Option<fret_ui::element::Shadow
     let r = container_shape_radius(theme);
     let shadow_color = container_shadow_color(theme);
     shadow_for_elevation_with_color(theme, elevation, Some(shadow_color), Corners::all(r))
+}
+
+#[cfg(test)]
+pub(crate) fn container_background(theme: &Theme) -> Color {
+    theme
+        .color_by_key("md.comp.snackbar.container.color")
+        .or_else(|| theme.color_by_key("md.sys.color.inverse-surface"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.inverse-surface"))
+}
+
+#[cfg(test)]
+pub(crate) fn supporting_text_color(theme: &Theme) -> Color {
+    theme
+        .color_by_key("md.comp.snackbar.supporting-text.color")
+        .or_else(|| theme.color_by_key("md.sys.color.inverse-on-surface"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.inverse-on-surface"))
+}
+
+#[cfg(test)]
+pub(crate) fn supporting_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        Some("md.comp.snackbar.supporting-text"),
+        "md.sys.typescale.body-medium",
+        Some("md.comp.snackbar.supporting-text.weight"),
+        TextIntent::Content,
+    )
 }
 
 pub(crate) fn open_duration_ms(theme: &Theme) -> u32 {
@@ -158,7 +191,7 @@ pub(crate) fn action_button_style(theme: &Theme) -> ToastButtonStyle {
     );
 
     ToastButtonStyle {
-        label_style_key: Some("md.sys.typescale.label-large".to_string()),
+        label_style_key: Some("md.comp.snackbar.action.label-text".to_string()),
         label_color_key: Some("md.comp.snackbar.action.label-text.color".to_string()),
         state_layer_color_key: Some("md.comp.snackbar.action.hover.state-layer.color".to_string()),
         hover_state_layer_opacity_key: Some(
@@ -180,6 +213,172 @@ pub(crate) fn action_button_style(theme: &Theme) -> ToastButtonStyle {
             bottom: Px(4.0),
         },
         radius: Px(4.0),
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg(test)]
+pub(crate) enum SnackbarActionInteraction {
+    Default,
+    Hovered,
+    Focused,
+    Pressed,
+}
+
+#[cfg(test)]
+pub(crate) fn action_label_color(theme: &Theme, interaction: SnackbarActionInteraction) -> Color {
+    theme
+        .color_by_key(snackbar_action_label_color_key(interaction))
+        .or_else(|| theme.color_by_key("md.sys.color.inverse-primary"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.inverse-primary"))
+}
+
+#[cfg(test)]
+pub(crate) fn action_label_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        Some("md.comp.snackbar.action.label-text"),
+        "md.sys.typescale.label-large",
+        Some("md.comp.snackbar.action.label-text.weight"),
+        TextIntent::Control,
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn action_state_layer_color(
+    theme: &Theme,
+    interaction: SnackbarActionInteraction,
+) -> Color {
+    theme
+        .color_by_key(snackbar_action_state_layer_color_key(interaction))
+        .or_else(|| theme.color_by_key("md.sys.color.inverse-primary"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.inverse-primary"))
+}
+
+#[cfg(test)]
+pub(crate) fn action_state_layer_opacity(
+    theme: &Theme,
+    interaction: SnackbarActionInteraction,
+) -> f32 {
+    let Some(key) = snackbar_action_state_layer_opacity_key(interaction) else {
+        return 0.0;
+    };
+    theme.number_by_key(key).unwrap_or(match interaction {
+        SnackbarActionInteraction::Hovered => 0.08,
+        SnackbarActionInteraction::Focused | SnackbarActionInteraction::Pressed => 0.1,
+        SnackbarActionInteraction::Default => 0.0,
+    })
+}
+
+#[cfg(test)]
+pub(crate) fn icon_color(theme: &Theme, interaction: SnackbarActionInteraction) -> Color {
+    theme
+        .color_by_key(snackbar_icon_color_key(interaction))
+        .or_else(|| theme.color_by_key("md.sys.color.inverse-on-surface"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.inverse-on-surface"))
+}
+
+#[cfg(test)]
+pub(crate) fn icon_state_layer_color(
+    theme: &Theme,
+    interaction: SnackbarActionInteraction,
+) -> Color {
+    theme
+        .color_by_key(snackbar_icon_state_layer_color_key(interaction))
+        .or_else(|| theme.color_by_key("md.sys.color.inverse-on-surface"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.inverse-on-surface"))
+}
+
+#[cfg(test)]
+pub(crate) fn icon_state_layer_opacity(
+    theme: &Theme,
+    interaction: SnackbarActionInteraction,
+) -> f32 {
+    let Some(key) = snackbar_icon_state_layer_opacity_key(interaction) else {
+        return 0.0;
+    };
+    theme.number_by_key(key).unwrap_or(match interaction {
+        SnackbarActionInteraction::Hovered => 0.08,
+        SnackbarActionInteraction::Focused | SnackbarActionInteraction::Pressed => 0.1,
+        SnackbarActionInteraction::Default => 0.0,
+    })
+}
+
+#[cfg(test)]
+fn snackbar_action_label_color_key(interaction: SnackbarActionInteraction) -> &'static str {
+    match interaction {
+        SnackbarActionInteraction::Pressed => "md.comp.snackbar.action.pressed.label-text.color",
+        SnackbarActionInteraction::Hovered => "md.comp.snackbar.action.hover.label-text.color",
+        SnackbarActionInteraction::Focused => "md.comp.snackbar.action.focus.label-text.color",
+        SnackbarActionInteraction::Default => "md.comp.snackbar.action.label-text.color",
+    }
+}
+
+#[cfg(test)]
+fn snackbar_action_state_layer_color_key(interaction: SnackbarActionInteraction) -> &'static str {
+    match interaction {
+        SnackbarActionInteraction::Pressed => "md.comp.snackbar.action.pressed.state-layer.color",
+        SnackbarActionInteraction::Hovered => "md.comp.snackbar.action.hover.state-layer.color",
+        SnackbarActionInteraction::Focused | SnackbarActionInteraction::Default => {
+            "md.comp.snackbar.action.focus.state-layer.color"
+        }
+    }
+}
+
+#[cfg(test)]
+fn snackbar_action_state_layer_opacity_key(
+    interaction: SnackbarActionInteraction,
+) -> Option<&'static str> {
+    match interaction {
+        SnackbarActionInteraction::Pressed => {
+            Some("md.comp.snackbar.action.pressed.state-layer.opacity")
+        }
+        SnackbarActionInteraction::Hovered => {
+            Some("md.comp.snackbar.action.hover.state-layer.opacity")
+        }
+        SnackbarActionInteraction::Focused => {
+            Some("md.comp.snackbar.action.focus.state-layer.opacity")
+        }
+        SnackbarActionInteraction::Default => None,
+    }
+}
+
+#[cfg(test)]
+fn snackbar_icon_color_key(interaction: SnackbarActionInteraction) -> &'static str {
+    match interaction {
+        SnackbarActionInteraction::Hovered => "md.comp.snackbar.icon.hover.icon.color",
+        SnackbarActionInteraction::Focused => "md.comp.snackbar.icon.focus.icon.color",
+        SnackbarActionInteraction::Pressed => "md.comp.snackbar.icon.pressed.icon.color",
+        SnackbarActionInteraction::Default => "md.comp.snackbar.icon.color",
+    }
+}
+
+#[cfg(test)]
+fn snackbar_icon_state_layer_color_key(interaction: SnackbarActionInteraction) -> &'static str {
+    match interaction {
+        SnackbarActionInteraction::Hovered => "md.comp.snackbar.icon.hover.state-layer.color",
+        SnackbarActionInteraction::Focused | SnackbarActionInteraction::Default => {
+            "md.comp.snackbar.icon.focus.state-layer.color"
+        }
+        SnackbarActionInteraction::Pressed => "md.comp.snackbar.icon.pressed.state-layer.color",
+    }
+}
+
+#[cfg(test)]
+fn snackbar_icon_state_layer_opacity_key(
+    interaction: SnackbarActionInteraction,
+) -> Option<&'static str> {
+    match interaction {
+        SnackbarActionInteraction::Hovered => {
+            Some("md.comp.snackbar.icon.hover.state-layer.opacity")
+        }
+        SnackbarActionInteraction::Focused => {
+            Some("md.comp.snackbar.icon.focus.state-layer.opacity")
+        }
+        SnackbarActionInteraction::Pressed => {
+            Some("md.comp.snackbar.icon.pressed.state-layer.opacity")
+        }
+        SnackbarActionInteraction::Default => None,
     }
 }
 
