@@ -30,6 +30,37 @@ Focused gates:
   forbids and moving the production semantics to `render.rs`.
 - `cargo nextest run -p fret-ui-editor editor_theme_preset_picker_stamps_listbox_options_and_selected_state editor_theme_preset_picker_click_updates_model_and_replays_reversible_preset --no-fail-fast`: pass (2 passed, 184 skipped).
 
+## TextField Buffered Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI text-field buffered draft/session handling split into a private child owner
+without changing TextField public options, draft-controller support, buffered blur behavior,
+clear-button reset behavior, or API smoke coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_field.rs` now keeps the public control/options and
+  layout orchestration only.
+- `ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs` owns the draft controller,
+  buffered state, session planning, commit/cancel helpers, clear-button session reset, and the
+  buffered unit tests.
+- `tools/gate_imui_workstream_source.py` now checks the root/buffered split and keeps buffered
+  helper ownership out of the root TextField owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --lib focus_begin_starts_session_and_clears_pending_blur
+  refocus_cancels_pending_blur_without_restarting_active_session blur_commit_arms_pending_commit
+  blur_cancel_arms_pending_cancel blur_preserve_draft_clears_pending_blur_without_arming_timer
+  active_unfocused_session_keeps_existing_pending_blur_state
+  inactive_unfocused_state_clears_stale_pending_blur text_field_defaults_to_stable_line_boxes
+  draft_controller_commit_uses_bound_buffered_session
+  draft_controller_discard_reverts_bound_buffered_session
+  draft_controller_unbound_actions_are_noops --no-fail-fast`: pass (11 passed, 171 skipped).
+- `cargo nextest run -p fret-ui-editor --test text_field_api_smoke --no-fail-fast`: pass
+  (1 passed).
+
 ## Textarea Element and Props Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI textarea lifecycle/element assembly split from textarea props/style resolution

@@ -1042,6 +1042,8 @@
     "ecosystem/fret-ui-editor/src/composites/property_row.rs",
     "ecosystem/fret-ui-editor/src/test_support.rs",
     "ecosystem/fret-ui-editor/src/controls/field_status.rs",
+    "ecosystem/fret-ui-editor/src/controls/text_field.rs",
+    "ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs",
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs",
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/options.rs",
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render.rs",

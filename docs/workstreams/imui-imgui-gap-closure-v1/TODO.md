@@ -44,6 +44,12 @@ Last updated: 2026-05-30
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI text-field buffered draft/session handling into a private child owner without
+      changing TextField public options, draft-controller support, buffered blur behavior,
+      clear-button reset behavior, or API smoke coverage.
+      Result: `controls/text_field.rs` now keeps the public control/options and layout orchestration
+      only. `controls/text_field/buffered.rs` owns the draft controller, buffered state, session
+      planning, commit/cancel helpers, clear-button session reset, and the buffered unit tests.
 - [x] Split editor theme preset picker policy/installation from listbox rendering and row chrome
       assembly without changing preset installation, selected preset sync, label fallback,
       listbox semantics, preset activation, item test IDs, or theme replay behavior.

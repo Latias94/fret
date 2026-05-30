@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 text-field buffered child-owner result:
+`ecosystem/fret-ui-editor/src/controls/text_field.rs` now keeps the public control/options and
+layout orchestration only. `controls/text_field/buffered.rs` owns the draft controller, buffered
+state, session planning, commit/cancel helpers, clear-button session reset, and the buffered unit
+tests. Public TextField options, draft-controller API, buffered blur behavior, and
+`text_field_api_smoke` coverage remain unchanged.
+
 2026-05-30 editor theme preset picker render child-owner result:
 `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs` now keeps preset
 installation, theme resolution, and render dispatch only. `render.rs` owns listbox semantics,
