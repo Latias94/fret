@@ -1855,6 +1855,12 @@ Last updated: 2026-05-31
       Result: `menu_controls/routing/dispatch.rs` owns public menu-item entry wrappers,
       checkbox/radio/action role selection, noop-hook routing, and identity-to-mount dispatch.
       `routing.rs` is now a private dispatch/identity/mount module index and re-export hub.
+- [x] Split IMUI menu-control regression tests into private text-role and root owners without
+      changing menu item label/shortcut/indicator text-role coverage, root pressable ownership,
+      test-id forwarding, or visible child mounting assertions.
+      Result: `menu_controls/tests.rs` now keeps shared helpers and module routing only.
+      `tests/text_roles.rs` owns label/shortcut/indicator text-role coverage, while
+      `tests/root.rs` owns root pressable and visible child mounting coverage.
 - [x] Split IMUI container child building, linear layout, scroll, and grid element composition out
       of `ecosystem/fret-ui-kit/src/imui/containers.rs` into private owner modules without
       changing horizontal/vertical/grid/scroll facade helpers, option forwarding, test-id

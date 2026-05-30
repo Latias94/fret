@@ -676,6 +676,8 @@
     "ecosystem/fret-ui-kit/src/imui/menu_controls/routing/identity.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/routing/mount.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/tests.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls/tests/root.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls/tests/text_roles.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/parts.rs",

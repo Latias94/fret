@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Menu Control Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI menu-control regression tests split into private text-role and root owners
+without changing menu item label, shortcut, or indicator text-role coverage, root pressable
+ownership, test-id forwarding, or visible child mounting.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/tests.rs` is now a thin hub with shared helpers
+  and module routing only.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/tests/text_roles.rs` owns label, shortcut, and
+  indicator text-role coverage.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/tests/root.rs` owns root pressable and visible
+  child mounting coverage.
+- `tools/gate_imui_workstream_source.py` now checks the hub and both private test owners and
+  rejects the split coverage from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new test-owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  menu_item_label_text_uses_shared_list_row_text_role
+  menu_item_shortcut_text_uses_shared_control_readout_role
+  menu_item_indicator_text_uses_shared_chrome_glyph_role
+  menu_item_root_pressable_owns_visible_row_children --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test
+  imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Debug-Draw Draw-List Summary Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI debug-draw draw-list summary regression coverage split into private

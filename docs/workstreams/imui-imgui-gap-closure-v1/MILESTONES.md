@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 menu-control test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/tests.rs` is now a thin test hub.
+`tests/text_roles.rs` owns label/shortcut/indicator text-role coverage, while
+`tests/root.rs` owns root pressable and visible-child mounting coverage. Shared helpers and module
+routing stay in the root file, and the public menu-item behavior remains unchanged.
+
 2026-05-31 debug-draw path-builder test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/path_builder.rs` is now a thin test
 hub. Stroke/fill command recording and invalid finished-path cleanup live in
