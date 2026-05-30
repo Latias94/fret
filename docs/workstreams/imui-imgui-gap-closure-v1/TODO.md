@@ -1830,6 +1830,13 @@ Last updated: 2026-05-30
       `TableColumnVisibilityMenuResponse`, `TableColumnVisibilityHeaderContextMenuResponse`, and
       `TableColumnVisibilityMenuItemResponse`. The root file keeps options, state re-exports,
       public helper forwarding, and test wiring.
+- [x] Split IMUI table-column visibility option types out of
+      `ecosystem/fret-ui-kit/src/imui/table_column_visibility.rs` into a private options owner
+      without changing public option type names, fields, defaults, popup sizing, menu policy, helper
+      forwarding, or re-export paths.
+      Result: `table_column_visibility/options.rs` owns
+      `TableColumnVisibilityMenuOptions` and `TableColumnVisibilityHeaderContextMenuOptions`; the
+      root file keeps option/response/state re-exports, public helper forwarding, and test wiring.
 - [x] Split IMUI container/layout option types out of
       `ecosystem/fret-ui-kit/src/imui/options/containers.rs` into private owner modules without
       changing option type names, fields, defaults, or re-export paths.

@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Table-Column Visibility Options Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI table-column visibility option types split into a private options owner without
+changing public option type names, fields, defaults, popup sizing, menu policy, helper forwarding,
+or re-export paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility.rs` keeps option/response/state
+  re-exports, public helper forwarding, and test wiring.
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/options.rs` owns
+  `TableColumnVisibilityMenuOptions` and `TableColumnVisibilityHeaderContextMenuOptions`,
+  including the header popup default size.
+- `tools/gate_imui_workstream_source.py` now checks the root/options split and prevents option
+  structs from drifting back into `table_column_visibility.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_column_visibility::tests
+  --no-fail-fast`: pass (7 passed, 683 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke
+  table_column_visibility --no-fail-fast`: pass (4 passed, 5 skipped).
+- `cargo nextest run -p fret-imui
+  table_column_visibility_menu_item_updates_visibility_state
+  table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns
+  table_column_visibility_header_context_menu_opens_and_updates_state
+  table_column_visibility_header_context_menu_opens_from_plain_header --no-fail-fast`: pass
+  (4 passed, 182 skipped).
+
 ## Combo Model Owner-Split Evidence - 2026-05-30
 
 Claim verified: IMUI combo-model wrapper split into entry, popup-items, and response owners without
