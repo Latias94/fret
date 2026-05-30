@@ -1,7 +1,7 @@
 # Material3 Foundation Deepening v1 Milestones
 
-Status: Active
-Last updated: 2026-05-30
+Status: Closed
+Last updated: 2026-05-31
 
 ## M0 - Context Interface Deepened
 
@@ -28,6 +28,8 @@ Status: Complete
 - Material token matrix tests remain the main proof surface.
 
 ## M3 - Lane Verified
+
+Status: Complete
 
 - Workstream docs name the final gate set and evidence anchors.
 - Formatting, targeted tests, check/clippy, catalog, layering, and diff hygiene pass.

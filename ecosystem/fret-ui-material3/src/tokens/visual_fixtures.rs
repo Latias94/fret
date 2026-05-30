@@ -6,6 +6,7 @@ use crate::button::ButtonVariant;
 use crate::card::CardVariant;
 use crate::fab::{FabSize, FabVariant};
 use crate::foundation::interaction::PressableInteraction;
+use crate::foundation::token_resolver::blend_over;
 use crate::icon_button::{IconButtonSize, IconButtonVariant};
 use crate::navigation_drawer::NavigationDrawerVariant;
 use crate::select::SelectVariant;
@@ -2717,21 +2718,6 @@ fn color_with_alpha(theme: &Theme, color_token: &str, opacity_token: &str) -> Co
 fn alpha_color(mut color: Color, opacity: f32) -> Color {
     color.a = (color.a * opacity).clamp(0.0, 1.0);
     color
-}
-
-fn blend_over(base: Color, overlay: Color, opacity: f32) -> Color {
-    let a = (overlay.a * opacity).clamp(0.0, 1.0);
-    if a <= 0.0 {
-        return base;
-    }
-
-    let inv = 1.0 - a;
-    Color {
-        r: overlay.r * a + base.r * inv,
-        g: overlay.g * a + base.g * inv,
-        b: overlay.b * a + base.b * inv,
-        a: a + base.a * inv,
-    }
 }
 
 fn control_text_style(theme: &Theme, key: &str) -> TextStyle {

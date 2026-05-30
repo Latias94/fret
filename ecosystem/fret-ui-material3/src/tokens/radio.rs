@@ -6,6 +6,8 @@
 use fret_core::{Color, Px};
 use fret_ui::Theme;
 
+use crate::foundation::token_resolver::alpha_mul;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RadioInteraction {
     None,
@@ -112,11 +114,6 @@ pub(crate) fn icon_color(
                 .color_by_key("md.sys.color.primary")
                 .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
         })
-}
-
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
 }
 
 fn state_layer_opacity_key(checked: bool, interaction: RadioInteraction) -> &'static str {

@@ -6,6 +6,8 @@
 use fret_core::{Color, Px};
 use fret_ui::Theme;
 
+use crate::foundation::token_resolver::alpha_mul;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CheckboxInteraction {
     None,
@@ -42,11 +44,6 @@ pub(crate) fn size_tokens(theme: &Theme) -> CheckboxSizeTokens {
         state_layer,
         container_corner,
     }
-}
-
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
 }
 
 fn state_layer_opacity_key(selected: bool, interaction: CheckboxInteraction) -> &'static str {

@@ -1,0 +1,7 @@
+{"role":"domain","path":"CONTEXT.md","reason":"Canonical Fret glossary for Component Ecosystem, Policy Layer, Runtime Substrate, and Incubating Component Surface language."}
+{"role":"adr","path":"docs/adr/0032-style-tokens-and-theme-resolution.md","reason":"Typed token and theme resolution contract."}
+{"role":"adr","path":"docs/adr/0066-fret-ui-runtime-contract-surface.md","reason":"Runtime substrate vs component policy seam."}
+{"role":"source_workstream","path":"docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json","reason":"Closed token matrix lane and fixture proof surface."}
+{"role":"source_workstream","path":"docs/workstreams/material3-foundation-deepening-v1/CLOSEOUT_AUDIT_2026-05-31.md","reason":"Immediate follow-on source and residual fallback risk."}
+{"role":"execution","path":"docs/workstreams/material3-token-resolver-fallback-v1/TODO.md","reason":"Task ledger for this lane."}
+{"role":"gates","path":"docs/workstreams/material3-token-resolver-fallback-v1/EVIDENCE_AND_GATES.md","reason":"Validation commands and evidence anchors."}

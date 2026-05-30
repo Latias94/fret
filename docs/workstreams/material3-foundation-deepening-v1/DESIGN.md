@@ -1,7 +1,7 @@
 # Material3 Foundation Deepening v1
 
-Status: Active
-Last updated: 2026-05-30
+Status: Closed
+Last updated: 2026-05-31
 
 ## Problem
 
@@ -108,4 +108,3 @@ interface, and deleting one fixture runner should not delete the outcome vocabul
 - `docs/workstreams/material3-layout-direction-provider-bridge-v1/CLOSEOUT_AUDIT_2026-05-30.md`
 - `docs/workstreams/material3-field-logical-insets-v1/CLOSEOUT_AUDIT_2026-05-30.md`
 - `docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json`
-

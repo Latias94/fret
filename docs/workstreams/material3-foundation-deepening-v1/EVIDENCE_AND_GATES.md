@@ -1,7 +1,7 @@
 # Material3 Foundation Deepening v1 Evidence And Gates
 
-Status: Active
-Last updated: 2026-05-30
+Status: Closed
+Last updated: 2026-05-31
 
 ## Repro Surface
 
@@ -61,3 +61,30 @@ Last updated: 2026-05-30
 - `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`
 - `ecosystem/fret-ui-material3/src/tokens/v30.rs`
 - `docs/workstreams/material3-foundation-deepening-v1/TODO.md`
+
+## Closeout Verification
+
+Fresh evidence captured on 2026-05-31:
+
+- `cargo fmt --package fret-ui-material3 --check`: passed.
+- `rg -n "direction_prim::use_direction_in_scope|use_direction_in_scope\\(" ecosystem/fret-ui-material3/src -g "*.rs"`:
+  no residual matches.
+- `cargo nextest run -p fret-ui-material3 --lib material_layout_direction_in_scope_uses_theme_default_and_local_override material3_token_visual_fixtures_match_expected_token_outcomes`:
+  2 passed.
+- `cargo nextest run -p fret-ui-material3 --test environment_query_adoption_smoke material_recipes_resolve_layout_direction_through_material_context`:
+  1 passed.
+- `cargo nextest run -p fret-ui-material3 --features diagnostics --test menu_state dropdown_menu_rtl_start_align_uses_material_theme_direction`:
+  1 passed.
+- `cargo nextest run -p fret-ui-material3 --features diagnostics --test select_behavior select_rtl_start_aligned_popup_anchors_to_trigger_inline_start select_rtl_listbox_items_place_logical_leading_slot_on_right select_rtl_label_and_supporting_text_use_logical_inline_insets`:
+  3 passed.
+- `cargo nextest run -p fret-ui-material3 --features diagnostics --test text_field_hover text_field_rtl_label_and_supporting_text_use_logical_inline_insets`:
+  1 passed.
+- `cargo run -p fret-ui-material3 --bin material3_token_audit -- --help`: passed.
+- `cargo check -p fret-ui-material3 --features diagnostics --tests`: passed.
+- `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`:
+  passed.
+- `python -m json.tool docs\workstreams\material3-foundation-deepening-v1\WORKSTREAM.json | Out-Null`:
+  passed.
+- `python tools\check_workstream_catalog.py`: passed.
+- `python tools\check_layering.py`: passed.
+- `git diff --check`: passed.

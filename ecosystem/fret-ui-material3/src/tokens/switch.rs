@@ -6,6 +6,8 @@
 use fret_core::{Color, Corners, Px};
 use fret_ui::Theme;
 
+use crate::foundation::token_resolver::alpha_mul;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SwitchInteraction {
     None,
@@ -244,11 +246,6 @@ fn disabled_chrome(theme: &Theme, selected: bool) -> SwitchChrome {
         outline_color,
         handle_color,
     }
-}
-
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
 }
 
 fn icon_color_key(selected: bool, interaction: SwitchInteraction) -> &'static str {

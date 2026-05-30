@@ -1,7 +1,7 @@
 # Material3 Foundation Deepening v1 Handoff
 
-Status: Active
-Last updated: 2026-05-30
+Status: Closed
+Last updated: 2026-05-31
 
 ## Current State
 
@@ -11,7 +11,8 @@ The first bounded goal completed three Material3 architecture deepening tracks:
 2. Material field family module.
 3. Material token matrix split.
 
-This workstream remains active for the next token-family split follow-on.
+This workstream is closed. Token resolver/fallback policy should continue in a narrow follow-on
+instead of reopening this lane.
 
 ## Completed Slice
 
@@ -43,12 +44,16 @@ This workstream remains active for the next token-family split follow-on.
 - `python tools\check_layering.py`
 - `git diff --check`
 
-## Next Executable Task
+## Closeout
 
-Continue M3FD-070:
+M3FD-070 is complete. Fresh gate evidence is recorded in `EVIDENCE_AND_GATES.md` and
+`CLOSEOUT_AUDIT_2026-05-31.md`.
 
-- Decide whether this lane should close now or stay open for a narrower token registry follow-on.
-- If closing, add a closeout note and keep the final gate list in `EVIDENCE_AND_GATES.md`.
+## Next Follow-On
+
+Open a narrow `material3-token-resolver-fallback-v1` lane for deepening Material token resolver and
+fallback policy. The first slice should reduce duplicated fallback/alpha/blend logic across token
+modules without changing public recipe behavior.
 
 ## Guardrails
 

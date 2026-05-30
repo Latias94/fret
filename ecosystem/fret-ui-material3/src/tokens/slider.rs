@@ -7,6 +7,8 @@ use fret_core::{Color, Corners, FontWeight, Px, TextStyle};
 use fret_ui::Theme;
 use fret_ui_kit::typography::{self, TextIntent};
 
+use crate::foundation::token_resolver::alpha_mul;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SliderInteraction {
     None,
@@ -351,9 +353,4 @@ pub(crate) fn handle_shape(theme: &Theme) -> Corners {
         })
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
         .unwrap_or_else(|| Corners::all(Px(9999.0)))
-}
-
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
 }

@@ -1,7 +1,7 @@
 # Material3 Foundation Deepening v1 TODO
 
-Status: Active
-Last updated: 2026-05-30
+Status: Closed
+Last updated: 2026-05-31
 
 ## Tasks
 
@@ -41,12 +41,15 @@ Last updated: 2026-05-30
   - Gate: `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes`.
   - Note: outcome runners now live under `tokens/visual_fixtures/{fields,selection,navigation,overlays,surfaces}.rs`.
 
-- [ ] M3FD-070: Verify and close the lane.
+- [x] M3FD-070: Verify and close the lane.
   - Scope: formatting, check, clippy, layering, workstream catalog, diff hygiene.
   - Gate: all commands in `EVIDENCE_AND_GATES.md`.
+  - Note: closed on 2026-05-31 with fresh gate evidence recorded in
+    `CLOSEOUT_AUDIT_2026-05-31.md`.
 
 ## Notes
 
 - Keep public recipe churn justified by depth and deletion, not cosmetic cleanup.
 - Do not duplicate generic `fret-ui-kit` primitives in Material3.
 - Split narrow follow-ons when a task discovers a real mechanism gap in `crates/fret-ui`.
+- Token resolver/fallback policy remains a narrow follow-on; do not reopen this lane for that work.

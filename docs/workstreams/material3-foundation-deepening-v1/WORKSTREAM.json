@@ -2,8 +2,8 @@
   "schema_version": 1,
   "slug": "material3-foundation-deepening-v1",
   "title": "Material3 Foundation Deepening v1",
-  "status": "active",
-  "updated": "2026-05-30",
+  "status": "closed",
+  "updated": "2026-05-31",
   "scope_kind": "execution",
   "follow_on_of": "material3-visual-behavior-layout-parity-v2",
   "problem": "Material3 has useful foundation modules, but Material context, field-family chrome, and token matrix outcomes are still shallow enough that RTL, field geometry, and token drift fixes can spread across large recipe modules.",
@@ -27,6 +27,10 @@
     {
       "role": "handoff",
       "path": "docs/workstreams/material3-foundation-deepening-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-foundation-deepening-v1/CLOSEOUT_AUDIT_2026-05-31.md"
     }
   ],
   "repro": {
@@ -100,6 +104,7 @@
   "evidence": [
     "docs/workstreams/material3-foundation-deepening-v1/DESIGN.md",
     "docs/workstreams/material3-foundation-deepening-v1/TODO.md",
+    "docs/workstreams/material3-foundation-deepening-v1/CLOSEOUT_AUDIT_2026-05-31.md",
     "ecosystem/fret-ui-material3/src/foundation/context.rs",
     "ecosystem/fret-ui-material3/src/foundation/field.rs",
     "ecosystem/fret-ui-material3/src/foundation/field_motion.rs",
@@ -120,7 +125,7 @@
     "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue this lane until Material context, field-family chrome, and token matrix interfaces are deepened or split into explicit narrow follow-ons."
+    "default_action": "closed",
+    "notes": "Material context, field-family chrome, and token matrix fixture interfaces were deepened and verified. Continue token resolver/fallback policy in the material3-token-resolver-fallback-v1 follow-on instead of reopening this lane."
   }
 }

@@ -1,6 +1,26 @@
 use fret_core::Color;
 use fret_ui::Theme;
 
+pub(crate) fn alpha_mul(mut color: Color, multiplier: f32) -> Color {
+    color.a = (color.a * multiplier).clamp(0.0, 1.0);
+    color
+}
+
+pub(crate) fn blend_over(base: Color, overlay: Color, opacity: f32) -> Color {
+    let a = (overlay.a * opacity).clamp(0.0, 1.0);
+    if a <= 0.0 {
+        return base;
+    }
+
+    let inv = 1.0 - a;
+    Color {
+        r: overlay.r * a + base.r * inv,
+        g: overlay.g * a + base.g * inv,
+        b: overlay.b * a + base.b * inv,
+        a: a + base.a * inv,
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct MaterialTokenResolver<'a> {
     theme: &'a Theme,
@@ -72,5 +92,29 @@ fn fallback_color_for_sys(sys_key: &str) -> Color {
         "md.sys.color.outline" => Color::from_srgb_hex_rgb(0x8c_8c_94),
         "md.sys.color.outline-variant" => Color::from_srgb_hex_rgb(0x59_59_61),
         _ => Color::from_srgb_hex_rgb(0xff_00_ff),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn color(r: f32, g: f32, b: f32, a: f32) -> Color {
+        Color { r, g, b, a }
+    }
+
+    #[test]
+    fn alpha_mul_clamps_alpha() {
+        assert_eq!(alpha_mul(color(0.1, 0.2, 0.3, 0.5), 3.0).a, 1.0);
+        assert_eq!(alpha_mul(color(0.1, 0.2, 0.3, 0.5), -1.0).a, 0.0);
+    }
+
+    #[test]
+    fn blend_over_uses_overlay_alpha_times_opacity() {
+        let blended = blend_over(color(0.0, 0.0, 1.0, 1.0), color(1.0, 0.0, 0.0, 0.5), 0.5);
+        assert!((blended.r - 0.25).abs() < 1e-6);
+        assert!((blended.g - 0.0).abs() < 1e-6);
+        assert!((blended.b - 0.75).abs() < 1e-6);
+        assert!((blended.a - 1.0).abs() < 1e-6);
     }
 }

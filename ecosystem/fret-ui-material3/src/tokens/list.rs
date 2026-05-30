@@ -8,6 +8,7 @@ use fret_ui::Theme;
 use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::content::MaterialContentDefaults;
+use crate::foundation::token_resolver::alpha_mul;
 use crate::tokens::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -164,11 +165,6 @@ pub(crate) fn trailing_icon_size_with_variant(theme: &Theme, expressive: bool) -
             .metric_by_key("md.comp.list.list-item.trailing-icon.size")
             .unwrap_or(Px(24.0))
     }
-}
-
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
 }
 
 fn supporting_text_opacity(theme: &Theme, enabled: bool, selected: bool) -> f32 {

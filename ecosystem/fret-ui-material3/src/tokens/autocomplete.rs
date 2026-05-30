@@ -7,28 +7,9 @@ use fret_core::{Color, Corners, Edges, Px, TextStyle};
 use fret_ui::{TextInputStyle, Theme};
 use fret_ui_kit::typography::{self, TextIntent};
 
+use crate::foundation::token_resolver::{alpha_mul, blend_over};
 use crate::text_field::TextFieldVariant;
 use crate::tokens::{selectable_menu_item as selectable_item_tokens, shape};
-
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
-}
-
-fn blend_over(base: Color, overlay: Color, opacity: f32) -> Color {
-    let a = (overlay.a * opacity).clamp(0.0, 1.0);
-    if a <= 0.0 {
-        return base;
-    }
-
-    let inv = 1.0 - a;
-    Color {
-        r: overlay.r * a + base.r * inv,
-        g: overlay.g * a + base.g * inv,
-        b: overlay.b * a + base.b * inv,
-        a: a + base.a * inv,
-    }
-}
 
 pub(crate) fn text_field_container_height(theme: &Theme, variant: TextFieldVariant) -> Px {
     let key = match variant {

@@ -7,6 +7,7 @@ use fret_core::{Color, Corners, Edges, Px};
 use fret_ui::{TextInputStyle, Theme};
 
 use crate::foundation::content::MaterialContentDefaults;
+use crate::foundation::token_resolver::{alpha_mul, blend_over};
 use crate::text_field::TextFieldVariant;
 
 pub(crate) fn container_height(theme: &Theme, variant: TextFieldVariant) -> Px {
@@ -42,26 +43,6 @@ fn filled_container_corner(theme: &Theme) -> Corners {
         top_right: r,
         bottom_right: Px(0.0),
         bottom_left: Px(0.0),
-    }
-}
-
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
-}
-
-fn blend_over(base: Color, overlay: Color, opacity: f32) -> Color {
-    let a = (overlay.a * opacity).clamp(0.0, 1.0);
-    if a <= 0.0 {
-        return base;
-    }
-
-    let inv = 1.0 - a;
-    Color {
-        r: overlay.r * a + base.r * inv,
-        g: overlay.g * a + base.g * inv,
-        b: overlay.b * a + base.b * inv,
-        a: a + base.a * inv,
     }
 }
 
