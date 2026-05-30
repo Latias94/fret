@@ -222,6 +222,11 @@ Last updated: 2026-05-31
       Result: `controls/slider.rs` keeps slider state, value flow, pointer/input switching, and
       layout orchestration. `controls/slider/chrome.rs` owns slider token fallback, color mixing,
       alpha attenuation, resolved chrome fields, and the focused chrome precedence test.
+- [x] Split editor slider chrome precedence regressions into a private test owner without changing
+      theme token precedence, fallback palette behavior, color mixing, alpha attenuation, or slider
+      control routing.
+      Result: `controls/slider/chrome.rs` keeps chrome/color resolution implementation plus
+      test-owner routing. `controls/slider/chrome/tests.rs` owns chrome precedence coverage.
 - [x] Split editor slider value-domain math into a private child owner without changing pointer-x
       mapping, clamp/step quantization, thumb-radius compensation, track-degenerate behavior,
       typing fallback, or public slider options.

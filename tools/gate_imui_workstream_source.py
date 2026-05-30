@@ -31329,6 +31329,7 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/slider/chrome.rs"),
             required=[
+                "mod tests;",
                 "fn lerp(",
                 "pub(super) fn mix(",
                 "pub(super) fn alpha_mul(",
@@ -31339,7 +31340,18 @@ def main() -> None:
                 "editor_subtle_bg(theme)",
                 "editor_accent(theme)",
                 "editor_border(theme)",
+            ],
+            forbidden=[
                 "slider_chrome_prefers_editor_owned_tokens_over_generic_palette",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/slider/chrome/tests.rs"),
+            required=[
+                "slider_chrome_prefers_editor_owned_tokens_over_generic_palette",
+                "EditorTokenKeys::SLIDER_TRACK_BG.to_string()",
+                "Theme::with_global_mut",
+                "resolve_slider_chrome(theme)",
             ],
             forbidden=[],
         ),

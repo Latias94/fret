@@ -221,6 +221,12 @@ alpha attenuation, resolved chrome fields, and the focused chrome precedence tes
 behavior, value formatting, theme token precedence, hover/pressed/disabled color mixing, and public
 slider options remain unchanged.
 
+2026-05-31 editor slider chrome tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/slider/chrome.rs` now keeps slider chrome/color resolution
+implementation and test-owner routing. `controls/slider/chrome/tests.rs` owns chrome precedence
+coverage. Theme token precedence, fallback palette behavior, color mixing, alpha attenuation, and
+slider control routing remain unchanged.
+
 2026-05-30 editor slider value-math child-owner result:
 `ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider state, event handling, typing
 handoff, and layout orchestration. `controls/slider/value_math.rs` owns value quantization,

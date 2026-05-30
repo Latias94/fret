@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Slider Chrome Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor slider chrome precedence regressions split into a private test owner without
+changing theme token precedence, fallback palette behavior, color mixing, alpha attenuation, or
+slider control routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/slider/chrome.rs` now keeps slider chrome/color resolution
+  implementation and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/controls/slider/chrome/tests.rs` owns chrome precedence coverage.
+- `tools/gate_imui_workstream_source.py` now checks the slider chrome root/test split and keeps the
+  migrated precedence regression test name out of the root owner file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the slider chrome test
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  slider_chrome_prefers_editor_owned_tokens_over_generic_palette --no-fail-fast`: pass (1 passed,
+  197 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Slider Value-Math Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor slider value-domain math regressions split into a private test owner without
