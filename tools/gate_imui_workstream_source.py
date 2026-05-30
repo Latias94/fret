@@ -30209,11 +30209,26 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/composites/gradient_editor.rs"),
             required=[
+                "mod tests;",
                 "use crate::primitives::readout::editor_empty_state_text_props;",
                 "fn gradient_editor_empty_state_text",
                 "editor_empty_state_text_props(",
                 "gradient_editor_empty_state_text(cx, \"No stops\")",
+            ],
+            forbidden=[
+                "rows.push(cx.text(\"No stops\"));",
+                "TextProps {",
+                "TextStyle {",
                 "gradient_editor_empty_state_text_is_single_line_and_shrinkable",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/composites/gradient_editor/tests.rs"),
+            required=[
+                "gradient_editor_empty_state_text_is_single_line_and_shrinkable",
+                "gradient_editor_empty_state_text(cx, \"No stops\")",
+                "TextWrap::None",
+                "TextOverflow::Ellipsis",
             ],
             forbidden=[
                 "rows.push(cx.text(\"No stops\"));",

@@ -86,6 +86,11 @@ Last updated: 2026-05-31
       wrapping value growth, or layout-query coverage.
       Result: `composites/property_row.rs` keeps implementation only plus `mod tests;`.
       `composites/property_row/tests.rs` owns the wrapping/value-slot regression harness.
+- [x] Split editor gradient empty-state text-role regression into a private test owner without
+      changing gradient stop composition, preview canvas behavior, empty-state copy, or editor
+      readout text-role routing.
+      Result: `composites/gradient_editor.rs` keeps gradient editor composition and preview
+      implementation. `composites/gradient_editor/tests.rs` owns empty-state text-role coverage.
 - [x] Split the shared editor popup-list readout helpers into a private child owner without
       changing popup row geometry, alignment, empty-state copy, or popup-list text-role coverage.
       Result: `primitives/readout.rs` now keeps the non-popup editor readout helpers only.

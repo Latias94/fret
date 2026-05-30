@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Gradient Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor gradient empty-state text-role regression split into a private test owner
+without changing gradient stop composition, preview canvas behavior, empty-state copy, or editor
+readout text-role routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps gradient editor
+  composition, preview implementation, and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor/tests.rs` owns empty-state text-role
+  coverage.
+- `tools/gate_imui_workstream_source.py` now checks the gradient editor root/test split and keeps
+  migrated regression test names out of the root composite file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the gradient editor root
+  and test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  gradient_editor_empty_state_text_is_single_line_and_shrinkable --no-fail-fast`: pass (1 passed,
+  197 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Editor InputGroup Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor input-group value text-role regression split into a private test owner

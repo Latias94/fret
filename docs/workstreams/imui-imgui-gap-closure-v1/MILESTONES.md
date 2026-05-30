@@ -63,6 +63,12 @@ harness, including value-slot marker lookup, wrapping text services, and layout-
 Public row options, label line-box behavior, wrapping value growth, and value-slot overflow
 contracts remain unchanged.
 
+2026-05-31 editor gradient tests child-owner result:
+`ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps gradient editor composition
+and preview implementation. `composites/gradient_editor/tests.rs` owns empty-state text-role
+coverage. Gradient stop composition, preview canvas behavior, empty-state copy, and editor readout
+text-role routing remain unchanged.
+
 2026-05-30 editor readout popup-list child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the non-popup editor readout
 helpers only. `primitives/readout/popup_list.rs` owns the popup-list row, centered-row,

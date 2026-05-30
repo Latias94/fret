@@ -1041,6 +1041,8 @@
     "ecosystem/fret-ui-editor/src/primitives/readout/popup_list.rs",
     "ecosystem/fret-ui-editor/src/primitives/readout/theme_preset.rs",
     "ecosystem/fret-ui-editor/src/composites/inspector_panel.rs",
+    "ecosystem/fret-ui-editor/src/composites/gradient_editor.rs",
+    "ecosystem/fret-ui-editor/src/composites/gradient_editor/tests.rs",
     "ecosystem/fret-ui-editor/src/composites/property_group.rs",
     "ecosystem/fret-ui-editor/src/composites/property_grid.rs",
     "ecosystem/fret-ui-editor/src/composites/property_row.rs",
