@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Hover Hook Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI hover hook installation split into hover-change and timer child owners without
+changing stationary/short/normal hover timers, hover-leave timer cancellation, shared-delay
+delegation, long-press timer dispatch, transient event recording, or `HoverQueryDelayRead`
+projection.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/hooks.rs` now orchestrates shared-delay
+  model lookup, child hook installation, and delay reads only.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/hook_hover_change.rs` owns pressable
+  hover-change timer setup/cancellation and shared hover-change delegation.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/hook_timer.rs` owns local hover-delay
+  timer dispatch, shared-delay timer delegation, and long-press timer delegation.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs` wires the new private child owners.
+- `tools/gate_imui_workstream_source.py` now checks the hover hook root/child split and keeps
+  concrete timer hook logic out of `hooks.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the hover hook child
+  owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-imui shared_hover_delay
+  long_press_sets_long_pressed_true_once_and_reports_holding
+  begin_menu_helper_hover_switches_top_level_popup_after_trigger_hover_delay --no-fail-fast`: pass
+  (2 passed, 184 skipped; `shared_hover_delay` did not match an additional test name).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test
+  imui_response_contract_smoke --no-fail-fast`: pass (5 passed).
+- `cargo nextest run -p fret-imui
+  hovered_for_tooltip_requires_stationary_and_delay_short_even_when_disabled
+  no_shared_delay_disables_window_scoped_hover_delay_sharing --no-fail-fast`: pass (2 passed, 184
+  skipped).
+
 ## IMUI Debug-Draw Path Helper Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI debug-draw path helper regression coverage split into private sub-owners

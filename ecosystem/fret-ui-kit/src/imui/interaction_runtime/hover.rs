@@ -1,4 +1,6 @@
 mod active_block;
+mod hook_hover_change;
+mod hook_timer;
 mod hooks;
 mod long_press;
 mod read;

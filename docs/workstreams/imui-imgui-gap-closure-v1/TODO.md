@@ -1455,6 +1455,15 @@ Last updated: 2026-05-31
       Result: `interaction_runtime/hover/active_block.rs` owns active-item blocking reads,
       `interaction_runtime/hover/hooks.rs` owns hover-change and timer hook installation, and
       `interaction_runtime/hover.rs` is now a private module/re-export hub.
+- [x] Split IMUI hover hook installation into hover-change and timer child owners without changing
+      stationary/short/normal hover timers, hover-leave timer cancellation, shared-delay
+      delegation, long-press timer dispatch, transient event recording, or
+      `HoverQueryDelayRead` projection.
+      Result: `interaction_runtime/hover/hooks.rs` now orchestrates shared-delay model lookup,
+      child hook installation, and delay reads only. `hover/hook_hover_change.rs` owns
+      pressable hover-change timer setup/cancellation, while `hover/hook_timer.rs` owns
+      local hover-delay timer dispatch, shared-delay timer delegation, and long-press timer
+      delegation.
 - [x] Split IMUI porting layout sugar into private scoped-layout and spacer owners without
       changing `items`, `same_line`, `dummy`, `spacing`, `indent`, layout-token defaults,
       explicit dummy sizing, indent composition, test-id stamping, or public-in-IMUI APIs.
