@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Button Root Wrapper Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI button root wrapper routing split into plain and action child owners without
+changing button/small-button/arrow/invisible/action/payload-action public facade calls, variant
+selection, push-id scoping, action payload forwarding, command dispatch behavior, or response
+projection.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/button_controls.rs` is now a private re-export hub for
+  public-in-IMUI button wrappers.
+- `ecosystem/fret-ui-kit/src/imui/button_controls/plain.rs` owns button, small-button, arrow, and
+  invisible-button wrapper routing.
+- `ecosystem/fret-ui-kit/src/imui/button_controls/actions.rs` owns action and payload-action
+  wrapper routing plus payload closure construction.
+- `tools/gate_imui_workstream_source.py` now checks the button root/plain/action split.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --no-fail-fast`:
+  pass (1 passed).
+- `cargo nextest run -p fret-imui tests::interaction_shortcuts::button_shortcuts
+  --no-fail-fast`: pass (2 passed, 184 skipped).
+- `cargo nextest run -p fret-imui tests::interaction_shortcuts::command_metadata::button_command_uses_command_metadata_and_gating
+  --no-fail-fast`: pass (1 passed, 185 skipped).
+- `cargo nextest run -p fret-imui tests::composition::control_geometry::button_family_variants_and_radio_mount_with_expected_bounds
+  --no-fail-fast`: pass (1 passed, 185 skipped).
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Popup-Modal Layer Backdrop/Panel Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI popup-modal layer backdrop and panel assembly split into private child owners

@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 button root wrapper child-owner result:
+`ecosystem/fret-ui-kit/src/imui/button_controls.rs` is now a private re-export hub for
+public-in-IMUI button wrappers. `button_controls/plain.rs` owns button, small-button, arrow, and
+invisible-button wrapper routing; `button_controls/actions.rs` owns action and payload-action
+wrapper routing. Variant selection, push-id scoping, action payload forwarding, behavior dispatch,
+and response projection remain unchanged.
+
 2026-05-30 popup-modal layer child-owner result:
 `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer.rs` now keeps layer input/output,
 root-name mounting, stack wiring, and panel-focus handoff. `layer/backdrop.rs` owns modal barrier

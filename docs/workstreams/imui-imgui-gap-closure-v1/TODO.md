@@ -44,6 +44,13 @@ Last updated: 2026-05-30
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI button root wrapper routing into plain and action child owners without changing
+      button/small-button/arrow/invisible/action/payload-action public facade calls, variant
+      selection, push-id scoping, action payload forwarding, command dispatch behavior, or response
+      projection.
+      Result: `button_controls.rs` is now a private re-export hub for button wrappers.
+      `button_controls/plain.rs` owns ordinary button variants, while `button_controls/actions.rs`
+      owns action and payload-action wrappers.
 - [x] Split IMUI popup-modal layer backdrop and panel assembly into private child owners without
       changing modal root naming, layer stack layout, backdrop barrier dismissal, panel semantics,
       facade child mounting, focus-state handoff, overlay request assembly, or public popup modal
