@@ -31153,6 +31153,7 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/text_assist_field/model.rs"),
             required=[
+                "mod tests;",
                 "pub type OnTextAssistFieldAccept",
                 "pub enum TextAssistFieldSurface",
                 "pub struct TextAssistFieldOptions",
@@ -31161,8 +31162,6 @@ def main() -> None:
                 "TextFieldOptions {",
                 "buffered: false",
                 "InputOwnedTextAssistKeyOptions::default()",
-                "text_assist_field_defaults_to_unbuffered_field_policy",
-                "text_assist_field_item_test_id_prefix_can_fallback_to_list_test_id",
             ],
             forbidden=[
                 "fn render_text_assist_panel",
@@ -31170,7 +31169,20 @@ def main() -> None:
                 "fn accept_text_assist_match",
                 "input_owned_text_assist_key_handler",
                 "editor_popup_list_row_text_props(",
+                "text_assist_field_defaults_to_unbuffered_field_policy",
+                "text_assist_field_item_test_id_prefix_can_fallback_to_list_test_id",
             ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/text_assist_field/model/tests.rs"),
+            required=[
+                "text_assist_field_defaults_to_unbuffered_field_policy",
+                "text_assist_field_item_test_id_prefix_can_fallback_to_list_test_id",
+                "TextAssistFieldOptions::default()",
+                "TextAssistFieldSurface::Inline",
+                "editor.name-assist.list",
+            ],
+            forbidden=[],
         ),
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/text_assist_field/panel.rs"),

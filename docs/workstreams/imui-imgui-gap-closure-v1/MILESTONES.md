@@ -27,6 +27,12 @@ owns `OnTextAssistFieldAccept`, `TextAssistFieldSurface`, `TextAssistFieldOption
 unbuffered input policy, item test-id prefix fallback, rendered panel handoff, inline empty-label
 behavior, and anchored-overlay height policy remain unchanged.
 
+2026-05-31 text-assist field model tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field/model.rs` now keeps option/model records
+and test-owner routing. `controls/text_assist_field/model/tests.rs` owns option/default coverage.
+Public option names, default unbuffered input policy, item test-id prefix fallback, rendered panel
+handoff, and root control orchestration remain unchanged.
+
 2026-05-30 text-assist field overlay child-owner result:
 `ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now keeps input and panel
 orchestration. `controls/text_assist_field/overlay.rs` owns anchored placement, diagnostics

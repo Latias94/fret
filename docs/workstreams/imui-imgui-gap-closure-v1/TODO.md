@@ -57,6 +57,11 @@ Last updated: 2026-05-31
       request, key handling, and accept commits. `controls/text_assist_field/model.rs` owns
       `OnTextAssistFieldAccept`, `TextAssistFieldSurface`, `TextAssistFieldOptions`,
       `RenderedTextAssistPanel`, and the focused option/default tests.
+- [x] Split editor text-assist field model regressions into a private test owner without changing
+      public option names, default unbuffered input policy, item test-id prefix fallback, rendered
+      panel handoff, or root control orchestration.
+      Result: `controls/text_assist_field/model.rs` keeps option/model records plus test-owner
+      routing. `controls/text_assist_field/model/tests.rs` owns option/default coverage.
 - [x] Split editor text-assist anchored-overlay request/placement into a private child owner
       without changing anchor fallback, popper placement, diagnostics placement recording,
       dismissible branch wiring, query dismissal writeback, or overlay-open local model behavior.
