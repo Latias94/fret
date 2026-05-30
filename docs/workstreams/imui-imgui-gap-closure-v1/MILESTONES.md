@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 button visual content child-owner result:
+`ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` now keeps `ButtonVisual`, chrome
+resolution, and visible/invisible selection only. `button_controls/visual/content.rs` owns
+`ButtonVisualContent`, foreground-aware centered text child construction, and empty invisible-button
+content. Button chrome resolution, variant sizing, arrow glyph labels, centered text mounting, and
+button response behavior remain unchanged.
+
 2026-05-30 child-region resize handle child-owner result:
 `ecosystem/fret-ui-kit/src/imui/child_region/resize/handle.rs` now keeps the pointer-region handle
 element assembly, axis layout application, and handle test-id stamping. `handle/events.rs` owns the

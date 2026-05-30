@@ -44,6 +44,12 @@ Last updated: 2026-05-30
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI button visual content children out of the visual hub without changing button
+      chrome resolution, variant sizing, visible/invisible visual selection, centered-row text
+      mounting, arrow glyph rendering, or public button response behavior.
+      Result: `button_controls/visual.rs` keeps `ButtonVisual`, chrome resolution, and visible/
+      invisible selection. `button_controls/visual/content.rs` owns `ButtonVisualContent`, text
+      child construction, foreground handling, and empty invisible-button content.
 - [x] Split IMUI child-region resize handle pointer callbacks and drag-response edge tracking into
       private child owners without changing resize handle layout/test IDs, enabled gating,
       thresholded drag lifecycle, resize cursor requests, pointer capture/release behavior, or

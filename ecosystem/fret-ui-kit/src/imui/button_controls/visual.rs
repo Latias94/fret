@@ -1,15 +1,17 @@
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Px};
-use fret_ui::element::{AnyElement, ContainerProps, PressableState};
+use fret_ui::element::{ContainerProps, PressableState};
 use fret_ui::{ElementContext, UiHost};
 
 use super::super::{ButtonVariant, control_chrome};
 
 mod a11y;
+mod content;
 mod variant;
 
 pub(super) use a11y::button_a11y;
+use content::ButtonVisualContent;
 pub(super) use variant::apply_button_variant_layout;
 use variant::arrow_symbol;
 
@@ -21,23 +23,6 @@ pub(super) struct ButtonVisual {
 impl ButtonVisual {
     pub(super) fn into_parts(self) -> (ContainerProps, ButtonVisualContent) {
         (self.chrome, self.content)
-    }
-}
-
-pub(super) struct ButtonVisualContent {
-    label: Arc<str>,
-    foreground: Option<Color>,
-}
-
-impl ButtonVisualContent {
-    pub(super) fn children<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> Vec<AnyElement> {
-        let Some(foreground) = self.foreground else {
-            return Vec::new();
-        };
-        let label = self.label;
-        vec![cx.flex(control_chrome::centered_row_props(), move |cx| {
-            vec![control_chrome::control_text(cx, label.clone(), foreground)]
-        })]
     }
 }
 
@@ -78,20 +63,14 @@ impl ButtonVisual {
     fn visible(chrome: ContainerProps, label: Arc<str>, foreground: Color) -> Self {
         Self {
             chrome,
-            content: ButtonVisualContent {
-                label,
-                foreground: Some(foreground),
-            },
+            content: ButtonVisualContent::visible(label, foreground),
         }
     }
 
     fn invisible() -> Self {
         Self {
             chrome: ContainerProps::default(),
-            content: ButtonVisualContent {
-                label: Arc::from(""),
-                foreground: None,
-            },
+            content: ButtonVisualContent::empty(),
         }
     }
 }

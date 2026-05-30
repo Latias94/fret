@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Button Visual Content Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI button visual content children split into a private child owner without
+changing button chrome resolution, variant sizing, visible/invisible visual selection,
+centered-row text mounting, arrow glyph rendering, or public button response behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` keeps `ButtonVisual`, chrome
+  resolution, and visible/invisible selection.
+- `ecosystem/fret-ui-kit/src/imui/button_controls/visual/content.rs` owns `ButtonVisualContent`,
+  foreground-aware centered text child construction, and empty invisible-button content.
+- `tools/gate_imui_workstream_source.py` now checks the visual/content split and keeps content
+  child assembly out of the visual hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new content owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass after adding the new content owner to the
+  workstream file manifest.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --no-fail-fast`:
+  pass (1 passed).
+- `cargo nextest run -p fret-imui
+  tests::composition::control_geometry::button_family_variants_and_radio_mount_with_expected_bounds
+  --no-fail-fast`: pass (1 passed, 185 skipped).
+
 ## Child-Region Resize Handle Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI child-region resize handle pointer callbacks and drag-response edge tracking
