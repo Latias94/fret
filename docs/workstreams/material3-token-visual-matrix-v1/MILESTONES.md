@@ -14,6 +14,8 @@ Exit criteria:
 
 ## M1 - Inventory Report Ready
 
+Status: Complete as of M3TVM-020.
+
 Exit criteria:
 
 - Generated or scripted inventory classifies token modules, injection functions, fallback chains,

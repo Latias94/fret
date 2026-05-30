@@ -26,6 +26,8 @@ gate proves the rendered result.
 - Component token access is localized behind typed token outcome helpers where practical.
 - Recipe-local fallback chains and magic visual constants are either deleted or explicitly recorded
   as intentional local policy.
+- A generated inventory report keeps token-module, v30 alias, fallback-chain, and visual-constant
+  counts reproducible before each family packet changes code.
 - Scene assertions prove high-value token outcomes directly: color, alpha, shape radius, elevation,
   outline width, active indicator geometry, typography role, and motion/easing channel.
 - Golden coverage remains representative; exhaustive token correctness is handled by fixtures and

@@ -18,13 +18,15 @@ Task IDs use `M3TVM-*`.
 
 ## M1 - Token Inventory And Fallback Audit
 
-- [ ] M3TVM-020 [owner=codex] [deps=M3TVM-010] [scope=ecosystem/fret-ui-material3/src/tokens,ecosystem/fret-ui-material3/src/foundation,tools/parity-discovery,docs/workstreams/material3-token-visual-matrix-v1]
+- [x] M3TVM-020 [owner=codex] [deps=M3TVM-010] [scope=ecosystem/fret-ui-material3/src/tokens,ecosystem/fret-ui-material3/src/foundation,tools/parity-discovery,docs/workstreams/material3-token-visual-matrix-v1]
   Goal: Build a token inventory report that classifies generated Material Web tokens, manual v30
   aliases, component token modules, fallback chains, and magic visual constants.
-  Validation: generated report plus JSON/schema gates; targeted `cargo nextest run -p fret-ui-material3 --lib tokens::v30`.
-  Review: Pending.
-  Handoff: Do not refactor fallback logic until the report identifies duplicated patterns and
-  owner layers.
+  Validation: `python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json`; generated report plus JSON/schema gates; targeted `cargo nextest run -p fret-ui-material3 --lib tokens::v30`.
+  Review: DONE. The generated report covers all 38 component token modules mapped by the 39
+  component rows, classifies 3,580 generated Material Web keys, 67 non-generated v30 manual writes,
+  1,138 component token fallback sites, and 506 component token visual constants.
+  Handoff: Start M3TVM-030 by turning the report's heaviest fallback families into declarative
+  fixture rows before refactoring fallback logic.
 
 - [ ] M3TVM-030 [owner=codex] [deps=M3TVM-020] [scope=ecosystem/fret-ui-material3/tests,ecosystem/fret-ui-material3/tests/fixtures,docs/workstreams/material3-token-visual-matrix-v1]
   Goal: Add a fixture-driven visual-token harness for token outcomes and rendered scene assertions.

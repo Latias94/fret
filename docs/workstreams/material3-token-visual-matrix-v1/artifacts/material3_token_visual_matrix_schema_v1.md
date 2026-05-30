@@ -30,6 +30,9 @@ instead of broad component behavior axes.
 
 - `inventory_seeded`: component is in the matrix and mapped to likely token owners, but no dedicated
   visual-token fixture packet has closed it yet.
+- `inventory_audited`: the generated inventory report has mapped the component to current token
+  modules, fallback chains, manual v30 writes, and magic visual constants, but no fixture packet has
+  closed exact token outcomes yet.
 - `covered_fixture`: fixture-driven token/scene assertions cover the row.
 - `covered_scene`: focused Rust scene assertions cover the row.
 - `covered_golden`: representative headless golden coverage exists but exact token assertions are
@@ -43,6 +46,9 @@ instead of broad component behavior axes.
 - Public injection surface: `ecosystem/fret-ui-material3/src/tokens/v30.rs`
 - Component token modules: `ecosystem/fret-ui-material3/src/tokens/*.rs`
 - Shared fallback helper: `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`
+- Generated inventory report:
+  `docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json`
+- Inventory generator: `tools/parity-discovery/material3_token_inventory.py`
 - Closed component-axis reference:
   `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_v2_closeout_audit.md`
 - Local source references: `repo-ref/compose-multiplatform-core`, `repo-ref/base-ui`

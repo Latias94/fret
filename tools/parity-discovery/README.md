@@ -215,6 +215,12 @@ live_fact_requirements`; otherwise it stays in the repair queue.
 
 ## Commands
 
+Generate the Material3 token inventory/fallback report:
+
+```powershell
+python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json
+```
+
 Generate the current v2 suite and cross-component summary:
 
 ```powershell

@@ -10,6 +10,7 @@ The initial repro is schema/catalog validation:
 ```powershell
 python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json | Out-Null
 python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null
+python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null
 python tools/check_workstream_catalog.py
 ```
 
@@ -20,6 +21,8 @@ python tools/check_workstream_catalog.py
 ```powershell
 python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json | Out-Null
 python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null
+python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null
+python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json
 python tools/check_workstream_catalog.py
 git diff --check
 ```
@@ -41,6 +44,8 @@ cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D
 - `docs/workstreams/material3-token-visual-matrix-v1/TODO.md`
 - `docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json`
 - `docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_schema_v1.md`
+- `docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json`
+- `tools/parity-discovery/material3_token_inventory.py`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_v2_closeout_audit.md`
 - `ecosystem/fret-ui-material3/src/tokens/v30.rs`
 - `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`
@@ -59,3 +64,21 @@ cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D
     source precedence, first family packet ownership, and initial `inventory_seeded` state.
   - Evidence note:
     `docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_schema_v1.md`.
+- 2026-05-30: M3TVM-020 added the generated token inventory/fallback audit.
+  - Report:
+    `docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json`.
+  - Result: all 38 component token modules are mapped to matrix rows; the report classifies 3,580
+    generated Material Web token keys, 107 v30 injection functions, 67 non-generated v30 manual
+    writes, 1,138 component token fallback sites, 506 component token visual constants, 45
+    foundation/interaction fallback sites, and 50 foundation/interaction visual constants.
+  - Main finding: the next fix should build fixture rows before deleting fallback logic, with
+    field-family, slider/list/chip/fab/icon-button, and time-picker modules highest in the queue.
+  - Fresh verification:
+    - `python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json`: passed.
+    - `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json | Out-Null`; `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null`; `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null`: passed.
+    - `python tools/check_workstream_catalog.py`: passed with 511 dedicated directories and 47 standalone markdown files.
+    - `cargo nextest run -p fret-ui-material3 --lib tokens::v30`: passed, 6 tests run.
+    - `git diff --check`: passed.
+  - Broader gates not run: `cargo check -p fret-ui-material3 --features diagnostics --tests` and
+    diagnostics automation tests were skipped because M3TVM-020 only adds a Python report generator
+    plus docs/artifact updates and does not change Rust component behavior.

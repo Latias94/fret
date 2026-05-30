@@ -30,13 +30,19 @@
     {
       "role": "token_visual_matrix",
       "path": "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json"
+    },
+    {
+      "role": "token_inventory_report",
+      "path": "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json"
     }
   ],
   "repro": {
-    "summary": "Validate the token visual matrix lane state and initial matrix schema.",
+    "summary": "Validate the token visual matrix lane state, matrix schema, and generated token inventory.",
     "commands": [
+      "python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json",
       "python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json | Out-Null",
       "python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null",
       "python tools/check_workstream_catalog.py",
       "git diff --check"
     ]
@@ -51,6 +57,14 @@
       "command": "python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null"
     },
     {
+      "name": "material3-token-inventory-report",
+      "command": "python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json"
+    },
+    {
+      "name": "material3-token-inventory-json",
+      "command": "python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null"
+    },
+    {
       "name": "workstream-catalog",
       "command": "python tools/check_workstream_catalog.py"
     },
@@ -62,6 +76,8 @@
   "evidence": [
     "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json",
     "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_schema_v1.md",
+    "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json",
+    "tools/parity-discovery/material3_token_inventory.py",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_v2_closeout_audit.md",
     "ecosystem/fret-ui-material3/src/tokens",
     "ecosystem/fret-ui-material3/src/foundation",
@@ -74,6 +90,6 @@
   ],
   "continue_policy": {
     "default_action": "run_next_task",
-    "notes": "Continue with M3TVM-020 token inventory/fallback audit before refactoring component recipes."
+    "notes": "Continue with M3TVM-030 fixture-driven visual-token harness before refactoring component recipe fallback logic."
   }
 }
