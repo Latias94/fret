@@ -260,6 +260,11 @@ Last updated: 2026-05-31
       Result: `controls/enum_select.rs` now keeps public control/options, trigger composition, and
       overlay orchestration. `controls/enum_select/row.rs` owns option-row rendering, selection
       commit policy, item test-id normalization, and the focused row-policy tests.
+- [x] Split editor enum-select row policy regressions into a private test owner without changing
+      option-row rendering, selection commit policy, item test-id normalization, popup-list row
+      text-role routing, or overlay boundaries.
+      Result: `controls/enum_select/row.rs` keeps option-row implementation plus test-owner
+      routing. `controls/enum_select/row/tests.rs` owns commit-policy and item-id coverage.
 - [x] Split editor enum-select overlay request, popup panel/list composition, selected-row reveal,
       and overlay helper tests into a private child owner without changing trigger composition,
       search/filter behavior, popup placement, dismissal policy, row routing, or focus restore.

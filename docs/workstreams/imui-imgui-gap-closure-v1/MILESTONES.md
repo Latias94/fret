@@ -265,6 +265,11 @@ selection commit policy, item test-id normalization, and the focused row-policy 
 composition, overlay dismissal, filter/search behavior, popup empty-state rendering, row chrome,
 and selected-row reveal remain unchanged.
 
+2026-05-31 editor enum-select row tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/enum_select/row.rs` now keeps option-row implementation and
+test-owner routing. `controls/enum_select/row/tests.rs` owns commit-policy and item-id coverage.
+Option-row rendering, popup-list row text-role routing, and overlay boundaries remain unchanged.
+
 2026-05-30 editor enum-select overlay child-owner result:
 `ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps public control/options and trigger
 composition. `controls/enum_select/overlay.rs` owns overlay request assembly, popup panel/list

@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Enum-Select Row Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor enum-select row policy regressions split into a private test owner without
+changing option-row rendering, selection commit policy, item test-id normalization, popup-list row
+text-role routing, or overlay boundaries.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/enum_select/row.rs` now keeps option-row implementation,
+  row policy helpers, and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/row/tests.rs` owns commit-policy and item-id
+  coverage.
+- `tools/gate_imui_workstream_source.py` now checks the enum-select row root/test split and keeps
+  migrated row policy regression test names out of the root owner file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the row test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor enum_select_item_test_id_segment_is_stable_ascii
+  enum_select_commit_policy_does_not_toggle_selected_to_none --no-fail-fast`: pass (2 passed,
+  196 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test
+  imui_surface_policy --no-fail-fast`: pass (3 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Theme Preset Picker Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor theme preset picker behavior regressions split into a private test owner
