@@ -44,6 +44,13 @@ Last updated: 2026-05-30
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI child-region resize handle pointer callbacks and drag-response edge tracking into
+      private child owners without changing resize handle layout/test IDs, enabled gating,
+      thresholded drag lifecycle, resize cursor requests, pointer capture/release behavior, or
+      `ChildRegionResponse` resize drag semantics.
+      Result: `child_region/resize/handle.rs` now keeps pointer-region element assembly and test-id
+      stamping. `handle/events.rs` owns pointer down/move/up drag callbacks, while
+      `handle/drag_state.rs` owns response population and started/stopped drag edge tracking.
 - [x] Split IMUI button root wrapper routing into plain and action child owners without changing
       button/small-button/arrow/invisible/action/payload-action public facade calls, variant
       selection, push-id scoping, action payload forwarding, command dispatch behavior, or response

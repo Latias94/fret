@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 child-region resize handle child-owner result:
+`ecosystem/fret-ui-kit/src/imui/child_region/resize/handle.rs` now keeps the pointer-region handle
+element assembly, axis layout application, and handle test-id stamping. `handle/events.rs` owns the
+pointer down/move/up drag callbacks, cursor request, thresholded drag movement, and pointer release
+finish call. `handle/drag_state.rs` owns `ResponseExt` population plus started/stopped drag edge
+tracking. Resize handle layout, enabled gating, threshold/cursor behavior, and
+`ChildRegionResponse` resize drag semantics remain unchanged.
+
 2026-05-30 floating-window on-area state child-owner result:
 `ecosystem/fret-ui-kit/src/imui/floating_window_on_area/state.rs` now keeps the on-area state
 preparation flow, resize snapshot/prepare calls, scale-factor lookup, and chrome response assembly.

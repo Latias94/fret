@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Child-Region Resize Handle Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI child-region resize handle pointer callbacks and drag-response edge tracking
+split into private child owners without changing resize handle layout/test IDs, enabled gating,
+thresholded drag lifecycle, resize cursor requests, pointer capture/release behavior, or
+`ChildRegionResponse` resize drag semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/child_region/resize/handle.rs` keeps pointer-region handle
+  element assembly, axis layout application, and handle test-id stamping.
+- `ecosystem/fret-ui-kit/src/imui/child_region/resize/handle/events.rs` owns pointer down/move/up
+  drag callbacks, cursor request, thresholded drag movement, and pointer release finish behavior.
+- `ecosystem/fret-ui-kit/src/imui/child_region/resize/handle/drag_state.rs` owns response
+  population, drag readback, and started/stopped edge tracking.
+- `tools/gate_imui_workstream_source.py` now checks the handle/events/drag_state split and keeps
+  runtime drag callbacks out of the handle hub.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-imui
+  child_region_helper_renders_resize_y_handle_without_breaking_scroll_chrome --no-fail-fast`:
+  pass on rerun after the first invocation timed out at the command wrapper after printing a
+  passing nextest summary (1 passed, 185 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_child_region_smoke
+  --no-fail-fast`: pass (3 passed).
+
 ## Floating-Window On-Area State Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI floating-window on-area state details split into collapsed and position
