@@ -35397,14 +35397,31 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/readout/theme_preset.rs"),
             required=[
+                "mod tests;",
                 "pub(crate) fn editor_theme_preset_picker_header_text_props",
                 "pub(crate) fn editor_theme_preset_picker_row_label_text_props",
                 "pub(crate) fn editor_theme_preset_picker_row_status_text_props",
                 "compact_readout_text_px(text_px)",
                 "weight: FontWeight::MEDIUM,",
+            ],
+            forbidden=[
                 "editor_theme_preset_picker_header_text_is_single_line_and_shrinkable",
                 "editor_theme_preset_picker_row_label_text_keeps_fixed_row_line_box",
                 "editor_theme_preset_picker_row_status_text_keeps_fixed_slot",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/readout/theme_preset/tests.rs"),
+            required=[
+                "editor_theme_preset_picker_header_text_is_single_line_and_shrinkable",
+                "editor_theme_preset_picker_row_label_text_keeps_fixed_row_line_box",
+                "editor_theme_preset_picker_row_status_text_keeps_fixed_slot",
+                "editor_theme_preset_picker_header_text_props",
+                "editor_theme_preset_picker_row_label_text_props",
+                "editor_theme_preset_picker_row_status_text_props",
+                "TextOverflow::Ellipsis",
+                "TextOverflow::Clip",
+                "FontWeight::MEDIUM",
             ],
             forbidden=[],
         ),
