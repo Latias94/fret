@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Enum-Select Overlay Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor enum-select overlay helper regressions split into a private test owner
+without changing overlay request assembly, popup panel/list layout, selected-row reveal,
+close-focus policy, viewport test-id derivation, or row routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` now keeps overlay implementation,
+  helper policy, and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay/tests.rs` owns close-focus,
+  viewport-id, and visibility-contract coverage.
+- `tools/gate_imui_workstream_source.py` now checks the enum-select overlay root/test split and
+  keeps migrated helper regression test names out of the root owner file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the overlay test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  enum_select_close_focus_policy_matches_trigger_owned_combobox
+  enum_select_viewport_test_id_suffixes_list_test_id
+  rect_visible_within_viewport_y_matches_nearest_visibility_contract --no-fail-fast`: pass (3
+  passed, 195 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test
+  imui_surface_policy --no-fail-fast`: pass (3 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Enum-Select Row Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor enum-select row policy regressions split into a private test owner without

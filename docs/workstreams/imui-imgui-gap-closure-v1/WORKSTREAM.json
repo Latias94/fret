@@ -1116,6 +1116,7 @@
     "ecosystem/fret-ui-editor/src/controls/slider/value_math/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs",
+    "ecosystem/fret-ui-editor/src/controls/enum_select/overlay/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select/row.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select/row/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/text_assist_field.rs",
