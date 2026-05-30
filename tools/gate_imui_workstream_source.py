@@ -30192,6 +30192,31 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/density.rs"),
+            required=[
+                "mod tests;",
+                "pub struct EditorDensity",
+                "pub fn affordance_extent(self) -> Px",
+                "pub fn resolve(theme: &Theme) -> Self",
+                "EditorTokenKeys::DENSITY_ROW_HEIGHT",
+                "component.list.row_height",
+            ],
+            forbidden=[
+                "affordance_extent_prefers_row_height_when_visual_hit_is_smaller",
+                "affordance_extent_preserves_larger_hit_targets",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/density/tests.rs"),
+            required=[
+                "affordance_extent_prefers_row_height_when_visual_hit_is_smaller",
+                "affordance_extent_preserves_larger_hit_targets",
+                "row_height: Px(24.0)",
+                "hit_thickness: Px(28.0)",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/visuals.rs"),
             required=[
                 "mod tests;",

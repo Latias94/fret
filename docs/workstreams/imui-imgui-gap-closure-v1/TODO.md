@@ -96,6 +96,11 @@ Last updated: 2026-05-31
       invalid lane fallback, or popup/panel fallback order.
       Result: `primitives/colors.rs` keeps semantic color helper implementation plus test-owner
       routing. `primitives/colors/tests.rs` owns color fallback policy coverage.
+- [x] Split editor density affordance regression tests into a private test owner without changing
+      editor density defaults, theme metric resolution, non-negative clamping, or hit-target extent
+      policy.
+      Result: `primitives/density.rs` keeps density policy implementation plus test-owner routing.
+      `primitives/density/tests.rs` owns affordance extent coverage.
 - [x] Split editor widget-visuals selection/focus/invalid/hover regressions into a private test
       owner without changing shared visual policy, selected-frame fill/foreground behavior,
       disabled alpha attenuation, invalid chrome routing, or icon-button hover overlay source.

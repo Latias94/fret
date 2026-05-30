@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Density Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor density affordance regression tests split into a private test owner without
+changing editor density defaults, theme metric resolution, non-negative clamping, or hit-target
+extent policy.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/density.rs` now keeps density policy implementation and
+  a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/primitives/density/tests.rs` owns affordance extent coverage.
+- `tools/gate_imui_workstream_source.py` now checks the density root/test split and keeps migrated
+  regression test names out of the root primitive file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the density root and
+  test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  affordance_extent_prefers_row_height_when_visual_hit_is_smaller
+  affordance_extent_preserves_larger_hit_targets --no-fail-fast`: pass (2 passed, 196 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Colors Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor semantic color fallback regressions split into a private test owner without

@@ -8,6 +8,9 @@ use fret_ui::Theme;
 
 use super::EditorTokenKeys;
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Debug, Clone, Copy)]
 pub struct EditorDensity {
     pub row_height: Px,
@@ -61,34 +64,5 @@ impl EditorDensity {
         out.icon_size = Px(out.icon_size.0.max(0.0));
 
         out
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use fret_core::Px;
-
-    use super::EditorDensity;
-
-    #[test]
-    fn affordance_extent_prefers_row_height_when_visual_hit_is_smaller() {
-        let density = EditorDensity {
-            row_height: Px(24.0),
-            hit_thickness: Px(20.0),
-            ..Default::default()
-        };
-
-        assert_eq!(density.affordance_extent(), Px(24.0));
-    }
-
-    #[test]
-    fn affordance_extent_preserves_larger_hit_targets() {
-        let density = EditorDensity {
-            row_height: Px(22.0),
-            hit_thickness: Px(28.0),
-            ..Default::default()
-        };
-
-        assert_eq!(density.affordance_extent(), Px(28.0));
     }
 }

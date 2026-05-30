@@ -75,6 +75,12 @@ and test-owner routing. `primitives/colors/tests.rs` owns color fallback policy 
 Editor-owned token precedence, legacy text-field fallback behavior, shared palette fallbacks,
 invalid lane fallback, and popup/panel fallback order remain unchanged.
 
+2026-05-31 editor density tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/density.rs` now keeps density policy implementation and
+test-owner routing. `primitives/density/tests.rs` owns affordance extent coverage. Editor density
+defaults, theme metric resolution, non-negative clamping, and hit-target extent policy remain
+unchanged.
+
 2026-05-31 editor visuals tests child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/visuals.rs` now keeps editor widget visual policy and
 test-owner routing. `primitives/visuals/tests.rs` owns visual-state policy coverage. Shared visual
