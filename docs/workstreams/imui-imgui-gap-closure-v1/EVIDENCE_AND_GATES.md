@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Combo Model Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI combo-model wrapper split into entry, popup-items, and response owners without
+changing borrowed item iteration, canonical `combo_with_options` reuse, option picking, popup close,
+trigger test-id option suffixes, or changed/edited/deactivated-after-edit response semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/combo_model_controls.rs` is now a thin module/re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/combo_model_controls/entry.rs` owns model reads, preview
+  fallback, combo option forwarding, and canonical combo mounting.
+- `ecosystem/fret-ui-kit/src/imui/combo_model_controls/popup_items.rs` owns borrowed item
+  iteration, selectable item rows, option test-id suffixes, model updates, and popup close.
+- `ecosystem/fret-ui-kit/src/imui/combo_model_controls/response.rs` owns
+  changed/edited/deactivated-after-edit response projection.
+- `ecosystem/fret-ui-kit/tests/imui_perf_guard_smoke.rs` now points the combo-model performance
+  source guard at the entry owner where the canonical combo helper call lives.
+- `tools/gate_imui_workstream_source.py` checks the new hub/entry/popup-items/response split and
+  keeps response projection out of popup item rendering.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_combo --no-fail-fast`: pass (11 passed, 175 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_combo_smoke --no-fail-fast`:
+  pass (2 passed).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_perf_guard_smoke
+  combo_model_wrapper_does_not_materialize_items_vec_each_frame --no-fail-fast`: pass (1 passed,
+  4 skipped).
+
 ## Switch Entry/Props Owner-Split Evidence - 2026-05-30
 
 Claim verified: IMUI switch entry and props ownership split without changing label identity, model

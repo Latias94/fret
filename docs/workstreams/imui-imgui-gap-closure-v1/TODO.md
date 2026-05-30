@@ -1603,6 +1603,13 @@ Last updated: 2026-05-30
       shortcut activation, context-menu request handling, trigger `ResponseExt` population, and
       open/menu badge visual assembly. The root file keeps label identity, popup open/close model
       wiring, popup mounting, and aggregate `ComboResponse` open/toggled state.
+- [x] Split IMUI combo-model wrapper into entry, popup-items, and response owners without changing
+      borrowed item iteration, canonical `combo_with_options` reuse, option picking, popup close,
+      trigger test-id option suffixes, or changed/edited/deactivated-after-edit response semantics.
+      Result: `combo_model_controls.rs` is now a thin module/re-export hub,
+      `combo_model_controls/entry.rs` owns model reads, preview fallback, combo option forwarding,
+      and canonical combo mounting, `popup_items.rs` owns selectable item rows plus model/popup
+      updates, and `response.rs` owns changed response projection.
 - [x] Split IMUI combo trigger behavior out of
       `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger.rs` into a private owner module
       without changing trigger props, ComboBox semantics, a11y label derivation, shortcut
