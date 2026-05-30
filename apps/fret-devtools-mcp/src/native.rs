@@ -96,6 +96,8 @@ const DEBUG_HOTSPOTS_COMMAND: &str =
 const DEBUG_TRACE_COMMAND: &str = "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json";
 const DEMO_METRICS_DEBUG_OWNER_DOC: &str =
     "docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json";
+const DEMO_METRICS_DEBUG_ACTION_METADATA_DOC: &str =
+    "docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/WORKSTREAM.json";
 const DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC: &str =
     "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json";
 const DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC: &str = "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md";
@@ -104,29 +106,53 @@ const DOCKING_CAMPAIGN_VALIDATE_COMMAND: &str = "cargo run -p fretboard-dev -- d
 const DOCKING_POLICY_SKIP_COMMAND: &str = "python tools/diag_gate_docking_wayland_policy_skip.py";
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct DemoMetricsDebugActionSpec {
+    id: &'static str,
     label: &'static str,
     command: &'static str,
+    category: &'static str,
+    requires_bundle: bool,
+    primary: bool,
 }
 const DEMO_METRICS_DEBUG_ACTIONS: &[DemoMetricsDebugActionSpec] = &[
     DemoMetricsDebugActionSpec {
+        id: "open_workbench",
         label: "open workbench",
         command: DEMO_EDITOR_WORKBENCH_COMMAND,
+        category: "demo",
+        requires_bundle: false,
+        primary: true,
     },
     DemoMetricsDebugActionSpec {
+        id: "product_discovery",
         label: "run product discovery",
         command: IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND,
+        category: "product-gate",
+        requires_bundle: false,
+        primary: false,
     },
     DemoMetricsDebugActionSpec {
+        id: "inspect_metrics_stats",
         label: "inspect metrics stats",
         command: METRICS_STATS_COMMAND,
+        category: "metrics",
+        requires_bundle: true,
+        primary: false,
     },
     DemoMetricsDebugActionSpec {
+        id: "inspect_debug_trace",
         label: "inspect debug trace",
         command: DEBUG_TRACE_COMMAND,
+        category: "debug",
+        requires_bundle: true,
+        primary: false,
     },
     DemoMetricsDebugActionSpec {
+        id: "validate_docking_campaign",
         label: "validate docking campaign",
         command: DOCKING_CAMPAIGN_VALIDATE_COMMAND,
+        category: "handoff",
+        requires_bundle: false,
+        primary: false,
     },
 ];
 const RECENT_EVIDENCE_GATE_RUNS_DIR: &str = ".fret/diag/gate-runs";
@@ -3018,6 +3044,7 @@ fn mcp_first_open_lines() -> Vec<String> {
         ),
         format!("route: {DEMO_METRICS_DEBUG_ROUTE_ID}"),
         format!("route owner: {DEMO_METRICS_DEBUG_OWNER_DOC}"),
+        format!("action metadata owner: {DEMO_METRICS_DEBUG_ACTION_METADATA_DOC}"),
         format!("docking owner: {DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC}"),
         format!("wayland acceptance: {DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC}"),
         "action surface: dedicated DevTools guide panel + MCP first-open action list".to_string(),
@@ -3029,6 +3056,12 @@ fn mcp_first_open_lines() -> Vec<String> {
             .iter()
             .map(|action| format!("action: {} -> {}", action.label, action.command)),
     );
+    lines.extend(DEMO_METRICS_DEBUG_ACTIONS.iter().map(|action| {
+        format!(
+            "action metadata: {} | id={} | category={} | primary={} | requires_bundle={}",
+            action.label, action.id, action.category, action.primary, action.requires_bundle
+        )
+    }));
     lines.extend([
         format!("demo editor workbench: {DEMO_EDITOR_WORKBENCH_COMMAND}"),
         format!("demo editor proof supporting: {DEMO_EDITOR_PROOF_COMMAND}"),
@@ -3627,6 +3660,9 @@ mod tests {
             "route owner: docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json"
         ));
         assert!(text.contains(
+            "action metadata owner: docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/WORKSTREAM.json"
+        ));
+        assert!(text.contains(
             "docking owner: docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"
         ));
         assert!(text.contains(
@@ -3652,6 +3688,12 @@ mod tests {
         ));
         assert!(text.contains(
             "action: validate docking campaign -> cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json"
+        ));
+        assert!(text.contains(
+            "action metadata: open workbench | id=open_workbench | category=demo | primary=true | requires_bundle=false"
+        ));
+        assert!(text.contains(
+            "action metadata: inspect debug trace | id=inspect_debug_trace | category=debug | primary=false | requires_bundle=true"
         ));
         assert!(text.contains(
             "demo editor workbench: cargo run -p fret-demo --bin imui_editor_workbench_demo"

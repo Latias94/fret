@@ -20,8 +20,8 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiPointerActionHost};
 use fret_ui::element::{
-    AnyElement, CanvasProps, ContainerProps, CrossAlign, Length, MainAlign, PointerRegionProps,
-    PositionStyle, RowProps, SemanticsProps, StackProps, TextProps,
+    AnyElement, CanvasProps, ContainerProps, CrossAlign, InsetEdge, Length, MainAlign,
+    PointerRegionProps, PositionStyle, RowProps, SemanticsProps, StackProps, TextProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, Invalidation, Theme, UiHost};
@@ -33,6 +33,10 @@ use fret_ui_kit::{
 use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
 use crate::foundation::indication::material_pressable_indication_config;
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
+use crate::foundation::test_id::{
+    absolute_region_layout, centered_absolute_region_layout, diagnostic_anchor,
+    optional_part_test_id, part_test_id,
+};
 use crate::interaction::state_layer::StateLayerAnimator;
 use crate::tokens::slider as slider_tokens;
 
@@ -529,12 +533,15 @@ pub fn slider<H: UiHost>(
         .clamp(min, max);
     let value_now = quantize_value(value_now, min, max, step);
     let t_value = value_to_t(value_now, min, max);
+    let semantic_step = keyboard_step_delta(min, max, step);
+    let semantic_jump = keyboard_page_delta(min, max, step);
 
     let mut semantics = SemanticsProps::default();
     semantics.layout.size.width = Length::Fill;
     semantics.layout.size.height = Length::Fill;
     semantics.role = SemanticsRole::Slider;
     semantics.label = a11y_label;
+    let root_test_id = test_id.clone();
     semantics.test_id = test_id;
     semantics.focusable = !disabled;
     semantics.disabled = disabled;
@@ -547,9 +554,11 @@ pub fn slider<H: UiHost>(
     if max.is_finite() {
         semantics.max_numeric_value = Some(max as f64);
     }
-    if step.is_finite() && step > 0.0 {
-        semantics.numeric_value_step = Some(step as f64);
-        semantics.numeric_value_jump = Some((step * 10.0) as f64);
+    if semantic_step.is_finite() && semantic_step > 0.0 {
+        semantics.numeric_value_step = Some(semantic_step as f64);
+    }
+    if semantic_jump.is_finite() && semantic_jump > 0.0 {
+        semantics.numeric_value_jump = Some(semantic_jump as f64);
     }
     semantics.value_editable = Some(!disabled);
 
@@ -571,6 +580,9 @@ pub fn slider<H: UiHost>(
     semantics.value = Some(value_text);
 
     cx.semantics_with_id(semantics, move |cx, semantics_id| {
+        let track_test_id = optional_part_test_id(root_test_id.as_ref(), "track");
+        let active_track_test_id = optional_part_test_id(root_test_id.as_ref(), "active-track");
+        let handle_test_id = optional_part_test_id(root_test_id.as_ref(), "handle");
         let layout_direction = resolved_layout_direction(cx, default_layout_direction);
         let rtl = layout_direction == LayoutDirection::Rtl;
         let sign = if rtl { -1.0 } else { 1.0 };
@@ -1148,8 +1160,49 @@ pub fn slider<H: UiHost>(
                 None
             };
 
-            vec![cx.stack_props(stack_props, |_cx| {
+            vec![cx.stack_props(stack_props, |cx| {
                 let mut out = vec![content];
+                if let Some(test_id) = track_test_id.clone() {
+                    out.push(diagnostic_anchor(
+                        cx,
+                        test_id,
+                        absolute_region_layout(
+                            InsetEdge::Px(Px(0.0)),
+                            InsetEdge::Px(Px((handle_h.0 - track_h.0) * 0.5)),
+                            Length::Fill,
+                            Length::Px(track_h),
+                        ),
+                    ));
+                }
+                if let Some(test_id) = active_track_test_id.clone() {
+                    let (left, width) = if rtl {
+                        (InsetEdge::Fraction(t), Length::Fraction(1.0 - t))
+                    } else {
+                        (InsetEdge::Px(Px(0.0)), Length::Fraction(t))
+                    };
+                    out.push(diagnostic_anchor(
+                        cx,
+                        test_id,
+                        absolute_region_layout(
+                            left,
+                            InsetEdge::Px(Px((handle_h.0 - track_h.0) * 0.5)),
+                            width,
+                            Length::Px(track_h),
+                        ),
+                    ));
+                }
+                if let Some(test_id) = handle_test_id.clone() {
+                    out.push(diagnostic_anchor(
+                        cx,
+                        test_id,
+                        centered_absolute_region_layout(
+                            InsetEdge::Fraction(t),
+                            InsetEdge::Px(Px(0.0)),
+                            handle_w,
+                            handle_h,
+                        ),
+                    ));
+                }
                 if let Some(indicator) = value_indicator {
                     out.push(indicator);
                 }
@@ -1296,8 +1349,12 @@ pub fn range_slider<H: UiHost>(
     semantics.value = Some(range_value_text);
 
     let track_h = Px(active_track_h.0.max(inactive_track_h.0));
+    let semantic_step = keyboard_step_delta(min, max, step);
+    let semantic_jump = keyboard_page_delta(min, max, step);
 
     cx.semantics_with_id(semantics, move |cx, group_semantics_id| {
+        let track_test_id = optional_part_test_id(test_id.as_ref(), "track");
+        let active_track_test_id = optional_part_test_id(test_id.as_ref(), "active-track");
         let layout_direction = resolved_layout_direction(cx, default_layout_direction);
         let rtl = layout_direction == LayoutDirection::Rtl;
         let sign = if rtl { -1.0 } else { 1.0 };
@@ -1346,6 +1403,8 @@ pub fn range_slider<H: UiHost>(
                     st.end_test_id.clone(),
                 )
             });
+        let start_handle_test_id = start_test_id.as_ref().map(|id| part_test_id(id, "handle"));
+        let end_handle_test_id = end_test_id.as_ref().map(|id| part_test_id(id, "handle"));
 
         #[derive(Default)]
         struct DerivedThumbValues {
@@ -1405,12 +1464,14 @@ pub fn range_slider<H: UiHost>(
         if min.is_finite() {
             start_thumb_semantics.min_numeric_value = Some(min as f64);
         }
-        if max.is_finite() {
-            start_thumb_semantics.max_numeric_value = Some(max as f64);
+        if values_now[1].is_finite() {
+            start_thumb_semantics.max_numeric_value = Some(values_now[1] as f64);
         }
-        if step.is_finite() && step > 0.0 {
-            start_thumb_semantics.numeric_value_step = Some(step as f64);
-            start_thumb_semantics.numeric_value_jump = Some((step * 10.0) as f64);
+        if semantic_step.is_finite() && semantic_step > 0.0 {
+            start_thumb_semantics.numeric_value_step = Some(semantic_step as f64);
+        }
+        if semantic_jump.is_finite() && semantic_jump > 0.0 {
+            start_thumb_semantics.numeric_value_jump = Some(semantic_jump as f64);
         }
         start_thumb_semantics.value_editable = Some(enabled);
 
@@ -1482,15 +1543,17 @@ pub fn range_slider<H: UiHost>(
         if values_now[1].is_finite() {
             end_thumb_semantics.numeric_value = Some(values_now[1] as f64);
         }
-        if min.is_finite() {
-            end_thumb_semantics.min_numeric_value = Some(min as f64);
+        if values_now[0].is_finite() {
+            end_thumb_semantics.min_numeric_value = Some(values_now[0] as f64);
         }
         if max.is_finite() {
             end_thumb_semantics.max_numeric_value = Some(max as f64);
         }
-        if step.is_finite() && step > 0.0 {
-            end_thumb_semantics.numeric_value_step = Some(step as f64);
-            end_thumb_semantics.numeric_value_jump = Some((step * 10.0) as f64);
+        if semantic_step.is_finite() && semantic_step > 0.0 {
+            end_thumb_semantics.numeric_value_step = Some(semantic_step as f64);
+        }
+        if semantic_jump.is_finite() && semantic_jump > 0.0 {
+            end_thumb_semantics.numeric_value_jump = Some(semantic_jump as f64);
         }
         end_thumb_semantics.value_editable = Some(enabled);
 
@@ -2243,8 +2306,66 @@ pub fn range_slider<H: UiHost>(
                 None
             };
 
-            vec![cx.stack_props(stack_props, |_cx| {
+            vec![cx.stack_props(stack_props, |cx| {
                 let mut out = vec![content, start_thumb, end_thumb];
+                if let Some(test_id) = track_test_id.clone() {
+                    out.push(diagnostic_anchor(
+                        cx,
+                        test_id,
+                        absolute_region_layout(
+                            InsetEdge::Px(Px(0.0)),
+                            InsetEdge::Px(Px((handle_h.0 - track_h.0) * 0.5)),
+                            Length::Fill,
+                            Length::Px(track_h),
+                        ),
+                    ));
+                }
+                if let Some(test_id) = active_track_test_id.clone() {
+                    out.push(diagnostic_anchor(
+                        cx,
+                        test_id,
+                        absolute_region_layout(
+                            InsetEdge::Fraction(t_left),
+                            InsetEdge::Px(Px((handle_h.0 - track_h.0) * 0.5)),
+                            Length::Fraction(t_right - t_left),
+                            Length::Px(track_h),
+                        ),
+                    ));
+                }
+                if let Some(test_id) = start_handle_test_id.clone() {
+                    let handle_w = if active_thumb == 0 {
+                        handle_w_active
+                    } else {
+                        handle_w_inactive
+                    };
+                    out.push(diagnostic_anchor(
+                        cx,
+                        test_id,
+                        centered_absolute_region_layout(
+                            InsetEdge::Fraction(t0_visual),
+                            InsetEdge::Px(Px(0.0)),
+                            handle_w,
+                            handle_h,
+                        ),
+                    ));
+                }
+                if let Some(test_id) = end_handle_test_id.clone() {
+                    let handle_w = if active_thumb == 1 {
+                        handle_w_active
+                    } else {
+                        handle_w_inactive
+                    };
+                    out.push(diagnostic_anchor(
+                        cx,
+                        test_id,
+                        centered_absolute_region_layout(
+                            InsetEdge::Fraction(t1_visual),
+                            InsetEdge::Px(Px(0.0)),
+                            handle_w,
+                            handle_h,
+                        ),
+                    ));
+                }
                 if let Some(indicator) = value_indicator {
                     out.push(indicator);
                 }

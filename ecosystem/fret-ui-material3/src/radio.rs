@@ -14,7 +14,7 @@ use fret_core::{
 use fret_runtime::{ActionId, Model};
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
-    AnyElement, CanvasProps, ContainerProps, Length, Overflow, PointerRegionProps, PressableA11y,
+    AnyElement, CanvasProps, ContainerProps, InsetEdge, Length, Overflow, PointerRegionProps,
     PressableProps,
 };
 use fret_ui::elements::ElementContext;
@@ -22,6 +22,7 @@ use fret_ui::pixel_snap;
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::controllable_state;
+use fret_ui_kit::primitives::radio_group::radio_button_a11y;
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
 };
@@ -34,7 +35,11 @@ use crate::foundation::interaction::{PressableInteraction, pressable_interaction
 use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, minimum_interactive_size,
 };
-use crate::interaction::state_layer::StateLayerAnimator;
+use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::test_id::{
+    absolute_region_layout, diagnostic_anchor, optional_part_test_id,
+};
+use crate::motion::SpringAnimator;
 use crate::tokens::radio as radio_tokens;
 use crate::tokens::radio::RadioSizeTokens;
 
@@ -799,19 +804,15 @@ impl Radio {
                     RadioFocusPolicy::Default => enabled,
                     RadioFocusPolicy::Roving { tab_stop } => enabled && (tab_stop || st.focused),
                 };
+                let mut a11y = radio_button_a11y(self.a11y_label.clone(), checked);
+                a11y.test_id = self.test_id.clone();
+                a11y.pos_in_set = self.a11y_pos_in_set;
+                a11y.set_size = self.a11y_set_size;
                 let pressable_props = PressableProps {
                     enabled,
                     focusable,
                     key_activation: Default::default(),
-                    a11y: PressableA11y {
-                        role: Some(SemanticsRole::RadioButton),
-                        label: self.a11y_label.clone(),
-                        test_id: self.test_id.clone(),
-                        checked: Some(checked),
-                        pos_in_set: self.a11y_pos_in_set,
-                        set_size: self.a11y_set_size,
-                        ..Default::default()
-                    },
+                    a11y,
                     layout: {
                         let mut l = fret_ui::element::LayoutStyle::default();
                         l.overflow = Overflow::Visible;
@@ -877,8 +878,7 @@ impl Radio {
                             state_layer_target,
                             state_layer_color,
                             indication_config,
-                            dot_duration_ms,
-                            dot_easing,
+                            dot_spring,
                             ripple_base_opacity,
                             icon_color,
                         ) = {
@@ -904,12 +904,8 @@ impl Radio {
                                 Some(Px(size.state_layer.0 * 0.5)),
                             );
 
-                            let dot_duration_ms = theme
-                                .duration_ms_by_key("md.sys.motion.duration.medium2")
-                                .unwrap_or(300);
-                            let dot_easing = theme
-                                .easing_by_key("md.sys.motion.easing.emphasized.decelerate")
-                                .unwrap_or(indication_config.easing);
+                            let dot_spring =
+                                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
 
                             let ripple_base_opacity =
                                 radio_tokens::pressed_state_layer_opacity(theme, checked);
@@ -931,8 +927,7 @@ impl Radio {
                                 state_layer_target,
                                 state_layer_color,
                                 indication_config,
-                                dot_duration_ms,
-                                dot_easing,
+                                dot_spring,
                                 ripple_base_opacity,
                                 icon_color,
                             )
@@ -941,23 +936,25 @@ impl Radio {
                         #[derive(Default)]
                         struct RadioDotRuntime {
                             dot_target: f32,
-                            dot: StateLayerAnimator,
+                            dot: SpringAnimator,
                         }
 
                         let (dot_scale, dot_active) =
                             cx.state_for(pressable_id, RadioDotRuntime::default, |rt| {
                                 let desired_dot = if checked { 1.0 } else { 0.0 };
+
+                                if !rt.dot.is_initialized() {
+                                    rt.dot_target = desired_dot;
+                                    rt.dot.reset(now_frame, desired_dot);
+                                    return (rt.dot.value(), false);
+                                }
+
                                 if (desired_dot - rt.dot_target).abs() > 1e-6 {
                                     rt.dot_target = desired_dot;
-                                    rt.dot.set_target(
-                                        now_frame,
-                                        desired_dot,
-                                        dot_duration_ms,
-                                        dot_easing,
-                                    );
+                                    rt.dot.set_target(now_frame, desired_dot, dot_spring);
                                 }
                                 rt.dot.advance(now_frame);
-                                (rt.dot.value(), rt.dot.is_active())
+                                (rt.dot.value().clamp(0.0, 1.0), rt.dot.is_active())
                             });
 
                         let overlay = material_ink_layer_for_pressable(
@@ -976,7 +973,12 @@ impl Radio {
 
                         let icon = radio_icon(cx, size, checked, icon_color, dot_scale);
 
-                        let chrome = material_radio_chrome(cx, size, vec![overlay, icon]);
+                        let chrome = material_radio_chrome(
+                            cx,
+                            size,
+                            pressable_props.a11y.test_id.as_ref(),
+                            vec![overlay, icon],
+                        );
                         vec![centered_fill_with_chrome_test_id(
                             cx,
                             pressable_props.a11y.test_id.as_ref(),
@@ -994,6 +996,7 @@ impl Radio {
 fn material_radio_chrome<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     size: RadioSizeTokens,
+    base_test_id: Option<&Arc<str>>,
     children: Vec<AnyElement>,
 ) -> AnyElement {
     let mut props = ContainerProps::default();
@@ -1001,7 +1004,41 @@ fn material_radio_chrome<H: UiHost>(
     props.corner_radii = Corners::all(Px(size.state_layer.0 * 0.5));
     props.layout.size.width = Length::Px(size.state_layer);
     props.layout.size.height = Length::Px(size.state_layer);
-    cx.container(props, move |_cx| children)
+    let icon_test_id = optional_part_test_id(base_test_id, "icon");
+    let dot_test_id = optional_part_test_id(base_test_id, "dot");
+    cx.container(props, move |cx| {
+        let mut children = children;
+        let icon_inset = Px((size.state_layer.0 - size.icon.0) * 0.5);
+        if let Some(test_id) = icon_test_id.clone() {
+            children.push(diagnostic_anchor(
+                cx,
+                test_id,
+                absolute_region_layout(
+                    InsetEdge::Px(icon_inset),
+                    InsetEdge::Px(icon_inset),
+                    Length::Px(size.icon),
+                    Length::Px(size.icon),
+                ),
+            ));
+        }
+
+        let dot_size = Px(10.0);
+        let dot_inset = Px((size.state_layer.0 - dot_size.0) * 0.5);
+        if let Some(test_id) = dot_test_id.clone() {
+            children.push(diagnostic_anchor(
+                cx,
+                test_id,
+                absolute_region_layout(
+                    InsetEdge::Px(dot_inset),
+                    InsetEdge::Px(dot_inset),
+                    Length::Px(dot_size),
+                    Length::Px(dot_size),
+                ),
+            ));
+        }
+
+        children
+    })
 }
 
 fn radio_icon<H: UiHost>(

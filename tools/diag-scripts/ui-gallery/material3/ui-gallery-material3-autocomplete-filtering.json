@@ -31,7 +31,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-material3-autocomplete-listbox" }
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-autocomplete.listbox" }
       },
       "timeout_frames": 600
     },
@@ -41,7 +41,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-autocomplete-option-gamma"
+          "id": "ui-gallery-material3-autocomplete.option.gamma"
         }
       },
       "timeout_frames": 600
@@ -52,7 +52,7 @@
         "kind": "not_exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-autocomplete-option-alpha"
+          "id": "ui-gallery-material3-autocomplete.option.alpha"
         }
       },
       "timeout_frames": 600
@@ -62,7 +62,7 @@
       "type": "assert",
       "predicate": {
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-material3-autocomplete-listbox" },
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-autocomplete.listbox" },
         "padding_px": 8.0
       }
     },
@@ -71,4 +71,3 @@
     { "type": "capture_screenshot", "label": "ui-gallery-material3-autocomplete-filtering" }
   ]
 }
-

@@ -67,6 +67,10 @@ impl BoundTextArea {
         self.area.min_height = min_height;
     }
 
+    pub fn set_max_height(&mut self, max_height: Option<Px>) {
+        self.area.max_height = max_height;
+    }
+
     pub fn with_style(mut self, style: TextAreaStyle) -> Self {
         self.area.style = style;
         self.area.style_override = true;

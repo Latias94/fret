@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use fret_core::{
     Axis, Color, Corners, Edges, NodeId, Point, Px, SemanticsRole, SvgFit, TextOverflow,
-    TextStrutStyle, TextWrap, Transform2D,
+    TextStrutStyle, TextStyle, TextWrap, Transform2D,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -29,6 +29,10 @@ use fret_ui_kit::{
     resolve_override_slot_with,
 };
 
+use crate::foundation::field::{
+    material_field_active_indicator_layer, material_field_text_start_inset_x,
+};
+use crate::foundation::field_motion::{FieldInputPhase, FieldMotionTargets, field_motion_frame};
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -36,7 +40,7 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interactive_size::minimum_interactive_size;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
-use crate::motion::SpringAnimator;
+use crate::foundation::test_id::part_test_id;
 use crate::tokens::autocomplete as autocomplete_tokens;
 use crate::tokens::text_field as text_field_tokens;
 
@@ -130,67 +134,25 @@ impl TextFieldStyle {
     }
 }
 
-#[derive(Debug, Default)]
-struct TextFieldRuntime {
-    float_target: bool,
-    float: SpringAnimator,
-    last_phase: TextFieldInputPhase,
-    placeholder_opacity: SpringAnimator,
-    border_top: SpringAnimator,
-    border_right: SpringAnimator,
-    border_bottom: SpringAnimator,
-    border_left: SpringAnimator,
-    border_color: AnimatedColor,
+#[derive(Debug, Clone)]
+struct TextFieldPartTestIds {
+    chrome: Arc<str>,
+    active_indicator: Arc<str>,
+    label: Arc<str>,
+    supporting_text: Arc<str>,
+    leading_icon: Arc<str>,
+    trailing_icon: Arc<str>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-enum TextFieldInputPhase {
-    Focused,
-    #[default]
-    UnfocusedEmpty,
-    UnfocusedNotEmpty,
-}
-
-#[derive(Debug, Default)]
-struct AnimatedColor {
-    r: SpringAnimator,
-    g: SpringAnimator,
-    b: SpringAnimator,
-    a: SpringAnimator,
-}
-
-impl AnimatedColor {
-    fn reset(&mut self, now_frame: u64, color: Color) {
-        self.r.reset(now_frame, color.r);
-        self.g.reset(now_frame, color.g);
-        self.b.reset(now_frame, color.b);
-        self.a.reset(now_frame, color.a);
-    }
-
-    fn set_target(&mut self, now_frame: u64, color: Color, spec: crate::motion::SpringSpec) {
-        self.r.set_target(now_frame, color.r, spec);
-        self.g.set_target(now_frame, color.g, spec);
-        self.b.set_target(now_frame, color.b, spec);
-        self.a.set_target(now_frame, color.a, spec);
-    }
-
-    fn advance(&mut self, now_frame: u64) {
-        self.r.advance(now_frame);
-        self.g.advance(now_frame);
-        self.b.advance(now_frame);
-        self.a.advance(now_frame);
-    }
-
-    fn is_active(&self) -> bool {
-        self.r.is_active() || self.g.is_active() || self.b.is_active() || self.a.is_active()
-    }
-
-    fn value(&self) -> Color {
-        Color {
-            r: self.r.value().clamp(0.0, 1.0),
-            g: self.g.value().clamp(0.0, 1.0),
-            b: self.b.value().clamp(0.0, 1.0),
-            a: self.a.value().clamp(0.0, 1.0),
+impl TextFieldPartTestIds {
+    fn from_base(base: &Arc<str>) -> Self {
+        Self {
+            chrome: part_test_id(base, "chrome"),
+            active_indicator: part_test_id(base, "active-indicator"),
+            label: part_test_id(base, "label"),
+            supporting_text: part_test_id(base, "supporting-text"),
+            leading_icon: part_test_id(base, "leading-icon"),
+            trailing_icon: part_test_id(base, "trailing-icon"),
         }
     }
 }
@@ -207,6 +169,45 @@ fn maybe_force_strut_from_style(mut style: fret_core::TextStyle) -> fret_core::T
         ..Default::default()
     });
     style
+}
+
+fn material_text_field_input_text_style<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    multiline: bool,
+    stable_line_boxes: bool,
+) -> TextStyle {
+    let base_style = crate::foundation::context::inherited_text_style(cx).unwrap_or_else(|| {
+        let theme = Theme::global(&*cx.app);
+        theme
+            .text_style_by_key("md.sys.typescale.body-large")
+            .unwrap_or_default()
+    });
+
+    if multiline && !stable_line_boxes {
+        return typography::with_intent(base_style, TextIntent::Content);
+    }
+
+    let style = typography::with_intent(base_style, TextIntent::Control);
+    if multiline {
+        maybe_force_strut_from_style(style)
+    } else {
+        style
+    }
+}
+
+fn text_style_line_height(style: &TextStyle) -> Px {
+    if let Some(line_height) = style.line_height {
+        return line_height;
+    }
+    if let Some(line_height_em) = style.line_height_em {
+        return Px((style.size.0 * line_height_em).max(style.size.0));
+    }
+    style.size
+}
+
+fn multiline_line_limit_container_height(base_height: Px, line_height: Px, lines: usize) -> Px {
+    let extra_lines = lines.saturating_sub(1) as f32;
+    Px(base_height.0 + line_height.0.max(0.0) * extra_lines)
 }
 
 fn text_area_style_from_text_input_style(input: fret_ui::TextInputStyle) -> TextAreaStyle {
@@ -261,6 +262,8 @@ pub struct TextField {
     input_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
     multiline: bool,
     stable_line_boxes: bool,
+    multiline_min_lines: usize,
+    multiline_max_lines: Option<usize>,
     multiline_min_height: Option<Px>,
     token_namespace: TextFieldTokenNamespace,
 }
@@ -320,6 +323,8 @@ impl TextField {
             input_id_out: None,
             multiline: false,
             stable_line_boxes: true,
+            multiline_min_lines: 1,
+            multiline_max_lines: None,
             multiline_min_height: None,
             token_namespace: TextFieldTokenNamespace::TextField,
         }
@@ -365,6 +370,26 @@ impl TextField {
     /// ink clipping for tall fallback glyphs.
     pub fn stable_line_boxes(mut self, stable: bool) -> Self {
         self.stable_line_boxes = stable;
+        self
+    }
+
+    /// Minimum number of visible text lines in multiline mode.
+    pub fn min_lines(mut self, min_lines: usize) -> Self {
+        self.multiline_min_lines = min_lines.max(1);
+        self
+    }
+
+    /// Maximum number of visible text lines in multiline mode.
+    pub fn max_lines(mut self, max_lines: usize) -> Self {
+        self.multiline_max_lines = Some(max_lines.max(1));
+        self
+    }
+
+    /// Visible line bounds for multiline mode.
+    pub fn line_limits(mut self, min_lines: usize, max_lines: usize) -> Self {
+        let min_lines = min_lines.max(1);
+        self.multiline_min_lines = min_lines;
+        self.multiline_max_lines = Some(max_lines.max(min_lines));
         self
     }
 
@@ -529,6 +554,8 @@ impl TextField {
                 input_id_out,
                 multiline,
                 stable_line_boxes,
+                multiline_min_lines,
+                multiline_max_lines,
                 multiline_min_height,
                 token_namespace,
             } = self;
@@ -550,6 +577,66 @@ impl TextField {
             } else {
                 height
             };
+            let input_text_style =
+                material_text_field_input_text_style(cx, multiline, stable_line_boxes);
+            let multiline_min_lines = multiline_min_lines.max(1);
+            let multiline_max_lines = multiline_max_lines.map(|lines| lines.max(1));
+            let multiline_max_lines =
+                multiline_max_lines.map(|lines| lines.max(multiline_min_lines));
+            let multiline_content_lines = if multiline {
+                cx.read_model_ref(&model, Invalidation::Layout, |value| {
+                    value.split('\n').count().max(1)
+                })
+                .ok()
+                .unwrap_or(1)
+            } else {
+                1
+            };
+            let multiline_line_height = text_style_line_height(&input_text_style);
+            let multiline_min_container_height = multiline.then(|| {
+                multiline_line_limit_container_height(
+                    height,
+                    multiline_line_height,
+                    multiline_min_lines,
+                )
+            });
+            let multiline_max_container_height = multiline_max_lines.map(|lines| {
+                let line_limit_height =
+                    multiline_line_limit_container_height(height, multiline_line_height, lines);
+                if let Some(min_height) = multiline_min_container_height {
+                    Px(line_limit_height.0.max(min_height.0))
+                } else {
+                    line_limit_height
+                }
+            });
+            let multiline_container_height = multiline.then(|| {
+                let visible_lines = multiline_content_lines.max(multiline_min_lines);
+                let visible_lines = multiline_max_lines
+                    .map(|max_lines| visible_lines.min(max_lines))
+                    .unwrap_or(visible_lines);
+                multiline_line_limit_container_height(height, multiline_line_height, visible_lines)
+            });
+            let part_test_ids = test_id.as_ref().map(TextFieldPartTestIds::from_base);
+            let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+            let active_indicator_test_id = part_test_ids
+                .as_ref()
+                .map(|ids| ids.active_indicator.clone());
+            let label_test_id = part_test_ids.as_ref().map(|ids| ids.label.clone());
+            let supporting_text_test_id = part_test_ids
+                .as_ref()
+                .map(|ids| ids.supporting_text.clone());
+            let leading_icon_test_id = leading_icon_test_id
+                .or_else(|| part_test_ids.as_ref().map(|ids| ids.leading_icon.clone()));
+            let trailing_icon_test_id = trailing_icon_test_id
+                .or_else(|| part_test_ids.as_ref().map(|ids| ids.trailing_icon.clone()));
+            let label_element_id_out = cx.slot_state(
+                || Rc::new(Cell::new(None::<GlobalElementId>)),
+                |id| id.clone(),
+            );
+            let supporting_text_element_id_out = cx.slot_state(
+                || Rc::new(Cell::new(None::<GlobalElementId>)),
+                |id| id.clone(),
+            );
 
             let mut hover_layout = fret_ui::element::LayoutStyle::default();
             hover_layout.size.width = Length::Fill;
@@ -592,12 +679,21 @@ impl TextField {
                     move |cx| {
                         let mut children: Vec<AnyElement> = Vec::new();
                         let mut float_progress = 0.0f32;
+                        let mut active_indicator_el: Option<AnyElement> = None;
+                        let mut leading_icon_content_size: Option<Px> = None;
+                        if label.is_none() {
+                            label_element_id_out.set(None);
+                        }
+                        if supporting_text.is_none() {
+                            supporting_text_element_id_out.set(None);
+                        }
 
                         let input = cx.named("text_input", |cx| {
                             let populated = cx
                                 .read_model_ref(&model, Invalidation::Layout, |v| !v.is_empty())
                                 .ok()
                                 .unwrap_or(false);
+                            let input_text_style = input_text_style.clone();
 
                             let mut container = ContainerProps::default();
                             container.layout.size.width = Length::Fill;
@@ -661,18 +757,47 @@ impl TextField {
                                         chrome
                                     };
 
-                                    let (leading_icon_hit_width, trailing_icon_hit_width) = {
+                                    let (
+                                        leading_icon_hit_width,
+                                        trailing_icon_hit_width,
+                                        next_leading_icon_content_size,
+                                    ) = {
                                         let theme = Theme::global(&*cx.app);
                                         let min_touch_target = minimum_interactive_size(theme);
                                         let leading =
                                             leading_icon.is_some().then_some(min_touch_target);
                                         let trailing =
                                             trailing_icon.is_some().then_some(min_touch_target);
-                                        (leading.unwrap_or(Px(0.0)), trailing.unwrap_or(Px(0.0)))
+                                        let leading_size =
+                                            leading_icon.as_ref().map(|_| match token_namespace {
+                                                TextFieldTokenNamespace::TextField => {
+                                                    text_field_tokens::leading_icon_size(
+                                                        theme,
+                                                        variant_for_children,
+                                                    )
+                                                }
+                                                TextFieldTokenNamespace::Autocomplete => {
+                                                    autocomplete_tokens::leading_icon_size(
+                                                        theme,
+                                                        variant_for_children,
+                                                    )
+                                                }
+                                            });
+                                        (
+                                            leading.unwrap_or(Px(0.0)),
+                                            trailing.unwrap_or(Px(0.0)),
+                                            leading_size,
+                                        )
                                     };
+                                    leading_icon_content_size = next_leading_icon_content_size;
                                     if leading_icon_hit_width.0 > 0.0 {
-                                        chrome.padding.left =
-                                            Px(chrome.padding.left.0.max(leading_icon_hit_width.0));
+                                        chrome.padding.left = Px(chrome.padding.left.0.max(
+                                            material_field_text_start_inset_x(
+                                                leading_icon_hit_width,
+                                                next_leading_icon_content_size,
+                                            )
+                                            .0,
+                                        ));
                                     }
                                     if trailing_icon_hit_width.0 > 0.0 {
                                         chrome.padding.right = Px(chrome
@@ -682,11 +807,22 @@ impl TextField {
                                             .max(trailing_icon_hit_width.0));
                                     }
 
-                                    let should_float = focused || populated;
-                                    float_progress = if should_float { 1.0 } else { 0.0 };
+                                    let expanded_for_float = expanded.unwrap_or(false);
+                                    let should_float = focused || expanded_for_float || populated;
+                                    let input_phase = if focused {
+                                        FieldInputPhase::Focused
+                                    } else if populated {
+                                        FieldInputPhase::UnfocusedNotEmpty
+                                    } else {
+                                        FieldInputPhase::UnfocusedEmpty
+                                    };
 
-                                    let placeholder_opacity: f32 = if label.is_some() {
-                                        if focused && !populated { 1.0 } else { 0.0 }
+                                    let placeholder_target_opacity: f32 = if label.is_some() {
+                                        if (focused || expanded_for_float) && !populated {
+                                            1.0
+                                        } else {
+                                            0.0
+                                        }
                                     } else {
                                         1.0
                                     };
@@ -697,11 +833,63 @@ impl TextField {
                                         TextFieldVariant::Filled => Px(0.0),
                                     };
 
+                                    let spatial = sys_spring_in_scope(
+                                        &*cx,
+                                        Theme::global(&*cx.app),
+                                        MotionSchemeKey::FastSpatial,
+                                    );
+                                    let fast_effects = sys_spring_in_scope(
+                                        &*cx,
+                                        Theme::global(&*cx.app),
+                                        MotionSchemeKey::FastEffects,
+                                    );
+                                    let slow_effects = sys_spring_in_scope(
+                                        &*cx,
+                                        Theme::global(&*cx.app),
+                                        MotionSchemeKey::SlowEffects,
+                                    );
+                                    let motion = field_motion_frame(
+                                        cx,
+                                        FieldMotionTargets {
+                                            disabled,
+                                            should_float,
+                                            input_phase,
+                                            placeholder_target_opacity,
+                                            border: chrome.border,
+                                            border_color: chrome.border_color,
+                                            spatial,
+                                            fast_effects,
+                                            slow_effects,
+                                        },
+                                    );
+                                    float_progress = motion.float_progress.clamp(0.0, 1.0);
+
+                                    let mut container_border = motion.border;
+                                    if variant_for_children == TextFieldVariant::Filled
+                                        && motion.border.bottom.0 > 0.0
+                                    {
+                                        active_indicator_el =
+                                            Some(material_field_active_indicator_layer(
+                                                cx,
+                                                motion.border.bottom,
+                                                motion.border_color,
+                                                active_indicator_test_id.clone(),
+                                            ));
+                                        container_border.bottom = Px(0.0);
+                                    }
+
                                     container.background =
                                         (chrome.background.a > 0.0).then_some(chrome.background);
                                     container.corner_radii = chrome.corner_radii;
-                                    container.border = chrome.border;
-                                    container.border_color = Some(chrome.border_color);
+                                    container.border = container_border;
+                                    container.border_color = Some(motion.border_color);
+                                    if let Some(min_height) = multiline_container_height {
+                                        container.layout.size.height = Length::Auto;
+                                        container.layout.size.min_height =
+                                            Some(Length::Px(min_height));
+                                        container.layout.size.max_height =
+                                            multiline_max_container_height.map(Length::Px);
+                                    }
 
                                     chrome.background = Color::TRANSPARENT;
                                     chrome.border = Edges::all(Px(0.0));
@@ -710,36 +898,29 @@ impl TextField {
 
                                     chrome.placeholder_color = alpha_mul(
                                         chrome.placeholder_color,
-                                        placeholder_opacity.clamp(0.0, 1.0),
+                                        motion.placeholder_opacity.clamp(0.0, 1.0),
                                     );
 
                                     let mut props = TextAreaProps::new(model.clone());
                                     props.layout.size.width = Length::Fill;
                                     props.layout.size.height = Length::Fill;
                                     props.a11y_label = a11y_label.clone();
+                                    props.labelled_by_element =
+                                        label_element_id_out.get().map(|id| id.0);
+                                    props.described_by_element =
+                                        supporting_text.as_ref().and_then(|_| {
+                                            supporting_text_element_id_out.get().map(|id| id.0)
+                                        });
                                     props.test_id = test_id.clone();
                                     props.placeholder = placeholder.clone();
                                     props.min_height = height;
+                                    if let Some(min_height) = multiline_container_height {
+                                        props.layout.size.height = Length::Auto;
+                                        props.min_height = min_height;
+                                        props.max_height = multiline_max_container_height;
+                                    }
                                     props.chrome = text_area_style_from_text_input_style(chrome);
-
-                                    let base_style =
-                                        crate::foundation::context::inherited_text_style(cx)
-                                            .unwrap_or_else(|| {
-                                                let theme = Theme::global(&*cx.app);
-                                                theme
-                                                    .text_style_by_key(
-                                                        "md.sys.typescale.body-large",
-                                                    )
-                                                    .unwrap_or_default()
-                                            });
-                                    props.text_style = if stable_line_boxes {
-                                        maybe_force_strut_from_style(typography::with_intent(
-                                            base_style,
-                                            TextIntent::Control,
-                                        ))
-                                    } else {
-                                        typography::with_intent(base_style, TextIntent::Content)
-                                    };
+                                    props.text_style = input_text_style;
 
                                     props
                                 })
@@ -800,18 +981,47 @@ impl TextField {
                                         (chrome, spatial, fast_effects, slow_effects)
                                     };
 
-                                    let (leading_icon_hit_width, trailing_icon_hit_width) = {
+                                    let (
+                                        leading_icon_hit_width,
+                                        trailing_icon_hit_width,
+                                        next_leading_icon_content_size,
+                                    ) = {
                                         let theme = Theme::global(&*cx.app);
                                         let min_touch_target = minimum_interactive_size(theme);
                                         let leading =
                                             leading_icon.is_some().then_some(min_touch_target);
                                         let trailing =
                                             trailing_icon.is_some().then_some(min_touch_target);
-                                        (leading.unwrap_or(Px(0.0)), trailing.unwrap_or(Px(0.0)))
+                                        let leading_size =
+                                            leading_icon.as_ref().map(|_| match token_namespace {
+                                                TextFieldTokenNamespace::TextField => {
+                                                    text_field_tokens::leading_icon_size(
+                                                        theme,
+                                                        variant_for_children,
+                                                    )
+                                                }
+                                                TextFieldTokenNamespace::Autocomplete => {
+                                                    autocomplete_tokens::leading_icon_size(
+                                                        theme,
+                                                        variant_for_children,
+                                                    )
+                                                }
+                                            });
+                                        (
+                                            leading.unwrap_or(Px(0.0)),
+                                            trailing.unwrap_or(Px(0.0)),
+                                            leading_size,
+                                        )
                                     };
+                                    leading_icon_content_size = next_leading_icon_content_size;
                                     if leading_icon_hit_width.0 > 0.0 {
-                                        chrome.padding.left =
-                                            Px(chrome.padding.left.0.max(leading_icon_hit_width.0));
+                                        chrome.padding.left = Px(chrome.padding.left.0.max(
+                                            material_field_text_start_inset_x(
+                                                leading_icon_hit_width,
+                                                next_leading_icon_content_size,
+                                            )
+                                            .0,
+                                        ));
                                     }
                                     if trailing_icon_hit_width.0 > 0.0 {
                                         chrome.padding.right = Px(chrome
@@ -821,165 +1031,67 @@ impl TextField {
                                             .max(trailing_icon_hit_width.0));
                                     }
 
-                                    let should_float = focused || populated;
+                                    let expanded_for_float = expanded.unwrap_or(false);
+                                    let should_float = focused || expanded_for_float || populated;
                                     let input_phase = if focused {
-                                        TextFieldInputPhase::Focused
+                                        FieldInputPhase::Focused
                                     } else if populated {
-                                        TextFieldInputPhase::UnfocusedNotEmpty
+                                        FieldInputPhase::UnfocusedNotEmpty
                                     } else {
-                                        TextFieldInputPhase::UnfocusedEmpty
+                                        FieldInputPhase::UnfocusedEmpty
                                     };
 
                                     let placeholder_target_opacity = if label.is_some() {
-                                        if focused && !populated { 1.0 } else { 0.0 }
+                                        if (focused || expanded_for_float) && !populated {
+                                            1.0
+                                        } else {
+                                            0.0
+                                        }
                                     } else {
                                         1.0
                                     };
 
-                                    let now_frame = cx.frame_id.0;
-
-                                    let target_border = chrome.border;
-                                    let target_border_color = chrome.border_color;
-
-                                    let (
-                                        want_frames,
-                                        next_float_progress,
-                                        animated_border,
-                                        animated_border_color,
-                                        placeholder_opacity,
-                                    ) = cx.root_state(TextFieldRuntime::default, |rt| {
-                                        if disabled {
-                                            rt.float_target = should_float;
-                                            rt.float.reset(
-                                                now_frame,
-                                                if should_float { 1.0 } else { 0.0 },
-                                            );
-                                            rt.last_phase = input_phase;
-                                            rt.placeholder_opacity
-                                                .reset(now_frame, placeholder_target_opacity);
-                                            rt.border_top.reset(now_frame, target_border.top.0);
-                                            rt.border_right.reset(now_frame, target_border.right.0);
-                                            rt.border_bottom
-                                                .reset(now_frame, target_border.bottom.0);
-                                            rt.border_left.reset(now_frame, target_border.left.0);
-                                            rt.border_color.reset(now_frame, target_border_color);
-
-                                            return (
-                                                false,
-                                                rt.float.value(),
-                                                target_border,
-                                                target_border_color,
-                                                rt.placeholder_opacity.value(),
-                                            );
-                                        }
-
-                                        if rt.float_target != should_float {
-                                            rt.float_target = should_float;
-                                            rt.float.set_target(
-                                                now_frame,
-                                                if should_float { 1.0 } else { 0.0 },
-                                                spatial,
-                                            );
-                                        }
-
-                                        let placeholder_effects = match (rt.last_phase, input_phase)
-                                        {
-                                            (
-                                                TextFieldInputPhase::Focused,
-                                                TextFieldInputPhase::UnfocusedEmpty,
-                                            ) => fast_effects,
-                                            (
-                                                TextFieldInputPhase::UnfocusedEmpty,
-                                                TextFieldInputPhase::Focused,
-                                            )
-                                            | (
-                                                TextFieldInputPhase::UnfocusedNotEmpty,
-                                                TextFieldInputPhase::UnfocusedEmpty,
-                                            ) => slow_effects,
-                                            _ => fast_effects,
-                                        };
-                                        rt.last_phase = input_phase;
-
-                                        rt.placeholder_opacity.set_target(
-                                            now_frame,
+                                    let motion = field_motion_frame(
+                                        cx,
+                                        FieldMotionTargets {
+                                            disabled,
+                                            should_float,
+                                            input_phase,
                                             placeholder_target_opacity,
-                                            placeholder_effects,
-                                        );
-
-                                        rt.border_top.set_target(
-                                            now_frame,
-                                            target_border.top.0,
+                                            border: chrome.border,
+                                            border_color: chrome.border_color,
                                             spatial,
-                                        );
-                                        rt.border_right.set_target(
-                                            now_frame,
-                                            target_border.right.0,
-                                            spatial,
-                                        );
-                                        rt.border_bottom.set_target(
-                                            now_frame,
-                                            target_border.bottom.0,
-                                            spatial,
-                                        );
-                                        rt.border_left.set_target(
-                                            now_frame,
-                                            target_border.left.0,
-                                            spatial,
-                                        );
-
-                                        rt.border_color.set_target(
-                                            now_frame,
-                                            target_border_color,
                                             fast_effects,
-                                        );
-
-                                        rt.float.advance(now_frame);
-                                        rt.placeholder_opacity.advance(now_frame);
-                                        rt.border_top.advance(now_frame);
-                                        rt.border_right.advance(now_frame);
-                                        rt.border_bottom.advance(now_frame);
-                                        rt.border_left.advance(now_frame);
-                                        rt.border_color.advance(now_frame);
-
-                                        let want_frames = rt.float.is_active()
-                                            || rt.placeholder_opacity.is_active()
-                                            || rt.border_top.is_active()
-                                            || rt.border_right.is_active()
-                                            || rt.border_bottom.is_active()
-                                            || rt.border_left.is_active()
-                                            || rt.border_color.is_active();
-
-                                        (
-                                            want_frames,
-                                            rt.float.value(),
-                                            Edges {
-                                                top: Px(rt.border_top.value().max(0.0)),
-                                                right: Px(rt.border_right.value().max(0.0)),
-                                                bottom: Px(rt.border_bottom.value().max(0.0)),
-                                                left: Px(rt.border_left.value().max(0.0)),
-                                            },
-                                            rt.border_color.value(),
-                                            rt.placeholder_opacity.value(),
-                                        )
-                                    });
-
-                                    float_progress = next_float_progress.clamp(0.0, 1.0);
-
-                                    if want_frames {
-                                        cx.request_animation_frame();
-                                    }
+                                            slow_effects,
+                                        },
+                                    );
+                                    float_progress = motion.float_progress.clamp(0.0, 1.0);
 
                                     input_bg = chrome.background;
                                     outline_width_for_notch = match variant_for_children {
-                                        TextFieldVariant::Outlined => animated_border.top,
+                                        TextFieldVariant::Outlined => motion.border.top,
                                         TextFieldVariant::Filled => Px(0.0),
                                     };
+
+                                    let mut container_border = motion.border;
+                                    if variant_for_children == TextFieldVariant::Filled
+                                        && motion.border.bottom.0 > 0.0
+                                    {
+                                        active_indicator_el =
+                                            Some(material_field_active_indicator_layer(
+                                                cx,
+                                                motion.border.bottom,
+                                                motion.border_color,
+                                                active_indicator_test_id.clone(),
+                                            ));
+                                        container_border.bottom = Px(0.0);
+                                    }
 
                                     container.background =
                                         (chrome.background.a > 0.0).then_some(chrome.background);
                                     container.corner_radii = chrome.corner_radii;
-                                    container.border = animated_border;
-                                    container.border_color = Some(animated_border_color);
+                                    container.border = container_border;
+                                    container.border_color = Some(motion.border_color);
 
                                     chrome.background = Color::TRANSPARENT;
                                     chrome.border = Edges::all(Px(0.0));
@@ -988,7 +1100,7 @@ impl TextField {
 
                                     chrome.placeholder_color = alpha_mul(
                                         chrome.placeholder_color,
-                                        placeholder_opacity.clamp(0.0, 1.0),
+                                        motion.placeholder_opacity.clamp(0.0, 1.0),
                                     );
 
                                     let mut props = TextInputProps::new(model.clone());
@@ -997,6 +1109,12 @@ impl TextField {
                                     props.a11y_label = a11y_label.clone();
                                     props.a11y_role =
                                         Some(a11y_role.unwrap_or(SemanticsRole::TextField));
+                                    props.labelled_by_element =
+                                        label_element_id_out.get().map(|id| id.0);
+                                    props.described_by_element =
+                                        supporting_text.as_ref().and_then(|_| {
+                                            supporting_text_element_id_out.get().map(|id| id.0)
+                                        });
                                     props.test_id = test_id.clone();
                                     props.placeholder = placeholder.clone();
                                     props.active_descendant = active_descendant;
@@ -1004,18 +1122,7 @@ impl TextField {
                                     props.controls_element = controls_element;
                                     props.expanded = expanded;
                                     props.chrome = chrome;
-                                    let base_style =
-                                        crate::foundation::context::inherited_text_style(cx)
-                                            .unwrap_or_else(|| {
-                                                let theme = Theme::global(&*cx.app);
-                                                theme
-                                                    .text_style_by_key(
-                                                        "md.sys.typescale.body-large",
-                                                    )
-                                                    .unwrap_or_default()
-                                            });
-                                    props.text_style =
-                                        typography::with_intent(base_style, TextIntent::Control);
+                                    props.text_style = input_text_style;
 
                                     props
                                 })
@@ -1094,31 +1201,7 @@ impl TextField {
                                 icon_props.layout.size.height = Length::Px(size);
                                 let icon_el = cx.svg_icon_props(icon_props);
 
-                                #[derive(Default)]
-                                struct DerivedTestIds {
-                                    base: Option<Arc<str>>,
-                                    explicit: Option<Arc<str>>,
-                                    icon: Option<Arc<str>>,
-                                }
-
-                                let icon_test_id = cx.slot_state(DerivedTestIds::default, |st| {
-                                    if st.base.as_deref() != test_id.as_deref()
-                                        || st.explicit.as_deref() != leading_icon_test_id.as_deref()
-                                    {
-                                        st.base = test_id.clone();
-                                        st.explicit = leading_icon_test_id.clone();
-                                        st.icon = st.explicit.clone().or_else(|| {
-                                            st.base.as_ref().map(|id| {
-                                                Arc::<str>::from(format!(
-                                                    "{}-leading-icon",
-                                                    id.as_ref()
-                                                ))
-                                            })
-                                        });
-                                    }
-                                    st.icon.clone()
-                                });
-
+                                let icon_test_id = leading_icon_test_id.clone();
                                 let icon_a11y_label = leading_icon_a11y_label.clone();
 
                                 let input_id_for_focus = input_id;
@@ -1271,32 +1354,7 @@ impl TextField {
                                         icon_el
                                     };
 
-                                #[derive(Default)]
-                                struct DerivedTestIds {
-                                    base: Option<Arc<str>>,
-                                    explicit: Option<Arc<str>>,
-                                    icon: Option<Arc<str>>,
-                                }
-
-                                let icon_test_id = cx.slot_state(DerivedTestIds::default, |st| {
-                                    if st.base.as_deref() != test_id.as_deref()
-                                        || st.explicit.as_deref()
-                                            != trailing_icon_test_id.as_deref()
-                                    {
-                                        st.base = test_id.clone();
-                                        st.explicit = trailing_icon_test_id.clone();
-                                        st.icon = st.explicit.clone().or_else(|| {
-                                            st.base.as_ref().map(|id| {
-                                                Arc::<str>::from(format!(
-                                                    "{}-trailing-icon",
-                                                    id.as_ref()
-                                                ))
-                                            })
-                                        });
-                                    }
-                                    st.icon.clone()
-                                });
-
+                                let icon_test_id = trailing_icon_test_id.clone();
                                 let icon_a11y_label = trailing_icon_a11y_label.clone();
 
                                 let input_id_for_focus = input_id;
@@ -1390,7 +1448,7 @@ impl TextField {
                                 )
                             });
 
-                            cx.container(container, move |cx| {
+                            let mut chrome = cx.container(container, move |cx| {
                                 if let Some(out) = field_id_out.as_ref() {
                                     out.set(Some(cx.root_id()));
                                 }
@@ -1401,8 +1459,15 @@ impl TextField {
                                 if let Some(icon) = trailing_icon_el {
                                     out.push(icon);
                                 }
+                                if let Some(indicator) = active_indicator_el {
+                                    out.push(indicator);
+                                }
                                 out
-                            })
+                            });
+                            if let Some(test_id) = chrome_test_id.clone() {
+                                chrome = chrome.test_id(test_id);
+                            }
+                            chrome
                         });
 
                         children.push(input);
@@ -1422,6 +1487,9 @@ impl TextField {
                                 input_id,
                                 input_bg,
                                 outline_width_for_notch,
+                                label_test_id.clone(),
+                                leading_icon_content_size,
+                                label_element_id_out.clone(),
                             ));
                         }
 
@@ -1436,6 +1504,9 @@ impl TextField {
                                 disabled,
                                 error,
                                 focused,
+                                supporting_text_test_id.clone(),
+                                leading_icon_content_size,
+                                supporting_text_element_id_out.clone(),
                             ));
                         }
 
@@ -1461,6 +1532,9 @@ fn text_field_label<H: UiHost>(
     input_id: GlobalElementId,
     input_bg: Color,
     outline_width: Px,
+    test_id: Option<Arc<str>>,
+    leading_icon_size: Option<Px>,
+    label_element_id_out: Rc<Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
@@ -1479,6 +1553,7 @@ fn text_field_label<H: UiHost>(
     };
 
     let (x, y) = floating_label::material_floating_label_offsets(progress);
+    let x = material_field_text_start_inset_x(x, leading_icon_size);
 
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.position = fret_ui::element::PositionStyle::Absolute;
@@ -1507,7 +1582,7 @@ fn text_field_label<H: UiHost>(
         patch.background = floated.then_some(input_bg);
     }
 
-    cx.pointer_region(
+    let mut label = cx.pointer_region(
         PointerRegionProps {
             layout,
             enabled: !disabled,
@@ -1533,7 +1608,12 @@ fn text_field_label<H: UiHost>(
                 })]
             })]
         },
-    )
+    );
+    if let Some(test_id) = test_id {
+        label = label.test_id(test_id);
+    }
+    label_element_id_out.set(Some(label.id));
+    label
 }
 
 fn text_field_supporting_text<H: UiHost>(
@@ -1546,6 +1626,9 @@ fn text_field_supporting_text<H: UiHost>(
     disabled: bool,
     error: bool,
     focused: bool,
+    test_id: Option<Arc<str>>,
+    leading_icon_size: Option<Px>,
+    supporting_text_element_id_out: Rc<Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
@@ -1567,10 +1650,13 @@ fn text_field_supporting_text<H: UiHost>(
     };
 
     let mut layout = fret_ui::element::LayoutStyle::default();
-    layout.margin.left = fret_ui::element::MarginEdge::Px(Px(16.0));
+    layout.margin.left = fret_ui::element::MarginEdge::Px(material_field_text_start_inset_x(
+        Px(16.0),
+        leading_icon_size,
+    ));
     layout.margin.right = fret_ui::element::MarginEdge::Px(Px(16.0));
 
-    cx.text_props(TextProps {
+    let mut supporting_text = cx.text_props(TextProps {
         layout,
         text,
         style,
@@ -1579,7 +1665,12 @@ fn text_field_supporting_text<H: UiHost>(
         overflow: TextOverflow::Clip,
         align: fret_core::TextAlign::Start,
         ink_overflow: Default::default(),
-    })
+    });
+    if let Some(test_id) = test_id {
+        supporting_text = supporting_text.test_id(test_id);
+    }
+    supporting_text_element_id_out.set(Some(supporting_text.id));
+    supporting_text
 }
 
 fn text_field_widget_states<H: UiHost>(

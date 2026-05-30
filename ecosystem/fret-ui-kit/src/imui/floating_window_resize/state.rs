@@ -1,22 +1,15 @@
-use std::sync::Arc;
-
-use fret_core::{Point, Px, Size};
+use fret_core::{Point, Size};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use super::FloatingWindowResizeHandleTestIds;
 use super::FloatingWindowResizeSnapshot;
 use drag_apply::apply_resize_drag;
+use initial::initial_float_window_state;
+pub(in crate::imui) use output::FloatingWindowResizeStateOutput;
 
 mod drag_apply;
-
-pub(in crate::imui) struct FloatingWindowResizeStateOutput {
-    pub(in crate::imui) position_after_resize: Point,
-    pub(in crate::imui) size: Size,
-    pub(in crate::imui) resizing: bool,
-    pub(in crate::imui) title_bar_test_id: Arc<str>,
-    pub(in crate::imui) close_button_test_id: Arc<str>,
-    pub(in crate::imui) handle_test_ids: FloatingWindowResizeHandleTestIds,
-}
+mod initial;
+mod output;
 
 pub(in crate::imui) fn prepare_resize_state<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -49,22 +42,7 @@ pub(in crate::imui) fn prepare_resize_state<H: UiHost>(
         resize_corner_test_id,
     ) = cx.state_for(
         window_id,
-        || super::super::FloatWindowState {
-            size: initial_size.unwrap_or_else(|| Size::new(Px(0.0), Px(0.0))),
-            last_resize_position: None,
-            title_bar_test_id: Arc::from(format!("imui.float_window.title_bar:{id}")),
-            close_button_test_id: Arc::from(format!("imui.float_window.close:{id}")),
-            resize_left_test_id: Arc::from(format!("imui.float_window.resize.left:{id}")),
-            resize_right_test_id: Arc::from(format!("imui.float_window.resize.right:{id}")),
-            resize_top_test_id: Arc::from(format!("imui.float_window.resize.top:{id}")),
-            resize_bottom_test_id: Arc::from(format!("imui.float_window.resize.bottom:{id}")),
-            resize_top_left_test_id: Arc::from(format!("imui.float_window.resize.top_left:{id}")),
-            resize_top_right_test_id: Arc::from(format!("imui.float_window.resize.top_right:{id}")),
-            resize_bottom_left_test_id: Arc::from(format!(
-                "imui.float_window.resize.bottom_left:{id}"
-            )),
-            resize_corner_test_id: Arc::from(format!("imui.float_window.resize.corner:{id}")),
-        },
+        || initial_float_window_state(id, initial_size),
         |st| {
             let mut position = area_position;
 

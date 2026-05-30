@@ -28,6 +28,7 @@ use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::dropdown_menu as menu;
 use fret_ui_kit::primitives::popper;
@@ -1502,12 +1503,11 @@ fn dropdown_menu_label_element<H: UiHost>(
     pad_x: Px,
     pad_x_inset: Px,
     pad_y: Px,
-    text_style: &TextStyle,
+    _text_style: &TextStyle,
     fg: fret_core::Color,
 ) -> AnyElement {
     let dir = crate::direction::use_direction(cx, None);
     let pad_left = if inset { pad_x_inset } else { pad_x };
-    let text_style = text_style.clone();
 
     cx.container(
         ContainerProps {
@@ -1516,14 +1516,7 @@ fn dropdown_menu_label_element<H: UiHost>(
                 .into(),
             ..Default::default()
         },
-        move |cx| {
-            vec![crate::menu_text::menu_section_label(
-                cx,
-                text,
-                &text_style,
-                fg,
-            )]
-        },
+        move |cx| vec![decl_text::text_menu_group_label(cx, text).inherit_foreground(fg)],
     )
 }
 
@@ -5398,7 +5391,7 @@ mod tests {
     }
 
     #[test]
-    fn dropdown_menu_label_element_uses_source_aligned_section_text_role() {
+    fn dropdown_menu_label_element_uses_shared_menu_group_text_role() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let bounds = Rect::new(
@@ -5439,20 +5432,19 @@ mod tests {
             props.layout.size.min_width,
             Some(fret_ui::element::Length::Px(Px(0.0)))
         );
-        assert_eq!(props.layout.flex.grow, 1.0);
         assert_eq!(props.layout.flex.shrink, 1.0);
-        assert_eq!(
-            props.layout.flex.basis,
-            fret_ui::element::Length::Px(Px(0.0))
-        );
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
         let inherited = text
             .inherited_text_style
             .as_ref()
             .expect("dropdown menu label should inherit a text style");
-        assert_eq!(inherited.size, Some(Px(14.0)));
-        assert_eq!(inherited.line_height, Some(Px(20.0)));
+        let theme = Theme::global(&app);
+        let mut expected = typography::composable_refinement_from_style(
+            &typography::control_text_style(theme, typography::UiTextSize::Xs),
+        );
+        expected.weight = Some(FontWeight::MEDIUM);
+        assert_eq!(text.inherited_text_style.as_ref(), Some(&expected));
         assert_eq!(inherited.weight, Some(FontWeight::MEDIUM));
         assert_eq!(text.inherited_foreground, Some(foreground));
     }

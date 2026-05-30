@@ -9,26 +9,23 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Axis, Color, Edges, KeyCode, Px, SemanticsOrientation, SemanticsRole, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
-    PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, SemanticsDecoration,
-    SemanticsProps, SvgIconProps, TextProps,
+    PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, SemanticsProps,
+    SvgIconProps, TextProps,
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
-use fret_ui_headless::motion::spring::SpringDescription;
-use fret_ui_headless::motion::tolerance::Tolerance;
 use fret_ui_kit::declarative::controllable_state;
-use fret_ui_kit::declarative::motion_value::{
-    MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
-};
 use fret_ui_kit::typography::{self, TextIntent};
 
+use crate::foundation::active_indicator::{ActiveIndicatorRect, material_active_indicator_layer};
 use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -39,12 +36,47 @@ use crate::foundation::interaction::{PressableInteraction, pressable_interaction
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::test_id::part_test_id;
 use crate::tokens::navigation_rail as rail_tokens;
 use crate::{Badge, BadgePlacement, BadgeValue};
 
 #[derive(Debug, Default, Clone)]
 struct NavigationRailLayoutRuntime {
     icon_slots: LayoutProbeList,
+}
+
+#[derive(Debug, Clone)]
+struct NavigationRailPartTestIds {
+    chrome: Arc<str>,
+    active_indicator: Arc<str>,
+}
+
+impl NavigationRailPartTestIds {
+    fn from_base(base: &Arc<str>) -> Self {
+        Self {
+            chrome: part_test_id(base, "chrome"),
+            active_indicator: part_test_id(base, "active-indicator"),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct NavigationRailItemPartTestIds {
+    chrome: Arc<str>,
+    icon: Arc<str>,
+    label: Arc<str>,
+    badge: Arc<str>,
+}
+
+impl NavigationRailItemPartTestIds {
+    fn from_base(base: &Arc<str>) -> Self {
+        Self {
+            chrome: part_test_id(base, "chrome"),
+            icon: part_test_id(base, "icon"),
+            label: part_test_id(base, "label"),
+            badge: part_test_id(base, "badge"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -223,28 +255,32 @@ fn navigation_rail_impl<H: UiHost>(
             role: SemanticsRole::TabList,
             label: a11y_label.clone(),
             test_id: test_id.clone(),
+            orientation: Some(SemanticsOrientation::Vertical),
             disabled,
             ..Default::default()
         };
-        let indicator_test_id = test_id
+        let part_test_ids = test_id.as_ref().map(NavigationRailPartTestIds::from_base);
+        let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+        let indicator_test_id = part_test_ids
             .as_ref()
-            .map(|id| Arc::<str>::from(format!("{id}-active-indicator")));
+            .map(|ids| ids.active_indicator.clone());
 
-        let (container_w, container_bg, container_shape) = {
+        let (container_w, container_bg, container_shape, vertical_padding) = {
             let theme = Theme::global(&*cx.app);
             (
                 rail_tokens::container_width(theme),
                 rail_tokens::container_background(theme),
                 rail_tokens::container_shape(theme),
+                rail_tokens::vertical_padding(theme),
             )
         };
 
         let mut props = RovingFlexProps::default();
         props.flex.direction = Axis::Vertical;
-        props.flex.gap = Px(4.0).into();
+        props.flex.gap = vertical_padding.into();
         props.flex.justify = MainAlign::Start;
         props.flex.align = CrossAlign::Stretch;
-        props.flex.padding = Edges::all(Px(4.0)).into();
+        props.flex.padding = Edges::symmetric(Px(0.0), vertical_padding).into();
         props.roving = fret_ui::element::RovingFocusProps {
             enabled: !disabled,
             wrap: loop_navigation,
@@ -252,7 +288,7 @@ fn navigation_rail_impl<H: UiHost>(
         };
 
         cx.semantics(sem, move |cx| {
-            vec![cx.container(
+            let mut chrome = cx.container(
                 ContainerProps {
                     background: Some(container_bg),
                     corner_radii: container_shape,
@@ -381,7 +417,11 @@ fn navigation_rail_impl<H: UiHost>(
                         }),
                     ]
                 },
-            )]
+            );
+            if let Some(chrome_test_id) = chrome_test_id.clone() {
+                chrome = chrome.test_id(chrome_test_id);
+            }
+            vec![chrome]
         })
     })
 }
@@ -403,10 +443,19 @@ fn navigation_rail_item<H: UiHost>(
     let badge = item.badge.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
+    let part_test_ids = test_id
+        .as_ref()
+        .map(NavigationRailItemPartTestIds::from_base);
+    let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+    let icon_test_id = part_test_ids.as_ref().map(|ids| ids.icon.clone());
+    let label_test_id = part_test_ids.as_ref().map(|ids| ids.label.clone());
+    let badge_test_id = part_test_ids.as_ref().map(|ids| ids.badge.clone());
 
     let (
         indicator_w,
         indicator_h,
+        item_w,
+        item_h,
         icon_size,
         ripple_base_opacity,
         config,
@@ -418,7 +467,9 @@ fn navigation_rail_item<H: UiHost>(
         let theme = Theme::global(&*cx.app);
 
         let indicator_w = rail_tokens::active_indicator_width(theme);
-        let indicator_h = rail_tokens::active_indicator_height(theme, always_show_label);
+        let indicator_h = rail_tokens::active_indicator_height(theme, true);
+        let item_w = rail_tokens::item_width(theme);
+        let item_h = rail_tokens::item_height(theme);
         let icon_size = rail_tokens::icon_size(theme);
 
         let ripple_base_opacity = rail_tokens::pressed_state_layer_opacity(theme);
@@ -436,6 +487,8 @@ fn navigation_rail_item<H: UiHost>(
         (
             indicator_w,
             indicator_h,
+            item_w,
+            item_h,
             icon_size,
             ripple_base_opacity,
             config,
@@ -445,10 +498,6 @@ fn navigation_rail_item<H: UiHost>(
             active_indicator_corner_radii,
         )
     };
-
-    let label_h = label_style_base
-        .line_height
-        .unwrap_or(Px(label_style_base.size.0 * 1.2));
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !disabled_group && !item.disabled;
@@ -476,11 +525,6 @@ fn navigation_rail_item<H: UiHost>(
         }
 
         let show_label = always_show_label || selected;
-        let item_h = if show_label {
-            Px(indicator_w.0 + label_h.0 + 12.0)
-        } else {
-            indicator_w
-        };
 
         let pressable_props = PressableProps {
             enabled,
@@ -497,7 +541,7 @@ fn navigation_rail_item<H: UiHost>(
             },
             layout: {
                 let mut l = fret_ui::element::LayoutStyle::default();
-                l.size.width = Length::Fill;
+                l.size.width = Length::Px(item_w);
                 l.size.height = Length::Px(item_h);
                 l.overflow = Overflow::Visible;
                 {
@@ -574,33 +618,20 @@ fn navigation_rail_item<H: UiHost>(
                         rt.icon_slots.set(idx, icon_slot_id);
                     });
 
-                    let icon_el = rail_icon(cx, &icon, icon_size, icon_color);
+                    let mut icon_el = rail_icon(cx, &icon, icon_size, icon_color);
+                    if let Some(icon_test_id) = icon_test_id.clone() {
+                        icon_el = icon_el.test_id(icon_test_id);
+                    }
                     let icon_el = if let Some(badge) = badge.clone() {
-                        #[derive(Default)]
-                        struct DerivedBadgeTestId {
-                            base: Option<Arc<str>>,
-                            badge: Option<Arc<str>>,
-                        }
-
                         let badge = match badge {
                             BadgeValue::Dot => Badge::dot(),
                             BadgeValue::Text(value) => Badge::text(value),
                         };
 
-                        let badge_test_id = cx.slot_state(DerivedBadgeTestId::default, |st| {
-                            if st.base.as_deref() != test_id.as_deref() {
-                                st.base = test_id.clone();
-                                st.badge = st
-                                    .base
-                                    .as_ref()
-                                    .map(|id| Arc::<str>::from(format!("{id}-badge")));
-                            }
-                            st.badge.clone()
-                        });
                         let badge = badge
                             .placement(BadgePlacement::NavigationIcon)
                             .navigation_anchor_size(icon_size);
-                        let badge = if let Some(badge_test_id) = badge_test_id {
+                        let badge = if let Some(badge_test_id) = badge_test_id.clone() {
                             badge.test_id(badge_test_id)
                         } else {
                             badge
@@ -637,9 +668,16 @@ fn navigation_rail_item<H: UiHost>(
                     };
                     rail_label(cx, &label, style, label_color)
                 });
+                let label_el = label_el.map(|label_el| {
+                    if let Some(label_test_id) = label_test_id.clone() {
+                        label_el.test_id(label_test_id)
+                    } else {
+                        label_el
+                    }
+                });
 
                 let mut col = FlexProps::default();
-                col.layout.size.width = Length::Fill;
+                col.layout.size.width = Length::Px(item_w);
                 col.layout.size.height = Length::Px(item_h);
                 col.layout.overflow = Overflow::Visible;
                 col.direction = Axis::Vertical;
@@ -652,11 +690,8 @@ fn navigation_rail_item<H: UiHost>(
                 if let Some(label_el) = label_el {
                     children.push(label_el);
                 }
-                let chrome_test_id = test_id
-                    .as_ref()
-                    .map(|id| Arc::<str>::from(format!("{id}.chrome")));
                 let mut chrome = cx.flex(col, move |_cx| children);
-                if let Some(test_id) = chrome_test_id {
+                if let Some(test_id) = chrome_test_id.clone() {
                     chrome = chrome.test_id(test_id);
                 }
                 vec![chrome]
@@ -675,15 +710,28 @@ fn navigation_rail_active_indicator<H: UiHost>(
     indicator_test_id: Option<Arc<str>>,
 ) -> AnyElement {
     cx.named("navigation_rail_active_indicator", move |cx| {
-        let id = cx.root_id();
-        let container_bounds = cx.last_bounds_for_element(id).unwrap_or(cx.bounds);
+        let container_bounds = cx
+            .last_bounds_for_element(container_id)
+            .unwrap_or(cx.bounds);
 
-        let (indicator_color, corner_radii, spring) = {
+        let (indicator_w, indicator_h, item_h, item_gap, indicator_color, corner_radii, spring) = {
             let theme = Theme::global(&*cx.app);
+            let indicator_w = rail_tokens::active_indicator_width(theme);
+            let indicator_h = rail_tokens::active_indicator_height(theme, true);
+            let item_h = rail_tokens::item_height(theme);
+            let item_gap = rail_tokens::vertical_padding(theme);
             let indicator_color = rail_tokens::active_indicator_color(theme);
             let corner_radii = rail_tokens::active_indicator_shape(theme);
             let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
-            (indicator_color, corner_radii, spring)
+            (
+                indicator_w,
+                indicator_h,
+                item_h,
+                item_gap,
+                indicator_color,
+                corner_radii,
+                spring,
+            )
         };
 
         let icon_slot_bounds = selected_idx
@@ -699,6 +747,10 @@ fn navigation_rail_active_indicator<H: UiHost>(
                 let x = b.origin.x.0 - container_bounds.origin.x.0;
                 let y = b.origin.y.0 - container_bounds.origin.y.0;
                 (x, y, b.size.width.0, b.size.height.0, indicator_color)
+            } else if let Some(idx) = selected_idx {
+                let x = ((container_bounds.size.width.0 - indicator_w.0) / 2.0).max(0.0);
+                let y = item_gap.0 + (item_h.0 + item_gap.0) * (idx as f32);
+                (x, y, indicator_w.0, indicator_h.0, indicator_color)
             } else {
                 (0.0, 0.0, 0.0, 0.0, Color::TRANSPARENT)
             }
@@ -706,96 +758,16 @@ fn navigation_rail_active_indicator<H: UiHost>(
             (0.0, 0.0, 0.0, 0.0, Color::TRANSPARENT)
         };
 
-        let spring = SpringDescription::with_damping_ratio(
-            1.0,
-            spring.stiffness as f64,
-            spring.damping as f64,
-        );
-        let spec = MotionToSpecF32::Spring(SpringSpecF32 {
+        let target = ActiveIndicatorRect::new(target_x, target_y, target_w, target_h);
+
+        material_active_indicator_layer(
+            cx,
+            target,
+            color,
+            corner_radii,
             spring,
-            tolerance: Tolerance::default(),
-            snap_to_target: true,
-        });
-
-        let x = drive_motion_value_f32(
-            cx,
-            target_x,
-            MotionValueF32Update::To {
-                target: target_x,
-                spec,
-                kick: None,
-            },
-        );
-        let y = drive_motion_value_f32(
-            cx,
-            target_y,
-            MotionValueF32Update::To {
-                target: target_y,
-                spec,
-                kick: None,
-            },
-        );
-        let w = drive_motion_value_f32(
-            cx,
-            target_w,
-            MotionValueF32Update::To {
-                target: target_w,
-                spec,
-                kick: None,
-            },
-        );
-        let h = drive_motion_value_f32(
-            cx,
-            target_h,
-            MotionValueF32Update::To {
-                target: target_h,
-                spec,
-                kick: None,
-            },
-        );
-
-        let mut props = fret_ui::element::CanvasProps::default();
-        props.layout.position = fret_ui::element::PositionStyle::Absolute;
-        props.layout.inset.top = Some(Px(0.0)).into();
-        props.layout.inset.right = Some(Px(0.0)).into();
-        props.layout.inset.bottom = Some(Px(0.0)).into();
-        props.layout.inset.left = Some(Px(0.0)).into();
-
-        let mut indicator = cx.canvas(props, move |p| {
-            if w.value > 0.0 && h.value > 0.0 && color.a > 0.0 {
-                let bounds = p.bounds();
-                let x_px = x.value.clamp(0.0, bounds.size.width.0);
-                let y_px = y.value.clamp(0.0, bounds.size.height.0);
-                let max_w = (bounds.size.width.0 - x_px).max(0.0);
-                let max_h = (bounds.size.height.0 - y_px).max(0.0);
-                let w_px = w.value.clamp(0.0, max_w);
-                let h_px = h.value.clamp(0.0, max_h);
-
-                let rect = fret_core::Rect::new(
-                    fret_core::Point::new(
-                        Px(bounds.origin.x.0 + x_px),
-                        Px(bounds.origin.y.0 + y_px),
-                    ),
-                    fret_core::Size::new(Px(w_px), Px(h_px)),
-                );
-
-                fret_ui::paint::paint_state_layer(
-                    p.scene(),
-                    fret_core::DrawOrder(0),
-                    rect,
-                    color,
-                    1.0,
-                    corner_radii,
-                );
-            }
-        });
-
-        if let Some(test_id) = indicator_test_id.as_ref() {
-            indicator =
-                indicator.attach_semantics(SemanticsDecoration::default().test_id(test_id.clone()));
-        }
-
-        indicator
+            indicator_test_id.clone(),
+        )
     })
 }
 

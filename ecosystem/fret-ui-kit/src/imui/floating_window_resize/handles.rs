@@ -4,6 +4,7 @@ use fret_ui::UiHost;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, GlobalElementId};
 
+mod cursor;
 mod layout;
 mod pointer;
 

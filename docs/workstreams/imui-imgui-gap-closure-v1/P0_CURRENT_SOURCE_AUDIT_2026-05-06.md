@@ -15,6 +15,9 @@ This audit was refreshed from current repo sources and the local Dear ImGui mirr
   - `apps/fret-cookbook/examples/imui_action_basics.rs`
   - `apps/fret-cookbook/examples/imui_debug_draw_basics.rs`
   - `apps/fret-cookbook/examples/imui_editor_controls_basics.rs`
+  - `apps/fret-examples/src/imui_editor_workbench_demo.rs`
+  - `apps/fret-examples/tests/imui_editor_workbench_golden_path_surface.rs`
+  - `docs/workstreams/imui-editor-workbench-golden-path-v1/CLOSEOUT_AUDIT_2026-05-25.md`
 - Dear ImGui anchors:
   - `repo-ref/imgui/imgui.h`
   - `repo-ref/imgui/imgui.cpp`
@@ -42,6 +45,10 @@ The stack is materially beyond the old prototype stage:
     vector/transform editors, property group/grid, virtualized property grid, inspector panel.
 - Cookbook proof surfaces cover action interop, debug drawing, and editor controls through
   `cookbook-imui`.
+- The canonical product-facing editor workbench route is now
+  `cargo run -p fret-demo --bin imui_editor_workbench_demo`; it mounts the editor-notes workflow
+  directly and keeps `imui_editor_proof_demo`, `workspace_shell_demo`, and docking demos as
+  supporting proof surfaces.
 
 ## Stale or Partially Superseded Older Conclusions
 
@@ -67,8 +74,8 @@ understates several areas:
 | --- | --- | --- | --- | --- |
 | P0 | Source-of-truth drift | Old parity notes and current source have diverged. | docs/workstreams | `python tools/check_workstream_catalog.py` |
 | P1 | Fearless cleanup/deletion | The stack has many narrow closeouts; stale teaching paths can keep old surfaces alive by accident. | docs + examples + ecosystem owners | `python tools/gate_imui_facade_teaching_source.py` |
-| P2 | User-usable golden path | Individual examples work, but the default "write an editor panel with IMUI" story is still fragmented. | `fret`, cookbook, `fret-ui-editor`, examples | cookbook IMUI examples + source gate |
-| P2 | Workbench product closure | Dear ImGui feels complete because demo, dockspace, inspector, collection, console, and metrics compose as one product. Fret still has adjacent proofs. | workspace/docking/editor/devtools | workspace shell + editor proof gates |
+| P2 | User-usable golden path | Closed on the IMUI side: `imui_editor_workbench_demo` is the canonical product-facing editor route, with cookbook/docs/discovery pointing to it and older proof demos demoted to supporting surfaces. | `fret`, cookbook, `fret-ui-editor`, examples | `imui_editor_workbench_golden_path_surface` + `cargo check -p fret-demo --bin imui_editor_workbench_demo` |
+| P2 | Workbench product closure | The workbench route, style/theme picker integration, Demo/Metrics/Debug route, ListBox, plot adapter, and table owner slices are closed with evidence; full Dear ImGui-class product closure still depends on external owner lanes for real-host Wayland, broader DevTools GUI maturity, perf/smoothness attribution, and broad porting sugar. | workspace/docking/editor/devtools/perf | product-chain gates + owner-lane closeout audits |
 | P3 | Multi-window/backend hand-feel | Still a top parity risk: hovered viewport, peek-behind, transparent payload, mixed-DPI, release/cancel paths. | runner/backend + `fret-docking` | `imui-p3-multiwindow-parity` campaign |
 | P3 | Diagnostics ambient usability | Scripted diagnostics are strong, but the always-open Demo/Metrics/Debug culture is less immediate than Dear ImGui. | `fret-diag`, `fret-devtools`, bootstrap | devtools first-open smoke |
 | P3 | Porting ergonomics | Current proof surfaces already cover most authoring friction with explicit `PropertyGrid`, `row_with`, `horizontal_with_options`, `child_region_with_options`, and stable `id_source` / `test_id` wiring. Direct Dear ImGui ports are still more verbose, but the same tax does not yet repeat across two proof surfaces, so `SameLine` / item-width / label-ID sugar stays candidate-only. | `fret-imui` / `fret-ui-kit::imui` | two-proof helper-readiness rule |
@@ -93,11 +100,12 @@ These are candidates, not approved edits. Each requires a narrow follow-on with 
 
 ## Recommended Next Slices
 
-1. P1 cleanup scan: compare `fret::imui` public teaching imports against examples/docs and delete
+1. Keep the canonical workbench route current: when editor workflow depth changes, update
+   `imui_editor_workbench_demo` and its golden-path surface test first, leaving older proof demos as
+   supporting surfaces.
+2. P1 cleanup scan: compare `fret::imui` public teaching imports against examples/docs and delete
    obsolete direct-crate teaching paths where gates allow it.
-2. P2 golden-path proof: make `imui_editor_controls_basics` the minimal "real editor panel" teaching
-   surface with property grid, color edit, input, menu/popup, and debug draw references.
-3. P3 porting sugar proposal: only after two proof surfaces show repeated friction, propose opt-in
+3. P3 porting sugar proposal: only after two product surfaces show repeated friction, propose opt-in
    `same_line` / item-width / label-ID helpers in `fret-ui-kit::imui`.
 4. P3 diagnostics proposal: use the existing
    `docs/workstreams/standalone/diag-devtools-gui-refresh-v1.md` follow-on to keep the

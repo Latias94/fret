@@ -48,7 +48,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-material3-select-rich-listbox" }
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-select-rich.listbox" }
       },
       "timeout_frames": 600
     },
@@ -67,4 +67,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-material3-select-rich-options" }
   ]
 }
-

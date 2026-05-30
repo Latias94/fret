@@ -10,6 +10,7 @@ use super::super::super::{
     FloatWindowResizeHandle, KEY_FLOAT_WINDOW_ACTIVATE, float_layer_bring_to_front_if_activated,
     float_window_resize_kind_for_element,
 };
+use super::cursor::resize_handle_cursor;
 use super::layout::resize_handle_layout;
 
 pub(super) fn resize_handle_element<H: UiHost>(
@@ -19,7 +20,8 @@ pub(super) fn resize_handle_element<H: UiHost>(
     test_id: Arc<str>,
     enable_activation: bool,
 ) -> AnyElement {
-    let (cursor, layout) = resize_handle_layout(handle);
+    let cursor = resize_handle_cursor(handle);
+    let layout = resize_handle_layout(handle);
 
     let kind = float_window_resize_kind_for_element(window_id, handle);
     cx.pointer_region(

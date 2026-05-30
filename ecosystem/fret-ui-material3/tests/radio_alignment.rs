@@ -1,845 +1,70 @@
 use std::{
-    any::{Any, TypeId},
-    collections::{BTreeMap, HashMap, HashSet},
-    path::{Path, PathBuf},
+    collections::{BTreeMap, HashMap},
     sync::Arc,
 };
 
-use fret_core::MouseButtons;
 use fret_core::{
-    AppWindowId, DrawOrder, Edges, Event, KeyCode, Modifiers, MouseButton, NodeId, Point,
-    PointerEvent, PointerId, PointerType, Px, Rect, Scene, SceneOp, Size, Transform2D, UiServices,
+    AppWindowId, DrawOrder, Edges, Event, KeyCode, Modifiers, NodeId, Point, PointerId, Px, Rect,
+    Scene, SceneOp, SemanticsInvalid, SemanticsLive, SemanticsRole, Size, Transform2D, UiServices,
 };
-use fret_runtime::{
-    CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession, DragSessionId, Effect,
-    EffectSink, FrameId, GlobalsHost, Model, ModelHost, ModelId, ModelStore, ModelsHost,
-    PlatformCapabilities, TickId, TimeHost,
-};
+use fret_runtime::{Effect, Model, ModelHost, PlatformCapabilities};
 use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::{Theme, UiTree};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-
-fn paint_alpha(paint: &fret_core::Paint) -> f32 {
-    match paint {
-        fret_core::Paint::Solid(c) => c.a,
-        _ => 1.0,
-    }
-}
-use fret_ui_material3::tokens::v30::{
-    ColorSchemeOptions, DynamicVariant, SchemeMode, TypographyOptions, theme_config_with_colors,
-};
-use serde::{Deserialize, Serialize};
+use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 
 mod interaction_harness;
-use interaction_harness::{
-    QuadGeomSig, SceneSig, scene_quad_geometry_signature, scene_quad_signature, scene_signature,
+mod support;
+
+use interaction_harness::{QuadGeomSig, SceneSig, scene_quad_geometry_signature, scene_signature};
+use support::events::{
+    drain_zero_delay_timer_tokens, key_down, key_up, pointer_down, pointer_move,
+    pointer_move_touch, pointer_up,
 };
+use support::goldens::{
+    Material3HeadlessGoldenV1, Material3HeadlessSuiteV1, material3_scene_snapshot_v1,
+    run_overlay_frame, run_overlay_frame_scaled, run_overlay_frame_with_scene_scaled,
+    settle_material3_overlay_scene_snapshot_v1, settle_material3_scene_snapshot_v1,
+    snapshot_material3_scene_at_frame_v1, write_or_assert_material3_suite_v1,
+};
+use support::host::{FakeUiServices, TestHost};
+use support::layout::{
+    find_first_bounds_with_size, paint_alpha, semantics_node_id_by_test_id, with_padding,
+};
+use support::theme::{apply_material_theme, apply_material_theme_rtl};
 
-#[derive(Default)]
-struct TestHost {
-    globals: HashMap<TypeId, Box<dyn Any>>,
-    models: ModelStore,
-    commands: CommandRegistry,
-    redraw: HashSet<AppWindowId>,
-    effects: Vec<Effect>,
-    drags: HashMap<fret_core::PointerId, DragSession>,
-    next_drag_session_id: u64,
-    tick_id: TickId,
-    frame_id: FrameId,
-    next_timer_token: u64,
-    next_clipboard_token: u64,
-    next_share_sheet_token: u64,
-    next_image_upload_token: u64,
-}
-
-impl TestHost {
-    fn set_global<T: Any>(&mut self, value: T) {
-        GlobalsHost::set_global(self, value);
-    }
-
-    fn advance_frame(&mut self) {
-        self.frame_id = FrameId(self.frame_id.0.saturating_add(1));
-        self.tick_id = TickId(self.tick_id.0.saturating_add(1));
-    }
-}
-
-impl GlobalsHost for TestHost {
-    fn set_global<T: Any>(&mut self, value: T) {
-        self.globals.insert(TypeId::of::<T>(), Box::new(value));
-    }
-
-    fn global<T: Any>(&self) -> Option<&T> {
-        self.globals
-            .get(&TypeId::of::<T>())
-            .and_then(|v| v.downcast_ref::<T>())
-    }
-
-    fn with_global_mut<T: Any, R>(
-        &mut self,
-        init: impl FnOnce() -> T,
-        f: impl FnOnce(&mut T, &mut Self) -> R,
-    ) -> R {
-        #[derive(Debug)]
-        struct GlobalLeaseMarker;
-
-        struct Guard<T: Any> {
-            type_id: TypeId,
-            value: Option<T>,
-            globals: *mut HashMap<TypeId, Box<dyn Any>>,
-        }
-
-        impl<T: Any> Drop for Guard<T> {
-            fn drop(&mut self) {
-                let Some(value) = self.value.take() else {
-                    return;
-                };
-                unsafe {
-                    (*self.globals).insert(self.type_id, Box::new(value));
-                }
-            }
-        }
-
-        let type_id = TypeId::of::<T>();
-        let existing = self
-            .globals
-            .insert(type_id, Box::new(GlobalLeaseMarker) as Box<dyn Any>);
-
-        let existing = match existing {
-            None => None,
-            Some(v) => {
-                if v.is::<GlobalLeaseMarker>() {
-                    panic!("global already leased: {type_id:?}");
-                }
-                Some(*v.downcast::<T>().expect("global type id must match"))
-            }
-        };
-
-        let mut guard = Guard::<T> {
-            type_id,
-            value: Some(existing.unwrap_or_else(init)),
-            globals: &mut self.globals as *mut _,
-        };
-
-        let result = {
-            let value = guard.value.as_mut().expect("guard value exists");
-            f(value, self)
-        };
-
-        drop(guard);
-        result
-    }
-}
-
-impl ModelsHost for TestHost {
-    fn take_changed_models(&mut self) -> Vec<ModelId> {
-        self.models.take_changed_models()
-    }
-}
-
-impl CommandsHost for TestHost {
-    fn commands(&self) -> &CommandRegistry {
-        &self.commands
-    }
-}
-
-impl EffectSink for TestHost {
-    fn request_redraw(&mut self, window: AppWindowId) {
-        self.redraw.insert(window);
-    }
-
-    fn push_effect(&mut self, effect: Effect) {
-        match effect {
-            Effect::Redraw(window) => self.request_redraw(window),
-            effect => self.effects.push(effect),
-        }
-    }
-}
-
-impl TimeHost for TestHost {
-    fn tick_id(&self) -> TickId {
-        self.tick_id
-    }
-
-    fn frame_id(&self) -> FrameId {
-        self.frame_id
-    }
-
-    fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
-        let token = fret_runtime::TimerToken(self.next_timer_token);
-        self.next_timer_token = self.next_timer_token.saturating_add(1);
-        token
-    }
-
-    fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
-        let token = fret_runtime::ClipboardToken(self.next_clipboard_token);
-        self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
-        token
-    }
-
-    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
-        let token = fret_runtime::ShareSheetToken(self.next_share_sheet_token);
-        self.next_share_sheet_token = self.next_share_sheet_token.saturating_add(1);
-        token
-    }
-
-    fn next_image_upload_token(&mut self) -> fret_runtime::ImageUploadToken {
-        let token = fret_runtime::ImageUploadToken(self.next_image_upload_token);
-        self.next_image_upload_token = self.next_image_upload_token.saturating_add(1);
-        token
-    }
-}
-
-impl DragHost for TestHost {
-    fn drag(&self, pointer_id: fret_core::PointerId) -> Option<&DragSession> {
-        self.drags.get(&pointer_id)
-    }
-
-    fn drag_mut(&mut self, pointer_id: fret_core::PointerId) -> Option<&mut DragSession> {
-        self.drags.get_mut(&pointer_id)
-    }
-
-    fn cancel_drag(&mut self, pointer_id: fret_core::PointerId) {
-        self.drags.remove(&pointer_id);
-    }
-
-    fn any_drag_session(&self, predicate: impl FnMut(&DragSession) -> bool) -> bool {
-        self.drags.values().any(predicate)
-    }
-
-    fn find_drag_pointer_id(
-        &self,
-        mut predicate: impl FnMut(&DragSession) -> bool,
-    ) -> Option<PointerId> {
-        self.drags
+fn semantics_invalid_by_test_id(ui: &UiTree<TestHost>, test_id: &str) -> Option<SemanticsInvalid> {
+    ui.semantics_snapshot().and_then(|snapshot| {
+        snapshot
+            .nodes
             .iter()
-            .find_map(|(pointer_id, session)| predicate(session).then_some(*pointer_id))
-    }
+            .find(|node| node.test_id.as_deref() == Some(test_id))
+            .and_then(|node| node.flags.invalid)
+    })
+}
 
-    fn cancel_drag_sessions(
-        &mut self,
-        mut predicate: impl FnMut(&DragSession) -> bool,
-    ) -> Vec<PointerId> {
-        let canceled: Vec<PointerId> = self
-            .drags
+fn semantics_label_by_test_id(ui: &UiTree<TestHost>, test_id: &str) -> Option<String> {
+    ui.semantics_snapshot().and_then(|snapshot| {
+        snapshot
+            .nodes
             .iter()
-            .filter_map(|(pointer_id, session)| predicate(session).then_some(*pointer_id))
-            .collect();
-
-        for pointer_id in &canceled {
-            self.drags.remove(pointer_id);
-        }
-
-        canceled
-    }
-
-    fn begin_drag_with_kind<T: Any>(
-        &mut self,
-        pointer_id: fret_core::PointerId,
-        kind: DragKindId,
-        source_window: AppWindowId,
-        start: Point,
-        payload: T,
-    ) {
-        let session_id = DragSessionId(self.next_drag_session_id);
-        self.next_drag_session_id = self.next_drag_session_id.saturating_add(1);
-        self.drags.insert(
-            pointer_id,
-            DragSession::new(session_id, pointer_id, source_window, kind, start, payload),
-        );
-    }
-
-    fn begin_cross_window_drag_with_kind<T: Any>(
-        &mut self,
-        pointer_id: fret_core::PointerId,
-        kind: DragKindId,
-        source_window: AppWindowId,
-        start: Point,
-        payload: T,
-    ) {
-        let session_id = DragSessionId(self.next_drag_session_id);
-        self.next_drag_session_id = self.next_drag_session_id.saturating_add(1);
-        self.drags.insert(
-            pointer_id,
-            DragSession::new_cross_window(
-                session_id,
-                pointer_id,
-                source_window,
-                kind,
-                start,
-                payload,
-            ),
-        );
-    }
+            .find(|node| node.test_id.as_deref() == Some(test_id))
+            .and_then(|node| node.label.clone())
+    })
 }
 
-impl ModelHost for TestHost {
-    fn models(&self) -> &ModelStore {
-        &self.models
-    }
-
-    fn models_mut(&mut self) -> &mut ModelStore {
-        &mut self.models
-    }
-}
-
-#[derive(Default)]
-struct FakeUiServices;
-
-impl fret_core::TextService for FakeUiServices {
-    fn prepare(
-        &mut self,
-        _input: &fret_core::TextInput,
-        _constraints: fret_core::TextConstraints,
-    ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
-        (
-            fret_core::TextBlobId::default(),
-            fret_core::TextMetrics {
-                size: Size::new(Px(10.0), Px(10.0)),
-                baseline: Px(8.0),
-            },
-        )
-    }
-
-    fn release(&mut self, _blob: fret_core::TextBlobId) {}
-}
-
-impl fret_core::PathService for FakeUiServices {
-    fn prepare(
-        &mut self,
-        _commands: &[fret_core::PathCommand],
-        _style: fret_core::PathStyle,
-        _constraints: fret_core::PathConstraints,
-    ) -> (fret_core::PathId, fret_core::PathMetrics) {
-        (
-            fret_core::PathId::default(),
-            fret_core::PathMetrics::default(),
-        )
-    }
-
-    fn release(&mut self, _path: fret_core::PathId) {}
-}
-
-impl fret_core::SvgService for FakeUiServices {
-    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
-        fret_core::SvgId::default()
-    }
-
-    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
-        false
-    }
-}
-
-impl fret_core::MaterialService for FakeUiServices {
-    fn register_material(
-        &mut self,
-        _desc: fret_core::MaterialDescriptor,
-    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
-        Err(fret_core::MaterialRegistrationError::Unsupported)
-    }
-
-    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
-        false
-    }
-}
-
-fn find_first_bounds_with_size(
+fn semantics_live_by_test_id(
     ui: &UiTree<TestHost>,
-    root: fret_core::NodeId,
-    width: f32,
-    height: f32,
-) -> Option<Rect> {
-    let mut stack = vec![root];
-    while let Some(node) = stack.pop() {
-        if let Some(r) = ui.debug_node_visual_bounds(node)
-            && (r.size.width.0 - width).abs() < 0.1
-            && (r.size.height.0 - height).abs() < 0.1
-        {
-            return Some(r);
-        }
-
-        for child in ui.children(node) {
-            stack.push(child);
-        }
-    }
-    None
-}
-
-fn apply_material_theme(app: &mut TestHost, mode: SchemeMode, variant: DynamicVariant) {
-    let mut colors = ColorSchemeOptions::default();
-    colors.mode = mode;
-    colors.variant = variant;
-
-    let cfg = theme_config_with_colors(TypographyOptions::default(), colors);
-    Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
-}
-
-fn apply_material_theme_rtl(app: &mut TestHost, mode: SchemeMode, variant: DynamicVariant) {
-    let mut colors = ColorSchemeOptions::default();
-    colors.mode = mode;
-    colors.variant = variant;
-
-    let mut cfg = theme_config_with_colors(TypographyOptions::default(), colors);
-    cfg.numbers
-        .insert("md.sys.fret.layout.is-rtl".to_string(), 1.0);
-    Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
-}
-
-fn repo_root() -> PathBuf {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir
-        .parent()
-        .and_then(|p| p.parent())
-        .map(Path::to_path_buf)
-        .expect("repo root")
-}
-
-fn material3_goldens_dir() -> PathBuf {
-    repo_root()
-        .join("goldens")
-        .join("material3-headless")
-        .join("v1")
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-struct Material3HeadlessGoldenV1 {
-    signature: Vec<SceneOpSigV1>,
-    quads: Vec<QuadV1>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-struct Material3HeadlessSuiteV1 {
-    cases: BTreeMap<String, Material3HeadlessGoldenV1>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-enum SceneOpSigV1 {
-    PushTransform,
-    PopTransform,
-    PushOpacity,
-    PopOpacity,
-    PushLayer,
-    PopLayer,
-    PushClipRect,
-    PushClipRRect,
-    PushClipPath,
-    PopClip,
-    PushMask,
-    PopMask,
-    PushEffect,
-    PopEffect,
-    PushBackdropSourceGroup,
-    PopBackdropSourceGroup,
-    PushCompositeGroup,
-    PopCompositeGroup,
-    StrokeRRect { order: u32 },
-    ShadowRRect { order: u32 },
-    Quad { order: u32 },
-    VertexColorQuad { order: u32 },
-    ImageQuad { order: u32 },
-    VertexColorTriangle { order: u32 },
-    ImageTriangle { order: u32 },
-    Image { order: u32 },
-    ImageRegion { order: u32 },
-    MaskImage { order: u32 },
-    SvgMaskIcon { order: u32 },
-    SvgImage { order: u32 },
-    Text { order: u32 },
-    Path { order: u32 },
-    ViewportSurface { order: u32 },
-}
-
-impl From<SceneSig> for SceneOpSigV1 {
-    fn from(sig: SceneSig) -> Self {
-        match sig {
-            SceneSig::PushTransform => Self::PushTransform,
-            SceneSig::PopTransform => Self::PopTransform,
-            SceneSig::PushOpacity => Self::PushOpacity,
-            SceneSig::PopOpacity => Self::PopOpacity,
-            SceneSig::PushLayer => Self::PushLayer,
-            SceneSig::PopLayer => Self::PopLayer,
-            SceneSig::PushClipRect => Self::PushClipRect,
-            SceneSig::PushClipRRect => Self::PushClipRRect,
-            SceneSig::PushClipPath => Self::PushClipPath,
-            SceneSig::PopClip => Self::PopClip,
-            SceneSig::PushMask => Self::PushMask,
-            SceneSig::PopMask => Self::PopMask,
-            SceneSig::PushEffect => Self::PushEffect,
-            SceneSig::PopEffect => Self::PopEffect,
-            SceneSig::PushBackdropSourceGroup => Self::PushBackdropSourceGroup,
-            SceneSig::PopBackdropSourceGroup => Self::PopBackdropSourceGroup,
-            SceneSig::PushCompositeGroup => Self::PushCompositeGroup,
-            SceneSig::PopCompositeGroup => Self::PopCompositeGroup,
-            SceneSig::StrokeRRect(order) => Self::StrokeRRect { order: order.0 },
-            SceneSig::ShadowRRect(order) => Self::ShadowRRect { order: order.0 },
-            SceneSig::Quad(order) => Self::Quad { order: order.0 },
-            SceneSig::VertexColorQuad(order) => Self::VertexColorQuad { order: order.0 },
-            SceneSig::ImageQuad(order) => Self::ImageQuad { order: order.0 },
-            SceneSig::VertexColorTriangle(order) => Self::VertexColorTriangle { order: order.0 },
-            SceneSig::ImageTriangle(order) => Self::ImageTriangle { order: order.0 },
-            SceneSig::Image(order) => Self::Image { order: order.0 },
-            SceneSig::ImageRegion(order) => Self::ImageRegion { order: order.0 },
-            SceneSig::MaskImage(order) => Self::MaskImage { order: order.0 },
-            SceneSig::SvgMaskIcon(order) => Self::SvgMaskIcon { order: order.0 },
-            SceneSig::SvgImage(order) => Self::SvgImage { order: order.0 },
-            SceneSig::Text(order) => Self::Text { order: order.0 },
-            SceneSig::Path(order) => Self::Path { order: order.0 },
-            SceneSig::ViewportSurface(order) => Self::ViewportSurface { order: order.0 },
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-struct QuadV1 {
-    order: u32,
-    rect: [i32; 4],
-    background: [i32; 4],
-    border: [i32; 4],
-    corner_radii: [i32; 4],
-}
-
-impl From<interaction_harness::QuadSig> for QuadV1 {
-    fn from(quad: interaction_harness::QuadSig) -> Self {
-        Self {
-            order: quad.order.0,
-            rect: [quad.rect.x, quad.rect.y, quad.rect.w, quad.rect.h],
-            background: [
-                quad.background.r,
-                quad.background.g,
-                quad.background.b,
-                quad.background.a,
-            ],
-            border: [
-                quad.border.top,
-                quad.border.right,
-                quad.border.bottom,
-                quad.border.left,
-            ],
-            corner_radii: [
-                quad.corner_radii.top_left,
-                quad.corner_radii.top_right,
-                quad.corner_radii.bottom_right,
-                quad.corner_radii.bottom_left,
-            ],
-        }
-    }
-}
-
-fn material3_scene_snapshot_v1(scene: &Scene) -> Material3HeadlessGoldenV1 {
-    Material3HeadlessGoldenV1 {
-        signature: scene_signature(scene)
-            .into_iter()
-            .map(SceneOpSigV1::from)
-            .collect(),
-        quads: scene_quad_signature(scene)
-            .into_iter()
-            .map(QuadV1::from)
-            .collect(),
-    }
-}
-
-fn settle_material3_scene_snapshot_v1(
-    app: &mut TestHost,
-    ui: &mut UiTree<TestHost>,
-    services: &mut dyn UiServices,
-    bounds: Rect,
-    scale_factor: f32,
-    settle_from_frame: usize,
-    total_frames: usize,
-    stable_message: &str,
-    render: &impl Fn(&mut UiTree<TestHost>, &mut TestHost, &mut dyn UiServices) -> NodeId,
-) -> Material3HeadlessGoldenV1 {
-    let mut settled: Option<Material3HeadlessGoldenV1> = None;
-    for frame in 0..total_frames {
-        app.advance_frame();
-        let root = render(ui, app, services);
-        ui.set_root(root);
-        ui.layout_all(app, services, bounds, scale_factor);
-
-        let mut scene = Scene::default();
-        ui.paint_all(app, services, bounds, &mut scene, scale_factor);
-
-        if frame < settle_from_frame {
-            continue;
-        }
-
-        let snapshot = material3_scene_snapshot_v1(&scene);
-        if let Some(prev) = settled.as_ref() {
-            assert_eq!(snapshot, *prev, "{stable_message}");
-        } else {
-            settled = Some(snapshot);
-        }
-    }
-
-    settled.unwrap_or_else(|| panic!("expected a settled snapshot: {stable_message}"))
-}
-
-fn snapshot_material3_scene_at_frame_v1(
-    app: &mut TestHost,
-    ui: &mut UiTree<TestHost>,
-    services: &mut dyn UiServices,
-    bounds: Rect,
-    scale_factor: f32,
-    snapshot_frame: usize,
-    render: &impl Fn(&mut UiTree<TestHost>, &mut TestHost, &mut dyn UiServices) -> NodeId,
-) -> Material3HeadlessGoldenV1 {
-    let mut snapshot: Option<Material3HeadlessGoldenV1> = None;
-    for _frame in 0..=snapshot_frame {
-        app.advance_frame();
-        let root = render(ui, app, services);
-        ui.set_root(root);
-        ui.layout_all(app, services, bounds, scale_factor);
-
-        let mut scene = Scene::default();
-        ui.paint_all(app, services, bounds, &mut scene, scale_factor);
-        snapshot = Some(material3_scene_snapshot_v1(&scene));
-    }
-
-    snapshot.unwrap_or_else(|| panic!("expected a snapshot at frame {snapshot_frame}"))
-}
-
-fn settle_material3_overlay_scene_snapshot_v1(
-    app: &mut TestHost,
-    ui: &mut UiTree<TestHost>,
-    services: &mut dyn UiServices,
-    window: AppWindowId,
-    bounds: Rect,
-    scale_factor: f32,
-    settle_from_frame: usize,
-    total_frames: usize,
-    stable_message: &str,
-    render: &impl Fn(&mut UiTree<TestHost>, &mut TestHost, &mut dyn UiServices) -> NodeId,
-) -> Material3HeadlessGoldenV1 {
-    let mut settled: Option<Material3HeadlessGoldenV1> = None;
-    for frame in 0..total_frames {
-        let scene = run_overlay_frame_with_scene_scaled(
-            ui,
-            app,
-            services,
-            window,
-            bounds,
-            scale_factor,
-            false,
-            |ui, app, services| render(ui, app, services),
-        );
-
-        if frame < settle_from_frame {
-            continue;
-        }
-
-        let snapshot = material3_scene_snapshot_v1(&scene);
-        if let Some(prev) = settled.as_ref() {
-            assert_eq!(snapshot, *prev, "{stable_message}");
-        } else {
-            settled = Some(snapshot);
-        }
-    }
-
-    settled.unwrap_or_else(|| panic!("expected a settled snapshot: {stable_message}"))
-}
-
-fn write_or_assert_material3_suite_v1(name: &str, suite: &Material3HeadlessSuiteV1) {
-    let path = material3_goldens_dir().join(format!("{name}.json"));
-
-    if std::env::var_os("FRET_UPDATE_GOLDENS").is_some() {
-        std::fs::create_dir_all(material3_goldens_dir()).expect("create material3 goldens dir");
-        let json = serde_json::to_string_pretty(suite).expect("serialize material3 suite golden");
-        std::fs::write(&path, json).expect("write material3 suite golden");
-        return;
-    }
-
-    let golden_json = std::fs::read_to_string(&path).unwrap_or_else(|err| {
-        panic!(
-            "missing material3 suite golden: {}\nerror: {err}\n\nTo (re)generate:\n  $env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment -- material3_headless\n",
-            path.display()
-        )
-    });
-    let golden: Material3HeadlessSuiteV1 =
-        serde_json::from_str(&golden_json).expect("parse material3 suite golden");
-
-    assert_eq!(
-        *suite,
-        golden,
-        "material3 suite golden mismatch: {}\n\nTo update:\n  $env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment -- material3_headless",
-        path.display()
-    );
-}
-
-fn run_overlay_frame(
-    ui: &mut UiTree<TestHost>,
-    app: &mut TestHost,
-    services: &mut dyn UiServices,
-    window: AppWindowId,
-    bounds: Rect,
-    capture_semantics: bool,
-    render: impl FnOnce(&mut UiTree<TestHost>, &mut TestHost, &mut dyn UiServices) -> NodeId,
-) {
-    use fret_ui_kit::OverlayController;
-
-    app.advance_frame();
-    OverlayController::begin_frame(app, window);
-
-    let root = render(ui, app, services);
-    ui.set_root(root);
-    OverlayController::render(ui, app, services, window, bounds);
-
-    if capture_semantics {
-        ui.request_semantics_snapshot();
-    }
-    ui.layout_all(app, services, bounds, 1.0);
-    let mut scene = Scene::default();
-    ui.paint_all(app, services, bounds, &mut scene, 1.0);
-}
-
-fn run_overlay_frame_scaled(
-    ui: &mut UiTree<TestHost>,
-    app: &mut TestHost,
-    services: &mut dyn UiServices,
-    window: AppWindowId,
-    bounds: Rect,
-    scale_factor: f32,
-    capture_semantics: bool,
-    render: impl FnOnce(&mut UiTree<TestHost>, &mut TestHost, &mut dyn UiServices) -> NodeId,
-) {
-    use fret_ui_kit::OverlayController;
-
-    app.advance_frame();
-    OverlayController::begin_frame(app, window);
-
-    let root = render(ui, app, services);
-    ui.set_root(root);
-    OverlayController::render(ui, app, services, window, bounds);
-
-    if capture_semantics {
-        ui.request_semantics_snapshot();
-    }
-    ui.layout_all(app, services, bounds, scale_factor);
-
-    let mut scene = Scene::default();
-    ui.paint_all(app, services, bounds, &mut scene, scale_factor);
-}
-
-fn run_overlay_frame_with_scene_scaled(
-    ui: &mut UiTree<TestHost>,
-    app: &mut TestHost,
-    services: &mut dyn UiServices,
-    window: AppWindowId,
-    bounds: Rect,
-    scale_factor: f32,
-    capture_semantics: bool,
-    render: impl FnOnce(&mut UiTree<TestHost>, &mut TestHost, &mut dyn UiServices) -> NodeId,
-) -> Scene {
-    use fret_ui_kit::OverlayController;
-
-    app.advance_frame();
-    OverlayController::begin_frame(app, window);
-
-    let root = render(ui, app, services);
-    ui.set_root(root);
-    OverlayController::render(ui, app, services, window, bounds);
-
-    if capture_semantics {
-        ui.request_semantics_snapshot();
-    }
-    ui.layout_all(app, services, bounds, scale_factor);
-
-    let mut scene = Scene::default();
-    ui.paint_all(app, services, bounds, &mut scene, scale_factor);
-    scene
-}
-
-fn pointer_down(pointer_id: PointerId, position: Point) -> Event {
-    Event::Pointer(PointerEvent::Down {
-        pointer_id,
-        position,
-        button: MouseButton::Left,
-        modifiers: Modifiers::default(),
-        click_count: 1,
-        pointer_type: PointerType::Mouse,
+    test_id: &str,
+) -> Option<(SemanticsLive, bool)> {
+    ui.semantics_snapshot().and_then(|snapshot| {
+        snapshot
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some(test_id))
+            .and_then(|node| node.flags.live.map(|live| (live, node.flags.live_atomic)))
     })
 }
-
-fn pointer_move(pointer_id: PointerId, position: Point) -> Event {
-    Event::Pointer(PointerEvent::Move {
-        pointer_id,
-        position,
-        buttons: MouseButtons::default(),
-        modifiers: Modifiers::default(),
-        pointer_type: PointerType::Mouse,
-    })
-}
-
-fn pointer_move_touch(pointer_id: PointerId, position: Point) -> Event {
-    Event::Pointer(PointerEvent::Move {
-        pointer_id,
-        position,
-        buttons: MouseButtons::default(),
-        modifiers: Modifiers::default(),
-        pointer_type: PointerType::Touch,
-    })
-}
-
-fn pointer_up(pointer_id: PointerId, position: Point) -> Event {
-    Event::Pointer(PointerEvent::Up {
-        pointer_id,
-        position,
-        button: MouseButton::Left,
-        modifiers: Modifiers::default(),
-        is_click: true,
-        click_count: 1,
-        pointer_type: PointerType::Mouse,
-    })
-}
-
-fn key_down(key: KeyCode) -> Event {
-    Event::KeyDown {
-        key,
-        modifiers: Modifiers::default(),
-        repeat: false,
-    }
-}
-
-fn key_up(key: KeyCode) -> Event {
-    Event::KeyUp {
-        key,
-        modifiers: Modifiers::default(),
-    }
-}
-
-fn drain_zero_delay_timer_tokens(
-    app: &mut TestHost,
-    window: AppWindowId,
-) -> Vec<fret_runtime::TimerToken> {
-    let mut out: Vec<fret_runtime::TimerToken> = Vec::new();
-    app.effects.retain(|effect| match effect {
-        Effect::SetTimer {
-            window: Some(w),
-            token,
-            after,
-            repeat: None,
-        } if *w == window && after.as_millis() == 0 => {
-            out.push(*token);
-            false
-        }
-        _ => true,
-    });
-    out
-}
-
-fn with_padding<'a, H: fret_ui::UiHost>(
-    cx: &mut fret_ui::elements::ElementContext<'a, H>,
-    padding: Px,
-    child: AnyElement,
-) -> AnyElement {
-    cx.container(
-        ContainerProps {
-            padding: Edges::all(padding).into(),
-            ..Default::default()
-        },
-        move |_cx| vec![child],
-    )
-}
-
 #[test]
 fn text_input_text_input_event_updates_model() {
     use fret_ui::element::TextInputProps;
@@ -903,58 +128,6 @@ fn text_input_text_input_event_updates_model() {
 
     let value = app.models().get_cloned(&model).expect("model exists");
     assert_eq!(value, "a", "expected text input event to update the model");
-}
-
-#[test]
-fn top_app_bar_exposes_toolbar_semantics_role() {
-    use fret_ui_material3::{TopAppBar, TopAppBarVariant};
-
-    let mut app = TestHost::default();
-    app.set_global(PlatformCapabilities::default());
-    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
-
-    let window = AppWindowId::default();
-    let mut services = FakeUiServices;
-    let mut ui: UiTree<TestHost> = UiTree::new();
-    ui.set_window(window);
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(520.0), Px(220.0)),
-    );
-
-    let render =
-        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
-            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-                let bar = TopAppBar::new("TopAppBar")
-                    .variant(TopAppBarVariant::Small)
-                    .a11y_label("Material 3 Top App Bar")
-                    .test_id("top-app-bar")
-                    .into_element(cx);
-                vec![with_padding(cx, Px(24.0), bar)]
-            })
-        };
-
-    let root = render(&mut ui, &mut app, &mut services);
-    ui.set_root(root);
-    ui.request_semantics_snapshot();
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-    let node = ui
-        .semantics_snapshot()
-        .and_then(|snapshot| {
-            snapshot
-                .nodes
-                .iter()
-                .find(|n| n.test_id.as_deref() == Some("top-app-bar"))
-        })
-        .expect("expected top-app-bar in semantics snapshot");
-
-    assert_eq!(
-        node.role,
-        fret_core::SemanticsRole::Toolbar,
-        "expected top app bar semantics role to be Toolbar",
-    );
 }
 
 #[test]
@@ -2600,7 +1773,7 @@ fn time_picker_clock_dial_drag_updates_time() {
         .semantics_snapshot()
         .and_then(|snapshot| {
             snapshot.nodes.iter().find_map(|node| {
-                if node.test_id.as_deref() == Some("time-picker-clock-dial") {
+                if node.test_id.as_deref() == Some("time-picker-docked.clock-dial") {
                     Some(node.id)
                 } else {
                     None
@@ -2684,7 +1857,7 @@ fn time_picker_selector_keyboard_arrows_step_time() {
         .semantics_snapshot()
         .and_then(|snapshot| {
             snapshot.nodes.iter().find_map(|node| {
-                if node.test_id.as_deref() == Some("time-picker-hour-selector") {
+                if node.test_id.as_deref() == Some("time-picker-docked.hour-selector") {
                     Some(node.id)
                 } else {
                     None
@@ -2713,7 +1886,7 @@ fn time_picker_selector_keyboard_arrows_step_time() {
         .semantics_snapshot()
         .and_then(|snapshot| {
             snapshot.nodes.iter().find_map(|node| {
-                if node.test_id.as_deref() == Some("time-picker-minute-selector") {
+                if node.test_id.as_deref() == Some("time-picker-docked.minute-selector") {
                     Some(node.id)
                 } else {
                     None
@@ -2777,18 +1950,20 @@ fn time_picker_time_input_replaces_and_auto_advances_hour() {
         .semantics_snapshot()
         .and_then(|snapshot| {
             snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("time-input-hour")).then_some(node.id)
+                (node.test_id.as_deref() == Some("time-picker-docked-input.input.hour"))
+                    .then_some(node.id)
             })
         })
-        .expect("expected time-input-hour in semantics snapshot");
+        .expect("expected time-picker-docked-input.input.hour in semantics snapshot");
     let minute_node: NodeId = ui
         .semantics_snapshot()
         .and_then(|snapshot| {
             snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("time-input-minute")).then_some(node.id)
+                (node.test_id.as_deref() == Some("time-picker-docked-input.input.minute"))
+                    .then_some(node.id)
             })
         })
-        .expect("expected time-input-minute in semantics snapshot");
+        .expect("expected time-picker-docked-input.input.minute in semantics snapshot");
 
     ui.set_focus(Some(hour_node));
 
@@ -2830,6 +2005,140 @@ fn time_picker_time_input_replaces_and_auto_advances_hour() {
         ui.focus(),
         Some(minute_node),
         "expected entering a two-digit hour to auto-advance focus to minutes",
+    );
+}
+
+#[test]
+fn time_picker_time_input_rejects_invalid_values_and_recovers() {
+    use fret_ui_material3::{DockedTimePicker, TimePickerDisplayMode};
+    use time::Time;
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(520.0), Px(420.0)),
+    );
+
+    let selected_time = Time::from_hms(9, 41, 0).expect("valid time");
+    let time = app.models_mut().insert(selected_time);
+    let time_for_render = time.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let picker = DockedTimePicker::new(time_for_render.clone())
+                    .is_24h(true)
+                    .display_mode(TimePickerDisplayMode::Input)
+                    .test_id("time-picker-docked-input")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), picker)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let hour_node = semantics_node_id_by_test_id(&ui, "time-picker-docked-input.input.hour")
+        .expect("expected time input hour field in semantics snapshot");
+    ui.set_focus(Some(hour_node));
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Digit2));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Digit2));
+    ui.dispatch_event(&mut app, &mut services, &Event::TextInput("2".to_string()));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        app.models().get_cloned(&time).expect("time model exists"),
+        Time::from_hms(2, 41, 0).expect("valid time"),
+        "first valid hour digit should still update the committed time",
+    );
+    assert_eq!(
+        semantics_invalid_by_test_id(&ui, "time-picker-docked-input.input.hour"),
+        None,
+        "single valid hour digit should not expose invalid semantics",
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Digit7));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Digit7));
+    ui.dispatch_event(&mut app, &mut services, &Event::TextInput("7".to_string()));
+
+    for token in drain_zero_delay_timer_tokens(&mut app, window) {
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+    }
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        app.models().get_cloned(&time).expect("time model exists"),
+        Time::from_hms(2, 41, 0).expect("valid time"),
+        "invalid 24h hour input must not clamp or overwrite the committed time",
+    );
+    assert_eq!(
+        semantics_invalid_by_test_id(&ui, "time-picker-docked-input.input.hour"),
+        Some(SemanticsInvalid::True),
+        "invalid hour input should expose aria-invalid semantics",
+    );
+    assert_eq!(
+        semantics_label_by_test_id(&ui, "time-picker-docked-input.input.hour.supporting-text"),
+        Some(String::from("Hour must be 0-23")),
+        "invalid hour input should expose Material supporting error text",
+    );
+    assert_eq!(
+        semantics_live_by_test_id(&ui, "time-picker-docked-input.input.hour.supporting-text"),
+        Some((SemanticsLive::Polite, true)),
+        "supporting error text should be a polite atomic live region",
+    );
+
+    let hour_node = semantics_node_id_by_test_id(&ui, "time-picker-docked-input.input.hour")
+        .expect("expected time input hour field after invalid input");
+    ui.set_focus(Some(hour_node));
+    for _ in 0..2 {
+        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Backspace));
+        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Backspace));
+    }
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Digit1));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Digit1));
+    ui.dispatch_event(&mut app, &mut services, &Event::TextInput("1".to_string()));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Digit2));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Digit2));
+    ui.dispatch_event(&mut app, &mut services, &Event::TextInput("2".to_string()));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        app.models().get_cloned(&time).expect("time model exists"),
+        Time::from_hms(12, 41, 0).expect("valid time"),
+        "recovered valid hour input should update the committed time",
+    );
+    assert_eq!(
+        semantics_invalid_by_test_id(&ui, "time-picker-docked-input.input.hour"),
+        None,
+        "valid recovery should clear invalid semantics",
+    );
+    assert_eq!(
+        semantics_label_by_test_id(&ui, "time-picker-docked-input.input.hour.supporting-text"),
+        Some(String::from("Hour")),
+        "valid recovery should restore supporting text",
     );
 }
 
@@ -3868,6 +3177,11 @@ fn icon_toggle_button_semantics_role_and_checked_state_are_stable() {
             Some(false),
             "expected IconToggleButton checked=false initially"
         );
+        assert_eq!(
+            node.flags.checked_state,
+            Some(fret_core::SemanticsCheckedState::False),
+            "expected IconToggleButton checked_state=false initially"
+        );
         let bounds = ui
             .debug_node_visual_bounds(node.id)
             .expect("expected icon-toggle-button visual bounds");
@@ -3918,6 +3232,11 @@ fn icon_toggle_button_semantics_role_and_checked_state_are_stable() {
         node.flags.checked,
         Some(true),
         "expected IconToggleButton checked=true after click"
+    );
+    assert_eq!(
+        node.flags.checked_state,
+        Some(fret_core::SemanticsCheckedState::True),
+        "expected IconToggleButton checked_state=true after click"
     );
 
     // Sanity: the visual node should still be queryable.
@@ -3978,6 +3297,7 @@ fn chips_export_checked_state_for_selected_semantics() {
         .iter()
         .find(|node| node.test_id.as_deref() == Some("filter-chip-selected"))
         .expect("expected filter chip in semantics snapshot");
+    assert_eq!(filter.role, fret_core::SemanticsRole::Checkbox);
     assert_eq!(filter.flags.checked, Some(true));
     assert_eq!(
         filter.flags.checked_state,
@@ -3989,6 +3309,7 @@ fn chips_export_checked_state_for_selected_semantics() {
         .iter()
         .find(|node| node.test_id.as_deref() == Some("input-chip-unselected"))
         .expect("expected input chip in semantics snapshot");
+    assert_eq!(input.role, fret_core::SemanticsRole::Checkbox);
     assert_eq!(input.flags.checked, Some(false));
     assert_eq!(
         input.flags.checked_state,
@@ -5038,7 +4359,7 @@ fn dialog_focus_is_contained_and_restored_across_schemes() {
             snapshot
                 .nodes
                 .iter()
-                .any(|node| node.test_id.as_deref() == Some("dialog-scrim")),
+                .any(|node| node.test_id.as_deref() == Some("dialog.scrim")),
             "expected dialog scrim node while dialog is open ({label})"
         );
         assert_ne!(
@@ -5365,7 +4686,7 @@ fn dialog_scrim_dismisses_without_activating_underlay() {
             snapshot
                 .nodes
                 .iter()
-                .any(|node| node.test_id.as_deref() == Some("dialog-scrim")),
+                .any(|node| node.test_id.as_deref() == Some("dialog.scrim")),
             "expected dialog scrim node while dialog is open ({label})"
         );
         assert!(
@@ -5520,7 +4841,7 @@ fn modal_navigation_drawer_focus_is_contained_and_restored_across_schemes() {
             snapshot
                 .nodes
                 .iter()
-                .any(|node| node.test_id.as_deref() == Some("drawer-scrim")),
+                .any(|node| node.test_id.as_deref() == Some("drawer.scrim")),
             "expected drawer scrim node while drawer is open ({label})"
         );
         assert_ne!(
@@ -6180,7 +5501,7 @@ fn tooltip_is_click_through_and_does_not_block_underlay_activation_across_scheme
 
 #[test]
 fn material3_headless_controls_suite_goldens_v1() {
-    use fret_ui::element::{ContainerProps, FlexProps, Length, TextProps};
+    use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, Length, TextProps};
     use fret_ui_material3::{
         AssistChip, AssistChipVariant, Button, Card, CardVariant, Checkbox, FilterChip,
         FilterChipVariant, InputChip, Select, SelectItem, SuggestionChip, SuggestionChipVariant,
@@ -6254,6 +5575,7 @@ fn material3_headless_controls_suite_goldens_v1() {
                     let mut props = FlexProps::default();
                     props.direction = fret_core::Axis::Vertical;
                     props.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
+                    props.align = CrossAlign::Start;
                     let content = cx.flex(props, |cx| {
                         let theme = Theme::global(&*cx.app).clone();
                         let body_style = theme
@@ -7167,6 +6489,10 @@ fn segmented_button_semantics_roles_match_compose_baseline() {
     let alpha = find("segmented-single-alpha");
     assert_eq!(alpha.role, fret_core::SemanticsRole::RadioButton);
     assert_eq!(alpha.flags.checked, Some(true));
+    assert_eq!(
+        alpha.flags.checked_state,
+        Some(fret_core::SemanticsCheckedState::True)
+    );
     assert!(
         !alpha.flags.selected,
         "radio buttons should not set selected"
@@ -7175,6 +6501,10 @@ fn segmented_button_semantics_roles_match_compose_baseline() {
     let beta = find("segmented-single-beta");
     assert_eq!(beta.role, fret_core::SemanticsRole::RadioButton);
     assert_eq!(beta.flags.checked, Some(false));
+    assert_eq!(
+        beta.flags.checked_state,
+        Some(fret_core::SemanticsCheckedState::False)
+    );
     assert!(
         !beta.flags.selected,
         "radio buttons should not set selected"
@@ -7183,6 +6513,10 @@ fn segmented_button_semantics_roles_match_compose_baseline() {
     let multi_alpha = find("segmented-multi-alpha");
     assert_eq!(multi_alpha.role, fret_core::SemanticsRole::Checkbox);
     assert_eq!(multi_alpha.flags.checked, Some(true));
+    assert_eq!(
+        multi_alpha.flags.checked_state,
+        Some(fret_core::SemanticsCheckedState::True)
+    );
     assert!(
         !multi_alpha.flags.selected,
         "checkboxes should not set selected"
@@ -7191,6 +6525,10 @@ fn segmented_button_semantics_roles_match_compose_baseline() {
     let multi_beta = find("segmented-multi-beta");
     assert_eq!(multi_beta.role, fret_core::SemanticsRole::Checkbox);
     assert_eq!(multi_beta.flags.checked, Some(false));
+    assert_eq!(
+        multi_beta.flags.checked_state,
+        Some(fret_core::SemanticsCheckedState::False)
+    );
     assert!(
         !multi_beta.flags.selected,
         "checkboxes should not set selected"
@@ -7287,10 +6625,12 @@ fn material3_headless_badge_suite_goldens_v1() {
                                     .into_element(cx, |cx| vec![anchor(cx, small)]),
                                 Badge::dot()
                                     .placement(BadgePlacement::TopRight)
+                                    .anchor_size(Px(40.0))
                                     .test_id("badge-dot-top-right")
                                     .into_element(cx, |cx| vec![anchor(cx, Px(40.0))]),
                                 Badge::text("99+")
                                     .placement(BadgePlacement::TopRight)
+                                    .anchor_size(Px(40.0))
                                     .test_id("badge-text-top-right")
                                     .into_element(cx, |cx| vec![anchor(cx, Px(40.0))]),
                             ]
@@ -8245,12 +7585,17 @@ fn material3_headless_list_suite_goldens_v1() {
                                 .items(vec![
                                     ListItem::new("alpha", "Alpha")
                                         .leading_icon(fret_icons::ids::ui::SEARCH)
+                                        .supporting_text("Supporting text")
                                         .test_id("list-alpha"),
                                     ListItem::new("beta", "Beta (selected)")
                                         .leading_icon(fret_icons::ids::ui::SETTINGS)
+                                        .supporting_text("Selected supporting text")
+                                        .trailing_supporting_text("Meta")
                                         .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
                                         .test_id("list-beta"),
                                     ListItem::new("charlie", "Charlie (disabled)")
+                                        .overline_text("Overline")
+                                        .supporting_text("Disabled supporting text")
                                         .leading_icon(fret_icons::ids::ui::SLASH)
                                         .disabled(true)
                                         .test_id("list-charlie"),
@@ -9878,7 +9223,7 @@ fn material3_autocomplete_semantics_v1() {
     let list = snap
         .nodes
         .iter()
-        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete-listbox"))
+        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete.listbox"))
         .expect("listbox node");
     assert!(
         input.controls.contains(&list.id),
@@ -9902,7 +9247,7 @@ fn material3_autocomplete_semantics_v1() {
     let beta = snap
         .nodes
         .iter()
-        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete-option-beta"))
+        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete.option.beta"))
         .expect("expected beta option node");
     assert!(beta.flags.selected, "expected beta to be marked selected");
 
@@ -10030,14 +9375,14 @@ fn material3_autocomplete_filters_items_by_query_v1() {
     assert!(
         snap.nodes
             .iter()
-            .any(|n| { n.test_id.as_deref() == Some("material3-autocomplete-option-gamma") }),
+            .any(|n| { n.test_id.as_deref() == Some("material3-autocomplete.option.gamma") }),
         "expected gamma option after typing 'ga'"
     );
     assert!(
         !snap
             .nodes
             .iter()
-            .any(|n| { n.test_id.as_deref() == Some("material3-autocomplete-option-alpha") }),
+            .any(|n| { n.test_id.as_deref() == Some("material3-autocomplete.option.alpha") }),
         "expected alpha option to be filtered out after typing 'ga'"
     );
 }
@@ -10404,7 +9749,7 @@ fn material3_exposed_dropdown_trailing_icon_toggles_overlay_v1() {
         .semantics_snapshot()
         .and_then(|snapshot| {
             snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("material3-exposed-dropdown-trailing-icon"))
+                (node.test_id.as_deref() == Some("material3-exposed-dropdown.trailing-icon"))
                     .then_some(node.id)
             })
         })
@@ -10441,6 +9786,33 @@ fn material3_exposed_dropdown_trailing_icon_toggles_overlay_v1() {
             entry.kind == OverlayStackEntryKind::Popover && entry.open && entry.visible
         }),
         "expected popover overlay to be open after clicking the trailing icon"
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("material3-exposed-dropdown"))
+        .expect("expected exposed dropdown input node");
+    assert_eq!(input.role, SemanticsRole::ComboBox);
+    assert!(
+        input.flags.expanded,
+        "exposed dropdown input should report expanded=true while open"
+    );
+
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("material3-exposed-dropdown.listbox"))
+        .expect("expected exposed dropdown listbox node");
+    assert_eq!(listbox.role, SemanticsRole::ListBox);
+    assert!(
+        input.controls.contains(&listbox.id),
+        "exposed dropdown input should control its listbox"
+    );
+    assert!(
+        listbox.labelled_by.contains(&input.id),
+        "exposed dropdown listbox should be labelled by its input"
     );
 
     ui.dispatch_event(
@@ -12153,7 +11525,7 @@ fn material3_headless_search_bar_suite_goldens_v1() {
 #[test]
 fn material3_headless_search_view_suite_goldens_v1() {
     use fret_ui::element::FlexProps;
-    use fret_ui_material3::SearchView;
+    use fret_ui_material3::{SearchView, SearchViewPresentation};
 
     let schemes = [
         (
@@ -12184,7 +11556,11 @@ fn material3_headless_search_view_suite_goldens_v1() {
         for (mode, variant, label) in schemes {
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
 
-            for (case_name, open) in [("closed", false), ("open", true)] {
+            for (case_name, open, presentation) in [
+                ("closed", false, SearchViewPresentation::Docked),
+                ("open", true, SearchViewPresentation::Docked),
+                ("full_screen_open", true, SearchViewPresentation::FullScreen),
+            ] {
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -12231,6 +11607,7 @@ fn material3_headless_search_view_suite_goldens_v1() {
                                 .placeholder("Search")
                                 .a11y_label("Search")
                                 .test_id("sv")
+                                .presentation(presentation)
                                 .into_element(cx, |_cx| vec![content]);
 
                             let content = cx.named("search_view_root", |cx| {
@@ -12607,7 +11984,7 @@ fn dropdown_menu_dismisses_and_restores_focus_across_schemes() {
 
                     let mut props = fret_ui::element::FlexProps::default();
                     props.direction = fret_core::Axis::Vertical;
-                    props.gap = fret_ui::element::SpacingLength::Px(Px(24.0));
+                    props.gap = fret_ui::element::SpacingLength::Px(Px(220.0));
                     vec![cx.flex(props, move |_cx| vec![menu, underlay])]
                 })
             };
@@ -12772,728 +12149,6 @@ fn dropdown_menu_dismisses_and_restores_focus_across_schemes() {
 }
 
 #[test]
-fn select_dismisses_and_restores_focus_across_schemes() {
-    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
-    use fret_ui_material3::{Select, SelectItem};
-
-    let cases = [
-        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
-        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
-        (
-            SchemeMode::Dark,
-            DynamicVariant::Expressive,
-            "dark/expressive",
-        ),
-        (
-            SchemeMode::Light,
-            DynamicVariant::Expressive,
-            "light/expressive",
-        ),
-    ];
-
-    for (mode, variant, label) in cases {
-        let mut app = TestHost::default();
-        app.set_global(PlatformCapabilities::default());
-        apply_material_theme(&mut app, mode, variant);
-
-        let window = AppWindowId::default();
-        let mut services = FakeUiServices;
-        let mut ui: UiTree<TestHost> = UiTree::new();
-        ui.set_window(window);
-
-        let bounds = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(560.0), Px(420.0)),
-        );
-
-        let selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
-        let items: Arc<[SelectItem]> = vec![
-            SelectItem::new("alpha", "Alpha").test_id("select-item-alpha"),
-            SelectItem::new("beta", "Beta").test_id("select-item-beta"),
-            SelectItem::new("charlie", "Charlie (disabled)")
-                .disabled(true)
-                .test_id("select-item-charlie-disabled"),
-        ]
-        .into();
-
-        let selected_model = selected.clone();
-        let render =
-            move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
-                let selected_model = selected_model.clone();
-                let items = items.clone();
-                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-                    vec![
-                        Select::new(selected_model)
-                            .a11y_label("select")
-                            .placeholder("Pick one")
-                            .items(items)
-                            .test_id("select-trigger")
-                            .into_element(cx),
-                    ]
-                })
-            };
-
-        run_overlay_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            true,
-            |ui, app, services| render(ui, app, services),
-        );
-
-        let trigger_node: NodeId = ui
-            .semantics_snapshot()
-            .and_then(|snapshot| {
-                snapshot.nodes.iter().find_map(|node| {
-                    (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
-                })
-            })
-            .unwrap_or_else(|| panic!("expected select-trigger in semantics snapshot ({label})"));
-
-        let trigger_bounds = ui
-            .debug_node_visual_bounds(trigger_node)
-            .expect("expected select-trigger bounds");
-        let click_at = Point::new(
-            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
-            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
-        );
-
-        ui.set_focus(Some(trigger_node));
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &pointer_down(PointerId(1), click_at),
-        );
-        ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
-
-        let mut opened = false;
-        for _ in 0..16 {
-            run_overlay_frame(
-                &mut ui,
-                &mut app,
-                &mut services,
-                window,
-                bounds,
-                false,
-                |ui, app, services| render(ui, app, services),
-            );
-
-            let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
-            if stack
-                .stack
-                .iter()
-                .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
-            {
-                opened = true;
-                break;
-            }
-        }
-        assert!(opened, "expected select overlay to open on click ({label})");
-
-        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Escape));
-        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Escape));
-
-        let mut closed = false;
-        for _ in 0..16 {
-            run_overlay_frame(
-                &mut ui,
-                &mut app,
-                &mut services,
-                window,
-                bounds,
-                false,
-                |ui, app, services| render(ui, app, services),
-            );
-
-            let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
-            if !stack
-                .stack
-                .iter()
-                .any(|e| e.kind == OverlayStackEntryKind::Popover && e.visible)
-            {
-                closed = true;
-                break;
-            }
-        }
-
-        assert!(
-            closed,
-            "expected select overlay to close on Escape ({label})"
-        );
-        assert_eq!(
-            ui.focus(),
-            Some(trigger_node),
-            "expected select to restore focus to trigger on Escape ({label})"
-        );
-    }
-}
-
-#[test]
-fn select_keyboard_open_sets_initial_focus_and_outside_dismiss_restores_focus_across_schemes() {
-    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
-    use fret_ui_material3::{Select, SelectItem};
-
-    let cases = [
-        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
-        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
-        (
-            SchemeMode::Dark,
-            DynamicVariant::Expressive,
-            "dark/expressive",
-        ),
-        (
-            SchemeMode::Light,
-            DynamicVariant::Expressive,
-            "light/expressive",
-        ),
-    ];
-    let keyboard_open_keys = [
-        (KeyCode::ArrowDown, "arrow_down"),
-        (KeyCode::ArrowUp, "arrow_up"),
-        (KeyCode::Enter, "enter"),
-        (KeyCode::Space, "space"),
-    ];
-
-    for (mode, variant, label) in cases {
-        for (open_key, key_label) in keyboard_open_keys {
-            let mut app = TestHost::default();
-            app.set_global(PlatformCapabilities::default());
-            apply_material_theme(&mut app, mode, variant);
-
-            let window = AppWindowId::default();
-            let mut services = FakeUiServices;
-            let mut ui: UiTree<TestHost> = UiTree::new();
-            ui.set_window(window);
-
-            let bounds = Rect::new(
-                Point::new(Px(0.0), Px(0.0)),
-                Size::new(Px(560.0), Px(420.0)),
-            );
-
-            let selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
-            let underlay_toggled = app.models_mut().insert(false);
-
-            let items: Arc<[SelectItem]> = vec![
-                SelectItem::new("alpha", "Alpha").test_id("select-item-alpha"),
-                SelectItem::new("beta", "Beta").test_id("select-item-beta"),
-                SelectItem::new("charlie", "Charlie (disabled)")
-                    .disabled(true)
-                    .test_id("select-item-charlie-disabled"),
-            ]
-            .into();
-
-            let selected_model = selected.clone();
-            let underlay_model = underlay_toggled.clone();
-            let render = move |ui: &mut UiTree<TestHost>,
-                               app: &mut TestHost,
-                               services: &mut dyn UiServices| {
-                let selected_model = selected_model.clone();
-                let items = items.clone();
-                let underlay_model = underlay_model.clone();
-                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-                    let select = Select::new(selected_model)
-                        .a11y_label("select")
-                        .placeholder("Pick one")
-                        .items(items)
-                        .test_id("select-trigger")
-                        .into_element(cx);
-
-                    let underlay = cx.pressable(
-                        fret_ui::element::PressableProps {
-                            layout: {
-                                let mut l = fret_ui::element::LayoutStyle::default();
-                                l.size.width = fret_ui::element::Length::Px(Px(160.0));
-                                l.size.height = fret_ui::element::Length::Px(Px(40.0));
-                                l
-                            },
-                            a11y: fret_ui::element::PressableA11y {
-                                test_id: Some(Arc::<str>::from("select-underlay-toggle")),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        move |cx, _st| {
-                            cx.pressable_toggle_bool(&underlay_model);
-                            Vec::new()
-                        },
-                    );
-
-                    let mut props = fret_ui::element::FlexProps::default();
-                    props.direction = fret_core::Axis::Vertical;
-                    props.gap = fret_ui::element::SpacingLength::Px(Px(24.0));
-                    // Place the underlay above the trigger so the "outside press" point is
-                    // guaranteed to be outside the select popover (which opens below the trigger).
-                    vec![cx.flex(props, move |_cx| vec![underlay, select])]
-                })
-            };
-
-            run_overlay_frame(
-                &mut ui,
-                &mut app,
-                &mut services,
-                window,
-                bounds,
-                true,
-                |ui, app, services| render(ui, app, services),
-            );
-
-            let trigger_node: NodeId = ui
-                .semantics_snapshot()
-                .and_then(|snapshot| {
-                    snapshot.nodes.iter().find_map(|node| {
-                        (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
-                    })
-                })
-                .unwrap_or_else(|| {
-                    panic!("expected select-trigger in semantics snapshot ({label}, {key_label})")
-                });
-            let underlay_node: NodeId = ui
-                .semantics_snapshot()
-                .and_then(|snapshot| {
-                    snapshot.nodes.iter().find_map(|node| {
-                        (node.test_id.as_deref() == Some("select-underlay-toggle"))
-                            .then_some(node.id)
-                    })
-                })
-                .unwrap_or_else(|| {
-                    panic!(
-                        "expected select-underlay-toggle in semantics snapshot ({label}, {key_label})"
-                    )
-                });
-
-            ui.set_focus(Some(trigger_node));
-            ui.dispatch_event(&mut app, &mut services, &key_down(open_key));
-            ui.dispatch_event(&mut app, &mut services, &key_up(open_key));
-
-            let mut opened = false;
-            for _ in 0..24 {
-                run_overlay_frame(
-                    &mut ui,
-                    &mut app,
-                    &mut services,
-                    window,
-                    bounds,
-                    true,
-                    |ui, app, services| render(ui, app, services),
-                );
-
-                let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
-                if stack
-                    .stack
-                    .iter()
-                    .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
-                {
-                    opened = true;
-                    break;
-                }
-            }
-            assert!(
-                opened,
-                "expected select overlay to open on {key_label} ({label})"
-            );
-
-            let selected_option_node: NodeId = ui
-                .semantics_snapshot()
-                .and_then(|snapshot| {
-                    snapshot.nodes.iter().find_map(|node| {
-                        (node.test_id.as_deref() == Some("select-item-beta")).then_some(node.id)
-                    })
-                })
-                .unwrap_or_else(|| {
-                    panic!("expected select-item-beta in semantics snapshot ({label}, {key_label})")
-                });
-            let mut focused_selected = ui.focus() == Some(selected_option_node);
-            for _ in 0..12 {
-                if focused_selected {
-                    break;
-                }
-                run_overlay_frame(
-                    &mut ui,
-                    &mut app,
-                    &mut services,
-                    window,
-                    bounds,
-                    true,
-                    |ui, app, services| render(ui, app, services),
-                );
-                focused_selected = ui.focus() == Some(selected_option_node);
-            }
-            if !focused_selected {
-                let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
-                    ui.focus().and_then(|focused| {
-                        snapshot
-                            .nodes
-                            .iter()
-                            .find(|node| node.id == focused)
-                            .and_then(|node| node.test_id.as_deref())
-                            .map(|s| s.to_string())
-                    })
-                });
-                panic!(
-                    "expected Select to move focus to the selected option when opening via keyboard ({label}, {key_label}); focus={:?}, focus_test_id={focused_test_id:?}",
-                    ui.focus()
-                );
-            }
-
-            let underlay_bounds = ui
-                .debug_node_visual_bounds(underlay_node)
-                .expect("expected underlay bounds");
-            let click_at = Point::new(
-                Px(underlay_bounds.origin.x.0 + underlay_bounds.size.width.0 * 0.5),
-                Px(underlay_bounds.origin.y.0 + underlay_bounds.size.height.0 * 0.5),
-            );
-            ui.dispatch_event(
-                &mut app,
-                &mut services,
-                &pointer_down(PointerId(1), click_at),
-            );
-            ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
-
-            let mut closed = false;
-            for _ in 0..24 {
-                run_overlay_frame(
-                    &mut ui,
-                    &mut app,
-                    &mut services,
-                    window,
-                    bounds,
-                    false,
-                    |ui, app, services| render(ui, app, services),
-                );
-
-                let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
-                if !stack
-                    .stack
-                    .iter()
-                    .any(|e| e.kind == OverlayStackEntryKind::Popover && e.visible)
-                {
-                    closed = true;
-                    break;
-                }
-            }
-
-            assert!(
-                closed,
-                "expected select overlay to close on outside press after opening via {key_label} ({label})"
-            );
-            assert_eq!(
-                app.models().get_copied(&underlay_toggled),
-                Some(false),
-                "expected select to prevent underlay activation on outside press ({label}, {key_label})"
-            );
-            assert_eq!(
-                ui.focus(),
-                Some(trigger_node),
-                "expected select to restore focus to trigger on outside press ({label}, {key_label})"
-            );
-
-            ui.set_focus(Some(trigger_node));
-            ui.dispatch_event(&mut app, &mut services, &key_down(open_key));
-            ui.dispatch_event(&mut app, &mut services, &key_up(open_key));
-
-            let mut reopened = false;
-            for _ in 0..24 {
-                run_overlay_frame(
-                    &mut ui,
-                    &mut app,
-                    &mut services,
-                    window,
-                    bounds,
-                    true,
-                    |ui, app, services| render(ui, app, services),
-                );
-
-                let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
-                if stack
-                    .stack
-                    .iter()
-                    .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
-                {
-                    reopened = true;
-                    break;
-                }
-            }
-            assert!(
-                reopened,
-                "expected select overlay to re-open on {key_label} ({label})"
-            );
-
-            let selected_option_node: NodeId = ui
-                .semantics_snapshot()
-                .and_then(|snapshot| {
-                    snapshot.nodes.iter().find_map(|node| {
-                        (node.test_id.as_deref() == Some("select-item-beta")).then_some(node.id)
-                    })
-                })
-                .unwrap_or_else(|| {
-                    panic!("expected select-item-beta in semantics snapshot ({label}, {key_label})")
-                });
-            let mut focused_selected = ui.focus() == Some(selected_option_node);
-            for _ in 0..12 {
-                if focused_selected {
-                    break;
-                }
-                run_overlay_frame(
-                    &mut ui,
-                    &mut app,
-                    &mut services,
-                    window,
-                    bounds,
-                    true,
-                    |ui, app, services| render(ui, app, services),
-                );
-                focused_selected = ui.focus() == Some(selected_option_node);
-            }
-            if !focused_selected {
-                let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
-                    ui.focus().and_then(|focused| {
-                        snapshot
-                            .nodes
-                            .iter()
-                            .find(|node| node.id == focused)
-                            .and_then(|node| node.test_id.as_deref())
-                            .map(|s| s.to_string())
-                    })
-                });
-                panic!(
-                    "expected Select to focus the selected option when reopening via keyboard ({label}, {key_label}); focus={:?}, focus_test_id={focused_test_id:?}",
-                    ui.focus()
-                );
-            }
-
-            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
-            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
-            run_overlay_frame(
-                &mut ui,
-                &mut app,
-                &mut services,
-                window,
-                bounds,
-                true,
-                |ui, app, services| render(ui, app, services),
-            );
-
-            let alpha_option_node: NodeId = ui
-                .semantics_snapshot()
-                .and_then(|snapshot| {
-                    snapshot.nodes.iter().find_map(|node| {
-                        (node.test_id.as_deref() == Some("select-item-alpha")).then_some(node.id)
-                    })
-                })
-                .unwrap_or_else(|| {
-                    panic!(
-                        "expected select-item-alpha in semantics snapshot ({label}, {key_label})"
-                    )
-                });
-            assert_eq!(
-                ui.focus(),
-                Some(alpha_option_node),
-                "expected ArrowDown to rove focus to the next enabled option (wrap + skip disabled) ({label}, {key_label})"
-            );
-
-            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Enter));
-            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Enter));
-
-            let mut closed_after_select = false;
-            for _ in 0..24 {
-                run_overlay_frame(
-                    &mut ui,
-                    &mut app,
-                    &mut services,
-                    window,
-                    bounds,
-                    false,
-                    |ui, app, services| render(ui, app, services),
-                );
-
-                let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
-                if !stack
-                    .stack
-                    .iter()
-                    .any(|e| e.kind == OverlayStackEntryKind::Popover && e.visible)
-                {
-                    closed_after_select = true;
-                    break;
-                }
-            }
-
-            assert!(
-                closed_after_select,
-                "expected select overlay to close after selecting an option ({label}, {key_label})"
-            );
-            assert_eq!(
-                ui.focus(),
-                Some(trigger_node),
-                "expected select to restore focus to trigger after selecting an option ({label}, {key_label})"
-            );
-            assert_eq!(
-                app.models().get_cloned(&selected),
-                Some(Some(Arc::<str>::from("alpha"))),
-                "expected Enter to select the focused option ({label}, {key_label})"
-            );
-        }
-    }
-}
-
-#[test]
-fn select_roving_scrolls_focused_option_into_view() {
-    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
-    use fret_ui_material3::{Select, SelectItem};
-
-    let mut app = TestHost::default();
-    app.set_global(PlatformCapabilities::default());
-    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
-
-    let window = AppWindowId::default();
-    let mut services = FakeUiServices;
-    let mut ui: UiTree<TestHost> = UiTree::new();
-    ui.set_window(window);
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(560.0), Px(420.0)),
-    );
-
-    let selected = app.models_mut().insert(Some(Arc::<str>::from("item-0")));
-    let mut items_vec: Vec<SelectItem> = Vec::new();
-    for i in 0..20 {
-        let value: Arc<str> = Arc::from(format!("item-{i}"));
-        let label: Arc<str> = Arc::from(format!("Item {i}"));
-        items_vec.push(
-            SelectItem::new(value.clone(), label).test_id(Arc::from(format!("select-item-{i}"))),
-        );
-    }
-    let items: Arc<[SelectItem]> = items_vec.into();
-
-    let render =
-        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
-            let selected = selected.clone();
-            let items = items.clone();
-            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-                vec![
-                    Select::new(selected)
-                        .a11y_label("select")
-                        .placeholder("Pick one")
-                        .items(items)
-                        .test_id("select-trigger")
-                        .into_element(cx),
-                ]
-            })
-        };
-
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        true,
-        |ui, app, services| render(ui, app, services),
-    );
-
-    let trigger_node: NodeId = ui
-        .semantics_snapshot()
-        .and_then(|snapshot| {
-            snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
-            })
-        })
-        .expect("expected select-trigger in semantics snapshot");
-
-    let trigger_bounds = ui
-        .debug_node_visual_bounds(trigger_node)
-        .expect("expected select-trigger bounds");
-    let click_at = Point::new(
-        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
-        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
-    );
-
-    ui.set_focus(Some(trigger_node));
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &pointer_down(PointerId(1), click_at),
-    );
-    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
-
-    let mut opened = false;
-    for _ in 0..24 {
-        run_overlay_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            true,
-            |ui, app, services| render(ui, app, services),
-        );
-        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
-        if stack
-            .stack
-            .iter()
-            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
-        {
-            opened = true;
-            break;
-        }
-    }
-    assert!(opened, "expected select overlay to open");
-
-    for _ in 0..12 {
-        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
-        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
-        run_overlay_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            false,
-            |ui, app, services| render(ui, app, services),
-        );
-    }
-
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        true,
-        |ui, app, services| render(ui, app, services),
-    );
-
-    let listbox_node: NodeId = ui
-        .semantics_snapshot()
-        .and_then(|snapshot| {
-            snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("select-trigger-listbox")).then_some(node.id)
-            })
-        })
-        .expect("expected select-trigger-listbox in semantics snapshot");
-    let listbox_bounds = ui
-        .debug_node_visual_bounds(listbox_node)
-        .expect("expected listbox bounds");
-
-    let focused = ui.focus().expect("expected focused node after roving");
-    let focused_bounds = ui
-        .debug_node_visual_bounds(focused)
-        .expect("expected focused bounds");
-
-    let epsilon = 0.01;
-    let listbox_top = listbox_bounds.origin.y.0;
-    let listbox_bottom = listbox_bounds.origin.y.0 + listbox_bounds.size.height.0;
-    let focused_top = focused_bounds.origin.y.0;
-    let focused_bottom = focused_bounds.origin.y.0 + focused_bounds.size.height.0;
-    assert!(
-        focused_top + epsilon >= listbox_top && focused_bottom - epsilon <= listbox_bottom,
-        "expected focused option to be visible within listbox viewport after roving"
-    );
-}
-
-#[test]
 fn chip_set_roving_treats_trailing_action_focus_as_active_chip() {
     use fret_ui_material3::{ChipSet, ChipSetItem, InputChip, SuggestionChip};
 
@@ -13605,862 +12260,6 @@ fn chip_set_roving_treats_trailing_action_focus_as_active_chip() {
         ui.focus(),
         Some(chip_b_node),
         "expected ChipSet roving to treat trailing-focus as within the active chip",
-    );
-}
-
-#[test]
-fn select_open_scrolls_selected_option_into_view() {
-    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
-    use fret_ui_material3::{Select, SelectItem};
-
-    let mut app = TestHost::default();
-    app.set_global(PlatformCapabilities::default());
-    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
-
-    let window = AppWindowId::default();
-    let mut services = FakeUiServices;
-    let mut ui: UiTree<TestHost> = UiTree::new();
-    ui.set_window(window);
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(560.0), Px(420.0)),
-    );
-
-    let selected = app.models_mut().insert(Some(Arc::<str>::from("item-18")));
-    let mut items_vec: Vec<SelectItem> = Vec::new();
-    for i in 0..30 {
-        let value: Arc<str> = Arc::from(format!("item-{i}"));
-        let label: Arc<str> = Arc::from(format!("Item {i}"));
-        items_vec.push(
-            SelectItem::new(value.clone(), label).test_id(Arc::from(format!("select-item-{i}"))),
-        );
-    }
-    let items: Arc<[SelectItem]> = items_vec.into();
-
-    let render =
-        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
-            let selected = selected.clone();
-            let items = items.clone();
-            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-                vec![
-                    Select::new(selected)
-                        .a11y_label("select")
-                        .placeholder("Pick one")
-                        .items(items)
-                        .test_id("select-trigger")
-                        .into_element(cx),
-                ]
-            })
-        };
-
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        true,
-        |ui, app, services| render(ui, app, services),
-    );
-
-    let trigger_node: NodeId = ui
-        .semantics_snapshot()
-        .and_then(|snapshot| {
-            snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
-            })
-        })
-        .expect("expected select-trigger in semantics snapshot");
-
-    ui.set_focus(Some(trigger_node));
-    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
-    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
-
-    let mut opened = false;
-    for _ in 0..24 {
-        run_overlay_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            true,
-            |ui, app, services| render(ui, app, services),
-        );
-        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
-        if stack
-            .stack
-            .iter()
-            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
-        {
-            opened = true;
-            break;
-        }
-    }
-    assert!(opened, "expected select overlay to open");
-
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        true,
-        |ui, app, services| render(ui, app, services),
-    );
-
-    let listbox_node: NodeId = ui
-        .semantics_snapshot()
-        .and_then(|snapshot| {
-            snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("select-trigger-listbox")).then_some(node.id)
-            })
-        })
-        .expect("expected select-trigger-listbox in semantics snapshot");
-    let listbox_bounds = ui
-        .debug_node_visual_bounds(listbox_node)
-        .expect("expected listbox bounds");
-
-    let selected_node: NodeId = ui
-        .semantics_snapshot()
-        .and_then(|snapshot| {
-            snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("select-item-18")).then_some(node.id)
-            })
-        })
-        .expect("expected select-item-18 in semantics snapshot");
-    let selected_bounds = ui
-        .debug_node_visual_bounds(selected_node)
-        .expect("expected selected option bounds");
-
-    let epsilon = 0.01;
-    let listbox_top = listbox_bounds.origin.y.0;
-    let listbox_bottom = listbox_bounds.origin.y.0 + listbox_bounds.size.height.0;
-    let selected_top = selected_bounds.origin.y.0;
-    let selected_bottom = selected_bounds.origin.y.0 + selected_bounds.size.height.0;
-    assert!(
-        selected_top + epsilon >= listbox_top && selected_bottom - epsilon <= listbox_bottom,
-        "expected the selected option to be visible within listbox viewport on open"
-    );
-}
-
-#[test]
-fn select_menu_matches_anchor_width_and_clamps_height_to_available_space() {
-    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
-    use fret_ui_material3::{Select, SelectItem};
-
-    let mut app = TestHost::default();
-    app.set_global(PlatformCapabilities::default());
-    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
-
-    let window = AppWindowId::default();
-    let mut services = FakeUiServices;
-    let mut ui: UiTree<TestHost> = UiTree::new();
-    ui.set_window(window);
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(420.0), Px(320.0)),
-    );
-
-    let selected = app.models_mut().insert(Some(Arc::<str>::from("v0")));
-    let items: Arc<[SelectItem]> = (0..40)
-        .map(|i| SelectItem::new(Arc::<str>::from(format!("v{i}")), format!("Item {i}")))
-        .collect::<Vec<_>>()
-        .into();
-
-    let selected_model = selected.clone();
-    let render =
-        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
-            let selected_model = selected_model.clone();
-            let items = items.clone();
-            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-                let mut l = fret_ui::element::LayoutStyle::default();
-                l.position = fret_ui::element::PositionStyle::Absolute;
-                l.inset = fret_ui::element::InsetStyle {
-                    top: Some(Px(200.0)).into(),
-                    left: Some(Px(24.0)).into(),
-                    right: None.into(),
-                    bottom: None.into(),
-                };
-                l.size.width = fret_ui::element::Length::Px(Px(240.0));
-                l.size.height = fret_ui::element::Length::Auto;
-                l.overflow = fret_ui::element::Overflow::Visible;
-
-                vec![cx.container(
-                    fret_ui::element::ContainerProps {
-                        layout: l,
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        vec![
-                            Select::new(selected_model)
-                                .a11y_label("select")
-                                .placeholder("Pick one")
-                                .items(items)
-                                .test_id("select-trigger")
-                                .into_element(cx),
-                        ]
-                    },
-                )]
-            })
-        };
-
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        true,
-        |ui, app, services| render(ui, app, services),
-    );
-
-    let trigger_node: NodeId = ui
-        .semantics_snapshot()
-        .and_then(|snapshot| {
-            snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
-            })
-        })
-        .expect("expected select-trigger in semantics snapshot");
-
-    let trigger_bounds = ui
-        .debug_node_visual_bounds(trigger_node)
-        .expect("expected select-trigger bounds");
-    let click_at = Point::new(
-        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
-        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
-    );
-
-    ui.set_focus(Some(trigger_node));
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &pointer_down(PointerId(1), click_at),
-    );
-    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
-
-    let mut opened = false;
-    for _ in 0..24 {
-        run_overlay_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            true,
-            |ui, app, services| render(ui, app, services),
-        );
-        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
-        if stack
-            .stack
-            .iter()
-            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
-        {
-            opened = true;
-            break;
-        }
-    }
-    assert!(opened, "expected select overlay to open");
-
-    for _ in 0..20 {
-        run_overlay_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            true,
-            |ui, app, services| render(ui, app, services),
-        );
-    }
-
-    let snapshot = ui
-        .semantics_snapshot()
-        .expect("expected semantics snapshot");
-
-    let listbox_node: NodeId = snapshot
-        .nodes
-        .iter()
-        .find_map(|node| {
-            (node.test_id.as_deref() == Some("select-trigger-listbox")).then_some(node.id)
-        })
-        .expect("expected select-trigger-listbox in semantics snapshot");
-    let listbox_bounds = ui
-        .debug_node_visual_bounds(listbox_node)
-        .expect("expected listbox bounds");
-
-    let epsilon = 0.01;
-    assert!(
-        (listbox_bounds.size.width.0 - trigger_bounds.size.width.0).abs() <= epsilon,
-        "expected listbox width to match trigger width"
-    );
-
-    let collision_top = 48.0;
-    let collision_bottom = 48.0;
-    let gap = 4.0;
-
-    let outer_top = bounds.origin.y.0 + collision_top;
-    let outer_bottom = bounds.origin.y.0 + bounds.size.height.0 - collision_bottom;
-    let anchor_top = trigger_bounds.origin.y.0;
-    let anchor_bottom = trigger_bounds.origin.y.0 + trigger_bounds.size.height.0;
-
-    let available_above = anchor_top - (outer_top + gap);
-    let available_below = outer_bottom - (anchor_bottom + gap);
-    let available = available_above.max(available_below).max(0.0);
-
-    assert!(
-        listbox_bounds.size.height.0 <= available + epsilon,
-        "expected listbox height to clamp to available space (got {}, want <= {})",
-        listbox_bounds.size.height.0,
-        available
-    );
-    assert!(
-        (listbox_bounds.size.height.0 - available).abs() <= 0.5,
-        "expected listbox height to match available space when content overflows (got {}, want ~ {})",
-        listbox_bounds.size.height.0,
-        available
-    );
-}
-
-#[test]
-fn select_exposes_combobox_controls_and_listbox_labelled_by_relations() {
-    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
-    use fret_ui_material3::{Select, SelectItem};
-
-    let mut app = TestHost::default();
-    app.set_global(PlatformCapabilities::default());
-    apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::TonalSpot);
-
-    let window = AppWindowId::default();
-    let mut services = FakeUiServices;
-    let mut ui: UiTree<TestHost> = UiTree::new();
-    ui.set_window(window);
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(560.0), Px(420.0)),
-    );
-
-    let selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
-    let items: Arc<[SelectItem]> = vec![
-        SelectItem::new("alpha", "Alpha"),
-        SelectItem::new("beta", "Beta"),
-    ]
-    .into();
-
-    let selected_model = selected.clone();
-    let render =
-        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
-            let selected_model = selected_model.clone();
-            let items = items.clone();
-            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-                vec![
-                    Select::new(selected_model)
-                        .a11y_label("select")
-                        .placeholder("Pick one")
-                        .items(items)
-                        .test_id("select-trigger")
-                        .into_element(cx),
-                ]
-            })
-        };
-
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        true,
-        |ui, app, services| render(ui, app, services),
-    );
-
-    let trigger_node: NodeId = ui
-        .semantics_snapshot()
-        .and_then(|snapshot| {
-            snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
-            })
-        })
-        .expect("expected select-trigger in semantics snapshot");
-
-    let trigger_bounds = ui
-        .debug_node_visual_bounds(trigger_node)
-        .expect("expected select-trigger bounds");
-    let click_at = Point::new(
-        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
-        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
-    );
-
-    ui.set_focus(Some(trigger_node));
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &pointer_down(PointerId(1), click_at),
-    );
-    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
-
-    let mut opened = false;
-    for _ in 0..16 {
-        run_overlay_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            false,
-            |ui, app, services| render(ui, app, services),
-        );
-
-        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
-        if stack
-            .stack
-            .iter()
-            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
-        {
-            opened = true;
-            break;
-        }
-    }
-    assert!(opened, "expected select overlay to open on click");
-
-    // One extra frame: the trigger's `controls_element` is resolved via last-frame element IDs.
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        false,
-        |ui, app, services| render(ui, app, services),
-    );
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        true,
-        |ui, app, services| render(ui, app, services),
-    );
-
-    let snap = ui.semantics_snapshot().expect("semantics snapshot");
-    let trigger = snap
-        .nodes
-        .iter()
-        .find(|n| n.test_id.as_deref() == Some("select-trigger"))
-        .expect("select trigger semantics node");
-    assert!(
-        trigger.flags.expanded,
-        "select trigger should report expanded=true while open"
-    );
-
-    let listbox = snap
-        .nodes
-        .iter()
-        .find(|n| n.test_id.as_deref() == Some("select-trigger-listbox"))
-        .expect("select listbox semantics node");
-
-    assert!(
-        trigger.controls.contains(&listbox.id),
-        "select trigger should control the listbox"
-    );
-    assert!(
-        listbox.labelled_by.contains(&trigger.id),
-        "select listbox should be labelled by the trigger"
-    );
-}
-
-#[test]
-fn select_listbox_typeahead_moves_focus_skipping_disabled_options() {
-    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
-    use fret_ui_material3::{Select, SelectItem};
-
-    let mut app = TestHost::default();
-    app.set_global(PlatformCapabilities::default());
-    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
-
-    let window = AppWindowId::default();
-    let mut services = FakeUiServices;
-    let mut ui: UiTree<TestHost> = UiTree::new();
-    ui.set_window(window);
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(560.0), Px(420.0)),
-    );
-
-    let selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
-    let items: Arc<[SelectItem]> = vec![
-        SelectItem::new("alpha", "Alpha").test_id("select-item-alpha"),
-        SelectItem::new("beta", "Beta").test_id("select-item-beta"),
-        SelectItem::new("charlie", "Charlie (disabled)")
-            .disabled(true)
-            .test_id("select-item-charlie-disabled"),
-        SelectItem::new("delta", "Delta").test_id("select-item-delta"),
-    ]
-    .into();
-
-    let selected_model = selected.clone();
-    let render =
-        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
-            let selected_model = selected_model.clone();
-            let items = items.clone();
-            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-                vec![
-                    Select::new(selected_model)
-                        .a11y_label("select")
-                        .placeholder("Pick one")
-                        .items(items)
-                        .test_id("select-trigger")
-                        .into_element(cx),
-                ]
-            })
-        };
-
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        true,
-        |ui, app, services| render(ui, app, services),
-    );
-
-    let trigger_node: NodeId = ui
-        .semantics_snapshot()
-        .and_then(|snapshot| {
-            snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
-            })
-        })
-        .expect("expected select-trigger in semantics snapshot");
-
-    ui.set_focus(Some(trigger_node));
-    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
-    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
-
-    let mut opened = false;
-    for _ in 0..24 {
-        run_overlay_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            true,
-            |ui, app, services| render(ui, app, services),
-        );
-        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
-        if stack
-            .stack
-            .iter()
-            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
-        {
-            opened = true;
-            break;
-        }
-    }
-    assert!(opened, "expected select overlay to open");
-
-    let beta_option_node: NodeId = ui
-        .semantics_snapshot()
-        .and_then(|snapshot| {
-            snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("select-item-beta")).then_some(node.id)
-            })
-        })
-        .expect("expected select-item-beta in semantics snapshot");
-    assert_eq!(
-        ui.focus(),
-        Some(beta_option_node),
-        "expected select to focus the selected option when opening via keyboard"
-    );
-
-    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::KeyC));
-    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::KeyC));
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        true,
-        |ui, app, services| render(ui, app, services),
-    );
-    let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
-        ui.focus().and_then(|focused| {
-            snapshot
-                .nodes
-                .iter()
-                .find(|node| node.id == focused)
-                .and_then(|node| node.test_id.as_deref())
-        })
-    });
-    assert_eq!(
-        focused_test_id,
-        Some("select-item-beta"),
-        "expected typeahead to ignore disabled matches (KeyC)"
-    );
-
-    // Wait for the typeahead buffer to expire (select installs a prefix-buffer typeahead policy).
-    for _ in 0..40 {
-        run_overlay_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            false,
-            |ui, app, services| render(ui, app, services),
-        );
-    }
-
-    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::KeyD));
-    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::KeyD));
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        true,
-        |ui, app, services| render(ui, app, services),
-    );
-
-    let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
-        ui.focus().and_then(|focused| {
-            snapshot
-                .nodes
-                .iter()
-                .find(|node| node.id == focused)
-                .and_then(|node| node.test_id.as_deref())
-        })
-    });
-    assert_eq!(
-        focused_test_id,
-        Some("select-item-delta"),
-        "expected typeahead to rove focus to the matching option (KeyD)"
-    );
-}
-
-#[test]
-fn select_typeahead_delay_controls_buffer_expiration() {
-    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
-    use fret_ui_material3::{Select, SelectItem};
-
-    let mut app = TestHost::default();
-    app.set_global(PlatformCapabilities::default());
-    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
-
-    let window = AppWindowId::default();
-    let mut services = FakeUiServices;
-    let mut ui: UiTree<TestHost> = UiTree::new();
-    ui.set_window(window);
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(560.0), Px(420.0)),
-    );
-
-    let selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
-    let items: Arc<[SelectItem]> = vec![
-        SelectItem::new("beta", "Beta").test_id("select-item-beta"),
-        SelectItem::new("delta", "Delta").test_id("select-item-delta"),
-        SelectItem::new("echo", "Echo").test_id("select-item-echo"),
-    ]
-    .into();
-
-    let delay_ms = 1000;
-    let timeout_ticks = fret_ui_material3::motion::ms_to_frames(delay_ms);
-
-    let selected_model = selected.clone();
-    let render =
-        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
-            let selected_model = selected_model.clone();
-            let items = items.clone();
-            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-                vec![
-                    Select::new(selected_model)
-                        .a11y_label("select")
-                        .placeholder("Pick one")
-                        .items(items)
-                        .typeahead_delay_ms(delay_ms)
-                        .test_id("select-trigger")
-                        .into_element(cx),
-                ]
-            })
-        };
-
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        true,
-        |ui, app, services| render(ui, app, services),
-    );
-
-    let trigger_node: NodeId = ui
-        .semantics_snapshot()
-        .and_then(|snapshot| {
-            snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
-            })
-        })
-        .expect("expected select-trigger in semantics snapshot");
-
-    ui.set_focus(Some(trigger_node));
-    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
-    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
-
-    let mut opened = false;
-    for _ in 0..24 {
-        run_overlay_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            true,
-            |ui, app, services| render(ui, app, services),
-        );
-        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
-        if stack
-            .stack
-            .iter()
-            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
-        {
-            opened = true;
-            break;
-        }
-    }
-    assert!(opened, "expected select overlay to open");
-
-    let beta_option_node: NodeId = ui
-        .semantics_snapshot()
-        .and_then(|snapshot| {
-            snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("select-item-beta")).then_some(node.id)
-            })
-        })
-        .expect("expected select-item-beta in semantics snapshot");
-    assert_eq!(
-        ui.focus(),
-        Some(beta_option_node),
-        "expected select to focus the selected option when opening via keyboard"
-    );
-
-    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::KeyD));
-    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::KeyD));
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        true,
-        |ui, app, services| render(ui, app, services),
-    );
-
-    let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
-        ui.focus().and_then(|focused| {
-            snapshot
-                .nodes
-                .iter()
-                .find(|node| node.id == focused)
-                .and_then(|node| node.test_id.as_deref())
-        })
-    });
-    assert_eq!(
-        focused_test_id,
-        Some("select-item-delta"),
-        "expected typeahead (KeyD) to focus Delta"
-    );
-
-    // The buffer should still be active: `d` + `e` => "de" matches Delta, not Echo.
-    for _ in 0..timeout_ticks.saturating_sub(1) {
-        run_overlay_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            false,
-            |ui, app, services| render(ui, app, services),
-        );
-    }
-
-    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::KeyE));
-    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::KeyE));
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        true,
-        |ui, app, services| render(ui, app, services),
-    );
-
-    let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
-        ui.focus().and_then(|focused| {
-            snapshot
-                .nodes
-                .iter()
-                .find(|node| node.id == focused)
-                .and_then(|node| node.test_id.as_deref())
-        })
-    });
-    assert_eq!(
-        focused_test_id,
-        Some("select-item-delta"),
-        "expected typeahead buffer to keep 'de' and stay on Delta before timeout"
-    );
-
-    // Now let the buffer expire, then 'e' should match Echo.
-    for _ in 0..(timeout_ticks + 2) {
-        run_overlay_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            false,
-            |ui, app, services| render(ui, app, services),
-        );
-    }
-
-    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::KeyE));
-    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::KeyE));
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        true,
-        |ui, app, services| render(ui, app, services),
-    );
-
-    let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
-        ui.focus().and_then(|focused| {
-            snapshot
-                .nodes
-                .iter()
-                .find(|node| node.id == focused)
-                .and_then(|node| node.test_id.as_deref())
-        })
-    });
-    assert_eq!(
-        focused_test_id,
-        Some("select-item-echo"),
-        "expected typeahead buffer to expire and 'e' to match Echo after timeout"
     );
 }
 

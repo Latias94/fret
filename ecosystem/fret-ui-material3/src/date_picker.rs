@@ -8,12 +8,12 @@
 use std::sync::Arc;
 use std::sync::OnceLock;
 
-use fret_core::{Axis, Color, Edges, Px, SemanticsRole, TextOverflow, TextWrap};
+use fret_core::{Axis, Color, Edges, Px, SemanticsLive, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::{DismissReason, DismissRequestCx, OnActivate, OnDismissRequest};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableA11y, PressableProps, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetEdge, LayoutStyle, Length, MainAlign,
+    Overflow, PressableA11y, PressableProps, SemanticsDecoration, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
@@ -25,7 +25,18 @@ use fret_ui_kit::{OverlayController, OverlayPresence};
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{Button, ButtonVariant};
+use crate::foundation::interactive_size::{centered_fill, minimum_interactive_size};
+use crate::foundation::modal_motion::material_modal_panel_transform;
+use crate::foundation::strings::{
+    material_date_picker_cancel_label, material_date_picker_confirm_label,
+    material_date_picker_day_description, material_date_picker_dismiss_label,
+    material_date_picker_month_year, material_date_picker_next_month_label,
+    material_date_picker_next_month_short_label, material_date_picker_previous_month_label,
+    material_date_picker_previous_month_short_label, material_date_picker_title,
+    material_date_picker_weekday_long_label, material_date_picker_weekday_short_label,
+};
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::{absolute_region_layout, diagnostic_anchor, part_test_id};
 use crate::motion;
 use crate::tokens::date_picker as date_tokens;
 use crate::tokens::date_picker::DatePickerTokenVariant;
@@ -34,6 +45,41 @@ fn default_date_picker_test_id() -> Arc<str> {
     static ID: OnceLock<Arc<str>> = OnceLock::new();
     ID.get_or_init(|| Arc::<str>::from("material3-date-picker"))
         .clone()
+}
+
+fn date_picker_cell_test_id(base: &Arc<str>, row: usize, col: usize) -> Arc<str> {
+    Arc::from(format!("{base}.cell.{row}.{col}"))
+}
+
+fn date_picker_date_cell_test_id(base: &Arc<str>, date: Date) -> Arc<str> {
+    let month = u8::from(date.month());
+    Arc::from(format!(
+        "{base}.cell.{:04}-{month:02}-{:02}",
+        date.year(),
+        date.day()
+    ))
+}
+
+fn date_picker_slot_size(theme: &Theme, variant: DatePickerTokenVariant) -> (Px, Px) {
+    let min = minimum_interactive_size(theme);
+    let width = date_tokens::date_cell_width(theme, variant);
+    let height = date_tokens::date_cell_height(theme, variant);
+    (
+        if width.0 >= min.0 { width } else { min },
+        if height.0 >= min.0 { height } else { min },
+    )
+}
+
+/// Date-level selection policy for Material date picker grids.
+///
+/// This mirrors Compose Material3's selectable-date outcome at Fret's recipe layer: disabled dates
+/// remain visible but cannot be activated.
+pub type DateSelectablePredicate = Arc<dyn Fn(Date) -> bool + 'static>;
+
+fn date_is_selectable(selectable_dates: Option<&DateSelectablePredicate>, date: Date) -> bool {
+    selectable_dates
+        .map(|predicate| predicate(date))
+        .unwrap_or(true)
 }
 
 fn cached_day_of_month_label(day: u8) -> Arc<str> {
@@ -50,26 +96,6 @@ fn cached_day_of_month_label(day: u8) -> Arc<str> {
         .unwrap_or_else(|| Arc::<str>::from(day.to_string()))
 }
 
-fn weekday_short_arc(w: Weekday) -> Arc<str> {
-    static TABLE: OnceLock<Vec<Arc<str>>> = OnceLock::new();
-    let table = TABLE.get_or_init(|| {
-        ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-            .into_iter()
-            .map(Arc::<str>::from)
-            .collect::<Vec<_>>()
-    });
-    let idx = match w {
-        Weekday::Monday => 0,
-        Weekday::Tuesday => 1,
-        Weekday::Wednesday => 2,
-        Weekday::Thursday => 3,
-        Weekday::Friday => 4,
-        Weekday::Saturday => 5,
-        Weekday::Sunday => 6,
-    };
-    table[idx].clone()
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DatePickerVariant {
     #[default]
@@ -84,6 +110,7 @@ pub struct DockedDatePicker {
     selected: Model<Option<Date>>,
     week_start: Weekday,
     today: Option<Date>,
+    selectable_dates: Option<DateSelectablePredicate>,
     test_id: Option<Arc<str>>,
 }
 
@@ -95,6 +122,7 @@ impl std::fmt::Debug for DockedDatePicker {
             .field("selected", &"<model>")
             .field("week_start", &self.week_start)
             .field("today", &self.today)
+            .field("selectable_dates", &self.selectable_dates.is_some())
             .field("test_id", &self.test_id)
             .finish()
     }
@@ -108,6 +136,7 @@ impl DockedDatePicker {
             selected,
             week_start: Weekday::Monday,
             today: None,
+            selectable_dates: None,
             test_id: None,
         }
     }
@@ -124,6 +153,11 @@ impl DockedDatePicker {
 
     pub fn today(mut self, today: Option<Date>) -> Self {
         self.today = today;
+        self
+    }
+
+    pub fn selectable_dates(mut self, predicate: impl Fn(Date) -> bool + 'static) -> Self {
+        self.selectable_dates = Some(Arc::new(predicate));
         self
     }
 
@@ -178,6 +212,7 @@ impl DockedDatePicker {
             container.background = Some(background);
             container.shadow = shadow;
             container.corner_radii = corner_radii;
+            let chrome_test_id = self.test_id.as_ref().map(|id| part_test_id(id, "chrome"));
 
             let content = date_picker_body(
                 cx,
@@ -188,6 +223,7 @@ impl DockedDatePicker {
                 today,
                 selected_now,
                 self.selected.clone(),
+                self.selectable_dates.clone(),
                 self.test_id.clone(),
             );
 
@@ -197,7 +233,13 @@ impl DockedDatePicker {
                     test_id: self.test_id.clone(),
                     ..Default::default()
                 },
-                move |cx| vec![cx.container(container, move |_cx| vec![content])],
+                move |cx| {
+                    let mut chrome = cx.container(container, move |_cx| vec![content]);
+                    if let Some(test_id) = chrome_test_id.clone() {
+                        chrome = chrome.test_id(test_id);
+                    }
+                    vec![chrome]
+                },
             )
         })
     }
@@ -214,6 +256,7 @@ pub struct DatePickerDialog {
     close_duration_ms: Option<u32>,
     easing_key: Option<Arc<str>>,
     on_dismiss_request: Option<OnDismissRequest>,
+    selectable_dates: Option<DateSelectablePredicate>,
     test_id: Option<Arc<str>>,
 }
 
@@ -229,6 +272,7 @@ impl std::fmt::Debug for DatePickerDialog {
             .field("close_duration_ms", &self.close_duration_ms)
             .field("easing_key", &self.easing_key)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .field("selectable_dates", &self.selectable_dates.is_some())
             .field("test_id", &self.test_id)
             .finish()
     }
@@ -262,6 +306,7 @@ impl DatePickerDialog {
             close_duration_ms: None,
             easing_key: Some(Arc::<str>::from("md.sys.motion.easing.emphasized")),
             on_dismiss_request: None,
+            selectable_dates: None,
             test_id: None,
         }
     }
@@ -344,6 +389,11 @@ impl DatePickerDialog {
 
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.on_dismiss_request = on_dismiss_request;
+        self
+    }
+
+    pub fn selectable_dates(mut self, predicate: impl Fn(Date) -> bool + 'static) -> Self {
+        self.selectable_dates = Some(Arc::new(predicate));
         self
     }
 
@@ -460,26 +510,12 @@ impl DatePickerDialog {
                     });
                 let dismiss_handler_for_request = dismiss_handler.clone();
 
-                #[derive(Default)]
-                struct DerivedTestIds {
-                    base: Option<Arc<str>>,
-                    scrim: Option<Arc<str>>,
-                    panel: Option<Arc<str>>,
-                }
-
-                let (scrim_test_id, panel_test_id) =
-                    cx.slot_state(DerivedTestIds::default, |st| {
-                        if st.base.as_deref() != self.test_id.as_deref() {
-                            st.base = self.test_id.clone();
-                            st.scrim = st.base.as_ref().map(|id| {
-                                Arc::from(format!("{}-scrim", id.as_ref()))
-                            });
-                            st.panel = st.base.as_ref().map(|id| {
-                                Arc::from(format!("{}-panel", id.as_ref()))
-                            });
-                        }
-                        (st.scrim.clone(), st.panel.clone())
-                    });
+                let scrim_test_id = self.test_id.as_ref().map(|id| part_test_id(id, "scrim"));
+                let scrim_chrome_test_id = scrim_test_id
+                    .as_ref()
+                    .map(|id| part_test_id(id, "chrome"));
+                let panel_test_id = self.test_id.as_ref().map(|id| part_test_id(id, "panel"));
+                let content_test_id = self.test_id.clone();
 
                 let cancel: OnActivate = {
                     let open = self.open.clone();
@@ -535,6 +571,10 @@ impl DatePickerDialog {
                                         enabled: open_now,
                                         focusable: false,
                                         a11y: PressableA11y {
+                                            role: Some(SemanticsRole::Button),
+                                            label: Some(material_date_picker_dismiss_label(
+                                                &*cx.app,
+                                            )),
                                             test_id: scrim_test_id.clone(),
                                             ..Default::default()
                                         },
@@ -561,7 +601,7 @@ impl DatePickerDialog {
                                             cx.pressable_on_activate(on_activate);
                                         }
 
-                                        vec![cx.container(
+                                        let mut chrome = cx.container(
                                             ContainerProps {
                                                 layout: {
                                                     let mut l = LayoutStyle::default();
@@ -573,15 +613,19 @@ impl DatePickerDialog {
                                                 ..Default::default()
                                             },
                                             |_cx| Vec::<AnyElement>::new(),
-                                        )]
+                                        );
+                                        if let Some(test_id) = scrim_chrome_test_id.clone() {
+                                            chrome = chrome.test_id(test_id);
+                                        }
+                                        vec![chrome]
                                     },
                                 )
                             });
 
                             let panel = cx.named("panel", |cx| {
                                 let opacity = transition.progress;
-                                let scale = 0.95 + 0.05 * transition.progress;
-                                let transform = fret_core::Transform2D::scale_uniform(scale);
+                                let transform =
+                                    material_modal_panel_transform(cx.bounds, transition.progress);
 
                                 let mut align = FlexProps::default();
                                 align.direction = Axis::Vertical;
@@ -596,7 +640,9 @@ impl DatePickerDialog {
                                     models.draft_month.clone(),
                                     models.draft_selected.clone(),
                                     panel_test_id.clone(),
+                                    content_test_id.clone(),
                                     today,
+                                    self.selectable_dates.clone(),
                                     cancel.clone(),
                                     confirm.clone(),
                                 );
@@ -646,7 +692,9 @@ fn date_picker_modal_panel<H: UiHost>(
     month: Model<CalendarMonth>,
     selected: Model<Option<Date>>,
     test_id: Option<Arc<str>>,
+    content_test_id: Option<Arc<str>>,
     today: Date,
+    selectable_dates: Option<DateSelectablePredicate>,
     on_cancel: OnActivate,
     on_confirm: OnActivate,
 ) -> AnyElement {
@@ -691,33 +739,69 @@ fn date_picker_modal_panel<H: UiHost>(
     container.corner_radii = corner_radii;
 
     let title = {
-        let mut props = TextProps::new(Arc::<str>::from("Select date"));
+        let title_label = material_date_picker_title(&*cx.app);
+        let title_test_id = content_test_id
+            .as_ref()
+            .map(|id| part_test_id(id, "modal.title"))
+            .unwrap_or_else(|| Arc::<str>::from("material3-date-picker.modal.title"));
+        let mut props = TextProps::new(title_label.clone());
         props.style = Some(headline_style);
         props.color = Some(headline_color);
         props.layout.size.width = Length::Fill;
         props.layout.size.min_width = Some(Length::Px(Px(0.0)));
         props.wrap = TextWrap::None;
         props.overflow = TextOverflow::Ellipsis;
-        cx.text_props(props)
+        cx.text_props(props).a11y(
+            SemanticsDecoration::default()
+                .test_id(title_test_id)
+                .label(title_label),
+        )
     };
 
-    let test_id_for_body = test_id.clone();
+    let test_id_for_body = content_test_id.clone();
+    let title = padded_element(
+        cx,
+        Edges {
+            top: Px(16.0),
+            right: Px(12.0),
+            bottom: Px(0.0),
+            left: Px(24.0),
+        },
+        title,
+    );
+
     let body = cx.flex(
         FlexProps {
             direction: Axis::Vertical,
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
             wrap: false,
-            gap: Px(12.0).into(),
+            gap: Px(0.0).into(),
             layout: {
                 let mut l = LayoutStyle::default();
                 l.size.width = Length::Fill;
                 l.size.height = Length::Fill;
                 l
             },
-            padding: Edges::all(Px(16.0)).into(),
+            padding: Edges::all(Px(0.0)).into(),
         },
         move |cx| {
+            let action_row = date_picker_actions(
+                cx,
+                content_test_id.clone(),
+                on_cancel.clone(),
+                on_confirm.clone(),
+            );
+            let actions = padded_element(
+                cx,
+                Edges {
+                    top: Px(0.0),
+                    right: Px(6.0),
+                    bottom: Px(8.0),
+                    left: Px(0.0),
+                },
+                action_row,
+            );
             vec![
                 title,
                 date_picker_body(
@@ -729,9 +813,10 @@ fn date_picker_modal_panel<H: UiHost>(
                     today,
                     selected_now,
                     selected.clone(),
+                    selectable_dates.clone(),
                     test_id_for_body.clone(),
                 ),
-                date_picker_actions(cx, on_cancel.clone(), on_confirm.clone()),
+                actions,
             ]
         },
     );
@@ -746,8 +831,20 @@ fn date_picker_modal_panel<H: UiHost>(
     )
 }
 
+fn padded_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    padding: Edges,
+    child: AnyElement,
+) -> AnyElement {
+    let mut props = ContainerProps::default();
+    props.layout.size.width = Length::Fill;
+    props.padding = padding.into();
+    cx.container(props, move |_cx| vec![child])
+}
+
 fn date_picker_actions<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    test_id: Option<Arc<str>>,
     on_cancel: OnActivate,
     on_confirm: OnActivate,
 ) -> AnyElement {
@@ -760,16 +857,24 @@ fn date_picker_actions<H: UiHost>(
     props.layout.size.width = Length::Fill;
 
     cx.flex(props, move |cx| {
+        let cancel_test_id = test_id
+            .as_ref()
+            .map(|id| part_test_id(id, "actions.cancel"))
+            .unwrap_or_else(|| Arc::<str>::from("material3-date-picker.actions.cancel"));
+        let confirm_test_id = test_id
+            .as_ref()
+            .map(|id| part_test_id(id, "actions.confirm"))
+            .unwrap_or_else(|| Arc::<str>::from("material3-date-picker.actions.confirm"));
         vec![
-            Button::new("Cancel")
+            Button::new(material_date_picker_cancel_label(&*cx.app))
                 .variant(ButtonVariant::Text)
                 .on_activate(on_cancel.clone())
-                .test_id("material3-date-picker-cancel")
+                .test_id(cancel_test_id)
                 .into_element(cx),
-            Button::new("OK")
+            Button::new(material_date_picker_confirm_label(&*cx.app))
                 .variant(ButtonVariant::Filled)
                 .on_activate(on_confirm.clone())
-                .test_id("material3-date-picker-confirm")
+                .test_id(confirm_test_id)
                 .into_element(cx),
         ]
     })
@@ -784,21 +889,27 @@ fn date_picker_body<H: UiHost>(
     today: Date,
     selected_now: Option<Date>,
     selected_model: Model<Option<Date>>,
+    selectable_dates: Option<DateSelectablePredicate>,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
+    let horizontal_padding = {
+        let theme = Theme::global(&*cx.app);
+        date_tokens::calendar_horizontal_padding(theme, token_variant)
+    };
+
     cx.flex(
         FlexProps {
             direction: Axis::Vertical,
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
             wrap: false,
-            gap: Px(8.0).into(),
+            gap: Px(0.0).into(),
             layout: {
                 let mut l = LayoutStyle::default();
                 l.size.width = Length::Fill;
                 l
             },
-            ..Default::default()
+            padding: Edges::symmetric(horizontal_padding, Px(0.0)).into(),
         },
         move |cx| {
             vec![
@@ -809,7 +920,7 @@ fn date_picker_body<H: UiHost>(
                     month_model.clone(),
                     test_id.clone(),
                 ),
-                weekdays_row(cx, token_variant, week_start),
+                weekdays_row(cx, token_variant, week_start, test_id.clone()),
                 dates_grid(
                     cx,
                     token_variant,
@@ -819,6 +930,7 @@ fn date_picker_body<H: UiHost>(
                     today,
                     selected_now,
                     selected_model,
+                    selectable_dates,
                     test_id,
                 ),
             ]
@@ -834,33 +946,14 @@ fn month_nav_header<H: UiHost>(
     month_model: Model<CalendarMonth>,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
-    #[derive(Default)]
-    struct DerivedTitle {
-        month: Option<time::Month>,
-        year: i32,
-        title: Option<Arc<str>>,
-    }
+    let title = material_date_picker_month_year(&*cx.app, month.month, month.year);
 
-    let title = cx.slot_state(DerivedTitle::default, |st| {
-        if st.title.is_none() || st.month != Some(month.month) || st.year != month.year {
-            st.month = Some(month.month);
-            st.year = month.year;
-            st.title = Some(Arc::<str>::from(format!(
-                "{} {}",
-                month_name_en(month.month),
-                month.year
-            )));
-        }
-        st.title.as_ref().expect("title").clone()
-    });
-
-    let mut row = FlexProps::default();
-    row.direction = Axis::Horizontal;
-    row.justify = MainAlign::SpaceBetween;
-    row.align = CrossAlign::Center;
-    row.wrap = false;
-    row.layout.size.width = Length::Fill;
-    row.gap = Px(12.0).into();
+    let base_id = test_id.clone().unwrap_or_else(default_date_picker_test_id);
+    let tag = match token_variant {
+        DatePickerTokenVariant::Docked => "docked",
+        DatePickerTokenVariant::Modal => "modal",
+    };
+    let month_label_test_id = part_test_id(&base_id, &format!("{tag}.month-label"));
 
     let title_el = {
         let (style, color) = {
@@ -883,10 +976,21 @@ fn month_nav_header<H: UiHost>(
         props.align = fret_core::TextAlign::Center;
         props.wrap = TextWrap::None;
         props.overflow = TextOverflow::Ellipsis;
-        cx.text_props(props)
+        cx.text_props(props).a11y(
+            SemanticsDecoration::default()
+                .test_id(month_label_test_id)
+                .live(Some(SemanticsLive::Polite))
+                .live_atomic(true),
+        )
     };
 
-    let base_id = test_id.clone().unwrap_or_else(default_date_picker_test_id);
+    let mut row = FlexProps::default();
+    row.direction = Axis::Horizontal;
+    row.justify = MainAlign::SpaceBetween;
+    row.align = CrossAlign::Center;
+    row.wrap = false;
+    row.layout.size.width = Length::Fill;
+    row.gap = Px(12.0).into();
 
     let prev: OnActivate = {
         let month_model = month_model.clone();
@@ -907,39 +1011,17 @@ fn month_nav_header<H: UiHost>(
         })
     };
 
-    let tag = match token_variant {
-        DatePickerTokenVariant::Docked => "docked",
-        DatePickerTokenVariant::Modal => "modal",
-    };
+    let prev_test_id = part_test_id(&base_id, &format!("{tag}.prev"));
+    let next_test_id = part_test_id(&base_id, &format!("{tag}.next"));
 
-    #[derive(Default)]
-    struct DerivedNavTestIds {
-        base: Option<Arc<str>>,
-        tag: Option<&'static str>,
-        prev: Option<Arc<str>>,
-        next: Option<Arc<str>>,
-    }
-
-    let (prev_test_id, next_test_id) = cx.slot_state(DerivedNavTestIds::default, |st| {
-        if st.prev.is_none() || st.base.as_deref() != Some(base_id.as_ref()) || st.tag != Some(tag)
-        {
-            st.base = Some(base_id.clone());
-            st.tag = Some(tag);
-            st.prev = Some(Arc::from(format!("{base_id}-{tag}-prev")));
-            st.next = Some(Arc::from(format!("{base_id}-{tag}-next")));
-        }
-        (
-            st.prev.as_ref().expect("prev").clone(),
-            st.next.as_ref().expect("next").clone(),
-        )
-    });
-
-    let prev = Button::new("Prev")
+    let prev = Button::new(material_date_picker_previous_month_short_label(&*cx.app))
+        .a11y_label(material_date_picker_previous_month_label(&*cx.app))
         .variant(ButtonVariant::Text)
         .on_activate(prev)
         .test_id(prev_test_id)
         .into_element(cx);
-    let next = Button::new("Next")
+    let next = Button::new(material_date_picker_next_month_short_label(&*cx.app))
+        .a11y_label(material_date_picker_next_month_label(&*cx.app))
         .variant(ButtonVariant::Text)
         .on_activate(next)
         .test_id(next_test_id)
@@ -952,34 +1034,55 @@ fn weekdays_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     token_variant: DatePickerTokenVariant,
     week_start: Weekday,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let mut row = FlexProps::default();
     row.direction = Axis::Horizontal;
-    row.justify = MainAlign::SpaceBetween;
+    row.justify = MainAlign::SpaceEvenly;
     row.align = CrossAlign::Center;
     row.wrap = false;
     row.layout.size.width = Length::Fill;
     row.gap = Px(0.0).into();
 
-    let (style, color) = {
+    let (style, color, slot_w, slot_h) = {
         let theme = Theme::global(&*cx.app);
         let style = date_tokens::weekdays_label_text_style(theme, token_variant);
         let color = date_tokens::weekdays_label_text_color(theme, token_variant);
-        (style, color)
+        let (slot_w, slot_h) = date_picker_slot_size(theme, token_variant);
+        (style, color, slot_w, slot_h)
     };
 
     let weekdays = weekdays_from_start(week_start);
+    let base_id = test_id.unwrap_or_else(default_date_picker_test_id);
+    let tag = match token_variant {
+        DatePickerTokenVariant::Docked => "docked",
+        DatePickerTokenVariant::Modal => "modal",
+    };
     cx.flex(row, move |cx| {
         weekdays
             .into_iter()
-            .map(|w| {
-                let label = weekday_short_arc(w);
+            .enumerate()
+            .map(|(idx, w)| {
+                let label = material_date_picker_weekday_short_label(&*cx.app, w);
+                let a11y_label = material_date_picker_weekday_long_label(&*cx.app, w);
+                let test_id = part_test_id(&base_id, &format!("{tag}.weekday.{idx}"));
                 let mut props = TextProps::new(label);
                 props.style = Some(style.clone());
                 props.color = Some(color);
                 props.wrap = TextWrap::None;
                 props.overflow = TextOverflow::Clip;
-                cx.text_props(props)
+                let mut slot = FlexProps::default();
+                slot.direction = Axis::Horizontal;
+                slot.justify = MainAlign::Center;
+                slot.align = CrossAlign::Center;
+                slot.wrap = false;
+                slot.layout.size.width = Length::Px(slot_w);
+                slot.layout.size.height = Length::Px(slot_h);
+                cx.flex(slot, move |cx| vec![cx.text_props(props)]).a11y(
+                    SemanticsDecoration::default()
+                        .test_id(test_id)
+                        .label(a11y_label),
+                )
             })
             .collect::<Vec<_>>()
     })
@@ -995,12 +1098,15 @@ fn dates_grid<H: UiHost>(
     today: Date,
     selected_now: Option<Date>,
     selected_model: Model<Option<Date>>,
+    selectable_dates: Option<DateSelectablePredicate>,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let days = month_grid(month, week_start);
     let (
         cell_w,
         cell_h,
+        slot_w,
+        slot_h,
         cell_shape,
         label_style,
         unselected_color,
@@ -1009,11 +1115,15 @@ fn dates_grid<H: UiHost>(
         today_outline_width,
         today_outline_color,
         outside_opacity,
+        disabled_opacity,
     ) = {
         let theme = Theme::global(&*cx.app);
+        let (slot_w, slot_h) = date_picker_slot_size(theme, token_variant);
         (
             date_tokens::date_cell_width(theme, token_variant),
             date_tokens::date_cell_height(theme, token_variant),
+            slot_w,
+            slot_h,
             date_tokens::date_cell_shape(theme, token_variant),
             date_tokens::date_label_text_style(theme, token_variant),
             date_tokens::date_unselected_label_text_color(theme, token_variant),
@@ -1022,37 +1132,29 @@ fn dates_grid<H: UiHost>(
             date_tokens::date_today_outline_width(theme, token_variant),
             date_tokens::date_today_outline_color(theme, token_variant),
             date_tokens::date_outside_month_opacity(theme, token_variant),
+            theme
+                .number_by_key("md.sys.state.disabled.state-layer-opacity")
+                .unwrap_or(0.38),
         )
     };
 
     let base_id = test_id.clone().unwrap_or_else(default_date_picker_test_id);
 
-    #[derive(Default)]
-    struct DerivedGridTestIds {
-        base: Option<Arc<str>>,
-        cell_test_ids: Option<Arc<[Arc<str>]>>,
-    }
-
-    let cell_test_ids = cx.slot_state(DerivedGridTestIds::default, |st| {
-        if st.cell_test_ids.is_none() || st.base.as_deref() != Some(base_id.as_ref()) {
-            st.base = Some(base_id.clone());
-            let mut out: Vec<Arc<str>> = Vec::with_capacity(42);
-            for row_idx in 0..6 {
-                for col_idx in 0..7 {
-                    out.push(Arc::from(format!("{base_id}-cell-{row_idx}-{col_idx}")));
-                }
-            }
-            st.cell_test_ids = Some(Arc::from(out));
-        }
-        st.cell_test_ids.as_ref().expect("cell_test_ids").clone()
-    });
+    let cell_test_ids: Arc<[Arc<str>]> = Arc::from(
+        (0..6)
+            .flat_map(|row_idx| {
+                let base_id = base_id.clone();
+                (0..7).map(move |col_idx| date_picker_cell_test_id(&base_id, row_idx, col_idx))
+            })
+            .collect::<Vec<_>>(),
+    );
 
     let mut grid = FlexProps::default();
     grid.direction = Axis::Vertical;
     grid.justify = MainAlign::Start;
     grid.align = CrossAlign::Stretch;
     grid.wrap = false;
-    grid.gap = Px(4.0).into();
+    grid.gap = Px(0.0).into();
     grid.layout.size.width = Length::Fill;
 
     cx.flex(grid, move |cx| {
@@ -1062,9 +1164,11 @@ fn dates_grid<H: UiHost>(
             let selected_model = selected_model.clone();
             let label_style = label_style.clone();
             let cell_test_ids = cell_test_ids.clone();
+            let base_id_for_row = base_id.clone();
+            let selectable_dates = selectable_dates.clone();
             let mut row = FlexProps::default();
             row.direction = Axis::Horizontal;
-            row.justify = MainAlign::SpaceBetween;
+            row.justify = MainAlign::SpaceEvenly;
             row.align = CrossAlign::Center;
             row.wrap = false;
             row.gap = Px(0.0).into();
@@ -1080,6 +1184,7 @@ fn dates_grid<H: UiHost>(
                         let in_month = day.in_month;
                         let is_today = date == today;
                         let is_selected = selected_now.is_some_and(|d| d == date);
+                        let is_selectable = date_is_selectable(selectable_dates.as_ref(), date);
 
                         let mut props = ContainerProps::default();
                         props.layout.size.width = Length::Px(cell_w);
@@ -1106,6 +1211,9 @@ fn dates_grid<H: UiHost>(
                         if !in_month && !is_selected {
                             label_color.a = (label_color.a * outside_opacity).clamp(0.0, 1.0);
                         }
+                        if !is_selectable {
+                            label_color.a = (label_color.a * disabled_opacity).clamp(0.0, 1.0);
+                        }
                         label_props.color = Some(label_color);
                         label_props.wrap = TextWrap::None;
                         label_props.overflow = TextOverflow::Clip;
@@ -1114,6 +1222,14 @@ fn dates_grid<H: UiHost>(
                             .get(row_idx * 7 + i)
                             .expect("cell_test_id")
                             .clone();
+                        let date_cell_test_id =
+                            date_picker_date_cell_test_id(&base_id_for_row, date);
+                        let date_description =
+                            material_date_picker_day_description(&*cx.app, date, is_today);
+
+                        let mut pressable_layout = LayoutStyle::default();
+                        pressable_layout.size.width = Length::Px(slot_w);
+                        pressable_layout.size.height = Length::Px(slot_h);
 
                         let on_activate: OnActivate = {
                             let selected_model = selected_model.clone();
@@ -1132,17 +1248,36 @@ fn dates_grid<H: UiHost>(
 
                         cx.pressable(
                             PressableProps {
+                                layout: pressable_layout,
+                                enabled: is_selectable,
+                                focusable: is_selectable,
                                 a11y: PressableA11y {
+                                    role: Some(SemanticsRole::Button),
+                                    label: Some(date_description),
                                     test_id: Some(cell_test_id),
+                                    selected: is_selected,
                                     ..Default::default()
                                 },
                                 ..Default::default()
                             },
                             move |cx, _st| {
                                 cx.pressable_on_activate(on_activate.clone());
-                                vec![
-                                    cx.container(props, move |cx| vec![cx.text_props(label_props)]),
-                                ]
+                                let chrome = cx.container(props, move |cx| {
+                                    vec![
+                                        cx.text_props(label_props),
+                                        diagnostic_anchor(
+                                            cx,
+                                            date_cell_test_id.clone(),
+                                            absolute_region_layout(
+                                                InsetEdge::Px(Px(0.0)),
+                                                InsetEdge::Px(Px(0.0)),
+                                                Length::Fill,
+                                                Length::Fill,
+                                            ),
+                                        ),
+                                    ]
+                                });
+                                vec![centered_fill(cx, chrome)]
                             },
                         )
                     })
@@ -1166,24 +1301,6 @@ fn weekdays_from_start(start: Weekday) -> [Weekday; 7] {
     ];
     let idx = all.iter().position(|w| *w == start).unwrap_or(0);
     std::array::from_fn(|i| all[(idx + i) % 7])
-}
-
-fn month_name_en(m: time::Month) -> &'static str {
-    use time::Month;
-    match m {
-        Month::January => "January",
-        Month::February => "February",
-        Month::March => "March",
-        Month::April => "April",
-        Month::May => "May",
-        Month::June => "June",
-        Month::July => "July",
-        Month::August => "August",
-        Month::September => "September",
-        Month::October => "October",
-        Month::November => "November",
-        Month::December => "December",
-    }
 }
 
 fn with_alpha(c: Color, a: f32) -> Color {
@@ -1281,7 +1398,9 @@ mod tests {
                     month_model.clone(),
                     selected_model.clone(),
                     Some(Arc::<str>::from("m3-date-picker-modal")),
+                    Some(Arc::<str>::from("m3-date-picker-modal")),
                     month,
+                    None,
                     noop.clone(),
                     noop.clone(),
                 )

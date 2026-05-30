@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "slug": "material3-bottom-sheet-chrome-alias-packet-v1",
+  "title": "Material 3 BottomSheet Chrome Alias Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "follow_on",
+  "problem": "Closed lane that added layout-safe BottomSheet chrome aliases through hidden diagnostic anchors without changing bottom-sheet scene output.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-bottom-sheet-chrome-alias-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-bottom-sheet-chrome-alias-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-bottom-sheet-chrome-alias-packet-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-bottom-sheet-chrome-alias-packet-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-bottom-sheet-chrome-alias-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-bottom-sheet-chrome-alias-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Automation surface currently lacks bottom-sheet chrome aliases.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_dialog_and_bottom_sheet_expose_stable_part_test_ids"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-bottom-sheet-chrome-alias-packet-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "bottom-sheet-automation-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_dialog_and_bottom_sheet_expose_stable_part_test_ids"
+    },
+    {
+      "name": "bottom-sheet-headless-golden-suite",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_bottom_sheet_suite_goldens_v1"
+    },
+    {
+      "name": "material3-crate-check-diagnostics-tests",
+      "command": "cargo check -p fret-ui-material3 --features diagnostics --tests"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+    "docs/workstreams/material3-bottom-sheet-chrome-alias-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md",
+    "docs/workstreams/material3-bottom-sheet-chrome-alias-packet-v1/artifacts/bottom_sheet_chrome_alias_packet_v1.md",
+    "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/artifacts/material3_canvas_draw_region_packet_v1.md",
+    "ecosystem/fret-ui-material3/src/foundation/test_id.rs",
+    "ecosystem/fret-ui-material3/src/bottom_sheet.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "ecosystem/fret-ui-material3/tests/radio_alignment.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This bottom-sheet chrome alias lane is closed. Start a new follow-on only for gestures, motion timing, or content-sizing changes with fresh evidence."
+  }
+}

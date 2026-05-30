@@ -180,8 +180,21 @@ impl ElementHostWidget {
                 if let Some(label) = props.a11y_label.as_ref() {
                     cx.set_label(label.as_ref().to_string());
                 }
+                if let Some(state_description) = props.a11y_state_description.as_ref() {
+                    cx.set_state_description(Some(state_description.as_ref().to_string()));
+                }
                 if let Some(test_id) = props.test_id.as_ref() {
                     cx.set_test_id(test_id.as_ref().to_string());
+                }
+                if let Some(element) = props.labelled_by_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_labelled_by(node);
+                }
+                if let Some(element) = props.described_by_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_described_by(node);
                 }
                 if let Some(expanded) = props.expanded {
                     cx.set_expanded(expanded);
@@ -222,11 +235,25 @@ impl ElementHostWidget {
                 area.set_style(props.chrome);
                 area.set_text_style(props.text_style);
                 area.set_min_height(props.min_height);
+                area.set_max_height(props.max_height);
                 if let Some(label) = props.a11y_label.as_ref() {
                     cx.set_label(label.as_ref().to_string());
                 }
+                if let Some(state_description) = props.a11y_state_description.as_ref() {
+                    cx.set_state_description(Some(state_description.as_ref().to_string()));
+                }
                 if let Some(test_id) = props.test_id.as_ref() {
                     cx.set_test_id(test_id.as_ref().to_string());
+                }
+                if let Some(element) = props.labelled_by_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_labelled_by(node);
+                }
+                if let Some(element) = props.described_by_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_described_by(node);
                 }
                 cx.set_required(props.a11y_required);
                 cx.set_invalid(props.a11y_invalid);
@@ -273,6 +300,9 @@ impl ElementHostWidget {
                     }
                     if let Some(value) = props.a11y.value.as_ref() {
                         cx.set_value(value.as_ref().to_string());
+                    }
+                    if let Some(state_description) = props.a11y.state_description.as_ref() {
+                        cx.set_state_description(Some(state_description.as_ref().to_string()));
                     }
                     if let Some(test_id) = props.a11y.test_id.as_ref() {
                         cx.set_test_id(test_id.as_ref().to_string());
@@ -480,6 +510,9 @@ impl ElementHostWidget {
             }
             if let Some(role_description) = decoration.role_description.as_ref() {
                 cx.set_role_description(Some(role_description.as_ref().to_string()));
+            }
+            if let Some(state_description) = decoration.state_description.as_ref() {
+                cx.set_state_description(Some(state_description.as_ref().to_string()));
             }
             if let Some(test_id) = decoration.test_id.as_ref() {
                 cx.set_test_id(test_id.as_ref().to_string());

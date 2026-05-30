@@ -1,8 +1,10 @@
 use fret_core::{Color, Corners, Px};
 use fret_ui::Theme;
 use fret_ui::element::{ShadowLayerStyle, ShadowStyle};
+use fret_ui::theme::CubicBezier;
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::motion::{cubic_bezier_ease, ms_to_frames};
 
 /// Compute the Material 3 surface tint overlay alpha for a given elevation.
 ///
@@ -75,6 +77,162 @@ pub fn shadow_for_elevation_with_color(
         secondary: Some(ambient),
         corner_radii,
     })
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MaterialElevationInteraction {
+    Pressed,
+    Hovered,
+    Focused,
+}
+
+#[derive(Debug, Clone)]
+pub struct AnimatedElevationRuntime {
+    initialized: bool,
+    current: f32,
+    from: f32,
+    to: f32,
+    start_frame: u64,
+    duration_frames: u64,
+    easing: CubicBezier,
+    active: bool,
+    last_interaction: Option<MaterialElevationInteraction>,
+}
+
+impl Default for AnimatedElevationRuntime {
+    fn default() -> Self {
+        Self {
+            initialized: false,
+            current: 0.0,
+            from: 0.0,
+            to: 0.0,
+            start_frame: 0,
+            duration_frames: 0,
+            easing: CUBIC_BEZIER_LINEAR,
+            active: false,
+            last_interaction: None,
+        }
+    }
+}
+
+pub fn animate_material_elevation(
+    runtime: &mut AnimatedElevationRuntime,
+    now_frame: u64,
+    enabled: bool,
+    interaction: Option<MaterialElevationInteraction>,
+    target: Px,
+) -> (Px, bool) {
+    let target = target.0.max(0.0);
+    if !runtime.initialized {
+        runtime.reset(now_frame, target, interaction);
+        return (Px(runtime.current), false);
+    }
+
+    runtime.advance(now_frame);
+
+    if !enabled {
+        // Compose snaps elevation when entering disabled state.
+        runtime.reset(now_frame, target, None);
+        return (Px(runtime.current), false);
+    }
+
+    if (target - runtime.to).abs() > 1e-6 {
+        let (duration_ms, easing) =
+            material_elevation_transition(runtime.last_interaction, interaction);
+        runtime.set_target(now_frame, target, duration_ms, easing);
+    }
+
+    runtime.last_interaction = interaction;
+    (Px(runtime.current.max(0.0)), runtime.active)
+}
+
+impl AnimatedElevationRuntime {
+    fn reset(
+        &mut self,
+        now_frame: u64,
+        value: f32,
+        interaction: Option<MaterialElevationInteraction>,
+    ) {
+        self.initialized = true;
+        self.current = value;
+        self.from = value;
+        self.to = value;
+        self.start_frame = now_frame;
+        self.duration_frames = 0;
+        self.easing = CUBIC_BEZIER_LINEAR;
+        self.active = false;
+        self.last_interaction = interaction;
+    }
+
+    fn set_target(&mut self, now_frame: u64, target: f32, duration_ms: u32, easing: CubicBezier) {
+        if duration_ms == 0 {
+            self.reset(now_frame, target, self.last_interaction);
+            return;
+        }
+
+        self.from = self.current;
+        self.to = target;
+        self.start_frame = now_frame;
+        self.duration_frames = ms_to_frames(duration_ms).max(1);
+        self.easing = easing;
+        self.active = true;
+    }
+
+    fn advance(&mut self, now_frame: u64) {
+        if !self.active {
+            return;
+        }
+
+        let elapsed = now_frame.saturating_sub(self.start_frame);
+        if elapsed >= self.duration_frames {
+            self.current = self.to;
+            self.active = false;
+            return;
+        }
+
+        let t = elapsed as f32 / self.duration_frames as f32;
+        let eased = cubic_bezier_ease(self.easing, t);
+        self.current = self.from + (self.to - self.from) * eased;
+    }
+}
+
+fn material_elevation_transition(
+    from: Option<MaterialElevationInteraction>,
+    to: Option<MaterialElevationInteraction>,
+) -> (u32, CubicBezier) {
+    if to.is_some() {
+        return (120, fast_out_slow_in_easing());
+    }
+    match from {
+        Some(MaterialElevationInteraction::Hovered) => (120, elevation_outgoing_easing()),
+        Some(_) => (150, elevation_outgoing_easing()),
+        None => (0, CUBIC_BEZIER_LINEAR),
+    }
+}
+
+const CUBIC_BEZIER_LINEAR: CubicBezier = CubicBezier {
+    x1: 0.0,
+    y1: 0.0,
+    x2: 1.0,
+    y2: 1.0,
+};
+
+fn fast_out_slow_in_easing() -> CubicBezier {
+    CubicBezier {
+        x1: 0.4,
+        y1: 0.0,
+        x2: 0.2,
+        y2: 1.0,
+    }
+}
+
+fn elevation_outgoing_easing() -> CubicBezier {
+    CubicBezier {
+        x1: 0.4,
+        y1: 0.0,
+        x2: 0.6,
+        y2: 1.0,
+    }
 }
 
 fn elevation_to_level(elevation: Px) -> u8 {

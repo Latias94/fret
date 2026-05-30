@@ -22,13 +22,18 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .items(vec![
                 material3::ListItem::new("alpha", "Alpha")
                     .leading_icon(ids::ui::SEARCH)
+                    .supporting_text("Primary line with supporting text")
                     .a11y_label("List item alpha")
                     .test_id(format!("{id_prefix}-list-item-alpha")),
                 material3::ListItem::new("beta", "Beta")
                     .leading_icon(ids::ui::SETTINGS)
+                    .supporting_text("Selected item metadata")
+                    .trailing_supporting_text("Meta")
                     .a11y_label("List item beta")
                     .test_id(format!("{id_prefix}-list-item-beta")),
                 material3::ListItem::new("disabled", "Disabled")
+                    .overline_text("Overline")
+                    .supporting_text("Disabled supporting text")
                     .leading_icon(ids::ui::SLASH)
                     .disabled(true)
                     .a11y_label("List item disabled")

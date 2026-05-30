@@ -1041,7 +1041,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(48.0)));
         let scroll_handle = fret_ui::scroll::ScrollHandle::default();
         scroll_handle.set_viewport_size(Size::new(Px(160.0), Px(48.0)));

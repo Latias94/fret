@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "slug": "material3-icon-button-diagnostics-packet-v1",
+  "title": "Material 3 IconButton Diagnostics Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "diagnostics_follow_on",
+  "problem": "Closed the IconButton matrix residual by repairing stale centered-chrome diagnostics navigation and proving centered chrome, selector readiness, and pressed scene stability.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-icon-button-diagnostics-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-icon-button-diagnostics-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-icon-button-diagnostics-packet-v1/TODO.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-icon-button-diagnostics-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-icon-button-diagnostics-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the repaired Material3 IconButton centered-chrome diagnostics script against the UI Gallery.",
+    "commands": [
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-icon-button-centered-chrome.json --dir target/fret-diag/material3-icon-button-centered-chrome-20260528 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3"
+    ]
+  },
+  "gates": [
+    {
+      "name": "icon-button-centered-chrome-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-icon-button-centered-chrome.json --dir target/fret-diag/material3-icon-button-centered-chrome-20260528 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3"
+    },
+    {
+      "name": "choice-controls-automation-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_choice_controls_expose_stable_part_test_ids"
+    },
+    {
+      "name": "icon-button-pressed-scene",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment icon_button_pressed_scene_structure_is_stable"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-material3/src/icon_button.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/material3/icon_button.rs",
+    "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-icon-button-centered-chrome.json",
+    "docs/workstreams/material3-icon-button-diagnostics-packet-v1/artifacts/icon_button_diagnostics_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "return_to_material3_sweep",
+    "notes": "IconButton is closed for centered chrome, stable selectors, and pressed scene evidence. Keep variant chrome and toggle semantics recipe-owned."
+  }
+}

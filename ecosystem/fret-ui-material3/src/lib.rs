@@ -63,7 +63,9 @@ pub use checkbox::{Checkbox, CheckboxStyle};
 pub use chip::{AssistChip, AssistChipStyle, AssistChipVariant};
 pub use chip_set::{ChipSet, ChipSetItem};
 pub use context::{MaterialDesignVariant, with_material_design_variant};
-pub use date_picker::{DatePickerDialog, DatePickerVariant, DockedDatePicker};
+pub use date_picker::{
+    DatePickerDialog, DatePickerVariant, DateSelectablePredicate, DockedDatePicker,
+};
 pub use dialog::{Dialog, DialogAction, DialogStyle};
 pub use divider::Divider;
 pub use dropdown_menu::{DropdownMenu, DropdownMenuAlign, DropdownMenuSide};
@@ -84,7 +86,7 @@ pub use navigation_rail::{NavigationRail, NavigationRailItem};
 pub use progress_indicator::{CircularProgressIndicator, LinearProgressIndicator};
 pub use radio::{Radio, RadioGroup, RadioGroupItem, RadioGroupOrientation, RadioStyle};
 pub use search_bar::SearchBar;
-pub use search_view::SearchView;
+pub use search_view::{SearchView, SearchViewPresentation};
 pub use segmented_button::{SegmentedButtonItem, SegmentedButtonSet};
 pub use select::{Select, SelectItem, SelectStyle, SelectVariant};
 pub use slider::{RangeSlider, Slider, SliderStyle};

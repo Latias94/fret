@@ -7,582 +7,60 @@
 //! - per-control alpha preview policy mirroring Dear ImGui's ColorButton preview modes
 
 use std::panic::Location;
-use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, Edges, KeyCode, MouseButton, Px};
+use fret_core::{Color, Px};
 use fret_runtime::Model;
-use fret_ui::action::{
-    ActionCx, ActivateReason, OnActivate, PressablePointerDownResult, UiActionHost,
-};
-use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PointerRegionProps, PressableA11y, PressableProps, SizeStyle, SpacingLength, TextInputProps,
-};
+use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::{ChromeRefinement, Size};
 
-use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::input_group::derived_test_id;
-use crate::primitives::readout::editor_inline_error_text_props;
-use crate::primitives::style::EditorStyle;
-use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 mod drag_drop;
+mod input;
+mod layout;
 mod model;
+mod options;
 mod popup;
+mod records;
+mod state;
+mod swatch;
 
 #[cfg(test)]
 mod tests;
 
 use self::drag_drop::{
-    apply_color_drop_payload, color_drag_drop_store_for, install_color_drag_source,
-    palette_slot_drop_from_payload, prune_color_drag_drop_store, resolve_color_drag_threshold,
-    take_delivered_color_drop, update_color_drop_target,
+    ColorEditDeliveredDropArgs, apply_delivered_color_drop, color_drag_drop_store_for,
+    prune_color_drag_drop_store, resolve_color_drag_threshold,
 };
-use self::model::{format_hex, parse_hex};
+use self::input::{ColorEditInputArgs, color_hex_input};
+use self::layout::{ColorEditRootLayoutArgs, color_edit_root_layout};
+use self::model::format_hex;
+pub(in crate::controls::color_edit) use self::options::ColorEditPopupRuntimeOptions;
+pub use self::options::{
+    ColorEditAlphaPreview, ColorEditCopyOptions, ColorEditDragDropOptions, ColorEditOptions,
+    ColorEditPopupNumericInputs, ColorEditPopupOptions, ColorEditPopupPicker,
+    ColorEditPopupSidePreview, ColorEditTooltipOptions,
+};
 use self::popup::{
-    color_preview_stack, request_color_copy_menu_overlay, request_color_tooltip_overlay,
-    request_popup_overlay,
+    request_color_copy_menu_overlay, request_color_tooltip_overlay, request_popup_overlay,
 };
-
-const COLOR_PRESETS: [(&str, u32); 12] = [
-    ("Slate", 0x0f_17_2a),
-    ("Red", 0xef_44_44),
-    ("Orange", 0xf9_73_16),
-    ("Amber", 0xf5_9e_0b),
-    ("Yellow", 0xea_d3_08),
-    ("Green", 0x22_c5_5e),
-    ("Emerald", 0x10_b9_81),
-    ("Cyan", 0x06_b6_d4),
-    ("Blue", 0x3b_82_f6),
-    ("Violet", 0x8b_5c_f6),
-    ("Fuchsia", 0xd9_46_ef),
-    ("White", 0xff_ff_ff),
-];
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ColorEditPaletteEntry {
-    pub name: Arc<str>,
-    pub rgb: u32,
-}
-
-impl ColorEditPaletteEntry {
-    pub fn new(name: impl Into<Arc<str>>, rgb: u32) -> Self {
-        Self {
-            name: name.into(),
-            rgb,
-        }
-    }
-
-    pub fn with_rgb(mut self, rgb: u32) -> Self {
-        self.rgb = rgb;
-        self
-    }
-}
-
-pub fn default_color_edit_palette() -> Arc<[ColorEditPaletteEntry]> {
-    COLOR_PRESETS
-        .iter()
-        .map(|(name, rgb)| ColorEditPaletteEntry::new(*name, *rgb))
-        .collect::<Vec<_>>()
-        .into()
-}
-
-/// App-owned palette slot mutation request emitted when a color payload is dropped onto a
-/// `ColorEdit` popup palette entry.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ColorEditPaletteSlotDrop {
-    index: usize,
-    previous: ColorEditPaletteEntry,
-    payload: ColorEditDragDropPayload,
-    next: ColorEditPaletteEntry,
-}
-
-impl ColorEditPaletteSlotDrop {
-    pub fn new(
-        index: usize,
-        previous: ColorEditPaletteEntry,
-        payload: ColorEditDragDropPayload,
-    ) -> Self {
-        Self {
-            index,
-            next: palette_slot_drop_from_payload(previous.clone(), payload),
-            previous,
-            payload,
-        }
-    }
-
-    pub fn index(&self) -> usize {
-        self.index
-    }
-
-    pub fn previous(&self) -> &ColorEditPaletteEntry {
-        &self.previous
-    }
-
-    pub fn payload(&self) -> ColorEditDragDropPayload {
-        self.payload
-    }
-
-    pub fn next(&self) -> &ColorEditPaletteEntry {
-        &self.next
-    }
-}
-
-pub type OnColorEditPaletteSlotDrop =
-    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, ColorEditPaletteSlotDrop) + 'static>;
-
-/// App-owned eyedropper activation request emitted from an editor `ColorEdit` popup.
-///
-/// Fret does not currently expose a portable platform screen-sampling contract. This request keeps
-/// the editor control useful for apps that already own an eyedropper implementation while avoiding
-/// an implicit runtime or renderer readback dependency.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ColorEditEyedropperRequest {
-    current: Color,
-    show_alpha: bool,
-}
-
-impl ColorEditEyedropperRequest {
-    pub fn new(current: Color, show_alpha: bool) -> Self {
-        Self {
-            current,
-            show_alpha,
-        }
-    }
-
-    pub fn current(self) -> Color {
-        self.current
-    }
-
-    pub fn show_alpha(self) -> bool {
-        self.show_alpha
-    }
-
-    pub fn apply_sample(self, sampled: Color) -> Color {
-        if self.show_alpha {
-            sampled
-        } else {
-            let mut next = sampled;
-            next.a = self.current.a;
-            next
-        }
-    }
-}
-
-/// App-owned eyedropper activation hook for editor `ColorEdit`.
-///
-/// Return `Some(sampled_color)` for synchronous sampling and the control will update its color
-/// model, draft text, and validation state. Return `None` for asynchronous app/platform flows.
-pub type OnColorEditEyedropper = Arc<
-    dyn Fn(&mut dyn UiActionHost, ActionCx, ColorEditEyedropperRequest) -> Option<Color> + 'static,
->;
+pub use self::records::{
+    ColorEditDragDropComponents, ColorEditDragDropPayload, ColorEditEyedropperRequest,
+    ColorEditPaletteEntry, ColorEditPaletteSlotDrop, OnColorEditEyedropper,
+    OnColorEditPaletteSlotDrop, default_color_edit_palette,
+};
+use self::state::{
+    copy_menu_open_model, draft_model, error_model, popup_open_model, popup_runtime_options_model,
+    reference_model, sync_popup_runtime_options, tooltip_open_model,
+};
+use self::swatch::{ColorEditSwatchArgs, color_swatch};
 
 const CHECKERBOARD_LIGHT_RGB: u32 = 0xd8_de_e8;
 const CHECKERBOARD_DARK_RGB: u32 = 0x8b_95_a5;
 const ALPHA_BAR_STEPS: usize = 8;
 const HUE_BAR_STEPS: usize = 12;
 const SV_PICKER_STEPS: usize = 8;
-
-/// Alpha preview policy for `ColorEdit` swatches.
-///
-/// Dear ImGui exposes this as `AlphaOpaque`, `AlphaNoBg`, and `AlphaPreviewHalf` flags on
-/// `ColorButton` / `ColorEdit`. Fret keeps it as explicit per-control editor policy.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ColorEditAlphaPreview {
-    /// Show transparent colors over a checkerboard background.
-    Checkerboard,
-    /// Show the current RGB channels as fully opaque in preview only.
-    Opaque,
-    /// Show the color with its real alpha without a checkerboard background.
-    NoBackground,
-    /// Split the preview between opaque RGB and transparent checkerboard-backed RGB.
-    Half,
-}
-
-impl Default for ColorEditAlphaPreview {
-    fn default() -> Self {
-        Self::Checkerboard
-    }
-}
-
-/// Color payload component shape used by `ColorEdit` drag/drop.
-///
-/// This mirrors Dear ImGui's standard `_COL3F` and `_COL4F` payload split while keeping the Fret
-/// payload typed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ColorEditDragDropComponents {
-    /// RGB payload; dropping preserves the target alpha.
-    Rgb,
-    /// RGBA payload; dropping applies alpha only when the target exposes alpha editing.
-    Rgba,
-}
-
-/// Typed color payload published and accepted by editor `ColorEdit` swatches.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ColorEditDragDropPayload {
-    color: Color,
-    components: ColorEditDragDropComponents,
-}
-
-impl ColorEditDragDropPayload {
-    pub fn from_color(color: Color, include_alpha: bool) -> Self {
-        Self {
-            color,
-            components: if include_alpha {
-                ColorEditDragDropComponents::Rgba
-            } else {
-                ColorEditDragDropComponents::Rgb
-            },
-        }
-    }
-
-    pub fn color(self) -> Color {
-        self.color
-    }
-
-    pub fn components(self) -> ColorEditDragDropComponents {
-        self.components
-    }
-}
-
-/// Per-control color drag/drop policy for editor `ColorEdit`.
-///
-/// Dear ImGui enables color drag/drop by default and uses `NoDragDrop` as the opt-out flag. Fret
-/// keeps the same default for local editor payloads while making cross-window routing explicit.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ColorEditDragDropOptions {
-    pub enabled: bool,
-    pub cross_window: bool,
-}
-
-impl Default for ColorEditDragDropOptions {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            cross_window: false,
-        }
-    }
-}
-
-/// Picker surface shown inside the `ColorEdit` popup.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ColorEditPopupPicker {
-    /// Dear ImGui's default `PickerHueBar` shape: saturation/value area plus a hue bar.
-    HsvHueBar,
-    /// Dear ImGui's `PickerHueWheel` shape.
-    ///
-    /// Use `ColorEditPopupPicker::HsvHueWheel` for a hue wheel plus a rotated saturation/value
-    /// triangle.
-    HsvHueWheel,
-    /// Hide the picker surface while keeping other popup affordances available.
-    Hidden,
-}
-
-impl Default for ColorEditPopupPicker {
-    fn default() -> Self {
-        Self::HsvHueBar
-    }
-}
-
-/// Numeric edit rows shown inside the `ColorEdit` popup.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ColorEditPopupNumericInputs {
-    /// Show both RGB and HSV numeric rows.
-    RgbAndHsv,
-    /// Show only the RGB numeric row.
-    Rgb,
-    /// Show only the HSV numeric row.
-    Hsv,
-    /// Hide numeric edit rows.
-    Hidden,
-}
-
-impl Default for ColorEditPopupNumericInputs {
-    fn default() -> Self {
-        Self::RgbAndHsv
-    }
-}
-
-/// Side preview surface shown inside the `ColorEdit` popup.
-///
-/// Dear ImGui's picker shows a current preview by default and, when a reference color is provided,
-/// an original preview that restores the reference when activated. Fret keeps the same behavior as
-/// explicit per-control popup policy instead of global picker flags.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ColorEditPopupSidePreview {
-    /// Hide the popup side preview row.
-    Hidden,
-    /// Show only the current color preview.
-    Current,
-    /// Show the current color and the reference captured when the popup opened.
-    CurrentAndOriginal,
-}
-
-impl ColorEditPopupSidePreview {
-    fn has_visible_content(self) -> bool {
-        self != Self::Hidden
-    }
-
-    pub(in crate::controls::color_edit) fn shows_original(self) -> bool {
-        self == Self::CurrentAndOriginal
-    }
-}
-
-impl Default for ColorEditPopupSidePreview {
-    fn default() -> Self {
-        Self::CurrentAndOriginal
-    }
-}
-
-/// Per-control popup defaults for editor `ColorEdit`.
-///
-/// Dear ImGui stores color edit defaults in the global context via `SetColorEditOptions()`. Fret
-/// keeps that policy explicit and app-owned: each editor control receives the popup defaults it
-/// should use.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ColorEditPopupOptions {
-    pub picker: ColorEditPopupPicker,
-    pub numeric_inputs: ColorEditPopupNumericInputs,
-    pub side_preview: ColorEditPopupSidePreview,
-    pub presets: bool,
-    pub alpha_bar: bool,
-    /// Show popup-local controls for picker shape and AlphaBar visibility.
-    ///
-    /// This intentionally replaces Dear ImGui's global `ColorPickerOptionsPopup()` state with a
-    /// per-control runtime override owned by editor `ColorEdit`.
-    pub picker_options: bool,
-}
-
-impl ColorEditPopupOptions {
-    fn has_visible_content_with_swatches(
-        self,
-        show_alpha: bool,
-        has_palette: bool,
-        has_history: bool,
-    ) -> bool {
-        self.picker != ColorEditPopupPicker::Hidden
-            || self.numeric_inputs != ColorEditPopupNumericInputs::Hidden
-            || self.side_preview.has_visible_content()
-            || (self.presets && has_palette)
-            || has_history
-            || self.shows_alpha_bar(show_alpha)
-            || self.shows_picker_options(show_alpha)
-    }
-
-    fn shows_alpha_bar(self, show_alpha: bool) -> bool {
-        show_alpha && self.alpha_bar
-    }
-
-    fn shows_picker_options(self, show_alpha: bool) -> bool {
-        self.picker_options && (self.picker != ColorEditPopupPicker::Hidden || show_alpha)
-    }
-
-    fn runtime_defaults(self) -> ColorEditPopupRuntimeOptions {
-        ColorEditPopupRuntimeOptions {
-            default_picker: self.picker,
-            picker: self.picker,
-            default_alpha_bar: self.alpha_bar,
-            alpha_bar: self.alpha_bar,
-        }
-    }
-
-    fn with_runtime_options(self, runtime: ColorEditPopupRuntimeOptions) -> Self {
-        if !self.picker_options {
-            return self;
-        }
-
-        let mut options = self;
-        if self.picker != ColorEditPopupPicker::Hidden
-            && runtime.picker != ColorEditPopupPicker::Hidden
-        {
-            options.picker = runtime.picker;
-        }
-        options.alpha_bar = runtime.alpha_bar;
-        options
-    }
-}
-
-impl Default for ColorEditPopupOptions {
-    fn default() -> Self {
-        Self {
-            picker: ColorEditPopupPicker::default(),
-            numeric_inputs: ColorEditPopupNumericInputs::default(),
-            side_preview: ColorEditPopupSidePreview::default(),
-            presets: true,
-            alpha_bar: true,
-            picker_options: true,
-        }
-    }
-}
-
-/// Hover tooltip policy for editor `ColorEdit` preview swatches.
-///
-/// Dear ImGui exposes this as `ImGuiColorEditFlags_NoTooltip`. Fret keeps it as explicit
-/// per-control editor policy and avoids global color-edit option state.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ColorEditTooltipOptions {
-    pub enabled: bool,
-}
-
-impl Default for ColorEditTooltipOptions {
-    fn default() -> Self {
-        Self { enabled: true }
-    }
-}
-
-/// Context-menu copy policy for editor `ColorEdit` preview swatches.
-///
-/// Dear ImGui exposes `Copy as..` inside `ColorEditOptionsPopup()`. Fret keeps the behavior local
-/// to the editor control and writes through the existing clipboard effect boundary.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ColorEditCopyOptions {
-    pub enabled: bool,
-}
-
-impl Default for ColorEditCopyOptions {
-    fn default() -> Self {
-        Self { enabled: true }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(in crate::controls::color_edit) struct ColorEditPopupRuntimeOptions {
-    pub(in crate::controls::color_edit) default_picker: ColorEditPopupPicker,
-    pub(in crate::controls::color_edit) picker: ColorEditPopupPicker,
-    pub(in crate::controls::color_edit) default_alpha_bar: bool,
-    pub(in crate::controls::color_edit) alpha_bar: bool,
-}
-
-impl ColorEditPopupRuntimeOptions {
-    fn sync_defaults(&mut self, defaults: Self) {
-        if self.default_picker != defaults.default_picker {
-            self.default_picker = defaults.default_picker;
-            self.picker = defaults.picker;
-        }
-        if self.default_alpha_bar != defaults.default_alpha_bar {
-            self.default_alpha_bar = defaults.default_alpha_bar;
-            self.alpha_bar = defaults.alpha_bar;
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct ColorEditOptions {
-    pub layout: LayoutStyle,
-    pub enabled: bool,
-    pub focusable: bool,
-    pub show_alpha: bool,
-    pub alpha_preview: ColorEditAlphaPreview,
-    pub drag_drop: ColorEditDragDropOptions,
-    pub popup: ColorEditPopupOptions,
-    pub tooltip: ColorEditTooltipOptions,
-    pub copy: ColorEditCopyOptions,
-    /// Optional app-owned eyedropper activation hook shown inside the popup.
-    ///
-    /// Screen sampling is platform/security-sensitive and is not part of the current Fret runtime
-    /// contract. Apps that own a native/web eyedropper can opt into this callback and either return
-    /// a synchronous sampled color or run an asynchronous flow themselves.
-    pub on_eyedropper: Option<OnColorEditEyedropper>,
-    /// App-owned palette entries shown by the popup preset row when `popup.presets` is enabled.
-    ///
-    /// Dear ImGui's custom palette demo stores palette slots in app state. Fret mirrors that
-    /// ownership by making the palette data explicit on the editor control options.
-    pub palette: Arc<[ColorEditPaletteEntry]>,
-    /// App-owned recent color entries shown inside the popup before the palette row.
-    ///
-    /// Fret does not record a global color history. Apps that want recent colors should keep that
-    /// list in their own model and pass it here each frame.
-    pub history: Arc<[ColorEditPaletteEntry]>,
-    /// Called when a compatible editor color payload is dropped onto a popup palette slot.
-    ///
-    /// The callback owns the final app-state mutation. When it is absent, palette swatches still
-    /// publish RGB drag payloads but do not accept drops as editable slots.
-    pub on_palette_slot_drop: Option<OnColorEditPaletteSlotDrop>,
-    /// Explicit identity source for internal state (draft/error/open models, overlay root ids).
-    ///
-    /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
-    /// Use this when a helper function builds multiple color edits from the same callsite and
-    /// you need stable, per-instance state separation.
-    pub id_source: Option<Arc<str>>,
-    pub test_id: Option<Arc<str>>,
-    pub swatch_test_id: Option<Arc<str>>,
-    pub input_test_id: Option<Arc<str>>,
-    pub popup_test_id: Option<Arc<str>>,
-    pub tooltip_test_id: Option<Arc<str>>,
-    pub copy_menu_test_id: Option<Arc<str>>,
-    pub eyedropper_test_id: Option<Arc<str>>,
-}
-
-impl std::fmt::Debug for ColorEditOptions {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ColorEditOptions")
-            .field("layout", &self.layout)
-            .field("enabled", &self.enabled)
-            .field("focusable", &self.focusable)
-            .field("show_alpha", &self.show_alpha)
-            .field("alpha_preview", &self.alpha_preview)
-            .field("drag_drop", &self.drag_drop)
-            .field("popup", &self.popup)
-            .field("tooltip", &self.tooltip)
-            .field("copy", &self.copy)
-            .field(
-                "on_eyedropper",
-                &self.on_eyedropper.as_ref().map(|_| "<callback>"),
-            )
-            .field("palette", &self.palette)
-            .field("history", &self.history)
-            .field(
-                "on_palette_slot_drop",
-                &self.on_palette_slot_drop.as_ref().map(|_| "<callback>"),
-            )
-            .field("id_source", &self.id_source)
-            .field("test_id", &self.test_id)
-            .field("swatch_test_id", &self.swatch_test_id)
-            .field("input_test_id", &self.input_test_id)
-            .field("popup_test_id", &self.popup_test_id)
-            .field("tooltip_test_id", &self.tooltip_test_id)
-            .field("copy_menu_test_id", &self.copy_menu_test_id)
-            .field("eyedropper_test_id", &self.eyedropper_test_id)
-            .finish()
-    }
-}
-
-impl Default for ColorEditOptions {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Auto,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            enabled: true,
-            focusable: true,
-            show_alpha: false,
-            alpha_preview: ColorEditAlphaPreview::default(),
-            drag_drop: ColorEditDragDropOptions::default(),
-            popup: ColorEditPopupOptions::default(),
-            tooltip: ColorEditTooltipOptions::default(),
-            copy: ColorEditCopyOptions::default(),
-            on_eyedropper: None,
-            palette: default_color_edit_palette(),
-            history: Vec::new().into(),
-            on_palette_slot_drop: None,
-            id_source: None,
-            test_id: None,
-            swatch_test_id: None,
-            input_test_id: None,
-            popup_test_id: None,
-            tooltip_test_id: None,
-            copy_menu_test_id: None,
-            eyedropper_test_id: None,
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct ColorEdit {
@@ -629,20 +107,13 @@ impl ColorEdit {
         let draft = draft_model(cx);
         let error = error_model(cx);
 
-        let (density, frame_chrome, swatch_size, popup_padding, ring) = {
+        let (density, popup_padding) = {
             let theme = Theme::global(&*cx.app);
             let density = EditorDensity::resolve(theme);
-            let frame_chrome = EditorStyle::resolve(theme).frame_chrome_small();
-            let swatch_size = theme
-                .metric_by_key(EditorTokenKeys::COLOR_SWATCH_SIZE)
-                .unwrap_or(density.icon_size);
             let popup_padding = theme
                 .metric_by_key(EditorTokenKeys::COLOR_POPUP_PADDING)
                 .unwrap_or(Px(8.0));
-            let ring = theme
-                .color_by_key("ring")
-                .unwrap_or_else(|| theme.color_token("primary"));
-            (density, frame_chrome, swatch_size, popup_padding, ring)
+            (density, popup_padding)
         };
 
         let current = cx
@@ -718,360 +189,62 @@ impl ColorEdit {
                 || copy_enabled
                 || eyedropper_enabled);
 
-        let input = {
-            let (chrome, text_style) = {
-                let theme = Theme::global(&*cx.app);
-                let (chrome, text_style) = resolve_editor_text_field_style(
-                    theme,
-                    Size::default(),
-                    &ChromeRefinement::default(),
-                );
-                (chrome, text_style)
-            };
+        let input = color_hex_input(
+            cx,
+            ColorEditInputArgs {
+                model: self.model.clone(),
+                draft: draft.clone(),
+                error: error.clone(),
+                current_hex: current_hex.clone(),
+                show_alpha: self.options.show_alpha,
+                enabled: self.options.enabled,
+                focusable: self.options.focusable,
+                test_id: input_test_id.clone(),
+                row_height: density.row_height,
+            },
+        );
 
-            // Keep the draft synced while not focused so external updates (undo, scripts) show up.
-            let mut props = TextInputProps::new(draft.clone());
-            props.layout = LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Auto,
-                    min_height: Some(Length::Px(density.row_height)),
-                    ..Default::default()
-                },
-                ..Default::default()
-            };
-            props.enabled = self.options.enabled;
-            props.focusable = self.options.focusable;
-            props.test_id = input_test_id.clone();
-            props.chrome = chrome;
-            props.text_style = text_style;
+        let swatch = color_swatch(
+            cx,
+            ColorEditSwatchArgs {
+                model: self.model.clone(),
+                open: open.clone(),
+                tooltip_open: tooltip_open.clone(),
+                copy_menu_open: copy_menu_open.clone(),
+                reference: reference.clone(),
+                drag_drop_store: drag_drop_store.clone(),
+                current,
+                current_hex: current_hex.clone(),
+                show_alpha: self.options.show_alpha,
+                alpha_preview: self.options.alpha_preview,
+                enabled: self.options.enabled,
+                swatch_enabled,
+                swatch_focusable,
+                popup_has_visible_content,
+                popup_options,
+                tooltip_options,
+                copy_options,
+                copy_enabled,
+                drag_drop_enabled,
+                drag_drop_options,
+                drag_threshold,
+                test_id: swatch_test_id.clone(),
+            },
+        );
 
-            let input = cx.text_input(props);
-            let input_id = input.id;
-            let is_focused = cx.is_focused_element(input_id);
-
-            if !is_focused {
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&draft, |s| *s = current_hex.as_ref().to_string());
-                let _ = cx.app.models_mut().update(&error, |e| *e = None);
-            }
-
-            let model_for_key = self.model.clone();
-            let draft_for_key = draft.clone();
-            let error_for_key = error.clone();
-            let show_alpha = self.options.show_alpha;
-            cx.key_add_on_key_down_capture_for(
-                input_id,
-                Arc::new(move |host, action_cx: ActionCx, down| match down.key {
-                    KeyCode::Enter | KeyCode::NumpadEnter => {
-                        let text = host
-                            .models_mut()
-                            .read(&draft_for_key, |s| s.clone())
-                            .unwrap_or_default();
-                        let current = host
-                            .models_mut()
-                            .get_copied(&model_for_key)
-                            .unwrap_or(Color::TRANSPARENT);
-                        if let Some(next) = parse_hex(&text, show_alpha, current) {
-                            let _ = host.models_mut().update(&model_for_key, |c| *c = next);
-                            let _ = host.models_mut().update(&error_for_key, |e| *e = None);
-                        } else {
-                            let _ = host
-                                .models_mut()
-                                .update(&error_for_key, |e| *e = Some(Arc::from("Invalid color")));
-                        }
-                        host.request_redraw(action_cx.window);
-                        true
-                    }
-                    KeyCode::Escape => {
-                        let current = host
-                            .models_mut()
-                            .get_copied(&model_for_key)
-                            .unwrap_or_else(|| Color::from_srgb_hex_rgb(0x00_00_00));
-                        let formatted = format_hex(current, show_alpha);
-                        let _ = host
-                            .models_mut()
-                            .update(&draft_for_key, |s| *s = formatted.as_ref().to_string());
-                        let _ = host.models_mut().update(&error_for_key, |e| *e = None);
-                        host.request_redraw(action_cx.window);
-                        true
-                    }
-                    _ => false,
-                }),
-            );
-
-            cx.pointer_region(
-                PointerRegionProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Auto,
-                            min_height: Some(Length::Px(density.row_height)),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    enabled: self.options.enabled && self.options.focusable,
-                    capture_phase_pointer_moves: false,
-                },
-                move |cx| {
-                    cx.pointer_region_on_pointer_down(Arc::new(move |host, action_cx, _down| {
-                        host.request_focus(input_id);
-                        host.request_redraw(action_cx.window);
-                        false
-                    }));
-                    vec![input]
-                },
-            )
-        };
-
-        let swatch = {
-            let open_for_activate = open.clone();
-            let open_for_paint = open.clone();
-            let tooltip_open_for_paint = tooltip_open.clone();
-            let copy_menu_open_for_activate = copy_menu_open.clone();
-            let copy_menu_open_for_pointer = copy_menu_open.clone();
-            let copy_menu_open_for_paint = copy_menu_open.clone();
-            let open_for_pointer = open.clone();
-            let tooltip_open_for_pointer = tooltip_open.clone();
-            let reference_for_activate = reference.clone();
-            let model_for_activate = self.model.clone();
-            let enabled_for_paint = self.options.enabled;
-            let drag_drop_store_for_swatch = drag_drop_store.clone();
-            let on_activate: OnActivate =
-                Arc::new(move |host, action_cx: ActionCx, _reason: ActivateReason| {
-                    if !popup_has_visible_content {
-                        return;
-                    }
-                    let prev = host
-                        .models_mut()
-                        .get_copied(&open_for_activate)
-                        .unwrap_or(false);
-                    let opening = !prev;
-                    if opening && popup_options.side_preview.shows_original() {
-                        let current = host
-                            .models_mut()
-                            .get_copied(&model_for_activate)
-                            .unwrap_or(Color::TRANSPARENT);
-                        let _ = host
-                            .models_mut()
-                            .update(&reference_for_activate, |reference| {
-                                *reference = Some(current)
-                            });
-                    }
-                    let _ = host
-                        .models_mut()
-                        .update(&open_for_activate, |v| *v = opening);
-                    let _ = host
-                        .models_mut()
-                        .update(&copy_menu_open_for_activate, |v| *v = false);
-                    host.request_redraw(action_cx.window);
-                });
-
-            let mut swatch = cx.pressable(
-                PressableProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Px(density.hit_thickness),
-                            height: Length::Px(density.hit_thickness),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    enabled: swatch_enabled,
-                    focusable: swatch_enabled && swatch_focusable,
-                    a11y: PressableA11y {
-                        role: Some(fret_core::SemanticsRole::Button),
-                        label: Some(Arc::from("Color swatch")),
-                        ..Default::default()
-                    },
-                    focus_ring: Some(fret_ui::element::RingStyle {
-                        placement: fret_ui::element::RingPlacement::Outset,
-                        width: Px(2.0),
-                        offset: Px(2.0),
-                        color: ring,
-                        offset_color: None,
-                        corner_radii: Corners::all(frame_chrome.radius),
-                    }),
-                    ..Default::default()
-                },
-                move |cx, st| {
-                    cx.pressable_add_on_activate(on_activate.clone());
-                    if copy_options.enabled {
-                        cx.pressable_add_on_pointer_down(Arc::new({
-                            let copy_menu_open_for_pointer = copy_menu_open_for_pointer.clone();
-                            let open_for_pointer = open_for_pointer.clone();
-                            let tooltip_open_for_pointer = tooltip_open_for_pointer.clone();
-                            move |host, action_cx, down| {
-                                let is_context_menu = down.button == MouseButton::Right
-                                    || (cfg!(target_os = "macos")
-                                        && down.button == MouseButton::Left
-                                        && down.modifiers.ctrl);
-                                if !is_context_menu {
-                                    return PressablePointerDownResult::Continue;
-                                }
-
-                                let _ = host
-                                    .models_mut()
-                                    .update(&open_for_pointer, |value| *value = false);
-                                let _ = host
-                                    .models_mut()
-                                    .update(&tooltip_open_for_pointer, |value| *value = false);
-                                let _ = host
-                                    .models_mut()
-                                    .update(&copy_menu_open_for_pointer, |value| *value = true);
-                                host.request_focus(action_cx.target);
-                                host.request_redraw(action_cx.window);
-                                PressablePointerDownResult::SkipDefaultAndStopPropagation
-                            }
-                        }));
-                    }
-                    let swatch_id = cx.root_id();
-                    install_color_drag_source(
-                        cx,
-                        swatch_id,
-                        drag_drop_store_for_swatch.clone(),
-                        ColorEditDragDropPayload::from_color(current, self.options.show_alpha),
-                        drag_drop_options,
-                        drag_threshold,
-                    );
-                    let drop_over = update_color_drop_target(
-                        cx,
-                        &drag_drop_store_for_swatch,
-                        swatch_id,
-                        st.hovered_raw,
-                        drag_drop_enabled,
-                    );
-
-                    let is_open = cx
-                        .get_model_copied(&open_for_paint, Invalidation::Paint)
-                        .unwrap_or(false);
-                    let copy_menu_is_open = cx
-                        .get_model_copied(&copy_menu_open_for_paint, Invalidation::Paint)
-                        .unwrap_or(false);
-                    let tooltip_visible = tooltip_options.enabled
-                        && enabled_for_paint
-                        && !is_open
-                        && !copy_menu_is_open
-                        && st.hovered_raw;
-                    let tooltip_open_now = cx
-                        .get_model_copied(&tooltip_open_for_paint, Invalidation::Paint)
-                        .unwrap_or(false);
-                    if tooltip_open_now != tooltip_visible {
-                        let _ = cx
-                            .app
-                            .models_mut()
-                            .update(&tooltip_open_for_paint, |value| *value = tooltip_visible);
-                    }
-                    let visuals = {
-                        let theme = Theme::global(&*cx.app);
-                        EditorWidgetVisuals::new(theme).frame_visuals(
-                            frame_chrome,
-                            EditorFrameState {
-                                enabled: enabled_for_paint,
-                                hovered: st.hovered || st.hovered_raw,
-                                pressed: st.pressed || drop_over,
-                                focused: st.focused,
-                                open: (is_open && popup_has_visible_content) || copy_menu_is_open,
-                                semantic: EditorFrameSemanticState::default(),
-                            },
-                        )
-                    };
-
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Px(swatch_size),
-                                    height: Length::Px(swatch_size),
-                                    ..Default::default()
-                                },
-                                overflow: Overflow::Clip,
-                                ..Default::default()
-                            },
-                            border: Edges::all(frame_chrome.border_width),
-                            border_color: Some(visuals.border),
-                            corner_radii: Corners::all(frame_chrome.radius),
-                            padding: Edges::all(frame_chrome.border_width).into(),
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            vec![color_preview_stack(
-                                cx,
-                                current,
-                                frame_chrome.radius,
-                                self.options.alpha_preview,
-                            )]
-                        },
-                    )]
-                },
-            );
-
-            if let Some(test_id) = swatch_test_id.as_ref() {
-                swatch = swatch.test_id(test_id.clone());
-            }
-            swatch = swatch.a11y_value(current_hex.clone());
-            if copy_enabled {
-                let open_for_key = open.clone();
-                let tooltip_open_for_key = tooltip_open.clone();
-                let copy_menu_open_for_key = copy_menu_open.clone();
-                cx.key_on_key_down_for(
-                    swatch.id,
-                    Arc::new(move |host, action_cx, down| {
-                        if down.repeat {
-                            return false;
-                        }
-
-                        let no_extra_modifiers = !down.modifiers.ctrl
-                            && !down.modifiers.alt
-                            && !down.modifiers.meta
-                            && !down.modifiers.alt_gr;
-                        let is_shift_f10 =
-                            down.key == KeyCode::F10 && down.modifiers.shift && no_extra_modifiers;
-                        let is_context_menu_key = down.key == KeyCode::ContextMenu
-                            && !down.modifiers.shift
-                            && no_extra_modifiers;
-                        if !is_shift_f10 && !is_context_menu_key {
-                            return false;
-                        }
-
-                        let _ = host
-                            .models_mut()
-                            .update(&open_for_key, |value| *value = false);
-                        let _ = host
-                            .models_mut()
-                            .update(&tooltip_open_for_key, |value| *value = false);
-                        let _ = host
-                            .models_mut()
-                            .update(&copy_menu_open_for_key, |value| *value = true);
-                        host.request_redraw(action_cx.window);
-                        true
-                    }),
-                );
-            }
-            swatch
-        };
-
-        if drag_drop_enabled
-            && let Some(payload) = take_delivered_color_drop(cx, &drag_drop_store, swatch.id)
-        {
-            let current_for_drop = cx
-                .get_model_copied(&self.model, Invalidation::Paint)
-                .unwrap_or(current);
-            let next = apply_color_drop_payload(payload, current_for_drop, self.options.show_alpha);
-            let formatted = format_hex(next, self.options.show_alpha);
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&self.model, |color| *color = next);
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&draft, |s| *s = formatted.as_ref().to_string());
-            let _ = cx.app.models_mut().update(&error, |e| *e = None);
-        }
+        apply_delivered_color_drop(
+            cx,
+            ColorEditDeliveredDropArgs {
+                store: drag_drop_store.clone(),
+                target_id: swatch.id,
+                model: self.model.clone(),
+                draft: draft.clone(),
+                error: error.clone(),
+                current,
+                show_alpha: self.options.show_alpha,
+                enabled: drag_drop_enabled,
+            },
+        );
 
         request_popup_overlay(
             cx,
@@ -1117,113 +290,16 @@ impl ColorEdit {
             copy_menu_test_id,
         );
 
-        let error_msg = cx
-            .get_model_cloned(&error, Invalidation::Paint)
-            .unwrap_or(None);
-        let error_el = error_msg.map(|msg| {
-            cx.text_props(editor_inline_error_text_props(
-                msg,
-                Theme::global(&*cx.app).color_token("destructive"),
-                density.row_height,
-            ))
-        });
-
-        let mut root_layout = self.options.layout;
-        if root_layout.size.min_height.is_none() {
-            root_layout.size.min_height = Some(Length::Px(density.row_height));
-        }
-
-        let mut el = cx.flex(
-            FlexProps {
-                layout: root_layout,
-                direction: Axis::Vertical,
-                gap: SpacingLength::Px(Px(4.0)),
-                padding: Edges::all(Px(0.0)).into(),
-                justify: MainAlign::Start,
-                align: CrossAlign::Stretch,
-                wrap: false,
+        color_edit_root_layout(
+            cx,
+            ColorEditRootLayoutArgs {
+                swatch,
+                input,
+                error,
+                layout: self.options.layout,
+                test_id: self.options.test_id.clone(),
+                row_height: density.row_height,
             },
-            move |cx| {
-                let row = cx.flex(
-                    FlexProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Auto,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        direction: Axis::Horizontal,
-                        gap: SpacingLength::Px(Px(8.0)),
-                        padding: Edges::all(Px(0.0)).into(),
-                        justify: MainAlign::Start,
-                        align: CrossAlign::Center,
-                        wrap: false,
-                    },
-                    move |_cx| vec![swatch, input],
-                );
-
-                let mut out = vec![row];
-                if let Some(err) = error_el {
-                    out.push(err);
-                }
-                out
-            },
-        );
-
-        if let Some(test_id) = self.options.test_id.as_ref() {
-            el = el.test_id(test_id.clone());
-        }
-        el
+        )
     }
-}
-
-#[track_caller]
-fn popup_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    cx.local_model(|| false)
-}
-
-#[track_caller]
-fn tooltip_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    cx.local_model_keyed("tooltip_open", || false)
-}
-
-#[track_caller]
-fn copy_menu_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    cx.local_model_keyed("copy_menu_open", || false)
-}
-
-#[track_caller]
-fn reference_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Color>> {
-    cx.local_model(|| None::<Color>)
-}
-
-#[track_caller]
-fn draft_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    cx.local_model(String::new)
-}
-
-#[track_caller]
-fn error_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Arc<str>>> {
-    cx.local_model(|| None::<Arc<str>>)
-}
-
-#[track_caller]
-fn popup_runtime_options_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    defaults: ColorEditPopupRuntimeOptions,
-) -> Model<ColorEditPopupRuntimeOptions> {
-    cx.local_model_keyed("popup_runtime_options", move || defaults)
-}
-
-fn sync_popup_runtime_options<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    model: &Model<ColorEditPopupRuntimeOptions>,
-    defaults: ColorEditPopupRuntimeOptions,
-) {
-    let _ = cx
-        .app
-        .models_mut()
-        .update(model, |runtime| runtime.sync_defaults(defaults));
 }

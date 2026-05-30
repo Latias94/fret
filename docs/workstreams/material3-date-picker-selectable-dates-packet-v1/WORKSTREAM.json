@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "slug": "material3-date-picker-selectable-dates-packet-v1",
+  "title": "Material 3 DatePicker Selectable Dates Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "closeout",
+  "problem": "Closed lane that resolved the Material3 DatePicker selectable-date disabling follow-on by adding a recipe-level predicate and focused docked/modal automation proof.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-date-picker-selectable-dates-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-date-picker-selectable-dates-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-date-picker-selectable-dates-packet-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-date-picker-selectable-dates-packet-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-date-picker-selectable-dates-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-date-picker-selectable-dates-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Render docked and modal Material3 DatePicker with Jan 10 blocked, then click blocked and allowed cells to inspect disabled semantics and selection commits.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_respects_selectable_dates"
+    ]
+  },
+  "gates": [
+    {
+      "name": "material3-date-picker-selectable-dates",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_respects_selectable_dates"
+    },
+    {
+      "name": "material3-date-picker-selector-regression",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_exposes_stable_part_test_ids"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-material3/src/date_picker.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "return_to_material3_sweep",
+    "notes": "Selectable-date disabling is closed. DatePicker live-region and locale-label follow-ons were closed by later dedicated packets."
+  }
+}

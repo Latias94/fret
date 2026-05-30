@@ -267,6 +267,11 @@ pub struct ToastLayerStyle {
     pub close_ticks: u64,
     pub easing: Option<fret_ui::theme::CubicBezier>,
     pub slide_distance: Px,
+    /// Optional scale applied from this value toward 1.0 as toast presence opens.
+    ///
+    /// This lets design-system skins model non-sliding toast/snackbar enter motion while keeping
+    /// the shadcn/Sonner default path unchanged.
+    pub scale_from: Option<f32>,
     /// Optional border color. When omitted, no border is drawn.
     pub border_color_key: Option<String>,
     pub border_width: Px,
@@ -295,6 +300,7 @@ impl Default for ToastLayerStyle {
             close_ticks: 12,
             easing: None,
             slide_distance: Px(16.0),
+            scale_from: None,
             border_color_key: Some("border".to_string()),
             border_width: Px(1.0),
             description_color_key: Some("muted-foreground".to_string()),

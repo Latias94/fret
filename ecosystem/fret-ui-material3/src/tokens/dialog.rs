@@ -89,6 +89,21 @@ pub(crate) fn panel_padding(theme: &Theme) -> Edges {
     Edges::all(Px(24.0))
 }
 
+pub(crate) fn viewport_margin(theme: &Theme) -> Edges {
+    let _ = theme;
+    Edges::all(Px(24.0))
+}
+
+pub(crate) fn container_min_width(theme: &Theme) -> Px {
+    let _ = theme;
+    Px(280.0)
+}
+
+pub(crate) fn container_max_width(theme: &Theme) -> Px {
+    let _ = theme;
+    Px(560.0)
+}
+
 pub(crate) fn action_height(theme: &Theme) -> Px {
     let _ = theme;
     Px(40.0)

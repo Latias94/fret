@@ -1,14 +1,17 @@
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, Edges, Px};
-use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    SizeStyle, SpacerProps, SpacingLength,
-};
+use fret_core::Corners;
+use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, Overflow, SizeStyle};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use super::super::spec::{DisclosureKind, DisclosureSpec};
 use super::resolve_disclosure_palette;
+
+mod children;
+mod metrics;
+
+use children::{HeaderChildrenRequest, header_children};
+use metrics::{header_border_edges, header_indicator, header_row_padding};
 
 pub(in crate::imui::disclosure_controls) fn header_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -20,34 +23,9 @@ pub(in crate::imui::disclosure_controls) fn header_row<H: UiHost>(
     let theme = Theme::global(&*cx.app);
     let palette = resolve_disclosure_palette(theme, spec, state);
     let border = theme.color_token("border");
-    let indicator: Option<Arc<str>> = if spec.leaf {
-        None
-    } else if open_now {
-        Some(Arc::from("v"))
-    } else {
-        Some(Arc::from(">"))
-    };
-    let row_padding = match spec.kind {
-        DisclosureKind::CollapsingHeader => Edges {
-            top: Px(4.0),
-            right: Px(6.0),
-            bottom: Px(4.0),
-            left: Px(6.0),
-        },
-        DisclosureKind::TreeNode => {
-            let indent = Px(16.0 * (spec.level.saturating_sub(1) as f32));
-            Edges {
-                top: Px(2.0),
-                right: Px(6.0),
-                bottom: Px(2.0),
-                left: Px(6.0 + indent.0),
-            }
-        }
-    };
-    let border_edges = match spec.kind {
-        DisclosureKind::CollapsingHeader => Edges::all(Px(1.0)),
-        DisclosureKind::TreeNode => Edges::all(Px(0.0)),
-    };
+    let indicator = header_indicator(spec, open_now);
+    let row_padding = header_row_padding(spec);
+    let border_edges = header_border_edges(spec.kind);
 
     let mut row_props = ContainerProps::default();
     row_props.layout = LayoutStyle {
@@ -66,65 +44,13 @@ pub(in crate::imui::disclosure_controls) fn header_row<H: UiHost>(
     row_props.corner_radii = Corners::all(super::super::super::control_chrome::CONTROL_RADIUS);
 
     cx.container(row_props, move |cx| {
-        vec![cx.flex(
-            FlexProps {
-                layout: LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Auto,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                direction: Axis::Horizontal,
-                gap: SpacingLength::Px(Px(4.0)),
-                justify: MainAlign::Start,
-                align: CrossAlign::Center,
-                wrap: false,
-                ..Default::default()
+        header_children(
+            cx,
+            HeaderChildrenRequest {
+                label,
+                indicator,
+                foreground: palette.foreground,
             },
-            move |cx| {
-                let mut out = Vec::new();
-                out.push(cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Px(Px(12.0)),
-                                height: Length::Auto,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        indicator
-                            .as_ref()
-                            .map(|indicator| {
-                                vec![
-                                    crate::declarative::text::text_chrome_glyph(
-                                        cx,
-                                        indicator.clone(),
-                                    )
-                                    .inherit_foreground(palette.foreground),
-                                ]
-                            })
-                            .unwrap_or_default()
-                    },
-                ));
-
-                out.push(disclosure_label_text(cx, label, palette.foreground));
-                out.push(cx.spacer(SpacerProps::default()));
-                out
-            },
-        )]
+        )
     })
-}
-
-fn disclosure_label_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    label: Arc<str>,
-    foreground: Color,
-) -> AnyElement {
-    crate::declarative::text::text_list_row_label(cx, label).inherit_foreground(foreground)
 }

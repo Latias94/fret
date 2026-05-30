@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-27
+Last updated: 2026-05-30
 
 ## Worktree Convergence - 2026-05-26
 
@@ -17,8 +17,1359 @@ Last updated: 2026-05-27
 - [x] Run focused convergence gates and record the result in `EVIDENCE_AND_GATES.md`.
 - [x] Continue follow-up IMUI development only from `F:/SourceCodes/Rust/fret` on `main`.
 
+## Current Gap Refresh - 2026-05-27
+
+- [x] Refresh the canonical workbench teaching docs so cookbook/examples no longer claim
+      `imui_editor_workbench_demo` delegates to the workspace shell owner after the route was moved
+      to direct editor-notes workflow mounting.
+      Result: `docs/examples/README.md`, `apps/fret-cookbook/README.md`, and
+      `apps/fret-cookbook/EXAMPLES.md` now describe the workbench as the canonical editor route
+      that mounts editor-notes directly, while `imui_editor_proof_demo` remains the supporting
+      dense panel / explicit stable identity proof. `tools/gate_imui_facade_teaching_source.py`
+      now freezes that wording.
+- [x] Refresh `P0_CURRENT_SOURCE_AUDIT_2026-05-06.md` and the P2 TODO status so the active gap map
+      no longer treats `imui_editor_proof_demo` as the canonical editor-panel route after the
+      workbench lane closed.
+      Result: the active P0 read now names `cargo run -p fret-demo --bin
+      imui_editor_workbench_demo` as the canonical product-facing editor workbench route, keeps
+      `imui_editor_proof_demo`, `workspace_shell_demo`, and docking demos as supporting proof
+      surfaces, and points current workbench verification at
+      `imui_editor_workbench_golden_path_surface`.
+- [x] Refresh `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md` so the active gap map no longer treats
+      ListBox, plot adapter, or style/theme preset picker as open candidate-only gaps after their
+      closed proof lanes landed.
+      Result: the catalog now records ListBox as a kit-owned container proof, plot as an opt-in
+      `fret-plot/imui` adapter, and style/theme editing as editor-owned preset tooling exposed by
+      the canonical workbench.
+
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split remaining IMUI facade root scope/basic/disclosure trait default method declarations out
+      of `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
+      `UiWriterImUiFacadeExt` trait, caller import behavior, push-id/disabled-scope, text,
+      separator, debug-draw, collapsing-header, or tree-node method names and behavior.
+      Result: `facade_writer.rs` keeps the single public trait hub plus surface macro expansion
+      only. `scope_surface.rs`, `basic_surface.rs`, and `disclosure_surface.rs` own the remaining
+      trait default declarations/forwarding, while `scope_methods.rs`, `basic_items.rs`, and
+      `disclosure_controls` remain the behavior owners.
+- [x] Split IMUI facade basic surface macro owner into text, debug-draw, and separator child
+      owners without changing public trait method names, default option forwarding, response
+      returns, macro expansion order, or concrete `basic_items` behavior ownership.
+      Result: `basic_surface.rs` is now a module/re-export hub. `basic_surface/text.rs` owns
+      text, wrapped text, and bullet text forwarding; `basic_surface/debug_draw.rs` owns
+      debug-draw forwarding; and `basic_surface/separators.rs` owns separator and separator-text
+      forwarding.
+- [x] Split IMUI facade disclosure surface macro owner into collapsing-header and tree-node child
+      owners without changing public trait method names, stable identity/depth docs, response
+      returns, macro expansion order, or concrete `disclosure_controls` behavior ownership.
+      Result: `disclosure_surface.rs` is now a module/re-export hub.
+      `disclosure_surface/collapsing_header.rs` owns collapsing-header forwarding, while
+      `disclosure_surface/tree_node.rs` owns tree-node forwarding and explicit depth guidance.
+- [x] Split IMUI facade support hub into constants, geometry, runtime, state, and ui-writer child
+      owners without changing public IMUI key names, frame preparation, point helpers, model
+      change tracking, or `UiWriterUiKitExt` re-export paths.
+      Result: `facade_support.rs` is now a module/re-export hub.
+      `facade_support/constants.rs` owns IMUI key/timing constants, `geometry.rs` owns point and
+      device-pixel helpers, `runtime.rs` owns frame preparation, `state.rs` owns model change
+      tracking, and `ui_writer.rs` owns the bridge trait implementation.
+- [x] Split IMUI facade scope method behavior owner into push-id and disabled-scope child owners
+      without changing public facade method names, keyed identity scoping, disabled alpha/gating,
+      runtime frame preparation, or `scope_surface` forwarding.
+      Result: `facade_writer/scope_methods.rs` is now a module/re-export hub.
+      `scope_methods/push_id.rs` owns keyed child facade execution and result propagation, while
+      `scope_methods/disabled_scope.rs` owns disabled-scope wrapping, alpha, pointer blocking, and
+      focus traversal gating.
+- [x] Split IMUI facade container/layout trait default method declarations out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
+      `UiWriterImUiFacadeExt` trait, caller import behavior, item-flow, same-line,
+      dummy/spacing/indent, layout group, menu/tab bar, ListBox, grid, table, virtual-list, scroll,
+      child-region method names, porting-sugar spacing docs, or container behavior.
+      Result: `facade_writer.rs` keeps the single public trait hub and expands
+      `facade_writer/container_surface.rs`. `container_surface.rs` owns container/layout trait
+      default declarations/forwarding, while existing `container_methods/*` owners still carry the
+      concrete layout/container behavior.
+- [x] Split IMUI facade container surface macro owner into layout, menu/tab, collection, and
+      region child owners without changing the public `UiWriterImUiFacadeExt` trait, caller import
+      behavior, item-flow, menu/tab bar, ListBox, grid, table, virtual-list, scroll, child-region,
+      or concrete `container_methods/*` behavior ownership.
+      Result: `facade_writer/container_surface.rs` is now a module/re-export hub.
+      `container_surface/layout.rs` owns layout/spacing forwarding,
+      `container_surface/menu_tabs.rs` owns menu-bar and tab-bar forwarding,
+      `container_surface/collections.rs` owns ListBox/grid/table/virtual-list forwarding, and
+      `container_surface/regions.rs` owns scroll and child-region forwarding.
+- [x] Split IMUI facade container collection surface macro owner into ListBox, grid, Table, and
+      VirtualList child owners without changing public trait method names, collection forwarding,
+      response returns, macro expansion order, or concrete `container_methods/*` behavior
+      ownership.
+      Result: `container_surface/collections.rs` is now a module/re-export hub.
+      `collections/list_box.rs`, `collections/grid.rs`, `collections/table.rs`, and
+      `collections/virtual_list.rs` own the corresponding trait forwarding groups.
+- [x] Split IMUI facade container layout surface macro owner into flow and group child owners
+      without changing public trait method names, item-flow/same-line/dummy/spacing/indent
+      forwarding, horizontal/vertical forwarding, or concrete `container_methods/*` behavior
+      ownership.
+      Result: `container_surface/layout.rs` is now a module/re-export hub. `layout/flow.rs` owns
+      item-flow, same-line, dummy, spacing, and indent forwarding, while `layout/groups.rs` owns
+      horizontal and vertical group forwarding.
+- [x] Split IMUI facade container layout method behavior owner into linear, grid/scroll, and
+      child-region child owners without changing public facade methods, build-focus forwarding,
+      horizontal/vertical/grid/scroll element routing, child-region response behavior, or
+      `container_methods` re-export paths.
+      Result: `facade_writer/container_methods/layout.rs` is now a module/re-export hub.
+      `layout/linear.rs` owns horizontal/vertical forwarding, `layout/grid_scroll.rs` owns grid
+      and scroll forwarding, and `layout/child_region.rs` owns child-region forwarding and response
+      return.
+- [x] Split IMUI facade container collection method behavior owner into ListBox, Table, and
+      VirtualList child owners without changing public facade methods, build-focus forwarding,
+      collection element routing, response returns, or `container_methods` re-export paths.
+      Result: `facade_writer/container_methods/collections.rs` is now a module/re-export hub.
+      `collections/list_box.rs` owns ListBox option normalization and element forwarding,
+      `collections/table.rs` owns Table forwarding and response return, and
+      `collections/virtual_list.rs` owns VirtualList forwarding and response return.
+- [x] Split IMUI facade container flow method behavior owner into sequence, spacer, and indent
+      child owners without changing public facade methods, build-focus forwarding, porting-sugar
+      layout routing, or `container_methods` re-export paths.
+      Result: `facade_writer/container_methods/flow.rs` is now a module/re-export hub.
+      `flow/sequences.rs` owns item-flow and same-line forwarding, `flow/spacers.rs` owns dummy and
+      spacing forwarding, and `flow/indent.rs` owns indent forwarding.
+- [x] Split IMUI facade container menu/tab method behavior owner into menu-bar and tab-bar child
+      owners without changing public facade methods, build-focus forwarding, menu/tab element
+      routing, tab response return, or `container_methods` re-export paths.
+      Result: `facade_writer/container_methods/menu_tabs.rs` is now a module/re-export hub.
+      `menu_tabs/menu.rs` owns menu-bar forwarding, and `menu_tabs/tabs.rs` owns tab-bar forwarding
+      and response return.
+- [x] Route the IMUI facade inherent ListBox wrapper through the collection method owner instead of
+      direct `list_box_controls` element construction without changing public inherent method names,
+      build-focus forwarding, or ListBox behavior.
+      Result: `facade_writer/container_wrappers/collections.rs` now delegates
+      `list_box_with_options(...)` to `container_methods::list_box_with_options(...)`, matching
+      the Table and VirtualList wrapper pattern.
+- [x] Split IMUI facade container collection inherent wrapper owner into ListBox, Table, and
+      VirtualList child owners without changing public inherent method names, build-focus
+      forwarding, response returns, or `container_methods/*` delegation.
+      Result: `container_wrappers/collections.rs` is now a module hub. `collections/list_box.rs`
+      owns ListBox label/options wrappers, `collections/table.rs` owns Table wrappers, and
+      `collections/virtual_list.rs` owns VirtualList wrappers.
+- [x] Split IMUI facade floating/popup/tooltip/drag/window trait default method declarations out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
+      `UiWriterImUiFacadeExt` trait, caller import behavior, floating area/window, popup, tooltip,
+      drag/drop method names, popup/window docs, or floating/popup/drag behavior.
+      Result: `facade_writer.rs` keeps the single public trait hub and expands
+      `facade_writer/floating_surface.rs` at the original floating, tooltip/drag, and window
+      positions. `floating_surface.rs` owns floating layer/area, popup open/drop/begin, tooltip,
+      drag/drop, and in-window floating-window trait default declarations/forwarding. Existing
+      `floating_popup/*` owners still delegate to concrete floating, popup, tooltip, drag/drop, and
+      window behavior modules.
+- [x] Split IMUI facade floating surface macro owner into popup/floating-area, tooltip/drag, and
+      window child owners without changing the public `UiWriterImUiFacadeExt` trait, facade macro
+      expansion points, popup/window docs, or concrete `floating_popup/*` behavior ownership.
+      Result: `facade_writer/floating_surface.rs` is now a module/re-export hub.
+      `floating_surface/popup.rs` owns floating layer/area plus popup open/drop/begin forwarding,
+      `floating_surface/tooltip_drag.rs` owns tooltip and drag/drop forwarding, and
+      `floating_surface/window.rs` owns in-window floating-window forwarding.
+- [x] Split IMUI facade floating tooltip/drag surface macro owner into tooltip and drag/drop child
+      owners without changing public trait method names, tooltip forwarding, drag/drop forwarding,
+      drag/drop docs, or concrete `floating_popup/*` behavior ownership.
+      Result: `floating_surface/tooltip_drag.rs` is now a module/re-export hub.
+      `tooltip_drag/tooltip.rs` owns tooltip text/custom-content forwarding, while
+      `tooltip_drag/drag_drop.rs` owns typed drag source/drop target forwarding and docs.
+- [x] Split IMUI facade floating popup surface macro owner into floating-area/layer, popup state,
+      and begin-popup child owners without changing the public `UiWriterImUiFacadeExt` trait,
+      caller import behavior, floating layer/area/drag-surface, popup open/drop/close, popup
+      menu/modal method names, or concrete `floating_popup/*` behavior ownership.
+      Result: `floating_surface/popup.rs` is now a module/re-export hub.
+      `floating_surface/popup/area.rs` owns floating layer/area/drag-surface forwarding,
+      `floating_surface/popup/state.rs` owns popup open-model/drop/open/close forwarding, and
+      `floating_surface/popup/begin.rs` owns popup menu/modal begin forwarding.
+- [x] Split IMUI facade menu/selection trait default method declarations out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
+      `UiWriterImUiFacadeExt` trait, caller import behavior, menu item, begin menu/submenu,
+      selectable, multi-selectable, combo, context-menu method names, focusable recording wrappers,
+      popup/menu behavior, or selectable/combo behavior.
+      Result: `facade_writer.rs` keeps the single public trait hub and expands
+      `facade_writer/menu_selection_surface.rs` inside it. `menu_selection_surface.rs` owns menu
+      item, begin menu/submenu, selectable, multi-selectable, combo, and context-menu trait default
+      declarations/forwarding. Existing `menu_items.rs`, `selection_combo.rs`, and
+      `floating_popup/*` owners still carry inherent wrappers and underlying behavior.
+- [x] Split IMUI facade menu/selection surface macro owner into menu-item, menu-family,
+      selection/combo, and context-popup child owners without changing the public
+      `UiWriterImUiFacadeExt` trait, caller import behavior, menu item, begin menu/submenu,
+      selectable, multi-selectable, combo, context-menu method names, or underlying behavior
+      owners.
+      Result: `facade_writer/menu_selection_surface.rs` is now a module/re-export hub.
+      `menu_selection_surface/menu_items.rs` owns menu item forwarding,
+      `menu_selection_surface/menu_family.rs` owns begin menu/submenu forwarding,
+      `menu_selection_surface/selection_combo.rs` owns selectable/multi-selectable/combo
+      forwarding, and `menu_selection_surface/context_popup.rs` owns context-menu popup
+      forwarding.
+- [x] Split IMUI facade menu/selection selection-combo surface macro owner into selection and
+      combo child owners without changing public trait method names, default option forwarding,
+      response returns, macro expansion order, focusable recording wrappers, or concrete
+      selectable/combo behavior ownership.
+      Result: `menu_selection_surface/selection_combo.rs` is now a module/re-export hub.
+      `selection_combo/selectables.rs` owns selectable and multi-selectable forwarding, while
+      `selection_combo/combo.rs` owns combo forwarding.
+- [x] Split IMUI facade selectable/combo inherent wrapper behavior owner into selectable and combo
+      child owners without changing public inherent method names, focusable recording, disabled
+      checks, selectable/multi-selectable delegation, combo delegation, or `fret-imui` thinness.
+      Result: `facade_writer/selection_combo.rs` is now a module hub.
+      `selection_combo/selectables.rs` owns selectable and multi-selectable focusable-recording
+      wrappers, while `selection_combo/combo.rs` owns direct combo focusable-recording wrappers.
+- [x] Split IMUI facade model/control trait default method declarations out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
+      `UiWriterImUiFacadeExt` trait, caller import behavior, checkbox/radio/switch,
+      slider/combo model, input text, picker/history text, textarea method names, focusable
+      recording wrappers, or model-control behavior.
+      Result: `facade_writer.rs` keeps the single public trait hub and expands
+      `facade_writer/model_surface.rs` inside it. `model_surface.rs` owns checkbox/radio/switch,
+      slider/combo model, input text model, input text picker/history model, and textarea model
+      trait default declarations/forwarding. Existing `boolean_wrappers.rs`, `value_models.rs`,
+      and `text_models.rs` inherent wrappers still own focusable recording.
+- [x] Split IMUI facade model surface macro owner into boolean, value/combo, and text child owners
+      without changing the public `UiWriterImUiFacadeExt` trait, caller import behavior,
+      checkbox/radio/switch, slider/combo model, input text, picker/history text, textarea method
+      names, focusable recording wrappers, or model-control behavior.
+      Result: `facade_writer/model_surface.rs` is now a module/re-export hub.
+      `model_surface/boolean.rs` owns checkbox/radio/switch model forwarding,
+      `model_surface/value_combo.rs` owns slider and combo-model forwarding, and
+      `model_surface/text.rs` owns input text, input text picker/history, and textarea forwarding.
+- [x] Split IMUI facade text model surface macro owner into input, picker/history, and textarea
+      child owners without changing public trait method names, default option forwarding,
+      response returns, macro expansion order, focusable recording wrappers, or concrete
+      text-control behavior ownership.
+      Result: `model_surface/text.rs` is now a module/re-export hub. `text/input.rs` owns
+      input-text model forwarding, `text/picker.rs` owns completion/history picker forwarding, and
+      `text/textarea.rs` owns textarea forwarding.
+- [x] Split IMUI facade boolean-control inherent wrapper behavior owner into checkbox, radio, and
+      switch child owners without changing public inherent method names, disabled checks,
+      focusable recording, trait delegation paths, or `fret-imui` thinness.
+      Result: `facade_writer/boolean_wrappers.rs` is now a module hub.
+      `boolean_wrappers/checkbox.rs` owns checkbox model wrappers,
+      `boolean_wrappers/radio.rs` owns radio wrappers, and `boolean_wrappers/switch.rs` owns switch
+      model wrappers.
+- [x] Split IMUI facade value/combo-model inherent wrapper behavior owner into slider and
+      combo-model child owners without changing public inherent method names, disabled checks,
+      focusable recording, trait delegation paths, or `fret-imui` thinness.
+      Result: `facade_writer/value_models.rs` is now a module hub. `value_models/slider.rs` owns
+      slider model wrappers, and `value_models/combo_model.rs` owns combo-model wrappers.
+- [x] Split IMUI facade text-model inherent wrapper behavior owner into input, picker, and textarea
+      child owners without changing public inherent method names, disabled/focusable checks, picker
+      focusable calculation, trait delegation paths, or `fret-imui` thinness.
+      Result: `facade_writer/text_models.rs` is now a module hub. `text_models/input.rs` owns
+      single-line input wrappers, `text_models/picker.rs` owns completion/history picker wrappers,
+      and `text_models/textarea.rs` owns textarea wrappers.
+- [x] Split IMUI facade button/image/action trait default method declarations out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
+      `UiWriterImUiFacadeExt` trait, caller import behavior, button/image/action method names,
+      button-command presentation forwarding, focusable recording wrappers, image-button option
+      normalization, or button/image smoke behavior.
+      Result: `facade_writer.rs` keeps the single public trait hub and expands
+      `facade_writer/button_surface.rs` inside it. `button_surface.rs` owns button,
+      small/arrow/invisible button, image item/button, action button, payload action button, and
+      button-command trait default declarations/forwarding. Existing `button_actions.rs` /
+      `button_actions/*` inherent wrappers still own focusable recording, while `image_items.rs`
+      still owns image-button option normalization.
+- [x] Split IMUI facade button surface macro owner into plain-button, image-button, and
+      action-button child owners without changing the public `UiWriterImUiFacadeExt` trait, caller
+      import behavior, button/image/action method names, command presentation forwarding,
+      focusable recording wrappers, or image-button option normalization.
+      Result: `facade_writer/button_surface.rs` is now a module/re-export hub.
+      `button_surface/plain.rs` owns plain/small/arrow/invisible button forwarding,
+      `button_surface/images.rs` owns image item/button forwarding, and
+      `button_surface/actions.rs` owns action button, payload action button, and button-command
+      forwarding.
+- [x] Split IMUI facade button action surface macro owner into action, payload-action, and
+      command-button child owners without changing public trait method names, default option
+      forwarding, payload bounds, command presentation forwarding, macro expansion order,
+      focusable recording wrappers, or concrete button/action behavior ownership.
+      Result: `button_surface/actions.rs` is now a module/re-export hub.
+      `actions/action.rs` owns action button forwarding, `actions/payload.rs` owns payload action
+      button forwarding, and `actions/command.rs` owns command-button forwarding.
+- [x] Split IMUI facade button/action inherent wrapper behavior owner into button-family and
+      command-button child owners without changing public inherent method names, focusable
+      recording, command metadata lookup, action/payload action wrappers, or `fret-imui` thinness.
+      Result: `facade_writer/button_actions.rs` keeps only module wiring and the private
+      button-command helper re-export. `button_actions/buttons.rs` owns plain/small/arrow/invisible
+      button wrappers, `button_actions/commands.rs` owns command-button wrappers, and existing
+      `action_methods.rs` / `button_command.rs` now import directly from the facade parent instead
+      of relying on root hub imports.
+- [x] Split IMUI shared pressable item pointer hook bodies out of
+      `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` without changing shared button,
+      checkbox/radio, selectable, combo, image-item, debug-draw pressable, context-menu,
+      pointer-click, double-click, drag, long-press, lifecycle, or response population behavior.
+      Result: `item_behavior/install.rs` keeps hook clearing, model capture, and behavior assembly;
+      `item_behavior/install/pointer_down.rs` owns lifecycle activation and drag start
+      preparation; `pointer_move.rs` owns drag-threshold move handling; `pointer_up.rs` owns
+      lifecycle deactivation, drag finish, context-menu transients, pointer-click modifier capture,
+      and double-click transients.
+- [x] Split IMUI table response header/resize accessors out of
+      `ecosystem/fret-ui-kit/src/imui/response/widgets/table.rs` without changing public response
+      names, field privacy, header lookup behavior, resize drag accessors, width clamping, table
+      smoke behavior, or table-column visibility behavior.
+      Result: `response/widgets/table.rs` owns `TableResponse` aggregation and header lookup,
+      `response/widgets/table/header.rs` owns `TableHeaderResponse`, and
+      `response/widgets/table/resize.rs` owns `TableColumnResizeResponse`.
+- [x] Split IMUI debug-draw root draw-list state and facade entry glue out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs` without changing public debug-draw
+      list/options/response names, command recording, channel merging, summary projection,
+      element mounting, or debug-draw smoke behavior.
+      Result: `debug_draw_controls/draw_list.rs` owns `ImUiDebugDrawList` and channel-split state,
+      while `debug_draw_controls/facade.rs` owns `debug_draw_with_options(...)` list capture,
+      summaries, command boxing, keyed element mounting, and response assembly.
+- [x] Split IMUI popup-overlay root state helpers and context-menu wrapper out of
+      `ecosystem/fret-ui-kit/src/imui/popup_overlay.rs` into private owners without changing popup
+      open/close/drop/open-at behavior, context-menu anchor fallback, menu/modal entrypoints,
+      popup-hover behavior, or popup/menu facade behavior.
+      Result: `popup_overlay/state.rs` owns popup open model lookup, drop/open/open-at/close
+      mutations, keep-alive generation writes, anchor writes, and redraw requests.
+      `popup_overlay/context_menu.rs` owns context-menu trigger inspection, 1px fallback anchor
+      construction, and delegation to the menu owner.
+- [x] Split IMUI tab-bar item builder methods out of
+      `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs` into a private owner without
+      changing public `ImUiTabBar` method names, label identity parsing, panel test-id fallback,
+      focused-child capture, tab smoke behavior, or fret-imui tab behavior.
+      Result: `tab_family_controls/item_methods.rs` owns `tab_item`,
+      `tab_item_with_options`, `begin_tab_item`, and `begin_tab_item_with_options`; the root file
+      keeps `ImUiTabBar` storage and `tab_bar_element` assembly.
+- [x] Split IMUI floating-area option/context records into options and opaque context private
+      owners without changing public option/context names, area defaults, accessor-first context
+      shape, root re-exports, floating-area smoke behavior, or fret-imui floating behavior.
+      Result: `floating_options/area.rs` is now a public re-export hub.
+      `floating_options/area/options.rs` owns `FloatingAreaOptions`, while
+      `floating_options/area/context.rs` owns `FloatingAreaContext` storage and accessors.
+- [x] Split IMUI floating-window option records into behavior, resize, and root window option
+      private owners without changing public option names, defaults, builder methods, root
+      re-exports, floating-window smoke behavior, or fret-imui floating behavior.
+      Result: `floating_options/window.rs` is now a public re-export hub.
+      `floating_options/window/behavior.rs` owns `FloatingWindowOptions`,
+      `floating_options/window/resize.rs` owns `FloatingWindowResizeOptions`, and
+      `floating_options/window/options.rs` owns `WindowOptions` and its builder methods.
+- [x] Split editor-owned IMUI style/theme preset picker option records into a private owner
+      without changing public control names, option fields/defaults, controls re-exports, IMUI
+      adapter callsite, listbox semantics, selected-state behavior, or reversible preset replay.
+      Result: `controls/editor_theme_preset_picker.rs` keeps picker rendering and behavior, while
+      `controls/editor_theme_preset_picker/options.rs` owns `EditorThemePresetPickerOptions`.
+- [x] Split editor-owned theme preset patch construction into a private owner without changing
+      preset metadata, install/reapply APIs, host theme sync behavior, dense/default token values,
+      or style/theme picker proof behavior.
+      Result: `theme.rs` keeps public preset metadata and install/replay APIs, while
+      `theme/patches.rs` owns default and ImGui-like dense token patch construction.
+- [x] Split editor color-edit hue-wheel canvas painting into a private owner without changing HSV
+      hue-wheel picker entrypoints, pointer drag behavior, option thumbnails, alpha/SV bars, or
+      color-edit popup policy tests.
+      Result: `color_edit/popup/picker.rs` keeps picker composition and interactions, while
+      `color_edit/popup/picker/hue_wheel.rs` owns hue-wheel canvas painting and geometry helpers.
+- [x] Split editor color-edit alpha bar previews and interaction into a private owner without
+      changing horizontal/vertical alpha bars, alpha coordinate mapping, popup picker composition,
+      color-edit helper tests, or color-edit popup policy tests.
+      Result: `color_edit/popup/picker.rs` keeps picker composition and entrypoint re-exports,
+      while `color_edit/popup/picker/alpha.rs` owns alpha gradients, thumb overlays, pointer
+      updates, and alpha helper math.
+- [x] Split editor color-edit hue bar previews and interaction into a private owner without
+      changing HSV hue-bar picker entrypoints, option thumbnails, hue coordinate mapping, shared
+      HSV color application, or color-edit popup policy tests.
+      Result: `color_edit/popup/picker.rs` keeps picker composition and shared HSV apply logic,
+      while `color_edit/popup/picker/hue_bar.rs` owns hue-bar gradients, thumb overlays, pointer
+      updates, and vertical hue helper wiring.
+- [x] Split editor color-edit saturation/value picker previews and interaction into a private
+      owner without changing HSV hue-bar picker composition, option thumbnails, SV coordinate
+      mapping, shared HSV color application, or color-edit popup policy tests.
+      Result: `color_edit/popup/picker.rs` keeps picker composition and shared HSV apply logic,
+      while `color_edit/popup/picker/sv.rs` owns the SV grid, thumb overlay, pointer updates, and
+      SV helper wiring.
+- [x] Split editor color-edit hue-wheel picker interaction into a private owner without changing
+      hue-wheel picker composition, pure canvas painting ownership, hue-wheel target math, shared
+      HSV color application, or color-edit popup policy tests.
+      Result: `color_edit/popup/picker.rs` keeps picker composition and shared HSV apply logic,
+      `color_edit/popup/picker/hue_wheel.rs` remains the pure canvas owner, and
+      `color_edit/popup/picker/hue_wheel_picker.rs` owns pressable drag target tracking and HSV
+      update wiring.
+- [x] Split editor color-edit option records and runtime popup defaults into a private owner
+      without changing public `ColorEditOptions` / popup option names, default values, runtime
+      override semantics, palette/payload/request ownership, or popup policy tests.
+      Result: `controls/color_edit.rs` keeps public re-exports, payload/request records, the main
+      control renderer, and shared local models, while `controls/color_edit/options.rs` owns
+      option records, default construction, runtime defaults, and runtime sync semantics.
+- [x] Split editor color-edit palette/payload/eyedropper records into a private owner without
+      changing public record names, accessor behavior, default palette values, drag/drop payload
+      alpha semantics, palette slot drop semantics, or popup policy tests.
+      Result: `controls/color_edit.rs` keeps public re-exports, the main control renderer, and
+      shared local models, while `controls/color_edit/records.rs` owns default palette data,
+      palette entries, drag/drop payload records, palette slot drop requests, and eyedropper
+      request/callback records.
+- [x] Split editor color-edit local state helpers into a private owner without changing local model
+      keys, track-caller allocation posture, draft/error/reference model defaults, popup runtime
+      option sync behavior, or popup policy tests.
+      Result: `controls/color_edit.rs` keeps public re-exports and the main control renderer,
+      while `controls/color_edit/state.rs` owns popup/tooltip/copy-menu open models,
+      draft/error/reference models, popup runtime option model allocation, and runtime default
+      sync.
+- [x] Split editor color-edit hex input construction into a private owner without changing draft
+      synchronization, Enter/Escape parse/reset behavior, invalid color errors, pointer focus
+      routing, test-id assignment, text-field chrome resolution, or popup policy tests.
+      Result: `controls/color_edit.rs` keeps the main control renderer and passes input arguments
+      to `controls/color_edit/input.rs`, while the input owner owns text input props, key handling,
+      draft/error updates, and pointer focus wrapping.
+- [x] Split editor color-edit swatch construction into a private owner without changing swatch
+      activation, original-color reference capture, right-click and keyboard copy-menu triggers,
+      drag-source/drop-hover behavior, tooltip hover-open synchronization, preview painting,
+      test-id/a11y value assignment, or popup/drop-delivery policy.
+      Result: `controls/color_edit.rs` keeps the main control renderer, popup requests, and
+      delivered drop application, while `controls/color_edit/swatch.rs` owns the swatch pressable,
+      context-menu triggers, drag hover state, frame visuals, preview container, and swatch style
+      resolution.
+- [x] Split editor color-edit delivered drop application into the drag/drop owner without changing
+      delivered payload tick filtering, target alpha rules, model/draft/error updates, or popup
+      policy tests.
+      Result: `controls/color_edit.rs` passes the swatch id and model context to
+      `controls/color_edit/drag_drop.rs`, while the drag/drop owner now owns delivered payload
+      extraction, alpha-aware payload application, formatted draft synchronization, and error
+      clearing.
+- [x] Split editor color-edit root layout/error rendering into a private owner without changing
+      error text styling, row/root flex direction, spacing, min-height fallback, root test-id
+      assignment, or popup policy tests.
+      Result: `controls/color_edit.rs` remains the state/owner orchestration hub, while
+      `controls/color_edit/layout.rs` owns error text rendering, root min-height fallback, vertical
+      root layout, horizontal swatch/input row layout, and root test-id assignment.
+- [x] Split IMUI leaf control option records into selection, tab-item, and slider private owners
+      without changing public option type names, fields, defaults, root re-exports, selectable
+      smoke behavior, tab/menu behavior, or slider model behavior.
+      Result: `options/controls/selection.rs`, `options/controls/tab.rs`, and
+      `options/controls/value.rs` are now public re-export hubs. `selection/options.rs` owns
+      `SelectableOptions`, `tab/options.rs` owns `TabItemOptions`, and `value/slider.rs` owns
+      `SliderOptions`.
+- [x] Split IMUI input-text-picker option records into filter and options private owners without
+      changing public option type names, filter matching, default popup/input/options, root
+      re-exports, picker smoke behavior, or fret-imui picker behavior.
+      Result: `options/controls/text/picker.rs` is now a public re-export hub.
+      `picker/filter.rs` owns `InputTextPickerFilter`, and `picker/options.rs` owns
+      `InputTextPickerOptions`.
+- [x] Split IMUI textarea option records into submit-key and options private owners without
+      changing public option type names, multiline submit/cancel defaults, stable-line-box default,
+      root re-exports, textarea smoke behavior, or fret-imui textarea model behavior.
+      Result: `options/controls/text/textarea.rs` is now a public re-export hub.
+      `textarea/submit_key.rs` owns `TextAreaSubmitKey`, and `textarea/options.rs` owns
+      `TextAreaOptions`.
+- [x] Split IMUI input-text option records into mode and options private owners without changing
+      public option type names, text-field semantics default, command-policy defaults, filter
+      fields, root re-exports, input-text option smoke behavior, or fret-imui text-model behavior.
+      Result: `options/controls/text/input.rs` is now a public re-export hub. `input/mode.rs` owns
+      `InputTextMode`, and `input/options.rs` owns `InputTextOptions`.
+- [x] Split IMUI popup option records into popup-menu and popup-modal private owners without
+      changing public option type names, popup placement defaults, menu size/modal/auto-focus
+      defaults, modal size/outside-press defaults, root re-exports, popup smoke behavior, or
+      popup-hover behavior.
+      Result: `options/menus/popup.rs` is now a public re-export hub. `popup/menu.rs` owns
+      `PopupMenuOptions`, and `popup/modal.rs` owns `PopupModalOptions`.
+- [x] Split IMUI misc option records into drag-source, drop-target, separator-text, and bullet-text
+      private owners without changing public option type names, default enabled/cross-window
+      behavior, `test_id` fields, root re-exports, drag/drop smoke behavior, separator/bullet smoke
+      behavior, or fret-imui composition/drag behavior.
+      Result: `options/misc.rs` is now a public re-export hub. `misc/drag_source.rs` owns
+      `DragSourceOptions`, `misc/drop_target.rs` owns `DropTargetOptions`,
+      `misc/separator_text.rs` owns `SeparatorTextOptions`, and `misc/bullet_text.rs` owns
+      `BulletTextOptions`.
+- [x] Split IMUI spacer flow option records into dummy, spacing, and indent private owners without
+      changing public option type names, default optional size, indent token default, `test_id`
+      fields, flow re-exports, container smoke behavior, or porting-sugar behavior.
+      Result: `options/containers/flow/spacer.rs` is now a private re-export hub.
+      `flow/spacer/dummy.rs` owns `DummyOptions`, `flow/spacer/spacing.rs` owns `SpacingOptions`,
+      and `flow/spacer/indent.rs` owns `IndentOptions`.
+- [x] Split IMUI linear flow option records into horizontal and vertical private owners without
+      changing public option type names, default gaps, default center/stretch item alignment,
+      `test_id` fields, flow re-exports, container smoke behavior, or porting-sugar behavior.
+      Result: `options/containers/flow/linear.rs` is now a private re-export hub.
+      `flow/linear/horizontal.rs` owns `HorizontalOptions`, and `flow/linear/vertical.rs` owns
+      `VerticalOptions`.
+- [x] Split IMUI inline flow option records into item-flow and same-line private owners without
+      changing public option type names, default gaps, default alignment/stretch behavior,
+      `test_id` fields, flow re-exports, container smoke behavior, or porting-sugar behavior.
+      Result: `options/containers/flow/inline.rs` is now a private re-export hub.
+      `flow/inline/item_flow.rs` owns `ItemFlowOptions`, and `flow/inline/same_line.rs` owns
+      `SameLineOptions`.
+- [x] Split IMUI child-region option records into chrome, body options, and resize private owners
+      without changing public option type names, default chrome, scroll/layout fields, resize
+      defaults, resize builder methods, root re-exports, child-region smoke behavior, or
+      composition behavior.
+      Result: `options/containers/child_region.rs` is now a public re-export hub.
+      `child_region/chrome.rs` owns `ChildRegionChrome`, `child_region/options.rs` owns
+      `ChildRegionOptions`, and `child_region/resize.rs` owns `ChildRegionResizeXOptions` and
+      `ChildRegionResizeYOptions`.
+- [x] Split IMUI table/row/cell option records into private owners without changing public option
+      type names, default values, `TableOptions` debug formatting, horizontal-scroll defaults,
+      row/cell background seams, root re-exports, table smoke behavior, or table composition
+      behavior.
+      Result: `options/collections/table.rs` is now a public re-export hub. `table/root.rs` owns
+      `TableOptions`, `table/row.rs` owns `TableRowOptions`, and `table/cell.rs` owns
+      `TableCellOptions`.
+- [x] Split IMUI menu option records into menu-bar, begin-menu/submenu, and menu-item private
+      owners without changing public option type names, default values, submenu popup placement,
+      shortcut fields, root re-exports, menu smoke behavior, or menu/tab interaction behavior.
+      Result: `options/menus/menu.rs` is now a public re-export hub. `menu/bar.rs` owns
+      `MenuBarOptions`, `menu/begin.rs` owns `BeginMenuOptions` and `BeginSubmenuOptions`, and
+      `menu/item.rs` owns `MenuItemOptions`.
+- [x] Split IMUI combo control option types into direct-combo and model-combo private owners
+      without changing public option type names, default values, placeholder text, popup defaults,
+      shortcut fields, facade imports, combo smoke behavior, or combo-model behavior.
+      Result: `options/controls/combo.rs` is now a public re-export hub.
+      `combo/direct.rs` owns `ComboOptions`; `combo/model.rs` owns `ComboModelOptions`.
+- [x] Split IMUI boolean control option types into checkbox, radio, and switch private owners
+      without changing public option type names, default values, shortcut fields, facade imports,
+      button smoke coverage, or boolean control behavior.
+      Result: `options/controls/boolean.rs` is now a public re-export hub.
+      `boolean/checkbox.rs`, `boolean/radio.rs`, and `boolean/switch.rs` own the three option
+      structs and their default values.
+- [x] Split IMUI disclosure control option types into collapsing-header and tree-node private
+      owners without changing public option type names, default values, shortcut fields, hierarchy
+      metadata defaults, facade imports, disclosure smoke behavior, or disclosure-control tests.
+      Result: `options/controls/disclosure.rs` is now a public re-export hub.
+      `disclosure/collapsing_header.rs` owns `CollapsingHeaderOptions`, and
+      `disclosure/tree_node.rs` owns `TreeNodeOptions`.
+- [x] Split IMUI button/image control option types into button and image-item private owners
+      without changing public option type names, default values, image-item builder methods,
+      shortcut fields, facade imports, button smoke behavior, or image-item smoke behavior.
+      Result: `options/controls/button_image.rs` is now a public re-export hub.
+      `button_image/button.rs` owns `ButtonArrowDirection`, `ButtonVariant`, and `ButtonOptions`;
+      `button_image/image.rs` owns `ImageItemVariant` and `ImageItemOptions`.
+- [x] Split IMUI debug-draw rect path construction into plain-rect and rounded-rect private owners
+      without changing clockwise rect command ordering, rounded-rect effective rounding clamp,
+      per-corner sampling, fallback square points, path-builder call sites, path tests, or public
+      debug-draw behavior.
+      Result: `debug_draw_controls/paths/rects.rs` is now a private re-export hub.
+      `rects/plain.rs` owns plain closed rect path commands and `rects/rounded.rs` owns
+      rounded-rect point generation plus corner arc sampling.
+- [x] Split IMUI debug-draw linear path construction into polyline, polygon fill, and primitive
+      private owners without changing open/closed stroke point requirements, polyline command
+      ordering, convex/concave fill forwarding, triangle/quad closure, paint-shape call sites, path
+      tests, or public debug-draw behavior.
+      Result: `debug_draw_controls/paths/linear.rs` is now a private re-export hub.
+      `linear/polyline.rs` owns stroke point requirements and polyline commands,
+      `linear/fills.rs` owns convex/concave fill forwarding, and `linear/primitives.rs` owns
+      triangle/quad path construction.
+- [x] Split IMUI debug-draw round path construction into circle, ngon, and ellipse private owners
+      without changing circle cubic approximation, ngon validation/point generation, ellipse
+      default segment fallback/rotation, paint-shape call sites, path tests, or public debug-draw
+      behavior.
+      Result: `debug_draw_controls/paths/round.rs` is now a private re-export hub.
+      `round/circle.rs` owns circle cubic path construction, `round/ngon.rs` owns regular polygon
+      path construction, and `round/ellipse.rs` owns ellipse path validation and rotation sampling.
+- [x] Split IMUI debug-draw path sampling helpers into segment, arc, and Bezier private owners
+      without changing default segment fallback, arc/elliptical arc point generation, Bezier point
+      interpolation, path-builder command output, or public debug-draw behavior.
+      Result: `debug_draw_controls/paths/sampling.rs` is now a private re-export hub.
+      `sampling/segments.rs` owns default segment fallback, `sampling/arcs.rs` owns circular and
+      elliptical arc point sampling, and `sampling/beziers.rs` owns quadratic/cubic Bezier point
+      interpolation.
+- [x] Split IMUI debug-draw geometry helpers into finite, rectangle, and triangle private owners
+      without changing finite checks, rect emptiness/finite checks, rect quad point generation,
+      effective rounding clamp rules, triangle degeneracy checks, indexed triangle lookup,
+      sequential index generation, or public debug-draw behavior.
+      Result: `debug_draw_controls/geometry.rs` is now a private re-export hub.
+      `geometry/finite.rs` owns point/UV/vertex finite checks; `geometry/rects.rs` owns rect
+      checks and rounding clamp rules; `geometry/triangles.rs` owns triangle degeneracy/
+      drawability, indexed triangle lookup, and sequential index generation.
+- [x] Split IMUI facade menu-item inherent wrappers into a private owner without changing plain
+      menu-item wrappers, checkbox/radio wrappers, action menu item wrappers, focusable recording,
+      begin-menu/submenu wrappers, command presentation forwarding, or public facade method names.
+      Result: `facade_writer/menu_items/item_methods.rs` owns plain, checkbox/radio, and action
+      menu item inherent wrappers. `facade_writer/menu_items.rs` keeps begin-menu/submenu inherent
+      wrappers and command menu item wiring.
+- [x] Split IMUI menu dispatch checked/action entry variants into private owners without changing
+      plain menu-item routing, pressable-hook entry routing, checkbox/radio semantics, action
+      dispatch forwarding, label identity handling, mount routing, or public facade menu item
+      behavior.
+      Result: `menu_controls/routing/dispatch/entries/checked.rs` owns checkbox/radio entry
+      wrappers and checked-state semantics; `entries/action.rs` owns action entry forwarding.
+      `dispatch/entries.rs` keeps plain entry routing, shared implementation forwarding,
+      pressable-hook entry routing, and private re-exports.
+- [x] Split IMUI facade button action inherent wrappers into a private owner without changing plain
+      button wrappers, command button forwarding, action dispatch, payload action dispatch,
+      focusable recording, response projection, or public facade method names.
+      Result: `facade_writer/button_actions/action_methods.rs` owns `action_button`,
+      `action_button_with_options`, `action_payload_button`, and
+      `action_payload_button_with_options` inherent wrappers. `facade_writer/button_actions.rs`
+      keeps ordinary button wrappers and command button wiring.
+- [x] Split IMUI text-picker core input-root phase into a private owner without changing model
+      reads, candidate filtering, keyboard snapshot preparation, popup snapshot reads, expanded
+      semantics, input-root request construction, keyboard-handler installation, popup open
+      policy, pick response merge, or public text-picker facade behavior.
+      Result: `text_picker_controls/core/input_root.rs` owns prepared input-root request
+      construction, root mounting, response extraction, and popup item test-id base forwarding.
+      `text_picker_controls/core.rs` keeps model/candidate/keyboard/open-policy/popup/response
+      orchestration.
+- [x] Split IMUI facade-core disabled-scope behavior into a private owner without changing
+      `ImUiFacade` storage, keyed id helpers, `UiWriter` implementation, disabled-depth handling,
+      pointer event swallowing, opacity dimming, focus traversal gating, scoped runtime
+      preparation, or public facade behavior.
+      Result: `facade_writer/facade_core/disabled_scope.rs` owns `ImUiFacade::disabled_scope`
+      behavior. `facade_writer/facade_core.rs` keeps the facade storage shape, focus recording,
+      keyed id helpers, and `UiWriter` implementation.
+- [x] Split IMUI table builder row and cell methods into private owners without changing
+      `ImUiTable` / `ImUiTableRow` public methods, row key scopes, row/cell test-id derivation,
+      child IMUI mounting, cell packing, text-cell rendering, or table facade behavior.
+      Result: `table_controls/builder/row_methods.rs` owns `row` / `row_with_options` row
+      collection and keyed row scopes; `table_controls/builder/cell_methods.rs` owns `cell` /
+      `cell_with_options` / `cell_text` / `cell_text_with_options` child mounting and cell
+      packing. `table_controls/builder.rs` keeps built row/cell data shapes and `build_table_rows`.
+- [x] Split IMUI child-region resize stack assembly into a private owner without changing
+      resizable child-region detection, scroll/content construction, resize handle test-id
+      defaults, X/Y resize response writes, stack layout refinement, stack root test-id routing, or
+      public child-region facade/response behavior.
+      Result: `child_region/resize_stack.rs` owns resize handle test-id derivation, X/Y handle
+      creation, stack layout/style projection, children ordering, and resizable root test-id
+      stamping. `child_region.rs` keeps option normalization, scroll owner dispatch, response
+      aggregation, and the non-resizable vs resizable branch.
+- [x] Split IMUI child-region scroll/content/chrome assembly into a private owner without changing
+      IMUI child mounting, scroll axis/options forwarding, framed/bare chrome, content/viewport/
+      root test-id routing, resize layout override, resize handle assembly, stack root test-id
+      routing, or public child-region facade/response behavior.
+      Result: `child_region/scroll.rs` owns scroll-area builder construction, content mounting,
+      framed chrome, handle forwarding, viewport test-id routing, and non-resizable root test-id
+      stamping. `child_region.rs` keeps resize option detection, resize handle assembly, stack
+      layout/test-id routing, and response aggregation.
+- [x] Split IMUI popup-modal overlay identity and request submission into a private owner without
+      changing overlay id naming, modal root naming, trigger forwarding, open-model forwarding,
+      instant modal presence, layer children, dismiss request forwarding, initial focus handoff, or
+      public popup modal facade behavior.
+      Result: `popup_overlay/modal/request.rs` owns modal overlay id/root-name construction and
+      `OverlayRequest::modal` submission. `popup_overlay/modal.rs` keeps open-state gating,
+      layout/dismiss/layer owner dispatch, and the final request input assembly.
+- [x] Split IMUI popup-modal open and keep-alive state handling into a private owner without
+      changing popup store model identity, closed-modal render gating, keep-alive generation
+      writeback, modal root naming, dismiss policy, layer assembly, focus initialization, overlay
+      request assembly, or public popup modal facade behavior.
+      Result: `popup_overlay/modal/state.rs` owns modal open-model lookup, is-open reads, and
+      keep-alive generation writeback. `popup_overlay/modal.rs` keeps dismiss policy creation,
+      overlay identity/root naming, layout owner dispatch, layer owner dispatch, overlay request
+      assembly, and final focus target selection.
+- [x] Split IMUI popup-modal layer and panel assembly into a private owner without changing popup
+      store open state reads, keep-alive generation, modal root naming, backdrop barrier behavior,
+      centered panel layout, facade child mounting, focus initialization, overlay request assembly,
+      or public popup modal facade behavior.
+      Result: `popup_overlay/modal/layer.rs` owns modal layer/root mounting, barrier construction,
+      panel semantics mounting, facade child rendering, focus-state construction, and panel focus
+      handoff. `popup_overlay/modal.rs` keeps open-state gating, keep-alive writeback, dismiss
+      policy creation, overlay request assembly, and final focus target selection.
+- [x] Split IMUI popup-modal dismiss request policy into a private owner without changing popup
+      store open state reads, keep-alive generation, modal root naming, backdrop/panel assembly,
+      Escape close behavior, outside-press close option, dismiss prevention, focus initialization,
+      or public popup modal facade behavior.
+      Result: `popup_overlay/modal/dismiss.rs` owns modal `OnDismissRequest` policy for Escape,
+      optional outside press, and default prevention. `popup_overlay/modal.rs` keeps open-state
+      gating, keep-alive writeback, layer/panel assembly, overlay request assembly, and focus
+      initialization.
+- [x] Split IMUI button pressable props and a11y assembly into a private owner without changing
+      enabled/focusable projection, variant layout application, button a11y metadata, chrome
+      assembly, activation/keyboard/response dispatch, or public button facade behavior.
+      Result: `button_controls/behavior/props.rs` owns `PressableProps` construction, focusable
+      gating, variant layout, and a11y metadata. `button_controls/behavior.rs` keeps chrome owner
+      dispatch, behavior owner dispatch, response projection dispatch, and visual resolution.
+- [x] Split IMUI button pressable response projection into a private owner without changing
+      clicked transient consumption, shared pressable item response population, lifecycle/hover/
+      drag response projection, visual assembly, or public button facade behavior.
+      Result: `button_controls/behavior/response.rs` owns button clicked transient consumption and
+      shared `PressableItemResponseInput` projection. `button_controls/behavior.rs` keeps
+      pressable props/chrome assembly, activation/keyboard owner dispatch, and visual assembly.
+- [x] Split IMUI button pressable activation behavior into a private owner without changing
+      pressable props/chrome assembly, keyboard lifecycle marking, clicked transient recording,
+      action dispatch, response population, or public button facade behavior.
+      Result: `button_controls/behavior/activation.rs` owns pressable activate-hook installation,
+      keyboard activation lifecycle marking, clicked transient recording, action dispatch, and
+      notify. `button_controls/behavior.rs` keeps pressable props/chrome assembly, keyboard owner
+      dispatch, response population, and visual assembly.
+- [x] Split IMUI button pressable keyboard behavior into a private owner without changing
+      pressable props/chrome assembly, action dispatch, shortcut repeat policy, keyboard lifecycle
+      marking, context-menu key handling, response population, or public button facade behavior.
+      Result: `button_controls/behavior/keyboard.rs` owns focused button activate-shortcut handling
+      and keyboard context-menu requests. `button_controls/behavior.rs` keeps pressable props,
+      action activation, response population, and visual assembly.
+- [x] Split IMUI debug-draw round path-command paint dispatch into stroked and filled private
+      owners without changing public draw-list commands, round path paint routing, stroke/fill
+      painter calls, command fallthrough, or debug-draw smoke behavior.
+      Result: `paint_shapes/path_commands/round.rs` now only dispatches to `round/stroked.rs` and
+      `round/filled.rs`; those owners handle stroked circle/ngon/ellipse commands and filled
+      circle/ngon/ellipse commands respectively.
+- [x] Split IMUI debug-draw linear path-command paint dispatch into stroked and filled private
+      owners without changing public draw-list commands, path paint routing, stroke/fill painter
+      calls, command fallthrough, or debug-draw smoke behavior.
+      Result: `paint_shapes/path_commands/linear.rs` now only dispatches to
+      `linear/stroked.rs` and `linear/filled.rs`; those owners handle stroked line/poly/rect/quad/
+      triangle commands and filled polygon/quad/triangle commands respectively.
+- [x] Split IMUI debug-draw geometry summary projection into linear, mesh, round, and Bezier
+      private owners without changing public command summaries, point/vertex/index/triangle counts,
+      clip-state projection, media/text summary projection, or debug-draw smoke behavior.
+      Result: `commands/summary_projection/geometry.rs` now only dispatches to family owners;
+      `geometry/linear.rs`, `geometry/mesh.rs`, `geometry/round.rs`, and `geometry/beziers.rs`
+      own the concrete geometry summary counts.
+- [x] Split IMUI debug-draw stroked linear path painters into line/polyline and rect/quad/triangle
+      private owners without changing public draw-list commands, path command generation, shared
+      stroke style dispatch, canvas path dispatch, or debug-draw smoke behavior.
+      Result: `paint_shapes/paths/stroked/linear/line_poly.rs` owns line and polyline stroke
+      painting, and `paint_shapes/paths/stroked/linear/rect_quad_triangle.rs` owns rect, quad, and
+      triangle stroke painting. `stroked/linear.rs` keeps private re-exports.
+- [x] Split IMUI debug-draw list summary command-kind classification into a private owner without
+      changing public summary accessors, aggregate counts, clip-stack depth accounting, command
+      summary shape, or debug-draw smoke behavior.
+      Result: `debug_draw_controls/summaries/list/classification.rs` owns command-kind to list
+      summary class mapping. `summaries/list.rs` keeps aggregate counters, public accessors,
+      final clip-depth writeback, and include-time counter updates.
+- [x] Split IMUI text-picker popup item rendering and pick commit into a private owner without
+      changing popup lifecycle, keyboard handler installation, candidate filtering, selectable row
+      presentation, active-descendant writeback, model update, popup close, or public picker
+      response behavior.
+      Result: `text_picker_controls/popup/item.rs` owns selectable candidate rows, item test-id
+      derivation, active element writeback, model update, popup close, and click pick result.
+      `popup.rs` keeps popup lifetime, keyboard handler installation, and aggregate pick result
+      merging.
+- [x] Split IMUI table header resize grip visual into a private owner without changing pointer
+      region hit width, resize drag lifecycle hooks, cursor behavior, drag response edge merging,
+      resize test-id attachment, or table column resize public behavior.
+      Result: `table_controls/header/resize/visual.rs` owns resize grip color, disabled alpha, and
+      visual dimensions. `header/resize.rs` keeps pointer-region drag setup, response writeback,
+      and test-id attachment.
+- [x] Split IMUI debug-draw filled path painters into polygon-fill and round-fill private owners
+      without changing public draw-list commands, path command generation, shared fill style,
+      canvas path dispatch, summaries, or debug-draw smoke behavior.
+      Result: `paint_shapes/paths/filled/polygons.rs` owns convex/concave/quad/triangle fills and
+      `paint_shapes/paths/filled/round.rs` owns circle/ngon/ellipse fills. `filled.rs` keeps the
+      shared fill style plus private re-exports.
+- [x] Split IMUI disclosure header indicator, padding, and border metrics into a private owner
+      without changing header row composition, palette resolution, indicator glyph text role, tree
+      row label text role, or tree-node/collapsing-header public behavior.
+      Result: `disclosure_controls/visual/header/metrics.rs` owns indicator glyph selection,
+      tree indentation padding, and header border edges. `visual/header.rs` keeps palette lookup,
+      row element composition, glyph/text rendering, and spacer layout.
+- [x] Split IMUI menu-item command presentation, shortcut defaulting, and enabled gating into a
+      private owner without changing public menu item wrapper methods, focusable-recording
+      behavior, command metadata lookup, shortcut propagation, or action menu item dispatch.
+      Result: `facade_writer/menu_items/command.rs` owns command presentation lookup, enabled
+      gating, and shortcut fallback. `menu_items.rs` keeps public menu item wrappers and the
+      private helper re-export.
+- [x] Split IMUI tooltip runtime layout/placement calculation into a private owner without
+      changing trigger-id validation, event/open model setup, pointer-move open gate installation,
+      interaction update, open model synchronization, overlay request submission, or public tooltip
+      facade behavior.
+      Result: `tooltip_overlay/runtime/layout.rs` owns anchor bounds, measured/estimated panel
+      sizing, and floating bounds calculation. `tooltip_overlay/runtime.rs` kept trigger gates,
+      interaction updates, open state writeback, and overlay request submission until the later
+      runtime-interaction split below moved hover/focus/open synchronization into a child owner.
+- [x] Split IMUI tooltip runtime hover/focus interaction update out of
+      `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` into a private interaction owner
+      without changing trigger-id validation, event/open model setup, pointer-move open gate
+      installation, layout projection, provider option defaults, open model synchronization,
+      overlay request submission, or public tooltip facade behavior.
+      Result: `tooltip_overlay/runtime/interaction.rs` owns trigger hover/focus gating,
+      `TooltipInteractionConfig` construction, continuous-frame scheduling, and open model
+      synchronization. `tooltip_overlay/runtime.rs` keeps trigger-id validation, runtime model
+      creation, pointer-move gate installation, layout resolution, and overlay request submission.
+- [x] Split IMUI button-command presentation and enabled gating into a private owner without
+      changing public button wrapper methods, focusable-recording behavior, command metadata
+      lookup, or action button dispatch.
+      Result: `facade_writer/button_actions/button_command.rs` owns command presentation lookup and
+      enabled gating. `button_actions.rs` keeps the public button wrappers and private helper
+      re-export.
+- [x] Split IMUI pressable drag state machine into a private interaction-runtime owner without
+      changing drag kind derivation, theme threshold reads, pointer-down active item marking,
+      long-press cancellation/arming, thresholded move transitions, drag started/stopped transient
+      events, pointer-up cleanup, or public response drag state.
+      Result: `interaction_runtime/drag/pressable.rs` owns pressable pointer down/move/up drag
+      state transitions. `interaction_runtime/drag.rs` keeps drag kind/threshold helpers and
+      private sub-owner re-exports.
+- [x] Split IMUI drag-source payload lifecycle hooks into a private owner without changing
+      drag-source trigger-id gating, enabled/cross-window pointer-down policy, active payload
+      tracking, hovered-target preservation, drop delivery writeback, or public drag/drop response
+      behavior.
+      Result: `drag_drop/source/hooks/payload_lifecycle.rs` owns pointer-move active payload
+      tracking and pointer-up delivery insertion. `drag_drop/source/hooks.rs` keeps enabled gating,
+      cross-window drag upgrade policy, and the private payload-lifecycle delegation.
+- [x] Split IMUI table-column visibility menu-item toggle behavior into a private owner without
+      changing header context-menu trigger selection, menu item group composition, test-id suffix
+      generation, shared visibility state updates, changed/edited response flags, or public
+      visibility helper behavior.
+      Result: `table_column_visibility/menu/item.rs` owns single checkbox item rendering and
+      visibility model mutation. `menu.rs` keeps header context-menu orchestration, item group
+      composition, identity/test-id filtering, and the private item-owner re-export.
+- [x] Split IMUI menubar active-trigger reconciliation into a private owner without changing
+      open-menu synchronization, active-trigger installation, close-after-render reconciliation,
+      popup close restoration, or begin-menu public behavior.
+      Result: `menu_family_controls/menu_state/open_policy/active_trigger/reconcile.rs` owns
+      close/reconcile state cleanup. `active_trigger.rs` keeps active-trigger sync/activation and
+      re-exports the reconcile owner.
+- [x] Split IMUI begin-menu capture read helpers into a private owner without changing
+      row/popup/was-open model identity, open-menu model reads, render-state writeback, or menubar
+      open-policy behavior.
+      Result: `menu_family_controls/menu_state/capture/read.rs` owns bool/open-menu model reads.
+      `capture.rs` kept `BeginMenuState`, `MenuRenderState`, model capture, render-state
+      writeback, and read facade methods until the later state-carrier split below moved the state
+      types and render-state writeback out.
+- [x] Split IMUI begin-menu capture state carrier and render-state writeback into a private owner
+      without changing row/popup/was-open model identity, pre-render snapshots, read facade methods,
+      render-state writeback, or begin-menu public behavior.
+      Result: `menu_family_controls/menu_state/capture/state.rs` owns `BeginMenuState`,
+      `MenuRenderState`, row/open-menu read facade methods, and `record_render_state(...)`.
+      `capture.rs` keeps begin-menu model capture and state assembly.
+- [x] Split IMUI table builder row/cell test-id derivation into a private owner without changing
+      public `ImUiTable` / `ImUiTableRow` methods, row option explicit test-id override behavior,
+      default row/cell test-id strings, child `ImUiFacade` mounting, or table render behavior.
+      Result: `table_controls/builder/test_ids.rs` owns row/cell test-id derivation. `builder.rs`
+      keeps row/cell collection, keyed row scopes, child mounting, and public table-builder
+      methods.
+- [x] Split IMUI selectable popup-menu keyboard navigation into a private owner without changing
+      selectable shortcut activation, popup close-on-shortcut, context-menu key handling, inherited
+      popup menu item registration, Arrow/Home/End focus movement, or public selectable/menu-item
+      behavior.
+      Result: `selectable_controls/keyboard/popup_nav.rs` owns inherited popup menu nav item
+      registration and focus movement. `keyboard.rs` keeps shortcut and context-menu key handling.
+- [x] Split IMUI menu-family trigger menubar behavior into a private owner without changing
+      active trigger install/population, click/shortcut activation, menubar trigger-row registry
+      sync, patient-click timer wiring, ArrowDown/ArrowUp open behavior, or public menu facade
+      behavior.
+      Result: `menu_family_controls/trigger/behavior/menubar.rs` owns menubar trigger-row
+      registration, sync, toggle-on-activate, and vertical-arrow open support. `behavior.rs` keeps
+      base active-trigger behavior and response population.
+- [x] Split IMUI disclosure trigger response projection into a private owner without changing
+      disclosure pointer/shortcut behavior, context-menu and double-click transient signaling,
+      hover-state projection, active-item hover blocking, or public disclosure facade behavior.
+      Result: `disclosure_controls/trigger/behavior/response.rs` owns trigger response
+      population. `behavior.rs` keeps pressable/key/pointer hook installation and delegates the
+      response projection to the new owner.
+- [x] Split IMUI disclosure trigger hook families into private activation, keyboard, and pointer
+      owners without changing click toggle behavior, activate-shortcut repeat/IME gating,
+      ContextMenu/Shift+F10 context-menu requests, right-click anchor capture, double-click
+      signaling, hook clearing order, response projection, or public disclosure facade behavior.
+      Result: `disclosure_controls/trigger/behavior.rs` now only clears/reinstalls the trigger
+      hook family in order and delegates to `behavior/activation.rs`, `behavior/keyboard.rs`,
+      `behavior/pointer.rs`, and `behavior/response.rs`.
+- [x] Split IMUI slider pointer value-update logic into a private owner without changing pointer
+      down/move/up capture, active-item mutation, lifecycle activation/deactivation, changed
+      response emission, or slider pointer behavior.
+      Result: `slider_controls/interaction/pointer/value_update.rs` owns pointer-to-value
+      projection, clamp/snap, and value write detection. `pointer.rs` keeps pointer hook
+      installation, active-item updates, capture, and lifecycle edit emission.
+- [x] Split IMUI slider pointer down/move/up hook installation into private child owners without
+      changing pointer capture/release, focus request, active-item mutation, lifecycle
+      activation/deactivation/edit marking, changed transient emission, or slider pointer behavior.
+      Result: `slider_controls/interaction/pointer.rs` now keeps model clone/installation order.
+      `pointer/down.rs`, `pointer/move_handler.rs`, and `pointer/up.rs` own the corresponding
+      pointer hook callbacks, while `pointer/value_update.rs` remains the value projection owner.
+- [x] Split IMUI combo trigger visual props/a11y/chrome assembly into a private owner without
+      changing ComboBox semantics, trigger activation behavior, open/close toggling, shortcut
+      handling, preview/label rendering, or public combo facade behavior.
+      Result: `combo_controls/trigger/visual.rs` owns the trigger props, chrome, children, and
+      a11y label helper. `combo_controls/trigger.rs` keeps the behavior installation and visual
+      owner dispatch.
+- [x] Split IMUI combo trigger visual owner into props/a11y and children/badge child owners without
+      changing ComboBox semantics, trigger activation behavior, open/close toggling, shortcut
+      handling, preview/label rendering, a11y label formatting, state badge text, or public combo
+      facade behavior.
+      Result: `combo_controls/trigger/visual.rs` is now the chrome/re-export hub.
+      `combo_controls/trigger/visual/props.rs` owns trigger `PressableProps` and a11y label
+      derivation, while `combo_controls/trigger/visual/children.rs` owns the label/preview row and
+      Open/Menu state badge assembly.
+- [x] Split IMUI combo trigger behavior into activation, keyboard, and response owners without
+      changing ComboBox trigger clicks, keyboard lifecycle marking, activate-shortcut repeat/IME
+      gating, ContextMenu/Shift+F10 requests, pressable response projection, or public direct/model
+      combo facade behavior.
+      Result: `combo_controls/trigger/behavior.rs` keeps input normalization, shared pressable item
+      behavior installation, and owner dispatch. `behavior/activation.rs` owns activate click
+      recording, `behavior/keyboard.rs` owns shortcut/context-menu key handling, and
+      `behavior/response.rs` owns pressable trigger response projection.
+- [x] Split IMUI popup-menu overlay request assembly into a private request owner without changing
+      overlay id/root naming, popup open model forwarding, trigger fallback, auto-focus targets,
+      focus-outside submenu preservation, menubar close-auto-focus suppression, submenu pointer
+      move handler installation, modal flag forwarding, or public popup/menu facade behavior.
+      Result: `popup_overlay/menu/request.rs` owns dismiss/close-auto-focus handlers and
+      `dismissible_menu_request_with_modal_and_dismiss_handler(...)` assembly. `menu.rs` keeps
+      overlay id creation, policy lookup, panel build orchestration, and request owner dispatch.
+- [x] Split IMUI text-picker keyboard preparation into a private core sub-owner without changing
+      keyboard model identity, enabled/empty/exact-match reconciliation, pending keyboard pick
+      projection, active descendant element projection, input-root forwarding, popup forwarding,
+      or public text-picker facade behavior.
+      Result: `text_picker_controls/core/keyboard_state.rs` owns keyboard model creation and
+      snapshot reconciliation. `text_picker_controls/core.rs` keeps model/candidate/input/open/
+      popup/response orchestration.
+- [x] Split IMUI child-region resize pointer-handle behavior into a private owner without changing
+      X/Y resize response setup, min/max forwarding, handle layout/axis constants, pointer-region
+      drag start/move/up behavior, cursor selection, drag response population, started/stopped edge
+      synthesis, or handle test-id stamping.
+      Result: `child_region/resize/handle.rs` owns the shared pointer-region resize handle and drag
+      response projection. `resize.rs` keeps X/Y entry points and response option/min/max wiring.
+- [x] Split IMUI submenu state mutation into private clear/select owners without changing submenu
+      open-value updates, trigger updates, geometry clearing, pending-open cleanup, pointer-grace
+      timer cleanup, close/focus/open timer cleanup, focus retry reset, or submenu selection writes.
+      Result: `menu_family_controls/submenu_state.rs` is now a private module/re-export index.
+      `submenu_state/clear.rs` owns clear/reset behavior, and `submenu_state/select.rs` owns
+      selection writes.
+- [x] Split IMUI submenu clear model reset details out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state/clear.rs` into a private
+      reset owner without changing active submenu matching, trigger matching, optional geometry
+      clearing, pending-open cleanup, pointer-grace/close/focus/open timer cleanup, or focus retry
+      reset.
+      Result: `submenu_state/clear.rs` keeps the public-in-menu-family clear flow, while
+      `submenu_state/clear/reset.rs` owns active, pending, and runtime submenu model resets.
+- [x] Split IMUI menu-item keyboard behavior into private popup-menu and menubar owners without
+      changing popup item nav registration, Arrow/Home/End focus movement, shortcut activation,
+      popup-close-on-key activation, lifecycle instant marking, menubar horizontal-arrow
+      suppression, or menubar primitive wiring.
+      Result: `menu_controls/keyboard.rs` is now a private module/re-export index.
+      `keyboard/popup.rs` owns popup menu keyboard behavior, and `keyboard/menubar.rs` owns menubar
+      horizontal switching support.
+- [x] Split IMUI interaction-runtime model helpers into private element, window, scope, and state
+      owners without changing context-menu anchor model creation, long-press signal storage,
+      pointer-click modifier storage, lifecycle session storage, active-item per-window storage,
+      float-window collapsed storage, disabled-scope depth reads, or public interaction runtime
+      surfaces.
+      Result: `interaction_runtime/models.rs` is now a private module/re-export index.
+      `models/element.rs`, `models/window.rs`, `models/scope.rs`, and `models/state.rs` own the
+      respective helper families and state shapes.
+- [x] Split IMUI input-text props and assistive-semantics assembly into a private owner without
+      changing model reads, response lifecycle population, select-all-on-focus effect dispatch,
+      input filters/custom filter ordering, password mode, accessibility metadata, placeholder/
+      command forwarding, compact IMUI chrome/style, or public input-text surfaces.
+      Result: `text_controls/input/props.rs` owns `InputTextAssistiveSemantics`,
+      `TextInputProps` construction, insert filters, password-mode projection, a11y metadata, and
+      input chrome/style. `input.rs` keeps model/lifecycle/effect/element orchestration.
+- [x] Split IMUI text-control policy command installation into private input and textarea owners
+      without changing completion/history/undo/redo key handling, repeat gating, IME/Alt/Meta
+      guards, textarea Enter/CtrlEnter/Escape capture policy, repeat-consume semantics, or public
+      text-control surfaces.
+      Result: `text_controls/policy_commands.rs` is now a private module/re-export index.
+      `policy_commands/input.rs` owns input key-down command dispatch, and
+      `policy_commands/textarea.rs` owns textarea submit/cancel capture dispatch.
+- [x] Split IMUI table-column visibility state methods into private override, snapshot-IO, and
+      column-application owners without changing public state constructors/accessors, empty-id
+      filtering, last-entry-wins behavior, snapshot roundtrips, table-column visibility application,
+      or opaque state storage.
+      Result: `table_column_visibility/state.rs` now owns only the state/override storage shape and
+      public snapshot re-export. `state/overrides.rs` owns runtime override mutation/query,
+      `state/snapshot_io.rs` owns snapshot conversion/restoration, and `state/columns.rs` owns
+      `TableColumn` application.
+- [x] Split IMUI child-region resize responses into private X/Y response owners without changing
+      public `ChildRegionResizeXResponse` / `ChildRegionResizeYResponse` re-exports, enabled/min/
+      max accessors, drag edge accessors, drag delta/total projection, clamp-from-start helpers, or
+      opaque response fields.
+      Result: `response/widgets/child_region/resize.rs` is now a private module/re-export index.
+      `resize/x.rs` owns width-axis response projection and tests, while `resize/y.rs` owns
+      height-axis response projection and tests.
+- [x] Split IMUI input-text filter options into private built-in and custom-filter owners without
+      changing `InputTextFilters` constructors, public filter flags, character filtering,
+      uppercase/no-blank behavior, `InputTextCustomFilter` closure storage, debug output, or public
+      text option exports.
+      Result: `options/controls/text/filters.rs` is now a private module/re-export index.
+      `filters/builtin.rs` owns `InputTextFilters` plus decimal/scientific/hex/uppercase/no-blank
+      character filtering, and `filters/custom.rs` owns `InputTextCustomFilter`.
+- [x] Split IMUI input-text built-in filter application out of
+      `ecosystem/fret-ui-kit/src/imui/options/controls/text/filters/builtin.rs` into a private
+      filtering owner without changing `InputTextFilters` constructors, public flags,
+      `filter_text(...)`, decimal/scientific/hex/uppercase/no-blank behavior, or text-control
+      call sites.
+      Result: `filters/builtin.rs` owns the `InputTextFilters` storage and constructors, while
+      `filters/builtin/filtering.rs` owns `filter_text(...)`, per-character filtering, and
+      decimal/scientific character classifiers.
+- [x] Split IMUI debug-draw draw-list image authoring into private mesh, raster, and rounded-image
+      owners without changing `ImUiDebugDrawList` image method names, default option forwarding,
+      command payload variants, vertex/index collection, image-region/quad recording, rounded
+      command recording, summaries, paint dispatch, or public debug-draw APIs.
+      Result: `debug_draw_controls/draw_list/images.rs` is now a private module index.
+      `images/mesh.rs` owns triangle-mesh command recording, `images/raster.rs` owns image,
+      image-region, and image-quad recording, and `images/rounded.rs` owns rounded image/region
+      command recording.
+- [x] Split IMUI debug-draw paint helpers into private media, mesh, and rounded-corner owners
+      without changing opacity sanitization, UV validation, rounded-corner projection, triangle
+      mesh filtering, image triangle mesh filtering, raster image scene ops, region scene ops, or
+      debug-draw public APIs.
+      Result: `debug_draw_controls/paint_helpers.rs` is now a private module/re-export index.
+      `paint_helpers/media.rs` owns opacity/UV validation plus raster image scene ops,
+      `paint_helpers/meshes.rs` owns vertex-color and image triangle mesh scene ops, and
+      `paint_helpers/rounded.rs` owns rounded-corner visibility/projection.
+- [x] Split IMUI debug-draw path-builder shape methods into private rect, bezier, and arc owners
+      without changing `ImUiDebugDrawPath` method names, path point storage, invalid input
+      handling, default segment fallback, rounded-rect sampling, Bezier sampling, arc sampling, or
+      public debug-draw APIs.
+      Result: `debug_draw_controls/path_builder/shape_methods.rs` is now a private module index.
+      `shape_methods/rects.rs` owns rect and rounded-rect point appending,
+      `shape_methods/beziers.rs` owns quadratic/cubic Bezier sampling, and
+      `shape_methods/arcs.rs` owns circular, fast 12-step, and elliptical arc sampling.
+- [x] Split IMUI shared hover-delay state/store/model lookup out of
+      `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay.rs` into a private
+      state owner without changing window-scoped shared-delay model allocation, short/normal delay
+      flags, hover-enter timer scheduling, hover-leave clear timer scheduling, clear-timer
+      cancellation, or shared delay reads.
+      Result: `interaction_runtime/hover/shared_delay/state.rs` owns
+      `ImUiSharedHoverDelayState`, `ImUiSharedHoverDelayStore`, `model_for_window`, and
+      `delay_flags`. `hover/shared_delay.rs` kept hover/timer event policy until the later
+      hover-change/timer sub-owner split below moved those event handlers out.
+- [x] Split IMUI shared hover-delay hover-change and timer event policy into private owners
+      without changing window-scoped shared-delay model allocation, short/normal timer scheduling,
+      hover-leave clear timer scheduling, clear-timer cancellation, timer-hit delay flags, notify
+      behavior, or shared-delay reads.
+      Result: `interaction_runtime/hover/shared_delay/hover_change.rs` owns hover-enter/leave
+      shared timer scheduling and clear-timer cancellation. `shared_delay/timer.rs` owns
+      short/normal/clear timer consumption, delay-flag updates, pending timer cancellation, and
+      notify behavior. `shared_delay.rs` is now a private module/re-export hub.
+- [x] Split IMUI hover query delay read/projection out of
+      `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs` into a private read owner
+      without changing hover hook installation, stationary/short/normal delay timers, shared-delay
+      timers, long-press timer handling, active-item blocking, transient consumption, or
+      `HoverQueryDelayRead` values.
+      Result: `interaction_runtime/hover/read.rs` owns local hover-delay state, transient
+      consumption, shared-delay flag reads, and `HoverQueryDelayRead` projection.
+      `interaction_runtime/hover.rs` keeps active-item blocking, hover-change hook installation,
+      timer dispatch, shared-delay delegation, and long-press delegation.
+- [x] Split IMUI porting layout sugar into private scoped-layout and spacer owners without
+      changing `items`, `same_line`, `dummy`, `spacing`, `indent`, layout-token defaults,
+      explicit dummy sizing, indent composition, test-id stamping, or public-in-IMUI APIs.
+      Result: `layout_sugar/scoped.rs` owns item-flow, same-line, and indent container
+      composition. `layout_sugar/spacers.rs` owns dummy and spacing spacer construction.
+      `layout_sugar.rs` is now a private module/re-export index.
+- [x] Split IMUI input-text picker keyboard handler out of
+      `ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard.rs` into a private handler
+      owner without changing keyboard navigation enablement, repeat/IME/modifier gating, arrow
+      highlight movement, Enter pick handling, popup close, model writes, or picker response
+      projection.
+      Result: `text_picker_controls/keyboard/handler.rs` owns key-down capture plus Arrow/Enter
+      model writes. `text_picker_controls/keyboard.rs` keeps keyboard pick/state/snapshot storage
+      and reconciliation.
+- [x] Split IMUI menu item routing dispatch into private entry and core owners without changing
+      menu item method names, checkbox/radio/action semantics roles, action forwarding,
+      label-identity scoping, pressable hook injection, mount routing, response population, or
+      public-in-IMUI APIs.
+      Result: `menu_controls/routing/dispatch/entries.rs` owns public-in-IMUI menu-item entry
+      wrappers and semantics/action selection.
+      `menu_controls/routing/dispatch/core.rs` owns no-op pressable hook and identity-to-mount
+      dispatch. `menu_controls/routing/dispatch.rs` is now a private module/re-export index.
+- [x] Split IMUI slider math helpers out of
+      `ecosystem/fret-ui-kit/src/imui/facade_support.rs` into a private slider-math owner without
+      changing slider range normalization, step fallback, clamp/snap behavior, pointer-to-value
+      mapping, slider a11y value projection, slider pointer/keyboard interaction, or public-in-IMUI
+      APIs.
+      Result: `facade_support/slider_math.rs` owns `slider_step_or_default`,
+      `slider_normalize_range`, `slider_clamp_and_snap`, and `slider_value_from_pointer`.
+      `facade_support.rs` keeps writer bridge support, transient keys, runtime frame prep,
+      device-pixel snapping, point arithmetic, and model-change detection.
+- [x] Split IMUI drag source hook installation out of
+      `ecosystem/fret-ui-kit/src/imui/drag_drop/source.rs` into a private hooks owner without
+      changing drag source trigger-id validation, payload boxing, store pruning, drag kind
+      selection, cross-window drag promotion, active payload publication, pointer-up delivery, or
+      `DragSourceResponse` population.
+      Result: `drag_drop/source/hooks.rs` owns enabled/cross-window policy, pointer-down
+      cross-window promotion, pointer-move active payload publication, and pointer-up delivery
+      insertion. `drag_drop/source.rs` keeps trigger validation, payload boxing, store model
+      lifecycle/pruning, drag-kind selection, hook owner dispatch, and source response projection.
+- [x] Split IMUI interaction lifecycle response projection out of
+      `ecosystem/fret-ui-kit/src/imui/interaction_runtime/lifecycle.rs` into a private response
+      owner without changing lifecycle activation/deactivation/edit mutation, transient
+      consumption, active-state frame diffing, `ResponseExt` lifecycle signal setters/mergers, or
+      public-in-IMUI APIs.
+      Result: `interaction_runtime/lifecycle/response.rs` owns transient-to-response population,
+      active-state lifecycle frame diffing, edited-state stamping, and activated/deactivated merge
+      application. `interaction_runtime/lifecycle.rs` keeps pointer-down/up lifecycle mutation,
+      instant edit mutation, lifecycle edit mutation, and private re-exports for callers.
+- [x] Split IMUI interaction lifecycle mutation owners into pointer-edge, edit, and instant child
+      modules without changing pointer activation/deactivation semantics, edited-during-active
+      state, instant activated/deactivated transient emission, response projection, or public-in-IMUI
+      re-export paths.
+      Result: `interaction_runtime/lifecycle.rs` is now a mutation/response re-export hub.
+      `lifecycle/pointer_edges.rs` owns pointer down/up lifecycle edges, `lifecycle/edit.rs` owns
+      edit marking, and `lifecycle/instant.rs` owns inactive instant lifecycle emission.
+- [x] Split IMUI tooltip overlay request assembly out of
+      `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` into a private request owner
+      without changing trigger-id validation, pointer-move open gating, hover/focus interaction
+      updates, panel layout, dismiss behavior, hoverable-content pointer tracking, overlay request
+      semantics, or public-in-IMUI APIs.
+      Result: `tooltip_overlay/request.rs` owns panel child construction, tooltip overlay request
+      creation, trigger binding, dismiss close-request signaling, optional hoverable-content pointer
+      tracker installation, and request submission. `tooltip_overlay/runtime.rs` keeps trigger-id
+      validation, event/open models, pointer-move open gate installation, panel-size/anchor
+      projection, and now delegates hover/focus/open synchronization to
+      `tooltip_overlay/runtime/interaction.rs`.
+- [x] Split IMUI floating area shell layout and hit-test gate selection out of
+      `ecosystem/fret-ui-kit/src/imui/floating_surface/area.rs` into a private layout owner without
+      changing floating-area registration, drag position reconciliation, no-input behavior,
+      hit-test passthrough behavior, area test IDs, response population, or public-in-IMUI APIs.
+      Result: `floating_surface/area/layout.rs` owns absolute area layout props,
+      `interactivity_gate_props` selection for `no_inputs`, `hit_test_gate_props` selection for
+      hit-test passthrough, and the container fallback. `area.rs` keeps layer child registration,
+      drag snapshot/state reconciliation, child mounting, final test-id stamping, and
+      `FloatingAreaResponse` construction.
+- [x] Split IMUI floating layer z-order state and snapshot projection out of
+      `ecosystem/fret-ui-kit/src/imui/floating_surface/layer.rs` into a private owner without
+      changing floating layer child registration, bring-to-front activation, missing-window
+      pruning, rank sorting, hit-test order, absolute layer layout, or floating layer public-in-IMUI
+      APIs.
+      Result: `floating_surface/layer/z_order.rs` owns `FloatWindowLayerZOrder`, z-order
+      membership, bring-to-front reordering, missing-window pruning, and rank snapshot projection.
+      `layer.rs` keeps layer marker state, child registration, activation dispatch, layer child
+      mounting, and rank sort application.
+- [x] Split IMUI floating layer absolute shell layout out of
+      `ecosystem/fret-ui-kit/src/imui/floating_surface/layer.rs` into a private owner without
+      changing floating layer child registration, bring-to-front activation, z-order sorting,
+      hit-test order, absolute fill layout, visible overflow, or floating layer public-in-IMUI
+      APIs.
+      Result: `floating_surface/layer/layout.rs` owns the absolute fill visible-overflow layer
+      container and id stamping. `layer.rs` keeps layer marker state, child registration,
+      activation dispatch, layer child mounting, and z-order snapshot reconciliation before
+      delegating rank sort and layout.
+- [x] Split IMUI floating layer z-order rank sort application out of
+      `ecosystem/fret-ui-kit/src/imui/floating_surface/layer.rs` into a private owner without
+      changing child registration, bring-to-front activation, missing-window pruning, unknown-rank
+      fallback, original-order tie-breaks, hit-test order, or absolute layer layout.
+      Result: `floating_surface/layer/sort.rs` owns z-order rank lookup, unknown-rank fallback, and
+      original-index stable tie-break sorting. `layer.rs` keeps marker state, child registration,
+      activation dispatch, child mounting, and z-order snapshot reconciliation before handing the
+      sorted windows to the layout owner.
+- [x] Split shared IMUI pressable item hook installation out of
+      `ecosystem/fret-ui-kit/src/imui/item_behavior.rs` into a private install owner without
+      changing shared button, checkbox/radio, selectable, combo, image-item, debug-draw pressable,
+      context-menu, pointer-click, double-click, drag, long-press, lifecycle, or response
+      population behavior.
+      Result: `item_behavior/install.rs` owns pressable pointer hook clearing,
+      active-item/long-press/lifecycle model capture, and assembly. Later pointer-hook sub-owner
+      splits move down/move/up transient bodies into `item_behavior/install/*`. The root
+      `item_behavior.rs` keeps shared data shapes plus install/response re-exports.
+- [x] Split IMUI facade floating/popup thin forwarding out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs` into private floating,
+      popup, tooltip, drag/drop, and window owner modules without changing trait method names,
+      facade forwarding, popup open/close behavior, tooltip forwarding, drag/drop forwarding, or
+      floating-window routing.
+      Result: `floating_popup.rs` is now a private module/re-export index; `floating.rs` owns
+      floating layer/area forwarding, `popup.rs` owns popup open/close/menu/modal/context
+      forwarding, `tooltip.rs` owns tooltip forwarding, `drag_drop_facade.rs` owns drag/drop
+      forwarding, and `window.rs` owns floating-window forwarding.
+- [x] Split IMUI facade floating-popup popup behavior forwarding into popup state and begin-popup
+      child owners without changing public facade method names, popup open-model/drop/open/close
+      forwarding, popup menu/modal/context-menu begin forwarding, or `floating_popup.rs`
+      re-export paths.
+      Result: `facade_writer/floating_popup/popup.rs` is now a module/re-export hub.
+      `popup/state.rs` owns open-model, drop, open, anchor-open, and close forwarding, while
+      `popup/begin.rs` owns menu, modal, and context-menu begin forwarding.
+- [x] Split IMUI button action payload and command dispatch out of
+      `ecosystem/fret-ui-kit/src/imui/button_controls/behavior.rs` into a private action owner
+      without changing button pressable behavior, shortcut activation, command gating, action
+      payload forwarding, context-menu signaling, visual resolution, or `ResponseExt` population.
+      Result: `button_controls/behavior/action.rs` owns `ButtonAction`, payload storage, command
+      dispatch source recording, pending payload recording, and final action dispatch, while
+      `behavior.rs` keeps pressable props, shortcut/context-menu handlers, enabled gating,
+      lifecycle marking, response population, and visual resolution.
+- [x] Split IMUI button visual a11y and variant layout/glyph policy out of
+      `ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` into private owner modules
+      without changing public button APIs, button a11y labels, arrow a11y labels, arrow glyphs,
+      variant sizing, or chrome/content assembly.
+      Result: `button_controls/visual/a11y.rs` owns button `PressableA11y` construction and
+      label fallback policy, `button_controls/visual/variant.rs` owns variant sizing plus arrow
+      glyph selection, and `visual.rs` keeps `ButtonVisual`, `ButtonVisualContent`, chrome
+      resolution, and visible/invisible content assembly.
+- [x] Split IMUI tab item list semantics and selected-panel rendering out of
+      `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items.rs` into private list and panel
+      owners without changing selected-model normalization, trigger response collection, focus
+      fallback behavior, tab-list semantics, tab-panel semantics, or public tab-bar APIs.
+      Result: `tab_family_controls/items/list.rs` owns tab-list semantics, trigger rendering,
+      selected/first-focusable trigger tracking, and `TabTriggerResponse` collection.
+      `items/panel.rs` owns selected tab-panel semantics and panel child mounting. `items.rs`
+      keeps `BuiltTabItem`, selected-model normalization, build-focus propagation, final column
+      assembly, and `TabBarResponse` construction.
+- [x] Split IMUI input-text picker core orchestration out of
+      `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into a private core owner without
+      changing completion/history wrapper calls, candidate filtering, keyboard navigation, input
+      root semantics, popup open policy, popup pick handling, or `InputTextPickerResponse`.
+      Result: `text_picker_controls/core.rs` owns model reads, candidate visibility, keyboard
+      snapshot reconciliation, input root mounting, open-policy application, popup rendering, and
+      pick response merging. `text_picker_controls.rs` is now a private module index and re-export
+      hub for core and entry wrappers.
+- [x] Split IMUI input-text picker session preparation out of
+      `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` into a private session owner
+      without changing model reads, candidate visibility, input enabled-scope checks, keyboard
+      snapshot reconciliation, popup snapshot reads, expanded-state derivation, input-root
+      mounting, popup open policy, popup rendering, or `InputTextPickerResponse`.
+      Result: `text_picker_controls/core/session.rs` owns model/candidate/popup/keyboard snapshot
+      preparation and `picker_expanded` derivation. `core.rs` keeps input-root mounting,
+      open-policy application, popup rendering, and pick response merging.
+- [x] Split IMUI table header cell layout/resize wrapping out of
+      `ecosystem/fret-ui-kit/src/imui/table_controls/header.rs` into a private cell owner without
+      changing sortable/plain header behavior, resize handle wiring, header test IDs, table layout,
+      or `TableHeaderResponse` collection.
+      Result: `table_controls/header/cell.rs` owns header cell layout, resize-handle attachment,
+      resize test-id suffixing, and header content flex wrapping. `header.rs` keeps sortable/plain
+      header trigger orchestration and `BuiltHeaderCell` response assembly.
+- [x] Split IMUI table sortable/plain header assembly into private child owners without changing
+      header trigger behavior, sortable a11y labels, plain fallback labels, visible label rendering,
+      resize handle wrapping, header test IDs, or `TableHeaderResponse` collection.
+      Result: `table_controls/header.rs` is now the labels/cell/trigger re-export hub plus
+      `BuiltHeaderCell` record. `table_controls/header/sortable.rs` owns sortable-header assembly,
+      while `table_controls/header/plain.rs` owns plain-header assembly.
+- [x] Split IMUI debug-draw path construction by shape family out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths.rs` into private linear, round,
+      and bezier owner modules without changing path helper names, validation behavior, sampling
+      helpers, rect path construction, paint dispatch, or debug-draw tests.
+      Result: `paths.rs` is now a private path-family re-export hub; `paths/linear.rs` now indexes
+      polyline/fill/primitive subowners; `paths/round.rs` now indexes circle/ngon/ellipse
+      subowners; `paths/beziers.rs` owns quadratic and cubic bezier path construction.
+      2026-05-28 follow-up: `paths/linear.rs` is now itself a private re-export hub; polyline,
+      fill, and primitive construction live in
+      `paths/linear/{polyline,fills,primitives}.rs`.
+      2026-05-28 follow-up: `paths/round.rs` is now itself a private re-export hub; circle, ngon,
+      and ellipse construction live in `paths/round/{circle,ngon,ellipse}.rs`.
+- [x] Split IMUI debug-draw command payload variants out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands.rs` into a private payload
+      owner without changing command variant names, draw-list recording paths, summary projection,
+      paint dispatch, public debug-draw summaries, or facade APIs.
+      Result: `debug_draw_controls/commands/types.rs` owns private `DebugDrawCommand` payload
+      variants. `commands.rs` keeps command module wiring, summary projection installation, and the
+      parent-visible `DebugDrawCommand` re-export.
+- [x] Split IMUI debug-draw media paint behavior behind
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` into private raster,
+      rounded, and SVG owner modules without changing image/region/quad/SVG paint behavior, opacity
+      filtering, UV validation, rounded clip balancing, or media command no-op routing.
+      Result: `paint/media.rs` kept `paint_debug_draw_media_command(...)` routing for this slice,
+      `paint/media/raster.rs` owns image/region/quad paint, `paint/media/rounded.rs` owns rounded
+      image/region paint and clip push/pop balancing, and `paint/media/svg.rs` owns SVG image/mask
+      icon paint. A follow-up dispatch split below moved that routing out of the hub as well.
+- [x] Split IMUI debug-draw media command dispatch out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` into a private dispatch
+      owner without changing image/region/quad/rounded-image/SVG/mask-icon routing, non-media
+      no-op behavior, or raster/rounded/SVG paint behavior.
+      Result: `paint/media/dispatch.rs` owns `paint_debug_draw_media_command(...)` media match
+      routing. `paint/media.rs` is now only the media paint module/type hub for `MediaPaintKey`,
+      `RasterImage`, `RasterUvRect`, and child owner wiring.
+- [x] Split IMUI debug-draw pressable element behavior out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element.rs` into a private owner module
+      without changing noninteractive canvas output, pressable canvas wrapping, keyboard activation
+      lifecycle marking, pointer-click reporting, click response population, cache policy, clipping,
+      or paint routing.
+      Result: `debug_draw_controls/element/behavior.rs` owns pressable behavior installation,
+      keyboard activation lifecycle marking, clicked transient reads, and `ResponseExt` population.
+      `element.rs` keeps canvas composition, fill-layout policy for interactive canvases, cache
+      policy, clipping, test-id routing, and debug-draw command painting.
+- [x] Split IMUI table row-group pinned-cell splitting, row flex layout, and horizontal-scroll
+      wrapper helpers out of `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` into
+      private owner modules without changing table row/header layout, pinned-column ordering,
+      horizontal-scroll wrapping, or table public APIs.
+      Result: `row_groups.rs` keeps `wrap_pinned_table_row_groups(...)` orchestration,
+      `row_groups/split.rs` owns pinned-cell grouping, `row_groups/layout.rs` owns horizontal row
+      flex wrappers, and `row_groups/scroll.rs` owns center horizontal scroll wrapping.
+- [x] Split IMUI debug-draw draw-list linear shape authoring out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear.rs` into private
+      line/poly and rect/quad/triangle owner modules without changing draw-list authoring method
+      names, command payloads, or summary/paint behavior.
+      Result: `draw_list_shapes/linear/line_poly.rs` owns line/polyline/filled-polygon command
+      recording, `linear/rect_quad_triangle.rs` owns rect/quad/triangle command recording, and
+      `linear.rs` is now a private module index.
+- [x] Split IMUI debug-draw draw-list rect/quad/triangle authoring out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear/rect_quad_triangle.rs`
+      into private rect, quad, and triangle owner modules without changing draw-list authoring
+      method names, command payloads, summary projection, paint behavior, or debug-draw smoke
+      coverage.
+      Result: `linear/rect_quad_triangle.rs` is now a private module index; `rect.rs`, `quad.rs`,
+      and `triangle.rs` own their corresponding command recording methods.
+- [x] Split IMUI debug-draw draw-list round shape authoring out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/round.rs` into private
+      circle, ngon, and ellipse owner modules without changing draw-list authoring method names,
+      command payloads, summary projection, paint behavior, or debug-draw smoke coverage.
+      Result: `draw_list_shapes/round.rs` is now a private module index; `round/circle.rs` owns
+      circle command recording, `round/ngon.rs` owns ngon command recording, and
+      `round/ellipse.rs` owns ellipse command recording.
+- [x] Split IMUI table-column construction, identity/accessor, visibility, sort, resize, and pin
+      methods out of `ecosystem/fret-ui-kit/src/imui/options/collections/table_column.rs` into
+      private owner modules without changing public `TableColumn` type names, method names, chained
+      builder behavior, stable-id inference, or table composition behavior.
+      Result: `table_column.rs` keeps the `TableColumn` storage shape and primitive re-exports;
+      `table_column/construction.rs`, `identity.rs`, `visibility.rs`, `sorting.rs`, `resize.rs`,
+      and `pinning.rs` now own the corresponding impl method families.
+- [x] Split IMUI drag/drop store state, lifecycle, source-response query, and target-payload query
+      out of `ecosystem/fret-ui-kit/src/imui/drag_drop/store.rs` into private owner modules without
+      changing `drag_source_with_options(...)`, `drop_target_with_options(...)`, payload lifetime,
+      stale-session pruning, or delivered-payload expiry behavior.
+      Result: `drag_drop/store/state.rs` owns the shared model and payload records,
+      `store/lifecycle.rs` owns global model creation plus pruning, `store/source_response.rs` owns
+      source response projection, `store/target_payloads.rs` owns active/delivered typed payload
+      lookup, and `store.rs` is now a private re-export index.
+- [x] Split IMUI debug-draw command summary geometry and clip-state projection out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection.rs` into
+      private owner modules without changing `DebugDrawCommandSummary` values, channel assignment,
+      clip stack depth, media summaries, or command-list summary behavior.
+      Result: `commands/summary_projection/geometry.rs` owns point/vertex/index/triangle-count
+      summaries for geometric commands, `commands/summary_projection/clip_state.rs` owns
+      push/pop/current clip rect and depth updates, and the root summary projection file keeps the
+      public-in-debug-draw entry point plus media/text/clip command routing.
+- [x] Split IMUI debug-draw command kind and command-summary storage out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/command.rs` into private kind
+      and summary owner modules without changing public type names, command-kind variants,
+      accessor-first summary storage, opaque field visibility, or list-summary classification.
+      Result: `summaries/command.rs` is now a private re-export index; `command/kind.rs` owns
+      `DebugDrawCommandKind`, and `command/summary.rs` owns `DebugDrawCommandSummary` storage,
+      accessors, construction, and channel projection.
+- [x] Split IMUI debug-draw list-summary accessors and mutation out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/list.rs` into private
+      accessor and mutation owners without changing `DebugDrawListSummary` public accessors,
+      opaque counter storage, final clip-depth projection, command inclusion counts, or
+      command-kind classification.
+      Result: `summaries/list.rs` keeps the opaque `DebugDrawListSummary` storage shape;
+      `list/accessors.rs` owns public getters, and `list/mutation.rs` owns construction,
+      final-clip-depth updates, and command inclusion aggregation.
+- [x] Split IMUI debug-draw path-command dispatch by shape family out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands.rs` into
+      private linear, round, and bezier owners without changing path command routing, canvas keys,
+      draw order, or path paint helpers.
+      Result: `path_commands/linear.rs` owns line/polyline/polygon/rect/quad/triangle dispatch,
+      `path_commands/round.rs` owns circle/ngon/ellipse dispatch, and
+      `path_commands/beziers.rs` owns quadratic/cubic bezier dispatch. The `path_commands.rs`
+      root is now a thin family router.
+- [x] Split IMUI debug-draw path-shape paint dispatch out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes.rs` into a private owner
+      module without changing command order, canvas keys, stroke/fill geometry, mesh painting,
+      text painting, or media no-op routing.
+      Result: `debug_draw_controls/paint_shapes/path_commands.rs` owns line/polyline/polygon,
+      rect-outline, quad, triangle, circle, ngon, ellipse, and bezier command dispatch into the
+      path paint owners. `paint_shapes.rs` keeps draw-order/key setup plus non-path command routing
+      for filled rects, meshes, text, and ignored media/clip commands.
+- [x] Split IMUI menu-item entry routing and label identity scoping out of
+      `ecosystem/fret-ui-kit/src/imui/menu_controls.rs` into a private owner module without
+      changing public menu-item, checkbox, radio, action, or submenu pressable-hook call paths.
+      Result: `menu_controls/routing.rs` owns public-in-IMUI menu item dispatch, semantic role
+      selection, `##/###` label identity parsing, item-id scoping, response assembly, and final
+      element insertion. The root file is now a thin module/re-export index beside the existing
+      element, interaction, keyboard, visual, and tests owners.
+- [x] Split IMUI menu-item label identity scoping out of
+      `ecosystem/fret-ui-kit/src/imui/menu_controls/routing.rs` into a private owner module
+      without changing public menu item dispatch, `##/###` visible-label semantics, stable
+      item-id scoping, response assembly, or final element insertion.
+      Result: `menu_controls/routing/identity.rs` owns `parse_label_identity(...)`, visible label
+      extraction, and `menu-item-label` `push_id` scoping. `routing.rs` keeps menu item entry
+      dispatch, semantic role selection, response assembly, and element insertion.
+- [x] Split IMUI menu-item final mounting and response assembly out of
+      `ecosystem/fret-ui-kit/src/imui/menu_controls/routing.rs` into a private owner module
+      without changing public menu item dispatch, semantic role/action selection, `##/###`
+      identity scoping, pressable-hook forwarding, final element insertion, or `ResponseExt`
+      assembly.
+      Result: `menu_controls/routing/mount.rs` owns menu-item element mounting,
+      `ResponseExt::default()` initialization, final `ui.add(...)`, and response return.
+      `routing.rs` keeps public dispatch, checkbox/radio/action role selection, noop-hook routing,
+      and label identity scoping.
+- [x] Split IMUI menu-item routing dispatch out of
+      `ecosystem/fret-ui-kit/src/imui/menu_controls/routing.rs` into a private dispatch owner
+      without changing public menu item entry points, checkbox/radio/action role selection,
+      noop-hook routing, `##/###` label identity scoping, pressable-hook forwarding, response
+      assembly, or final element mounting.
+      Result: `menu_controls/routing/dispatch.rs` owns public menu-item entry wrappers,
+      checkbox/radio/action role selection, noop-hook routing, and identity-to-mount dispatch.
+      `routing.rs` is now a private dispatch/identity/mount module index and re-export hub.
+- [x] Split IMUI container child building, linear layout, scroll, and grid element composition out
+      of `ecosystem/fret-ui-kit/src/imui/containers.rs` into private owner modules without
+      changing horizontal/vertical/grid/scroll facade helpers, option forwarding, test-id
+      placement, viewport test-id placement, or child focus propagation.
+      Result: `containers/children.rs` owns child `ImUiFacade` mounting,
+      `containers/linear.rs` owns horizontal/vertical flex containers, `containers/scroll.rs` owns
+      scroll-area construction, and `containers/grid.rs` owns grid row batching/keyed rows. The
+      root `containers.rs` is now a thin module/re-export index plus tests.
+- [x] Split shared IMUI active-trigger keyboard, pointer, and response behavior out of
+      `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs` into private owner modules
+      without changing active-item lifecycle, right-click context-menu signaling, keyboard
+      context-menu requests, or shared `ResponseExt` population.
+      Result: `active_trigger_behavior/keyboard.rs` owns ContextMenu/Shift+F10 request handling,
+      `active_trigger_behavior/pointer.rs` owns primary active-item pointer lifecycle and
+      secondary-click anchor signaling, `active_trigger_behavior/response.rs` owns context-menu
+      response fields plus shared pressable response population, and the root file keeps handler
+      clearing, model lookup, options/input structs, and owner dispatch.
 - [x] Split IMUI button visual/layout/accessibility ownership out of
       `ecosystem/fret-ui-kit/src/imui/button_controls.rs` into a private owner module without
       changing the public IMUI surface.
@@ -32,7 +1383,15 @@ Last updated: 2026-05-27
       Result: `button_controls/behavior.rs` owns button action payload storage, command gating,
       pressable props, shortcut/context-menu handling, action dispatch metadata/payload forwarding,
       and button `ResponseExt` population. The root file now keeps public entry routing plus
-      label-identity scoping, while `visual.rs` remains the layout/a11y/chrome owner.
+      label-identity scoping until the later entry split below moved the shared button
+      implementation out, while `visual.rs` remains the layout/a11y/chrome owner.
+- [x] Split IMUI button shared entry implementation out of
+      `ecosystem/fret-ui-kit/src/imui/button_controls.rs` into a private entry owner without
+      changing public button/small-button/arrow/invisible/action facade routing, label identity
+      scoping, action payload forwarding, shortcut behavior, or response behavior.
+      Result: `button_controls/entry.rs` owns `button_impl(...)`, label identity parsing, visible
+      label projection, scoped `push_id`, and delegation to `behavior::button_pressable(...)`.
+      `button_controls.rs` is now a wrapper hub for public-in-IMUI button entry points.
 - [x] Split IMUI shared control chrome text/pill helpers out of
       `ecosystem/fret-ui-kit/src/imui/control_chrome.rs` into a private owner module without
       changing compact button/control label text roles, caption text color routing, pill badge
@@ -56,6 +1415,14 @@ Last updated: 2026-05-27
       Result: `control_chrome/chrome.rs` owns `ImUiControlPalette`, button theme color resolution,
       field theme color resolution, and compact button/field container chrome. The root
       `control_chrome.rs` now keeps style constants, owner module wiring, and private re-exports.
+- [x] Split IMUI shared control chrome palette, button, and field theme resolution out of
+      `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome.rs` into narrower private owners
+      without changing `control_chrome::button_chrome`, `field_chrome`, `ImUiControlPalette`,
+      dense button/field chrome defaults, theme token fallback order, or caller paths.
+      Result: `control_chrome/chrome/palette.rs` owns `ImUiControlPalette`,
+      `chrome/button.rs` owns button theme resolution and chrome props, `chrome/field.rs` owns
+      field theme resolution and chrome props, and `chrome.rs` is now a private module/re-export
+      index.
 - [x] Split IMUI input-text picker candidate visibility and keyboard state reconciliation out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into private owner modules without
       changing the public IMUI surface.
@@ -80,6 +1447,21 @@ Last updated: 2026-05-27
       keyboard handler installation. The root file keeps candidate visibility, popup-open state,
       popup lifecycle policy, popup rendering delegation, and final `InputTextPickerResponse`
       merge.
+- [x] Split IMUI input-text picker input option preparation out of
+      `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input.rs` into a private options owner
+      without changing test-id fallback, `.input` suffix derivation, TextField-to-ComboBox role
+      normalization, assistive semantics, root fill sizing, or keyboard handler installation.
+      Result: `text_picker_controls/input/options.rs` owns `PreparedInputTextPickerInput` and
+      `prepare_text_picker_input_options(...)`; `input.rs` keeps input-root request/result shapes,
+      assistive semantics, root container construction, text input mounting, and keyboard handler
+      installation.
+- [x] Split IMUI popup-store stale-generation cleanup out of
+      `ecosystem/fret-ui-kit/src/imui/popup_store.rs` into a private lifecycle owner without
+      changing per-window state shape, popup open/anchor drop semantics, keep-alive generation
+      handling, or explicit scope-drop redraw requests.
+      Result: `popup_store/lifecycle.rs` owns stale popup cleanup during render generation
+      preparation. `popup_store.rs` keeps popup store state, generation entry points, scoped entry
+      lookup, and explicit scope dropping.
 - [x] Split IMUI input-text picker popup open policy out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into a private owner module without
       changing popup open/panel-id reads, active-descendant wiring, open-on-focus behavior,
@@ -98,6 +1480,13 @@ Last updated: 2026-05-27
       `model_value_changed_for(...)`, and picked-candidate `ResponseExt` merge writes. The root
       file keeps candidate resolution, input/popup orchestration, keyboard reconciliation, and final
       response assembly.
+- [x] Split IMUI input-text picker completion/history entry wrappers out of
+      `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into a private entry owner without
+      changing public facade call paths, completion picker behavior, history picker filter/open
+      normalization, core picker orchestration, or final response shape.
+      Result: `text_picker_controls/entry.rs` owns completion/history wrapper functions and
+      history option normalization. The root file keeps core picker orchestration and re-exports
+      the entry helpers.
 - [x] Split IMUI textarea element assembly out of
       `ecosystem/fret-ui-kit/src/imui/text_controls.rs` into a private owner module without changing
       the textarea facade, response semantics, select-all-on-focus behavior, submit/cancel command
@@ -106,6 +1495,15 @@ Last updated: 2026-05-27
       population, select-all command emission, submit/cancel policy installation, and text-area
       chrome/text-style selection. The root file keeps input-text assembly plus shared helper
       routing for text models.
+- [x] Split IMUI input-text element assembly out of
+      `ecosystem/fret-ui-kit/src/imui/text_controls.rs` into a private input owner without changing
+      input-text facade calls, assistive semantics wiring for text pickers, response lifecycle
+      population, select-all-on-focus behavior, insert filters, submit/cancel command policy,
+      compact chrome, or text style selection.
+      Result: `text_controls/input.rs` owns input-text model element assembly, assistive semantics,
+      response lifecycle population, select-all command emission, input filters, policy-command
+      installation, and compact input chrome/style selection. `text_controls.rs` is now a private
+      focus/input/policy/style/textarea module index and re-export hub.
 - [x] Split IMUI disclosure spec construction out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` into a private owner module without
       changing the public collapsing-header/tree-node surface.
@@ -115,18 +1513,48 @@ Last updated: 2026-05-27
 - [x] Split IMUI disclosure trigger behavior and response population out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` into a private owner module without
       changing the public collapsing-header/tree-node surface.
-      Result: `disclosure_controls/trigger.rs` owns pressable props, shortcut activation,
-      context-menu request handling, right/double-click events, hover-delay reads, enabled
-      sanitization, and trigger `ResponseExt` population. The root file keeps label identity,
-      spec/open-model wiring, content mounting, and aggregate `DisclosureResponse` open/toggled
-      state.
+      Result: `disclosure_controls/trigger.rs` owns pressable shell construction and delegates
+      trigger behavior/response population to its private behavior owner. The root file keeps label
+      identity, spec/open-model wiring, content mounting, and aggregate `DisclosureResponse`
+      open/toggled state.
+- [x] Split IMUI disclosure trigger pressable behavior and response population out of
+      `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger.rs` into a private owner module
+      without changing activation toggles, shortcut gating, context-menu keyboard requests,
+      right-click anchor capture, double-click signaling, hover-delay reads, enabled sanitization,
+      or trigger `ResponseExt` population.
+      Result: `disclosure_controls/trigger/behavior.rs` owns pressable callback installation,
+      activate shortcut/context-menu key handling, pointer down/up hooks, hover-delay reads,
+      context-menu anchor reporting, enabled sanitization, and trigger `ResponseExt` population.
+      `trigger.rs` keeps pressable props, a11y, header visual mounting, collapsible trigger
+      controls, and test-id application.
+- [x] Split IMUI disclosure content/root layout out of
+      `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` into a private layout owner without
+      changing label identity parsing, open-model reads, trigger mounting, content body building,
+      content/root test IDs, open/toggled response population, or public disclosure facade calls.
+      Result: `disclosure_controls/layout.rs` owns content container composition, body `ImUiFacade`
+      construction, root column layout, and content/root test-id application. The root file keeps
+      label identity parsing, open-model reads, trigger mounting, and aggregate `DisclosureResponse`
+      writes.
 - [x] Split IMUI disclosure header-row visual construction out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual.rs` into a private owner module
       without changing collapsing-header/tree-node a11y, palette policy, indicator glyphs, label
       text roles, row chrome, indentation, or trigger behavior.
       Result: `disclosure_controls/visual/header.rs` owns header row container/flex assembly,
-      indicator glyph mounting, label text mounting, row padding, border, and radius props.
-      `visual.rs` keeps disclosure a11y, content padding, and palette resolution.
+      indicator glyph mounting, label text mounting, row padding, border, and radius props until
+      the later children split below moved the flex/body composition out. `visual.rs` keeps
+      disclosure a11y, content padding, and palette resolution.
+- [x] Split IMUI disclosure header-row children composition into a private owner without changing
+      collapsing-header/tree-node a11y, palette policy, indicator glyphs, label text roles, row
+      chrome, indentation, or trigger behavior.
+      Result: `disclosure_controls/visual/header/children.rs` owns the header flex row, indicator
+      slot, label text, and spacer composition. `header.rs` keeps palette lookup, row container
+      props, and metric lookups only.
+- [x] Split IMUI disclosure visual a11y and style policy into private child owners without changing
+      collapsing-header/tree-node roles, expanded/selected/level metadata, content padding, palette
+      fallback order, header-row rendering, or public disclosure facade behavior.
+      Result: `disclosure_controls/visual.rs` is now the header/a11y/style re-export hub.
+      `disclosure_controls/visual/a11y.rs` owns `PressableA11y` construction, while
+      `disclosure_controls/visual/style.rs` owns content padding and disclosure palette resolution.
 - [x] Split IMUI combo trigger behavior and visual chrome out of
       `ecosystem/fret-ui-kit/src/imui/combo_controls.rs` into a private owner module without
       changing the public combo/combo-model facade surface.
@@ -173,6 +1601,59 @@ Last updated: 2026-05-27
       radio label identity, shortcut/context-menu handling, click response, and response
       population. The root `boolean_controls.rs` file is now a thin module/re-export index beside
       the existing switch and visual owners.
+- [x] Split IMUI checkbox pressable behavior out of
+      `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox.rs` into a private owner module
+      without changing label identity, checkbox a11y, model toggling, shortcut gating,
+      context-menu keyboard requests, changed response population, field chrome, or visual row
+      layout.
+      Result: `boolean_controls/checkbox/behavior.rs` owns pressable behavior installation,
+      activate handler model toggling, shortcut model toggling, context-menu key handling,
+      transient changed reads, and `ResponseExt` population. `checkbox.rs` keeps label identity,
+      `CheckboxOptions` a11y wiring, field chrome, checkbox indicator mounting, boolean label
+      mounting, and fill-row visual assembly.
+- [x] Split IMUI checkbox behavior into activation, keyboard, and response owners without changing
+      model toggling, lifecycle edit marking, changed transient emission, activate-shortcut
+      repeat/IME gating, ContextMenu/Shift+F10 requests, pressable response projection, or public
+      checkbox facade behavior.
+      Result: `boolean_controls/checkbox/behavior.rs` keeps option normalization, shared pressable
+      item behavior installation, and owner dispatch. `behavior/activation.rs` owns click toggling,
+      `behavior/keyboard.rs` owns shortcut/context-menu key handling, and `behavior/response.rs`
+      owns changed response projection.
+- [x] Split IMUI radio pressable behavior out of
+      `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio.rs` into a private owner module
+      without changing label identity, radio a11y, shortcut gating, context-menu keyboard
+      requests, click response population, field chrome, or visual row layout.
+      Result: `boolean_controls/radio/behavior.rs` owns pressable behavior installation,
+      activate handler click signaling, shortcut click signaling, context-menu key handling,
+      transient clicked reads, and `ResponseExt` population. `radio.rs` keeps label identity,
+      `RadioOptions` a11y wiring, field chrome, radio indicator mounting, boolean label mounting,
+      and fill-row visual assembly.
+- [x] Split IMUI radio behavior into activation, keyboard, and response owners without changing
+      click transient emission, keyboard lifecycle marking, activate-shortcut repeat/IME gating,
+      ContextMenu/Shift+F10 requests, pressable response projection, or public radio facade
+      behavior.
+      Result: `boolean_controls/radio/behavior.rs` keeps option normalization, shared pressable
+      item behavior installation, and owner dispatch. `behavior/activation.rs` owns click
+      activation, `behavior/keyboard.rs` owns shortcut/context-menu key handling, and
+      `behavior/response.rs` owns clicked response projection.
+- [x] Split IMUI switch pressable behavior out of
+      `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs` into a private owner module
+      without changing label identity, switch a11y, model toggling, shortcut gating, active-trigger
+      lifecycle semantics, changed/clicked response population, field chrome, or visual row
+      layout.
+      Result: `boolean_controls/switch/behavior.rs` owns active-trigger behavior installation,
+      activate handler model toggling, shortcut model toggling, lifecycle edit marking, transient
+      changed/clicked reads, and `ResponseExt` population. `switch.rs` keeps label identity,
+      `SwitchOptions` a11y wiring, field chrome, switch state badge mounting, boolean label
+      mounting, and fill-row visual assembly.
+- [x] Split IMUI switch behavior into activation, keyboard, and response owners without changing
+      active-trigger installation options, model toggling, lifecycle edit marking, clicked/changed
+      transient emission, activate-shortcut repeat/IME gating, pressable response projection, or
+      public switch facade behavior.
+      Result: `boolean_controls/switch/behavior.rs` keeps option normalization, active-trigger
+      behavior installation, and owner dispatch. `behavior/activation.rs` owns click toggling,
+      `behavior/keyboard.rs` owns shortcut key handling, and `behavior/response.rs` owns
+      active-trigger response projection.
 - [x] Split IMUI interaction-runtime hover internals out of
       `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs` into private owner modules
       without changing hovered-query, shared-delay, active-item block, or long-press behavior.
@@ -195,6 +1676,16 @@ Last updated: 2026-05-27
       `slider_controls/interaction.rs` owns pointer/key model editing and lifecycle signals, and
       `slider_controls/visual.rs` owns track/fill/value badge assembly. The root slider file keeps
       label identity, option normalization, response population, and final element assembly.
+- [x] Split IMUI slider pointer and keyboard interaction out of
+      `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction.rs` into private owner modules
+      without changing pointer capture, active-item state, pointer model editing, keyboard
+      step/page/home/end semantics, lifecycle edit signals, or changed response behavior.
+      Result: `slider_controls/interaction/pointer.rs` owns pointer down/move/up capture,
+      active-item set/clear, pointer value projection, pointer model mutation, and pointer
+      lifecycle edit signals. `slider_controls/interaction/keyboard.rs` owns enabled keyboard
+      gating, arrow/page/home/end value edits, snapping, and keyboard lifecycle edit signals.
+      `interaction.rs` now keeps handler clearing, active/lifecycle model lookup, shared range
+      input, and owner dispatch.
 - [x] Split IMUI facade container-method dispatch out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods.rs` into private owner modules
       without changing facade method names.
@@ -217,20 +1708,25 @@ Last updated: 2026-05-27
       Result: `response/widgets/open.rs` owns disclosure/combo responses,
       `response/widgets/text_picker.rs` owns input text picker responses,
       `response/widgets/tabs.rs` owns tab responses, `response/widgets/table.rs` owns table
-      responses, and `response/widgets/virtual_list.rs` owns virtual-list responses. The root
+      response aggregation, `response/widgets/table/header.rs` owns table header responses,
+      `response/widgets/table/resize.rs` owns table resize responses, and
+      `response/widgets/virtual_list.rs` owns virtual-list responses. The root
       `widgets.rs` file is now a thin module/re-export index beside the existing child-region owner.
 - [x] Split IMUI text-control option types out of
       `ecosystem/fret-ui-kit/src/imui/options/controls/text.rs` into private owner modules without
       changing option type names, fields, defaults, or re-export paths.
-      Result: `text/filters.rs` owns named/custom input filters, `text/input.rs` owns
-      `InputTextMode` and `InputTextOptions`, `text/picker.rs` owns picker filter/default popup
-      options, and `text/textarea.rs` owns textarea submit-key policy and defaults. The root
-      `text.rs` file is now a thin module/re-export index.
+      Result: `text/filters.rs` owns named/custom input filters, `text/input.rs` is the current
+      input-text option re-export hub, `input/mode.rs` owns `InputTextMode`, `input/options.rs`
+      owns `InputTextOptions`, `text/picker.rs` is the current picker option re-export hub,
+      `picker/filter.rs` owns picker filter matching, `picker/options.rs` owns picker default
+      popup/options, and `text/textarea.rs` is the current textarea option re-export hub,
+      `textarea/submit_key.rs` owns textarea submit-key policy, and `textarea/options.rs` owns
+      textarea defaults. The root `text.rs` file is now a thin module/re-export index.
 - [x] Split IMUI collection option types out of
       `ecosystem/fret-ui-kit/src/imui/options/collections.rs` into private owner modules without
       changing table, table-column, or virtual-list option type names and defaults.
       Result: `collections/table_column.rs` owns table column identity/visibility/sort/resize/pin
-      helpers, `collections/table.rs` owns table/row/cell options, and
+      helpers, `collections/table.rs` is the current table option re-export hub, and
       `collections/virtual_list.rs` owns virtual-list defaults. The root `collections.rs` file is
       now a thin module/re-export index.
 - [x] Split IMUI table-column primitive option types out of
@@ -250,14 +1746,42 @@ Last updated: 2026-05-27
       fields, and snapshot/entry accessors. `state.rs` keeps runtime override storage, mutation
       helpers, snapshot restore/apply orchestration, and `TableColumn` visibility policy
       application.
+- [x] Split IMUI table-column visibility menu identity helpers out of
+      `ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu.rs` into a private owner module
+      without changing stable column-id filtering, visible-label filtering, generated test-id
+      suffixes, menu item state updates, or table header context-menu behavior.
+      Result: `table_column_visibility/menu/identity.rs` owns stable menu column id extraction,
+      visible menu label parsing, and slug-like test-id suffix generation. `menu.rs` keeps header
+      context-menu composition, menu item/group rendering, model updates, and response population.
+- [x] Split IMUI table-column visibility response structs/accessors out of
+      `ecosystem/fret-ui-kit/src/imui/table_column_visibility.rs` into a private response owner
+      without changing public response type names, accessors, changed/clicked semantics, opaque
+      fields, menu item construction, or header context-menu response aggregation.
+      Result: `table_column_visibility/response.rs` owns
+      `TableColumnVisibilityMenuResponse`, `TableColumnVisibilityHeaderContextMenuResponse`, and
+      `TableColumnVisibilityMenuItemResponse`. The root file keeps options, state re-exports,
+      public helper forwarding, and test wiring.
 - [x] Split IMUI container/layout option types out of
       `ecosystem/fret-ui-kit/src/imui/options/containers.rs` into private owner modules without
       changing option type names, fields, defaults, or re-export paths.
       Result: `containers/flow.rs` owns item-flow/same-line/spacing/indent/grid options and the
       IMUI layout-token defaults, `containers/scroll.rs` owns scroll options,
-      `containers/list_box.rs` owns list-box options, and `containers/child_region.rs` owns
-      child-region chrome and resize option records. The root `containers.rs` file is now a thin
-      module/re-export index.
+      `containers/list_box.rs` owns list-box options, and `containers/child_region.rs` is the
+      current child-region option re-export hub. The root `containers.rs` file is now a thin
+      module/re-export index. The 2026-05-27 flow-option owner split below further divides the
+      flow owner.
+- [x] Split IMUI flow option defaults and records out of
+      `ecosystem/fret-ui-kit/src/imui/options/containers/flow.rs` into private owner modules
+      without changing option type names, fields, defaults, token keys, or public re-export paths.
+      Result: `containers/flow.rs` is now a private module/re-export index,
+      `flow/spacing.rs` owns the IMUI layout-token defaults, `flow/inline.rs` is the current
+      inline option re-export hub, `flow/inline/item_flow.rs` owns item-flow options,
+      `flow/inline/same_line.rs` owns same-line options, `flow/linear.rs` is the current linear
+      option re-export hub, `flow/linear/horizontal.rs` owns horizontal options,
+      `flow/linear/vertical.rs` owns vertical options, `flow/spacer.rs` is the current spacer
+      option re-export hub, `flow/spacer/dummy.rs` owns dummy options, `flow/spacer/spacing.rs`
+      owns spacing options, `flow/spacer/indent.rs` owns indent options, and `flow/grid.rs` owns
+      grid options.
 - [x] Split IMUI floating-surface drag-kind and state ownership out of
       `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` into private owner modules without
       changing floating-area, floating-window, drag, resize, activation, or collapse behavior.
@@ -269,10 +1793,27 @@ Last updated: 2026-05-27
       `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` into a private owner module without
       changing floating-area position state, drag snapshot application, layer registration,
       no-input/pass-through gates, test ids, or `FloatingAreaResponse` semantics.
-      Result: `floating_surface/area.rs` owns area registration, drag position reconciliation,
-      state/test-id updates, facade content mounting, absolute area layout, interaction gates, and
-      response assembly. The root `floating_surface.rs` keeps drag-surface pointer-region behavior,
-      layer/kind/state re-exports, and module wiring.
+      Result: `floating_surface/area.rs` owns area registration, facade content mounting,
+      absolute area layout, interaction gates, and response assembly. The root
+      `floating_surface.rs` keeps drag-surface pointer-region behavior, layer/kind/state
+      re-exports, and module wiring.
+- [x] Split IMUI floating-area drag/state reconciliation out of
+      `ecosystem/fret-ui-kit/src/imui/floating_surface/area.rs` into a private owner module without
+      changing drag snapshot matching, device-pixel snapping, test-id overrides, child window
+      resize feedback, or `FloatingAreaResponse` dragging/position semantics.
+      Result: `floating_surface/area/drag_state.rs` owns drag snapshot discovery,
+      drag-position reconciliation, scale-factor snapping, test-id state updates, and final
+      placement readback. `floating_surface/area.rs` now only orchestrates layer registration,
+      context creation, IMUI child mounting, layout shell creation, and response assembly.
+- [x] Split IMUI floating-area drag-surface behavior out of
+      `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` into a private owner module without
+      changing drag setup delegation, focusable key stub installation, double-click hooks,
+      activation signals, drag threshold handling, or IMUI child mounting.
+      Result: `floating_surface/drag_surface.rs` owns `floating_area_drag_surface_element(...)`,
+      pointer-region wiring, double-click dispatch, activation event recording, pointer drag
+      move/up handling, setup callback invocation, and IMUI child mounting. The root
+      `floating_surface.rs` is now a module index/re-export hub for area, drag-surface, kinds,
+      layer, and state owners.
 - [x] Split IMUI floating-window resize state/snapshot ownership out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs` into a private owner module
       without changing resize handles, left/right/top/bottom/corner resize behavior, collapse
@@ -296,20 +1837,52 @@ Last updated: 2026-05-27
       clamping, left/top origin reconciliation, all eight resize-handle branches, and
       `last_resize_position` advancement. `state.rs` keeps lifecycle state lookup, reset/snap
       policy, resize output assembly, and handle test-id packaging.
+- [x] Split IMUI floating-window resize initial state and output DTO out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs` into private child owners
+      without changing resize test-id strings, initial size defaults, collapsed reset policy,
+      device-pixel snapping, drag application, or handle test-id packaging.
+      Result: `floating_window_resize/state/initial.rs` owns initial `FloatWindowState` and stable
+      resize/title/close test-id construction, `state/output.rs` owns
+      `FloatingWindowResizeStateOutput`, and `state.rs` keeps `cx.state_for(...)`, snapshot/collapse
+      orchestration, pixel snapping, drag application, and output assembly.
 - [x] Split IMUI floating-window resize handle layout and pointer behavior out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles.rs` into private owner modules
       without changing resize handle placement, cursors, drag lifecycle, activation handoff, or
       pointer capture/release behavior.
-      Result: `floating_window_resize/handles/layout.rs` owns handle geometry and resize cursors,
+      Result: `floating_window_resize/handles/layout.rs` owns handle geometry,
       `floating_window_resize/handles/pointer.rs` owns pointer-region wiring, pointer capture,
       runtime drag begin/update/cancel, cursor updates, and activation handoff. `handles.rs` now
       only stacks the body/blocker with the eight resize handles.
+- [x] Split IMUI floating-window resize cursor mapping out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout.rs` into a private
+      owner module without changing handle placement, cursor icons, pointer capture/release,
+      activation handoff, or resize drag lifecycle.
+      Result: `floating_window_resize/handles/cursor.rs` owns handle-to-cursor mapping for all
+      eight handles, `floating_window_resize/handles/layout.rs` owns layout geometry only, and
+      `floating_window_resize/handles/pointer.rs` composes both before wiring pointer-region
+      behavior.
+- [x] Split IMUI floating-window resize-handle edge/corner layout geometry out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout.rs` into private
+      edge and corner owners without changing handle sizes, absolute insets, pointer-region
+      behavior, resize state, or public IMUI APIs.
+      Result: `floating_window_resize/handles/layout.rs` now dispatches by handle family,
+      `floating_window_resize/handles/layout/edge.rs` owns the four 6 px edge handles, and
+      `floating_window_resize/handles/layout/corner.rs` owns the four 10 px corner handles.
 - [x] Split IMUI selectable keyboard ownership out of
       `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` into a private owner module without
       changing selectable activation, popup close, menu navigation, or context-menu behavior.
       Result: `selectable_controls/keyboard.rs` now owns shortcut handling, popup close-on-activate
       behavior, context-menu requests, and popup menu arrow-key navigation. The root file keeps
       label identity, pressable assembly, and row rendering.
+- [x] Split IMUI selectable pressable behavior out of
+      `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` into a private owner module without
+      changing label identity, selectable a11y, pointer click reporting, keyboard activation
+      lifecycle marking, popup close-on-activate behavior, shortcut/context-menu/nav delegation,
+      response population, or row visual composition.
+      Result: `selectable_controls/behavior.rs` owns pressable behavior installation,
+      activate-handler popup close/click signaling, keyboard owner delegation, transient clicked
+      reads, and `ResponseExt` population. `selectable_controls.rs` keeps label identity,
+      `SelectableOptions` a11y wiring, selected/highlighted state reads, and row visual assembly.
 - [x] Split IMUI child-region resize handle/drag ownership out of
       `ecosystem/fret-ui-kit/src/imui/child_region.rs` into a private owner module without
       changing the public child-region facade or response surface.
@@ -337,12 +1910,14 @@ Last updated: 2026-05-27
       changing the public tooltip facade or hover/dismissal behavior.
       Result: `tooltip_overlay/trigger.rs` now owns pointer-move open gating and pointer-transit
       checks, `tooltip_overlay/panel.rs` owns concrete panel placement, chrome, semantics, and
-      content column assembly, and the root file keeps tooltip lifecycle, interaction bounds,
-      update, dismissal, and request orchestration.
+      content column assembly, `tooltip_overlay/runtime.rs` owns tooltip lifecycle, interaction
+      bounds, update, dismissal, and request orchestration, and the root file is now a thin module
+      index.
 - [x] Split IMUI menu/popup/tab/tooltip option types out of
       `ecosystem/fret-ui-kit/src/imui/options/menus.rs` into private owner modules without
       changing option type names, fields, defaults, or re-export paths.
-      Result: `menus/popup.rs` owns popup menu/modal options, `menus/menu.rs` owns menu bar,
+      Result: `menus/popup.rs` is the current popup option re-export hub, `popup/menu.rs` owns
+      popup-menu options, `popup/modal.rs` owns popup-modal options, `menus/menu.rs` owns menu bar,
       begin-menu/submenu, and menu-item options plus shortcut seams, `menus/tab.rs` owns tab-bar
       selection/gap/test-id options, and `menus/tooltip.rs` owns tooltip placement, timing,
       hoverable-content, and diagnostics options. The root `menus.rs` file is now a thin
@@ -378,6 +1953,34 @@ Last updated: 2026-05-27
       synchronization, post-trigger reconciliation, and `MenubarActiveTrigger` writes.
       `open_policy.rs` now keeps trigger-click toggling, open-request resolution,
       disabled-popup cleanup, and the private owner re-export.
+- [x] Split IMUI begin-submenu trigger wiring and open-policy reconciliation out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu.rs` into private owner modules
+      without changing submenu trigger geometry hints, hover/shortcut behavior, sibling switching,
+      popup open/close semantics, or `DisclosureResponse` open/toggled reporting.
+      Result: `menu_family_controls/submenu/trigger.rs` owns submenu menu-item trigger assembly,
+      submenu flag/expanded semantics, shortcut option forwarding, and `sub_trigger::wire(...)`
+      geometry hints. `menu_family_controls/submenu/open_policy.rs` owns clicked-trigger
+      submenu-state reconciliation, stale-open cleanup, and popup open/close anchoring. The root
+      `submenu.rs` keeps the public flow, state reads, popup mounting, and response assembly.
+- [x] Split IMUI begin-menu trigger behavior out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger.rs` into a private owner module
+      without changing menu trigger a11y, label identity, activate shortcut gating, keyboard
+      lifecycle marking, menubar registry synchronization, arrow-open behavior, click response
+      population, or trigger visual chrome.
+      Result: `menu_family_controls/trigger/behavior.rs` owns active-trigger behavior
+      installation, keyboard activation lifecycle marking, activate shortcut handling, menubar row
+      registry/sync wiring, arrow-down/up open behavior, transient click reads, and trigger
+      `ResponseExt` population. `trigger.rs` keeps label identity, `PressableA11y`, pressable shell
+      construction, and `visual::menu_trigger_visual(...)` mounting.
+- [x] Split IMUI begin-menu trigger base behavior into activation, keyboard, and response owners
+      without changing active-trigger installation options, click transient emission, keyboard
+      lifecycle marking, activate-shortcut repeat/IME gating, menubar row behavior, arrow-open
+      behavior, trigger response projection, or public begin-menu facade behavior.
+      Result: `menu_family_controls/trigger/behavior.rs` keeps input structure, active-trigger
+      behavior installation, menubar owner dispatch, and base owner dispatch.
+      `behavior/activation.rs` owns click activation, `behavior/keyboard.rs` owns shortcut
+      activation, `behavior/response.rs` owns trigger response projection, and `behavior/menubar.rs`
+      keeps menubar-specific row behavior.
 - [x] Split IMUI table header row assembly out of
       `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` into a private owner module
       without changing header visibility, sortable/plain header cells, resize response metadata,
@@ -387,6 +1990,31 @@ Last updated: 2026-05-27
       collection, and header row wrapping. `render.rs` keeps palette, visible-column, scroll, and
       header-presence decisions plus body rows, root chrome, semantics, and final response
       assembly.
+- [x] Split IMUI table body-row preparation out of
+      `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` into a private owner module
+      without changing hidden-column filtering, fallback empty cells, default/explicit test-id
+      precedence, striped/background selection, pinned/horizontal-scroll wrapping, or aggregate
+      `TableResponse` headers.
+      Result: `table_controls/render/body_rows.rs` owns keyed body row assembly, cell iteration,
+      hidden-column filtering, fallback empty-cell insertion, body cell wrapping, and body row
+      wrapping. `render.rs` keeps palette, visible-column, scroll/header decisions, root chrome,
+      semantics, and final `TableResponse` assembly.
+- [x] Split IMUI table root chrome/semantics assembly out of
+      `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` into a private root owner without
+      changing palette resolution, visible-column/header/body decisions, row gaps, root test ID
+      semantics, chrome border/radius/background, or aggregate `TableResponse` headers.
+      Result: `table_controls/render/root.rs` owns root container props, vertical stack mounting,
+      optional group semantics, and root test-id forwarding. `render.rs` keeps palette,
+      visible-column, scroll/header/body dispatch, and final response aggregation.
+- [x] Split IMUI table builder row/cell collection out of
+      `ecosystem/fret-ui-kit/src/imui/table_controls.rs` into a private builder owner without
+      changing `table(...)`/`table_with_options(...)` facade calls, public `ImUiTable` /
+      `ImUiTableRow` method names, row/cell test-id derivation, child `ImUiFacade` mounting,
+      `cell_text(...)` text routing, or final table rendering.
+      Result: `table_controls/builder.rs` owns `ImUiTable` / `ImUiTableRow`, built row/cell
+      records, row/cell test-id derivation, child `ImUiFacade` mounting, and `cell_text(...)`
+      table-cell text routing. `table_controls.rs` keeps module wiring, public table builder
+      re-exports, `table_element(...)`, and final render dispatch.
 - [x] Split IMUI table header label/sort helpers out of
       `ecosystem/fret-ui-kit/src/imui/table_controls/header.rs` into a private owner module without
       changing visible-label parsing, sortable/plain header wrapping, sort glyph text role,
@@ -394,6 +2022,15 @@ Last updated: 2026-05-27
       Result: `table_controls/header/labels.rs` owns visible header label parsing,
       sort-indicator text, sortable a11y labels, header content boxes, and header label text.
       `header.rs` keeps sortable/plain header-cell assembly and resize-handle wrapping.
+- [x] Split IMUI table header trigger behavior out of
+      `ecosystem/fret-ui-kit/src/imui/table_controls/header/trigger.rs` into a private owner module
+      without changing sortable/plain trigger props, primary activation policy, keyboard lifecycle
+      marking, context-menu request propagation, plain-header click suppression, response
+      population, or sortable header visual layout.
+      Result: `table_controls/header/trigger/behavior.rs` owns active-trigger behavior
+      installation, sortable keyboard activation lifecycle marking, clicked transient draining for
+      plain headers, and `ResponseExt` population. `trigger.rs` keeps header trigger props,
+      a11y/key-activation policy, keyed surface assembly, and sortable header visual construction.
 - [x] Split IMUI table row-group mechanics out of
       `ecosystem/fret-ui-kit/src/imui/table_controls/body.rs` into a private owner module without
       changing row semantics, cell wrapping, pinned left/right grouping, horizontal center-scroll
@@ -414,11 +2051,35 @@ Last updated: 2026-05-27
 - [x] Split IMUI tab-family item collection, selected-model normalization, and panel/list assembly
       out of `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs` into a private owner module
       without changing the public tab-bar builder or response surface.
-      Result: `tab_family_controls/items.rs` owns `BuiltTabItem`, selected-tab normalization,
-      tab-list semantics, trigger response aggregation, focus fallback, and selected panel
-      assembly. The root `tab_family_controls.rs` keeps the public `ImUiTabBar` builder and
-      `tab_bar_element(...)` entrypoint, while `trigger.rs` keeps per-trigger activation and
-      shortcut behavior.
+      Result: `tab_family_controls/items.rs` owns `BuiltTabItem`, tab-list semantics, trigger
+      response aggregation, focus fallback, and selected panel assembly. The root
+      `tab_family_controls.rs` keeps the public `ImUiTabBar` builder and `tab_bar_element(...)`
+      entrypoint, while `trigger.rs` keeps per-trigger activation and shortcut behavior.
+- [x] Split IMUI tab-family selected-model normalization out of
+      `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items.rs` into a private owner module
+      without changing selected fallback order, disabled-tab filtering, selected-model correction,
+      trigger response aggregation, focus fallback, tab-list semantics, panel mounting, or
+      `TabBarResponse` assembly.
+      Result: `tab_family_controls/items/selection.rs` owns selected model reads, current-tab
+      validity checks, default-selected fallback, first-enabled fallback, and model correction
+      writes. `tab_family_controls/items.rs` keeps `BuiltTabItem`, trigger response aggregation,
+      focus fallback, tab-list/panel assembly, and final `TabBarResponse` construction.
+- [x] Split IMUI tab trigger active-trigger behavior out of
+      `ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger.rs` into a private behavior owner
+      without changing tab a11y, selected-model writes, activate-shortcut handling, clicked
+      response population, or tab visual construction.
+      Result: `tab_family_controls/trigger/behavior.rs` owns active-trigger behavior installation,
+      keyboard lifecycle marking, selected-model writes, activate-shortcut handling, clicked
+      transient reads, and `ResponseExt` population. `trigger.rs` keeps tab trigger props,
+      collection a11y, keyed trigger assembly, and visual mounting.
+- [x] Split IMUI tab trigger behavior into activation, keyboard, and response owners without
+      changing active-trigger installation options, selected-tab model writes, keyboard lifecycle
+      marking, activate-shortcut repeat/IME gating, clicked response projection, or public tab-bar
+      facade behavior.
+      Result: `tab_family_controls/trigger/behavior.rs` keeps input structure, active-trigger
+      behavior installation, and owner dispatch. `behavior/activation.rs` owns activate selection
+      writes, `behavior/keyboard.rs` owns shortcut selection writes, and `behavior/response.rs`
+      owns active-trigger response projection.
 - [x] Split IMUI popup-menu policy state and panel composition out of
       `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu.rs` into private owner modules without
       changing popup/menu/submenu behavior or facade entry points.
@@ -428,6 +2089,15 @@ Last updated: 2026-05-27
       installation, content mounting, and focus targets. The root `popup_overlay/menu.rs` keeps
       overlay id/root-name setup, menubar policy lookup, dismiss/auto-focus handlers, and overlay
       request dispatch.
+- [x] Split IMUI popup-menu panel layout/chrome and content mounting out of
+      `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs` into private owner modules
+      without changing popup panel placement, menu semantics, nav-state installation, provider
+      nesting, IMUI child mounting, or focus target extraction.
+      Result: `popup_overlay/menu/panel/layout.rs` owns popper placement, menu semantics layout,
+      panel palette/chrome, and panel column props; `popup_overlay/menu/panel/content.rs` owns
+      popup/menubar policy provider nesting and IMUI child mounting. The root `panel.rs` keeps
+      open/anchor lifecycle reads, keepalive updates, nav-state installation, panel id storage, and
+      `PopupMenuBuilt` assembly.
 - [x] Split IMUI popup modal layout/chrome construction out of
       `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal.rs` into a private owner module without
       changing modal open/keepalive policy, Escape/outside-press dismissal, barrier behavior,
@@ -442,8 +2112,16 @@ Last updated: 2026-05-27
       Result: `menu_controls/interaction.rs` owns enabled/action gating, pressable props,
       activation/shortcut handlers, popup menu roving focus, menubar horizontal-arrow switching,
       command dispatch source metadata, and menu-item `ResponseExt` population. The element file
-      keeps row panel/indicator/shortcut/label visual assembly and the custom `pressable_hook`
-      insertion point.
+      kept row panel/indicator/shortcut/label visual assembly until the later visual-row split
+      below; it keeps the custom `pressable_hook` insertion point.
+- [x] Split IMUI menu-item visual row assembly out of
+      `ecosystem/fret-ui-kit/src/imui/menu_controls/element.rs` into a private visual-row owner
+      without changing menu item row structure, checkbox/radio/submenu indicators, shortcut
+      semantics, shortcut test-id derivation, text-role helpers, pressable behavior, or facade APIs.
+      Result: `menu_controls/element/visual_row.rs` owns panel/row props, indicator selection,
+      label/shortcut/submenu glyph mounting, and shortcut test-id stamping. `element.rs` now keeps
+      pressable orchestration, interaction-owner wiring, response population, and the custom
+      `pressable_hook` insertion point.
 - [x] Split IMUI menu-item keyboard/navigation behavior out of
       `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` into a private owner module
       without changing popup menu roving focus, shortcut, or menubar horizontal-arrow behavior.
@@ -451,12 +2129,22 @@ Last updated: 2026-05-27
       roving focus, menubar close-auto-focus suppression, and horizontal-arrow menu switching.
       `interaction.rs` now keeps enabled/action gating, pressable props, activation dispatch, and
       response population.
+- [x] Split IMUI menu-item active-trigger/activation/response behavior out of
+      `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` into a nested private owner
+      without changing enabled/action gating, pressable props, popup close-on-activate, command
+      dispatch metadata, keyboard owner wiring, or menu-item `ResponseExt` population.
+      Result: `menu_controls/interaction/behavior.rs` owns active-trigger installation,
+      activation handler wiring, clicked transient draining, command dispatch source metadata, and
+      active-trigger response population. `interaction.rs` keeps menu-item interaction structs,
+      enabled/action gating, pressable prop construction, and thin forwarding call sites for
+      element/keyboard users.
 - [x] Split IMUI multi-select state storage and normalization out of
       `ecosystem/fret-ui-kit/src/imui/multi_select.rs` into a private owner module without
       widening the public collection helper surface.
-      Result: `multi_select/state.rs` owns `ImUiMultiSelectState`, selected-order normalization,
-      anchor repair, and crate-local mutation helpers. The root `multi_select.rs` keeps model hook,
-      selectable response wiring, click-modifier policy, and response changed reporting.
+      Result: `multi_select/state.rs` owns `ImUiMultiSelectState` storage and read-only accessors,
+      while `multi_select/state/selection.rs` owns selected-order normalization, anchor repair,
+      crate-local mutation helpers, and `is_selected(...)`. The root `multi_select.rs` keeps model
+      hook, selectable response wiring, click-modifier policy, and response changed reporting.
 - [x] Split IMUI virtual-list runtime projection and row mechanics out of
       `ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs` into private owner modules without
       changing the facade virtual-list API or row clipping semantics.
@@ -522,19 +2210,20 @@ Last updated: 2026-05-27
 ## P2 - User-Usable Golden Path
 
 - [x] Pick the smallest runnable proof that should teach a complete editor panel.
-      Result: `apps/fret-examples/src/imui_editor_proof_demo.rs` plus the demo-local
-      `collection.rs` module is the selected proof surface; `cargo check -p fret-demo --bin
-      imui_editor_proof_demo` passes.
+      Current result: `apps/fret-examples/src/imui_editor_workbench_demo.rs` is the canonical
+      product-facing editor workbench route and mounts the editor-notes workflow directly.
+      `imui_editor_proof_demo` remains supporting collection-first proof evidence rather than the
+      route a new user should open first.
 - [x] Verify the proof includes state, command/action dispatch, editor controls, menu/popup, and
       diagnostic-friendly `test_id`s.
-      Result: the proof carries named demo state, explicit action handlers, popup/menu dispatch,
-      and stable `test_id` / `viewport_test_id` anchors; the collection source-guard tests now
-      pass under `cargo nextest run -p fret-examples --test ...`.
+      Current result: `imui_editor_workbench_golden_path_surface` proves the canonical route owns
+      the app shell, mounts a real editor workflow, surfaces the editor-owned style/theme preset
+      picker, is exported by `fret-examples`, and is advertised by `fret-demo`.
 - [x] Promote missing cookbook/docs references only after the proof runs and source gates pass.
-      Result: `apps/fret-cookbook/README.md`, `apps/fret-cookbook/EXAMPLES.md`, and
-      `docs/examples/README.md` now point from the focused IMUI cookbook lessons to
-      `cargo run -p fret-demo --bin imui_editor_proof_demo` as the heavier editor-panel proof,
-      without reclassifying it as a boring-ladder cookbook example.
+      Current result: `apps/fret-cookbook/README.md`, `apps/fret-cookbook/EXAMPLES.md`,
+      `docs/examples/README.md`, diagnostics first-open docs, and Demo/Metrics/Debug discovery now
+      point to `cargo run -p fret-demo --bin imui_editor_workbench_demo`, while the older proof
+      demos stay discoverable as supporting evidence.
 
 ## P3 - Dear ImGui-Class Follow-On Candidates
 
@@ -600,7 +2289,8 @@ Readiness order for the next locally testable review slices:
    2026-05-26 hover query owner split: `ImUiHoveredFlags` now lives in
    `response/hover/flags.rs`, while `hovered_like_imgui(...)` / `is_hovered(...)` query policy
    lives in `response/hover/query.rs`. The root `response/hover.rs` stays focused on
-   `ResponseExt` storage, mutators, accessors, and drag convenience helpers.
+   `ResponseExt` storage, mutators, accessors, and drag convenience helpers until the later drag
+   accessor owner split below moves drag methods out.
    2026-05-26 lifecycle owner split: `ResponseExt` lifecycle signal mutators, merge helpers,
    clearing, and read-only accessors now live in `response/hover/lifecycle.rs`. The root
    `response/hover.rs` still owns the lifecycle storage fields but no longer owns lifecycle
@@ -616,16 +2306,19 @@ Readiness order for the next locally testable review slices:
    2026-05-26 core-state owner split: `ResponseExt` core `fret_authoring::Response`, id, enabled,
    clicked, changed, rect, hover, press, and focus mutators/accessors now live in
    `response/hover/core_state.rs`. The root `response/hover.rs` keeps core/id/enabled storage only.
+   2026-05-30 drag accessor owner split: `ResponseExt` drag mutation and drag read accessors now
+   live in `response/hover/drag_accessors.rs`. The root `response/hover.rs` keeps the drag storage
+   field only.
    2026-05-26 menu-family menu owner split: `begin_menu_with_options(...)` now lives in
    `menu_family_controls/menu.rs`. The root `menu_family_controls.rs` keeps menubar policy state,
    menu-bar element construction, module wiring, and tests only.
    2026-05-26 debug-draw response owner split: `DebugDrawResponse` now lives in
    `debug_draw_controls/response.rs`, and the opaque-output source gate follows the new owner. The
-   root `debug_draw_controls.rs` keeps debug draw options, draw-list/style types, and helper
-   orchestration.
+   root `debug_draw_controls.rs` re-exports the public surface.
    2026-05-26 debug-draw options owner split: public debug draw options/style/vertex types now
    live in `debug_draw_controls/options.rs`. The root `debug_draw_controls.rs` re-exports them and
-   keeps draw-list state plus helper orchestration.
+   later owner splits moved draw-list state to `debug_draw_controls/draw_list.rs` and facade entry
+   glue to `debug_draw_controls/facade.rs`.
    2026-05-27 debug-draw options sub-owner split: `debug_draw_controls/options.rs` is now a thin
    re-export index; `options/root.rs` owns root/interaction canvas options, `options/stroke.rs`
    owns stroke style and path-style conversion, `options/round_corners.rs` owns rounded-corner
@@ -635,9 +2328,10 @@ Readiness order for the next locally testable review slices:
    `debug_draw_controls/path_builder/shape_methods.rs` now owns rect, Bezier, arc, fast-arc, and
    elliptical-arc authoring methods. `path_builder.rs` keeps point basics, stroke/fill recording,
    and path state accessors.
-   2026-05-27 debug-draw paint media owner split: `debug_draw_controls/paint/media.rs` now owns
-   image, image-region, image-quad, rounded-image, rounded-image-region, SVG image, and SVG
-   mask-icon painting. Root `paint.rs` keeps clip-stack balancing and media/shape command dispatch.
+   2026-05-27 debug-draw paint media owner split: `debug_draw_controls/paint/media.rs` kept
+   media command routing while `paint/media/raster.rs`, `paint/media/rounded.rs`, and
+   `paint/media/svg.rs` took image, rounded-image, SVG image, and SVG mask-icon paint behavior.
+   Root `paint.rs` keeps clip-stack balancing and media/shape command dispatch.
    2026-05-14 editor drag-value follow-up: `DragValueCoreResponse` now keeps drag/hover/press/focus
    storage private and no longer exposes external default construction. `DragValueCore` still owns
    response construction, while editor controls read visual state through `dragging()`, `hovered()`,
@@ -655,6 +2349,14 @@ Readiness order for the next locally testable review slices:
    `debug_draw_controls/commands/summary_projection/media.rs` now owns image/SVG/media command
    summary count and image-id assembly. `summary_projection.rs` keeps clip-stack tracking and
    non-media command projection.
+   2026-05-30 debug-draw residual summary projection owner split:
+   `debug_draw_controls/commands/summary_projection/residual.rs` now owns media, clip, SVG, and
+   text command summary dispatch over the existing private `DebugDrawCommand` discriminant.
+   `summary_projection.rs` keeps only clip-state application plus geometry/residual dispatch.
+   2026-05-30 debug-draw media dispatch owner split:
+   `debug_draw_controls/paint/media/dispatch.rs` now owns media command match routing and
+   non-media no-op dispatch. `paint/media.rs` is now a module/type hub that wires dispatch,
+   raster, rounded, and SVG paint owners without owning command routing or paint behavior.
    2026-05-14 source-gate follow-up: the IMUI workstream source gate now carries a reusable
    opaque-output-struct check for sealed response/context/summary records, so public output fields
    cannot return by simply changing field names.
@@ -1735,9 +3437,11 @@ Readiness order for the next locally testable review slices:
    2026-05-14 state-catalog gate follow-up: `ImUiMultiSelectState` is now covered by the reusable
    opaque-struct catalog because shared collection state is part of the public policy-layer
    contract, not a freely mutable data bag.
-   2026-05-27 multi-select state owner split: `ImUiMultiSelectState`, ordered-selection
-   normalization, anchor repair, and crate-local selection mutation helpers now live in
-   `multi_select/state.rs`; the root helper keeps click-modifier policy and response wiring.
+   2026-05-27 multi-select state owner split, refreshed 2026-05-30:
+   `ImUiMultiSelectState` storage and accessors live in `multi_select/state.rs`; ordered-selection
+   normalization, anchor repair, and crate-local selection mutation helpers live in
+   `multi_select/state/selection.rs`; the root helper keeps click-modifier policy and response
+   wiring.
 7. Child-region depth: reopen only with a concrete `BeginChild()`-style behavior target.
    Current readiness audit: `P3_CHILD_REGION_READINESS_2026-05-06.md`. Fret already covers
    keyed scrollable child areas, chrome, scroll handles, nested shell panes, and app-owned
@@ -1813,8 +3517,17 @@ opening the slice.
       `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into the resize owner without
       changing the public IMUI surface.
       Result: `floating_window_resize.rs` now owns the handle enumeration, drag-kind lookup, drag
-      snapshot shape, and collapsed-aware resizing signal, while `floating_window_on_area.rs`
-      consumes `current_resize_snapshot(...)` / `prepare_resize_state(...)` as owner outputs.
+      snapshot shape, and collapsed-aware resizing signal, while `floating_window_on_area/state.rs`
+      consumes `current_resize_snapshot(...)` / `prepare_resize_state(...)` as owner outputs for
+      the on-area composition layer.
+- [x] Split the floating-window on-area collapse/resize state preparation out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into a dedicated private owner
+      without changing collapsed toggles, resize-state preparation, area position feedback,
+      title/content/shell wiring, or `FloatingWindowChromeResponse` semantics.
+      Result: `floating_window_on_area/state.rs` owns resizable-layout/resize-enabled derivation,
+      collapse toggle/readback, scale-factor lookup, resize owner calls, area position feedback,
+      and chrome response assembly. `floating_window_on_area.rs` now only wires the prepared state
+      into title bar, content, shell, and facade output.
 - [x] Split the floating-window shell/container composition out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into a dedicated internal helper
       without changing the public IMUI surface.
@@ -1837,6 +3550,13 @@ opening the slice.
       Result: `window_frame_props(...)`, `shell_column_props(...)`,
       `title_bar_container_props(...)`, and `clipped_body_props(...)` now own shell frame/layout
       properties while the shell element only composes owner outputs.
+- [x] Split the floating-window shell frame/title/body props helpers out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_shell.rs` into a private props owner without
+      changing window frame sizing, title-bar clipping/padding/border radii, collapsed sizing,
+      inner content clipping, blocker mounting, resize-stack composition, or public IMUI surface.
+      Result: `floating_window_shell/props.rs` owns `window_frame_props(...)`,
+      `shell_column_props(...)`, `title_bar_container_props(...)`, and `clipped_body_props(...)`.
+      `floating_window_shell.rs` now keeps shell composition only.
 - [x] Split the floating-window title-bar `RowProps` / drag-surface `PointerRegionProps` /
       close-button props construction out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs::floating_window_title_bar_row(...)`
@@ -1844,12 +3564,27 @@ opening the slice.
       Result: `floating_window_title_bar_props.rs` now owns the title-row layout, drag-surface
       layout, and close-button accessibility/size props, while `floating_window_title_bar.rs`
       keeps title-bar behavior orchestration and text-role helpers.
+- [x] Split the floating-window title-bar double-click / Escape / close-button behavior out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs` into a private behavior owner
+      without changing the public IMUI surface.
+      Result: `floating_window_title_bar/behavior.rs` now owns double-click collapse event
+      recording, title-bar Escape close key behavior, close-button activation wiring, and model
+      update/notify calls. `floating_window_title_bar.rs` keeps row composition, title text-role
+      selection, close-button prop selection, and close-glyph text construction.
 - [x] Split the floating-window content scroll/container layout construction out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_content.rs::floating_window_content_element(...)`
       into private helpers without changing the public IMUI surface.
       Result: `floating_window_content_props.rs` now owns the content surface layout, scroll
       layout, and container props, while `floating_window_content.rs` keeps the pointer/focus
       orchestration and consumes the prepared owner outputs.
+- [x] Split the floating-window content pointer/focus/activation behavior out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_content.rs` into a private behavior owner
+      without changing the public IMUI surface.
+      Result: `floating_window_content/behavior.rs` now owns content-surface pointer-region
+      wrapping, focusable key stub installation, background-click focus requests,
+      activate-on-click event recording, and float-layer bring-to-front delegation.
+      `floating_window_content.rs` keeps content scroll/container composition and IMUI child
+      mounting.
 - [x] Split IMUI table render/body/header ownership out of
       `ecosystem/fret-ui-kit/src/imui/table_controls.rs` into private owner modules without
       changing the public IMUI surface.
@@ -1895,6 +3630,15 @@ opening the slice.
       Result: `image_item_controls/visual.rs` owns chrome selection, image props, size
       sanitization, opacity normalization, and UV validation. `image_item_controls.rs` keeps
       pressable interaction wiring and `ResponseExt` population.
+- [x] Split IMUI image-item pressable behavior out of
+      `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs` into a private owner module without
+      changing image/image-button roles, focusability, context-menu keyboard requests, activation
+      lifecycle marking, pointer-click reporting, click response population, item sizing, chrome, or
+      image props.
+      Result: `image_item_controls/behavior.rs` owns pressable behavior installation,
+      keyboard-activation lifecycle marking, context-menu key handling, transient clicked reads, and
+      `ResponseExt` population. `image_item_controls.rs` keeps a11y props, size props, key
+      activation policy for plain images, chrome mounting, and image visual assembly.
 - [x] Split the IMUI facade command-presentation default bodies out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` into the existing button/menu owner modules
       without changing the public IMUI facade trait surface.

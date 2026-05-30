@@ -8,6 +8,11 @@ use fret_ui::Theme;
 
 use crate::foundation::content::MaterialContentDefaults;
 
+pub(crate) const ITEM_MIN_WIDTH_FALLBACK: Px = Px(112.0);
+pub(crate) const ITEM_MAX_WIDTH_FALLBACK: Px = Px(280.0);
+pub(crate) const CONTAINER_VERTICAL_PADDING_FALLBACK: Px = Px(8.0);
+pub(crate) const ITEM_HORIZONTAL_PADDING_FALLBACK: Px = Px(12.0);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum MenuItemInteraction {
     Default,
@@ -20,6 +25,30 @@ pub(crate) fn list_item_height(theme: &Theme) -> Px {
     theme
         .metric_by_key("md.comp.menu.list-item.container.height")
         .unwrap_or(Px(48.0))
+}
+
+pub(crate) fn item_min_width(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.menu.list-item.container.min-width")
+        .unwrap_or(ITEM_MIN_WIDTH_FALLBACK)
+}
+
+pub(crate) fn item_max_width(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.menu.list-item.container.max-width")
+        .unwrap_or(ITEM_MAX_WIDTH_FALLBACK)
+}
+
+pub(crate) fn container_vertical_padding(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.menu.container.vertical-padding")
+        .unwrap_or(CONTAINER_VERTICAL_PADDING_FALLBACK)
+}
+
+pub(crate) fn item_horizontal_padding(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.menu.list-item.content.horizontal-padding")
+        .unwrap_or(ITEM_HORIZONTAL_PADDING_FALLBACK)
 }
 
 pub(crate) fn container_background(theme: &Theme) -> Color {

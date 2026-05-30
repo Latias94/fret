@@ -24,6 +24,9 @@ DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-a
 DEMO_METRICS_DEBUG_OWNER_DOC = (
     "docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json"
 )
+DEMO_METRICS_DEBUG_ACTION_METADATA_DOC = (
+    "docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/WORKSTREAM.json"
+)
 DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC = (
     "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"
 )
@@ -259,6 +262,7 @@ def _validate_tool_app_discovery(
         f"gui branch: {DEVTOOLS_GUI_DOC}",
         "route: demo-metrics-debug",
         f"owner: {DEMO_METRICS_DEBUG_OWNER_DOC}",
+        f"action metadata owner: {DEMO_METRICS_DEBUG_ACTION_METADATA_DOC}",
         f"docking owner: {DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC}",
         f"wayland acceptance: {DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC}",
         "demo editor workbench: cargo run -p fret-demo --bin imui_editor_workbench_demo",
@@ -320,6 +324,10 @@ def _validate_tool_app_discovery(
         raise SystemExit("list tool-apps --json should expose demo-metrics-debug docs")
     if demo_metrics_route.get("owner_doc") != DEMO_METRICS_DEBUG_OWNER_DOC:
         raise SystemExit("list tool-apps --json should expose demo-metrics-debug owner_doc")
+    if demo_metrics_route.get("action_metadata_doc") != DEMO_METRICS_DEBUG_ACTION_METADATA_DOC:
+        raise SystemExit(
+            "list tool-apps --json should expose demo-metrics-debug action_metadata_doc"
+        )
     if demo_metrics_route.get("docking_owner_doc") != DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC:
         raise SystemExit("list tool-apps --json should expose demo-metrics-debug docking_owner_doc")
     if demo_metrics_route.get("wayland_acceptance_doc") != DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC:
@@ -371,6 +379,53 @@ def _validate_tool_app_discovery(
             if commands_by_label.get(label) != command:
                 raise SystemExit(
                     f"list tool-apps --json should expose demo-metrics-debug {label}"
+                )
+    action_metadata = {
+        "open workbench": {
+            "id": "open_workbench",
+            "category": "demo",
+            "requires_bundle": False,
+            "primary": True,
+        },
+        "run product discovery": {
+            "id": "product_discovery",
+            "category": "product-gate",
+            "requires_bundle": False,
+            "primary": False,
+        },
+        "inspect metrics stats": {
+            "id": "inspect_metrics_stats",
+            "category": "metrics",
+            "requires_bundle": True,
+            "primary": False,
+        },
+        "inspect debug trace": {
+            "id": "inspect_debug_trace",
+            "category": "debug",
+            "requires_bundle": True,
+            "primary": False,
+        },
+        "validate docking campaign": {
+            "id": "validate_docking_campaign",
+            "category": "handoff",
+            "requires_bundle": False,
+            "primary": False,
+        },
+    }
+    action_items = demo_metrics_route.get("action_commands")
+    action_items_by_label = {
+        item.get("label"): item for item in action_items if isinstance(item, dict)
+    }
+    for label, expected_fields in action_metadata.items():
+        item = action_items_by_label.get(label)
+        if not isinstance(item, dict):
+            raise SystemExit(
+                f"list tool-apps --json should expose demo-metrics-debug action metadata for {label}"
+            )
+        for field, expected in expected_fields.items():
+            if item.get(field) != expected:
+                raise SystemExit(
+                    f"list tool-apps --json should expose demo-metrics-debug action metadata {label} {field}"
                 )
     tool_apps = payload.get("tool_apps")
     if not isinstance(tool_apps, list):
@@ -500,6 +555,7 @@ def _validate_devtools_gui_first_open_source(
         "const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[",
         'const DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug"',
         "const DEVTOOLS_DEMO_METRICS_DEBUG_OWNER_DOC: &str =",
+        "const DEVTOOLS_DEMO_METRICS_DEBUG_ACTION_METADATA_DOC: &str =",
         "const DEVTOOLS_DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC: &str =",
         "const DEVTOOLS_DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC: &str =",
         "const DEVTOOLS_DOCKING_ARBITRATION_COMMAND: &str =",
@@ -514,6 +570,10 @@ def _validate_devtools_gui_first_open_source(
         'const DEVTOOLS_DEBUG_TRACE_COMMAND: &str =',
         'const CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS: &str =',
         "struct DemoMetricsDebugActionSpec",
+        "id: &'static str",
+        "category: &'static str",
+        "requires_bundle: bool",
+        "primary: bool",
         "const DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS: &[DemoMetricsDebugActionSpec] = &[",
         "DevtoolsGateScriptTargetCommandInputV1",
         "DevtoolsGatePerfThresholdCommandInputV1",
@@ -547,6 +607,7 @@ def _validate_devtools_gui_first_open_source(
         "Always-available editor demos, action commands, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
         "demo_metrics_debug_rows.push(devtools_demo_metrics_debug_action_row(cx))",
         "route owner: {DEVTOOLS_DEMO_METRICS_DEBUG_OWNER_DOC}",
+        "action metadata owner: {DEVTOOLS_DEMO_METRICS_DEBUG_ACTION_METADATA_DOC}",
         "docking owner: {DEVTOOLS_DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC}",
         "wayland acceptance: {DEVTOOLS_DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC}",
         "action surface: dedicated DevTools guide panel + copyable action command bundle",
@@ -556,7 +617,15 @@ def _validate_devtools_gui_first_open_source(
         "action: inspect metrics stats -> {DEVTOOLS_METRICS_STATS_COMMAND}",
         "action: inspect debug trace -> {DEVTOOLS_DEBUG_TRACE_COMMAND}",
         "action: validate docking campaign -> {DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND}",
+        "action metadata: {} | id={} | category={} | primary={} | requires_bundle={}",
+        "action readiness: {} | id={} | category={} | runnable={} | reason={}",
         "fn demo_metrics_debug_action_command_text() -> String",
+        "fn demo_metrics_debug_action_metadata_lines() -> Vec<String>",
+        "fn demo_metrics_debug_action_readiness_lines(selected_bundle_count: usize) -> Vec<String>",
+        "fn devtools_demo_metrics_debug_lines_with_state(",
+        "demo_metrics_debug_selected_bundle_count",
+        "select a regression bundle",
+        "selected bundle evidence available",
         "fn devtools_demo_metrics_debug_action_row(cx: &mut ElementContext<'_, App>) -> AnyElement",
         "Copy Demo/Metrics/Debug actions",
         "docking campaign validate: {DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND}",
@@ -613,7 +682,7 @@ def _validate_devtools_gui_first_open_source(
         "focused-node-bounds",
         "devtools_first_open_lines(st.cfg.fs_out_dir.as_ref())",
         "devtools_dogfood_workflow_lines(st.cfg.fs_out_dir.as_ref())",
-        "devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref())",
+        "devtools_demo_metrics_debug_lines_with_state(",
         "devtools_workflow_run_lines(st.cfg.fs_out_dir.as_ref())",
         "devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref())",
         'shadcn::TabsItem::new("guide", "Guide", [guide])',
@@ -776,6 +845,7 @@ def _validate_devtools_gui_first_open_source(
         "run and pack: {DEVTOOLS_DOGFOOD_RUN_PACK_COMMAND}",
         "open viewer: {DEVTOOLS_DOGFOOD_VIEWER_COMMAND}",
         "route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}",
+        "action metadata owner: {DEVTOOLS_DEMO_METRICS_DEBUG_ACTION_METADATA_DOC}",
         "metrics stats: {DEVTOOLS_METRICS_STATS_COMMAND}",
         "debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}",
         "debug trace: {DEVTOOLS_DEBUG_TRACE_COMMAND}",
@@ -1103,10 +1173,18 @@ def _validate_devtools_mcp_ai_scenario_doc(
         'const DEVTOOLS_MCP_DOC: &str =',
         'const RESOURCE_URI_FIRST_OPEN_MD: &str = "fret-diag://first-open.md"',
         "const DEMO_METRICS_DEBUG_OWNER_DOC: &str =",
+        "const DEMO_METRICS_DEBUG_ACTION_METADATA_DOC: &str =",
         "const DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC: &str =",
         "const DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC: &str =",
         "const DOCKING_CAMPAIGN_VALIDATE_COMMAND: &str =",
         "const DOCKING_POLICY_SKIP_COMMAND: &str =",
+        "struct DemoMetricsDebugActionSpec",
+        "id: &'static str",
+        "category: &'static str",
+        "requires_bundle: bool",
+        "primary: bool",
+        "action metadata owner: {DEMO_METRICS_DEBUG_ACTION_METADATA_DOC}",
+        "action metadata: {} | id={} | category={} | primary={} | requires_bundle={}",
         'const RESOURCE_URI_RECENT_EVIDENCE_JSON: &str = "fret-diag://recent-evidence.json"',
         "async fn fret_diag_inspect_set(",
         "async fn fret_diag_pick(",

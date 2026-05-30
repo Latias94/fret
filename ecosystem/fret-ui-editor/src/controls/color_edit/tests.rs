@@ -1,15 +1,17 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
+use super::drag_drop::apply_color_drop_payload;
 use super::model::{
     ColorNumericInputMode, HsvColor, HueWheelDragTarget, color_from_rgb_preserving_alpha,
     color_numeric_input_modes, hsv_from_color, hsv_numeric_text, hsv_to_color_preserving_alpha,
     hsv_to_rgb, hsv_with_hue_wheel_position, hsv_with_sv_from_local_position, hue_from_local_y,
     hue_wheel_geometry, hue_wheel_rotated_triangle, hue_wheel_sv_cursor_position,
-    hue_wheel_target_from_local_position, parse_color_numeric_input, rgb_numeric_text, rgb_to_hsv,
+    hue_wheel_target_from_local_position, parse_color_numeric_input, parse_hex, rgb_numeric_text,
+    rgb_to_hsv,
 };
 use super::popup::copy::{ColorEditCopyFormat, color_copy_entries};
-use super::popup::picker::{alpha_from_local_x, alpha_from_local_y, alpha_percent_text};
+use super::popup::picker::alpha::{alpha_from_local_x, alpha_from_local_y, alpha_percent_text};
 use super::popup::preview::{
     SIDE_PREVIEW_SWATCH_HEIGHT, SIDE_PREVIEW_SWATCH_WIDTH, checkerboard_cell_color,
     opaque_preview_color, preview_color_for_alpha_visibility, restore_reference_color,
@@ -31,7 +33,7 @@ fn color_presets_are_unique_and_hex_formattable() {
         assert_eq!(formatted.len(), 7);
         assert!(formatted.starts_with('#'));
     }
-    assert_eq!(palette.len(), COLOR_PRESETS.len());
+    assert_eq!(palette.len(), 12);
 }
 
 #[test]

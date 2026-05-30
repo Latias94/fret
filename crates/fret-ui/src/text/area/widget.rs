@@ -1570,10 +1570,13 @@ impl<H: UiHost> Widget<H> for TextArea {
         let max_offset_x = Px((self.last_content_width.0 - inner.size.width.0).max(0.0));
         self.offset_x = Px(self.offset_x.0.clamp(0.0, max_offset_x.0));
 
-        Size::new(
-            cx.available.width,
-            Px((metrics.size.height.0 + self.style.padding_y.0 * 2.0).max(self.min_height.0)),
-        )
+        let mut height =
+            (metrics.size.height.0 + self.style.padding_y.0 * 2.0).max(self.min_height.0);
+        if let Some(max_height) = self.max_height {
+            height = height.min(max_height.0.max(self.min_height.0).max(0.0));
+        }
+
+        Size::new(cx.available.width, Px(height))
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {

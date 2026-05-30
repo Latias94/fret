@@ -2,19 +2,16 @@ use std::sync::Arc;
 
 use fret_core::SemanticsRole;
 use fret_runtime::ActionId;
-use fret_ui::action::{ActivateReason, UiActionHostExt as _};
+use fret_ui::action::ActivateReason;
 use fret_ui::element::{Length, PressableA11y, PressableProps, PressableState};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::command::ElementCommandGatingExt as _;
 use crate::imui::menu_family_controls::ImUiMenubarPolicyState;
-use crate::imui::{
-    KEY_CLICKED, MenuItemOptions, ResponseExt, active_trigger_behavior, imui_is_disabled,
-    mark_lifecycle_instant_if_inactive,
-};
+use crate::imui::{MenuItemOptions, ResponseExt, active_trigger_behavior, imui_is_disabled};
 
-use super::keyboard;
+mod behavior;
 
 pub(super) struct MenuItemInteractionParts {
     pub(super) props: PressableProps,
@@ -75,20 +72,7 @@ pub(super) fn install_menu_item_interaction<H: UiHost>(
     id: GlobalElementId,
     interaction: &MenuItemInteraction,
 ) -> active_trigger_behavior::ActiveTriggerBehavior {
-    let behavior = active_trigger_behavior::install_active_trigger_behavior(
-        cx,
-        id,
-        active_trigger_behavior::ActiveTriggerBehaviorOptions::default(),
-    );
-
-    if !interaction.enabled {
-        return behavior;
-    }
-
-    install_activate_handler(cx, &behavior, interaction);
-    keyboard::install_popup_menu_keyboard(cx, id, &behavior, interaction);
-    keyboard::install_menubar_keyboard(cx, id, interaction.menubar_policy.as_ref());
-    behavior
+    behavior::install_menu_item_behavior(cx, id, interaction)
 }
 
 pub(super) fn populate_menu_item_response<H: UiHost>(
@@ -99,41 +83,7 @@ pub(super) fn populate_menu_item_response<H: UiHost>(
     enabled: bool,
     response: &mut ResponseExt,
 ) {
-    let clicked = cx.take_transient_for(id, KEY_CLICKED);
-    active_trigger_behavior::populate_active_trigger_response(
-        cx,
-        id,
-        state,
-        behavior,
-        active_trigger_behavior::ActiveTriggerResponseInput {
-            enabled,
-            clicked,
-            changed: false,
-            lifecycle_edited: false,
-        },
-        response,
-    );
-}
-
-fn install_activate_handler<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    behavior: &active_trigger_behavior::ActiveTriggerBehavior,
-    interaction: &MenuItemInteraction,
-) {
-    let close_popup_for_activate = interaction.close_popup.clone();
-    let action_for_activate = interaction.action.clone();
-    let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
-    cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
-        if reason == ActivateReason::Keyboard {
-            mark_lifecycle_instant_if_inactive(host, acx, &lifecycle_model_for_activate, false);
-        }
-        if let Some(open) = close_popup_for_activate.as_ref() {
-            let _ = host.update_model(open, |v| *v = false);
-        }
-        host.record_transient_event(acx, KEY_CLICKED);
-        dispatch_menu_item_action(host, acx, reason, action_for_activate.clone());
-        host.notify(acx);
-    }));
+    behavior::populate_menu_item_response(cx, id, state, behavior, enabled, response);
 }
 
 pub(super) fn dispatch_menu_item_action(
@@ -142,8 +92,5 @@ pub(super) fn dispatch_menu_item_action(
     reason: ActivateReason,
     action: Option<ActionId>,
 ) {
-    if let Some(action) = action {
-        host.record_pending_command_dispatch_source(acx, &action, reason);
-        host.dispatch_command(Some(acx.window), action);
-    }
+    behavior::dispatch_menu_item_action(host, acx, reason, action);
 }

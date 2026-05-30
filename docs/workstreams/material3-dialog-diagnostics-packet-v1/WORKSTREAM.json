@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "slug": "material3-dialog-diagnostics-packet-v1",
+  "title": "Material 3 Dialog Diagnostics Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "diagnostics_follow_on",
+  "problem": "Closed the Dialog matrix residual by adding dedicated Material3 Dialog UI Gallery diagnostics evidence for modal barrier, panel/scrim selectors, Dialog role, Escape dismissal, and focus restore.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-dialog-diagnostics-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-dialog-diagnostics-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-dialog-diagnostics-packet-v1/TODO.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-dialog-diagnostics-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-dialog-diagnostics-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the Material3 Dialog modal barrier/focus-restore diagnostics script against the UI Gallery.",
+    "commands": [
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-dialog-focus-trap-restore.json --dir target/fret-diag/material3-dialog-focus-trap-restore-20260528-final --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3"
+    ]
+  },
+  "gates": [
+    {
+      "name": "dialog-focus-trap-restore-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-dialog-focus-trap-restore.json --dir target/fret-diag/material3-dialog-focus-trap-restore-20260528-final --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3"
+    },
+    {
+      "name": "dialog-bottom-sheet-automation-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_dialog_and_bottom_sheet_expose_stable_part_test_ids"
+    },
+    {
+      "name": "dialog-focus-contained-restore",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment dialog_focus_is_contained_and_restored_across_schemes"
+    },
+    {
+      "name": "dialog-scrim-dismiss-underlay-block",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment dialog_scrim_dismisses_without_activating_underlay"
+    },
+    {
+      "name": "dialog-style-overrides",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment dialog_style_overrides_apply_to_container_and_text"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-material3/src/dialog.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/material3/dialog.rs",
+    "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-dialog-focus-trap-restore.json",
+    "tools/diag-scripts/suites/ui-gallery-material3-dialog-focus-trap-restore/suite.json",
+    "docs/workstreams/material3-dialog-diagnostics-packet-v1/artifacts/dialog_diagnostics_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "return_to_material3_sweep",
+    "notes": "Dialog is closed for dedicated Material3 gallery diagnostics. Keep modal policy in fret-ui-kit and recipe selectors/visual tokens in fret-ui-material3."
+  }
+}

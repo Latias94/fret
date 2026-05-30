@@ -28,6 +28,12 @@ pub(crate) fn two_line_container_height(theme: &Theme) -> Px {
         .unwrap_or(Px(72.0))
 }
 
+pub(crate) fn three_line_container_height(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.list.list-item.three-line.container.height")
+        .unwrap_or(Px(88.0))
+}
+
 pub(crate) fn item_container_shape_with_variant(
     theme: &Theme,
     selected: bool,
@@ -179,6 +185,22 @@ fn supporting_text_opacity(theme: &Theme, enabled: bool, selected: bool) -> f32 
         .clamp(0.0, 1.0)
 }
 
+fn overline_text_opacity(theme: &Theme, enabled: bool, selected: bool) -> f32 {
+    if enabled {
+        return 1.0;
+    }
+
+    theme
+        .number_by_key(if selected {
+            "md.comp.list.list-item.selected.disabled.overline.opacity"
+        } else {
+            "md.comp.list.list-item.disabled.overline.opacity"
+        })
+        .or_else(|| theme.number_by_key("md.sys.state.disabled.state-layer-opacity"))
+        .unwrap_or(0.38)
+        .clamp(0.0, 1.0)
+}
+
 fn trailing_supporting_text_opacity(theme: &Theme, enabled: bool, selected: bool) -> f32 {
     if enabled {
         return 1.0;
@@ -198,14 +220,15 @@ fn trailing_supporting_text_opacity(theme: &Theme, enabled: bool, selected: bool
 }
 
 pub(crate) fn supporting_text_style(theme: &Theme, _selected: bool) -> Option<TextStyle> {
-    // Material Web v30 exposes supporting text typography via mixins. The stable v1 mapping is
-    // sys `body-small`.
-    theme.text_style_by_key("md.sys.typescale.body-small")
+    theme.text_style_by_key("md.sys.typescale.body-medium")
 }
 
 pub(crate) fn trailing_supporting_text_style(theme: &Theme, _selected: bool) -> Option<TextStyle> {
-    // Same mapping strategy as supporting text.
-    theme.text_style_by_key("md.sys.typescale.body-small")
+    theme.text_style_by_key("md.sys.typescale.label-small")
+}
+
+pub(crate) fn overline_text_style(theme: &Theme, _selected: bool) -> Option<TextStyle> {
+    theme.text_style_by_key("md.sys.typescale.label-small")
 }
 
 pub(crate) fn supporting_text_color(theme: &Theme, enabled: bool, selected: bool) -> Color {
@@ -243,6 +266,21 @@ pub(crate) fn trailing_supporting_text_color(
         color,
         trailing_supporting_text_opacity(theme, enabled, selected),
     );
+    color
+}
+
+pub(crate) fn overline_text_color(theme: &Theme, enabled: bool, selected: bool) -> Color {
+    let key = match (selected, enabled) {
+        (true, true) => "md.comp.list.list-item.selected.overline.color",
+        (true, false) => "md.comp.list.list-item.selected.disabled.overline.color",
+        (false, true) => "md.comp.list.list-item.overline.color",
+        (false, false) => "md.comp.list.list-item.disabled.overline.color",
+    };
+    let mut color = theme
+        .color_by_key(key)
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
+    color = alpha_mul(color, overline_text_opacity(theme, enabled, selected));
     color
 }
 

@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "slug": "material3-top-app-bar-scroll-diagnostics-packet-v1",
+  "title": "Material 3 TopAppBar Scroll Diagnostics Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "closeout",
+  "problem": "Closed the TopAppBar scroll follow-on by running the promoted Material3 UI Gallery scroll diagnostics script and recording that the current recipe-owned scroll behavior is sufficiently covered by gallery evidence.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/TODO.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the promoted Material3 UI Gallery TopAppBar scroll diagnostics script over pinned, enter-always, enter-always-settle, exit-until-collapsed, and exit-until-collapsed-settle scenes.",
+    "commands": [
+      "cargo run -p fretboard-dev -- diag config doctor --mode launch --print-launch-policy",
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-top-app-bar-scroll-screenshots.json --dir target/fret-diag/material3-top-app-bar-scroll-20260528 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3"
+    ]
+  },
+  "gates": [
+    {
+      "name": "material3-top-app-bar-scroll-gallery-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-top-app-bar-scroll-screenshots.json --dir target/fret-diag/material3-top-app-bar-scroll-20260528 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3"
+    },
+    {
+      "name": "material3-top-app-bar-headless-golden",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_top_app_bar_suite_goldens_v1"
+    },
+    {
+      "name": "material3-top-app-bar-semantics",
+      "command": "cargo nextest run -p fret-ui-material3 --test top_app_bar_alignment top_app_bar_exposes_toolbar_semantics_role"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-material3/src/top_app_bar.rs",
+    "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-top-app-bar-scroll-screenshots.json",
+    "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/artifacts/top_app_bar_scroll_diagnostics_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "return_to_material3_sweep",
+    "notes": "TopAppBar scroll diagnostics are closed for the current gallery scenarios. Keep scroll behavior recipe-owned unless another design system or app surface proves shared kit-policy pressure."
+  }
+}

@@ -45,7 +45,7 @@
     { "type": "press_key", "key": "arrow_down" },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead-listbox" } },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead.listbox" } },
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
@@ -65,7 +65,7 @@
     { "type": "assert", "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead-item-echo" } } },
 
     { "type": "press_key", "key": "escape" },
-    { "type": "wait_until", "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead-listbox" } }, "timeout_frames": 600 },
+    { "type": "wait_until", "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead.listbox" } }, "timeout_frames": 600 },
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead-delay-200" } },
     { "type": "wait_frames", "n": 10 },
@@ -75,7 +75,7 @@
     { "type": "press_key", "key": "arrow_down" },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead-listbox" } },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead.listbox" } },
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },

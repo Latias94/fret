@@ -36,6 +36,14 @@
       },
       "timeout_frames": 240
     },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-navigation-rail.active-indicator" }
+      },
+      "timeout_frames": 240
+    },
 
     { "type": "wait_frames", "n": 10 },
     {

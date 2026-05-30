@@ -72,6 +72,12 @@ pub(crate) fn weekdays_label_text_color(theme: &Theme, variant: DatePickerTokenV
     )
 }
 
+pub(crate) fn calendar_horizontal_padding(theme: &Theme, _variant: DatePickerTokenVariant) -> Px {
+    theme
+        .metric_by_key("md.sys.fret.material.date-picker.calendar.horizontal-padding")
+        .unwrap_or(Px(12.0))
+}
+
 pub(crate) fn header_headline_style(theme: &Theme) -> TextStyle {
     let style = theme
         .text_style_by_key("md.comp.date-picker.modal.header.headline")

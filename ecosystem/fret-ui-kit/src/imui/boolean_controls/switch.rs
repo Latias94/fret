@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
 use fret_ui::UiHost;
-use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{Length, MainAlign, PressableProps};
 
 use super::super::label_identity::parse_label_identity;
 use super::super::{ResponseExt, SwitchOptions, UiWriterImUiFacadeExt};
 use super::visual;
 use crate::declarative::chrome::control_chrome_pressable_with_id_props;
+
+mod behavior;
 
 pub(in crate::imui) fn switch_model_with_options<
     H: UiHost,
@@ -58,70 +59,16 @@ fn switch_model_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Siz
 
         let label_for_visuals = label.clone();
         control_chrome_pressable_with_id_props(cx, move |cx, state, id| {
-            let behavior = super::super::active_trigger_behavior::install_active_trigger_behavior(
-                cx,
-                id,
-                super::super::active_trigger_behavior::ActiveTriggerBehaviorOptions {
-                    primary_active: true,
-                    request_focus_on_press: false,
-                    clear_pointer_move: true,
-                },
-            );
-            let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
-            let lifecycle_model_for_shortcut = behavior.lifecycle_model.clone();
-
-            let model_for_activate = model.clone();
-            cx.pressable_on_activate(crate::on_activate(move |host, acx, _reason| {
-                let _ = host.update_model(&model_for_activate, |v: &mut bool| *v = !*v);
-                super::super::mark_lifecycle_edit(host, acx, &lifecycle_model_for_activate);
-                host.record_transient_event(acx, super::super::KEY_CLICKED);
-                host.record_transient_event(acx, super::super::KEY_CHANGED);
-                host.notify(acx);
-            }));
-
-            if enabled && options.focusable {
-                let model_for_shortcut = model.clone();
-                cx.key_on_key_down_for(
-                    id,
-                    Arc::new(move |host, acx, down| {
-                        if let Some(shortcut) = activate_shortcut {
-                            let matches_shortcut =
-                                down.key == shortcut.key && down.modifiers == shortcut.mods;
-                            if matches_shortcut
-                                && (!down.repeat || shortcut_repeat)
-                                && !down.ime_composing
-                            {
-                                let _ =
-                                    host.update_model(&model_for_shortcut, |v: &mut bool| *v = !*v);
-                                super::super::mark_lifecycle_edit(
-                                    host,
-                                    acx,
-                                    &lifecycle_model_for_shortcut,
-                                );
-                                host.record_transient_event(acx, super::super::KEY_CLICKED);
-                                host.record_transient_event(acx, super::super::KEY_CHANGED);
-                                host.notify(acx);
-                                return true;
-                            }
-                        }
-
-                        false
-                    }),
-                );
-            }
-
-            let clicked = cx.take_transient_for(id, super::super::KEY_CLICKED);
-            let changed = cx.take_transient_for(id, super::super::KEY_CHANGED);
-            super::super::active_trigger_behavior::populate_active_trigger_response(
+            behavior::install_switch_behavior(
                 cx,
                 id,
                 state,
-                &behavior,
-                super::super::active_trigger_behavior::ActiveTriggerResponseInput {
+                model.clone(),
+                behavior::SwitchBehaviorOptions {
                     enabled,
-                    clicked,
-                    changed,
-                    lifecycle_edited: changed,
+                    focusable: options.focusable,
+                    activate_shortcut,
+                    shortcut_repeat,
                 },
                 response,
             );

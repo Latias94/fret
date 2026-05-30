@@ -52,6 +52,10 @@
           "kind": "pop_clip"
         },
         {
+          "kind": "quad",
+          "order": 0
+        },
+        {
           "kind": "pop_clip"
         },
         {
@@ -131,7 +135,7 @@
           "border": [
             0,
             0,
-            10,
+            0,
             0
           ],
           "corner_radii": [
@@ -147,7 +151,7 @@
             240,
             960,
             3600,
-            552
+            560
           ],
           "background": [
             0,
@@ -164,6 +168,33 @@
           "corner_radii": [
             40,
             40,
+            0,
+            0
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            1510,
+            3600,
+            10
+          ],
+          "background": [
+            67,
+            60,
+            76,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            0,
+            0,
             0,
             0
           ]
@@ -226,6 +257,10 @@
           "kind": "pop_clip"
         },
         {
+          "kind": "quad",
+          "order": 0
+        },
+        {
           "kind": "pop_clip"
         },
         {
@@ -255,24 +290,54 @@
           "order": 0
         },
         {
-          "kind": "text",
-          "order": 0
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "text",
           "order": 0
         },
         {
-          "kind": "text",
-          "order": 0
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "text",
           "order": 0
         },
         {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
           "kind": "text",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "pop_clip"
@@ -353,7 +418,7 @@
           "border": [
             0,
             0,
-            20,
+            0,
             0
           ],
           "corner_radii": [
@@ -369,7 +434,7 @@
             240,
             960,
             3600,
-            544
+            560
           ],
           "background": [
             0,
@@ -394,7 +459,7 @@
           "order": 0,
           "rect": [
             400,
-            1202,
+            1210,
             10,
             160
           ],
@@ -421,7 +486,34 @@
           "order": 0,
           "rect": [
             240,
-            1544,
+            1500,
+            3600,
+            20
+          ],
+          "background": [
+            130,
+            91,
+            275,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            1560,
             3600,
             2560
           ],
@@ -447,9 +539,9 @@
         {
           "order": 0,
           "rect": [
-            320,
-            1624,
-            3440,
+            280,
+            1640,
+            3520,
             480
           ],
           "background": [
@@ -465,10 +557,10 @@
             0
           ],
           "corner_radii": [
-            0,
-            0,
-            0,
-            0
+            120,
+            120,
+            120,
+            120
           ]
         }
       ]
@@ -533,6 +625,10 @@
           "kind": "pop_clip"
         },
         {
+          "kind": "quad",
+          "order": 0
+        },
+        {
           "kind": "pop_clip"
         },
         {
@@ -562,24 +658,54 @@
           "order": 0
         },
         {
-          "kind": "text",
-          "order": 0
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "text",
           "order": 0
         },
         {
-          "kind": "text",
-          "order": 0
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
         },
         {
           "kind": "text",
           "order": 0
         },
         {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
           "kind": "text",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "pop_clip"
@@ -714,7 +840,7 @@
           "border": [
             0,
             0,
-            10,
+            0,
             0
           ],
           "corner_radii": [
@@ -730,7 +856,7 @@
             240,
             960,
             3600,
-            552
+            560
           ],
           "background": [
             0,
@@ -754,9 +880,36 @@
         {
           "order": 0,
           "rect": [
-            264,
-            824,
-            3560,
+            240,
+            1510,
+            3600,
+            10
+          ],
+          "background": [
+            67,
+            60,
+            76,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            840,
+            3600,
             2560
           ],
           "background": [
@@ -781,9 +934,9 @@
         {
           "order": 0,
           "rect": [
-            344,
-            904,
-            3400,
+            280,
+            920,
+            3520,
             480
           ],
           "background": [
@@ -799,10 +952,10 @@
             0
           ],
           "corner_radii": [
-            0,
-            0,
-            0,
-            0
+            120,
+            120,
+            120,
+            120
           ]
         }
       ]

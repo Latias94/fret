@@ -1,0 +1,388 @@
+{
+  "schema_version": 1,
+  "component": "switch",
+  "style": "material3",
+  "source_family": "material3",
+  "adapter": {
+    "schema_version": 1,
+    "id": "material3.switch.adapter.v1",
+    "goal": "Map Material Switch state, semantics, chrome, and motion facts into the shared component parity packet so interaction-heavy Material foundation work can be queued by evidence.",
+    "source_precedence": [
+      "Material spec and Material Web for visual intent, switch icons, token vocabulary, and transition timing",
+      "Compose Material3 for toolkit switch semantics, touch target sizing, state model, and interaction source behavior",
+      "Material UI for web-facing Switch defaults and input semantics",
+      "Base UI only as a headless a11y fallback if switch semantics need a second opinion"
+    ]
+  },
+  "report": {
+    "id": "material3_switch_adapter_report_v1",
+    "schema_version": 1,
+    "generated_date": "2026-05-27",
+    "limitations": [
+      "This first Switch packet proves the harness can represent an interaction-heavy Material control; it is not a complete visual parity claim.",
+      "The current packet relies on Fret bundle semantics/interaction facts and existing timeline screenshot scripts; pixel-level motion deltas against upstream Material Web are future hardening.",
+      "Motion/chrome checks intentionally stay in ecosystem/fret-ui-material3 unless a later packet proves a true mechanism defect."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "material_web.switch",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-web/switch/internal/switch.ts"
+      },
+      {
+        "id": "material_web.switch_styles",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-web/switch/internal/_switch.scss"
+      },
+      {
+        "id": "material_web.switch_tokens",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-web/tokens/_md-comp-switch.scss"
+      },
+      {
+        "id": "material_web.switch_docs",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-web/docs/components/switch.md"
+      },
+      {
+        "id": "compose_material3.switch",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Switch.kt"
+      },
+      {
+        "id": "material_ui.switch",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Switch/Switch.js"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.material3.switch",
+        "path": "ecosystem/fret-ui-material3/src/switch.rs"
+      },
+      {
+        "id": "fret.material3.switch_tokens",
+        "path": "ecosystem/fret-ui-material3/src/tokens/switch.rs"
+      },
+      {
+        "id": "fret.material3.switch_gallery",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/material3/switch.rs"
+      },
+      {
+        "id": "fret.material3.interactive_size",
+        "path": "ecosystem/fret-ui-material3/src/foundation/interactive_size.rs"
+      },
+      {
+        "id": "fret.material3.indication",
+        "path": "ecosystem/fret-ui-material3/src/foundation/indication.rs"
+      },
+      {
+        "id": "fret.material3.focus_ring",
+        "path": "ecosystem/fret-ui-material3/src/foundation/focus_ring.rs"
+      },
+      {
+        "id": "fret.material3.switch_handle_diag",
+        "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-handle-screenshots.json"
+      },
+      {
+        "id": "fret.material3.switch_focus_diag",
+        "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-focus-visible-screenshots.json"
+      },
+      {
+        "id": "fret.material3.switch_icons_matrix_diag",
+        "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-icons-state-matrix-screenshots.json"
+      },
+      {
+        "id": "fret.material3.switch_icon_motion_diag",
+        "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-icon-motion-timeline-screenshots.json"
+      },
+      {
+        "id": "fret.material3.switch_handle_overshoot_diag",
+        "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-handle-overshoot-timeline-screenshots.json"
+      },
+      {
+        "id": "fret.material3.switch_chrome_crossfade_diag",
+        "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-chrome-crossfade-timeline-screenshots.json"
+      }
+    ]
+  },
+  "parts": [
+    {
+      "id": "material3_switch_semantics_and_activation",
+      "label": "Material 3 Switch semantics and activation",
+      "axis": "semantics",
+      "upstream": {
+        "source_ref_ids": [
+          "compose_material3.switch",
+          "material_ui.switch",
+          "material_web.switch"
+        ],
+        "facts": [
+          "A Material Switch is a toggle control with checked state and disabled state.",
+          "Activation toggles the boolean state only when enabled.",
+          "Keyboard and pointer activation should produce the same selected-state outcome."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.material3.switch",
+          "fret.material3.switch_gallery",
+          "fret.material3.switch_handle_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-material3-switch",
+          "ui-gallery-material3-switch.chrome",
+          "ui-gallery-material3-switch-disabled",
+          "ui-gallery-material3-switch-icons-both",
+          "ui-gallery-material3-switch-icons-selected-only"
+        ],
+        "facts": [
+          "Fret Material3 Switch sets SemanticsRole::Switch and checked state from the bound model.",
+          "Switch::test_id stamps the pressable semantics while centered_fill_with_chrome_test_id derives '<base>.chrome'.",
+          "The gallery exposes enabled, overridden, disabled, icons-both, and selected-icon-only variants with stable ids."
+        ]
+      },
+      "checks": [
+        {
+          "id": "material3_switch_semantics_bundle_gate",
+          "kind": "live_measurement_required",
+          "expected": "A fresh Material Switch bundle should prove switch role, checked state, disabled state, activation, and stable root/chrome ids for default and icon variants.",
+          "observed": "unknown",
+          "live_fact_requirements": {
+            "fret_semantics_fact_count": 5,
+            "fret_interaction_fact_count": 5
+          },
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "ecosystem/fret-ui-material3/src/switch.rs",
+            "apps/fret-ui-gallery/src/ui/snippets/material3/switch.rs",
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-handle-screenshots.json"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "Switch semantics and activation are interaction outcomes that need bundle-backed proof."
+          }
+        }
+      ]
+    },
+    {
+      "id": "material3_switch_touch_target_and_chrome_surface",
+      "label": "Material 3 Switch touch target and chrome surface",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "compose_material3.switch",
+          "material_web.switch_tokens"
+        ],
+        "facts": [
+          "Material Switch keeps the visual track/handle token-driven while the interactive target satisfies minimum touch-target sizing.",
+          "Track, handle, and state layer sizes are Material component tokens.",
+          "The visual chrome should remain centered inside the larger interactive box."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.material3.switch",
+          "fret.material3.switch_tokens",
+          "fret.material3.interactive_size"
+        ],
+        "test_ids": [
+          "ui-gallery-material3-switch",
+          "ui-gallery-material3-switch.chrome"
+        ],
+        "facts": [
+          "Switch uses enforce_minimum_interactive_size for the pressable target.",
+          "Switch resolves track, state layer, handle, pressed-handle, and with-icon handle sizes from Material switch tokens.",
+          "centered_fill_with_chrome_test_id keeps the token-driven visual chrome centered and automation-addressable."
+        ]
+      },
+      "checks": [
+        {
+          "id": "material3_switch_touch_target_chrome_contract_is_wired",
+          "kind": "existing_gate",
+          "expected": "Switch should separate minimum interactive target sizing from token-driven visual chrome and expose the chrome id.",
+          "observed": "pass",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "ecosystem/fret-ui-material3/src/switch.rs",
+            "ecosystem/fret-ui-material3/src/foundation/interactive_size.rs",
+            "ecosystem/fret-ui-material3/src/tokens/switch.rs",
+            "apps/fret-ui-gallery/src/ui/snippets/material3/switch.rs"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The touch-target/chrome split is recipe-owned but foundation-backed and should be preserved before refactors."
+          }
+        }
+      ]
+    },
+    {
+      "id": "material3_switch_state_layer_ripple_focus_chrome",
+      "label": "Material 3 Switch state layer, ripple, and focus chrome",
+      "axis": "interaction",
+      "upstream": {
+        "source_ref_ids": [
+          "material_web.switch",
+          "material_web.switch_styles",
+          "compose_material3.switch"
+        ],
+        "facts": [
+          "Switch hover and press drive state-layer/ripple behavior.",
+          "Focus-visible is expressed through focus ring and component chrome rather than generic core policy.",
+          "Material Web uses different focus selectors for track, handle, and icon chroming."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.material3.switch",
+          "fret.material3.indication",
+          "fret.material3.focus_ring",
+          "fret.material3.switch_focus_diag",
+          "fret.material3.switch_icons_matrix_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-material3-switch",
+          "ui-gallery-material3-switch-icons-both",
+          "ui-gallery-material3-switch-icons-selected-only",
+          "ui-gallery-material3-switch-disabled"
+        ],
+        "facts": [
+          "Switch uses material_ink_layer_for_pressable_with_ripple_bounds with thumb-relative ripple bounds.",
+          "Switch separates pressed/hover/focus-visible state-layer and chrome interactions before resolving Material tokens.",
+          "Existing focus-visible and state-matrix scripts cover pointer focus, keyboard focus-visible, hover, pressed, disabled, and icon variants."
+        ]
+      },
+      "checks": [
+        {
+          "id": "material3_switch_state_layer_focus_scripts_exist",
+          "kind": "existing_gate",
+          "expected": "Switch state-layer, ripple, and focus chrome should have focused diagnostics before foundation refactors.",
+          "observed": "pass",
+          "confidence": "medium",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "ecosystem/fret-ui-material3/src/switch.rs",
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-focus-visible-screenshots.json",
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-icons-state-matrix-screenshots.json"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "State-layer/focus behavior is interaction-sensitive and should be hardened with focused scripts before shared foundation edits."
+          }
+        }
+      ]
+    },
+    {
+      "id": "material3_switch_handle_and_icon_motion",
+      "label": "Material 3 Switch handle and icon motion",
+      "axis": "interaction",
+      "upstream": {
+        "source_ref_ids": [
+          "material_web.switch",
+          "material_web.switch_styles",
+          "material_web.switch_tokens"
+        ],
+        "facts": [
+          "Material Web switch uses an overshoot easing for handle-container position.",
+          "Switch icon opacity, transform, and color transitions use short independent durations.",
+          "Reduced/disabled motion collapses animation while preserving final checked-state output."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.material3.switch",
+          "fret.material3.switch_icon_motion_diag",
+          "fret.material3.switch_handle_overshoot_diag",
+          "fret.material3.switch_chrome_crossfade_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-material3-switch",
+          "ui-gallery-material3-switch-icons-both",
+          "ui-gallery-material3-switch-icons-selected-only"
+        ],
+        "facts": [
+          "Switch encodes Material Web handle overshoot easing and icon opacity/transform/color durations in the recipe.",
+          "Switch keeps icon nodes alive across toggle frames so transitions remain visible.",
+          "Timeline screenshot scripts capture handle overshoot, icon motion, icon color crossfade, and chrome crossfade."
+        ]
+      },
+      "checks": [
+        {
+          "id": "material3_switch_motion_scripts_exist",
+          "kind": "existing_gate",
+          "expected": "Switch motion-sensitive behavior should have fixed-timestep-capable scripts before recipe or motion foundation cleanup.",
+          "observed": "pass",
+          "confidence": "medium",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "ecosystem/fret-ui-material3/src/switch.rs",
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-icon-motion-timeline-screenshots.json",
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-handle-overshoot-timeline-screenshots.json",
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-chrome-crossfade-timeline-screenshots.json",
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-icon-color-crossfade-timeline-screenshots.json"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "Motion parity must stay script-backed; screenshot timelines should later gain structured sidecar predicates or pixel checks."
+          }
+        }
+      ]
+    },
+    {
+      "id": "material3_switch_icon_modes",
+      "label": "Material 3 Switch icon modes",
+      "axis": "chrome",
+      "upstream": {
+        "source_ref_ids": [
+          "material_web.switch",
+          "material_web.switch_docs"
+        ],
+        "facts": [
+          "Material Web exposes an icons mode with both selected and unselected icons.",
+          "Material Web also exposes show-only-selected-icon behavior.",
+          "Disabled switches preserve semantic disabled state while rendering disabled chrome."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.material3.switch",
+          "fret.material3.switch_gallery",
+          "fret.material3.switch_icons_matrix_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-material3-switch-icons-both",
+          "ui-gallery-material3-switch-icons-both-disabled",
+          "ui-gallery-material3-switch-icons-selected-only",
+          "ui-gallery-material3-switch-icons-selected-only-disabled"
+        ],
+        "facts": [
+          "Switch::icons(true) renders both on/off icon layers.",
+          "Switch::show_only_selected_icon(true) hides the unselected icon and rotates the selected icon in.",
+          "The gallery exposes both icon modes plus disabled variants."
+        ]
+      },
+      "checks": [
+        {
+          "id": "material3_switch_icon_modes_are_wired",
+          "kind": "existing_gate",
+          "expected": "Switch icon modes should be exposed in the gallery with stable selectors and diagnostics before icon-motion refactors.",
+          "observed": "pass",
+          "confidence": "medium",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "ecosystem/fret-ui-material3/src/switch.rs",
+            "apps/fret-ui-gallery/src/ui/snippets/material3/switch.rs",
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-switch-icons-state-matrix-screenshots.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Icon-mode coverage should become a component fixture when structured paint/scene predicates are available."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -70,6 +70,21 @@ pub(crate) fn two_line_min_height(theme: &Theme) -> Option<Px> {
     theme.metric_by_key("md.comp.snackbar.with-two-lines.container.height")
 }
 
+pub(crate) fn host_margin(theme: &Theme) -> Px {
+    let _ = theme;
+    Px(12.0)
+}
+
+pub(crate) fn container_max_width(theme: &Theme) -> Px {
+    let _ = theme;
+    Px(600.0)
+}
+
+pub(crate) fn closed_scale(theme: &Theme) -> f32 {
+    let _ = theme;
+    0.8
+}
+
 pub(crate) fn palette() -> ToastVariantPalette {
     ToastVariantPalette {
         default: ToastVariantColors::new(

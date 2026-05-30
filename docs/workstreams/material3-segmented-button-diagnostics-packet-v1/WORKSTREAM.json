@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "slug": "material3-segmented-button-diagnostics-packet-v1",
+  "title": "Material 3 Segmented Button Diagnostics Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "diagnostics_follow_on",
+  "problem": "Closed the SegmentedButtonSet matrix residual by promoting the Material3 roving-semantics gallery suite and revalidating semantics-role plus headless golden gates.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/TODO.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the Material3 SegmentedButton roving-semantics diagnostic script against the UI Gallery.",
+    "commands": [
+      "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-segmented-button-roving-semantics-screenshots.json --dir target/fret-diag/material3-segmented-button-roving-semantics-20260528 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3"
+    ]
+  },
+  "gates": [
+    {
+      "name": "segmented-button-roving-diag",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-segmented-button-roving-semantics-screenshots.json --dir target/fret-diag/material3-segmented-button-roving-semantics-20260528 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 900000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3"
+    },
+    {
+      "name": "segmented-button-semantics",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment segmented_button_semantics_roles_match_compose_baseline"
+    },
+    {
+      "name": "segmented-button-headless-goldens",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_segmented_button_suite_goldens_v1"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-material3/src/segmented_button.rs",
+    "ecosystem/fret-ui-material3/src/tokens/segmented_button.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/material3/segmented_button.rs",
+    "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-segmented-button-roving-semantics-screenshots.json",
+    "tools/diag-scripts/suites/ui-gallery-material3-segmented-button-roving-semantics-screenshots/suite.json",
+    "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/artifacts/segmented_button_diagnostics_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "return_to_material3_sweep",
+    "notes": "SegmentedButtonSet is closed for dedicated Material3 gallery roving diagnostics. Keep roving policy in the Material recipe unless another design system proves a shared need."
+  }
+}

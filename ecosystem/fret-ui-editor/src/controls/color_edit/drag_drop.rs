@@ -1,10 +1,12 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use fret_core::{Color, MouseButton, Point, PointerId, Px};
 use fret_runtime::{DragKindId, DragPhase, DragSessionId, Model, TickId};
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult, UiActionHostExt as _};
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, UiHost};
 
+use super::model::format_hex;
 use super::{
     ColorEditDragDropComponents, ColorEditDragDropOptions, ColorEditDragDropPayload,
     ColorEditPaletteEntry,
@@ -338,6 +340,44 @@ pub(in crate::controls::color_edit) fn take_delivered_color_drop<H: UiHost>(
         })
         .ok()
         .flatten()
+}
+
+pub(super) struct ColorEditDeliveredDropArgs {
+    pub(super) store: Model<ColorDragDropStore>,
+    pub(super) target_id: GlobalElementId,
+    pub(super) model: Model<Color>,
+    pub(super) draft: Model<String>,
+    pub(super) error: Model<Option<Arc<str>>>,
+    pub(super) current: Color,
+    pub(super) show_alpha: bool,
+    pub(super) enabled: bool,
+}
+
+pub(super) fn apply_delivered_color_drop<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    args: ColorEditDeliveredDropArgs,
+) {
+    if !args.enabled {
+        return;
+    }
+    let Some(payload) = take_delivered_color_drop(cx, &args.store, args.target_id) else {
+        return;
+    };
+
+    let current_for_drop = cx
+        .get_model_copied(&args.model, Invalidation::Paint)
+        .unwrap_or(args.current);
+    let next = apply_color_drop_payload(payload, current_for_drop, args.show_alpha);
+    let formatted = format_hex(next, args.show_alpha);
+    let _ = cx
+        .app
+        .models_mut()
+        .update(&args.model, |color| *color = next);
+    let _ = cx
+        .app
+        .models_mut()
+        .update(&args.draft, |s| *s = formatted.as_ref().to_string());
+    let _ = cx.app.models_mut().update(&args.error, |e| *e = None);
 }
 
 pub(super) fn apply_color_drop_payload(

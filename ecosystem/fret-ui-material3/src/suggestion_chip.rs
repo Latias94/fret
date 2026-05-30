@@ -34,6 +34,7 @@ use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
 };
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::optional_part_test_id;
 use crate::tokens::suggestion_chip as suggestion_chip_tokens;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -432,6 +433,7 @@ impl SuggestionChip {
                             None,
                             None,
                             Color::TRANSPARENT,
+                            self.test_id.clone(),
                             height,
                         );
 
@@ -473,6 +475,7 @@ fn chip_content<H: UiHost>(
     trailing_icon: Option<IconId>,
     trailing_icon_size: Option<Px>,
     trailing_icon_color: Color,
+    base_test_id: Option<Arc<str>>,
     height: Px,
 ) -> AnyElement {
     const LEADING_SPACE: Px = Px(16.0);
@@ -489,7 +492,13 @@ fn chip_content<H: UiHost>(
     text.layout.size.min_width = Some(Length::Px(Px(0.0)));
     text.layout.flex.shrink = 1.0;
 
-    let label_el = cx.text_props(text);
+    let mut label_el = cx.text_props(text);
+    if let Some(test_id) = optional_part_test_id(base_test_id.as_ref(), "label") {
+        label_el = label_el.test_id(test_id);
+    }
+
+    let leading_icon_test_id = optional_part_test_id(base_test_id.as_ref(), "leading-icon");
+    let trailing_icon_test_id = optional_part_test_id(base_test_id.as_ref(), "trailing-icon");
 
     let padding_left = if leading_icon.is_some() {
         WITH_LEADING_ICON_LEADING_SPACE
@@ -523,11 +532,19 @@ fn chip_content<H: UiHost>(
     cx.flex(props, move |cx| {
         let mut out = Vec::new();
         if let (Some(icon), Some(size)) = (leading_icon, leading_icon_size) {
-            out.push(material_icon(cx, &icon, size, leading_icon_color));
+            let mut icon = material_icon(cx, &icon, size, leading_icon_color);
+            if let Some(test_id) = leading_icon_test_id.clone() {
+                icon = icon.test_id(test_id);
+            }
+            out.push(icon);
         }
         out.push(label_el);
         if let (Some(icon), Some(size)) = (trailing_icon, trailing_icon_size) {
-            out.push(material_icon(cx, &icon, size, trailing_icon_color));
+            let mut icon = material_icon(cx, &icon, size, trailing_icon_color);
+            if let Some(test_id) = trailing_icon_test_id.clone() {
+                icon = icon.test_id(test_id);
+            }
+            out.push(icon);
         }
         out
     })

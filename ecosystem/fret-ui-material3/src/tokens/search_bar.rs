@@ -14,6 +14,18 @@ pub(crate) fn container_height(theme: &Theme) -> Px {
         .unwrap_or(Px(56.0))
 }
 
+pub(crate) fn container_min_width(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.sys.fret.material.search-bar.container.min-width")
+        .unwrap_or(Px(360.0))
+}
+
+pub(crate) fn container_max_width(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.sys.fret.material.search-bar.container.max-width")
+        .unwrap_or(Px(720.0))
+}
+
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
     let r = theme
         .metric_by_key("md.comp.search-bar.container.shape")

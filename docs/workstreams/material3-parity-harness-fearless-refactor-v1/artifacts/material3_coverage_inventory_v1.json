@@ -1,0 +1,1199 @@
+{
+  "schema_version": 1,
+  "generated_date": "2026-05-27",
+  "generated_by": "M3PH-020 manual source scan",
+  "workstream": "docs/workstreams/material3-parity-harness-fearless-refactor-v1",
+  "purpose": "Inventory the existing Material 3 component, gallery, diagnostics, golden, and parity-packet coverage before implementation refactors begin.",
+  "source_precedence": {
+    "visual_intent_tokens": [
+      "Material Design 3 spec and guidelines",
+      "repo-ref/material-ui",
+      "repo-ref/compose-multiplatform-core"
+    ],
+    "toolkit_state_motion_semantics": [
+      "repo-ref/compose-multiplatform-core",
+      "Material Design 3 spec and guidelines",
+      "repo-ref/material-ui"
+    ],
+    "web_defaults_overlay_focus": [
+      "repo-ref/material-ui",
+      "repo-ref/base-ui",
+      "repo-ref/compose-multiplatform-core"
+    ],
+    "headless_a11y_fallback": [
+      "repo-ref/base-ui",
+      "repo-ref/primitives",
+      "repo-ref/material-ui"
+    ],
+    "fret_side_exemplars": [
+      "ecosystem/fret-ui-shadcn/src/select.rs",
+      "ecosystem/fret-ui-kit/src/primitives/select.rs",
+      "docs/audits/shadcn-select.md"
+    ]
+  },
+  "source_scan": {
+    "commands": [
+      "rg -n \"^pub mod |^pub use\" ecosystem/fret-ui-material3/src/lib.rs",
+      "rg --files apps/fret-ui-gallery/src/ui/snippets/material3",
+      "rg --files tools/diag-scripts/ui-gallery/material3 tools/diag-scripts/ui-gallery/overlay tools/diag-scripts/ui-gallery/perf | rg \"material3\"",
+      "rg -n \"fn material3_|fn .*material3|#\\[test\\]\" ecosystem/fret-ui-material3/tests/radio_alignment.rs ecosystem/fret-ui-material3/tests/text_field_hover.rs ecosystem/fret-ui-material3/tests/environment_query_adoption_smoke.rs",
+      "rg --files goldens/material3-headless/v1",
+      "rg --files tools/parity-discovery docs/workstreams/component-parity-fact-harness-v1/artifacts | rg \"material3|Material3|material\""
+    ],
+    "notes": [
+      "Direct diag and golden counts are substring scans by component id. Aggregate suites such as material3-controls, material3-navigation, and material3-overlays are captured separately in headless_suites.",
+      "The inventory classifies coverage and priority; it does not claim behavioral parity."
+    ]
+  },
+  "summary": {
+    "component_count": 39,
+    "component_source_count": 39,
+    "components_with_gallery_snippet": 25,
+    "components_with_direct_diag_script": 21,
+    "components_with_direct_golden_prefix": 18,
+    "material_parity_packets": 1,
+    "material_suite_manifest_exists": false,
+    "main_test_structure_risk": {
+      "path": "ecosystem/fret-ui-material3/tests/radio_alignment.rs",
+      "line_count": 14594,
+      "risk": "Large mixed-purpose god test containing headless goldens, semantics, interaction, and scene stability coverage. Split only after coverage inventory and support extraction."
+    }
+  },
+  "known_material_packets": [
+    {
+      "component": "button",
+      "fixture": "tools/parity-discovery/fixtures/material3_button_adapter_v1.json",
+      "artifact": "docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json",
+      "upstream_dom": "docs/workstreams/component-parity-fact-harness-v1/artifacts/upstream-dom/material3-button-mui-contained.json",
+      "status": "seed_packet"
+    }
+  ],
+  "priority_recommendations": [
+    {
+      "rank": 1,
+      "component": "select",
+      "reason": "Best first field-family packet: high diag coverage, stable trigger/listbox/item ids, a11y/typeahead/bounds scripts, and a mature shadcn Select layering exemplar."
+    },
+    {
+      "rank": 2,
+      "component": "switch",
+      "reason": "Best first interaction-heavy packet: broad icon, focus, chrome, timeline, and motion diagnostics exercise Material state layer, ripple, and expressive motion foundations."
+    },
+    {
+      "rank": 3,
+      "component": "tabs",
+      "reason": "Strong second motion/indicator target: indicator geometry and perf scripts make it a useful bridge from recipe chrome to shared motion/focus proof."
+    },
+    {
+      "rank": 4,
+      "component": "autocomplete",
+      "reason": "Field-family follow-on after Select; it shares overlay/listbox semantics while adding query filtering and commit/revert behavior."
+    }
+  ],
+  "unclassified_high_risk_components": [],
+  "components": [
+    {
+      "id": "autocomplete",
+      "family": "field",
+      "source_module": "ecosystem/fret-ui-material3/src/autocomplete.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/autocomplete.rs",
+      "direct_diag_script_count": 8,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 44,
+      "snippet_test_id_mentions": 9,
+      "headless_suites": [
+        "material3_headless_autocomplete_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Autocomplete / text field menu patterns",
+        "mui": "repo-ref/material-ui Autocomplete",
+        "compose": "repo-ref/compose-multiplatform-core ExposedDropdownMenuBox and TextField patterns",
+        "base_ui": "repo-ref/base-ui Combobox patterns"
+      },
+      "parity_packet": null,
+      "inventory_classification": "field_follow_on_packet_candidate",
+      "required_test_id_anchors": [
+        "root",
+        "input",
+        "popup/listbox",
+        "option"
+      ],
+      "notes": "Already has filtering and commit/reopen tests; packet should follow Select so shared overlay findings are not duplicated."
+    },
+    {
+      "id": "badge",
+      "family": "data_display",
+      "source_module": "ecosystem/fret-ui-material3/src/badge.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/badge.rs",
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 8,
+      "snippet_test_id_mentions": 6,
+      "headless_suites": [
+        "material3_headless_badge_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Badge",
+        "mui": "repo-ref/material-ui Badge",
+        "compose": "repo-ref/compose-multiplatform-core Badge",
+        "base_ui": null
+      },
+      "parity_packet": null,
+      "inventory_classification": "golden_covered_low_interaction",
+      "required_test_id_anchors": [
+        "root",
+        "anchor",
+        "badge"
+      ],
+      "notes": "Golden coverage is enough for current risk; packet priority is low unless badge placement drifts."
+    },
+    {
+      "id": "bottom_sheet",
+      "family": "overlay_feedback",
+      "source_module": "ecosystem/fret-ui-material3/src/bottom_sheet.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/bottom_sheet.rs",
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 27,
+      "snippet_test_id_mentions": 7,
+      "headless_suites": [
+        "material3_headless_bottom_sheet_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Bottom sheet",
+        "mui": "repo-ref/material-ui Drawer / Modal patterns",
+        "compose": "repo-ref/compose-multiplatform-core ModalBottomSheet",
+        "base_ui": "repo-ref/base-ui Dialog / Popup patterns"
+      },
+      "parity_packet": null,
+      "inventory_classification": "overlay_covered_needs_diag_when_touched",
+      "required_test_id_anchors": [
+        "trigger",
+        "scrim",
+        "sheet",
+        "drag_handle",
+        "dismiss_action"
+      ],
+      "notes": "Has headless goldens but no direct diag script; future motion/dismiss work needs fixed-timestep overlay diagnostics."
+    },
+    {
+      "id": "button",
+      "family": "surface_action",
+      "source_module": "ecosystem/fret-ui-material3/src/button.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/button.rs",
+      "direct_diag_script_count": 8,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 6,
+      "snippet_test_id_mentions": 9,
+      "headless_suites": [
+        "material3_headless_controls_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Button",
+        "mui": "repo-ref/material-ui Button",
+        "compose": "repo-ref/compose-multiplatform-core Button",
+        "base_ui": "button semantics as supporting reference"
+      },
+      "parity_packet": "tools/parity-discovery/fixtures/material3_button_adapter_v1.json",
+      "inventory_classification": "packet_seed",
+      "required_test_id_anchors": [
+        "root",
+        "state_layer",
+        "label",
+        "leading_icon",
+        "trailing_icon"
+      ],
+      "notes": "Existing pilot proves schema viability; next work should move from single packet to suite manifest."
+    },
+    {
+      "id": "card",
+      "family": "surface_action",
+      "source_module": "ecosystem/fret-ui-material3/src/card.rs",
+      "gallery_snippet": null,
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 6,
+      "snippet_test_id_mentions": 0,
+      "headless_suites": [
+        "material3_headless_controls_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Card",
+        "mui": "repo-ref/material-ui Card",
+        "compose": "repo-ref/compose-multiplatform-core Card",
+        "base_ui": null
+      },
+      "parity_packet": null,
+      "inventory_classification": "aggregate_golden_needs_gallery_snippet",
+      "required_test_id_anchors": [
+        "root",
+        "container",
+        "media/content slot"
+      ],
+      "notes": "Only visible through aggregate controls golden; add a gallery snippet before broad card recipe changes."
+    },
+    {
+      "id": "carousel_item",
+      "family": "data_display",
+      "source_module": "ecosystem/fret-ui-material3/src/carousel_item.rs",
+      "gallery_snippet": null,
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 10,
+      "snippet_test_id_mentions": 0,
+      "headless_suites": [
+        "material3_headless_carousel_item_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Carousel",
+        "mui": "repo-ref/material-ui image-list / carousel-adjacent examples",
+        "compose": "repo-ref/compose-multiplatform-core carousel-adjacent patterns",
+        "base_ui": null
+      },
+      "parity_packet": null,
+      "inventory_classification": "golden_covered_needs_gallery_snippet",
+      "required_test_id_anchors": [
+        "item",
+        "mask",
+        "content"
+      ],
+      "notes": "Headless goldens exist; a demo snippet would make visual regression review easier."
+    },
+    {
+      "id": "checkbox",
+      "family": "choice_control",
+      "source_module": "ecosystem/fret-ui-material3/src/checkbox.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/checkbox.rs",
+      "direct_diag_script_count": 4,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 10,
+      "snippet_test_id_mentions": 5,
+      "headless_suites": [
+        "material3_headless_controls_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Checkbox",
+        "mui": "repo-ref/material-ui Checkbox",
+        "compose": "repo-ref/compose-multiplatform-core Checkbox",
+        "base_ui": "checkbox semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "covered_needs_packet_after_switch",
+      "required_test_id_anchors": [
+        "root",
+        "chrome",
+        "indicator",
+        "state_layer"
+      ],
+      "notes": "Shares state layer and ripple risk with Switch and Radio; defer packet until Switch establishes foundation evidence."
+    },
+    {
+      "id": "chip",
+      "family": "choice_control",
+      "source_module": "ecosystem/fret-ui-material3/src/chip.rs",
+      "gallery_snippet": null,
+      "direct_diag_script_count": 2,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 9,
+      "snippet_test_id_mentions": 0,
+      "headless_suites": [
+        "material3_headless_controls_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Assist chip",
+        "mui": "repo-ref/material-ui Chip",
+        "compose": "repo-ref/compose-multiplatform-core AssistChip",
+        "base_ui": "button semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "aggregate_golden_needs_gallery_snippet",
+      "required_test_id_anchors": [
+        "root",
+        "leading_icon",
+        "label",
+        "trailing_icon"
+      ],
+      "notes": "AssistChip is covered in aggregate controls; direct gallery coverage should be split from state_matrix if recipe changes grow."
+    },
+    {
+      "id": "chip_set",
+      "family": "choice_control",
+      "source_module": "ecosystem/fret-ui-material3/src/chip_set.rs",
+      "gallery_snippet": null,
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 6,
+      "snippet_test_id_mentions": 0,
+      "headless_suites": [],
+      "upstream_refs": {
+        "material_spec": "Chip set grouping",
+        "mui": "repo-ref/material-ui Chip examples",
+        "compose": "repo-ref/compose-multiplatform-core chip group patterns",
+        "base_ui": "collection semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "low_direct_evidence_needs_gallery_or_packet",
+      "required_test_id_anchors": [
+        "group",
+        "chip"
+      ],
+      "notes": "Grouping behavior has low direct evidence; add focused proof before changing selection or wrapping policy."
+    },
+    {
+      "id": "date_picker",
+      "family": "field",
+      "source_module": "ecosystem/fret-ui-material3/src/date_picker.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/date_picker.rs",
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 44,
+      "snippet_test_id_mentions": 4,
+      "headless_suites": [
+        "material3_headless_date_picker_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Date picker",
+        "mui": "repo-ref/material-ui date picker-adjacent examples",
+        "compose": "repo-ref/compose-multiplatform-core DatePicker",
+        "base_ui": "dialog and grid semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "golden_covered_needs_interaction_diag_when_touched",
+      "required_test_id_anchors": [
+        "trigger/input",
+        "dialog",
+        "calendar_grid",
+        "day_cell",
+        "confirm_action"
+      ],
+      "notes": "High semantic surface; keep below Select/TextField until field overlay baseline is stable."
+    },
+    {
+      "id": "dialog",
+      "family": "overlay_feedback",
+      "source_module": "ecosystem/fret-ui-material3/src/dialog.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/dialog.rs",
+      "direct_diag_script_count": 10,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 19,
+      "snippet_test_id_mentions": 8,
+      "headless_suites": [
+        "material3_headless_menu_dialog_style_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Dialog",
+        "mui": "repo-ref/material-ui Dialog",
+        "compose": "repo-ref/compose-multiplatform-core AlertDialog / BasicAlertDialog",
+        "base_ui": "repo-ref/base-ui Dialog"
+      },
+      "parity_packet": null,
+      "inventory_classification": "overlay_covered_needs_packet_after_select",
+      "required_test_id_anchors": [
+        "trigger",
+        "scrim",
+        "dialog",
+        "title",
+        "content",
+        "primary_action",
+        "secondary_action"
+      ],
+      "notes": "Diag and gallery coverage are strong; packet should focus focus-trap/restore and dismiss policy rather than visual chrome first."
+    },
+    {
+      "id": "divider",
+      "family": "data_display",
+      "source_module": "ecosystem/fret-ui-material3/src/divider.rs",
+      "gallery_snippet": null,
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 7,
+      "snippet_test_id_mentions": 0,
+      "headless_suites": [
+        "material3_headless_divider_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Divider",
+        "mui": "repo-ref/material-ui Divider",
+        "compose": "repo-ref/compose-multiplatform-core Divider",
+        "base_ui": null
+      },
+      "parity_packet": null,
+      "inventory_classification": "golden_covered_low_interaction",
+      "required_test_id_anchors": [
+        "root"
+      ],
+      "notes": "Low interaction risk; direct gallery snippet can wait."
+    },
+    {
+      "id": "dropdown_menu",
+      "family": "overlay_feedback",
+      "source_module": "ecosystem/fret-ui-material3/src/dropdown_menu.rs",
+      "gallery_snippet": null,
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 11,
+      "snippet_test_id_mentions": 0,
+      "headless_suites": [
+        "material3_headless_overlays_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Menu",
+        "mui": "repo-ref/material-ui Menu",
+        "compose": "repo-ref/compose-multiplatform-core DropdownMenu",
+        "base_ui": "repo-ref/base-ui Menu"
+      },
+      "parity_packet": null,
+      "inventory_classification": "aggregate_overlay_covered_needs_gallery_snippet",
+      "required_test_id_anchors": [
+        "trigger",
+        "menu",
+        "item"
+      ],
+      "notes": "Covered through overlay golden path, but direct demo snippet and diag packet would improve menu policy review."
+    },
+    {
+      "id": "exposed_dropdown",
+      "family": "field",
+      "source_module": "ecosystem/fret-ui-material3/src/exposed_dropdown.rs",
+      "gallery_snippet": null,
+      "direct_diag_script_count": 2,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 13,
+      "snippet_test_id_mentions": 0,
+      "headless_suites": [],
+      "upstream_refs": {
+        "material_spec": "Exposed dropdown menu",
+        "mui": "repo-ref/material-ui Select / Autocomplete patterns",
+        "compose": "repo-ref/compose-multiplatform-core ExposedDropdownMenuBox",
+        "base_ui": "repo-ref/base-ui Combobox / Select patterns"
+      },
+      "parity_packet": null,
+      "inventory_classification": "field_follow_on_packet_candidate",
+      "required_test_id_anchors": [
+        "text_field",
+        "trailing_icon",
+        "popup/listbox",
+        "option"
+      ],
+      "notes": "Has focused behavior tests but no direct snippet/golden. Reuse Select packet findings before isolating exposed dropdown."
+    },
+    {
+      "id": "fab",
+      "family": "surface_action",
+      "source_module": "ecosystem/fret-ui-material3/src/fab.rs",
+      "gallery_snippet": null,
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 9,
+      "snippet_test_id_mentions": 0,
+      "headless_suites": [
+        "material3_headless_fab_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Floating action button",
+        "mui": "repo-ref/material-ui Fab",
+        "compose": "repo-ref/compose-multiplatform-core FloatingActionButton",
+        "base_ui": "button semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "golden_covered_needs_gallery_snippet",
+      "required_test_id_anchors": [
+        "root",
+        "state_layer",
+        "icon",
+        "label"
+      ],
+      "notes": "Golden covered; add gallery snippet before changing variants or extended FAB behavior."
+    },
+    {
+      "id": "filter_chip",
+      "family": "choice_control",
+      "source_module": "ecosystem/fret-ui-material3/src/filter_chip.rs",
+      "gallery_snippet": null,
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 22,
+      "snippet_test_id_mentions": 0,
+      "headless_suites": [
+        "material3_headless_controls_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Filter chip",
+        "mui": "repo-ref/material-ui Chip",
+        "compose": "repo-ref/compose-multiplatform-core FilterChip",
+        "base_ui": "checkbox semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "aggregate_golden_needs_gallery_snippet",
+      "required_test_id_anchors": [
+        "root",
+        "selected_indicator",
+        "label",
+        "state_layer"
+      ],
+      "notes": "Selection state is represented in aggregate controls; direct packet is lower priority than Switch."
+    },
+    {
+      "id": "icon_button",
+      "family": "surface_action",
+      "source_module": "ecosystem/fret-ui-material3/src/icon_button.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/icon_button.rs",
+      "direct_diag_script_count": 2,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 17,
+      "snippet_test_id_mentions": 3,
+      "headless_suites": [],
+      "upstream_refs": {
+        "material_spec": "Icon button",
+        "mui": "repo-ref/material-ui IconButton",
+        "compose": "repo-ref/compose-multiplatform-core IconButton",
+        "base_ui": "button semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "focused_scene_test_covered_needs_packet_later",
+      "required_test_id_anchors": [
+        "root",
+        "state_layer",
+        "icon",
+        "selected_indicator"
+      ],
+      "notes": "Has scene stability tests; a packet is useful after shared state-layer/ripple evidence matures."
+    },
+    {
+      "id": "input_chip",
+      "family": "choice_control",
+      "source_module": "ecosystem/fret-ui-material3/src/input_chip.rs",
+      "gallery_snippet": null,
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 22,
+      "snippet_test_id_mentions": 0,
+      "headless_suites": [
+        "material3_headless_controls_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Input chip",
+        "mui": "repo-ref/material-ui Chip",
+        "compose": "repo-ref/compose-multiplatform-core InputChip",
+        "base_ui": "button / removable token semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "aggregate_golden_needs_gallery_snippet",
+      "required_test_id_anchors": [
+        "root",
+        "leading_icon",
+        "label",
+        "remove_action",
+        "state_layer"
+      ],
+      "notes": "Direct evidence should be improved before destructive chip refactors."
+    },
+    {
+      "id": "list",
+      "family": "data_display",
+      "source_module": "ecosystem/fret-ui-material3/src/list.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/list.rs",
+      "direct_diag_script_count": 2,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 15,
+      "snippet_test_id_mentions": 4,
+      "headless_suites": [
+        "material3_headless_list_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "List",
+        "mui": "repo-ref/material-ui List",
+        "compose": "repo-ref/compose-multiplatform-core ListItem",
+        "base_ui": "collection semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "covered_needs_packet_when_selection_policy_changes",
+      "required_test_id_anchors": [
+        "list",
+        "item",
+        "leading_slot",
+        "headline",
+        "trailing_slot"
+      ],
+      "notes": "Strong visual coverage; packet should be tied to list item semantics or item chrome, not static layout alone."
+    },
+    {
+      "id": "menu",
+      "family": "overlay_feedback",
+      "source_module": "ecosystem/fret-ui-material3/src/menu.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/menu.rs",
+      "direct_diag_script_count": 6,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 16,
+      "snippet_test_id_mentions": 12,
+      "headless_suites": [
+        "material3_headless_menu_dialog_style_suite_goldens_v1",
+        "material3_headless_overlays_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Menu",
+        "mui": "repo-ref/material-ui Menu",
+        "compose": "repo-ref/compose-multiplatform-core DropdownMenu",
+        "base_ui": "repo-ref/base-ui Menu"
+      },
+      "parity_packet": null,
+      "inventory_classification": "overlay_covered_needs_packet_after_select",
+      "required_test_id_anchors": [
+        "trigger",
+        "menu",
+        "item",
+        "submenu",
+        "separator"
+      ],
+      "notes": "Good candidate after Select if overlay policy findings point at shared menu primitives."
+    },
+    {
+      "id": "modal_navigation_drawer",
+      "family": "navigation",
+      "source_module": "ecosystem/fret-ui-material3/src/modal_navigation_drawer.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/modal_navigation_drawer.rs",
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 9,
+      "snippet_test_id_mentions": 8,
+      "headless_suites": [
+        "material3_headless_navigation_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Modal navigation drawer",
+        "mui": "repo-ref/material-ui Drawer",
+        "compose": "repo-ref/compose-multiplatform-core ModalNavigationDrawer",
+        "base_ui": "repo-ref/base-ui Dialog / Popup patterns"
+      },
+      "parity_packet": null,
+      "inventory_classification": "aggregate_navigation_overlay_covered_needs_diag_when_touched",
+      "required_test_id_anchors": [
+        "trigger",
+        "scrim",
+        "drawer",
+        "panel",
+        "underlay_probe"
+      ],
+      "notes": "Headless navigation suite covers open overlay state; motion/dismiss changes need a direct diag script."
+    },
+    {
+      "id": "navigation_bar",
+      "family": "navigation",
+      "source_module": "ecosystem/fret-ui-material3/src/navigation_bar.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/navigation_bar.rs",
+      "direct_diag_script_count": 4,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 25,
+      "snippet_test_id_mentions": 4,
+      "headless_suites": [
+        "material3_headless_navigation_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Navigation bar",
+        "mui": "repo-ref/material-ui BottomNavigation",
+        "compose": "repo-ref/compose-multiplatform-core NavigationBar",
+        "base_ui": "tab/list navigation semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "navigation_indicator_packet_candidate",
+      "required_test_id_anchors": [
+        "bar",
+        "item",
+        "active_indicator",
+        "badge",
+        "icon",
+        "label"
+      ],
+      "notes": "Potential packet should verify active indicator geometry and focus/selection semantics."
+    },
+    {
+      "id": "navigation_drawer",
+      "family": "navigation",
+      "source_module": "ecosystem/fret-ui-material3/src/navigation_drawer.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/navigation_drawer.rs",
+      "direct_diag_script_count": 2,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 15,
+      "snippet_test_id_mentions": 5,
+      "headless_suites": [
+        "material3_headless_navigation_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Navigation drawer",
+        "mui": "repo-ref/material-ui Drawer / List",
+        "compose": "repo-ref/compose-multiplatform-core NavigationDrawer",
+        "base_ui": "list navigation semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "navigation_covered_needs_packet_later",
+      "required_test_id_anchors": [
+        "drawer",
+        "item",
+        "active_indicator",
+        "badge",
+        "icon",
+        "label"
+      ],
+      "notes": "Covered by aggregate navigation suite; lower priority than nav bar/rail indicator diagnostics."
+    },
+    {
+      "id": "navigation_rail",
+      "family": "navigation",
+      "source_module": "ecosystem/fret-ui-material3/src/navigation_rail.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/navigation_rail.rs",
+      "direct_diag_script_count": 4,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 25,
+      "snippet_test_id_mentions": 5,
+      "headless_suites": [
+        "material3_headless_navigation_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Navigation rail",
+        "mui": "repo-ref/material-ui NavigationRail-adjacent examples",
+        "compose": "repo-ref/compose-multiplatform-core NavigationRail",
+        "base_ui": "tab/list navigation semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "navigation_indicator_packet_candidate",
+      "required_test_id_anchors": [
+        "rail",
+        "item",
+        "active_indicator",
+        "badge",
+        "icon",
+        "label"
+      ],
+      "notes": "Shares active indicator and badge concerns with navigation bar."
+    },
+    {
+      "id": "progress_indicator",
+      "family": "data_display",
+      "source_module": "ecosystem/fret-ui-material3/src/progress_indicator.rs",
+      "gallery_snippet": null,
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 14,
+      "snippet_test_id_mentions": 0,
+      "headless_suites": [
+        "material3_headless_progress_indicator_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Progress indicators",
+        "mui": "repo-ref/material-ui LinearProgress / CircularProgress",
+        "compose": "repo-ref/compose-multiplatform-core LinearProgressIndicator / CircularProgressIndicator",
+        "base_ui": "progressbar semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "golden_covered_needs_motion_diag_when_touched",
+      "required_test_id_anchors": [
+        "root",
+        "track",
+        "indicator"
+      ],
+      "notes": "Indeterminate motion changes require fixed-timestep diagnostics, not golden-only proof."
+    },
+    {
+      "id": "radio",
+      "family": "choice_control",
+      "source_module": "ecosystem/fret-ui-material3/src/radio.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/radio.rs",
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 22,
+      "snippet_test_id_mentions": 8,
+      "headless_suites": [],
+      "upstream_refs": {
+        "material_spec": "Radio button",
+        "mui": "repo-ref/material-ui Radio",
+        "compose": "repo-ref/compose-multiplatform-core RadioButton",
+        "base_ui": "radio semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "focused_scene_test_covered_needs_packet_after_switch",
+      "required_test_id_anchors": [
+        "root",
+        "outline",
+        "dot",
+        "state_layer"
+      ],
+      "notes": "Has focused alignment/ripple/pressed scene tests in radio_alignment.rs; defer broader packet until Switch foundation proof exists."
+    },
+    {
+      "id": "search_bar",
+      "family": "field",
+      "source_module": "ecosystem/fret-ui-material3/src/search_bar.rs",
+      "gallery_snippet": null,
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 8,
+      "snippet_test_id_mentions": 0,
+      "headless_suites": [
+        "material3_headless_search_bar_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Search bar",
+        "mui": "repo-ref/material-ui TextField / search examples",
+        "compose": "repo-ref/compose-multiplatform-core SearchBar",
+        "base_ui": "combobox/search semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "golden_covered_needs_gallery_snippet",
+      "required_test_id_anchors": [
+        "root",
+        "input",
+        "leading_icon",
+        "trailing_action"
+      ],
+      "notes": "Search field work should inherit TextField foundation decisions."
+    },
+    {
+      "id": "search_view",
+      "family": "field",
+      "source_module": "ecosystem/fret-ui-material3/src/search_view.rs",
+      "gallery_snippet": null,
+      "direct_diag_script_count": 2,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 12,
+      "snippet_test_id_mentions": 0,
+      "headless_suites": [
+        "material3_headless_search_view_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Search view",
+        "mui": "repo-ref/material-ui search dialog patterns",
+        "compose": "repo-ref/compose-multiplatform-core SearchBar / SearchView patterns",
+        "base_ui": "dialog and combobox semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "field_overlay_covered_needs_gallery_snippet",
+      "required_test_id_anchors": [
+        "trigger",
+        "view",
+        "input",
+        "suggestion",
+        "dismiss_action"
+      ],
+      "notes": "Overlay-like search surface should wait until Select/Dialog overlay packet findings are known."
+    },
+    {
+      "id": "segmented_button",
+      "family": "choice_control",
+      "source_module": "ecosystem/fret-ui-material3/src/segmented_button.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/segmented_button.rs",
+      "direct_diag_script_count": 2,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 15,
+      "snippet_test_id_mentions": 8,
+      "headless_suites": [
+        "material3_headless_segmented_button_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Segmented button",
+        "mui": "repo-ref/material-ui ToggleButtonGroup",
+        "compose": "repo-ref/compose-multiplatform-core SegmentedButton",
+        "base_ui": "radio group / checkbox group semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "covered_needs_packet_after_switch",
+      "required_test_id_anchors": [
+        "group",
+        "segment",
+        "selected_indicator",
+        "outline",
+        "label"
+      ],
+      "notes": "Has semantics tests and goldens. Useful later to prove choice-control group semantics."
+    },
+    {
+      "id": "select",
+      "family": "field",
+      "source_module": "ecosystem/fret-ui-material3/src/select.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/select.rs",
+      "direct_diag_script_count": 22,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 27,
+      "snippet_test_id_mentions": 27,
+      "headless_suites": [
+        "material3_headless_controls_suite_goldens_v1",
+        "material3_headless_overlays_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Exposed dropdown menu / Select",
+        "mui": "repo-ref/material-ui Select",
+        "compose": "repo-ref/compose-multiplatform-core ExposedDropdownMenuBox and DropdownMenu",
+        "base_ui": "repo-ref/base-ui Select"
+      },
+      "parity_packet": null,
+      "inventory_classification": "packet_priority_field",
+      "required_test_id_anchors": [
+        "trigger",
+        "field",
+        "label",
+        "supporting_text",
+        "trailing_icon",
+        "popup/listbox",
+        "option"
+      ],
+      "notes": "Recommended first new Material packet. It exercises field chrome, overlay placement, typeahead delay, a11y, width floor, item chrome, and focus restore."
+    },
+    {
+      "id": "slider",
+      "family": "choice_control",
+      "source_module": "ecosystem/fret-ui-material3/src/slider.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/slider.rs",
+      "direct_diag_script_count": 2,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 28,
+      "snippet_test_id_mentions": 4,
+      "headless_suites": [
+        "material3_headless_slider_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Slider",
+        "mui": "repo-ref/material-ui Slider",
+        "compose": "repo-ref/compose-multiplatform-core Slider",
+        "base_ui": "slider semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "covered_needs_motion_or_input_packet_later",
+      "required_test_id_anchors": [
+        "root",
+        "track",
+        "active_track",
+        "thumb",
+        "tick",
+        "value_label"
+      ],
+      "notes": "Good candidate after Switch for gesture/input state proof."
+    },
+    {
+      "id": "snackbar",
+      "family": "overlay_feedback",
+      "source_module": "ecosystem/fret-ui-material3/src/snackbar.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/snackbar.rs",
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 0,
+      "snippet_test_id_mentions": 3,
+      "headless_suites": [
+        "material3_headless_snackbar_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Snackbar",
+        "mui": "repo-ref/material-ui Snackbar",
+        "compose": "repo-ref/compose-multiplatform-core Snackbar",
+        "base_ui": "toast/live-region patterns as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "golden_covered_needs_source_test_ids",
+      "required_test_id_anchors": [
+        "host",
+        "snackbar",
+        "supporting_text",
+        "action",
+        "dismiss_action"
+      ],
+      "notes": "Source test_id count is zero in the scan; M3PH-090 should confirm automation anchors before snackbar behavior work."
+    },
+    {
+      "id": "suggestion_chip",
+      "family": "choice_control",
+      "source_module": "ecosystem/fret-ui-material3/src/suggestion_chip.rs",
+      "gallery_snippet": null,
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 9,
+      "snippet_test_id_mentions": 0,
+      "headless_suites": [
+        "material3_headless_controls_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Suggestion chip",
+        "mui": "repo-ref/material-ui Chip",
+        "compose": "repo-ref/compose-multiplatform-core SuggestionChip",
+        "base_ui": "button semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "aggregate_golden_needs_gallery_snippet",
+      "required_test_id_anchors": [
+        "root",
+        "label",
+        "state_layer"
+      ],
+      "notes": "Aggregate covered with chips; direct evidence is low."
+    },
+    {
+      "id": "switch",
+      "family": "choice_control",
+      "source_module": "ecosystem/fret-ui-material3/src/switch.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/switch.rs",
+      "direct_diag_script_count": 22,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 9,
+      "snippet_test_id_mentions": 7,
+      "headless_suites": [
+        "material3_headless_controls_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Switch",
+        "mui": "repo-ref/material-ui Switch",
+        "compose": "repo-ref/compose-multiplatform-core Switch",
+        "base_ui": "switch semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "packet_priority_interaction",
+      "required_test_id_anchors": [
+        "root",
+        "track",
+        "handle",
+        "icon",
+        "state_layer"
+      ],
+      "notes": "Recommended first interaction-heavy packet. It is the best current probe for state-layer, ripple, focus-visible, icon crossfade, and motion tokens."
+    },
+    {
+      "id": "tabs",
+      "family": "navigation",
+      "source_module": "ecosystem/fret-ui-material3/src/tabs.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/tabs.rs",
+      "direct_diag_script_count": 8,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 22,
+      "snippet_test_id_mentions": 9,
+      "headless_suites": [],
+      "upstream_refs": {
+        "material_spec": "Tabs",
+        "mui": "repo-ref/material-ui Tabs",
+        "compose": "repo-ref/compose-multiplatform-core TabRow / Tab",
+        "base_ui": "repo-ref/base-ui Tabs"
+      },
+      "parity_packet": null,
+      "inventory_classification": "motion_indicator_packet_candidate",
+      "required_test_id_anchors": [
+        "tablist",
+        "tab",
+        "active_indicator",
+        "content"
+      ],
+      "notes": "Recommended second interaction/motion target after Switch; direct diag coverage already includes indicator and perf probes."
+    },
+    {
+      "id": "text_field",
+      "family": "field",
+      "source_module": "ecosystem/fret-ui-material3/src/text_field.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/text_field.rs",
+      "direct_diag_script_count": 4,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 30,
+      "snippet_test_id_mentions": 6,
+      "headless_suites": [
+        "material3_headless_text_field_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Text field",
+        "mui": "repo-ref/material-ui TextField / InputBase",
+        "compose": "repo-ref/compose-multiplatform-core TextField / OutlinedTextField",
+        "base_ui": "input semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "field_foundation_packet_candidate",
+      "required_test_id_anchors": [
+        "field",
+        "input",
+        "label",
+        "leading_icon",
+        "trailing_icon",
+        "supporting_text",
+        "indicator/outline"
+      ],
+      "notes": "Foundational for Select, Search, Autocomplete, DatePicker, and TimePicker. Avoid changing it without consumer-level proof."
+    },
+    {
+      "id": "time_picker",
+      "family": "field",
+      "source_module": "ecosystem/fret-ui-material3/src/time_picker.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/time_picker.rs",
+      "direct_diag_script_count": 2,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 38,
+      "snippet_test_id_mentions": 4,
+      "headless_suites": [
+        "material3_headless_time_picker_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Time picker",
+        "mui": "repo-ref/material-ui time picker-adjacent examples",
+        "compose": "repo-ref/compose-multiplatform-core TimePicker",
+        "base_ui": "dialog and spinbutton-like semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "golden_covered_needs_interaction_diag_when_touched",
+      "required_test_id_anchors": [
+        "trigger/input",
+        "dialog",
+        "dial",
+        "period_toggle",
+        "hour/minute field",
+        "confirm_action"
+      ],
+      "notes": "Complex interaction surface; keep below Select/TextField until field-family harness is stable."
+    },
+    {
+      "id": "tooltip",
+      "family": "overlay_feedback",
+      "source_module": "ecosystem/fret-ui-material3/src/tooltip.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/tooltip.rs",
+      "direct_diag_script_count": 0,
+      "direct_golden_prefix_count": 0,
+      "source_test_id_mentions": 0,
+      "snippet_test_id_mentions": 6,
+      "headless_suites": [
+        "material3_headless_overlays_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Tooltip",
+        "mui": "repo-ref/material-ui Tooltip",
+        "compose": "repo-ref/compose-multiplatform-core TooltipBox",
+        "base_ui": "repo-ref/base-ui Tooltip"
+      },
+      "parity_packet": null,
+      "inventory_classification": "aggregate_overlay_covered_needs_source_test_ids",
+      "required_test_id_anchors": [
+        "trigger",
+        "tooltip",
+        "content"
+      ],
+      "notes": "Source test_id count is zero in the scan; M3PH-090 should confirm whether anchors are only caller-provided."
+    },
+    {
+      "id": "top_app_bar",
+      "family": "navigation",
+      "source_module": "ecosystem/fret-ui-material3/src/top_app_bar.rs",
+      "gallery_snippet": "apps/fret-ui-gallery/src/ui/snippets/material3/top_app_bar.rs",
+      "direct_diag_script_count": 2,
+      "direct_golden_prefix_count": 12,
+      "source_test_id_mentions": 12,
+      "snippet_test_id_mentions": 10,
+      "headless_suites": [
+        "material3_headless_top_app_bar_suite_goldens_v1"
+      ],
+      "upstream_refs": {
+        "material_spec": "Top app bar",
+        "mui": "repo-ref/material-ui AppBar / Toolbar",
+        "compose": "repo-ref/compose-multiplatform-core TopAppBar",
+        "base_ui": "toolbar semantics as supporting reference"
+      },
+      "parity_packet": null,
+      "inventory_classification": "covered_needs_scroll_packet_later",
+      "required_test_id_anchors": [
+        "bar",
+        "navigation_icon",
+        "title",
+        "action",
+        "scroll_container"
+      ],
+      "notes": "Has scroll diag and goldens; packet should focus scroll behavior and collapsed state."
+    }
+  ]
+}

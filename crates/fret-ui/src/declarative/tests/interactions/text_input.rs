@@ -1888,6 +1888,139 @@ fn text_input_semantics_controls_element_is_exposed() {
 }
 
 #[test]
+fn text_input_semantics_labelled_and_described_elements_are_exposed() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(260.0), Px(80.0)));
+    let mut services = FakeTextService::default();
+
+    let model = app.models_mut().insert("hello".to_string());
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-text-input-label-description",
+        |cx| {
+            let label = cx.text("Label").test_id("label");
+            let description = cx.text("Description").test_id("description");
+
+            let mut props = crate::element::TextInputProps::new(model.clone());
+            props.layout.size.width = Length::Px(Px(180.0));
+            props.layout.size.height = Length::Px(Px(32.0));
+            props.test_id = Some(Arc::from("input"));
+            props.labelled_by_element = Some(label.id.0);
+            props.described_by_element = Some(description.id.0);
+
+            vec![label, description, cx.text_input(props)]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("input"))
+        .expect("expected input semantics node");
+    let label = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("label"))
+        .expect("expected label semantics node");
+    let description = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("description"))
+        .expect("expected description semantics node");
+
+    assert!(
+        input.labelled_by.contains(&label.id),
+        "expected text input to be labelled by the label node"
+    );
+    assert!(
+        input.described_by.contains(&description.id),
+        "expected text input to be described by the description node"
+    );
+}
+
+#[test]
+fn text_area_semantics_labelled_and_described_elements_are_exposed() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(260.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let model = app.models_mut().insert("hello".to_string());
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-text-area-label-description",
+        |cx| {
+            let label = cx.text("Label").test_id("label");
+            let description = cx.text("Description").test_id("description");
+
+            let mut props = crate::element::TextAreaProps::new(model.clone());
+            props.layout.size.width = Length::Px(Px(180.0));
+            props.layout.size.height = Length::Px(Px(64.0));
+            props.test_id = Some(Arc::from("area"));
+            props.labelled_by_element = Some(label.id.0);
+            props.described_by_element = Some(description.id.0);
+
+            vec![label, description, cx.text_area(props)]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let area = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("area"))
+        .expect("expected text area semantics node");
+    let label = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("label"))
+        .expect("expected label semantics node");
+    let description = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("description"))
+        .expect("expected description semantics node");
+
+    assert!(
+        area.labelled_by.contains(&label.id),
+        "expected text area to be labelled by the label node"
+    );
+    assert!(
+        area.described_by.contains(&description.id),
+        "expected text area to be described by the description node"
+    );
+}
+
+#[test]
 fn text_input_semantics_active_descendant_element_is_exposed() {
     use std::cell::Cell;
 

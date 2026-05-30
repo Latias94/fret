@@ -1,21 +1,19 @@
-use std::{any::Any, sync::Arc};
+use std::sync::Arc;
 
-use fret_core::KeyCode;
-use fret_runtime::ActionId;
 use fret_ui::UiHost;
-use fret_ui::action::ActivateReason;
-use fret_ui::element::PressableProps;
 
 use super::super::{ButtonOptions, ResponseExt, UiWriterImUiFacadeExt};
 use super::visual;
 use crate::command::ElementCommandGatingExt as _;
 use crate::declarative::chrome::control_chrome_pressable_with_id_props;
 
-#[derive(Clone)]
-pub(super) struct ButtonAction {
-    pub(super) action: ActionId,
-    pub(super) payload: Option<Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>>,
-}
+mod action;
+mod activation;
+mod keyboard;
+mod props;
+mod response;
+
+pub(super) use action::ButtonAction;
 
 pub(super) fn button_pressable<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -32,90 +30,34 @@ pub(super) fn button_pressable<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
             enabled = enabled && cx.action_is_enabled(&action.action);
         }
         let variant = options.variant;
-        let mut props = PressableProps::default();
-        props.enabled = enabled;
-        props.focusable = enabled && options.focusable;
-        visual::apply_button_variant_layout(&mut props, variant);
-        props.a11y = visual::button_a11y(&label, &options, variant);
+        let props = props::button_pressable_props(&label, &options, enabled, variant);
         let activate_shortcut = options.activate_shortcut;
         let shortcut_repeat = options.shortcut_repeat;
 
         control_chrome_pressable_with_id_props(cx, move |cx, state, id| {
             let behavior = super::super::item_behavior::install_pressable_item_behavior(cx, id);
-            let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
+            activation::install_button_activation_behavior(
+                cx,
+                activation::ButtonActivationBehaviorInput {
+                    lifecycle_model: behavior.lifecycle_model.clone(),
+                    action: action.clone(),
+                },
+            );
 
-            let action_for_activate = action.clone();
-            cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
-                if reason == ActivateReason::Keyboard {
-                    super::super::mark_lifecycle_instant_if_inactive(
-                        host,
-                        acx,
-                        &lifecycle_model_for_activate,
-                        false,
-                    );
-                }
-                host.record_transient_event(acx, super::super::KEY_CLICKED);
-                dispatch_button_action(host, acx, reason, action_for_activate.clone());
-                host.notify(acx);
-            }));
-
-            if enabled {
-                let lifecycle_model_for_shortcut = behavior.lifecycle_model.clone();
-                let action_for_shortcut = action.clone();
-                cx.key_on_key_down_for(
-                    id,
-                    Arc::new(move |host, acx, down| {
-                        if let Some(shortcut) = activate_shortcut {
-                            let matches_shortcut =
-                                down.key == shortcut.key && down.modifiers == shortcut.mods;
-                            if matches_shortcut
-                                && (!down.repeat || shortcut_repeat)
-                                && !down.ime_composing
-                            {
-                                super::super::mark_lifecycle_instant_if_inactive(
-                                    host,
-                                    acx,
-                                    &lifecycle_model_for_shortcut,
-                                    false,
-                                );
-                                host.record_transient_event(acx, super::super::KEY_CLICKED);
-                                dispatch_button_action(
-                                    host,
-                                    acx,
-                                    ActivateReason::Keyboard,
-                                    action_for_shortcut.clone(),
-                                );
-                                host.notify(acx);
-                                return true;
-                            }
-                        }
-
-                        let is_menu_key = down.key == KeyCode::ContextMenu;
-                        let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
-                        if !(is_menu_key || is_shift_f10) {
-                            return false;
-                        }
-
-                        host.record_transient_event(acx, super::super::KEY_CONTEXT_MENU_REQUESTED);
-                        host.notify(acx);
-                        true
-                    }),
-                );
-            }
-
-            let clicked = cx.take_transient_for(id, super::super::KEY_CLICKED);
-            super::super::item_behavior::populate_pressable_item_response(
+            keyboard::install_button_keyboard_behavior(
                 cx,
                 id,
-                state,
-                &behavior,
-                super::super::item_behavior::PressableItemResponseInput {
+                keyboard::ButtonKeyboardBehaviorInput {
                     enabled,
-                    clicked,
-                    changed: false,
-                    lifecycle_edited: false,
+                    activate_shortcut,
+                    shortcut_repeat,
+                    lifecycle_model: behavior.lifecycle_model.clone(),
+                    action: action.clone(),
                 },
-                response,
+            );
+
+            response::populate_button_pressable_response(
+                cx, id, state, &behavior, enabled, response,
             );
 
             let (chrome, visual_content) =
@@ -128,19 +70,4 @@ pub(super) fn button_pressable<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
 
     ui.add(element);
     response
-}
-
-fn dispatch_button_action(
-    host: &mut dyn fret_ui::action::UiActionHost,
-    acx: fret_ui::action::ActionCx,
-    reason: ActivateReason,
-    action: Option<ButtonAction>,
-) {
-    if let Some(action) = action {
-        host.record_pending_command_dispatch_source(acx, &action.action, reason);
-        if let Some(payload) = action.payload.as_ref() {
-            host.record_pending_action_payload(acx, &action.action, payload());
-        }
-        host.dispatch_command(Some(acx.window), action.action);
-    }
 }

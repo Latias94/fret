@@ -3,7 +3,7 @@
 //! This module centralizes token key mapping and fallback chains so button variants remain
 //! consistent and drift-resistant during refactors.
 
-use fret_core::Color;
+use fret_core::{Color, Px};
 use fret_ui::Theme;
 
 use crate::button::ButtonVariant;
@@ -101,6 +101,25 @@ pub(crate) fn container_background(
             }
         }
     }
+}
+
+pub(crate) fn container_elevation(
+    theme: &Theme,
+    variant: ButtonVariant,
+    enabled: bool,
+    interaction: Option<ButtonInteraction>,
+) -> Px {
+    let key = container_elevation_key(variant, enabled, interaction);
+    let fallback = container_elevation_fallback(variant, enabled, interaction);
+    theme.metric_by_key(key).unwrap_or(Px(fallback))
+}
+
+pub(crate) fn container_shadow_color(theme: &Theme, variant: ButtonVariant) -> Color {
+    theme
+        .color_by_key(container_shadow_color_key(variant))
+        .or_else(|| theme.color_by_key("md.comp.button.container.shadow-color"))
+        .or_else(|| theme.color_by_key("md.sys.color.shadow"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
 }
 
 pub(crate) fn state_layer_color(
@@ -203,6 +222,107 @@ fn disabled_container_color(
         .unwrap_or(fallback);
     c.a *= disabled_container_opacity(theme, variant);
     c
+}
+
+fn container_elevation_key(
+    variant: ButtonVariant,
+    enabled: bool,
+    interaction: Option<ButtonInteraction>,
+) -> &'static str {
+    if !enabled {
+        return match variant {
+            ButtonVariant::Filled => "md.comp.button.filled.disabled.container.elevation",
+            ButtonVariant::Tonal => "md.comp.button.tonal.disabled.container.elevation",
+            ButtonVariant::Elevated => "md.comp.button.elevated.disabled.container.elevation",
+            ButtonVariant::Outlined => "md.comp.button.outlined.disabled.container.elevation",
+            ButtonVariant::Text => "md.comp.button.text.disabled.container.elevation",
+        };
+    }
+
+    match (variant, interaction) {
+        (ButtonVariant::Filled, Some(ButtonInteraction::Hovered)) => {
+            "md.comp.button.filled.hovered.container.elevation"
+        }
+        (ButtonVariant::Filled, Some(ButtonInteraction::Focused)) => {
+            "md.comp.button.filled.focused.container.elevation"
+        }
+        (ButtonVariant::Filled, Some(ButtonInteraction::Pressed)) => {
+            "md.comp.button.filled.pressed.container.elevation"
+        }
+        (ButtonVariant::Filled, None) => "md.comp.button.filled.container.elevation",
+
+        (ButtonVariant::Tonal, Some(ButtonInteraction::Hovered)) => {
+            "md.comp.button.tonal.hovered.container.elevation"
+        }
+        (ButtonVariant::Tonal, Some(ButtonInteraction::Focused)) => {
+            "md.comp.button.tonal.focused.container.elevation"
+        }
+        (ButtonVariant::Tonal, Some(ButtonInteraction::Pressed)) => {
+            "md.comp.button.tonal.pressed.container.elevation"
+        }
+        (ButtonVariant::Tonal, None) => "md.comp.button.tonal.container.elevation",
+
+        (ButtonVariant::Elevated, Some(ButtonInteraction::Hovered)) => {
+            "md.comp.button.elevated.hovered.container.elevation"
+        }
+        (ButtonVariant::Elevated, Some(ButtonInteraction::Focused)) => {
+            "md.comp.button.elevated.focused.container.elevation"
+        }
+        (ButtonVariant::Elevated, Some(ButtonInteraction::Pressed)) => {
+            "md.comp.button.elevated.pressed.container.elevation"
+        }
+        (ButtonVariant::Elevated, None) => "md.comp.button.elevated.container.elevation",
+
+        (ButtonVariant::Outlined, Some(ButtonInteraction::Hovered)) => {
+            "md.comp.button.outlined.hovered.container.elevation"
+        }
+        (ButtonVariant::Outlined, Some(ButtonInteraction::Focused)) => {
+            "md.comp.button.outlined.focused.container.elevation"
+        }
+        (ButtonVariant::Outlined, Some(ButtonInteraction::Pressed)) => {
+            "md.comp.button.outlined.pressed.container.elevation"
+        }
+        (ButtonVariant::Outlined, None) => "md.comp.button.outlined.container.elevation",
+
+        (ButtonVariant::Text, Some(ButtonInteraction::Hovered)) => {
+            "md.comp.button.text.hovered.container.elevation"
+        }
+        (ButtonVariant::Text, Some(ButtonInteraction::Focused)) => {
+            "md.comp.button.text.focused.container.elevation"
+        }
+        (ButtonVariant::Text, Some(ButtonInteraction::Pressed)) => {
+            "md.comp.button.text.pressed.container.elevation"
+        }
+        (ButtonVariant::Text, None) => "md.comp.button.text.container.elevation",
+    }
+}
+
+fn container_elevation_fallback(
+    variant: ButtonVariant,
+    enabled: bool,
+    interaction: Option<ButtonInteraction>,
+) -> f32 {
+    if !enabled {
+        return 0.0;
+    }
+
+    match (variant, interaction) {
+        (ButtonVariant::Elevated, Some(ButtonInteraction::Hovered)) => 3.0,
+        (ButtonVariant::Elevated, _) => 1.0,
+        (ButtonVariant::Filled | ButtonVariant::Tonal, Some(ButtonInteraction::Hovered)) => 1.0,
+        (ButtonVariant::Filled | ButtonVariant::Tonal, _) => 0.0,
+        (ButtonVariant::Outlined | ButtonVariant::Text, _) => 0.0,
+    }
+}
+
+fn container_shadow_color_key(variant: ButtonVariant) -> &'static str {
+    match variant {
+        ButtonVariant::Filled => "md.comp.button.filled.container.shadow-color",
+        ButtonVariant::Tonal => "md.comp.button.tonal.container.shadow-color",
+        ButtonVariant::Elevated => "md.comp.button.elevated.container.shadow-color",
+        ButtonVariant::Outlined => "md.comp.button.outlined.container.shadow-color",
+        ButtonVariant::Text => "md.comp.button.text.container.shadow-color",
+    }
 }
 
 fn label_color_key(variant: ButtonVariant) -> &'static str {

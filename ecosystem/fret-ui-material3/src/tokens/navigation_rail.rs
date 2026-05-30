@@ -22,6 +22,25 @@ pub(crate) fn container_width(theme: &Theme) -> Px {
         .unwrap_or(Px(80.0))
 }
 
+pub(crate) fn item_width(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.navigation-rail.item.width")
+        .unwrap_or_else(|| container_width(theme))
+}
+
+pub(crate) fn item_height(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.navigation-rail.item.height")
+        .or_else(|| theme.metric_by_key("md.comp.navigation-rail.active-indicator.width"))
+        .unwrap_or(Px(56.0))
+}
+
+pub(crate) fn vertical_padding(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.navigation-rail.vertical-padding")
+        .unwrap_or(Px(4.0))
+}
+
 pub(crate) fn container_background(theme: &Theme) -> Color {
     MaterialTokenResolver::new(theme).color_comp_or_sys(
         "md.comp.navigation-rail.container.color",
@@ -43,8 +62,8 @@ pub(crate) fn active_indicator_width(theme: &Theme) -> Px {
         .unwrap_or(Px(56.0))
 }
 
-pub(crate) fn active_indicator_height(theme: &Theme, always_show_label: bool) -> Px {
-    if always_show_label {
+pub(crate) fn active_indicator_height(theme: &Theme, has_label: bool) -> Px {
+    if has_label {
         theme
             .metric_by_key("md.comp.navigation-rail.active-indicator.height")
             .unwrap_or(Px(32.0))

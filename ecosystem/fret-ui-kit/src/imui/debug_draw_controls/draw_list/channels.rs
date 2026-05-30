@@ -1,5 +1,5 @@
 use super::super::commands::DebugDrawCommand;
-use super::super::{DebugDrawChannelSplit, ImUiDebugDrawList};
+use super::{DebugDrawChannelSplit, ImUiDebugDrawList};
 
 impl ImUiDebugDrawList {
     pub fn channels_split(&mut self, count: usize) {

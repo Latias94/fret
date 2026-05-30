@@ -1,10 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::Px;
 use fret_ui::UiHost;
-use fret_ui::element::{
-    ColumnProps, ContainerProps, LayoutStyle, Length, Overflow, SizeStyle, SpacingLength,
-};
 
 use super::label_identity::parse_label_identity;
 use super::{
@@ -13,6 +9,7 @@ use super::{
 use crate::declarative::ModelWatchExt;
 use crate::primitives::collapsible as radix_collapsible;
 
+mod layout;
 mod spec;
 mod trigger;
 mod visual;
@@ -88,78 +85,19 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
             root_children.push(header);
 
             if spec.has_children() && open_now {
-                let mut content = cx.named("content", |cx| {
-                    let mut props = ContainerProps::default();
-                    props.layout = LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Auto,
-                            ..Default::default()
-                        },
-                        overflow: Overflow::Visible,
-                        ..Default::default()
-                    };
-                    props.padding = visual::disclosure_content_padding(&spec).into();
-
-                    cx.container(props, move |cx| {
-                        vec![cx.column(
-                            ColumnProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Auto,
-                                        ..Default::default()
-                                    },
-                                    overflow: Overflow::Visible,
-                                    ..Default::default()
-                                },
-                                gap: SpacingLength::Px(Px(0.0)),
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                let mut out = Vec::new();
-                                let mut body_ui = ImUiFacade {
-                                    cx,
-                                    out: &mut out,
-                                    build_focus: None,
-                                };
-                                if let Some(build) = build.take() {
-                                    build(&mut body_ui);
-                                }
-                                out
-                            },
-                        )]
-                    })
-                });
-                if let Some(test_id) = spec.content_test_id.as_ref() {
-                    content = content.test_id(test_id.clone());
-                }
-                root_children.push(content);
+                root_children.push(layout::disclosure_content_element(
+                    cx,
+                    &spec,
+                    build
+                        .take()
+                        .expect("disclosure body builder should be available"),
+                ));
             }
 
             response.open = open_now;
             response.toggled = toggled;
 
-            let mut root = cx.column(
-                ColumnProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Auto,
-                            ..Default::default()
-                        },
-                        overflow: Overflow::Visible,
-                        ..Default::default()
-                    },
-                    gap: SpacingLength::Px(Px(0.0)),
-                    ..Default::default()
-                },
-                move |_cx| root_children,
-            );
-            if let Some(test_id) = spec.root_test_id.as_ref() {
-                root = root.test_id(test_id.clone());
-            }
-            root
+            layout::disclosure_root_element(cx, &spec, root_children)
         })
     });
 

@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "slug": "material3-canvas-draw-region-diagnostics-v1",
+  "title": "Material 3 Canvas Draw Region Diagnostics v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "follow_on",
+  "problem": "Closed lane that classified Material3 canvas-painted subregion diagnostics, added truthful rectangular recipe anchors for ProgressIndicator and Slider, and split exact named SceneOp diagnostics as a future mechanism concern.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Existing Material3 automation selectors expose component roots/thumbs but not named canvas draw subregions.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids",
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_choice_controls_expose_stable_part_test_ids"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-canvas-draw-region-diagnostics-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "material3-automation-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface"
+    },
+    {
+      "name": "progress-headless-golden-suite",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_progress_indicator_suite_goldens_v1"
+    },
+    {
+      "name": "slider-headless-golden-suite",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_slider_suite_goldens_v1"
+    },
+    {
+      "name": "material3-crate-check-diagnostics-tests",
+      "command": "cargo check -p fret-ui-material3 --features diagnostics --tests"
+    },
+    {
+      "name": "material3-crate-clippy-diagnostics-tests-no-deps",
+      "command": "cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/CLOSEOUT_AUDIT_2026-05-28.md",
+    "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/artifacts/canvas_draw_region_gap_audit_v1.md",
+    "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/artifacts/material3_canvas_draw_region_packet_v1.md",
+    "ecosystem/fret-ui-material3/src/foundation/test_id.rs",
+    "ecosystem/fret-ui-material3/src/progress_indicator.rs",
+    "ecosystem/fret-ui-material3/src/slider.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "ecosystem/fret-ui-material3/tests/radio_alignment.rs",
+    "crates/fret-ui/src/canvas.rs",
+    "crates/fret-core/src/scene/mod.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/snapshot_types.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0141-declarative-canvas-hosted-resources.md",
+    "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This draw-region diagnostics lane is closed. Start a generic mechanism follow-on only for named SceneOp diagnostics, or a narrow Material3 follow-on only if tick/stop/state-layer part ids have a concrete diagnostic consumer."
+  }
+}

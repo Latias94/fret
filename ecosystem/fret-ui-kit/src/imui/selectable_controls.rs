@@ -4,16 +4,15 @@ use std::sync::Arc;
 
 use fret_core::SemanticsRole;
 use fret_ui::UiHost;
-use fret_ui::action::{ActivateReason, UiActionHostExt as _};
 use fret_ui::element::{Length, PressableA11y, PressableProps};
 
 use super::label_identity::parse_label_identity;
 use super::{ResponseExt, SelectableOptions, UiWriterImUiFacadeExt};
 
+mod behavior;
 mod keyboard;
 mod visual;
 
-use keyboard::{SelectableKeyboardOptions, install_selectable_keyboard};
 use visual::selectable_row_element;
 
 pub(super) fn selectable_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
@@ -60,57 +59,16 @@ fn selectable_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
         };
 
         cx.pressable_with_id(props, move |cx, state, id| {
-            let behavior = super::item_behavior::install_pressable_item_behavior_with_options(
-                cx,
-                id,
-                super::item_behavior::PressableItemBehaviorOptions {
-                    report_pointer_click: true,
-                },
-            );
-            let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
-
-            if enabled {
-                let close_popup_for_activate = close_popup.clone();
-                cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
-                    if reason == ActivateReason::Keyboard {
-                        super::mark_lifecycle_instant_if_inactive(
-                            host,
-                            acx,
-                            &lifecycle_model_for_activate,
-                            false,
-                        );
-                    }
-                    if let Some(open) = close_popup_for_activate.as_ref() {
-                        let _ = host.update_model(open, |v| *v = false);
-                    }
-                    host.record_transient_event(acx, super::KEY_CLICKED);
-                    host.notify(acx);
-                }));
-
-                install_selectable_keyboard(
-                    cx,
-                    id,
-                    focusable,
-                    behavior.lifecycle_model.clone(),
-                    SelectableKeyboardOptions {
-                        close_popup: close_popup.clone(),
-                        activate_shortcut,
-                        shortcut_repeat,
-                    },
-                );
-            }
-
-            let clicked = cx.take_transient_for(id, super::KEY_CLICKED);
-            super::item_behavior::populate_pressable_item_response(
+            behavior::install_selectable_behavior(
                 cx,
                 id,
                 state,
-                &behavior,
-                super::item_behavior::PressableItemResponseInput {
+                behavior::SelectableBehaviorOptions {
                     enabled,
-                    clicked,
-                    changed: false,
-                    lifecycle_edited: false,
+                    focusable,
+                    close_popup: close_popup.clone(),
+                    activate_shortcut,
+                    shortcut_repeat,
                 },
                 response,
             );

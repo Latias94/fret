@@ -2,19 +2,15 @@
 
 use std::cell::Cell;
 use std::rc::Rc;
-use std::sync::Arc;
 
-use fret_ui::element::{AnyElement, StackProps};
-use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
+use fret_ui::element::AnyElement;
+use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
-use super::{
-    ChildRegionChrome, ChildRegionOptions, ChildRegionResponse, ImUiFacade,
-    containers::build_imui_children_with_focus,
-};
+use super::{ChildRegionOptions, ChildRegionResponse, ImUiFacade};
 
 mod resize;
-
-use resize::{child_region_resize_x_handle, child_region_resize_y_handle};
+mod resize_stack;
+mod scroll;
 
 pub(super) fn child_region_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -28,7 +24,8 @@ pub(super) fn child_region_element<H: UiHost>(
         let layout = options.layout.clone();
         let resize_x = options.resize_x.clone();
         let resize_y = options.resize_y.clone();
-        let scroll_layout = if resize_x.is_some() || resize_y.is_some() {
+        let has_resize = resize_x.is_some() || resize_y.is_some();
+        let scroll_layout = if has_resize {
             crate::LayoutRefinement::default().size_full()
         } else {
             layout.clone()
@@ -36,97 +33,34 @@ pub(super) fn child_region_element<H: UiHost>(
         let scroll_options = options.scroll.clone();
         let test_id = options.test_id.clone();
         let root_test_id = test_id.clone();
-        let content_test_id = options.content_test_id.clone();
-        let viewport_test_id = scroll_options.viewport_test_id.clone();
-
-        let mut builder = crate::ui::scroll_area_build(move |cx, out| {
-            let mut content = crate::ui::v_flex_build(move |cx, out| {
-                build_imui_children_with_focus(cx, out, build_focus, f);
-            })
-            .no_wrap();
-
-            if let Some(test_id) = content_test_id.clone() {
-                content = content.test_id(test_id);
-            }
-
-            out.push(content.into_element(cx));
-        })
-        .axis(scroll_options.axis)
-        .show_scrollbars(
-            scroll_options.show_scrollbar_x,
-            scroll_options.show_scrollbar_y,
-        )
-        .layout(scroll_layout);
-
-        if chrome == ChildRegionChrome::Framed {
-            builder = builder
-                .p_2()
-                .rounded_md()
-                .border_1()
-                .bg(crate::ColorRef::Token {
-                    key: "card",
-                    fallback: crate::ColorFallback::ThemePanelBackground,
-                })
-                .border_color(crate::ColorRef::Token {
-                    key: "border",
-                    fallback: crate::ColorFallback::ThemePanelBorder,
-                });
-        }
-
-        if let Some(handle) = scroll_options.handle {
-            builder = builder.handle(handle);
-        }
-
-        if let Some(test_id) = viewport_test_id {
-            builder = builder.viewport_test_id(test_id);
-        }
-
-        if resize_x.is_none()
-            && resize_y.is_none()
-            && let Some(test_id) = test_id
-        {
-            builder = builder.test_id(test_id);
-        }
-
-        let scroll = builder.into_element(cx);
+        let scroll_root_test_id = if has_resize { None } else { test_id };
+        let scroll = scroll::child_region_scroll_element(
+            cx,
+            scroll::ChildRegionScrollInput {
+                build_focus,
+                build: f,
+                chrome,
+                scroll_layout,
+                scroll_options,
+                root_test_id: scroll_root_test_id,
+                content_test_id: options.content_test_id.clone(),
+            },
+        );
         let mut response = ChildRegionResponse::empty();
 
-        let element = if resize_x.is_some() || resize_y.is_some() {
-            let resize_x_handle = resize_x.map(|resize_options| {
-                let handle_test_id = resize_options.handle_test_id.clone().or_else(|| {
-                    root_test_id
-                        .as_ref()
-                        .map(|base| Arc::from(format!("{base}.resize-x")))
-                });
-                child_region_resize_x_handle(cx, id, resize_options, handle_test_id, &mut response)
-            });
-            let resize_y_handle = resize_y.map(|resize_options| {
-                let handle_test_id = resize_options.handle_test_id.clone().or_else(|| {
-                    root_test_id
-                        .as_ref()
-                        .map(|base| Arc::from(format!("{base}.resize-y")))
-                });
-                child_region_resize_y_handle(cx, id, resize_options, handle_test_id, &mut response)
-            });
-
-            let mut stack = StackProps::default();
-            stack.layout = crate::declarative::style::layout_style(Theme::global(&*cx.app), layout);
-
-            let stack = cx.stack_props(stack, move |_cx| {
-                let mut children = vec![scroll];
-                if let Some(handle) = resize_x_handle {
-                    children.push(handle);
-                }
-                if let Some(handle) = resize_y_handle {
-                    children.push(handle);
-                }
-                children
-            });
-            if let Some(test_id) = root_test_id {
-                stack.test_id(test_id)
-            } else {
-                stack
-            }
+        let element = if has_resize {
+            resize_stack::child_region_resize_stack_element(
+                cx,
+                resize_stack::ChildRegionResizeStackInput {
+                    id,
+                    scroll,
+                    layout,
+                    root_test_id,
+                    resize_x,
+                    resize_y,
+                    response: &mut response,
+                },
+            )
         } else {
             scroll
         };

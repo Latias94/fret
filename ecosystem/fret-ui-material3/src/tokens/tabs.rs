@@ -33,6 +33,24 @@ pub(crate) fn active_indicator_height(theme: &Theme) -> Px {
         .unwrap_or(Px(3.0))
 }
 
+pub(crate) fn active_indicator_min_width(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.primary-navigation-tab.active-indicator.min-width")
+        .unwrap_or(Px(24.0))
+}
+
+pub(crate) fn scrollable_edge_padding(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.primary-navigation-tab.scrollable.edge-padding")
+        .unwrap_or(Px(52.0))
+}
+
+pub(crate) fn scrollable_min_tab_width(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.primary-navigation-tab.scrollable.min-tab-width")
+        .unwrap_or(Px(90.0))
+}
+
 pub(crate) fn active_indicator_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.primary-navigation-tab.active-indicator.color")

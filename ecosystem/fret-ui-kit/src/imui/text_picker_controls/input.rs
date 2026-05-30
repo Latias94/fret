@@ -1,17 +1,15 @@
 use std::sync::Arc;
 
-use fret_core::SemanticsRole;
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ContainerProps, Length};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
-use super::super::{InputTextOptions, InputTextPickerOptions, ResponseExt};
+use super::super::{InputTextOptions, ResponseExt};
 use super::keyboard::{InputTextPickerKeyboardState, install_picker_keyboard_handler};
 
-pub(super) struct PreparedInputTextPickerInput {
-    pub(super) test_id: Option<Arc<str>>,
-    pub(super) options: InputTextOptions,
-}
+mod options;
+
+pub(super) use options::prepare_text_picker_input_options;
 
 pub(super) struct InputTextPickerInputRootRequest<'a> {
     pub(super) model: Model<String>,
@@ -31,29 +29,6 @@ pub(super) struct InputTextPickerInputRootRequest<'a> {
 pub(super) struct BuiltInputTextPickerInputRoot {
     pub(super) root: AnyElement,
     pub(super) response: ResponseExt,
-}
-
-pub(super) fn prepare_text_picker_input_options(
-    options: &InputTextPickerOptions,
-) -> PreparedInputTextPickerInput {
-    let test_id = options
-        .test_id
-        .clone()
-        .or_else(|| options.input.test_id.clone());
-    let mut input_options = options.input.clone();
-    if input_options.test_id.is_none() {
-        input_options.test_id = test_id
-            .as_ref()
-            .map(|base| Arc::from(format!("{base}.input")));
-    }
-    if matches!(input_options.a11y_role, Some(SemanticsRole::TextField)) {
-        input_options.a11y_role = Some(SemanticsRole::ComboBox);
-    }
-
-    PreparedInputTextPickerInput {
-        test_id,
-        options: input_options,
-    }
 }
 
 pub(super) fn render_text_picker_input_root<H: UiHost>(

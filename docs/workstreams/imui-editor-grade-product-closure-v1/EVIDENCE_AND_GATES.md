@@ -613,8 +613,10 @@ Scope: keep `debug_draw_controls.rs` as the draw-list API and response/model hub
 final canvas/pressable element assembly into a narrower owner module.
 
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element.rs` now owns `debug_draw_element`,
-  pressable wrapping, fill-layout policy, canvas cache policy, clip-to-bounds dispatch, and
-  forwarding into `paint_debug_draw_commands`.
+  fill-layout policy, canvas cache policy, clip-to-bounds dispatch, and forwarding into
+  `paint_debug_draw_commands`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element/behavior.rs` now owns pressable
+  wrapping, click response population, and keyboard activation lifecycle marking.
 - `debug_draw_controls.rs` still owns `DebugDrawOptions`, `DebugDrawResponse`,
   `ImUiDebugDrawList`, stroke/corner options, command recording, summary construction, and the
   facade entrypoint.
@@ -2894,8 +2896,11 @@ Scope: keep `table_controls/header.rs` as the table-header coordination owner wh
 mechanism-heavy header internals into focused child owners.
 
 - `ecosystem/fret-ui-kit/src/imui/table_controls/header/trigger.rs` now owns sortable/plain header
-  pressable trigger construction, pressable a11y props, keyboard activation lifecycle marking,
-  active-trigger response population, and sortable header visual hover/focus/pressed chrome.
+  pressable trigger construction, pressable a11y props, and sortable header visual
+  hover/focus/pressed chrome.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/trigger/behavior.rs` now owns sortable
+  header keyboard activation lifecycle marking, clicked transient draining for plain headers, and
+  active-trigger response population.
 - `ecosystem/fret-ui-kit/src/imui/table_controls/header/resize.rs` now owns table column resize
   handle constants, pointer-region construction, resize cursor capture, pointer drag start/move/up
   handling, resize drag response population, and resize handle visual chrome.
@@ -3644,12 +3649,14 @@ layout/test-id contract tests into a dedicated test owner.
 
 - `ecosystem/fret-ui-kit/src/imui/containers.rs` now keeps the child-building helper plus
   horizontal, vertical, scroll, and grid container element builders.
-- `ecosystem/fret-ui-kit/src/imui/containers/tests.rs` now owns the local layout forwarding,
-  outer `test_id`, and scroll viewport `test_id` contract tests.
+- `ecosystem/fret-ui-kit/src/imui/containers/tests/mod.rs` now owns the shared local test harness,
+  with `tests/layout.rs` covering layout forwarding and `tests/identity.rs` covering outer
+  `test_id` plus scroll viewport `test_id` contracts.
 - `containers.rs` is a 146-line implementation file with only `#[cfg(test)] mod tests;` for the
-  local unit-test module; `containers/tests.rs` is a 207-line test owner.
+  local unit-test module; the split container test owners keep layout and identity assertions in
+  separate files.
 - The source gate now rejects local test harness and container contract test bodies from returning
-  to `containers.rs`, and checks the split test owner directly.
+  to `containers.rs`, and checks the split test owners directly.
 
 Focused gates:
 
@@ -3883,18 +3890,22 @@ code. `git diff --check` reported only the pre-existing line-ending warnings for
 ## IMUI floating-window title-bar test owner split - 2026-05-25
 
 Scope: keep `floating_window_title_bar.rs` focused on title-bar row assembly, drag/collapse/close
-interaction wiring, and close-glyph text construction while moving the local close-glyph text-role
-test into a dedicated test owner.
+interaction delegation, and close-glyph text construction while moving the local close-glyph
+text-role test into a dedicated test owner.
 
 - `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs` still owns
   `floating_window_title_bar_row(...)` and `floating_window_close_glyph_text(...)`.
+- 2026-05-27 follow-up: `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar/behavior.rs`
+  now owns title-bar double-click collapse signaling, Escape close behavior, and close-button
+  activation wiring, while the root title-bar file delegates those behaviors.
 - `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar/tests.rs` now owns the close-glyph
   shared chrome-glyph text-role test.
-- `floating_window_title_bar.rs` is now a 112-line implementation file with only
-  `#[cfg(test)] mod tests;` for the local test module; `floating_window_title_bar/tests.rs` is a
-  27-line test owner.
+- `floating_window_title_bar.rs` remains the title-bar assembly owner with only `mod behavior;` and
+  `#[cfg(test)] mod tests;` child modules; `floating_window_title_bar/tests.rs` remains the local
+  close-glyph test owner.
 - The source gate now rejects the local close-glyph test body from returning to
-  `floating_window_title_bar.rs`, while checking the split test owner directly.
+  `floating_window_title_bar.rs`, checks the split test owner directly, and rejects inline
+  title-bar key/press behavior bodies from returning to the root title-bar file.
 
 Focused gates:
 
