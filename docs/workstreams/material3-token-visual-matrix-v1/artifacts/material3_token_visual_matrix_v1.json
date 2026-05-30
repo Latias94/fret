@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "generated_date": "2026-05-30",
+  "purpose": "Track Material3 token visual parity across components, variants, states, schemes, parts, and token roles.",
+  "source_component_axis_matrix": "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_parity_axis_matrix_v2.json",
+  "source_closeout_audit": "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_v2_closeout_audit.md",
+  "token_version": {
+    "material_web": "30.0.14",
+    "fret_injection_surface": "ecosystem/fret-ui-material3/src/tokens/v30.rs",
+    "generated_snapshot": "ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs"
+  },
+  "source_precedence": {
+    "token_inventory": "Material Web v30 generated snapshot, then manual Fret v30 aliases",
+    "state_naming": "Compose Material3 interaction/state vocabulary, then Fret pressable state",
+    "headless_parts": "Fret Material stable part ids, with Base UI as supporting part/a11y reference",
+    "render_truth": "Fret scene/token assertions, then representative headless goldens"
+  },
+  "dimensions": {
+    "scheme_axis": [
+      "light_tonal_spot",
+      "dark_tonal_spot",
+      "light_expressive",
+      "dark_expressive"
+    ],
+    "state_axis": [
+      "enabled",
+      "hovered",
+      "focused",
+      "pressed",
+      "disabled",
+      "selected",
+      "error",
+      "open",
+      "closed"
+    ],
+    "token_roles": [
+      "container_color",
+      "content_color",
+      "icon_color",
+      "outline_color",
+      "state_layer_color",
+      "state_layer_opacity",
+      "shape",
+      "elevation",
+      "metric",
+      "typography",
+      "motion",
+      "shadow"
+    ],
+    "gate_states": [
+      "inventory_seeded",
+      "covered_fixture",
+      "covered_scene",
+      "covered_golden",
+      "not_applicable",
+      "split_follow_on"
+    ]
+  },
+  "family_packets": [
+    {
+      "id": "field_family",
+      "task": "M3TVM-040",
+      "components": [
+        "autocomplete",
+        "date_picker",
+        "exposed_dropdown",
+        "search_bar",
+        "search_view",
+        "select",
+        "text_field",
+        "time_picker"
+      ]
+    },
+    {
+      "id": "control_chip_family",
+      "task": "M3TVM-050",
+      "components": [
+        "button",
+        "checkbox",
+        "chip",
+        "chip_set",
+        "filter_chip",
+        "icon_button",
+        "input_chip",
+        "radio",
+        "segmented_button",
+        "slider",
+        "suggestion_chip",
+        "switch"
+      ]
+    },
+    {
+      "id": "navigation_family",
+      "task": "M3TVM-060",
+      "components": [
+        "modal_navigation_drawer",
+        "navigation_bar",
+        "navigation_drawer",
+        "navigation_rail",
+        "tabs",
+        "top_app_bar"
+      ]
+    },
+    {
+      "id": "overlay_surface_family",
+      "task": "M3TVM-070",
+      "components": [
+        "badge",
+        "bottom_sheet",
+        "card",
+        "carousel_item",
+        "dialog",
+        "divider",
+        "dropdown_menu",
+        "fab",
+        "list",
+        "menu",
+        "progress_indicator",
+        "snackbar",
+        "tooltip"
+      ]
+    }
+  ],
+  "components": [
+    {"id":"autocomplete","family":"field","token_modules":["tokens/autocomplete.rs","tokens/selectable_menu_item.rs"],"owner_bias":"material_recipe+foundation_field","variant_axis":["filled","outlined"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected","error","open","closed"],"gate_state":"inventory_seeded","first_packet":"M3TVM-040"},
+    {"id":"badge","family":"surface","token_modules":["tokens/badge.rs"],"owner_bias":"material_recipe","variant_axis":["small","large"],"state_axis":["enabled"],"gate_state":"inventory_seeded","first_packet":"M3TVM-070"},
+    {"id":"bottom_sheet","family":"overlay_feedback","token_modules":["tokens/sheet_bottom.rs"],"owner_bias":"material_recipe+foundation_motion","variant_axis":["modal"],"state_axis":["open","closed"],"gate_state":"inventory_seeded","first_packet":"M3TVM-070"},
+    {"id":"button","family":"control","token_modules":["tokens/button.rs"],"owner_bias":"material_foundation+material_recipe","variant_axis":["filled","tonal","elevated","outlined","text"],"state_axis":["enabled","hovered","focused","pressed","disabled"],"gate_state":"inventory_seeded","first_packet":"M3TVM-050"},
+    {"id":"card","family":"surface","token_modules":["tokens/card.rs"],"owner_bias":"material_foundation+material_recipe","variant_axis":["filled","elevated","outlined"],"state_axis":["enabled","hovered","focused","pressed","disabled"],"gate_state":"inventory_seeded","first_packet":"M3TVM-070"},
+    {"id":"carousel_item","family":"surface","token_modules":["tokens/carousel_item.rs"],"owner_bias":"material_foundation+material_recipe","variant_axis":["filled"],"state_axis":["enabled","hovered","focused","pressed","disabled"],"gate_state":"inventory_seeded","first_packet":"M3TVM-070"},
+    {"id":"checkbox","family":"choice_control","token_modules":["tokens/checkbox.rs"],"owner_bias":"material_recipe","variant_axis":["binary","tri_state"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected","error"],"gate_state":"inventory_seeded","first_packet":"M3TVM-050"},
+    {"id":"chip","family":"chip","token_modules":["tokens/chip.rs"],"owner_bias":"material_recipe","variant_axis":["assist","suggestion","filter","input"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected"],"gate_state":"inventory_seeded","first_packet":"M3TVM-050"},
+    {"id":"chip_set","family":"chip","token_modules":["tokens/chip.rs","tokens/filter_chip.rs","tokens/input_chip.rs","tokens/suggestion_chip.rs"],"owner_bias":"material_recipe","variant_axis":["single_line","wrapped"],"state_axis":["enabled","focused"],"gate_state":"inventory_seeded","first_packet":"M3TVM-050"},
+    {"id":"date_picker","family":"field_picker","token_modules":["tokens/date_picker.rs"],"owner_bias":"material_recipe","variant_axis":["docked","modal"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected","error","open","closed"],"gate_state":"inventory_seeded","first_packet":"M3TVM-040"},
+    {"id":"dialog","family":"overlay_feedback","token_modules":["tokens/dialog.rs"],"owner_bias":"material_recipe+foundation_motion","variant_axis":["alert","basic","full_screen"],"state_axis":["open","closed"],"gate_state":"inventory_seeded","first_packet":"M3TVM-070"},
+    {"id":"divider","family":"surface","token_modules":["tokens/divider.rs"],"owner_bias":"material_recipe","variant_axis":["horizontal","vertical"],"state_axis":["enabled"],"gate_state":"inventory_seeded","first_packet":"M3TVM-070"},
+    {"id":"dropdown_menu","family":"overlay_feedback","token_modules":["tokens/dropdown_menu.rs","tokens/menu.rs"],"owner_bias":"material_recipe+kit_policy","variant_axis":["plain"],"state_axis":["open","closed","focused"],"gate_state":"inventory_seeded","first_packet":"M3TVM-070"},
+    {"id":"exposed_dropdown","family":"field","token_modules":["tokens/autocomplete.rs","tokens/selectable_menu_item.rs"],"owner_bias":"material_recipe+foundation_field","variant_axis":["filled","outlined"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected","error","open","closed"],"gate_state":"inventory_seeded","first_packet":"M3TVM-040"},
+    {"id":"fab","family":"control","token_modules":["tokens/fab.rs"],"owner_bias":"material_foundation+material_recipe","variant_axis":["small","regular","medium","large","extended"],"state_axis":["enabled","hovered","focused","pressed","disabled"],"gate_state":"inventory_seeded","first_packet":"M3TVM-070"},
+    {"id":"filter_chip","family":"chip","token_modules":["tokens/filter_chip.rs","tokens/chip.rs"],"owner_bias":"material_recipe","variant_axis":["elevated","outlined"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected"],"gate_state":"inventory_seeded","first_packet":"M3TVM-050"},
+    {"id":"icon_button","family":"choice_control","token_modules":["tokens/icon_button.rs"],"owner_bias":"material_recipe","variant_axis":["standard","filled","filled_tonal","outlined"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected"],"gate_state":"inventory_seeded","first_packet":"M3TVM-050"},
+    {"id":"input_chip","family":"chip","token_modules":["tokens/input_chip.rs","tokens/chip.rs"],"owner_bias":"material_recipe","variant_axis":["input"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected"],"gate_state":"inventory_seeded","first_packet":"M3TVM-050"},
+    {"id":"list","family":"surface","token_modules":["tokens/list.rs"],"owner_bias":"material_recipe","variant_axis":["one_line","two_line","three_line"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected"],"gate_state":"inventory_seeded","first_packet":"M3TVM-070"},
+    {"id":"menu","family":"overlay_feedback","token_modules":["tokens/menu.rs"],"owner_bias":"material_recipe","variant_axis":["plain"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected"],"gate_state":"inventory_seeded","first_packet":"M3TVM-070"},
+    {"id":"modal_navigation_drawer","family":"navigation","token_modules":["tokens/navigation_drawer.rs"],"owner_bias":"material_recipe+kit_policy","variant_axis":["modal"],"state_axis":["open","closed"],"gate_state":"inventory_seeded","first_packet":"M3TVM-060"},
+    {"id":"navigation_bar","family":"navigation","token_modules":["tokens/navigation_bar.rs"],"owner_bias":"material_foundation+material_recipe","variant_axis":["collapsed"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected"],"gate_state":"inventory_seeded","first_packet":"M3TVM-060"},
+    {"id":"navigation_drawer","family":"navigation","token_modules":["tokens/navigation_drawer.rs"],"owner_bias":"material_recipe","variant_axis":["standard","modal_content"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected"],"gate_state":"inventory_seeded","first_packet":"M3TVM-060"},
+    {"id":"navigation_rail","family":"navigation","token_modules":["tokens/navigation_rail.rs"],"owner_bias":"material_foundation+material_recipe","variant_axis":["collapsed"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected"],"gate_state":"inventory_seeded","first_packet":"M3TVM-060"},
+    {"id":"progress_indicator","family":"surface","token_modules":["tokens/progress_indicator.rs"],"owner_bias":"material_recipe","variant_axis":["linear","circular"],"state_axis":["enabled","disabled"],"gate_state":"inventory_seeded","first_packet":"M3TVM-070"},
+    {"id":"radio","family":"choice_control","token_modules":["tokens/radio.rs"],"owner_bias":"material_recipe","variant_axis":["radio"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected","error"],"gate_state":"inventory_seeded","first_packet":"M3TVM-050"},
+    {"id":"search_bar","family":"field","token_modules":["tokens/search_bar.rs"],"owner_bias":"material_recipe+foundation_field","variant_axis":["standalone"],"state_axis":["enabled","hovered","focused","pressed","disabled","open","closed"],"gate_state":"inventory_seeded","first_packet":"M3TVM-040"},
+    {"id":"search_view","family":"field","token_modules":["tokens/search_view.rs"],"owner_bias":"material_recipe+foundation_field","variant_axis":["docked","full_screen"],"state_axis":["enabled","focused","open","closed"],"gate_state":"inventory_seeded","first_packet":"M3TVM-040"},
+    {"id":"segmented_button","family":"choice_control","token_modules":["tokens/segmented_button.rs"],"owner_bias":"material_recipe","variant_axis":["outlined"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected"],"gate_state":"inventory_seeded","first_packet":"M3TVM-050"},
+    {"id":"select","family":"field","token_modules":["tokens/select.rs","tokens/selectable_menu_item.rs"],"owner_bias":"material_recipe+foundation_field","variant_axis":["filled","outlined"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected","error","open","closed"],"gate_state":"inventory_seeded","first_packet":"M3TVM-040"},
+    {"id":"slider","family":"choice_control","token_modules":["tokens/slider.rs"],"owner_bias":"material_recipe","variant_axis":["single","range"],"state_axis":["enabled","hovered","focused","pressed","disabled"],"gate_state":"inventory_seeded","first_packet":"M3TVM-050"},
+    {"id":"snackbar","family":"overlay_feedback","token_modules":["tokens/snackbar.rs"],"owner_bias":"material_recipe+kit_policy","variant_axis":["single_line","two_line"],"state_axis":["open","closed"],"gate_state":"inventory_seeded","first_packet":"M3TVM-070"},
+    {"id":"suggestion_chip","family":"chip","token_modules":["tokens/suggestion_chip.rs","tokens/chip.rs"],"owner_bias":"material_recipe","variant_axis":["suggestion"],"state_axis":["enabled","hovered","focused","pressed","disabled"],"gate_state":"inventory_seeded","first_packet":"M3TVM-050"},
+    {"id":"switch","family":"choice_control","token_modules":["tokens/switch.rs"],"owner_bias":"material_recipe+kit_policy","variant_axis":["switch"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected"],"gate_state":"inventory_seeded","first_packet":"M3TVM-050"},
+    {"id":"tabs","family":"navigation","token_modules":["tokens/tabs.rs"],"owner_bias":"material_foundation+material_recipe","variant_axis":["primary","secondary"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected"],"gate_state":"inventory_seeded","first_packet":"M3TVM-060"},
+    {"id":"text_field","family":"field","token_modules":["tokens/text_field.rs"],"owner_bias":"material_recipe+foundation_field","variant_axis":["filled","outlined"],"state_axis":["enabled","hovered","focused","pressed","disabled","error"],"gate_state":"inventory_seeded","first_packet":"M3TVM-040"},
+    {"id":"time_picker","family":"field_picker","token_modules":["tokens/time_picker.rs","tokens/time_input.rs"],"owner_bias":"material_recipe","variant_axis":["dial","input","modal"],"state_axis":["enabled","hovered","focused","pressed","disabled","selected","error","open","closed"],"gate_state":"inventory_seeded","first_packet":"M3TVM-040"},
+    {"id":"tooltip","family":"overlay_feedback","token_modules":["tokens/tooltip.rs"],"owner_bias":"material_recipe+kit_policy","variant_axis":["plain","rich"],"state_axis":["open","closed"],"gate_state":"inventory_seeded","first_packet":"M3TVM-070"},
+    {"id":"top_app_bar","family":"navigation","token_modules":["tokens/top_app_bar.rs"],"owner_bias":"material_recipe","variant_axis":["small","center_aligned","medium","large"],"state_axis":["enabled","scrolled","collapsed","expanded"],"gate_state":"inventory_seeded","first_packet":"M3TVM-060"}
+  ]
+}

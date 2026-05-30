@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 504
+- Dedicated directories: 511
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2235,6 +2235,7 @@ Rule:
 - `docs/workstreams/imui-stack-fearless-refactor-v2/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the immediate-mode doc reset, editor adapter closure, and proof-surface cleanup lane)
 - `docs/workstreams/input-dispatch-v2/` — first 2026-01-22, latest 2026-02-14, 3 markdown docs
 - `docs/workstreams/into-element-surface-fearless-refactor-v1/` — first 2026-03-12, latest 2026-03-20, 6 markdown docs
+- `docs/workstreams/jellyflow-package-split-v1/` — first n/a, latest n/a, 5 markdown docs (active Jellyflow package-boundary split for separating reusable headless node/flow graph engine crates from the Fret UI adapter; includes `WORKSTREAM.json`)
 - `docs/workstreams/launcher-utility-windows-v1/` — first 2026-03-03, latest 2026-03-03, 4 markdown docs
 - `docs/workstreams/length-percentage-semantics-v1/` — first 2026-02-23, latest 2026-02-27, 3 markdown docs
 - `docs/workstreams/localization-i18n-v1/` — first 2026-02-06, latest 2026-02-07, 2 markdown docs
@@ -2271,6 +2272,7 @@ Rule:
 - `docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 TimePicker value-derived clock dial label selectors and picker accessibility residual-risk split; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-time-picker-input-error-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 TimePicker invalid input error text, invalid semantics, and supporting-text live-region anchors; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-time-picker-string-registry-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 TimePicker string registry wiring through `I18nService` plus bootstrap default resources; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-token-visual-matrix-v1/` — first n/a, latest n/a, 6 markdown docs (active fearless-refactor lane for exhaustive Material3 token visual matrix schema, source map, fixture strategy, and family token packets; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 TopAppBar promoted gallery scroll diagnostics; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-tooltip-rich-parts-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 RichTooltip title/supporting-text selectors, shared tooltip root/chrome wiring, and click-through mechanism boundary; includes `WORKSTREAM.json`)
 - `docs/workstreams/menu-surfaces-alignment-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs
