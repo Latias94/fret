@@ -6435,12 +6435,49 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/label_identity/tests.rs"),
             required=[
+                "use super::parse_label_identity;",
+                "mod double_hash;",
+                "mod triple_hash;",
+            ],
+            forbidden=[
+                "#[test]",
                 "imui_label_identity_keeps_plain_label_visible_and_identifying",
                 "imui_label_identity_hides_double_hash_suffix_from_visible_label",
                 "imui_label_identity_supports_hidden_label_with_double_hash_id",
                 "imui_label_identity_uses_triple_hash_suffix_as_stable_identity",
                 "imui_label_identity_supports_hidden_label_with_triple_hash_id",
                 "imui_label_identity_triple_hash_takes_identity_precedence",
+                "parse_label_identity(\"Play##toolbar###stable-play\")",
+                "pub fn ",
+                "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/label_identity/tests/double_hash.rs"),
+            required=[
+                "use super::*;",
+                "imui_label_identity_keeps_plain_label_visible_and_identifying",
+                "imui_label_identity_hides_double_hash_suffix_from_visible_label",
+                "imui_label_identity_supports_hidden_label_with_double_hash_id",
+                "parse_label_identity(\"Play\")",
+                "parse_label_identity(\"Play##toolbar\")",
+                "parse_label_identity(\"##toolbar-play\")",
+            ],
+            forbidden=[
+                "###",
+                "pub fn ",
+                "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/label_identity/tests/triple_hash.rs"),
+            required=[
+                "use super::*;",
+                "imui_label_identity_uses_triple_hash_suffix_as_stable_identity",
+                "imui_label_identity_supports_hidden_label_with_triple_hash_id",
+                "imui_label_identity_triple_hash_takes_identity_precedence",
+                "parse_label_identity(\"Compiling 42%###build-progress\")",
+                "parse_label_identity(\"###hidden-stable\")",
                 "parse_label_identity(\"Play##toolbar###stable-play\")",
             ],
             forbidden=[

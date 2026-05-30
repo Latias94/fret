@@ -55,6 +55,12 @@ Last updated: 2026-05-31
       Result: `drag_drop/tests.rs` now keeps the shared `TestWriter` harness and module routing
       only. `tests/source.rs` owns source fallback coverage, while `tests/target.rs` owns target
       fallback coverage.
+- [x] Split IMUI label-identity porting-sugar regressions into private double-hash and
+      triple-hash owners without changing visible label extraction, stable identity precedence, or
+      hidden-label behavior.
+      Result: `label_identity/tests.rs` now keeps module routing only. `tests/double_hash.rs` owns
+      plain and `##` identity coverage, while `tests/triple_hash.rs` owns `###` stable identity and
+      precedence coverage.
 - [x] Split IMUI debug-draw path-builder regression coverage into private sub-owners without
       changing path stroke/fill command recording, rectangle/rounded-rectangle sampling, Bezier
       defaults, circular/elliptical arc defaults, or invalid finished-path cleanup.

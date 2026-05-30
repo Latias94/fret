@@ -22,6 +22,11 @@ bullet-text behavior remains unchanged.
 `tests/source.rs` owns source no-trigger fallback coverage, while `tests/target.rs` owns target
 no-trigger fallback coverage. Public drag/drop behavior remains unchanged.
 
+2026-05-31 label-identity test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/label_identity/tests.rs` is now a thin test hub.
+`tests/double_hash.rs` owns plain and `##` identity coverage, while `tests/triple_hash.rs` owns
+`###` stable identity and precedence coverage. Public label identity behavior remains unchanged.
+
 2026-05-31 facade-writer text test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` is now a thin test hub.
 `tests/text.rs` owns `ui.text(...)` dense single-line coverage, while `tests/wrapped.rs` owns

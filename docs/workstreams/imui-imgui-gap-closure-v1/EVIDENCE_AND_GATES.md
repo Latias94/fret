@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Label-Identity Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI label-identity porting-sugar regressions split into private double-hash and
+triple-hash owners without changing visible label extraction, stable identity precedence, or
+hidden-label behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/label_identity/tests.rs` is now a thin hub with module routing
+  only.
+- `ecosystem/fret-ui-kit/src/imui/label_identity/tests/double_hash.rs` owns plain and `##`
+  identity coverage.
+- `ecosystem/fret-ui-kit/src/imui/label_identity/tests/triple_hash.rs` owns `###` stable identity
+  and precedence coverage.
+- `tools/gate_imui_workstream_source.py` now checks the hub and both private test owners and
+  rejects label-identity regression bodies from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the label-identity test-owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  imui_label_identity_keeps_plain_label_visible_and_identifying
+  imui_label_identity_hides_double_hash_suffix_from_visible_label
+  imui_label_identity_supports_hidden_label_with_double_hash_id
+  imui_label_identity_uses_triple_hash_suffix_as_stable_identity
+  imui_label_identity_supports_hidden_label_with_triple_hash_id
+  imui_label_identity_triple_hash_takes_identity_precedence --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui label_identity --no-fail-fast`: pass.
+
 ## IMUI Drag/Drop Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI drag/drop no-trigger regression coverage split into private source and target
