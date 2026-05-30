@@ -34,6 +34,13 @@ placement recording, dismissible popover request construction, branch registrati
 dismissal writeback, and overlay open-state model creation. Anchor fallback, popper placement,
 overlay diagnostics, dismiss behavior, and local open model behavior remain unchanged.
 
+2026-05-30 text-assist field panel child-owner result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now keeps input/key orchestration and
+accept flow. `controls/text_assist_field/panel.rs` owns suggestion panel content, option rows,
+scroll wrapping, listbox semantics, popup chrome, and rendered panel packaging. Visible-match
+listbox semantics, active/disabled row palette, option activation, scroll threshold, popup surface
+chrome, item test-id derivation, and rendered panel handoff remain unchanged.
+
 2026-05-30 property-row reset child-owner result:
 `ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the row layout and value
 orchestration plus reset delegation only. `composites/property_row/reset.rs` owns

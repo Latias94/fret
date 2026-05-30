@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Editor TextAssistField Panel Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: editor text-assist suggestion panel rendering split into a private child owner
+without changing visible-match listbox semantics, active/disabled row palette, option activation,
+scroll threshold, popup surface chrome, item test-id derivation, or rendered panel handoff.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now keeps input/key orchestration and
+  accept flow.
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field/panel.rs` owns suggestion panel content,
+  option rows, scroll wrapping, listbox semantics, popup chrome, and rendered panel packaging.
+- `tools/gate_imui_workstream_source.py` now checks the text-assist root/panel split and keeps
+  popup/listbox row rendering out of the root control file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the text-assist panel
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  text_assist_field_defaults_to_unbuffered_field_policy
+  text_assist_field_item_test_id_prefix_can_fallback_to_list_test_id
+  empty_label_is_inline_only
+  anchored_overlay_defaults_to_capped_content_height --no-fail-fast`: pass (4 passed, 194 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Editor TextAssistField Overlay Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: editor text-assist anchored-overlay request/placement split into a private child

@@ -63,6 +63,12 @@ Last updated: 2026-05-30
       Result: `controls/text_assist_field.rs` keeps input and panel orchestration.
       `controls/text_assist_field/overlay.rs` owns anchored placement, dismissible popover request,
       and overlay open-state model creation.
+- [x] Split editor text-assist suggestion panel rendering into a private child owner without
+      changing visible-match listbox semantics, active/disabled row palette, option activation,
+      scroll threshold, popup surface chrome, item test-id derivation, or rendered panel handoff.
+      Result: `controls/text_assist_field.rs` keeps input/key orchestration and accept flow.
+      `controls/text_assist_field/panel.rs` owns suggestion panel content, option rows, scroll
+      wrapping, listbox semantics, popup chrome, and rendered panel packaging.
 - [x] Split editor-owned property-row reset affordance handling into a private child owner without
       changing row layout, value-slot growth, reset keying, glyph render, accessibility label, or
       property chrome semantics.
