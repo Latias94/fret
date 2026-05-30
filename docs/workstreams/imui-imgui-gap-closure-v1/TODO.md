@@ -44,6 +44,14 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw path-builder regression coverage into private sub-owners without
+      changing path stroke/fill command recording, rectangle/rounded-rectangle sampling, Bezier
+      defaults, circular/elliptical arc defaults, or invalid finished-path cleanup.
+      Result: `debug_draw_controls/tests/path_builder.rs` is now a thin test hub.
+      `tests/path_builder/commands.rs` owns stroke/fill/invalid-finish coverage,
+      `tests/path_builder/rects.rs` owns rect and rounded-rect coverage,
+      `tests/path_builder/curves.rs` owns Bezier coverage, and
+      `tests/path_builder/arcs.rs` owns circular/elliptical arc coverage.
 - [x] Split IMUI text-field buffered draft/session handling into a private child owner without
       changing TextField public options, draft-controller support, buffered blur behavior,
       clear-button reset behavior, or API smoke coverage.

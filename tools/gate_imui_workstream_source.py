@@ -34545,6 +34545,14 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/path_builder.rs"),
             required=[
+                "use super::*;",
+                "mod arcs;",
+                "mod commands;",
+                "mod curves;",
+                "mod rects;",
+            ],
+            forbidden=[
+                "#[test]",
                 "fn debug_draw_path_builder_records_stroke_and_fill_commands",
                 "fn debug_draw_path_builder_records_concave_fill_command",
                 "fn debug_draw_path_builder_appends_rect_points",
@@ -34553,13 +34561,85 @@ def main() -> None:
                 "fn debug_draw_path_builder_appends_arc_samples",
                 "fn debug_draw_path_builder_appends_elliptical_arc_samples",
                 "fn debug_draw_path_builder_clears_invalid_finished_paths_without_recording",
-                "assert_point_near(",
-                "DEFAULT_PATH_ELLIPTICAL_ARC_SEGMENTS",
+                "DebugDrawRoundCorners::",
+                "DEFAULT_PATH_",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/path_builder/commands.rs"
+            ),
+            required=[
+                "fn debug_draw_path_builder_records_stroke_and_fill_commands",
+                "fn debug_draw_path_builder_records_concave_fill_command",
+                "fn debug_draw_path_builder_clears_invalid_finished_paths_without_recording",
+                "DebugDrawStrokeStyle::new(Px(2.0)).with_join",
+                "DebugDrawCommand::ConcavePolyFilled",
             ],
             forbidden=[
                 "debug_draw_element(",
                 "normalized_opacity(",
                 "rect_path(",
+                "assert_point_near(",
+                "DEFAULT_PATH_",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/path_builder/rects.rs"
+            ),
+            required=[
+                "fn debug_draw_path_builder_appends_rect_points",
+                "fn debug_draw_path_builder_appends_rounded_rect_corner_samples",
+                "fn debug_draw_path_builder_rect_rounding_clamps_and_handles_invalid_inputs",
+                "DebugDrawRoundCorners::TOP_LEFT",
+                "assert_point_near(",
+            ],
+            forbidden=[
+                "debug_draw_element(",
+                "normalized_opacity(",
+                "rect_path(",
+                "DEFAULT_PATH_ARC_SEGMENTS",
+                "DEFAULT_PATH_BEZIER_SEGMENTS",
+                "DEFAULT_PATH_ELLIPTICAL_ARC_SEGMENTS",
+                "bezier_",
+                "arc_to(",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/path_builder/curves.rs"
+            ),
+            required=[
+                "fn debug_draw_path_builder_appends_bezier_curve_samples",
+                "fn debug_draw_path_builder_bezier_helpers_require_a_start_point_and_default_segments",
+                "DEFAULT_PATH_BEZIER_SEGMENTS",
+            ],
+            forbidden=[
+                "debug_draw_element(",
+                "normalized_opacity(",
+                "rect_path(",
+                "DebugDrawRoundCorners::",
+                "arc_to(",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/path_builder/arcs.rs"),
+            required=[
+                "fn debug_draw_path_builder_appends_arc_samples",
+                "fn debug_draw_path_builder_arc_helpers_handle_fast_default_and_degenerate_inputs",
+                "fn debug_draw_path_builder_appends_elliptical_arc_samples",
+                "fn debug_draw_path_builder_elliptical_arc_handles_rotation_default_and_invalid_inputs",
+                "DEFAULT_PATH_ARC_SEGMENTS",
+                "DEFAULT_PATH_ELLIPTICAL_ARC_SEGMENTS",
+                "assert_point_near(",
+            ],
+            forbidden=[
+                "debug_draw_element(",
+                "normalized_opacity(",
+                "rect_path(",
+                "DebugDrawRoundCorners::",
+                "bezier_",
             ],
         ),
         SourceCheck(

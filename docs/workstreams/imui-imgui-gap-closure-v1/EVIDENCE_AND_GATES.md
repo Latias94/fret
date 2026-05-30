@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Debug-Draw Path-Builder Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI debug-draw path-builder regression coverage split into private sub-owners
+without changing path stroke/fill command recording, rectangle and rounded-rectangle sampling,
+Bezier defaults, circular/elliptical arc defaults, or invalid finished-path cleanup.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/path_builder.rs` is now a thin test
+  hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/path_builder/commands.rs` owns
+  stroke/fill command recording plus invalid finished-path cleanup coverage.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/path_builder/rects.rs` owns rect and
+  rounded-rect sampling coverage.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/path_builder/curves.rs` owns Bezier
+  sampling/default coverage.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/path_builder/arcs.rs` owns circular and
+  elliptical arc sampling/default coverage.
+- `tools/gate_imui_workstream_source.py` now checks the path-builder test hub/sub-owner split and
+  keeps concrete path-builder regression tests out of the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the path-builder test
+  owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui debug_draw_path_builder --no-fail-fast`:
+  pass (12 passed, 739 skipped).
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass (6 passed).
+- `git diff --check`: pass.
+
 ## IMUI Child-Region Resize Response Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI child-region resize response regressions split into private X/Y test owners

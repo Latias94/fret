@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 debug-draw path-builder test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/path_builder.rs` is now a thin test
+hub. Stroke/fill command recording and invalid finished-path cleanup live in
+`tests/path_builder/commands.rs`, rectangle and rounded-rectangle sampling coverage lives in
+`tests/path_builder/rects.rs`, Bezier defaults live in `tests/path_builder/curves.rs`, and
+circular/elliptical arc defaults live in `tests/path_builder/arcs.rs`. The public
+`ImUiDebugDrawPath` behavior and source-gated path-builder coverage remain unchanged.
+
 2026-05-30 text-field buffered child-owner result:
 `ecosystem/fret-ui-editor/src/controls/text_field.rs` now keeps the public control/options and
 layout orchestration only. `controls/text_field/buffered.rs` owns the draft controller, buffered
