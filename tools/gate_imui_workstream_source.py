@@ -30217,6 +30217,33 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/edit_session.rs"),
+            required=[
+                "mod tests;",
+                "pub enum EditSessionOutcome",
+                "pub struct EditSession<T>",
+                "pub fn begin(&mut self, current_value: T)",
+                "pub fn pre_edit_value(&self) -> Option<&T>",
+                "pub fn commit(&mut self) -> Option<T>",
+                "pub fn cancel(&mut self) -> Option<T>",
+                "pub fn changed_from(&self, current_value: &T) -> bool",
+            ],
+            forbidden=[
+                "changed_from_requires_an_active_session",
+                "changed_from_reports_dirty_only_when_value_differs_from_pre_edit",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/edit_session/tests.rs"),
+            required=[
+                "changed_from_requires_an_active_session",
+                "changed_from_reports_dirty_only_when_value_differs_from_pre_edit",
+                "EditSession::<String>::default()",
+                "session.begin(\"before\".to_string())",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/visuals.rs"),
             required=[
                 "mod tests;",

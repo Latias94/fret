@@ -81,6 +81,12 @@ test-owner routing. `primitives/density/tests.rs` owns affordance extent coverag
 defaults, theme metric resolution, non-negative clamping, and hit-target extent policy remain
 unchanged.
 
+2026-05-31 editor edit-session tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/edit_session.rs` now keeps edit-session primitive
+implementation and test-owner routing. `primitives/edit_session/tests.rs` owns dirty-state
+coverage. Pre-edit capture, commit/cancel clearing, active-state reporting, and changed-from
+semantics remain unchanged.
+
 2026-05-31 editor visuals tests child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/visuals.rs` now keeps editor widget visual policy and
 test-owner routing. `primitives/visuals/tests.rs` owns visual-state policy coverage. Shared visual

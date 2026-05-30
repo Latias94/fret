@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Edit-Session Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor edit-session dirty-state regressions split into a private test owner without
+changing pre-edit capture, commit/cancel clearing, active-state reporting, or changed-from
+semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/edit_session.rs` now keeps edit-session primitive
+  implementation and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/primitives/edit_session/tests.rs` owns dirty-state coverage.
+- `tools/gate_imui_workstream_source.py` now checks the edit-session root/test split and keeps
+  migrated regression test names out of the root primitive file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the edit-session root and
+  test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  changed_from_requires_an_active_session
+  changed_from_reports_dirty_only_when_value_differs_from_pre_edit --no-fail-fast`: pass (2
+  passed, 196 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Density Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor density affordance regression tests split into a private test owner without

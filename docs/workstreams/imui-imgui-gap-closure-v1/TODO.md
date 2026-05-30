@@ -101,6 +101,10 @@ Last updated: 2026-05-31
       policy.
       Result: `primitives/density.rs` keeps density policy implementation plus test-owner routing.
       `primitives/density/tests.rs` owns affordance extent coverage.
+- [x] Split editor edit-session dirty-state regressions into a private test owner without changing
+      pre-edit capture, commit/cancel clearing, active-state reporting, or changed-from semantics.
+      Result: `primitives/edit_session.rs` keeps edit-session primitive implementation plus
+      test-owner routing. `primitives/edit_session/tests.rs` owns dirty-state coverage.
 - [x] Split editor widget-visuals selection/focus/invalid/hover regressions into a private test
       owner without changing shared visual policy, selected-frame fill/foreground behavior,
       disabled alpha attenuation, invalid chrome routing, or icon-button hover overlay source.
