@@ -5477,6 +5477,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Disclosure Entry Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI disclosure entry/open-state assembly moved into a private entry owner without
+changing collapsing-header/tree-node label identity parsing, open-model reads, trigger mounting,
+content body building, open/toggled response population, or public disclosure facade calls.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/entry.rs` owns collapsing-header/tree-node
+  entry wrappers, label identity normalization, open-model setup, trigger/content/root
+  orchestration, and aggregate `DisclosureResponse` writes.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` is now a module/re-export hub plus
+  test-only helper imports.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests.rs` now imports test dependencies
+  explicitly instead of relying on root owner implementation imports.
+- `tools/gate_imui_workstream_source.py` now rejects entry/open-state assembly from drifting back
+  into `disclosure_controls.rs` while requiring the entry owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib disclosure_controls::tests
+  --no-fail-fast`: pass; 6 tests, 684 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_disclosure_smoke
+  --no-fail-fast`: pass; 1 test.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Text Picker Entry Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI input-text picker completion/history entry wrappers moved into a private

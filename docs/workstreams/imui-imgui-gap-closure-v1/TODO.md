@@ -1555,6 +1555,13 @@ Last updated: 2026-05-30
       construction, root column layout, and content/root test-id application. The root file keeps
       label identity parsing, open-model reads, trigger mounting, and aggregate `DisclosureResponse`
       writes.
+- [x] Split IMUI disclosure entry/open-state assembly into a private entry owner without changing
+      collapsing-header/tree-node label identity parsing, open-model reads, trigger mounting,
+      content body building, open/toggled response population, or public disclosure facade calls.
+      Result: `disclosure_controls/entry.rs` owns collapsing-header/tree-node entry wrappers,
+      label identity normalization, open-model setup, trigger/content/root orchestration, and
+      aggregate `DisclosureResponse` writes. `disclosure_controls.rs` is now a module/re-export hub
+      plus test-only helper imports.
 - [x] Split IMUI disclosure header-row visual construction out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual.rs` into a private owner module
       without changing collapsing-header/tree-node a11y, palette policy, indicator glyphs, label

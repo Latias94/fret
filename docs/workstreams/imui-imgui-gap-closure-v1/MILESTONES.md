@@ -1078,6 +1078,12 @@ composition, body `ImUiFacade` construction, root column layout, and content/roo
 application. `disclosure_controls.rs` keeps label identity parsing, open-model reads, trigger
 mounting, and aggregate `DisclosureResponse` writes.
 
+2026-05-30 disclosure entry owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/entry.rs` now owns collapsing-header/tree-node
+entry wrappers, label identity normalization, open-model setup, trigger/content/root orchestration,
+and aggregate `DisclosureResponse` writes. `disclosure_controls.rs` is now a module/re-export hub
+plus test-only helper imports.
+
 2026-05-27 text-picker entry owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/entry.rs` now owns completion/history wrapper
 functions plus history filter/open normalization. `text_picker_controls.rs` keeps core picker
