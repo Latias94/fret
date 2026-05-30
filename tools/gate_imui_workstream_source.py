@@ -34488,13 +34488,20 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/commands.rs"),
             required=[
+                "use super::*;",
+                "mod core;",
+                "mod media;",
+                "mod meshes;",
+                "mod polygons;",
+            ],
+            forbidden=[
+                "#[test]",
                 "fn debug_draw_list_records_commands_in_order",
                 "fn debug_draw_list_records_triangle_mesh_commands",
                 "fn debug_draw_list_records_image_overlay_commands",
                 "fn debug_draw_list_records_concave_poly_fill_command",
                 "DebugDrawCommand::ImageTriangleMesh",
-            ],
-            forbidden=[
+                "DebugDrawCommand::ImageRounded",
                 "debug_draw_element(",
                 "DebugDrawCommandKind::",
                 "list.command_summaries()",
@@ -34502,6 +34509,91 @@ def main() -> None:
                 "rect_path(",
                 "rounded_rect_corner_radii(",
                 "DebugDrawStrokeStyle::new(Px(2.0)).with_miter_limit",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/commands/core.rs"
+            ),
+            required=[
+                "fn debug_draw_list_records_commands_in_order",
+                "assert_eq!(list.command_count(), 19)",
+                "DebugDrawCommand::Line",
+                "DebugDrawCommand::RectFilledMultiColor",
+                "DebugDrawCommand::BezierCubic",
+                "DebugDrawCommand::Text",
+            ],
+            forbidden=[
+                "debug_draw_element(",
+                "DebugDrawCommandKind::",
+                "list.command_summaries()",
+                "channels_split",
+                "rect_path(",
+                "add_image_quad",
+                "add_svg_mask_icon_with_options",
+                "DebugDrawCommand::ImageTriangleMesh",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/commands/meshes.rs"
+            ),
+            required=[
+                "fn debug_draw_list_records_triangle_mesh_commands",
+                "add_triangle_mesh",
+                "add_image_triangle_mesh_with_options",
+                "DebugDrawCommand::ImageTriangleMesh",
+                "ImageSamplingHint::Nearest",
+            ],
+            forbidden=[
+                "debug_draw_element(",
+                "DebugDrawCommandKind::",
+                "list.command_summaries()",
+                "channels_split",
+                "rect_path(",
+                "add_image_quad",
+                "DebugDrawRoundCorners::",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/commands/media.rs"
+            ),
+            required=[
+                "fn debug_draw_list_records_image_overlay_commands",
+                "add_image_quad",
+                "add_image_region_rounded",
+                "add_svg_mask_icon_with_options",
+                "DebugDrawCommand::SvgMaskIcon",
+            ],
+            forbidden=[
+                "debug_draw_element(",
+                "DebugDrawCommandKind::",
+                "list.command_summaries()",
+                "channels_split",
+                "rect_path(",
+                "add_triangle_mesh",
+                "add_concave_poly_filled",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/commands/polygons.rs"
+            ),
+            required=[
+                "fn debug_draw_list_records_concave_poly_fill_command",
+                "add_concave_poly_filled",
+                "DebugDrawCommand::ConcavePolyFilled",
+            ],
+            forbidden=[
+                "debug_draw_element(",
+                "DebugDrawCommandKind::",
+                "list.command_summaries()",
+                "channels_split",
+                "rect_path(",
+                "add_image_quad",
+                "add_triangle_mesh",
+                "DebugDrawRoundCorners::",
             ],
         ),
         SourceCheck(

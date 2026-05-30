@@ -20,6 +20,14 @@ hub. Stroke/fill command recording and invalid finished-path cleanup live in
 circular/elliptical arc defaults live in `tests/path_builder/arcs.rs`. The public
 `ImUiDebugDrawPath` behavior and source-gated path-builder coverage remain unchanged.
 
+2026-05-31 debug-draw draw-list command test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/commands.rs` is now a thin
+test hub. Broad command-order coverage lives in `tests/draw_list/commands/core.rs`, triangle
+mesh/image mesh coverage lives in `tests/draw_list/commands/meshes.rs`, image/SVG overlay coverage
+lives in `tests/draw_list/commands/media.rs`, and concave polygon fill coverage lives in
+`tests/draw_list/commands/polygons.rs`. `ImUiDebugDrawList` command recording behavior and public
+debug-draw authoring APIs remain unchanged.
+
 2026-05-30 text-field buffered child-owner result:
 `ecosystem/fret-ui-editor/src/controls/text_field.rs` now keeps the public control/options and
 layout orchestration only. `controls/text_field/buffered.rs` owns the draft controller, buffered

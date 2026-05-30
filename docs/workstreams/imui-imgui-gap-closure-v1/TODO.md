@@ -52,6 +52,14 @@ Last updated: 2026-05-31
       `tests/path_builder/rects.rs` owns rect and rounded-rect coverage,
       `tests/path_builder/curves.rs` owns Bezier coverage, and
       `tests/path_builder/arcs.rs` owns circular/elliptical arc coverage.
+- [x] Split IMUI debug-draw draw-list command regression coverage into private sub-owners without
+      changing command insertion order, triangle mesh/image mesh recording, image/SVG overlay
+      recording, or concave polygon fill command storage.
+      Result: `debug_draw_controls/tests/draw_list/commands.rs` is now a thin test hub.
+      `tests/draw_list/commands/core.rs` owns broad command-order coverage,
+      `tests/draw_list/commands/meshes.rs` owns triangle mesh coverage,
+      `tests/draw_list/commands/media.rs` owns image/SVG overlay coverage, and
+      `tests/draw_list/commands/polygons.rs` owns concave fill coverage.
 - [x] Split IMUI text-field buffered draft/session handling into a private child owner without
       changing TextField public options, draft-controller support, buffered blur behavior,
       clear-button reset behavior, or API smoke coverage.
