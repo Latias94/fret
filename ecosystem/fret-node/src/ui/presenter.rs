@@ -20,8 +20,10 @@ use crate::schema::NodeRegistry;
 use crate::types::TypeDesc;
 use fret_runtime::CommandId;
 
-use super::canvas::NodeResizeHandle;
 use super::style::NodeGraphStyle;
+pub use fret_canvas::interaction::{
+    ResizeHandle2D as NodeResizeHandle, ResizeHandleSet2D as NodeResizeHandleSet,
+};
 use fret_core::scene::DashPatternV1;
 use fret_core::{Point, Rect};
 
@@ -66,68 +68,6 @@ pub struct InsertNodeCandidate {
 pub struct PortAnchorHint {
     pub center: Point,
     pub bounds: Rect,
-}
-
-/// A bitset defining which resize handles are enabled for a node.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct NodeResizeHandleSet {
-    bits: u16,
-}
-
-impl NodeResizeHandleSet {
-    const fn mask(handle: NodeResizeHandle) -> u16 {
-        match handle {
-            NodeResizeHandle::TopLeft => 1 << 0,
-            NodeResizeHandle::Top => 1 << 1,
-            NodeResizeHandle::TopRight => 1 << 2,
-            NodeResizeHandle::Right => 1 << 3,
-            NodeResizeHandle::BottomRight => 1 << 4,
-            NodeResizeHandle::Bottom => 1 << 5,
-            NodeResizeHandle::BottomLeft => 1 << 6,
-            NodeResizeHandle::Left => 1 << 7,
-        }
-    }
-
-    pub const NONE: Self = Self { bits: 0 };
-    pub const ALL: Self = Self { bits: (1 << 8) - 1 };
-
-    pub const fn none() -> Self {
-        Self::NONE
-    }
-
-    pub const fn all() -> Self {
-        Self::ALL
-    }
-
-    pub const fn from_bits(bits: u16) -> Self {
-        Self { bits }
-    }
-
-    pub const fn bits(self) -> u16 {
-        self.bits
-    }
-
-    pub const fn contains(self, handle: NodeResizeHandle) -> bool {
-        (self.bits & Self::mask(handle)) != 0
-    }
-
-    pub const fn is_empty(self) -> bool {
-        self.bits == 0
-    }
-
-    pub fn insert(&mut self, handle: NodeResizeHandle) {
-        self.bits |= Self::mask(handle);
-    }
-
-    pub fn remove(&mut self, handle: NodeResizeHandle) {
-        self.bits &= !Self::mask(handle);
-    }
-}
-
-impl Default for NodeResizeHandleSet {
-    fn default() -> Self {
-        Self::all()
-    }
 }
 
 /// Optional per-node resize constraints expressed in screen-space pixels (logical px).
@@ -265,7 +205,7 @@ pub trait NodeGraphPresenter {
 
     /// Accessible label for the node graph canvas root.
     ///
-    /// This is used by `NodeGraphCanvas::semantics` as a baseline for assistive technologies.
+    /// This is used by the node graph surface semantics as a baseline for assistive technologies.
     fn a11y_canvas_label(&self) -> Arc<str> {
         Arc::<str>::from("Node Graph Canvas")
     }

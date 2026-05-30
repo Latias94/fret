@@ -21,4 +21,3 @@ Exit criteria:
 - Matrix and picker packet are updated.
 - Gates are recorded with exact commands.
 - Follow-ons remain explicit.
-

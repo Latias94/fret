@@ -84,4 +84,4 @@ may be added later via a dedicated composite widget.
 
 ## Conformance gates
 
-- `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`

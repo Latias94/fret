@@ -66,7 +66,7 @@ pub(super) fn node_graph_rename_overlay_element<H: UiHost>(
         return None;
     };
 
-    let command_key = RenameOverlaySessionKey::from(session.key());
+    let command_key = session.key();
     let label = rename_session_label(&session);
     let test_id = rename_session_test_id(command_key);
     let input_test_id = rename_session_input_test_id(command_key);

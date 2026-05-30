@@ -49,6 +49,15 @@ Design constraints:
 - UI integration is optional (behind the default `fret-ui` feature); a headless build must remain
   usable for validation, tooling, and server-side workflows.
 
+Feature contract:
+
+- Default `fret-node` builds are UI-enabled through `default = ["fret-ui", "kit"]`.
+- Actual headless builds require `--no-default-features`; `--features headless` is only a marker
+  alias and does not disable defaults because Cargo features are additive.
+- The `fret-ui` feature currently depends on `fret-ui-kit` with the `dnd` feature for integration
+  helpers. This is the accepted UI-integration boundary; design-system recipe policy still must not
+  harden inside the headless runtime/store layer.
+
 ## Current Status (Snapshot)
 
 Now / Next / Later (high level):
@@ -71,7 +80,7 @@ Now / Next / Later (high level):
 
 ### Editor UI substrate (present, WIP-stabilization)
 
-- Single-canvas node graph widget (`NodeGraphCanvas`) with:
+- Declarative node graph surface (`node_graph_surface`) backed by `NodeGraphSurfaceBinding` with:
   - pan/zoom,
   - node selection + marquee,
   - node dragging, group dragging/resizing (where applicable),
@@ -97,7 +106,7 @@ Now / Next / Later (high level):
   - typed ports/wires + connect/reconnect,
   - conversion picker insertion flow,
   - portal number editing (stepper + drag threshold).
-- The demo is now **store-driven** (B-layer): `NodeGraphStore` is the source of truth; `Graph` and `NodeGraphViewState` models are kept in sync by the canvas.
+- The demo is now **store-driven** (B-layer): `NodeGraphStore` is the source of truth; `Graph` and `NodeGraphViewState` models are kept in sync by `NodeGraphSurfaceBinding`.
 
 To run:
 
@@ -168,7 +177,9 @@ Legend:
 - [x] Implement minimap overlay consuming derived geometry.
 - [x] Implement canvas controls (zoom/fit/reset) and bind to commands.
 - [x] Implement auto-pan during connect/drag near edges.
-- [x] Add "drag handle tooltip/help" in demo (components-layer tooltip; do not add `fret-ui-kit` dep to `fret-node`).
+- [x] Add "drag handle tooltip/help" in demo. UI integration may use the existing `fret-ui-kit`
+      dependency behind the `fret-ui` feature; keep recipe policy out of the headless runtime/store
+      layer.
 
 ### Medium-term
 
@@ -200,19 +211,18 @@ Legend:
     - Copy/paste remaps symbol-ref targets to pasted symbol IDs (no source-graph ID leakage): `ecosystem/fret-node/src/ops/tests.rs` (`fragment_paste_transaction_remaps_symbol_ref_targets_to_pasted_symbols`)
   - UI overlays (editor affordances):
     - Blackboard (symbols) overlay: `ecosystem/fret-node/src/ui/overlays/blackboard.rs`
-      - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_blackboard_conformance.rs`
+      - Conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
       - Gates: rename action hands off to `SymbolRenameOverlay`; Enter confirms rename, Escape cancels, Enter-without-change is no-op, and graph edits are deferred until confirm.
     - Symbol rename overlay (TextInput-hosted): `ecosystem/fret-node/src/ui/overlays/group_rename.rs` (`SymbolRenameOverlay`)
-      - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_symbol_rename_conformance.rs`
+      - Conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
       - Gates: Enter commit, Escape cancel + focus restore, and Enter no-op when text is unchanged.
   - Profile concretization (Dataflow demo): `ecosystem/fret-node/src/kit/profiles/dataflow.rs` (ensures symbol-ref nodes have a typed `out` port)
 - [~] Large-graph culling + incremental updates.
-  - [x] Portal subtree culling for offscreen nodes (`NodeGraphPortalHost::layout`).
-  - [x] Canvas paint culling for offscreen nodes/edges (`NodeGraphCanvas::paint`).
+  - [x] Portal subtree culling for offscreen nodes in the declarative surface.
+  - [x] Declarative paint culling for offscreen nodes/edges.
   - [x] Culling metrics gate: node candidate/visible counts are exported from render-data collection and tested to decrease under `only_render_visible_elements=true`.
-    - Metrics plumbing: `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/types.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/collect.rs`
-    - Test hook + shared cull-rect helper: `ecosystem/fret-node/src/ui/canvas/widget.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached.rs`
-    - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/render_culling_metrics_conformance.rs`
+    - Metrics plumbing: `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - Test hook + shared cull-rect helper: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 - [x] Deterministic graph diff/patch set for collaboration (MVP).
   - ADR: `docs/adr/0183-deterministic-graph-diff-and-patch-units.md`
   - Minimal deterministic diff: `ecosystem/fret-node/src/ops/diff.rs` (`graph_diff`)

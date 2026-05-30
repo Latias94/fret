@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "slug": "fret-node-declarative-fearless-refactor-v1",
+  "title": "`fret-node` Fearless Refactor (v1)",
+  "status": "active",
+  "updated": "2026-05-29",
+  "scope_kind": "execution",
+  "problem": "`fret-node` must converge on a declarative-first, controller/binding-first public consumer surface without leaking retained compatibility internals as the taught default.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/fret-node-declarative-fearless-refactor-v1/design.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-declarative-fearless-refactor-v1/todo.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/fret-node-declarative-fearless-refactor-v1/milestones.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/fret-node-declarative-fearless-refactor-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/fret-node-declarative-fearless-refactor-v1/HANDOFF.md"
+    }
+  ],
+  "gates": [
+    "cargo fmt --check",
+    "cargo nextest run -p fret-node",
+    "cargo nextest run -p fret-node public_node_graph_guides_teach_binding_first_surface",
+    "cargo nextest run -p fret-node declarative_overlay_layer_is_input_transparent_over_canvas_region",
+    "cargo nextest run -p fret-node declarative_hover_tooltip_overlay_tracks_dragged_anchor_when_portals_disabled",
+    "cargo nextest run -p fret-node declarative_portal_text_cancel_returns_focus_to_surface_without_graph_commit",
+    "cargo nextest run -p fret-node rename_managed_host_escape_closes_without_transaction_and_restores_focus",
+    "cargo nextest run -p fret-node store_public_surface_does_not_expose_raw_view_state_mutation",
+    "cargo nextest run -p fret-node edges_cache_key_changes_when_edge_types_or_skin_revision_changes declarative_edge_types_feed_default_surface_edge_draws declarative_skin_refines_edge_draw_hints_after_edge_types default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter",
+    "cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter",
+    "cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter",
+    "cargo nextest run -p fret-node custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter",
+    "cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter",
+    "cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_child_layer_anchor custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter",
+    "cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor custom_edge_path_feeds_declarative_edge_label_child_layer_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter",
+    "cargo nextest run -p fret-node custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor custom_edge_path_feeds_declarative_edge_label_child_layer_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter",
+    "cargo nextest run -p fret-node custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path build_click_selection_preview_edges_multi_click_toggles_hit_membership commit_edge_click_selection_action_host_multi_toggles_edge_without_clearing_other_kinds custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds",
+    "cargo nextest run -p fret-node edge_stroke_width_mul_for_selection_applies_selected_edge_width_token node_graph_surface_semantics_reports_selected_edges_count custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path",
+    "cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count",
+    "cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate",
+    "cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient",
+    "cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit",
+    "cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drag_cancel_paths_clear_transient",
+    "cargo nextest run -p fret-node edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit",
+    "cargo nextest run -p fret-node empty_reconnect_insert_picker_cancel_and_select_commit",
+    "cargo nextest run -p fret-node insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate",
+    "cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam",
+    "cargo nextest run -p fret-node --no-default-features runtime",
+    "cargo check -p fret-node --all-features --tests",
+    "cargo clippy -p fret-node --all-targets --all-features -- -D warnings",
+    "python3 tools/check_layering.py"
+  ],
+  "evidence": [
+    "docs/node-graph-how-to-build-like-xyflow.md",
+    "docs/node-graph-xyflow-parity.md",
+    "ecosystem/fret-node/README.md",
+    "ecosystem/fret-node/src/runtime/store.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/edge_hit_test.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/edge_labels.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/edge_path_geometry.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/insert_node_picker.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/interaction_hooks.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/pointer_down.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/selection.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs",
+    "ecosystem/fret-node/src/ui/declarative/mod.rs",
+    "ecosystem/fret-node/src/ui/mod.rs",
+    "ecosystem/fret-node/src/ui/overlays/mod.rs",
+    "ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs",
+    "ecosystem/fret-node/src/ui/edge_types.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only/hover_anchor.rs",
+    "ecosystem/fret-node/src/ui/editors/portal_text.rs",
+    "ecosystem/fret-node/src/ui/overlays/rename_command.rs",
+    "ecosystem/fret-node/src/ui/overlays/rename_declarative.rs",
+    "ecosystem/fret-node/src/ui/overlays/rename_lifecycle.rs",
+    "ecosystem/fret-node/src/ui/portal_commands.rs",
+    "ecosystem/fret-node/src/surface_policy_tests.rs",
+    "docs/workstreams/fret-node-declarative-fearless-refactor-v1/HANDOFF.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0126-node-graph-editor-and-typed-connections.md",
+    "docs/adr/0135-node-graph-canvas-middleware.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this parent lane while the public story remains declarative-first and controller/binding-first. FNDX-010/FNDX-020/FNDX-030 are closeout-verified, FNDX-040/FNDX-041/FNDX-042/FNDX-043 have concrete declarative overlay/add-on parity gates, FNDX-044 removes the raw public view-state mutation bypass, FNDX-045 wires edgeTypes/skin into the default declarative edge paint path while deferring the broad presenter surface, FNDX-046 feeds custom edge paths into conservative spatial-index candidates, FNDX-047 feeds custom edge paths into exact path-distance hit filtering, FNDX-048 feeds custom edge paths into default edge-center anchors, FNDX-049 feeds those anchors into declarative EdgeToolbar composition, FNDX-050 feeds EdgeRenderHint.label into a declarative edge-label child layer at the same custom-path anchor, FNDX-051 adds a NodeGraphDeclarativeEdgeLabelRenderer child contract on that anchor, FNDX-052 adds the first opt-in child-bounds pointer-interactive edge-label control contract, FNDX-053 feeds custom-path-aware edge hit-testing into default declarative click-edge selection, FNDX-054 feeds selected-edge state into default declarative edge paint/diagnostics, the FNDX-055 through FNDX-061 reconnect/update-anchor mechanism sub-lane is closeout-verified, FNDX-062A adds the store-first insert-node picker request seam for opt-in empty reconnect drops, FNDX-062B adds reusable insert-node picker candidate state/provider policy with cancel/no-commit and explicit selection-to-transaction planning, FNDX-062C mounts the default focusable visual picker list on that explicit path, and FNDX-063 keeps that picker runtime on the shared paint_only/transactions.rs graph-edit commit seam. Richer search/filter/typeahead behavior is optional follow-up; future tasks should keep choosing one observable behavior or public-surface hazard plus one narrow gate."
+  }
+}

@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use fret_canvas::view::PanZoom2D;
-use fret_canvas::wires as canvas_wires;
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 
 use crate::core::{EdgeId, NodeId, PortId};
@@ -9,17 +8,25 @@ use crate::ui::geometry_overrides::NodeGraphGeometryOverridesRef;
 use crate::ui::paint_overrides::{NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef};
 use crate::ui::presenter::{DefaultNodeGraphPresenter, NodeGraphPresenter};
 use crate::ui::style::NodeGraphStyle;
-use crate::ui::{MeasuredGeometryStore, NodeGraphCanvasTransform, NodeGraphInternalsSnapshot};
+use crate::ui::{
+    MeasuredGeometryStore, NodeGraphCanvasTransform, NodeGraphEdgeTypesRef,
+    NodeGraphInternalsSnapshot, NodeGraphSkinRef,
+};
 
+use super::cache::edge_commands_for_route;
+use super::edge_path_geometry::{EDGE_PATH_ANCHOR_STEPS, path_midpoint_and_normal};
+use super::edge_update_anchors::collect_edge_update_anchor_infos;
 use super::surface_support::{
     read_authoritative_interaction_config_in_models, read_authoritative_runtime_tuning_in_models,
 };
 use super::{
-    PaintOnlySurfaceModels, PortalBoundsStore, PortalMeasuredGeometryFlushOutcome,
-    SurfaceSemanticsParams, authoritative_surface_boundary_snapshot,
-    collect_edge_paint_diagnostics, collect_portal_diagnostics, declarative_presenter_revision,
-    effective_selected_nodes_for_paint, flush_portal_measured_geometry_state,
-    read_authoritative_graph_in_models, read_authoritative_view_state_in_models, stable_hash_u64,
+    PaintOnlyInteractionFrameInputs, PaintOnlySurfaceModels, PortalBoundsStore,
+    PortalMeasuredGeometryFlushOutcome, SurfaceSemanticsParams,
+    authoritative_surface_boundary_snapshot, collect_edge_paint_diagnostics,
+    collect_portal_diagnostics, declarative_presenter_revision,
+    flush_portal_measured_geometry_state, plan_paint_only_interaction_frame,
+    read_authoritative_graph_in_models, read_authoritative_view_state_in_models,
+    reconnect_preview_wire_paintable, stable_hash_u64,
     sync_authoritative_surface_boundary_in_models, sync_derived_cache, sync_edges_cache,
     sync_grid_cache, sync_nodes_cache, view_from_state,
 };
@@ -29,6 +36,7 @@ pub(super) struct PreparedPaintOnlySurfaceFrame {
     pub(super) view_for_paint: PanZoom2D,
     pub(super) theme: ThemeSnapshot,
     pub(super) style_tokens: NodeGraphStyle,
+    pub(super) edge_types: Option<NodeGraphEdgeTypesRef>,
     pub(super) diagnostics: super::NodeGraphDiagnosticsConfig,
     pub(super) diag_paint_overrides_value: Arc<NodeGraphPaintOverridesMap>,
     pub(super) paint_overrides_ref: Option<NodeGraphPaintOverridesRef>,
@@ -36,13 +44,16 @@ pub(super) struct PreparedPaintOnlySurfaceFrame {
     pub(super) marquee_value: Option<super::MarqueeDragState>,
     pub(super) marquee_active: bool,
     pub(super) node_drag_value: Option<super::NodeDragState>,
+    pub(super) reconnect_drag_value: Option<super::ReconnectDragState>,
     pub(super) node_dragging: bool,
     pub(super) grid_cache_value: super::GridPaintCacheState,
     pub(super) derived_cache_value: super::DerivedGeometryCacheState,
     pub(super) nodes_cache_value: super::NodePaintCacheState,
     pub(super) edges_cache_value: super::EdgePaintCacheState,
+    pub(super) edge_update_anchors: Vec<super::EdgeUpdateAnchorInfo>,
     pub(super) hovered_node_value: Option<NodeId>,
     pub(super) effective_selected_nodes: Vec<NodeId>,
+    pub(super) selected_edges: Vec<EdgeId>,
     pub(super) portals_disabled: bool,
     pub(super) semantics_value: Arc<str>,
     pub(super) test_id: Arc<str>,
@@ -57,6 +68,7 @@ fn sync_binding_internals_for_surface(
     derived_cache: &super::DerivedGeometryCacheState,
     edges_cache: &super::EdgePaintCacheState,
     style_tokens: &NodeGraphStyle,
+    connecting: bool,
 ) {
     let Some(geom) = derived_cache.geom.as_deref() else {
         binding
@@ -75,17 +87,30 @@ fn sync_binding_internals_for_surface(
         zoom: view.zoom,
     };
 
-    let focused_node = view_state
-        .selected_nodes
-        .iter()
-        .copied()
-        .find(|node| geom.nodes.contains_key(node));
-    let focused_edge = view_state.selected_edges.iter().copied().find(|edge| {
-        edges_cache
-            .draws
-            .as_deref()
-            .is_some_and(|draws| draws.iter().any(|draw| draw.edge == *edge))
-    });
+    let keyboard_a11y_disabled =
+        read_authoritative_interaction_config_in_models(models, binding, |config| {
+            config.disable_keyboard_a11y
+        })
+        .unwrap_or(false);
+    let focused_node = if keyboard_a11y_disabled {
+        None
+    } else {
+        view_state
+            .selected_nodes
+            .iter()
+            .copied()
+            .find(|node| geom.nodes.contains_key(node))
+    };
+    let focused_edge = if keyboard_a11y_disabled {
+        None
+    } else {
+        view_state.selected_edges.iter().copied().find(|edge| {
+            edges_cache
+                .draws
+                .as_deref()
+                .is_some_and(|draws| draws.iter().any(|draw| draw.edge == *edge))
+        })
+    };
     let focused_port = focused_node.and_then(|node| {
         geom.ports
             .iter()
@@ -97,6 +122,7 @@ fn sync_binding_internals_for_surface(
         focused_node,
         focused_port,
         focused_edge,
+        connecting,
         ..NodeGraphInternalsSnapshot::default()
     };
 
@@ -124,10 +150,16 @@ fn sync_binding_internals_for_surface(
     let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
     if let Some(edge_draws) = edges_cache.draws.as_deref() {
         for edge in edge_draws.iter() {
-            if let (Some(from), Some(to)) = (geom.port_center(edge.from), geom.port_center(edge.to))
-            {
-                let (ctrl1, ctrl2) = canvas_wires::wire_ctrl_points(from, to, zoom);
-                let center = canvas_wires::cubic_bezier(from, ctrl1, ctrl2, to, 0.5);
+            let center = path_midpoint_and_normal(&edge.commands, EDGE_PATH_ANCHOR_STEPS)
+                .map(|(center, _normal)| center)
+                .or_else(|| {
+                    let from = geom.port_center(edge.from)?;
+                    let to = geom.port_center(edge.to)?;
+                    let commands = edge_commands_for_route(edge.route, from, to, zoom);
+                    path_midpoint_and_normal(&commands, EDGE_PATH_ANCHOR_STEPS)
+                        .map(|(center, _normal)| center)
+                });
+            if let Some(center) = center {
                 next.edge_centers_window
                     .insert(edge.edge, transform.canvas_point_to_window(center));
             }
@@ -181,6 +213,8 @@ pub(super) struct PrepareSurfaceFrameParams<'a> {
     pub(super) surface_models: &'a PaintOnlySurfaceModels,
     pub(super) geometry_overrides: Option<NodeGraphGeometryOverridesRef>,
     pub(super) paint_overrides: Option<NodeGraphPaintOverridesRef>,
+    pub(super) edge_types: Option<NodeGraphEdgeTypesRef>,
+    pub(super) skin: Option<NodeGraphSkinRef>,
     pub(super) measured_geometry: Option<Arc<MeasuredGeometryStore>>,
     pub(super) diagnostics: super::NodeGraphDiagnosticsConfig,
     pub(super) cull_margin_screen_px: f32,
@@ -196,6 +230,8 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         surface_models,
         geometry_overrides,
         paint_overrides,
+        edge_types,
+        skin,
         measured_geometry,
         diagnostics,
         cull_margin_screen_px,
@@ -205,6 +241,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         drag,
         marquee_drag,
         node_drag,
+        reconnect_drag,
         pending_selection,
         hovered_node,
         hit_scratch: _,
@@ -247,6 +284,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         drag,
         marquee_drag,
         node_drag,
+        reconnect_drag,
         pending_selection,
         hovered_node,
         hover_anchor_store,
@@ -256,22 +294,17 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
     let drag_value = cx
         .get_model_copied(drag, Invalidation::Layout)
         .unwrap_or(None);
-    let panning = drag_value.is_some();
 
     let marquee_value = cx
         .get_model_cloned(marquee_drag, Invalidation::Layout)
         .unwrap_or(None);
-    let marquee_active = marquee_value.as_ref().is_some_and(|state| state.active);
 
     let node_drag_value = cx
         .get_model_cloned(node_drag, Invalidation::Layout)
         .unwrap_or(None);
-    let node_drag_armed = node_drag_value
-        .as_ref()
-        .is_some_and(super::NodeDragState::is_armed);
-    let node_dragging = node_drag_value
-        .as_ref()
-        .is_some_and(super::NodeDragState::is_active);
+    let reconnect_drag_value = cx
+        .get_model_cloned(reconnect_drag, Invalidation::Layout)
+        .unwrap_or(None);
     let pending_selection_value = cx
         .get_model_cloned(pending_selection, Invalidation::Layout)
         .unwrap_or(None);
@@ -300,6 +333,11 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         .as_deref()
         .map(|overrides| overrides.revision())
         .unwrap_or(0);
+    let edge_types_rev = edge_types
+        .as_ref()
+        .map(|edge_types| edge_types.revision())
+        .unwrap_or(0);
+    let skin_rev = skin.as_ref().map(|skin| skin.revision()).unwrap_or(0);
 
     let draw_order_hash = stable_hash_u64(2, &view_value.draw_order);
     let interaction_config =
@@ -356,6 +394,8 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         runtime_tuning,
         &style_tokens,
         presenter_rev,
+        edge_types_rev,
+        edge_types.as_deref(),
         measured_geometry.as_ref(),
         geometry_overrides,
         geometry_overrides_rev,
@@ -385,6 +425,10 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         node_origin,
         draw_order_hash,
         &style_tokens,
+        edge_types_rev,
+        skin_rev,
+        edge_types.as_deref(),
+        skin.as_deref(),
     );
     let edges_cached = edges_cache_value.draws.is_some();
 
@@ -397,18 +441,32 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         &derived_cache_value,
         &edges_cache_value,
         &style_tokens,
+        reconnect_drag_value.is_some_and(|state| state.is_active()),
     );
+    let internals_snapshot = binding.internals_store().snapshot();
+    let edge_update_anchors =
+        read_authoritative_graph_in_models(cx.app.models_mut(), binding, |graph_value| {
+            collect_edge_update_anchor_infos(
+                graph_value,
+                &view_value,
+                &internals_snapshot,
+                &interaction_state,
+            )
+        })
+        .unwrap_or_default();
 
     let hovered_node_value = cx
         .get_model_copied(hovered_node, Invalidation::Paint)
         .unwrap_or(None);
-    let hovered = hovered_node_value.is_some();
-    let effective_selected_nodes = effective_selected_nodes_for_paint(
-        &view_value,
-        marquee_value.as_ref(),
-        pending_selection_value.as_ref(),
-    );
-    let selected_nodes_len = effective_selected_nodes.len();
+    let interaction_plan = plan_paint_only_interaction_frame(PaintOnlyInteractionFrameInputs {
+        view_state: &view_value,
+        drag: drag_value,
+        marquee: marquee_value.as_ref(),
+        node_drag: node_drag_value.as_ref(),
+        reconnect_drag: reconnect_drag_value.as_ref(),
+        pending_selection: pending_selection_value.as_ref(),
+        hovered_node: hovered_node_value,
+    });
     let portals_disabled = cx
         .get_model_copied(portal_debug_flags, Invalidation::Paint)
         .unwrap_or_default()
@@ -431,13 +489,20 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         cull_margin_screen_px,
         node_drag_value.as_ref(),
     );
+    let reconnect_preview_wire = reconnect_preview_wire_paintable(
+        derived_cache_value.geom.as_deref(),
+        reconnect_drag_value.as_ref(),
+    );
     let semantics_value = super::build_surface_semantics_value(SurfaceSemanticsParams {
-        panning,
-        marquee_active,
-        node_drag_armed,
-        node_dragging,
-        hovered,
-        selected_nodes_len,
+        panning: interaction_plan.panning,
+        marquee_active: interaction_plan.marquee_active,
+        node_drag_armed: interaction_plan.node_drag_armed,
+        node_dragging: interaction_plan.node_dragging,
+        reconnect_drag_armed: interaction_plan.reconnect_drag_armed,
+        reconnect_dragging: interaction_plan.reconnect_dragging,
+        reconnect_preview_wire,
+        hovered: interaction_plan.hovered,
+        selected_nodes_len: interaction_plan.selected_nodes_len(),
         grid_cached,
         geom_cached,
         nodes_cached,
@@ -447,6 +512,7 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         nodes_rebuilds: nodes_cache_value.rebuilds,
         edges_rebuilds: edges_cache_value.rebuilds,
         edges: edge_paint_diagnostics,
+        edge_update_anchors_len: edge_update_anchors.len(),
         paint_overrides_rev,
         view_state: &view_value,
         portal: portal_diagnostics,
@@ -457,20 +523,24 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         view_for_paint,
         theme,
         style_tokens,
+        edge_types,
         diagnostics,
         diag_paint_overrides_value,
         paint_overrides_ref,
-        panning,
+        panning: interaction_plan.panning,
+        marquee_active: interaction_plan.marquee_active,
         marquee_value,
-        marquee_active,
         node_drag_value,
-        node_dragging,
+        reconnect_drag_value,
+        node_dragging: interaction_plan.node_dragging,
         grid_cache_value,
         derived_cache_value,
         nodes_cache_value,
         edges_cache_value,
-        hovered_node_value,
-        effective_selected_nodes,
+        edge_update_anchors,
+        hovered_node_value: interaction_plan.hovered_node,
+        effective_selected_nodes: interaction_plan.effective_selected_nodes,
+        selected_edges: view_value.selected_edges.clone(),
         portals_disabled,
         semantics_value,
         test_id,

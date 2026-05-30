@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "slug": "fret-node-declarative-contract-closure-v1",
+  "title": "`fret-node` Declarative Contract Closure v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "execution",
+  "problem": "`fret-node` has deleted retained node graph authoring, but stale docs/ADRs and duplicate store/binding/declarative seams can still pull future work away from the store-first declarative contract.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/fret-node-declarative-contract-closure-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-declarative-contract-closure-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/fret-node-declarative-contract-closure-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/fret-node-declarative-contract-closure-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/fret-node-declarative-contract-closure-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/fret-node-declarative-contract-closure-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    }
+  ],
+  "current_task": null,
+  "next_task": null,
+  "gates": [
+    "cargo nextest run -p fret-node --no-default-features retained_node_graph_current_guidance_stays_declarative",
+    "cargo nextest run -p fret-node --no-default-features",
+    "cargo nextest run -p fret-node",
+    "cargo nextest run -p fret-canvas",
+    "cargo fmt --check",
+    "python3 tools/check_layering.py",
+    "python3 tools/check_workstream_catalog.py"
+  ],
+  "evidence": [
+    "docs/workstreams/fret-node-declarative-contract-closure-v1/DESIGN.md",
+    "docs/workstreams/fret-node-declarative-contract-closure-v1/TODO.md",
+    "docs/workstreams/fret-node-declarative-contract-closure-v1/CLOSEOUT_AUDIT_2026-05-28.md",
+    "docs/workstreams/standalone/xyflow-gap-analysis.md",
+    "docs/adr/0128-canvas-widgets-and-interactive-surfaces.md",
+    "docs/adr/0135-node-graph-canvas-middleware.md",
+    "ecosystem/fret-node/src/surface_policy_tests.rs",
+    "ecosystem/fret-node/src/runtime/store.rs",
+    "ecosystem/fret-node/src/ui/binding.rs",
+    "ecosystem/fret-node/src/ui/declarative/paint_only.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0028-declarative-elements-and-element-state.md",
+    "docs/adr/0031-app-owned-models-and-leasing-updates.md",
+    "docs/adr/0051-model-observation-and-ui-invalidation-propagation.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0128-canvas-widgets-and-interactive-surfaces.md",
+    "docs/adr/0135-node-graph-canvas-middleware.md",
+    "docs/adr/0330-retained-runtime-internal-and-compat-surface.md"
+  ],
+  "dependencies": [
+    "docs/workstreams/fret-node-architecture-fearless-refactor-v2",
+    "docs/workstreams/fret-node-runtime-store-contract-closure-v1",
+    "docs/workstreams/fret-node-retained-exit-and-parity-seams-v1"
+  ],
+  "continue_policy": {
+    "default_action": "split_follow_on",
+    "notes": "This lane is closed. Do not reopen closed retained lanes; split pointer/command hook expansion, ReactFlow facade work, semantic focus tree work, or deeper cache/scene-plan extraction into narrower follow-ons."
+  }
+}

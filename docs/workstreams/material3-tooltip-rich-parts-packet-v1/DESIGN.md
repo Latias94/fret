@@ -58,4 +58,3 @@ automation unable to target the rich text parts without brittle structure assump
 - Base UI Tooltip: popup/positioner/root are headless tooltip parts, not rich Material content
   taxonomy.
 - Existing Fret evidence: `material3_overlay_feedback_packet_v1.md`.
-

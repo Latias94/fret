@@ -129,13 +129,13 @@ runtime tuning.
 - The retained canvas sync/runtime path no longer reconstructs editor config from
   `NodeGraphViewState` under `cfg(test)`; retained runtime, retained tests, and `--all-features`
   builds all use the same explicit editor-config seam.
-- Persistence ownership is now explicit: the file wrapper writes pure view-state under `state`, with
-  `interaction` / `runtime_tuning` stored as wrapper-owned fields in `state_version = 2`.
+- Persistence ownership is now explicit: the editor-state file wrapper writes pure view-state under
+  `view_state`, with interaction policy and runtime tuning stored under `editor_config`.
 - App/example authoring also follows the split:
   - retained canvas can mirror `NodeGraphEditorConfig`,
   - tuning/controls overlays read explicit editor-config seams, with
     `NodeGraphControlsOverlay::new(...)` now taking the editor-config model directly,
-  - example persistence restores and saves `NodeGraphViewStateFileV1` through
+  - example persistence restores and saves `NodeGraphEditorStateFile` through
     `new(...)`.
   - advanced binding seams now also require explicit editor-config mirrors, so controlled sync no
     longer falls back to default config when graph/view/controller mirrors are caller-owned.
@@ -228,6 +228,28 @@ Status target: architectural + API landing milestone
 
 Make the declarative path editor-grade by routing committed edits through store/controller entry
 points rather than direct graph mutation.
+
+### Closeout note (2026-05-29)
+
+- The FNDX-055 through FNDX-061 reconnect/update-anchor sub-lane is closeout-verified for the
+  default declarative path. It now covers selected/focused update-anchor planning, rendered
+  controls, reconnect drag lifecycle, valid target transaction commits, rejected/no-op empty-drop
+  outcomes, reconnect gesture callback aliases, preview wire paint, and opt-in empty-drop picker
+  outcomes without graph commits.
+- FNDX-062A adds a store-first request seam for opt-in empty-drop picker outcomes without graph
+  commits.
+- FNDX-062B adds reusable picker candidate state/provider policy for that request. It lets apps
+  cancel without graph commits and turns an explicit candidate selection into an `Insert Node`
+  transaction that is only applied through the binding/controller/store dispatch path.
+- FNDX-062C mounts the default visual insert-node picker list through
+  `NodeGraphDeclarativeInsertNodePickerOverlayBinding` plus
+  `node_graph_surface_with_insert_node_picker(...)`. It handles focused Escape cancel without a
+  graph commit and Enter/row activation through the explicit FNDX-062B transaction path. Richer
+  search/filter/typeahead behavior remains optional follow-up work and is not required to accept
+  the closed mechanism contract above.
+- FNDX-063 closes the mounted picker commit-seam leak by adding `insert_node_picker.rs` to the
+  declarative runtime source-policy matrix and routing candidate activation through
+  `commit_graph_transaction(...)` in `paint_only/transactions.rs`.
 
 ### Progress note (2026-03-07)
 
@@ -504,6 +526,17 @@ Status target: behavior convergence milestone
 
 Bring the declarative path much closer to the retained engine on the behaviors that matter most for
 real editors.
+
+### Progress note (2026-05-27)
+
+- FNDX-030 closed the overlay/menu/toolbar policy-placement decision with source-policy coverage,
+  and the closeout gate set for the recent FNDX slices passed.
+- FNDX-040 adds the first concrete declarative overlay behavior gate after that decision:
+  diagnostics-only overlay layers stay hit-test transparent over the canvas region.
+- FNDX-041 adds the next concrete declarative overlay behavior gate: diagnostics hover tooltips
+  track drag-adjusted hover anchors when portal bounds are disabled or unavailable.
+- This milestone is not fully closed by that result: the next slice should continue proving one
+  observable declarative overlay behavior at a time instead of only moving policy ownership seams.
 
 ### Progress note (2026-03-06)
 

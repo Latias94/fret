@@ -87,6 +87,7 @@ enum CleanGeometrySolveSkipRejectionReason {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[allow(clippy::enum_variant_names)]
 enum CleanGeometrySolveSkipRejectionDetail {
     TextHeightDelta,
     TextWrapNotNone,
@@ -114,6 +115,7 @@ enum CleanGeometryLayoutEffect {
 }
 
 #[derive(Clone)]
+#[allow(clippy::large_enum_variant)]
 enum CleanGeometryChildBoundsStrategy {
     /// Leaf node: no child bounds to derive.
     None,
@@ -823,13 +825,11 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        if has_emitted_pure_geometry {
-            if self.debug_enabled {
-                self.debug_stats.layout_clean_geometry_apply_nodes = self
-                    .debug_stats
-                    .layout_clean_geometry_apply_nodes
-                    .saturating_add(1);
-            }
+        if has_emitted_pure_geometry && self.debug_enabled {
+            self.debug_stats.layout_clean_geometry_apply_nodes = self
+                .debug_stats
+                .layout_clean_geometry_apply_nodes
+                .saturating_add(1);
         }
 
         Ok(())
@@ -2004,7 +2004,7 @@ impl<H: UiHost> UiTree<H> {
 
             if child_style.position == crate::element::PositionStyle::Absolute {
                 let absolute_started = self.debug_enabled.then(Instant::now);
-                let result = (|| -> Result<Rect, CleanGeometrySolveSkipRejection> {
+                let result = {
                     let allow_zero_measured_size =
                         self.clean_geometry_absent_interactivity_gate_leaf(app, window, child);
                     Self::clean_absolute_px_inset_child_bounds(
@@ -2014,7 +2014,7 @@ impl<H: UiHost> UiTree<H> {
                         element_kind,
                         allow_zero_measured_size,
                     )
-                })();
+                };
                 if let Some(absolute_started) = absolute_started {
                     self.debug_stats.layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time +=
                         absolute_started.elapsed();

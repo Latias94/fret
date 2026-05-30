@@ -12,11 +12,24 @@ mod paint_only;
 mod view_reducer;
 pub use super::binding::NodeGraphSurfaceBinding;
 pub use paint_only::{
-    NodeGraphDeclarativePortalCommandHandler, NodeGraphDeclarativePortalCommandHandlerRef,
-    NodeGraphDeclarativePortalRenderer, NodeGraphDiagnosticsConfig, NodeGraphSurfaceProps,
+    NodeGraphDeclarativeEdgeLabelRenderer, NodeGraphDeclarativeInsertNodePickerCandidateProvider,
+    NodeGraphDeclarativeInsertNodePickerCandidateProviderRef,
+    NodeGraphDeclarativeInsertNodePickerOpenOutcome,
+    NodeGraphDeclarativeInsertNodePickerOverlayBinding,
+    NodeGraphDeclarativeInsertNodePickerPlanError, NodeGraphDeclarativeInsertNodePickerRequest,
+    NodeGraphDeclarativeInsertNodePickerSession, NodeGraphDeclarativeInsertNodePickerState,
+    NodeGraphDeclarativeInsertNodePickerStateRef, NodeGraphDeclarativeInteractionContext,
+    NodeGraphDeclarativeInteractionHook, NodeGraphDeclarativeInteractionHookRef,
+    NodeGraphDeclarativeInteractionOutcome, NodeGraphDeclarativePortalCommandHandler,
+    NodeGraphDeclarativePortalCommandHandlerRef, NodeGraphDeclarativePortalRenderer,
+    NodeGraphDeclarativeSurfaceRenderers, NodeGraphDiagnosticsConfig,
+    NodeGraphEdgeLabelHitTestMode, NodeGraphEdgeLabelLayout, NodeGraphSurfaceProps,
     NodeGraphVisibleSubsetPortalConfig, PortalCommandOutcome, PortalTextCommand,
     PortalTextStepMode, node_graph_surface, node_graph_surface_in,
+    node_graph_surface_with_edge_label_renderer, node_graph_surface_with_edge_label_renderer_in,
+    node_graph_surface_with_insert_node_picker, node_graph_surface_with_insert_node_picker_in,
     node_graph_surface_with_portal_renderer, node_graph_surface_with_portal_renderer_in,
+    node_graph_surface_with_renderers, node_graph_surface_with_renderers_in,
     parse_portal_text_command, portal_cancel_text_command, portal_step_text_command,
     portal_step_text_command_with_mode, portal_submit_text_command,
 };

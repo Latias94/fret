@@ -1,13 +1,17 @@
 # `fret-node` Fearless Refactor (v1) - Design Map
 
-Status: execution-oriented companion (last updated 2026-04-07)
+Status: execution-oriented companion (last updated 2026-05-29)
 Scope: `ecosystem/fret-node` only
+
+Current note: the surface map and reconnect/update-anchor closeout guidance below are the active
+execution authority. Deep retained-widget notes in older slice history are preserved only as
+historical context and must not be used to revive deleted retained compatibility files or features.
 
 This file is the shortest possible answer to:
 
 - what surfaces should app authors use,
 - what surfaces are still advanced-only,
-- what retained seams are intentionally still internal,
+- which obsolete retained seams must stay out of the public surface,
 - what the next worktree should change first.
 
 Use this file together with:
@@ -20,9 +24,14 @@ Use this file together with:
 
 ### App-facing default surface
 
-Use these surfaces for new app code and new examples unless a specific retained-only gate requires
-something else.
+Use these surfaces for new app code and new examples.
 
+- `NodeGraphStore`
+  - owns the authoritative graph/view/config/history state,
+  - exposes read access through `view_state()` and notifying mutation paths through
+    `replace_view_state(...)` / `update_view_state(...)`,
+  - does not expose a public raw mutable view-state reference, so sanitization, view-change events,
+    and selector notifications stay coherent.
 - `NodeGraphController`
   - owns the recommended app-facing runtime facade,
   - owns viewport operations directly (`set_viewport*`, `set_center_in_bounds*`,
@@ -47,11 +56,18 @@ something else.
     explicit controller construction for normal instance-style hooks.
 - `node_graph_surface(...)`
   - remains the recommended lightweight declarative authoring surface,
+  - exposes narrow default-path view policy through `NodeGraphSurfaceProps.edge_types` and
+    `NodeGraphSurfaceProps.skin` for edge hints/custom paint paths and paint-only skin refinement,
   - should keep converging toward the editor-grade path rather than staying a "lite demo only"
     surface forever.
-- `node_graph_surface_compat_retained(...)`
-  - is still allowed as a compatibility path,
-  - but should be taught as compatibility-only, not as the long-term public design center.
+- `NodeGraphEdgeTypes` / `NodeGraphSkin`
+  - are app-facing extension points only when passed through `NodeGraphSurfaceProps`,
+  - must remain UI-only policy and keep graph documents free of serialized edge/chrome view state,
+  - currently affect the default declarative edge paint path and conservative edge spatial
+    candidates, exact custom-path distance hit filtering, and custom path midpoint anchors for
+    edge-center internals consumed by declarative EdgeToolbar and default `EdgeRenderHint.label`
+    child composition, plus `NodeGraphDeclarativeEdgeLabelRenderer` custom child composition with
+    opt-in child-bounds pointer interaction; node/body skin geometry remains a follow-up contract.
 
 ### XYFlow alignment note
 
@@ -62,20 +78,6 @@ focused on the editor-grade substrate + transaction-safe interaction model, and 
 layer techniques only when they directly serve the node editor’s contracts (portals, overlays,
 anchoring, diagnostics).
 
-### Crate-internal retained compatibility seams
-
-These still exist because retained conformance coverage and compatibility glue still need them, but
-they should not read like public downstream authoring APIs.
-
-- `NodeGraphCanvas::with_view_queue`
-- `NodeGraphController::bind_edit_queue_transport`
-- `ui/compat_transport.rs` (`NodeGraphEditQueue`)
-- `NodeGraphPortalHost::with_edit_queue`
-- `NodeGraphOverlayHost::with_edit_queue`
-- `NodeGraphBlackboardOverlay::with_edit_queue`
-
-These methods/types are crate-private on purpose.
-
 ### Deleted or demoted surfaces already landed
 
 These are no longer part of the recommended public story.
@@ -83,17 +85,20 @@ These are no longer part of the recommended public story.
 - Root `fret_node::ui::*` queue/helper aliases are removed.
 - Public `fret_node::ui::advanced::*` edit transport is removed.
 - `NodeGraphViewportHelper` is removed.
-- Raw edit/view queue transport is crate-internal only.
-- Public viewport option types are now split from retained queue animation options; the queue-only
-  motion overrides stay crate-internal.
-- Direct public retained queue-binding methods are demoted to crate-private compatibility seams.
-- Unused direct `NodeGraphCanvas::with_edit_queue(...)` is removed outright.
+- Raw edit/view queue transport and retained widget authoring are removed from the current public
+  surface.
+- Public viewport option types stay store-first and do not expose queue-era animation overrides.
+- Public raw mutable view-state access is removed; use `replace_view_state(...)` /
+  `update_view_state(...)`.
+- Custom `NodeGraphPresenter` is not part of the default `NodeGraphSurfaceProps` surface. Keep it
+  advanced/internal until geometry, labels, context menus, and insertion/search policy have narrower
+  app-facing contracts.
 
 ## Recommended integration recipes
 
 ### Recipe A - new editor-grade app code
 
-Use this unless you have a specific retained-only requirement.
+Use this for app-facing node graph surfaces.
 
 1. Create `NodeGraphStore`.
 2. Create `NodeGraphController` from the store.
@@ -103,29 +108,9 @@ Use this unless you have a specific retained-only requirement.
 6. In declarative button/action hooks, prefer `NodeGraphSurfaceBinding::*_action_host(...)` instead
    of teaching raw queue ownership.
 
-### Recipe B - compatibility retained shell
-
-Use this when a retained-only harness still needs the legacy canvas / overlay stack.
-
-1. Create `NodeGraphStore`.
-2. Create `NodeGraphController`.
-3. Pass the controller explicitly to retained widgets via `with_controller(...)`; this is the only
-   public retained binding seam.
-4. Let retained internals fall back to crate-private queue seams only where the compatibility path
-   still needs them.
-
-### Recipe C - retained transport compatibility internals
-
-This is not a downstream recipe. It exists only for in-tree retained compatibility harnesses and
-focused tests that still need queue transport while the retained stack is being collapsed.
-
-1. Keep raw edit/view queues inside `fret-node` internals.
-2. Bind them only through crate-private retained/controller glue.
-3. Do not re-export or teach this path in examples, cookbook docs, or app-facing guides.
-
 ## Next worktree order
 
-Status note (2026-04-03):
+Status note (2026-05-27):
 
 - Slice 1 is now landed for the current controller-facing viewport/XyFlow mapping.
 - Focused `controller.rs` + `binding.rs` gates now cover viewport read/projection,
@@ -156,9 +141,8 @@ First landing in this worktree:
 - Public `NodeGraphFitViewOptions` / `NodeGraphSetViewportOptions` now live in a dedicated
   `viewport_options.rs` module and only expose fields the store-first controller path really
   consumes.
-- Retained `view_queue.rs` keeps its richer animation options as crate-internal transport-only
-  types, so public app code no longer sees queue-era motion knobs that are no-ops on the
-  controller/binding path.
+- Queue-era animation transport is no longer part of the current public viewport option surface, so
+  public app code stays on store-first controller/binding helpers.
 - `update_node*` / `update_edge*` now use `NodeGraphNodeUpdate` / `NodeGraphEdgeUpdate` drafts,
   so structural node-port edits and edge endpoint rewires are not representable through the
   ergonomic helper surface and must stay on explicit transactions.
@@ -170,7 +154,7 @@ First landing in this worktree:
 
 ### Slice 2 - declarative transaction closure
 
-Status note (2026-04-03):
+Status note (2026-05-29):
 
 - The selection/marquee/pointer-session reducer split is now landed.
 - Local-vs-store interaction boundaries are explicit: transient drag/marquee/pending-selection/
@@ -182,6 +166,9 @@ Status note (2026-04-03):
 - Declarative graph-edit commit authority is now also centralized in `paint_only/transactions.rs`:
   runtime files must not replace graph/document directly or dispatch/submit transactions outside
   that seam.
+- FNDX-063 widened that source-policy guard to include the mounted insert-node picker runtime and
+  routed picker activation through `commit_graph_transaction(...)`, so the FNDX-062C visual picker
+  does not become a second declarative graph-edit commit path.
 - The retained compatibility runtime no longer keeps a stale `cfg(test)` editor-config
   reconstruction fallback; retained runtime, retained tests, and `--all-features` builds now all
   use the same explicit editor-config seam.
@@ -437,9 +424,20 @@ Status note (2026-04-03):
   `ui/canvas/widget/menu_session.rs` seam for edge-insert picker fallback, background double-click
   zoom preflight, and detail/hover cursor gates, so those paths stop re-embedding direct
   `context_menu/searcher` slot checks inline.
-- The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
-  policy placement, not on reopening visible-subset portal hosting or the now-aligned
-  toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.
+- FNDX-030 closes the overlay/menu/toolbar policy-placement decision with source-policy coverage:
+  toolbar public policy stays on `ui/overlays/toolbar_policy.rs`, and declarative toolbar
+  composition consumes that policy instead of owning it inline.
+- The closeout gate set for the FNDX consumer-surface slices now passes
+  (`cargo fmt --check`, `cargo nextest run -p fret-node`, and
+  `cargo check -p fret-node --all-features --tests`).
+- FNDX-040 locks the first concrete declarative overlay behavior parity gate: overlay layers remain
+  hit-test transparent over the canvas region, so diagnostics-only hover/marquee overlays do not
+  steal pointer input from the underlying surface.
+- FNDX-041 locks the next concrete declarative overlay behavior parity gate: diagnostics hover
+  tooltips track drag-adjusted hover anchors when portal bounds are disabled or unavailable.
+- The next narrow follow-up inside Slice 3 should choose one concrete declarative overlay behavior
+  parity gap and lock it with a behavior/conformance gate, not reopen the now-aligned policy
+  placement seams as unowned experiments.
 
 Why after callback/commit cleanup:
 
@@ -447,22 +445,99 @@ Why after callback/commit cleanup:
 
 What should be true after landing:
 
-- retained overlays no longer need ad-hoc queue fallback outside the crate-private compatibility
-  seams,
-- controller-first retained composition remains the default teaching posture,
+- declarative overlays stay controller/binding-first without raw queue fallback,
+- controller/store-backed declarative composition remains the default teaching posture,
 - focus / portal / rename / blackboard behavior keeps its current conformance coverage.
 
-### Slice 4 - compatibility retained convergence gate
+### Slice 4 - public extension surface convergence gate
 
-Why last:
+Status note (2026-05-28):
 
-- this is where deletion decisions become credible rather than speculative.
+- FNDX-045 closes the first decision slice: `NodeGraphEdgeTypes` and `NodeGraphSkin` are wired into
+  the default declarative edge paint path; custom `NodeGraphPresenter` is explicitly demoted from
+  the default app-facing surface until its mixed responsibilities are split.
+- FNDX-046 feeds custom edge path AABBs into the conservative spatial index candidate set, so the
+  first spatial contract follows the visible custom path without claiming exact path-distance
+  hit-testing.
+- FNDX-047 feeds the same custom path command stream into exact path-distance hit filtering after
+  spatial candidate lookup, so edge interaction candidates no longer fall back to the default route
+  when a custom path exists.
+- FNDX-048 feeds the same custom path command stream into default edge-center anchors, so internals
+  no longer expose a default-route midpoint when a custom edge path exists.
+- FNDX-049 feeds those custom-path-derived edge-center anchors into declarative EdgeToolbar host
+  child placement, so toolbar composition no longer falls outside the custom path contract.
+- FNDX-050 feeds default `EdgeRenderHint.label` output into a hit-test-transparent declarative
+  edge-label child layer at the same custom-path-derived anchor, so visible labels now share the
+  default anchor contract without exposing arbitrary custom child renderers yet.
+- FNDX-051 adds `NodeGraphDeclarativeEdgeLabelRenderer` for non-interactive custom child placement
+  at the same custom-path-derived anchor, so apps can supply EdgeLabelRenderer-style visual content
+  without widening the broad presenter surface, and can combine it with node portal rendering
+  through `NodeGraphDeclarativeSurfaceRenderers`.
+- FNDX-052 adds `NodeGraphEdgeLabelHitTestMode::ChildBounds` for the first pointer-interactive
+  custom edge-label control contract: renderer children remain transparent by default, but controls
+  can opt into child-rect hit-testing while surrounding label-host space falls through to the
+  canvas.
+- FNDX-053 feeds the custom-path-aware edge hit-test into default declarative pointer-down, so
+  click-edge selection now follows the active `edgeTypes` path and commits through the store-backed
+  view-state helper without claiming reconnect/update-anchor lifecycle parity.
+- FNDX-054 feeds store-backed `selected_edges` into default declarative edge paint and surface
+  diagnostics, so click-edge selection now has a visible default-paint loop without claiming
+  reconnect/update-anchor lifecycle parity.
+- FNDX-055 adds the first default declarative update-anchor planning slice for selected/focused
+  edges, resolving source/target anchors from authoritative port centers and reconnectability gates
+  without rendering controls or starting reconnect drags yet.
+- FNDX-056 renders those planned source/target update anchors as hit-testable default declarative
+  controls with stable diagnostics semantics and anchor-click priority, while still deferring
+  reconnect drag lifecycle and `reconnect_on_drop_empty`.
+- FNDX-057 starts reconnect drags from those rendered update-anchor controls, reusing the existing
+  connection-drag threshold and cancel/up cleanup policy.
+- FNDX-058 adds target-port hit-testing and accepted store-backed reconnect commit/callback
+  dispatch for active update-anchor drops, while keeping endpoint-gated and empty-canvas drops
+  cleanup-only.
+- FNDX-059 emits reconnect gesture start/end callback aliases for successful arm plus committed,
+  rejected, empty/no-op, Escape, PointerCancel, and missed-left-button cleanup end paths, while
+  still deferring preview wire paint and `reconnect_on_drop_empty`.
+- FNDX-060 paints an active reconnect preview wire from the fixed port to the current pointer using
+  the default canvas path paint route.
+- FNDX-061 adds the minimal `reconnect_on_drop_empty` event outcome: default empty reconnect drops
+  stay no-op, while opt-in empty drops emit `OpenInsertNodePicker` without committing graph
+  changes or mounting picker UI.
+- FNDX-062A adds the policy seam for that outcome: opt-in empty reconnect drops now raise
+  `NodeGraphDeclarativeInsertNodePickerRequest` through
+  `NodeGraphDeclarativeInteractionHook::handle_insert_node_picker_request`, carrying the
+  `ConnectEnd`, screen drop point, and canvas drop point without committing graph changes.
+- FNDX-062B adds reusable insert-node picker candidate state and provider policy for that request:
+  apps can open a candidate session, cancel it without graph commits, and turn an explicit
+  candidate selection into an `Insert Node` transaction that is only applied when dispatched through
+  the binding/controller/store path.
+- FNDX-062C mounts the default visual picker list for that state through
+  `NodeGraphDeclarativeInsertNodePickerOverlayBinding` and
+  `node_graph_surface_with_insert_node_picker(...)`, keeping Escape cancel and Enter/row activation
+  on the same explicit state/provider/binding path.
+
+Closeout note (2026-05-29):
+
+- FNDX-055 through FNDX-061 are accepted as a closed reconnect/update-anchor sub-lane for the
+  default declarative path. The closed claim is mechanism-level EdgeWrapper parity: selected/focused
+  edge update anchors render, own reconnect drag lifecycle, commit valid target drops through the
+  store transaction path, emit reconnect callback aliases, paint active preview wires, and surface
+  opt-in empty-drop picker outcomes without graph commits.
+- Richer search/filter/typeahead behavior for large candidate sets is split as optional follow-up.
+  Do not reopen the mechanism sub-lane, the request seam, the FNDX-062B candidate state/provider
+  seam, or the FNDX-062C mounted list seam unless a concrete UI workload proves the seams are
+  insufficient.
+
+Why this still matters:
+
+- the remaining presenter/skin/node-type/edge-type decisions are credible only when each one lands
+  with a concrete default-path behavior or source-policy gate.
 
 What should be true after landing:
 
-- `compat-retained-canvas` has a clearly bounded role,
-- every surviving retained-only seam has an explicit justification,
-- removal criteria are written down instead of implied.
+- `NodeGraphPresenter` is either split into narrower default-path contracts or kept advanced-only
+  with docs/tests that prevent accidental public-surface drift,
+- paint/style tokens no longer leak geometry or hit-testing policy,
+- frame preparation responsibilities are split only where doing so leaves stronger behavior gates.
 
 ## Worktree starter checklist
 
@@ -471,7 +546,8 @@ Before opening the next worktree, confirm these assumptions:
 - The change belongs to `ecosystem/fret-node`, not `crates/fret-ui`.
 - The public story should stay controller-first and declarative-first.
 - New raw queue surfaces should not be added to root `fret_node::ui::*`.
-- If a retained-only seam survives, it should either be crate-private or explicitly advanced-only.
+- New public store/view-state seams should preserve sanitization, events, and selector
+  notifications.
 - Any behavior change should leave behind at least one focused regression gate.
 
 ## Fast reviewer checklist
@@ -479,14 +555,16 @@ Before opening the next worktree, confirm these assumptions:
 A reviewer should be able to answer "yes" to all of these:
 
 - Does the change strengthen `NodeGraphController` as the default app-facing surface?
-- Does the change keep raw queue ownership explicit instead of accidental?
-- Does the change avoid teaching retained queue seams as public app APIs?
+- Does the change avoid reintroducing raw queue ownership or raw mutable store access?
+- Does the change keep extension surfaces wired into the default declarative path or clearly demoted?
 - Does the change preserve or improve the existing conformance gates?
 - Does the change leave the workstream easier to continue from a fresh worktree?
 
 ## Commands to keep using
 
 - `cargo fmt -p fret-node`
-- `cargo check -p fret-node --features compat-retained-canvas --tests`
-- `cargo nextest run -p fret-node <targeted-tests> --features compat-retained-canvas`
+- `cargo check -p fret-node --no-default-features`
+- `cargo nextest run -p fret-node --no-default-features runtime`
+- `cargo check -p fret-node --all-features --tests`
+- `cargo nextest run -p fret-node <targeted-tests>`
 - `python tools/check_layering.py`

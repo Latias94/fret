@@ -85,7 +85,7 @@ pub(super) fn build_diag_nudge_visible_node_transaction(graph: &Graph) -> GraphT
         break;
     }
 
-    let tx = graph_diff(graph, &next);
+    let tx = GraphTransaction::diff(graph, &next);
     if tx.is_empty() {
         tx
     } else {
@@ -117,7 +117,7 @@ pub(super) fn build_diag_normalize_visible_node_transaction(graph: &Graph) -> Gr
         }
     }
 
-    let tx = graph_diff(graph, &next);
+    let tx = GraphTransaction::diff(graph, &next);
     if tx.is_empty() {
         tx
     } else {

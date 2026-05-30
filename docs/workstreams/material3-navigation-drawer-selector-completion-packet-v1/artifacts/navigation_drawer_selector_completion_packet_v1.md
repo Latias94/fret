@@ -31,4 +31,3 @@ item icon/label/badge selectors.
 
 Modal drawer motion/interruption and shared navigation foundation extraction remain separate
 follow-ons only if future diagnostics prove drift.
-

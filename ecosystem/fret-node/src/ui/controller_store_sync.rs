@@ -622,10 +622,7 @@ impl NodeGraphController {
         editor_config: NodeGraphEditorConfig,
     ) -> Result<(), NodeGraphControllerError> {
         match models.update(&self.store, |store| {
-            store.replace_graph(graph);
-            store.replace_view_state(view_state);
-            store.replace_editor_config(editor_config);
-            store.clear_history();
+            store.replace_document(graph, view_state, editor_config)
         }) {
             Ok(()) => Ok(()),
             Err(_) => Err(NodeGraphControllerError::StoreUnavailable),

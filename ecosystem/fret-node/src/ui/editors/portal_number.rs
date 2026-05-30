@@ -785,11 +785,11 @@ fn handle_drag_pointer_move<S: PortalNumberEditSpec>(
         active.start_pos.x = adjusted;
 
         let _ = host.models_mut().update(drag_state, |v| {
-            if let Some(s) = v.as_mut() {
-                if s.node == node {
-                    s.started = true;
-                    s.start_pos.x = adjusted;
-                }
+            if let Some(s) = v.as_mut()
+                && s.node == node
+            {
+                s.started = true;
+                s.start_pos.x = adjusted;
             }
         });
     }
@@ -825,10 +825,7 @@ fn handle_drag_pointer_up(
 
     let ended = host
         .models_mut()
-        .update(drag_state, |v| {
-            let ended = v.take();
-            ended
-        })
+        .update(drag_state, |v| v.take())
         .ok()
         .flatten();
 

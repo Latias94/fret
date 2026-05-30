@@ -20,9 +20,9 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, ElementContextAccess, GlobalElementId, Invalidation, UiHost};
 
-use crate::core::Graph;
+use crate::core::{EdgeId, Graph};
 use crate::io::NodeGraphViewState;
-use crate::ops::{GraphTransaction, graph_diff};
+use crate::ops::GraphTransaction;
 use crate::ui::canvas::{CanvasGeometry, CanvasSpatialDerived};
 use crate::ui::declarative::view_reducer::{
     apply_pan_by_screen_delta, apply_zoom_about_screen_point, view_from_state,
@@ -34,21 +34,36 @@ pub use crate::ui::portal_commands::{
     portal_cancel_text_command, portal_step_text_command, portal_step_text_command_with_mode,
     portal_submit_text_command,
 };
-use crate::ui::presenter::DefaultNodeGraphPresenter;
+use crate::ui::presenter::{DefaultNodeGraphPresenter, EdgeRouteKind};
 use crate::ui::style::NodeGraphStyle;
 use crate::ui::{
-    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphInternalsStore,
-    NodeGraphPortalNodeLayout, NodeGraphPresenter, NodeGraphSurfaceBinding,
+    EdgePathInput, MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphEdgeTypesRef,
+    NodeGraphInternalsStore, NodeGraphPortalNodeLayout, NodeGraphPresenter, NodeGraphSkinRef,
+    NodeGraphSurfaceBinding,
 };
 
 #[path = "paint_only/cache.rs"]
 mod cache;
 #[path = "paint_only/diag.rs"]
 mod diag;
+#[path = "paint_only/edge_hit_test.rs"]
+mod edge_hit_test;
+#[path = "paint_only/edge_labels.rs"]
+mod edge_labels;
+#[path = "paint_only/edge_path_geometry.rs"]
+mod edge_path_geometry;
+#[path = "paint_only/edge_update_anchors.rs"]
+mod edge_update_anchors;
+#[path = "paint_only/frame_plan.rs"]
+mod frame_plan;
 #[path = "paint_only/hover_anchor.rs"]
 mod hover_anchor;
 #[path = "paint_only/input_handlers.rs"]
 mod input_handlers;
+#[path = "paint_only/insert_node_picker.rs"]
+mod insert_node_picker;
+#[path = "paint_only/interaction_hooks.rs"]
+mod interaction_hooks;
 #[path = "paint_only/overlay_elements.rs"]
 mod overlay_elements;
 #[path = "paint_only/overlays.rs"]
@@ -87,16 +102,35 @@ mod transactions;
 use self::cache::{
     DerivedGeometryCacheState, EdgePaintCacheState, NodePaintCacheState, NodeRectDraw,
     canvas_viewport_rect, declarative_presenter_revision, paint_debug_grid_cached,
-    paint_edges_cached, paint_nodes_cached, sync_derived_cache, sync_edges_cache, sync_grid_cache,
+    paint_edges_cached, paint_nodes_cached, paint_reconnect_preview_wire,
+    reconnect_preview_wire_paintable, sync_derived_cache, sync_edges_cache, sync_grid_cache,
     sync_nodes_cache,
 };
 #[cfg(test)]
-use self::cache::{derived_geometry_cache_key, edges_cache_key, grid_cache_key, nodes_cache_key};
+use self::cache::{
+    build_edge_spatial_rect_overrides, build_edges_draws_paint_only, derived_geometry_cache_key,
+    edge_stroke_width_mul_for_selection, edges_cache_key, grid_cache_key, nodes_cache_key,
+};
 use self::diag::{
     DeclarativeDiagKeyAction, DeclarativeKeyboardZoomAction,
     handle_declarative_diag_key_action_host, handle_declarative_escape_key_action_host,
     handle_declarative_keyboard_zoom_action_host,
 };
+#[cfg(test)]
+use self::edge_hit_test::hit_test_edge_at_canvas_point;
+use self::edge_labels::push_edge_label_overlays;
+use self::edge_update_anchors::{
+    EdgeUpdateAnchorInfo, ReconnectDragState, ReconnectDropContext,
+    cancel_reconnect_drag_action_host, cancel_reconnect_drag_pointer_action_host,
+    finish_reconnect_drag_pointer_up_action_host, handle_reconnect_drag_pointer_move_action_host,
+    push_edge_update_anchor_controls,
+};
+#[cfg(test)]
+use self::edge_update_anchors::{
+    collect_edge_update_anchor_infos, edge_reconnect_endpoint_enabled,
+    hit_test_edge_update_anchor_at_window_point,
+};
+use self::frame_plan::{PaintOnlyInteractionFrameInputs, plan_paint_only_interaction_frame};
 #[cfg(test)]
 use self::hover_anchor::resolve_hover_tooltip_anchor;
 use self::hover_anchor::{HoverAnchorStore, sync_hover_anchor_store_in_models};
@@ -105,6 +139,22 @@ use self::input_handlers::{
     PointerMoveHandlerParams, WheelHandlerParams, build_key_down_capture_handler,
     build_pinch_handler, build_pointer_cancel_handler, build_pointer_down_handler,
     build_pointer_move_handler, build_pointer_up_handler, build_wheel_handler,
+};
+pub use self::insert_node_picker::{
+    NodeGraphDeclarativeInsertNodePickerCandidateProvider,
+    NodeGraphDeclarativeInsertNodePickerCandidateProviderRef,
+    NodeGraphDeclarativeInsertNodePickerOpenOutcome,
+    NodeGraphDeclarativeInsertNodePickerOverlayBinding,
+    NodeGraphDeclarativeInsertNodePickerPlanError, NodeGraphDeclarativeInsertNodePickerSession,
+    NodeGraphDeclarativeInsertNodePickerState, NodeGraphDeclarativeInsertNodePickerStateRef,
+};
+use self::insert_node_picker::{
+    NodeGraphDeclarativeInsertNodePickerOverlayParams, push_insert_node_picker_overlay,
+};
+pub use self::interaction_hooks::{
+    NodeGraphDeclarativeInsertNodePickerRequest, NodeGraphDeclarativeInteractionContext,
+    NodeGraphDeclarativeInteractionHook, NodeGraphDeclarativeInteractionHookRef,
+    NodeGraphDeclarativeInteractionOutcome,
 };
 use self::overlays::{
     HoverTooltipOverlayParams, push_hover_tooltip_overlay_if_needed,
@@ -131,10 +181,12 @@ use self::portal_measurement::{
 #[cfg(test)]
 use self::portals::collect_portal_label_infos_for_visible_subset;
 use self::portals::{apply_pending_fit_to_portals, host_visible_portal_labels};
+#[cfg(test)]
+use self::selection::build_click_selection_preview_edges;
 use self::selection::{
     build_click_selection_preview_nodes, build_marquee_preview_selected_nodes,
-    commit_marquee_selection_action_host, commit_pending_selection_action_host,
-    effective_selected_nodes_for_paint,
+    commit_edge_click_selection_action_host, commit_marquee_selection_action_host,
+    commit_pending_selection_action_host, effective_selected_nodes_for_paint,
 };
 use self::semantics::{
     SurfaceSemanticsParams, build_surface_semantics_value, collect_edge_paint_diagnostics,
@@ -244,6 +296,68 @@ pub trait NodeGraphDeclarativePortalRenderer<H: UiHost> {
     ) -> Elements;
 }
 
+/// Screen-space layout passed to a declarative edge-label child renderer.
+#[derive(Debug, Clone)]
+pub struct NodeGraphEdgeLabelLayout {
+    pub edge: EdgeId,
+    pub edge_center_window: Point,
+    pub label: Option<Arc<str>>,
+    pub zoom: f32,
+}
+
+/// Hit-test behavior for a declarative edge-label child renderer.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub enum NodeGraphEdgeLabelHitTestMode {
+    /// The label layer paints only; pointer input falls through to the canvas.
+    #[default]
+    Transparent,
+    /// The laid-out renderer child bounds receive pointer input.
+    ChildBounds,
+}
+
+/// Per-edge child renderer for the declarative edge-label layer.
+///
+/// This is the default-path replacement for XyFlow-style `EdgeLabelRenderer` children. It receives
+/// the authoritative graph snapshot plus the screen-space edge-center anchor and returns regular
+/// declarative elements. Returning an empty list falls back to the built-in text label when
+/// `EdgeRenderHint.label` is present.
+pub trait NodeGraphDeclarativeEdgeLabelRenderer<H: UiHost> {
+    fn edge_label_hit_test_mode(
+        &mut self,
+        _graph: &Graph,
+        _layout: &NodeGraphEdgeLabelLayout,
+    ) -> NodeGraphEdgeLabelHitTestMode {
+        NodeGraphEdgeLabelHitTestMode::Transparent
+    }
+
+    fn render_edge_label(
+        &mut self,
+        cx: &mut ElementContext<'_, H>,
+        graph: &Graph,
+        layout: NodeGraphEdgeLabelLayout,
+    ) -> Elements;
+}
+
+/// Optional custom renderers for declarative node-graph subtrees.
+///
+/// Keep these renderers as composition-time hooks instead of fields on `NodeGraphSurfaceProps`, so
+/// the props type stays cloneable and the broad presenter surface does not grow UI-subtree policy.
+pub struct NodeGraphDeclarativeSurfaceRenderers<'a, H: UiHost> {
+    pub portal_renderer: Option<&'a mut dyn NodeGraphDeclarativePortalRenderer<H>>,
+    pub edge_label_renderer: Option<&'a mut dyn NodeGraphDeclarativeEdgeLabelRenderer<H>>,
+    pub insert_node_picker: Option<NodeGraphDeclarativeInsertNodePickerOverlayBinding>,
+}
+
+impl<'a, H: UiHost> NodeGraphDeclarativeSurfaceRenderers<'a, H> {
+    pub fn empty() -> Self {
+        Self {
+            portal_renderer: None,
+            edge_label_renderer: None,
+            insert_node_picker: None,
+        }
+    }
+}
+
 /// Command adapter for declarative portal subtrees.
 ///
 /// This is the default-path replacement for the retained `NodeGraphPortalHost::command` adapter.
@@ -279,6 +393,18 @@ pub struct NodeGraphSurfaceProps {
     /// Changes must bump `revision()` on the provider (see `ui/paint_overrides.rs`).
     pub paint_overrides: Option<NodeGraphPaintOverridesRef>,
 
+    /// Optional ReactFlow-style edgeTypes registry for declarative edge rendering.
+    ///
+    /// The default surface applies hint overrides and custom paint paths without serializing UI
+    /// policy into the graph document. Custom presenter geometry remains out of the default surface.
+    pub edge_types: Option<NodeGraphEdgeTypesRef>,
+
+    /// Optional paint-only skin for declarative edge rendering.
+    ///
+    /// This is currently applied to edge render hints; node/body chrome should continue to use
+    /// `paint_overrides` until the node skin contract is split from geometry-affecting policy.
+    pub skin: Option<NodeGraphSkinRef>,
+
     /// Optional measured geometry store shared with declarative portal subtrees.
     ///
     /// When present, derived geometry is built through `MeasuredNodeGraphPresenter`, and hosted
@@ -294,6 +420,9 @@ pub struct NodeGraphSurfaceProps {
 
     /// Optional command handler for declarative portal subtrees.
     pub portal_command_handler: Option<NodeGraphDeclarativePortalCommandHandlerRef>,
+
+    /// Optional store-first hook for declarative surface input interception.
+    pub interaction_hook: Option<NodeGraphDeclarativeInteractionHookRef>,
 
     /// Declarative diagnostics policy for debug-only shortcuts and overlays.
     pub diagnostics: NodeGraphDiagnosticsConfig,
@@ -323,10 +452,13 @@ impl NodeGraphSurfaceProps {
             canvas: CanvasProps::default(),
             geometry_overrides: None,
             paint_overrides: None,
+            edge_types: None,
+            skin: None,
             measured_geometry: None,
             a11y_internals,
             portal_hosting: NodeGraphVisibleSubsetPortalConfig::default(),
             portal_command_handler: None,
+            interaction_hook: None,
             diagnostics: NodeGraphDiagnosticsConfig::default(),
             cull_margin_screen_px: 256.0,
             pan_button: MouseButton::Middle,
@@ -355,7 +487,7 @@ pub fn node_graph_surface<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     props: NodeGraphSurfaceProps,
 ) -> AnyElement {
-    node_graph_surface_impl(cx, props, None)
+    node_graph_surface_impl(cx, props, NodeGraphDeclarativeSurfaceRenderers::empty())
 }
 
 /// Declarative node-graph surface with custom visible-subset portal subtree hosting.
@@ -370,24 +502,93 @@ pub fn node_graph_surface_with_portal_renderer<H: UiHost + 'static>(
     props: NodeGraphSurfaceProps,
     portal_renderer: &mut dyn NodeGraphDeclarativePortalRenderer<H>,
 ) -> AnyElement {
-    node_graph_surface_impl(cx, props, Some(portal_renderer))
+    node_graph_surface_with_renderers(
+        cx,
+        props,
+        NodeGraphDeclarativeSurfaceRenderers {
+            portal_renderer: Some(portal_renderer),
+            edge_label_renderer: None,
+            insert_node_picker: None,
+        },
+    )
 }
 
-fn node_graph_surface_impl<H: UiHost + 'static>(
+/// Declarative node-graph surface with custom edge-label subtree hosting.
+///
+/// The renderer is invoked for edges that have a default declarative edge-center anchor. Its output
+/// is mounted through the same screen-space edge-label layer as built-in `EdgeRenderHint.label`
+/// text, keyed by edge id so local element state follows the edge identity.
+#[track_caller]
+pub fn node_graph_surface_with_edge_label_renderer<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     props: NodeGraphSurfaceProps,
-    portal_renderer: Option<&mut dyn NodeGraphDeclarativePortalRenderer<H>>,
+    edge_label_renderer: &mut dyn NodeGraphDeclarativeEdgeLabelRenderer<H>,
 ) -> AnyElement {
+    node_graph_surface_with_renderers(
+        cx,
+        props,
+        NodeGraphDeclarativeSurfaceRenderers {
+            portal_renderer: None,
+            edge_label_renderer: Some(edge_label_renderer),
+            insert_node_picker: None,
+        },
+    )
+}
+
+/// Declarative node-graph surface with the default insert-node picker overlay mounted.
+#[track_caller]
+pub fn node_graph_surface_with_insert_node_picker<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    props: NodeGraphSurfaceProps,
+    picker: NodeGraphDeclarativeInsertNodePickerOverlayBinding,
+) -> AnyElement {
+    node_graph_surface_with_renderers(
+        cx,
+        props,
+        NodeGraphDeclarativeSurfaceRenderers {
+            portal_renderer: None,
+            edge_label_renderer: None,
+            insert_node_picker: Some(picker),
+        },
+    )
+}
+
+/// Declarative node-graph surface with multiple custom subtree renderers.
+///
+/// Use this when an app needs to combine visible-subset node portal rendering with custom edge-label
+/// children. The specialized `*_with_*_renderer` helpers remain convenience wrappers.
+#[track_caller]
+pub fn node_graph_surface_with_renderers<'a, H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    props: NodeGraphSurfaceProps,
+    renderers: NodeGraphDeclarativeSurfaceRenderers<'a, H>,
+) -> AnyElement {
+    node_graph_surface_impl(cx, props, renderers)
+}
+
+fn node_graph_surface_impl<'a, H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    props: NodeGraphSurfaceProps,
+    renderers: NodeGraphDeclarativeSurfaceRenderers<'a, H>,
+) -> AnyElement {
+    let NodeGraphDeclarativeSurfaceRenderers {
+        portal_renderer,
+        edge_label_renderer,
+        insert_node_picker,
+    } = renderers;
     let NodeGraphSurfaceProps {
         binding,
         pointer_region,
         canvas,
         geometry_overrides,
         paint_overrides,
+        edge_types,
+        skin,
         measured_geometry,
         a11y_internals,
         portal_hosting,
         portal_command_handler,
+        interaction_hook,
         diagnostics,
         cull_margin_screen_px,
         pan_button,
@@ -402,6 +603,7 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
         drag,
         marquee_drag,
         node_drag,
+        reconnect_drag,
         pending_selection,
         hovered_node,
         hit_scratch,
@@ -426,6 +628,7 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
                 drag: drag.clone(),
                 marquee_drag: marquee_drag.clone(),
                 node_drag: node_drag.clone(),
+                reconnect_drag: reconnect_drag.clone(),
                 pending_selection: pending_selection.clone(),
                 hovered_node: hovered_node.clone(),
                 hit_scratch: hit_scratch.clone(),
@@ -443,6 +646,8 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
             },
             geometry_overrides: geometry_overrides.clone(),
             paint_overrides: paint_overrides.clone(),
+            edge_types: edge_types.clone(),
+            skin: skin.clone(),
             measured_geometry: measured_geometry.clone(),
             diagnostics,
             cull_margin_screen_px,
@@ -460,13 +665,16 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
     let marquee_value = prepared_frame.marquee_value;
     let marquee_active = prepared_frame.marquee_active;
     let node_drag_value = prepared_frame.node_drag_value;
+    let reconnect_drag_value = prepared_frame.reconnect_drag_value;
     let node_dragging = prepared_frame.node_dragging;
     let grid_cache_value = prepared_frame.grid_cache_value;
     let derived_cache_value = prepared_frame.derived_cache_value;
     let nodes_cache_value = prepared_frame.nodes_cache_value;
     let edges_cache_value = prepared_frame.edges_cache_value;
+    let edge_update_anchors = prepared_frame.edge_update_anchors;
     let hovered_node_value = prepared_frame.hovered_node_value;
     let effective_selected_nodes = prepared_frame.effective_selected_nodes;
+    let selected_edges = prepared_frame.selected_edges;
     let portals_disabled = prepared_frame.portals_disabled;
     let semantics_value = prepared_frame.semantics_value;
     let test_id = prepared_frame.test_id;
@@ -567,6 +775,7 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
                     canvas,
                     measured_geometry_present: measured_geometry.is_some(),
                     portal_hosting,
+                    interaction_hook: interaction_hook.clone(),
                     cull_margin_screen_px,
                     pan_button,
                     min_zoom,
@@ -574,10 +783,13 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
                     wheel_zoom,
                     pinch_zoom_speed,
                     portal_renderer,
+                    edge_label_renderer,
+                    insert_node_picker,
                     surface_models: PaintOnlySurfaceModels {
                         drag: drag.clone(),
                         marquee_drag: marquee_drag.clone(),
                         node_drag: node_drag.clone(),
+                        reconnect_drag: reconnect_drag.clone(),
                         pending_selection: pending_selection.clone(),
                         hovered_node: hovered_node.clone(),
                         hit_scratch: hit_scratch.clone(),
@@ -597,6 +809,7 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
                         view_for_paint,
                         theme: theme.clone(),
                         style_tokens: style_tokens.clone(),
+                        edge_types: edge_types.clone(),
                         diagnostics,
                         diag_paint_overrides_value: diag_paint_overrides_value.clone(),
                         paint_overrides_ref: paint_overrides_ref.clone(),
@@ -604,13 +817,16 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
                         marquee_value: marquee_value.clone(),
                         marquee_active,
                         node_drag_value: node_drag_value.clone(),
+                        reconnect_drag_value,
                         node_dragging,
                         grid_cache_value: grid_cache_value.clone(),
                         derived_cache_value: derived_cache_value.clone(),
                         nodes_cache_value: nodes_cache_value.clone(),
                         edges_cache_value: edges_cache_value.clone(),
+                        edge_update_anchors: edge_update_anchors.clone(),
                         hovered_node_value,
                         effective_selected_nodes: effective_selected_nodes.clone(),
+                        selected_edges: selected_edges.clone(),
                         portals_disabled,
                         semantics_value: semantics_value.clone(),
                         test_id: test_id.clone(),
@@ -635,20 +851,20 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum NodeGraphA11yDescendantKey {
-    FocusedPort,
-    FocusedEdge,
-    FocusedNode,
+    Port,
+    Edge,
+    Node,
 }
 
 fn active_descendant_key_from_a11y(
     snapshot: &crate::ui::internals::NodeGraphA11ySnapshot,
 ) -> Option<NodeGraphA11yDescendantKey> {
     if snapshot.focused_port.is_some() {
-        Some(NodeGraphA11yDescendantKey::FocusedPort)
+        Some(NodeGraphA11yDescendantKey::Port)
     } else if snapshot.focused_edge.is_some() {
-        Some(NodeGraphA11yDescendantKey::FocusedEdge)
+        Some(NodeGraphA11yDescendantKey::Edge)
     } else if snapshot.focused_node.is_some() {
-        Some(NodeGraphA11yDescendantKey::FocusedNode)
+        Some(NodeGraphA11yDescendantKey::Node)
     } else {
         None
     }
@@ -680,21 +896,21 @@ fn build_a11y_descendant_semantics<H: UiHost + 'static>(
 ) -> Vec<AnyElement> {
     [
         (
-            NodeGraphA11yDescendantKey::FocusedPort,
+            NodeGraphA11yDescendantKey::Port,
             a11y.focused_port_label.clone().or_else(|| {
                 a11y.focused_port
                     .map(|port| format!("Focused port {port:?}"))
             }),
         ),
         (
-            NodeGraphA11yDescendantKey::FocusedEdge,
+            NodeGraphA11yDescendantKey::Edge,
             a11y.focused_edge_label.clone().or_else(|| {
                 a11y.focused_edge
                     .map(|edge| format!("Focused edge {edge:?}"))
             }),
         ),
         (
-            NodeGraphA11yDescendantKey::FocusedNode,
+            NodeGraphA11yDescendantKey::Node,
             a11y.focused_node_label.clone().or_else(|| {
                 a11y.focused_node
                     .map(|node| format!("Focused node {node:?}"))
@@ -753,4 +969,43 @@ where
     Cx: ElementContextAccess<'a, H>,
 {
     node_graph_surface_with_portal_renderer(cx.elements(), props, portal_renderer)
+}
+
+/// Capability-first adapter for [`node_graph_surface_with_edge_label_renderer`].
+#[track_caller]
+pub fn node_graph_surface_with_edge_label_renderer_in<'a, H: UiHost + 'static + 'a, Cx>(
+    cx: &mut Cx,
+    props: NodeGraphSurfaceProps,
+    edge_label_renderer: &mut dyn NodeGraphDeclarativeEdgeLabelRenderer<H>,
+) -> AnyElement
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    node_graph_surface_with_edge_label_renderer(cx.elements(), props, edge_label_renderer)
+}
+
+/// Capability-first adapter for [`node_graph_surface_with_insert_node_picker`].
+#[track_caller]
+pub fn node_graph_surface_with_insert_node_picker_in<'a, H: UiHost + 'static + 'a, Cx>(
+    cx: &mut Cx,
+    props: NodeGraphSurfaceProps,
+    picker: NodeGraphDeclarativeInsertNodePickerOverlayBinding,
+) -> AnyElement
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    node_graph_surface_with_insert_node_picker(cx.elements(), props, picker)
+}
+
+/// Capability-first adapter for [`node_graph_surface_with_renderers`].
+#[track_caller]
+pub fn node_graph_surface_with_renderers_in<'a, H: UiHost + 'static + 'a, Cx>(
+    cx: &mut Cx,
+    props: NodeGraphSurfaceProps,
+    renderers: NodeGraphDeclarativeSurfaceRenderers<'a, H>,
+) -> AnyElement
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    node_graph_surface_with_renderers(cx.elements(), props, renderers)
 }

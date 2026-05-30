@@ -980,13 +980,38 @@ Notes:
 
 ### `fret-node`
 
-**What it is:** a serializable node graph substrate with typed connections and editor-grade contracts.
+**What it is:** the Fret adapter and compatibility facade for Jellyflow-backed node graph surfaces.
 
-**Use it when:** you need a node graph model (headless or UI-integrated).
+**Use it when:** you need the Fret declarative node graph surface, controller/binding helpers,
+overlays, portals, diagnostics, or compatibility re-exports for existing `fret_node::*` paths.
 
-**Notes:** supports a `headless` mode; UI integration is behind its `fret-ui` feature. If you opt
-into app-owned command/keybinding wiring, use the explicit `fret_node::app::install(...)` seam
-instead of root-level install helpers.
+**Notes:** `fret-node` now depends on the Jellyflow headless crates and re-exports `core`, `types`,
+`interaction`, `ops`, `io`, `profile`, `rules`, `schema`, and `runtime` modules for compatibility.
+If you opt into app-owned command/keybinding wiring, use the explicit
+`fret_node::app::install(...)` seam instead of root-level install helpers.
+
+### `jellyflow-core`
+
+**What it is:** the headless graph document model, stable IDs, type descriptors, transaction
+ops/history helpers, and interaction policy value types used by `fret-node`.
+
+**Use it when:** you need portable node/flow graph primitives and transaction helpers without Fret
+UI, renderer, platform, or windowing dependencies.
+
+**Notes:** `jellyflow-core` is the first slice of the Jellyflow package split. It intentionally does
+not own runtime store/callbacks, geometry, or Fret UI adapters yet.
+
+### `jellyflow-runtime`
+
+**What it is:** the headless Jellyflow runtime package: persisted graph/view-state payloads,
+connection rules, schema/profile pipeline, store, callbacks, middleware, and XyFlow-style change
+projections.
+
+**Use it when:** you need a portable node/flow graph store and transaction pipeline without Fret UI
+or adapter glue.
+
+**Notes:** `jellyflow-runtime` builds on `jellyflow-core`. Fret-specific UI binding/controller
+surfaces and kit recipes such as `DataflowProfile` remain in `fret-node`.
 
 ### `fret-plot` / `fret-chart` / `fret-plot3d`
 

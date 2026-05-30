@@ -4,12 +4,14 @@ This guide documents the **controlled-mode** integration pattern for `ecosystem/
 mirrors the React Flow / XyFlow mental model:
 
 - the application owns the authoritative graph state, and
-- the runtime emits `NodeChange` / `EdgeChange` events that the application applies.
+- the runtime emits a full-fidelity `NodeGraphPatch` plus optional XyFlow-style
+  `NodeChange` / `EdgeChange` projections that the application may apply.
 
 In `fret-node`, the canonical document is `core::Graph` (hash maps) and undo/redo is expressed as
 reversible `ops::GraphTransaction`. Controlled mode is therefore best understood as:
 
-- **Events**: `runtime::changes::NodeGraphChanges` (`NodeChange` + `EdgeChange`)
+- **Full-fidelity events**: `runtime::changes::NodeGraphPatch` (`GraphTransaction` + all `GraphOp`s)
+- **XyFlow projection**: `runtime::changes::NodeGraphChanges` (`NodeChange` + `EdgeChange`)
 - **Apply helpers**: `runtime::apply::{apply_node_changes, apply_edge_changes}`
 - **Viewport/selection**: `io::NodeGraphViewState` and `runtime::events::ViewChange`
 
@@ -25,7 +27,7 @@ If you are building a typical editor UI with a single graph instance, prefer the
 **binding-first declarative** path: construct one store-backed `NodeGraphSurfaceBinding`, render
 `node_graph_surface(...)`, use the binding's common helpers for viewport/history/controlled-sync
 work, and construct `NodeGraphController::new(binding.store_model())` explicitly only when you need
-the lower-level controller surface or retained/compat composition. This keeps undo/redo, lookup
+the lower-level controller surface or custom declarative composition. This keeps undo/redo, lookup
 caches, and editor
 interactions in the store/runtime while teaching the same declarative surface that app code should
 copy.
@@ -33,7 +35,7 @@ copy.
 ## Building blocks (headless-safe)
 
 - Change events:
-  - `ecosystem/fret-node/src/runtime/changes.rs` (`NodeChange`, `EdgeChange`, `NodeGraphChanges`)
+  - `ecosystem/fret-node/src/runtime/changes.rs` (`NodeGraphPatch`, `NodeChange`, `EdgeChange`, `NodeGraphChanges`)
 - Apply helpers:
   - `ecosystem/fret-node/src/runtime/apply.rs` (`apply_node_changes`, `apply_edge_changes`)
 - Callback adapter:
@@ -44,7 +46,8 @@ copy.
   - `ecosystem/fret-node/src/ui/controller.rs` (`NodeGraphController`)
   - `ecosystem/fret-node/src/ui/binding.rs` + `binding_queries.rs` + `binding_store_sync.rs` +
     `binding_viewport.rs` (`NodeGraphSurfaceBinding`)
-  - `ecosystem/fret-node/src/ui/declarative/mod.rs` (`NodeGraphSurfaceProps`, `node_graph_surface`)
+  - `ecosystem/fret-node/src/ui/declarative/mod.rs` (`NodeGraphSurfaceProps`,
+    `NodeGraphDeclarativeInteractionHook`, `node_graph_surface`)
 
 ## Pattern A - Binding-first declarative surface (recommended default)
 
@@ -60,10 +63,16 @@ copy.
   They intentionally expose `NodeGraphNodeUpdate` / `NodeGraphEdgeUpdate` drafts instead of raw
   `Node` / `Edge`, so structural port edits and endpoint rewires stay on explicit transactions.
 - Treat `NodeGraphController::new(binding.store_model())` as the explicit lower-level escape hatch
-  for controller-only helpers or retained/compat wiring.
-- When you already own explicit graph/view/editor-config mirrors plus controller state, use
+  for controller-only helpers or custom declarative wiring.
+- Projection model handles are observation/sync targets, not mutation authority. Graph/view/config
+  mutations must still flow through binding helpers, `NodeGraphController`, or `NodeGraphStore`;
+  direct projection-model edits can be overwritten by `sync_from_store`.
+- When you already own explicit graph/view/editor-config projection models plus controller state, use
   `NodeGraphSurfaceBinding::from_models_and_controller(...)`; this is an advanced constructor, not
   the default teaching path.
+- Use `NodeGraphSurfaceProps::interaction_hook` for declarative tool-mode or shortcut interception.
+  Hook code receives `NodeGraphDeclarativeInteractionContext` and must commit graph edits through
+  binding/controller/store helpers rather than mutating a graph directly.
 - Expect transient paint-only interaction sessions to stay local to the surface: marquee preview,
   pending click-selection preview, hover targets, and live drag arming/preview are not persisted
   into `NodeGraphViewState` until commit/cancel time.
@@ -125,10 +134,16 @@ impl NodeGraphGestureCallbacks for ControlledGraph {}
 - `apply_*_changes` is best-effort and order-preserving; it intentionally mirrors XyFlow’s
   “apply changes to your owned state” workflow.
 - If you require full-fidelity, reversible edits, prefer applying committed transactions
-  (`GraphTransaction`) via `ops::apply_transaction` instead of applying `NodeChange`/`EdgeChange`.
+  (`GraphTransaction`) via `GraphTransaction::apply_to` instead of applying
+  `NodeChange`/`EdgeChange`.
 - Viewport/selection is modeled separately:
   - app-owned view state: `io::NodeGraphViewState`
   - change events: `runtime::events::ViewChange` via `NodeGraphViewCallbacks` (`on_view_change` / `on_viewport_change`)
+- Graph commits are full-fidelity first:
+  - `NodeGraphStoreEvent::GraphCommitted { patch, node_edge_changes }` carries `NodeGraphPatch`
+    as the primary payload,
+  - `node_edge_changes` is a lossy XyFlow-style adapter and does not include ports, groups, sticky
+    notes, imports, or symbols.
 
 ### Current replace policy
 
@@ -140,14 +155,27 @@ impl NodeGraphGestureCallbacks for ControlledGraph {}
   - it sanitizes selection against the new graph,
   - it applies the provided view state against the new graph,
   - it clears undo/redo history,
-  - it re-syncs the external graph/view mirrors,
+  - it re-syncs the store-derived graph/view projection models,
+  - it emits one `NodeGraphStoreEvent::DocumentReplaced` event,
   - it clears declarative local transient sessions on the next frame so preview/hover state cannot
     bleed across document swaps,
   - it does **not** emit incremental `NodeChange` / `EdgeChange` diffs.
 - `replace_graph(...)` remains available for graph-only controlled sync when the caller wants to
-  preserve existing view/history policy explicitly.
+  preserve existing view/history policy explicitly. It also emits
+  `NodeGraphStoreEvent::DocumentReplaced`, but does not clear undo/redo history.
 - Diff-first replace helpers remain intentionally deferred until we have a concrete editor-grade
   workload that proves full replace is not sufficient.
+
+FNDX-020 decision (2026-05-27): keep diff-first controlled sync out of the public helper surface
+for now. `GraphTransaction::diff` remains available for explicit transaction authorship, but
+promoting a public `replace_*_with_diff` helper would force policy decisions about history,
+selection, callbacks, and transient sessions before we have workload evidence. Until that evidence
+exists, controlled integrations should choose one of three explicit paths:
+
+- use `replace_document(...)` / `replace_document_and_sync_models(...)` for whole-document resets,
+- use `replace_graph(...)` for graph-only authoritative sync with caller-owned view/history policy,
+  or
+- submit/apply explicit `GraphTransaction` values when reversible, incremental edits matter.
 
 ## Runnable example
 

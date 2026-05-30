@@ -7,4 +7,7 @@
 //! Higher-level tool modes and gesture maps should live in ecosystem crates (or `crate::ui` when
 //! integration wiring is needed).
 
+pub mod resize;
 pub mod selection;
+
+pub use resize::{ResizeHandle2D, ResizeHandleSet2D};

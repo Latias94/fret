@@ -49,4 +49,3 @@ The next picker accessibility packet should choose one of two narrow lanes:
 
 - TimePicker invalid input and live-region announcements.
 - DatePicker disabled/selectable-date and localized day/month semantics.
-

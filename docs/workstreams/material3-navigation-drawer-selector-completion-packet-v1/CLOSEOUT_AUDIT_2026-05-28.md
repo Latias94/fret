@@ -45,4 +45,3 @@ git diff --check
 Do not open another selector-only NavigationDrawer lane unless a new part is added. Future work
 should be driven by modal drawer motion diagnostics or repeated evidence for shared navigation
 foundation extraction.
-

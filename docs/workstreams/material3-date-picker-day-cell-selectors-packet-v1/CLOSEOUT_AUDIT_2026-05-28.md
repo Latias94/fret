@@ -45,4 +45,3 @@ git diff --check
 The next DatePicker accessibility packet should handle `SelectableDates` and disabled-date semantics
 before live-region month announcements, because enabled/disabled day state is the harder behavioral
 contract.
-

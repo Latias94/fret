@@ -116,6 +116,27 @@ pub(super) fn build_click_selection_preview_nodes(
     Arc::from(selected_nodes.into_boxed_slice())
 }
 
+pub(super) fn build_click_selection_preview_edges(
+    base_selected_edges: &[crate::core::EdgeId],
+    hit: crate::core::EdgeId,
+    multi: bool,
+) -> Arc<[crate::core::EdgeId]> {
+    let mut selected_edges = base_selected_edges.to_vec();
+    if multi {
+        if let Some(ix) = selected_edges.iter().position(|id| *id == hit) {
+            selected_edges.remove(ix);
+        } else {
+            selected_edges.push(hit);
+        }
+    } else {
+        selected_edges.clear();
+        selected_edges.push(hit);
+    }
+    selected_edges.sort();
+    selected_edges.dedup();
+    Arc::from(selected_edges.into_boxed_slice())
+}
+
 pub(super) fn commit_pending_selection_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     binding: &NodeGraphSurfaceBinding,
@@ -134,6 +155,27 @@ pub(super) fn commit_pending_selection_action_host(
                 selected_edges.clear();
             }
             if clear_groups {
+                selected_groups.clear();
+            }
+        },
+    )
+}
+
+pub(super) fn commit_edge_click_selection_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    binding: &NodeGraphSurfaceBinding,
+    edge: crate::core::EdgeId,
+    multi: bool,
+) -> bool {
+    update_selection_action_host(
+        host,
+        binding,
+        move |selected_nodes, selected_edges, selected_groups| {
+            let next_edges = build_click_selection_preview_edges(selected_edges, edge, multi);
+            selected_edges.clear();
+            selected_edges.extend(next_edges.iter().copied());
+            if !multi {
+                selected_nodes.clear();
                 selected_groups.clear();
             }
         },

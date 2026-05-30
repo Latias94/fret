@@ -1,12 +1,21 @@
 # ADR 0135: Node Graph Canvas Middleware (Tx Gate + Input Interception)
 
-Status: Proposed
+Status: Superseded
 Scope: Ecosystem (`ecosystem/fret-node`) UI integration contract and guidance.
+
+Status note (2026-05-28): this ADR is superseded by the retained node graph canvas exit and the
+store-first/declarative-first surface. The retained `NodeGraphCanvas` and `NodeGraphCanvasMiddleware`
+names below describe deleted historical design direction, not a current API. Current graph commit
+interception lives in `NodeGraphStore` middleware/callbacks; any future UI interaction interception
+must be designed as a declarative surface hook under
+`docs/workstreams/fret-node-declarative-contract-closure-v1/`.
 
 ## Context
 
-`ecosystem/fret-node` provides a retained `NodeGraphCanvas` widget that already hosts a large
-interaction surface (selection, panning/zooming, dragging, context menus/searchers, etc.).
+Historically, `ecosystem/fret-node` provided a retained `NodeGraphCanvas` widget that hosted a large
+interaction surface (selection, panning/zooming, dragging, context menus/searchers, etc.). That
+widget has since been deleted. The supported app-facing surface is now
+`NodeGraphSurfaceBinding` + `node_graph_surface(...)` + `NodeGraphController`.
 
 As the editor surface grows, we need a **single, non-bypassable gate** for all graph edits, and a
 clean extension point for tool-mode and shortcut interception, without pushing editor policy into
@@ -28,7 +37,53 @@ Non-goals:
 - Define a universal "canvas middleware" for all Fret canvases.
 - Encode graph/domain rules inside `fret-canvas` or `crates/fret-ui`.
 
-## Decision
+## Supersession Decision
+
+Do not implement this ADR by reviving `NodeGraphCanvasMiddleware`.
+
+The replacement direction is:
+
+- Keep graph commit validation, normalization, history, and callbacks under `NodeGraphStore`.
+- Keep declarative UI event/command interception behind a new explicit hook contract.
+- Require any UI hook that commits graph edits to go through the store dispatch path.
+- Treat retained middleware references below as historical design context only.
+
+## Replacement Contract: Declarative Interaction Hooks
+
+The supported replacement for retained canvas input interception is
+`NodeGraphDeclarativeInteractionHook` on `NodeGraphSurfaceProps`.
+
+The first shipped hook point was key-down capture for the declarative surface. The same store-first
+hook surface now also carries insert-node picker requests for opt-in empty reconnect drops through
+`NodeGraphDeclarativeInsertNodePickerRequest`. Reusable picker policy lives on
+`NodeGraphDeclarativeInsertNodePickerState` plus
+`NodeGraphDeclarativeInsertNodePickerCandidateProvider`: policy code can open a candidate session,
+cancel it without graph commits, and plan an explicit `Insert Node` transaction for caller dispatch
+through the binding/controller/store path. The default visual list can be mounted with
+`NodeGraphDeclarativeInsertNodePickerOverlayBinding` and
+`node_graph_surface_with_insert_node_picker(...)`, which keeps Escape cancel and Enter/row
+activation on the same explicit state/provider/binding path; mounted activation still commits
+through the declarative `paint_only/transactions.rs` seam rather than becoming a second graph-edit
+commit path. This remains intentionally small: it covers tool-mode/shortcut interception and
+picker-policy handoff without reopening retained widget authoring or adding a second graph owner.
+
+Hooks receive a `NodeGraphDeclarativeInteractionContext`, not a mutable `Graph` and not raw
+`ModelStore` access. The context may expose:
+
+- immutable graph/view snapshots for planning,
+- binding/controller helpers that dispatch `GraphTransaction` through `NodeGraphStore`,
+- view-state replacement helpers that preserve binding projection sync,
+- focus/redraw/notify side-effect helpers for the current surface target.
+
+The context must not expose `&mut Graph`, graph projection model mutation, or a retained
+`NodeGraphCanvasMiddleware` chain. Any hook that wants to commit graph edits must submit a
+`GraphTransaction` through the binding/controller/store dispatch path, so validation,
+normalization, history, callbacks, and store events remain centralized.
+
+Pointer, command, and observer hooks can be added later under the same contract. They should extend
+`NodeGraphDeclarativeInteractionHook` rather than introduce another middleware family.
+
+## Historical Decision (Superseded)
 
 ### 1) Introduce a `NodeGraphCanvasMiddleware` extension point (ecosystem)
 

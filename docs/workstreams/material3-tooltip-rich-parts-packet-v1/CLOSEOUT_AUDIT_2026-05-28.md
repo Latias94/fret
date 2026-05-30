@@ -38,4 +38,3 @@ tooltip policy root. Tooltip overlay input behavior remains pointer transparent.
 - No `fret-ui-kit` tooltip policy changed.
 - Rich tooltip action interactivity remains a separate mechanism follow-on because current tooltip
   overlays are deliberately pointer transparent.
-

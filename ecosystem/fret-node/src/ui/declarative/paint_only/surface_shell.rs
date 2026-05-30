@@ -6,10 +6,10 @@ use crate::ui::NodeGraphSurfaceBinding;
 use super::{
     KeyHandlerParams, PaintOnlySurfaceModels, PinchHandlerParams, PointerDownHandlerParams,
     PointerFinishHandlerParams, PointerMoveHandlerParams, PreparedPaintOnlySurfaceFrame,
-    SurfaceRegionChildrenParams, WheelHandlerParams, build_key_down_capture_handler,
-    build_pinch_handler, build_pointer_cancel_handler, build_pointer_down_handler,
-    build_pointer_move_handler, build_pointer_up_handler, build_surface_region_children,
-    build_wheel_handler,
+    ReconnectDropContext, SurfaceRegionChildrenParams, WheelHandlerParams,
+    build_key_down_capture_handler, build_pinch_handler, build_pointer_cancel_handler,
+    build_pointer_down_handler, build_pointer_move_handler, build_pointer_up_handler,
+    build_surface_region_children, build_wheel_handler,
 };
 
 pub(super) struct SurfaceShellParams<'a, H: UiHost> {
@@ -24,7 +24,12 @@ pub(super) struct SurfaceShellParams<'a, H: UiHost> {
     pub(super) max_zoom: f32,
     pub(super) wheel_zoom: super::NodeGraphWheelZoomConfig,
     pub(super) pinch_zoom_speed: f32,
+    pub(super) interaction_hook: Option<super::NodeGraphDeclarativeInteractionHookRef>,
     pub(super) portal_renderer: Option<&'a mut dyn super::NodeGraphDeclarativePortalRenderer<H>>,
+    pub(super) edge_label_renderer:
+        Option<&'a mut dyn super::NodeGraphDeclarativeEdgeLabelRenderer<H>>,
+    pub(super) insert_node_picker:
+        Option<super::NodeGraphDeclarativeInsertNodePickerOverlayBinding>,
     pub(super) surface_models: PaintOnlySurfaceModels,
     pub(super) prepared_frame: PreparedPaintOnlySurfaceFrame,
 }
@@ -46,7 +51,10 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
         max_zoom,
         wheel_zoom,
         pinch_zoom_speed,
+        interaction_hook,
         portal_renderer,
+        edge_label_renderer,
+        insert_node_picker,
         surface_models,
         prepared_frame,
     } = params;
@@ -54,6 +62,7 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
         drag,
         marquee_drag,
         node_drag,
+        reconnect_drag,
         pending_selection,
         hovered_node,
         hit_scratch,
@@ -82,6 +91,7 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
         drag: drag.clone(),
         marquee_drag: marquee_drag.clone(),
         node_drag: node_drag.clone(),
+        reconnect_drag: reconnect_drag.clone(),
         pending_selection: pending_selection.clone(),
         binding: binding.clone(),
         portal_bounds_store: portal_bounds_store.clone(),
@@ -89,6 +99,7 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
         diagnostics: prepared_frame.diagnostics,
         diag_paint_overrides_value: prepared_frame.diag_paint_overrides_value.clone(),
         diag_paint_overrides_enabled: diag_paint_overrides_enabled.clone(),
+        interaction_hook: interaction_hook.clone(),
         min_zoom,
         max_zoom,
     });
@@ -106,12 +117,15 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
         derived_cache: derived_cache.clone(),
         hovered_node: hovered_node.clone(),
         hit_scratch: hit_scratch.clone(),
+        style_tokens: prepared_frame.style_tokens.clone(),
+        edge_types: prepared_frame.edge_types.clone(),
     });
 
     let on_pointer_move = build_pointer_move_handler(PointerMoveHandlerParams {
         drag: drag.clone(),
         marquee_drag: marquee_drag.clone(),
         node_drag: node_drag.clone(),
+        reconnect_drag: reconnect_drag.clone(),
         pending_selection: pending_selection.clone(),
         binding: binding.clone(),
         grid_cache: grid_cache.clone(),
@@ -125,6 +139,13 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
         drag: drag.clone(),
         marquee_drag: marquee_drag.clone(),
         node_drag: node_drag.clone(),
+        reconnect_drag: reconnect_drag.clone(),
+        reconnect_drop_context: ReconnectDropContext {
+            geom: prepared_frame.derived_cache_value.geom.clone(),
+            view: prepared_frame.view_for_paint,
+            bounds: prepared_frame.grid_cache_value.bounds,
+        },
+        interaction_hook: interaction_hook.clone(),
         pending_selection: pending_selection.clone(),
         binding: binding.clone(),
     });
@@ -134,6 +155,13 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
         drag: drag.clone(),
         marquee_drag: marquee_drag.clone(),
         node_drag: node_drag.clone(),
+        reconnect_drag: reconnect_drag.clone(),
+        reconnect_drop_context: ReconnectDropContext {
+            geom: prepared_frame.derived_cache_value.geom.clone(),
+            view: prepared_frame.view_for_paint,
+            bounds: prepared_frame.grid_cache_value.bounds,
+        },
+        interaction_hook: interaction_hook.clone(),
         pending_selection: pending_selection.clone(),
         binding: binding.clone(),
     });
@@ -170,6 +198,8 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
                 hovered_node_model: hovered_node.clone(),
                 node_drag_model: node_drag.clone(),
                 marquee_drag_model: marquee_drag.clone(),
+                reconnect_drag_model: reconnect_drag.clone(),
+                interaction_hook: interaction_hook.clone(),
                 hover_anchor_store: hover_anchor_store.clone(),
                 portal_bounds_store: portal_bounds_store.clone(),
                 portal_measured_geometry_state: portal_measured_geometry_state.clone(),
@@ -177,6 +207,9 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
                 portal_hosting,
                 portals_disabled: prepared_frame.portals_disabled,
                 portal_renderer,
+                edge_label_renderer,
+                insert_node_picker,
+                focus_target: element,
                 cull_margin_screen_px,
                 min_zoom,
                 max_zoom,
@@ -189,13 +222,16 @@ pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
                 grid_ops: prepared_frame.grid_cache_value.ops.clone(),
                 node_draws: prepared_frame.nodes_cache_value.draws.clone(),
                 edge_draws: prepared_frame.edges_cache_value.draws.clone(),
+                edge_update_anchors: prepared_frame.edge_update_anchors.clone(),
                 geom_for_paint: prepared_frame.derived_cache_value.geom.clone(),
                 style_tokens: prepared_frame.style_tokens.clone(),
                 theme: prepared_frame.theme.clone(),
                 hovered_node_value: prepared_frame.hovered_node_value,
                 selected_nodes: prepared_frame.effective_selected_nodes.clone(),
+                selected_edges: prepared_frame.selected_edges.clone(),
                 marquee_value: prepared_frame.marquee_value.clone(),
                 node_drag_value: prepared_frame.node_drag_value.clone(),
+                reconnect_drag_value: prepared_frame.reconnect_drag_value,
                 paint_overrides_ref: prepared_frame.paint_overrides_ref.clone(),
             },
         )

@@ -12,11 +12,20 @@ See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed
 Scope: UI infrastructure contracts and guidance (portable). Domain policy remains ecosystem/app-owned.
 
+Status note (2026-05-28): node graph retained widget examples in older revisions were superseded by
+the `fret-node` retained exit. Current node graph guidance is declarative/binding-first
+composition (`NodeGraphSurfaceBinding`, `node_graph_surface(...)`, `NodeGraphController`) over
+policy-light `fret-canvas` helpers. Historical retained widget terminology below remains useful for
+chart/plot history and low-level mechanism discussion, but it is not the current `fret-node` public
+authoring path.
+
 ## Context
 
-Multiple ecosystem crates implement “canvas-like” retained widgets today:
+Multiple ecosystem crates have implemented canvas-like surfaces that need shared terminology and
+helpers:
 
-- `fret-node`: `NodeGraphCanvas` (pan/zoom, large-scene drawing, spatial hit testing).
+- `fret-node`: declarative node graph surface over `NodeGraphSurfaceBinding` and
+  `node_graph_surface(...)` (pan/zoom, large-scene drawing, spatial hit testing).
 - `fret-plot`: `PlotCanvas` (plot regions + axes + overlays, cursor readouts, box zoom, queries).
 - `fret-chart`: `ChartCanvas` (ImPlot-like interactions, axis bands, engine-driven marks).
 - `fret-plot3d`: `Plot3dCanvas` (viewport surface + input forwarding).
@@ -310,7 +319,8 @@ Cons:
 
 Existing examples to keep aligned:
 
-- Node graph pan/zoom via `render_transform`: `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- Node graph pan/zoom via the supported declarative surface:
+  `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 - Plot regions + axis chrome without global transform: `ecosystem/fret-plot/src/retained/canvas/mod.rs`
 - Engine viewport mapping + input forwarding: `ecosystem/fret-plot3d/src/retained.rs`
 - Chart axis bands + engine-driven marks: `ecosystem/fret-chart/src/retained/canvas.rs`

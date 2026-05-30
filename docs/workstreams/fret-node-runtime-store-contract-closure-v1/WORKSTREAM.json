@@ -1,0 +1,81 @@
+{
+  "slug": "fret-node-runtime-store-contract-closure-v1",
+  "title": "fret-node Runtime/Store Contract Closure v1",
+  "status": "complete",
+  "created_at": "2026-05-26",
+  "updated_at": "2026-05-27",
+  "scope": [
+    "ecosystem/fret-node",
+    "docs/node-graph-roadmap.md",
+    "docs/workstreams/fret-node-declarative-fearless-refactor-v1"
+  ],
+  "phase": "closed",
+  "current_task": null,
+  "next_skill": null,
+  "dependencies": [
+    "docs/workstreams/fret-node-declarative-fearless-refactor-v1"
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "name": "Workstream opened and baseline captured",
+      "status": "complete"
+    },
+    {
+      "id": "M1",
+      "name": "Runtime change semantics closed",
+      "status": "complete",
+      "tasks": [
+        "FNRS-010"
+      ]
+    },
+    {
+      "id": "M2",
+      "name": "Lookup cache correctness closed",
+      "status": "complete",
+      "tasks": [
+        "FNRS-020"
+      ]
+    },
+    {
+      "id": "M3",
+      "name": "Store dispatch pipeline hardened",
+      "status": "complete",
+      "tasks": [
+        "FNRS-030"
+      ]
+    },
+    {
+      "id": "M4",
+      "name": "UI mirror cleanup started safely",
+      "status": "complete",
+      "tasks": [
+        "FNRS-040"
+      ]
+    },
+    {
+      "id": "M5",
+      "name": "Feature and documentation contracts aligned",
+      "status": "complete",
+      "tasks": [
+        "FNRS-050"
+      ]
+    },
+    {
+      "id": "M6",
+      "name": "Closeout",
+      "status": "complete",
+      "tasks": [
+        "FNRS-060"
+      ]
+    }
+  ],
+  "gates": [
+    "cargo fmt --check",
+    "cargo nextest run -p fret-node --no-default-features runtime",
+    "cargo check -p fret-node --no-default-features",
+    "cargo check -p fret-node --no-default-features --features headless",
+    "cargo check -p fret-node --features compat-retained-canvas",
+    "python3 tools/check_layering.py"
+  ]
+}

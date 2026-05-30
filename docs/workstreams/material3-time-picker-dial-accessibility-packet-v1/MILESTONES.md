@@ -23,4 +23,3 @@ Exit criteria:
 - The component alignment matrix records the new ids and artifact.
 - The picker packet residual risk no longer lists per-dial-label ids as open.
 - Exact validation commands are recorded.
-

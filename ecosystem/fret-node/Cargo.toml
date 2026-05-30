@@ -11,6 +11,8 @@ documentation.workspace = true
 description = "Node-graph foundation and integration surfaces for Fret editor workflows."
 
 [dependencies]
+jellyflow-core = { version = "0.1.0", path = "../jellyflow-core" }
+jellyflow-runtime = { version = "0.1.0", path = "../jellyflow-runtime" }
 fret-canvas = { version = "0.1.0", path = "../fret-canvas", optional = true }
 fret-app = { version = "0.1.0", path = "../../crates/fret-app", optional = true }
 fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
@@ -34,13 +36,6 @@ ui = ["fret-ui"]
 # Enables integration helpers for `crates/fret-ui` (canvas widget, action hooks, styling surfaces).
 fret-ui = ["dep:fret-ui", "dep:fret-runtime", "dep:fret-canvas", "dep:fret-ui-kit"]
 
-# Compatibility: opt into the legacy retained canvas implementation island.
-#
-# This is intentionally not part of the default feature set. It no longer enables the deleted
-# fret-ui retained bridge; the remaining code must explicitly opt into fret-ui's retained widget
-# authoring compatibility exports.
-compat-retained-canvas = ["fret-ui", "fret-ui/compat-retained-widgets"]
-
 # Opt into the `rstar` spatial index backend for large graphs.
 canvas-rstar = ["fret-ui", "fret-canvas/rstar"]
 
@@ -52,7 +47,11 @@ kit = []
 # Optional integration helpers for `fret-app` applications (command registration + default keybindings).
 app-integration = ["dep:fret-app"]
 
-# Builds only the headless graph model + schema + rules (no `fret-ui` dependency).
+# Marker for explicitly documented headless builds.
+#
+# Cargo features are additive: `--features headless` does not disable the default UI-enabled
+# feature set. Use `--no-default-features` (optionally with `--features headless`) for the actual
+# headless graph model + schema + rules build with no `fret-ui` dependency.
 headless = []
 
 [lints.rust]

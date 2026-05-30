@@ -24,6 +24,1022 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [ ] Do not expand `NodeGraphViewState` with more policy or tuning fields.
 - [ ] Do not solve recipe/policy gaps by smuggling new defaults into mechanism code.
 
+## Current execution focus - XYFlow consumer surface closeout and next parity proof (2026-05-27)
+
+- [x] FNDX-010 Refresh the XyFlow-style public guide so it teaches
+      `NodeGraphSurfaceBinding + node_graph_surface(...)` as the default consumer path, with
+      `NodeGraphController` as the explicit lower-level facade.
+  - Scope:
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - standard workstream continuation docs in this folder
+  - Validation:
+    - `cargo nextest run -p fret-node public_node_graph_guides_teach_binding_first_surface`
+    - `cargo fmt --check`
+  - Exit note: public docs must not drift back to the stale `Model<Graph>` / `Model<ViewState>` /
+    optional-store teaching model or direct retained canvas authoring.
+  - Evidence:
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node public_node_graph_guides_teach_binding_first_surface`: passed.
+    - `cargo fmt --check`: passed.
+- [x] FNDX-020 Decide whether diff-first controlled sync deserves a public helper now, or remains
+      deferred behind explicit transactions and full-document replacement.
+  - Scope:
+    - `docs/node-graph-controlled-mode.md`
+    - `ecosystem/fret-node/src/ui/binding_store_sync.rs`
+    - `ecosystem/fret-node/src/runtime/apply.rs`
+  - Validation:
+    - focused controlled-mode/runtime tests proving either the deferred policy or the new helper
+      semantics.
+  - Exit note: diff-first controlled sync remains deferred; public app-facing sync stays on
+    full-document replacement, graph-only replacement, or explicit `GraphTransaction` paths until a
+    concrete editor-grade workload proves a public `replace_*_with_diff` helper is needed.
+  - Evidence:
+    - `docs/node-graph-controlled-mode.md`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `ecosystem/fret-node/src/runtime/tests.rs`
+    - `ecosystem/fret-node/src/ui/binding_store_sync.rs`
+    - `ecosystem/fret-node/src/ui/controller_store_sync.rs`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node controlled_sync_public_surface_stays_full_replace_first_until_workload_proves_diff_helper`: passed.
+    - `cargo nextest run -p fret-node controlled_graph_can_apply_store_changes_via_callbacks`: passed.
+- [x] FNDX-030 Finish the remaining overlay/menu/toolbar policy placement decision with one narrow
+      source-policy or conformance gate.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/overlays/*`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/*`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+  - Validation:
+    - focused `cargo nextest run -p fret-node --features compat-retained-canvas <policy-filter>`.
+  - Exit note: this slice closes the policy-placement decision as a source-policy boundary, not as
+    a claim that every overlay behavior has declarative parity. Toolbar public policy stays in
+    `ui/overlays/toolbar_policy.rs`, retained menu/searcher lifecycle stays behind named overlay
+    seams, and default overlay policy modules stay retained-bridge-free.
+  - Evidence:
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `ecosystem/fret-node/src/ui/overlays/toolbar_policy.rs`
+    - `ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs`
+    - `ecosystem/fret-node/src/ui/canvas/state/state_overlay_policy.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/overlay.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/overlay.rs`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node --features compat-retained-canvas overlay_menu_toolbar_policy_ownership_stays_on_named_seams`: passed.
+    - `cargo nextest run -p fret-node --features compat-retained-canvas overlay_policy_modules_compile_without_retained_canvas_compat default_overlay_policy_surfaces_stay_off_retained_bridge`: passed.
+    - `cargo fmt --check`: passed.
+- [x] FNDX-040 Close one concrete declarative overlay parity gap with a behavior/conformance gate.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/overlays.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/overlay_elements.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - a focused declarative overlay behavior gate, or a paired declarative-vs-retained conformance
+      gate, plus the relevant package gate from `EVIDENCE_AND_GATES.md`.
+  - Exit note: this follow-up must prove one observable editor behavior on the declarative path
+    (anchoring, input transparency, dismissal, focus return, or add-on placement) instead of only
+    moving policy types between files.
+  - Landed behavior: declarative overlay layers are input-transparent over the canvas region,
+    matching the XyFlow-style "overlay root does not steal input" outcome already covered for
+    retained portal roots.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/overlays.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node declarative_overlay_layer_is_input_transparent_over_canvas_region`: passed.
+    - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed.
+    - `cargo fmt --check`: passed.
+- [x] FNDX-041 Lock declarative hover-tooltip anchoring under node motion with a behavior gate.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/hover_anchor.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/overlay_elements.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node declarative_hover_tooltip_overlay_tracks_dragged_anchor_when_portals_disabled`
+    - `cargo check -p fret-node --features compat-retained-canvas --tests`
+    - `cargo fmt --check`
+  - Exit note: when portal bounds are disabled or unavailable, the diagnostics hover tooltip must
+    anchor to the drag-adjusted hover-anchor store instead of using a stale pre-drag node rect.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/hover_anchor.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/overlay_elements.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node declarative_hover_tooltip_overlay_tracks_dragged_anchor_when_portals_disabled`: passed.
+    - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed.
+    - `cargo fmt --check`: passed.
+- [x] FNDX-042 Lock declarative portal text cancel focus-return behavior with a behavior gate.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/editors/portal_text.rs`
+    - `ecosystem/fret-node/src/ui/portal_commands.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node declarative_portal_text_cancel_returns_focus_to_surface_without_graph_commit`
+    - `cargo check -p fret-node --features compat-retained-canvas --tests`
+    - `cargo fmt --check`
+  - Exit note: a declarative portal text add-on cancel/handled command must return focus to the
+    node graph surface and must not commit graph changes, matching the overlay dismissal/focus
+    return outcome expected from editor-grade add-ons.
+  - Landed behavior: declarative portal text cancel commands are available only for live portal
+    nodes, handle through the declarative portal command route, restore `UiTree` focus to the graph
+    surface, and leave graph/store node position unchanged.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/editors/portal_text.rs`
+    - `ecosystem/fret-node/src/ui/portal_commands.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node declarative_portal_text_cancel_returns_focus_to_surface_without_graph_commit`: passed.
+    - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed.
+    - `cargo fmt --check`: passed.
+- [x] FNDX-043 Promote mounted declarative rename overlay dismissal/focus-return as a parity gate.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/overlays/rename_declarative.rs`
+    - `ecosystem/fret-node/src/ui/overlays/rename_command.rs`
+    - `ecosystem/fret-node/src/ui/overlays/rename_lifecycle.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node rename_managed_host_escape_closes_without_transaction_and_restores_focus`
+  - Exit note: a mounted declarative overlay subtree must be represented in the parity map, not
+    only diagnostics-only overlay command behavior.
+  - Landed behavior: the declarative rename overlay mounts a text-input subtree, handles Escape
+    through the overlay host, closes without a graph transaction, and restores focus to the graph
+    surface target.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/overlays/rename_declarative.rs`
+    - `ecosystem/fret-node/src/ui/overlays/rename_command.rs`
+    - `ecosystem/fret-node/src/ui/overlays/rename_lifecycle.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node rename_managed_host_escape_closes_without_transaction_and_restores_focus`: passed.
+
+- [x] FNDX-044 Remove the public raw `NodeGraphStore::view_state_mut` mutation path.
+  - Scope:
+    - `ecosystem/fret-node/src/runtime/store.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - standard workstream continuation docs in this folder
+  - Validation:
+    - `cargo nextest run -p fret-node store_public_surface_does_not_expose_raw_view_state_mutation`
+    - `cargo check -p fret-node --no-default-features`
+    - `cargo nextest run -p fret-node --no-default-features runtime`
+    - `cargo check -p fret-node --all-features --tests`
+    - `python3 tools/check_layering.py`
+  - Exit note: `NodeGraphStore` keeps read access through `view_state()` and mutations through
+    `replace_view_state(...)` / `update_view_state(...)`, so sanitization, view-change events, and
+    selector notifications cannot be bypassed by a public mutable reference.
+  - Evidence:
+    - `ecosystem/fret-node/src/runtime/store.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node store_public_surface_does_not_expose_raw_view_state_mutation`: passed.
+    - `cargo fmt --check`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo nextest run -p fret-node --no-default-features runtime`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+    - `python3 tools/check_layering.py`: passed.
+
+- [x] FNDX-045 Decide and wire the first default declarative public-extension surface slice.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/edge_types.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node edges_cache_key_changes_when_edge_types_or_skin_revision_changes declarative_edge_types_feed_default_surface_edge_draws declarative_skin_refines_edge_draw_hints_after_edge_types default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`
+    - `cargo check -p fret-node --tests`
+  - Exit note: the default declarative surface now exposes narrow `NodeGraphSurfaceProps.edge_types`
+    and `NodeGraphSurfaceProps.skin` hooks for edge hint/custom paint-path and paint-only skin
+    policy. It deliberately does not expose the broad `NodeGraphPresenter` contract as an app-facing
+    default prop until geometry, labels, context menus, and insertion/search policy are split.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo fmt --check`: passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo nextest run -p fret-node edges_cache_key_changes_when_edge_types_or_skin_revision_changes declarative_edge_types_feed_default_surface_edge_draws declarative_skin_refines_edge_draw_hints_after_edge_types default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `git diff --check`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+
+- [x] FNDX-046 Feed custom edge path policy into conservative spatial-index candidates.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`
+    - `cargo check -p fret-node --tests`
+  - Exit note: custom `NodeGraphEdgeTypes::register_path(...)` output now feeds conservative
+    spatial-index candidate rects in the default declarative derived cache. This does not yet claim
+    exact custom-path distance hit-testing, edge label placement, or EdgeToolbar internals parity.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo fmt --check`: passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+
+- [x] FNDX-047 Feed custom edge paths into exact edge hit-distance filtering.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_hit_test.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/edge_types.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate`
+    - `cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`
+    - `cargo check -p fret-node --tests`
+  - Exit note: default declarative edge hit-testing now resolves coarse edge candidates through the
+    same custom path command stream used for paint. This closes exact path-distance filtering for
+    edge interaction candidates, but it still does not claim edge label placement or EdgeToolbar
+    internals parity.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_hit_test.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo fmt --check`: passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo nextest run -p fret-node custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate`: passed.
+    - `cargo nextest run -p fret-node derived_geometry_cache_key_changes_when_edge_types_revision_changes custom_edge_path_spatial_rect_overrides_feed_edge_index_candidates custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+
+- [x] FNDX-048 Feed custom edge paths into default edge-center anchors.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_path_geometry.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/edge_types.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_default_declarative_edge_center_anchor`
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`
+  - Exit note: default declarative edge-center internals now compute the anchor from the same
+    custom path command stream used for paint, culling, spatial candidates, and exact hit filtering.
+    This closes the custom path midpoint/normal anchor slice, but full EdgeLabelRenderer-style child
+    labels and EdgeToolbar composition internals remain follow-up contracts.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_path_geometry.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_default_declarative_edge_center_anchor`:
+      passed.
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`:
+      passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo fmt --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+
+- [x] FNDX-049 Feed custom edge path anchors into declarative EdgeToolbar composition.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/overlays/mod.rs`
+    - `ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs`
+    - `ecosystem/fret-node/src/ui/edge_types.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor`
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`
+  - Exit note: declarative EdgeToolbar host composition now consumes the custom-path-derived
+    `edge_centers_window` anchor produced by the default surface and lays out its child at that
+    custom path midpoint. Full EdgeLabelRenderer-style child labels remain a separate follow-up
+    contract.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/overlays/mod.rs`
+    - `ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor`:
+      passed.
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor custom_edge_path_feeds_default_declarative_edge_center_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`:
+      passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo fmt --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+
+- [x] FNDX-050 Feed default edge labels into a declarative edge-label child layer.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_labels.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `ecosystem/fret-node/src/ui/edge_types.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_child_layer_anchor`
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_child_layer_anchor custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`
+  - Exit note: default `EdgeRenderHint.label` output now renders through a screen-space declarative
+    child layer centered on the custom-path-derived `edge_centers_window` anchor. The label host
+    remains hit-test transparent by default, matching XyFlow's EdgeLabelRenderer root behavior, and
+    arbitrary EdgeLabelRenderer-style custom child renderers remain a follow-up contract rather
+    than widening the broad `NodeGraphPresenter` default surface.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_labels.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_child_layer_anchor`:
+      passed.
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_child_layer_anchor custom_edge_path_feeds_declarative_edge_toolbar_composition_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`:
+      passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo fmt --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+
+- [x] FNDX-051 Add the first custom edge-label child renderer contract.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_labels.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/mod.rs`
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `ecosystem/fret-node/src/ui/edge_types.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor`
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor custom_edge_path_feeds_declarative_edge_label_child_layer_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`
+  - Exit note: `node_graph_surface_with_edge_label_renderer(...)` and
+    `NodeGraphDeclarativeEdgeLabelRenderer` now provide the first default-path custom edge-label
+    child renderer contract. The renderer receives `NodeGraphEdgeLabelLayout` with the same
+    custom-path-derived `edge_centers_window` anchor and can render a non-interactive custom child
+    even when `EdgeRenderHint.label` is absent. `NodeGraphDeclarativeSurfaceRenderers` keeps this
+    composable with custom node portal renderers. Pointer-interactive edge label controls remain a
+    follow-up contract, and broad `NodeGraphPresenter` stays out of the default surface.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_labels.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/mod.rs`
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor`:
+      passed.
+    - `cargo nextest run -p fret-node custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor custom_edge_path_feeds_declarative_edge_label_child_layer_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`:
+      passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo fmt --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+
+- [x] FNDX-052 Add the first pointer-interactive edge-label control contract.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_labels.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/mod.rs`
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds`
+    - `cargo nextest run -p fret-node custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor custom_edge_path_feeds_declarative_edge_label_child_layer_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`
+  - Exit note: `NodeGraphDeclarativeEdgeLabelRenderer` now exposes
+    `NodeGraphEdgeLabelHitTestMode`; renderers remain hit-test transparent by default, but can opt
+    into `ChildBounds` for app-provided controls. The default surface places those controls on the
+    custom-path-derived edge-center anchor, limits hit-testing to the measured child rect, allows
+    pointer events outside that rect to fall through to the canvas, and lets descendant pressables
+    bypass the canvas `PointerRegion` capture handler. Broad `NodeGraphPresenter` still stays out
+    of the default surface.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_labels.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/mod.rs`
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds`:
+      passed.
+    - `cargo nextest run -p fret-node custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds custom_edge_path_feeds_declarative_edge_label_custom_renderer_anchor custom_edge_path_feeds_declarative_edge_label_child_layer_anchor default_declarative_surface_exposes_edge_types_and_skin_without_custom_presenter`:
+      passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo fmt --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+
+- [x] FNDX-053 Feed custom-path-aware edge hit-testing into declarative click-edge selection.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/pointer_down.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/selection.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path build_click_selection_preview_edges_multi_click_toggles_hit_membership commit_edge_click_selection_action_host_multi_toggles_edge_without_clearing_other_kinds custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds`
+  - Exit note: default declarative pointer-down now receives the active `edgeTypes`/style policy,
+    resolves edge hits after node hits through the existing custom-path-aware hit-test, and commits
+    click-edge selection through the store-backed view-state helper. Multi-selection toggles only
+    the clicked edge kind and preserves other selected element kinds. This slice does not claim
+    reconnect/update-anchor lifecycle parity.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/pointer_down.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/selection.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo nextest run -p fret-node custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path build_click_selection_preview_edges_multi_click_toggles_hit_membership commit_edge_click_selection_action_host_multi_toggles_edge_without_clearing_other_kinds custom_edge_path_hit_testing_uses_exact_path_distance_after_spatial_candidate custom_edge_label_control_intercepts_inside_and_falls_through_outside_child_bounds`:
+      passed.
+    - `cargo fmt -p fret-node --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+
+- [x] FNDX-054 Feed store-backed selected edges into default declarative edge paint.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node edge_stroke_width_mul_for_selection_applies_selected_edge_width_token node_graph_surface_semantics_reports_selected_edges_count custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path`
+  - Exit note: default declarative edge paint now receives `NodeGraphViewState.selected_edges`
+    from the authoritative store-backed frame and applies `wire_width_selected_mul` to selected
+    edge strokes. Surface diagnostics also report selected edge count. This closes the selected-edge
+    visible paint/diagnostics loop after FNDX-053, but does not claim EdgeWrapper reconnect anchors
+    or drag lifecycle parity.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo nextest run -p fret-node edge_stroke_width_mul_for_selection_applies_selected_edge_width_token node_graph_surface_semantics_reports_selected_edges_count custom_edge_path_click_selects_edge_via_default_declarative_pointer_down_path`:
+      passed.
+    - `cargo fmt -p fret-node --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo nextest run -p fret-node`: passed.
+
+- [x] FNDX-055 Add default declarative EdgeWrapper update-anchor planning.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count`
+  - Exit note: selected and focused edges now plan source/target update anchors from authoritative
+    port-center internals. Planning respects global `edges_reconnectable`, per-edge
+    `Edge.reconnectable`, endpoint-specific source/target overrides, missing port centers, and
+    invalid reconnect radii. Surface diagnostics report planned anchor count. This slice does not
+    render update-anchor controls or start reconnect drags.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count`:
+      passed.
+    - `cargo fmt -p fret-node --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo nextest run -p fret-node`: passed with 472 tests.
+
+- [x] FNDX-056 Render default declarative EdgeWrapper update-anchor controls.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate`
+  - Exit note: planned selected/focused update anchors now render as default declarative
+    hit-testable controls with stable test IDs, button semantics, anchor-center placement, and
+    source/target endpoint gating. Anchor pointer-downs take priority over the canvas surface
+    pointer path by using the existing pressable-descendant arbitration seam. This slice does not
+    start reconnect drags, dispatch reconnect callbacks, or implement `reconnect_on_drop_empty`.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate`:
+      passed.
+    - `cargo fmt -p fret-node --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo nextest run -p fret-node`: passed with 474 tests.
+
+- [x] FNDX-057 Start declarative reconnect drags from rendered update-anchor controls.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/frame_plan.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_models.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_support.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`
+  - Exit note: rendered source/target update-anchor controls now start a transient reconnect drag
+    state on left pointer-down, remain armed until movement crosses the authoritative
+    `connection_drag_threshold`, then become active and mark internals `connecting` for diagnostics
+    and accessibility. Pointer-up, Escape, pointer cancel, missed-left-button moves, graph changes,
+    and selection changes clear the transient reconnect state. This slice does not target-hit-test,
+    commit reconnect transactions, dispatch reconnect callbacks, paint a preview wire, or implement
+    `reconnect_on_drop_empty`.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/frame_plan.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`:
+      passed.
+    - `cargo fmt -p fret-node`: passed.
+    - `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`:
+      passed.
+    - `cargo fmt -p fret-node --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo nextest run -p fret-node`: passed with 476 tests.
+
+- [x] FNDX-058 Commit declarative reconnect drops on valid target ports.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit`
+  - Exit note: active default declarative source/target update-anchor drags now hit-test nearby
+    candidate ports at pointer-up, reuse `plan_reconnect_edge_with_mode` and the store-backed
+    `commit_graph_transaction` path, and therefore dispatch the existing commit-derived
+    `on_reconnect` / `on_edge_update` callbacks for accepted reconnects. Dropping on empty canvas
+    or on a non-accepted target, including an endpoint-gated port such as
+    `connectable_start=false` while reconnecting the source endpoint, clears transient reconnect
+    state without committing. This slice still does not paint a reconnect preview wire, emit
+    reconnect gesture start/end callbacks, or implement `reconnect_on_drop_empty`.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks`:
+      passed.
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit`:
+      passed.
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit`:
+      passed.
+    - `cargo fmt -p fret-node`: passed.
+    - `cargo nextest run -p fret-node edge_reconnect_endpoint_enabled_resolves_global_and_per_edge_overrides collect_edge_update_anchor_infos_uses_selected_and_focused_edges_with_port_centers collect_edge_update_anchor_infos_respects_endpoint_override_missing_centers_and_radius node_graph_surface_semantics_reports_selected_edges_count edge_update_anchor_controls_render_and_intercept_before_surface_pointer_down edge_update_anchor_controls_respect_endpoint_reconnectable_gate edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_drag_cancel_paths_clear_transient edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit`:
+      passed.
+    - `cargo fmt -p fret-node --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo check -p fret-node --no-default-features`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo nextest run -p fret-node`: passed with 479 tests.
+
+- [x] FNDX-059 Emit default declarative reconnect gesture start/end callback aliases.
+  - Scope:
+    - `ecosystem/fret-node/src/runtime/callbacks.rs`
+    - `ecosystem/fret-node/src/runtime/events.rs`
+    - `ecosystem/fret-node/src/runtime/store.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`
+  - Exit note: default declarative update-anchor reconnect drags now emit UI gesture lifecycle
+    callbacks on the public callback surface. Successful left-button arm emits
+    `on_connect_start`, `on_reconnect_start`, and `on_edge_update_start` with
+    `ConnectDragKind::Reconnect`. A single matching end event is emitted for committed drops,
+    rejected endpoint-gated drops, empty/no-op drops, Escape, PointerCancel, and missed-left-button
+    cleanup; reconnect-only aliases mirror the base connect end event. This slice still does not
+    paint a reconnect preview wire or implement `reconnect_on_drop_empty`.
+  - Evidence:
+    - `ecosystem/fret-node/src/runtime/events.rs`
+    - `ecosystem/fret-node/src/runtime/callbacks.rs`
+    - `ecosystem/fret-node/src/runtime/store.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/input_handlers.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`:
+      passed.
+    - `cargo fmt`: passed.
+
+- [x] FNDX-060 Paint default declarative active reconnect preview wire.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup edge_update_anchor_reconnect_drag_cancel_paths_clear_transient edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit`
+  - Exit note: active default declarative update-anchor reconnect drags now paint one transient
+    preview wire from the fixed port to the current pointer using the existing canvas path paint,
+    Bezier route, preview color, and dashed stroke conventions. The preview stays suppressed while
+    the drag is only armed and disappears after pointer-up, Escape, PointerCancel, and
+    missed-left-button cleanup. This slice still does not implement `reconnect_on_drop_empty`.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/cache.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/semantics.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup`: red first, then passed after implementation.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo nextest run -p fret-node edge_update_anchor_drag_uses_connection_threshold_before_active_reconnect edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup edge_update_anchor_reconnect_drag_cancel_paths_clear_transient edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit`:
+      passed.
+    - `cargo fmt`: passed.
+
+- [x] FNDX-061 Add minimal `reconnect_on_drop_empty` outcome semantics for default declarative
+      reconnect drops.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`
+  - Exit note: active default declarative update-anchor reconnect drops on empty canvas now honor
+    `NodeGraphInteractionState.reconnect_on_drop_empty` at the mechanism/event layer. The default
+    remains `ConnectEndOutcome::NoOp`; when enabled, empty drops emit
+    `ConnectEndOutcome::OpenInsertNodePicker` with `target: None`, clear transient reconnect state,
+    and do not commit a graph transaction. This slice intentionally does not mount a concrete
+    insert-node picker UI.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled`:
+      passed.
+    - `cargo check -p fret-node --tests`: passed.
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled edge_update_anchor_reconnect_active_drag_paints_preview_wire_until_cleanup edge_update_anchor_reconnect_drop_on_valid_port_commits_store_transaction_and_callbacks edge_update_anchor_reconnect_drop_on_non_start_connectable_port_clears_without_commit edge_update_anchor_reconnect_drag_cancel_paths_clear_transient`:
+      passed.
+    - `cargo fmt --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+
+- [x] FNDX-062A Add a narrow declarative insert-node picker request seam for opt-in empty
+      reconnect drops.
+  - Status: follow-up split from the closed FNDX-055 through FNDX-061 reconnect/update-anchor
+    mechanism sub-lane.
+  - Scope:
+    - `NodeGraphDeclarativeInsertNodePickerRequest`
+    - `NodeGraphDeclarativeInteractionHook::handle_insert_node_picker_request`
+    - edge update-anchor pointer-up routing for both anchor-local and surface-level release paths
+    - focused declarative behavior tests
+  - Non-goal: do not reopen update-anchor planning, reconnect transaction commit, gesture callback
+    aliasing, preview wire mechanics, candidate listing, or concrete picker UI.
+  - Validation:
+    - `cargo nextest run -p fret-node edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit`
+  - Exit note: opt-in empty reconnect drops now raise a store-first declarative request containing
+    the `ConnectEnd`, screen drop position, and canvas drop position through
+    `NodeGraphSurfaceProps::interaction_hook`. The seam does not commit graph changes; app policy
+    must still choose a candidate and dispatch an explicit insertion action.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/interaction_hooks.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/edge_update_anchors.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit`:
+      passed.
+    - `cargo nextest run -p fret-node edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit declarative_interaction_hook_contract_stays_store_first public_node_graph_guides_teach_binding_first_surface`:
+      passed.
+    - `cargo nextest run -p fret-node edge_update_anchor_reconnect_drop_on_empty_space_clears_without_commit edge_update_anchor_reconnect_drop_on_empty_space_opens_insert_node_picker_when_enabled edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit`:
+      passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo fmt`: passed.
+    - `cargo fmt --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+
+- [x] FNDX-062B Split follow-on: decide and wire insert-node picker candidate state/policy
+      for opt-in empty reconnect drops.
+  - Status: completed as the reusable candidate policy/state slice after FNDX-062A established
+    the store-first picker request seam.
+  - Scope:
+    - candidate provider policy for `NodeGraphDeclarativeInsertNodePickerRequest`
+    - reusable picker session state for candidate-list UI entrypoints
+    - explicit selection action that commits through binding/controller/store helpers
+    - focused declarative behavior tests
+  - Non-goal: do not reopen update-anchor planning, reconnect transaction commit, gesture callback
+    aliasing, preview wire mechanics, the FNDX-062A request shape, or build a visual searcher/list
+    widget.
+  - Validation:
+    - `cargo nextest run -p fret-node empty_reconnect_insert_picker_cancel_and_select_commit`
+  - Exit note: the default declarative path now has a reusable
+    `NodeGraphDeclarativeInsertNodePickerState` plus
+    `NodeGraphDeclarativeInsertNodePickerCandidateProvider` seam. The state opens from the
+    FNDX-062A request, exposes candidates for a future visual list/searcher, cancels without graph
+    commits, and plans an explicit selected-candidate `Insert Node` transaction that callers
+    dispatch through binding/controller/store helpers.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/insert_node_picker.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - Red first: the focused insert-picker cancel/select gate failed before implementation because
+      the picker state/provider API did not exist.
+    - `cargo nextest run -p fret-node empty_reconnect_insert_picker_cancel_and_select_commit`:
+      passed.
+    - `cargo nextest run -p fret-node empty_reconnect_insert_picker_cancel_and_select_commit edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit declarative_interaction_hook_contract_stays_store_first public_node_graph_guides_teach_binding_first_surface`:
+      passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo fmt --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+
+- [x] FNDX-062C Split follow-on: mount a concrete visual insert-node searcher/list UI for the
+      FNDX-062B picker state.
+  - Status: completed as the default focusable candidate-list UI over the FNDX-062B state/provider
+    seam.
+  - Scope:
+    - visual list/searcher element for active `NodeGraphDeclarativeInsertNodePickerState`
+    - keyboard/focus/cancel behavior for the mounted picker UI
+    - candidate selection command route into the FNDX-062B explicit transaction path
+  - Non-goal: do not reopen update-anchor mechanics, request shape, or candidate planning unless
+    the visual UI exposes a concrete mismatch.
+  - Validation:
+    - `cargo nextest run -p fret-node insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate`
+  - Exit note: the default visual picker mounts through
+    `NodeGraphDeclarativeInsertNodePickerOverlayBinding` plus
+    `node_graph_surface_with_insert_node_picker(...)`. It renders a focusable
+    `node_graph.insert_node_picker` candidate list, handles Escape by canceling without a graph
+    commit, and handles Enter/row activation by planning and dispatching the selected-candidate
+    `Insert Node` transaction through the FNDX-062B state/provider/binding path.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/insert_node_picker.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - Red first: `cargo nextest run -p fret-node insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate`
+      failed before implementation because the visual picker overlay binding and
+      `node_graph_surface_with_insert_node_picker(...)` did not exist.
+    - `cargo nextest run -p fret-node insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate`:
+      passed.
+    - `cargo nextest run -p fret-node insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate empty_reconnect_insert_picker_cancel_and_select_commit edge_update_anchor_empty_reconnect_requests_insert_node_picker_policy_without_commit declarative_interaction_hook_contract_stays_store_first public_node_graph_guides_teach_binding_first_surface`:
+      passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo fmt --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+
+- [ ] FNDX-062D Split follow-on: add richer candidate search/filter/typeahead behavior if large
+      picker workloads need it.
+  - Status: optional follow-up after FNDX-062C established the default mounted list UI.
+  - Scope:
+    - search/filter text or typeahead policy for large candidate sets
+    - keyboard active-index bounds/wrap behavior beyond the current Enter/Escape focused gate
+    - focused gate proving filtering does not bypass the explicit FNDX-062B commit path
+  - Non-goal: do not reopen reconnect mechanics, picker request shape, or the default candidate
+    state/provider seam without a concrete workload mismatch.
+
+- [x] FNDX-063 Close the insert-node picker graph-edit commit seam leak.
+  - Status: completed as a source-policy and commit-path correction for the mounted picker runtime.
+  - Scope:
+    - include `insert_node_picker.rs` in the declarative paint-only runtime source-policy matrix
+    - route mounted picker candidate activation through `paint_only/transactions.rs` rather than
+      calling the binding transaction helper directly
+    - keep the FNDX-062B explicit candidate transaction path and FNDX-062C visual list behavior
+      unchanged
+  - Non-goal: do not add picker search/filter/typeahead and do not reopen reconnect mechanics or
+    picker request/candidate state shapes.
+  - Validation:
+    - `cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam`
+    - `cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate`
+  - Exit note: the new picker runtime file is now covered by the same source-policy gate as the
+    rest of the default declarative runtime. Candidate activation still plans an explicit
+    `Insert Node` transaction, but the actual commit now flows through
+    `commit_graph_transaction(...)`, preserving the single declarative graph-edit commit seam.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/insert_node_picker.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/transactions.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+  - Fresh gates:
+    - Red first: `cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam`
+      failed after adding `insert_node_picker.rs` to the runtime source list because mounted picker
+      activation called `dispatch_transaction_action_host(...)` directly.
+    - `cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam`:
+      passed after routing picker activation through `commit_graph_transaction(...)`.
+    - `cargo nextest run -p fret-node declarative_paint_only_graph_edit_paths_stay_on_transactions_seam insert_node_picker_visual_ui_focuses_cancels_and_commits_selected_candidate`:
+      passed.
+    - `cargo check -p fret-node --all-features --tests`: passed.
+    - `cargo clippy -p fret-node --all-targets --all-features -- -D warnings`: passed.
+    - `cargo fmt --check`: passed.
+    - `jq empty docs/workstreams/fret-node-declarative-fearless-refactor-v1/WORKSTREAM.json`:
+      passed.
+    - `git diff --check`: passed.
+    - `python3 tools/check_layering.py`: passed.
+
 ## M0 - Decision gates and internal seam map
 
 - [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.
@@ -64,11 +1080,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - cache prune tuning
   - expensive runtime knobs
 - [x] Land the first persisted split slice:
-  - `NodeGraphViewStateFileV1.state` now stores pure `NodeGraphViewState`
-  - wrapper-owned `interaction` stores `NodeGraphInteractionConfig`
-  - wrapper-owned `runtime_tuning` stores `NodeGraphRuntimeTuning`
+  - `NodeGraphEditorStateFile.view_state` stores pure `NodeGraphViewState`
+  - `NodeGraphEditorStateFile.editor_config` stores `NodeGraphInteractionConfig` plus `NodeGraphRuntimeTuning`
   - runtime/widget code resolves `NodeGraphInteractionState` from explicit editor-config seams
-  - legacy serialized `interaction` payloads still migrate at load time
 - [x] Decide where these new types live and who owns persistence for them.
 - [x] Design the migration/compat strategy for existing serialized `NodeGraphViewState` payloads.
 - [x] Update store code and tests so the new boundary is explicit in subscriptions and controlled
@@ -77,7 +1091,7 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [x] Move app/example persistence and overlay authoring to the explicit `NodeGraphEditorConfig`
       seam.
   - `node_graph_legacy_demo` / `node_graph_domain_demo` now load and save
-    `NodeGraphViewStateFileV1` through `new(...)`.
+    `NodeGraphEditorStateFile` through `new(...)`.
   - `NodeGraphTuningOverlay` now reads/writes `NodeGraphEditorConfig` instead of mutating
     `NodeGraphViewState`.
   - `NodeGraphControlsOverlay`, retained canvas, and declarative bindings now consume an explicit
@@ -370,6 +1384,8 @@ Execution companion: `design.md` (surface map + next worktree order).
     semantics explicit (graph + view-state replace + history clear + mirror sync).
 - [ ] Consider adding `replace_graph_with_diff` or equivalent if full reset semantics are not enough
       for editor-grade controlled integrations.
+  - Current FNDX-020 decision: do not add this helper yet; keep it as a future workload-driven
+    question rather than a public API commitment.
 
 ## M3 - Callback surface split
 
@@ -3199,5 +4215,7 @@ Execution companion: `design.md` (surface map + next worktree order).
     surface is `NodeGraphController` plus `NodeGraphSurfaceBinding`.
 - [ ] Whether diff-first controlled sync earns a public helper after the full-replace-first path
       proves insufficient.
+  - Current FNDX-020 decision: still deferred behind full-document replacement, graph-only
+    replacement, and explicit transactions.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.

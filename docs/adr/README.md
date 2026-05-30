@@ -322,6 +322,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0128-canvas-widgets-and-interactive-surfaces.md`
 - `docs/adr/0186-kurbo-geometry-backend-for-canvas-hit-testing.md`
 - `docs/adr/0135-node-graph-canvas-middleware.md`
+- `docs/adr/0331-jellyflow-headless-node-graph-engine-boundary.md`
 - `docs/adr/0130-viewport-gizmos-engine-pass-and-ui-overlay-boundary.md`
 - `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
 - `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`

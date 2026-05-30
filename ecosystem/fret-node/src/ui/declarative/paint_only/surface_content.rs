@@ -3,18 +3,22 @@ use std::sync::Arc;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::element::CanvasProps;
-use fret_ui::{ElementContext, Invalidation, ThemeSnapshot, UiHost};
+use fret_ui::{ElementContext, GlobalElementId, Invalidation, ThemeSnapshot, UiHost};
 
-use crate::core::NodeId;
+use crate::core::{EdgeId, NodeId};
 use crate::ui::paint_overrides::NodeGraphPaintOverridesRef;
 use crate::ui::style::NodeGraphStyle;
 
 use super::{
     HoverAnchorStore, HoverTooltipOverlayParams, MarqueeDragState, NodeDragState,
-    PortalMeasuredGeometryState, apply_pending_fit_to_portals, host_visible_portal_labels,
-    paint_debug_grid_cached, paint_edges_cached, paint_nodes_cached,
-    push_hover_tooltip_overlay_if_needed, push_marquee_overlay_if_active,
-    push_overlay_layer_if_needed, sync_hover_anchor_store_in_models,
+    NodeGraphDeclarativeInsertNodePickerOverlayBinding,
+    NodeGraphDeclarativeInsertNodePickerOverlayParams, NodeGraphDeclarativeInteractionHookRef,
+    PortalMeasuredGeometryState, ReconnectDragState, ReconnectDropContext,
+    apply_pending_fit_to_portals, host_visible_portal_labels, paint_debug_grid_cached,
+    paint_edges_cached, paint_nodes_cached, paint_reconnect_preview_wire, push_edge_label_overlays,
+    push_edge_update_anchor_controls, push_hover_tooltip_overlay_if_needed,
+    push_insert_node_picker_overlay, push_marquee_overlay_if_active, push_overlay_layer_if_needed,
+    sync_hover_anchor_store_in_models,
 };
 
 pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
@@ -23,6 +27,8 @@ pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
     pub(super) hovered_node_model: Model<Option<NodeId>>,
     pub(super) node_drag_model: Model<Option<NodeDragState>>,
     pub(super) marquee_drag_model: Model<Option<MarqueeDragState>>,
+    pub(super) reconnect_drag_model: Model<Option<ReconnectDragState>>,
+    pub(super) interaction_hook: Option<NodeGraphDeclarativeInteractionHookRef>,
     pub(super) hover_anchor_store: Model<HoverAnchorStore>,
     pub(super) portal_bounds_store: Model<super::PortalBoundsStore>,
     pub(super) portal_measured_geometry_state: Model<PortalMeasuredGeometryState>,
@@ -31,6 +37,10 @@ pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
     pub(super) diagnostics: super::NodeGraphDiagnosticsConfig,
     pub(super) portals_disabled: bool,
     pub(super) portal_renderer: Option<&'a mut dyn super::NodeGraphDeclarativePortalRenderer<H>>,
+    pub(super) edge_label_renderer:
+        Option<&'a mut dyn super::NodeGraphDeclarativeEdgeLabelRenderer<H>>,
+    pub(super) insert_node_picker: Option<NodeGraphDeclarativeInsertNodePickerOverlayBinding>,
+    pub(super) focus_target: GlobalElementId,
     pub(super) cull_margin_screen_px: f32,
     pub(super) min_zoom: f32,
     pub(super) max_zoom: f32,
@@ -42,13 +52,16 @@ pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
     pub(super) grid_ops: Option<Arc<Vec<fret_core::SceneOp>>>,
     pub(super) node_draws: Option<Arc<Vec<super::NodeRectDraw>>>,
     pub(super) edge_draws: Option<Arc<Vec<super::cache::EdgePathDraw>>>,
+    pub(super) edge_update_anchors: Vec<super::EdgeUpdateAnchorInfo>,
     pub(super) geom_for_paint: Option<Arc<crate::ui::canvas::CanvasGeometry>>,
     pub(super) style_tokens: NodeGraphStyle,
     pub(super) theme: ThemeSnapshot,
     pub(super) hovered_node_value: Option<NodeId>,
     pub(super) selected_nodes: Vec<NodeId>,
+    pub(super) selected_edges: Vec<EdgeId>,
     pub(super) marquee_value: Option<MarqueeDragState>,
     pub(super) node_drag_value: Option<NodeDragState>,
+    pub(super) reconnect_drag_value: Option<ReconnectDragState>,
     pub(super) paint_overrides_ref: Option<NodeGraphPaintOverridesRef>,
 }
 
@@ -62,6 +75,8 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         hovered_node_model,
         node_drag_model,
         marquee_drag_model,
+        reconnect_drag_model,
+        interaction_hook,
         hover_anchor_store,
         portal_bounds_store,
         portal_measured_geometry_state,
@@ -70,6 +85,9 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         diagnostics,
         portals_disabled,
         portal_renderer,
+        edge_label_renderer,
+        insert_node_picker,
+        focus_target,
         cull_margin_screen_px,
         min_zoom,
         max_zoom,
@@ -81,32 +99,40 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         grid_ops,
         node_draws,
         edge_draws,
+        edge_update_anchors,
         geom_for_paint,
         style_tokens,
         theme,
         hovered_node_value,
         selected_nodes,
+        selected_edges,
         marquee_value,
         node_drag_value,
+        reconnect_drag_value,
         paint_overrides_ref,
     } = params;
 
     let node_draws_for_paint = node_draws.clone();
     let edge_draws_for_paint = edge_draws.clone();
+    let geom_for_paint_canvas = geom_for_paint.clone();
     let style_tokens_for_paint = style_tokens.clone();
     let selected_nodes_for_paint = selected_nodes.clone();
+    let selected_edges_for_paint = selected_edges.clone();
     let node_drag_for_paint = node_drag_value.clone();
+    let reconnect_drag_for_paint = reconnect_drag_value;
     let paint_overrides_for_paint = paint_overrides_ref.clone();
 
     let store_model_id = binding.store_model().id();
     let hovered_node_model_id = hovered_node_model.id();
     let node_drag_model_id = node_drag_model.id();
     let marquee_drag_model_id = marquee_drag_model.id();
+    let reconnect_drag_model_id = reconnect_drag_model.id();
     let canvas = cx.canvas(canvas, move |p| {
         p.observe_model_id(store_model_id, Invalidation::Paint);
         p.observe_model_id(hovered_node_model_id, Invalidation::Paint);
         p.observe_model_id(node_drag_model_id, Invalidation::Paint);
         p.observe_model_id(marquee_drag_model_id, Invalidation::Paint);
+        p.observe_model_id(reconnect_drag_model_id, Invalidation::Paint);
 
         paint_debug_grid_cached(p, view_for_paint, grid_ops.clone(), &style_tokens_for_paint);
         paint_nodes_cached(
@@ -125,15 +151,64 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
             view_for_paint,
             cull_margin_screen_px,
             edge_draws_for_paint.clone(),
-            geom_for_paint.clone(),
+            geom_for_paint_canvas.clone(),
             node_drag_for_paint.as_ref(),
+            &selected_edges_for_paint,
             &style_tokens_for_paint,
             paint_overrides_for_paint.as_deref(),
+        );
+        paint_reconnect_preview_wire(
+            p,
+            view_for_paint,
+            cull_margin_screen_px,
+            geom_for_paint_canvas.clone(),
+            reconnect_drag_for_paint.as_ref(),
+            &style_tokens_for_paint,
         );
     });
 
     let mut out: Vec<AnyElement> = vec![canvas];
     let mut overlay_children: Vec<AnyElement> = Vec::new();
+    let mut interactive_overlay_children: Vec<AnyElement> = Vec::new();
+    push_edge_label_overlays(
+        cx,
+        &mut overlay_children,
+        &mut interactive_overlay_children,
+        &binding,
+        edge_draws.as_deref().map(Vec::as_slice),
+        grid_bounds,
+        view_for_paint.zoom,
+        &style_tokens,
+        edge_label_renderer,
+    );
+    push_edge_update_anchor_controls(
+        cx,
+        &mut interactive_overlay_children,
+        &edge_update_anchors,
+        &reconnect_drag_model,
+        ReconnectDropContext {
+            geom: geom_for_paint.clone(),
+            view: view_for_paint,
+            bounds: grid_bounds,
+        },
+        interaction_hook.as_ref(),
+        &binding,
+        grid_bounds,
+        &style_tokens,
+    );
+    if let Some(insert_node_picker) = insert_node_picker {
+        push_insert_node_picker_overlay(
+            cx,
+            &mut interactive_overlay_children,
+            NodeGraphDeclarativeInsertNodePickerOverlayParams {
+                binding: binding.clone(),
+                picker: insert_node_picker,
+                bounds: grid_bounds,
+                style_tokens: style_tokens.clone(),
+                focus_target,
+            },
+        );
+    }
     let hovered_portal_hosted = if portal_hosting.enabled && !portals_disabled {
         host_visible_portal_labels(
             cx,
@@ -207,6 +282,7 @@ pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
         grid_bounds,
         &style_tokens,
     );
+    out.extend(interactive_overlay_children);
     push_overlay_layer_if_needed(cx, &mut out, overlay_children);
 
     out

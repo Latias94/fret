@@ -21,4 +21,3 @@ Exit criteria:
 
 - Matrix status no longer claims a queued selector follow-on for NavigationDrawer.
 - Exact gates are recorded.
-

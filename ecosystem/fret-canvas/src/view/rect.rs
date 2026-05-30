@@ -17,6 +17,51 @@ fn rect_from_min_max(min_x: f32, max_x: f32, min_y: f32, max_y: f32) -> Rect {
     )
 }
 
+/// Builds a normalized rect from two corner points.
+pub fn rect_from_points(a: Point, b: Point) -> Rect {
+    let min_x = a.x.0.min(b.x.0);
+    let max_x = a.x.0.max(b.x.0);
+    let min_y = a.y.0.min(b.y.0);
+    let max_y = a.y.0.max(b.y.0);
+    rect_from_min_max(min_x, max_x, min_y, max_y)
+}
+
+/// Returns whether `p` is inside `rect`, including the rect edges.
+pub fn rect_contains_point(rect: Rect, p: Point) -> bool {
+    let (x0, x1, y0, y1) = rect_min_max(rect);
+    p.x.0 >= x0 && p.x.0 <= x1 && p.y.0 >= y0 && p.y.0 <= y1
+}
+
+/// Returns whether `outer` fully contains `inner`, including matching edges.
+pub fn rect_contains_rect(outer: Rect, inner: Rect) -> bool {
+    let (ox0, ox1, oy0, oy1) = rect_min_max(outer);
+    let (ix0, ix1, iy0, iy1) = rect_min_max(inner);
+    ix0 >= ox0 && ix1 <= ox1 && iy0 >= oy0 && iy1 <= oy1
+}
+
+/// Returns the union of two axis-aligned rects.
+pub fn rect_union(a: Rect, b: Rect) -> Rect {
+    let (ax0, ax1, ay0, ay1) = rect_min_max(a);
+    let (bx0, bx1, by0, by1) = rect_min_max(b);
+    rect_from_min_max(ax0.min(bx0), ax1.max(bx1), ay0.min(by0), ay1.max(by1))
+}
+
+/// Returns whether two rects intersect, counting touching edges as an intersection.
+pub fn rects_intersect(a: Rect, b: Rect) -> bool {
+    let (ax0, ax1, ay0, ay1) = rect_min_max(a);
+    let (bx0, bx1, by0, by1) = rect_min_max(b);
+    ax0 <= bx1 && ax1 >= bx0 && ay0 <= by1 && ay1 >= by0
+}
+
+/// Inflates a rect by a finite positive margin on all sides.
+pub fn inflate_rect(rect: Rect, margin: f32) -> Rect {
+    if !margin.is_finite() || margin <= 0.0 {
+        return rect;
+    }
+    let (x0, x1, y0, y1) = rect_min_max(rect);
+    rect_from_min_max(x0 - margin, x1 + margin, y0 - margin, y1 + margin)
+}
+
 /// Maps a window/screen-space rect into canvas space under a `PanZoom2D` view.
 ///
 /// Rects are treated as axis-aligned AABBs and remain axis-aligned under uniform scale.
@@ -79,5 +124,48 @@ mod tests {
         assert!((screen.origin.y.0 - screen2.origin.y.0).abs() <= 1.0e-5);
         assert!((screen.size.width.0 - screen2.size.width.0).abs() <= 1.0e-5);
         assert!((screen.size.height.0 - screen2.size.height.0).abs() <= 1.0e-5);
+    }
+
+    #[test]
+    fn rect_helpers_normalize_and_intersect() {
+        let rect = rect_from_points(
+            Point::new(Px(20.0), Px(40.0)),
+            Point::new(Px(5.0), Px(10.0)),
+        );
+        assert_eq!(rect.origin.x.0, 5.0);
+        assert_eq!(rect.origin.y.0, 10.0);
+        assert_eq!(rect.size.width.0, 15.0);
+        assert_eq!(rect.size.height.0, 30.0);
+
+        assert!(rect_contains_point(rect, Point::new(Px(20.0), Px(40.0))));
+        assert!(rect_contains_rect(
+            rect,
+            Rect::new(Point::new(Px(10.0), Px(15.0)), Size::new(Px(2.0), Px(3.0)))
+        ));
+        assert!(rects_intersect(
+            rect,
+            Rect::new(
+                Point::new(Px(20.0), Px(40.0)),
+                Size::new(Px(10.0), Px(10.0))
+            )
+        ));
+    }
+
+    #[test]
+    fn rect_union_and_inflate_are_stable_for_bad_margin() {
+        let a = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
+        let b = Rect::new(Point::new(Px(8.0), Px(-2.0)), Size::new(Px(10.0), Px(4.0)));
+        let union = rect_union(a, b);
+        assert_eq!(union.origin.x.0, 0.0);
+        assert_eq!(union.origin.y.0, -2.0);
+        assert_eq!(union.size.width.0, 18.0);
+        assert_eq!(union.size.height.0, 12.0);
+
+        assert_eq!(inflate_rect(a, f32::NAN), a);
+        let inflated = inflate_rect(a, 2.0);
+        assert_eq!(inflated.origin.x.0, -2.0);
+        assert_eq!(inflated.origin.y.0, -2.0);
+        assert_eq!(inflated.size.width.0, 14.0);
+        assert_eq!(inflated.size.height.0, 14.0);
     }
 }

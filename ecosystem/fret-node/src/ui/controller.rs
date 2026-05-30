@@ -10,7 +10,7 @@ use crate::core::{
     NodeExtent, NodeId, NodeKindKey, PortId,
 };
 use crate::io::NodeGraphViewState;
-use crate::ops::{GraphTransaction, graph_diff};
+use crate::ops::GraphTransaction;
 use crate::runtime::fit_view::{
     FitViewComputeOptions, FitViewNodeInfo, compute_fit_view_target,
     compute_fit_view_target_for_canvas_rect,
@@ -451,7 +451,10 @@ mod tests {
             .dispatch_transaction_and_sync_models(&mut host, &graph, &view, &tx)
             .expect("dispatch transaction through controller");
 
-        assert_eq!(outcome.committed.label.as_deref(), Some("Move Node"));
+        assert_eq!(
+            outcome.patch.transaction.label.as_deref(),
+            Some("Move Node")
+        );
         let graph_pos = graph
             .read_ref(&host, |graph| graph.nodes.get(&node_a).map(|node| node.pos))
             .ok()
@@ -626,7 +629,7 @@ mod tests {
     }
 
     #[test]
-    fn controller_replace_view_state_and_sync_model_action_host_updates_bound_view_model() {
+    fn controller_replace_view_state_and_sync_model_action_host_updates_view_projection_model() {
         let mut host = TestUiHostImpl::default();
         let (graph_value, _node_a, _node_b) = make_test_graph_two_nodes();
         let view = host.models.insert(NodeGraphViewState::default());
@@ -656,7 +659,7 @@ mod tests {
     }
 
     #[test]
-    fn controller_set_selection_and_sync_view_model_action_host_updates_bound_view_model() {
+    fn controller_set_selection_and_sync_view_model_action_host_updates_view_projection_model() {
         let mut host = TestUiHostImpl::default();
         let (mut graph, node_a, a_out, node_b, b_in) = make_test_graph_two_nodes_with_ports();
         let edge = EdgeId::new();
@@ -1351,9 +1354,12 @@ mod tests {
             })
             .expect("update node through controller");
 
-        assert_eq!(outcome.committed.label.as_deref(), Some("Update Node"));
+        assert_eq!(
+            outcome.patch.transaction.label.as_deref(),
+            Some("Update Node")
+        );
         assert!(
-            outcome.committed.ops.iter().any(
+            outcome.patch.ops().iter().any(
                 |op| matches!(op, GraphOp::SetNodeHidden { id, to: true, .. } if *id == node_a)
             )
         );
@@ -1418,8 +1424,11 @@ mod tests {
             })
             .expect("update edge through controller");
 
-        assert_eq!(outcome.committed.label.as_deref(), Some("Update Edge"));
-        assert!(outcome.committed.ops.iter().any(
+        assert_eq!(
+            outcome.patch.transaction.label.as_deref(),
+            Some("Update Edge")
+        );
+        assert!(outcome.patch.ops().iter().any(
             |op| matches!(op, GraphOp::SetEdgeSelectable { id, to: Some(false), .. } if *id == edge)
         ));
         let selectable = store
@@ -1601,7 +1610,7 @@ mod tests {
             .undo_and_sync_models(&mut host, &graph, &view_state)
             .unwrap()
             .expect("did undo");
-        assert!(!undo.committed.ops.is_empty());
+        assert!(!undo.patch.ops().is_empty());
         assert!(controller.can_redo(&host));
 
         let graph_pos = graph
@@ -1623,7 +1632,7 @@ mod tests {
             .redo_and_sync_models(&mut host, &graph, &view_state)
             .unwrap()
             .expect("did redo");
-        assert!(!redo.committed.ops.is_empty());
+        assert!(!redo.patch.ops().is_empty());
 
         let graph_pos = graph
             .read_ref(&host, |graph| graph.nodes.get(&node_a).map(|node| node.pos))

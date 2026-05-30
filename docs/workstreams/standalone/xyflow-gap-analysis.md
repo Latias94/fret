@@ -5,6 +5,12 @@ date: 2026-02-13
 scope: ecosystem/fret-canvas, ecosystem/fret-node, ecosystem/fret-ui-ai (workflow wrappers)
 ---
 
+Status note (2026-05-28): this analysis remains useful for XyFlow and workflow-surface gap
+history, but the current `fret-node` shipped guidance is binding/controller/declarative
+composition: `NodeGraphSurfaceBinding`, `node_graph_surface(...)`, and `NodeGraphController`.
+References below to the old retained `NodeGraphCanvas` should be read as historical/deleted unless
+explicitly marked otherwise.
+
 ## Upstream references (non-normative)
 
 This document references optional local checkouts under `repo-ref/` for convenience.
@@ -89,22 +95,24 @@ Fret equivalents:
 - `ecosystem/fret-canvas/src/interaction/selection.rs`: headless helpers for click-vs-box selection,
   normalized rects, and default modifier-to-mode mapping.
 
-### 4) Editor-grade node graph widget (turnkey)
+### 4) Editor-grade node graph surface (turnkey)
 
 If the product needs a real workflow editor (node/edge editing, hit-testing, selection, commands),
 Fret already has a much richer surface than XYFlow:
 
-- `ecosystem/fret-node/src/ui/canvas/widget.rs`: retained `NodeGraphCanvas` widget with:
-  - wheel pan + ctrl/cmd wheel zoom,
-  - marquee selection,
-  - connect-drag wiring,
-  - command integration (delete selection, frame all/selection, copy/paste, etc.),
-  - minimap + controls overlays in its style model.
+- `ecosystem/fret-node/src/ui/binding.rs`: `NodeGraphSurfaceBinding` owns the app-facing
+  graph/view/config/store bundle.
+- `ecosystem/fret-node/src/ui/declarative/paint_only.rs`: `node_graph_surface(...)` is the
+  supported declarative surface.
+- `ecosystem/fret-node/src/ui/controller.rs`: `NodeGraphController` provides the instance-style
+  viewport, fit-view, update, and history helpers.
+- `ecosystem/fret-node/src/ui/overlays/*`: minimap, controls, toolbars, rename, and blackboard
+  overlays compose above the declarative surface.
 
 ## What is still missing / mismatched (gap list)
 
-This list is ordered by “what we would need to build an XYFlow-like *component* experience” (not
-by what the retained `fret-node` widget already has).
+This list is ordered by “what we would need to build an XYFlow-like *component* experience” rather
+than by the deleted retained widget implementation.
 
 ### Gap A — Declarative "world layer" for nodes as element subtrees (partially closed)
 
@@ -146,8 +154,9 @@ Notes:
 Recommendation:
 
 - Track remaining work as `docs/workstreams/canvas-world-layer-v1/canvas-world-layer-v1.md` M2 (bounds + selection seams).
-- For editor-grade workflows **today**, prefer `fret-node::NodeGraphCanvas` as the interaction engine
-  and use `fret-ui-ai` workflow wrappers as chrome.
+- For editor-grade workflows **today**, prefer `fret-node::ui::NodeGraphSurfaceBinding` plus
+  `node_graph_surface(...)` as the interaction engine and use `fret-ui-ai` workflow wrappers as
+  chrome when appropriate.
 
 ### Gap B — ReactFlow-like input filter knobs (`noWheel` / `noPan` / `.nokey`)
 
@@ -277,7 +286,8 @@ Recommendation:
 Pick one of two paths:
 
 1) **Editor-grade workflow editor**
-   - Use `fret-node::NodeGraphCanvas` as the engine.
+   - Use `fret-node::ui::NodeGraphSurfaceBinding` + `node_graph_surface(...)` as the engine.
+   - Use `NodeGraphController` for viewport, fit-view, selection, update, and history commands.
    - Use `fret-ui-ai` workflow wrappers (`WorkflowPanel/Toolbar/Controls`) as overlay chrome if
      desired.
    - Skin `NodeGraphStyle` to match shadcn/AI Elements tokens (future work).
