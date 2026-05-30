@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use fret_core::{
     Axis, Color, Corners, Edges, LayoutDirection, NodeId, Point, Px, SemanticsRole, SvgFit,
-    TextOverflow, TextStrutStyle, TextStyle, TextWrap, Transform2D,
+    TextStrutStyle, TextStyle, Transform2D,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -18,7 +18,7 @@ use fret_ui::action::{OnPressablePointerDown, PointerDownCx, PressablePointerDow
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, HoverRegionProps, Length, MainAlign,
     Overflow, PointerRegionProps, PressableA11y, PressableProps, SvgIconProps, TextAreaProps,
-    TextInputProps, TextProps, VisualTransformProps,
+    TextInputProps, VisualTransformProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, Invalidation, TextAreaStyle, Theme, UiHost};
@@ -31,18 +31,17 @@ use fret_ui_kit::{
 
 use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
 use crate::foundation::field::{
-    material_field_active_indicator_layer, material_field_text_start_inset_x,
+    MaterialFieldFloatingLabelProps, MaterialFieldSupportingTextProps, MaterialFieldVariant,
+    material_field_active_indicator_layer, material_field_floating_label,
+    material_field_supporting_text, material_field_text_start_inset_x,
 };
-use crate::foundation::field_motion::{FieldInputPhase, FieldMotionTargets, field_motion_frame};
+use crate::foundation::field_motion::{FieldMotionTargets, field_input_phase, field_motion_frame};
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interactive_size::minimum_interactive_size;
-use crate::foundation::logical_edges::{
-    set_inset_inline_end, set_inset_inline_start, set_margin_inline_end, set_margin_inline_start,
-};
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::test_id::part_test_id;
 use crate::tokens::autocomplete as autocomplete_tokens;
@@ -53,6 +52,13 @@ pub enum TextFieldVariant {
     #[default]
     Outlined,
     Filled,
+}
+
+fn material_field_variant(variant: TextFieldVariant) -> MaterialFieldVariant {
+    match variant {
+        TextFieldVariant::Filled => MaterialFieldVariant::Filled,
+        TextFieldVariant::Outlined => MaterialFieldVariant::Outlined,
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -826,13 +832,7 @@ impl TextField {
 
                                     let expanded_for_float = expanded.unwrap_or(false);
                                     let should_float = focused || expanded_for_float || populated;
-                                    let input_phase = if focused {
-                                        FieldInputPhase::Focused
-                                    } else if populated {
-                                        FieldInputPhase::UnfocusedNotEmpty
-                                    } else {
-                                        FieldInputPhase::UnfocusedEmpty
-                                    };
+                                    let input_phase = field_input_phase(focused, populated);
 
                                     let placeholder_target_opacity: f32 = if label.is_some() {
                                         if (focused || expanded_for_float) && !populated {
@@ -1050,13 +1050,7 @@ impl TextField {
 
                                     let expanded_for_float = expanded.unwrap_or(false);
                                     let should_float = focused || expanded_for_float || populated;
-                                    let input_phase = if focused {
-                                        FieldInputPhase::Focused
-                                    } else if populated {
-                                        FieldInputPhase::UnfocusedNotEmpty
-                                    } else {
-                                        FieldInputPhase::UnfocusedEmpty
-                                    };
+                                    let input_phase = field_input_phase(focused, populated);
 
                                     let placeholder_target_opacity = if label.is_some() {
                                         if (focused || expanded_for_float) && !populated {
@@ -1586,66 +1580,22 @@ fn text_field_label<H: UiHost>(
         (style, color)
     };
 
-    let (x, y) = floating_label::material_floating_label_offsets(progress);
-    let x = material_field_text_start_inset_x(x, leading_icon_size);
-
-    let mut layout = fret_ui::element::LayoutStyle::default();
-    layout.position = fret_ui::element::PositionStyle::Absolute;
-    layout.inset.top = Some(y).into();
-    set_inset_inline_start(&mut layout, layout_direction, x);
-    set_inset_inline_end(&mut layout, layout_direction, Px(16.0));
-    layout.overflow = Overflow::Visible;
-
-    let floated = floating_label::is_floated(progress);
-
-    let mut patch = ContainerProps::default();
-    if variant == TextFieldVariant::Outlined {
-        let patch_padding_x = Px(4.0);
-        let patch_padding_y = Px((outline_width.0 + 1.0).max(0.0));
-        patch.padding = (if floated {
-            Edges {
-                top: patch_padding_y,
-                right: patch_padding_x,
-                bottom: patch_padding_y,
-                left: patch_padding_x,
-            }
-        } else {
-            Edges::all(Px(0.0))
-        })
-        .into();
-        patch.background = floated.then_some(input_bg);
-    }
-
-    let mut label = cx.pointer_region(
-        PointerRegionProps {
-            layout,
-            enabled: !disabled,
-            ..Default::default()
-        },
-        move |cx| {
-            let input_for_focus = input_id;
-            cx.pointer_region_on_pointer_down(Arc::new(move |host, _cx, _down| {
-                host.request_focus(input_for_focus);
-                true
-            }));
-
-            vec![cx.container(patch, move |cx| {
-                vec![cx.text_props(TextProps {
-                    layout: fret_ui::element::LayoutStyle::default(),
-                    text: text.clone(),
-                    style,
-                    color: Some(color),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                    ink_overflow: Default::default(),
-                })]
-            })]
+    let label = material_field_floating_label(
+        cx,
+        MaterialFieldFloatingLabelProps {
+            variant: material_field_variant(variant),
+            text,
+            progress,
+            style,
+            color,
+            input_bg,
+            outline_width,
+            test_id,
+            leading_icon_size,
+            layout_direction,
+            focus_target: (!disabled).then_some(input_id),
         },
     );
-    if let Some(test_id) = test_id {
-        label = label.test_id(test_id);
-    }
     label_element_id_out.set(Some(label.id));
     label
 }
@@ -1690,27 +1640,17 @@ fn text_field_supporting_text<H: UiHost>(
         (style, color)
     };
 
-    let mut layout = fret_ui::element::LayoutStyle::default();
-    set_margin_inline_start(
-        &mut layout,
-        layout_direction,
-        material_field_text_start_inset_x(Px(16.0), leading_icon_size),
+    let supporting_text = material_field_supporting_text(
+        cx,
+        MaterialFieldSupportingTextProps {
+            text,
+            style,
+            color,
+            test_id,
+            leading_icon_size,
+            layout_direction,
+        },
     );
-    set_margin_inline_end(&mut layout, layout_direction, Px(16.0));
-
-    let mut supporting_text = cx.text_props(TextProps {
-        layout,
-        text,
-        style,
-        color: Some(color),
-        wrap: TextWrap::Word,
-        overflow: TextOverflow::Clip,
-        align: fret_core::TextAlign::Start,
-        ink_overflow: Default::default(),
-    });
-    if let Some(test_id) = test_id {
-        supporting_text = supporting_text.test_id(test_id);
-    }
     supporting_text_element_id_out.set(Some(supporting_text.id));
     supporting_text
 }

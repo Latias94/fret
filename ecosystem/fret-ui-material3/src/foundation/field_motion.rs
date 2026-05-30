@@ -36,6 +36,16 @@ pub(crate) struct FieldMotionFrame {
     pub placeholder_opacity: f32,
 }
 
+pub(crate) fn field_input_phase(focused: bool, populated: bool) -> FieldInputPhase {
+    if focused {
+        FieldInputPhase::Focused
+    } else if populated {
+        FieldInputPhase::UnfocusedNotEmpty
+    } else {
+        FieldInputPhase::UnfocusedEmpty
+    }
+}
+
 #[derive(Debug, Default)]
 struct FieldMotionRuntime {
     float_target: bool,

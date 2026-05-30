@@ -1,8 +1,6 @@
-use fret_app::App;
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
 use fret_ui_kit::typography::{self, TextIntent};
-use serde::Deserialize;
 
 use crate::button::ButtonVariant;
 use crate::card::CardVariant;
@@ -24,130 +22,11 @@ use crate::tokens::{
 use crate::top_app_bar::TopAppBarVariant;
 
 use super::button::ButtonInteraction;
-use super::v30::{
-    ColorSchemeOptions, DynamicVariant, SchemeMode, TypographyOptions, theme_config_with_colors,
-};
-
-const FIXTURE: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/tests/fixtures/material3_token_visual_cases_v1.json"
-));
-
-#[derive(Debug, Deserialize)]
-struct Suite {
-    schema_version: u32,
-    cases: Vec<Case>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Case {
-    id: String,
-    component: Component,
-    scheme: Scheme,
-    input: Input,
-    assertions: Vec<Assertion>,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum Component {
-    Autocomplete,
-    Badge,
-    BottomSheet,
-    Button,
-    Card,
-    CarouselItem,
-    Checkbox,
-    Chip,
-    DatePicker,
-    Dialog,
-    Divider,
-    DropdownMenu,
-    ExposedDropdown,
-    Fab,
-    FilterChip,
-    IconButton,
-    InputChip,
-    List,
-    Menu,
-    ModalNavigationDrawer,
-    NavigationBar,
-    NavigationDrawer,
-    NavigationRail,
-    ProgressIndicator,
-    Radio,
-    SearchBar,
-    SearchView,
-    SegmentedButton,
-    Select,
-    Slider,
-    Snackbar,
-    SuggestionChip,
-    Switch,
-    Tabs,
-    TextField,
-    TimePicker,
-    Tooltip,
-    TopAppBar,
-}
-
-#[derive(Debug, Deserialize)]
-struct Scheme {
-    mode: SchemeModeFixture,
-    variant: DynamicVariantFixture,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum SchemeModeFixture {
-    Light,
-    Dark,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum DynamicVariantFixture {
-    TonalSpot,
-    Expressive,
-}
-
-#[derive(Debug, Deserialize)]
-struct Input {
-    variant: String,
-    enabled: Option<bool>,
-    interaction: Option<String>,
-    #[serde(default)]
-    hovered: bool,
-    #[serde(default)]
-    focused: bool,
-    #[serde(default)]
-    disabled: bool,
-    #[serde(default)]
-    error: bool,
-    #[serde(default)]
-    selected: bool,
-    #[serde(default)]
-    toggle: bool,
-    #[serde(default)]
-    scrolled: bool,
-}
-
-#[derive(Debug, Deserialize)]
-struct Assertion {
-    role: String,
-    kind: String,
-    token: Option<String>,
-    source_token: Option<String>,
-    color_token: Option<String>,
-    opacity_token: Option<String>,
-    base_color_token: Option<String>,
-    overlay_color_token: Option<String>,
-    value: Option<f32>,
-}
+use super::visual_fixture_model::{Assertion, Case, Component, load_suite, theme_for};
 
 #[test]
 fn material3_token_visual_fixtures_match_expected_token_outcomes() {
-    let suite: Suite = serde_json::from_str(FIXTURE).expect("fixture JSON must parse");
+    let suite = load_suite();
     assert_eq!(suite.schema_version, 1);
 
     for case in &suite.cases {
@@ -193,24 +72,6 @@ fn material3_token_visual_fixtures_match_expected_token_outcomes() {
             Component::TopAppBar => run_top_app_bar_case(case, &theme),
         }
     }
-}
-
-fn theme_for(scheme: &Scheme) -> Theme {
-    let colors = ColorSchemeOptions {
-        mode: match scheme.mode {
-            SchemeModeFixture::Light => SchemeMode::Light,
-            SchemeModeFixture::Dark => SchemeMode::Dark,
-        },
-        variant: match scheme.variant {
-            DynamicVariantFixture::TonalSpot => DynamicVariant::TonalSpot,
-            DynamicVariantFixture::Expressive => DynamicVariant::Expressive,
-        },
-        ..Default::default()
-    };
-    let cfg = theme_config_with_colors(TypographyOptions::default(), colors);
-    let mut app = App::new();
-    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
-    Theme::global(&app).clone()
 }
 
 fn run_button_case(case: &Case, theme: &Theme) {
@@ -2155,7 +2016,7 @@ fn run_list_case(case: &Case, theme: &Theme) {
     let selected = case.input.selected;
     let enabled = enabled_input(case);
     let interaction = list_interaction(case.input.interaction.as_deref(), &case.id);
-    let expressive = matches!(case.scheme.variant, DynamicVariantFixture::Expressive);
+    let expressive = case.is_expressive_scheme();
 
     for assertion in &case.assertions {
         match assertion.kind.as_str() {

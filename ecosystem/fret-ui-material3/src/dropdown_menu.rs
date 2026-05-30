@@ -20,11 +20,11 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::overlay;
 use fret_ui_kit::overlay_controller;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
-use fret_ui_kit::{OverlayController, OverlayPresence};
+use fret_ui_kit::{OverlayController, OverlayPresence, WidgetStateProperty};
 
+use crate::foundation::context::material_layout_direction_in_scope;
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::menu::{Menu, MenuEntry, MenuStyle};
 use crate::motion::ms_to_frames;
@@ -205,7 +205,7 @@ impl DropdownMenu {
             let trigger_id = trigger.id;
 
             if overlay_presence.present {
-                let direction = direction_prim::use_direction_in_scope(cx, None);
+                let direction = material_layout_direction_in_scope(cx);
 
                 let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id) else {
                     return trigger;
@@ -298,7 +298,12 @@ impl DropdownMenu {
                 });
 
                 let test_id = self.test_id.clone().unwrap_or(default_test_id);
-                let menu_style = self.menu_style.clone();
+                let menu_width = layout.rect.size.width;
+                let menu_style = self
+                    .menu_style
+                    .clone()
+                    .item_min_width(WidgetStateProperty::new(Some(menu_width)))
+                    .item_max_width(WidgetStateProperty::new(Some(menu_width)));
 
                 let overlay_root = popper_content::popper_wrapper_panel_at(
                     cx,
@@ -306,14 +311,19 @@ impl DropdownMenu {
                     Edges::all(Px(0.0)),
                     Overflow::Visible,
                     move |cx| {
-                        vec![
-                            Menu::new()
-                                .a11y_label(a11y_label)
-                                .test_id(test_id)
-                                .entries(menu_entries)
-                                .style(menu_style)
-                                .into_element_with_initial_focus_id(cx, initial_focus_id_for_menu),
-                        ]
+                        cx.provide(direction, |cx| {
+                            vec![
+                                Menu::new()
+                                    .a11y_label(a11y_label)
+                                    .test_id(test_id)
+                                    .entries(menu_entries)
+                                    .style(menu_style)
+                                    .into_element_with_initial_focus_id(
+                                        cx,
+                                        initial_focus_id_for_menu,
+                                    ),
+                            ]
+                        })
                     },
                 );
 

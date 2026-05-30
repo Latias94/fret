@@ -20,13 +20,13 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::OverlayPresence;
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::scheduling;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::dismissable_layer as dismissable_layer_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::tooltip as tooltip_prim;
 use fret_ui_kit::tooltip_provider;
 
+use crate::foundation::context::material_layout_direction_in_scope;
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::part_test_id;
@@ -365,7 +365,7 @@ fn tooltip_policy_root<H: UiHost>(
                 TooltipSide::Left => Side::Left,
             };
 
-            let direction = direction_prim::use_direction_in_scope(cx, None);
+            let direction = material_layout_direction_in_scope(cx);
             let layout = popper::popper_content_layout_sized(
                 outer,
                 anchor,
@@ -535,75 +535,77 @@ fn tooltip_policy_root<H: UiHost>(
         let overlay_root_name = tooltip_prim::tooltip_root_name(tooltip_id);
         let opacity = motion.alpha;
         let scale = motion.scale;
-        let direction = direction_prim::use_direction_in_scope(cx, None);
+        let direction = material_layout_direction_in_scope(cx);
 
         let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
-            let anchor = fret_ui_kit::overlay::anchor_bounds_for_element(cx, anchor_id);
-            let Some(anchor) = anchor else {
-                return Vec::new();
-            };
+            cx.provide(direction, |cx| {
+                let anchor = fret_ui_kit::overlay::anchor_bounds_for_element(cx, anchor_id);
+                let Some(anchor) = anchor else {
+                    return Vec::new();
+                };
 
-            let scale_factor = cx.environment_scale_factor(fret_ui::Invalidation::Layout);
-            let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
-            let estimated_size = Size::new(Px(240.0), Px(32.0));
-            let content_size = stabilize_popper_desired_size(
-                cx,
-                last_content_size.unwrap_or(estimated_size),
-                scale_factor,
-            );
-
-            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
-                cx,
-                fret_ui::Invalidation::Layout,
-                window_margin,
-            );
-
-            let align = match align {
-                TooltipAlign::Start => Align::Start,
-                TooltipAlign::Center => Align::Center,
-                TooltipAlign::End => Align::End,
-            };
-            let side = match side {
-                TooltipSide::Top => Side::Top,
-                TooltipSide::Right => Side::Right,
-                TooltipSide::Bottom => Side::Bottom,
-                TooltipSide::Left => Side::Left,
-            };
-
-            let placement =
-                popper::PopperContentPlacement::new(direction, side, align, side_offset)
-                    .with_shift_cross_axis(true)
-                    .with_hide_when_detached(hide_when_detached);
-            let reference_hidden = placement.reference_hidden(outer, anchor);
-
-            let layout =
-                popper::popper_content_layout_sized(outer, anchor, content_size, placement);
-            let placed = layout.rect;
-
-            let wrapper = popper_content::popper_wrapper_panel_at(
-                cx,
-                placed,
-                Edges::all(Px(0.0)),
-                fret_ui::element::Overflow::Visible,
-                move |_cx| vec![content],
-            );
-
-            let origin = popper::popper_content_transform_origin(&layout, anchor, None);
-            let origin_inv = fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0));
-            let transform = fret_core::Transform2D::translation(origin)
-                * fret_core::Transform2D::scale_uniform(scale)
-                * fret_core::Transform2D::translation(origin_inv);
-
-            let opacity = if reference_hidden { 0.0 } else { opacity };
-            vec![
-                fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
+                let scale_factor = cx.environment_scale_factor(fret_ui::Invalidation::Layout);
+                let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
+                let estimated_size = Size::new(Px(240.0), Px(32.0));
+                let content_size = stabilize_popper_desired_size(
                     cx,
-                    opacity,
-                    transform,
-                    !reference_hidden,
-                    vec![wrapper],
-                ),
-            ]
+                    last_content_size.unwrap_or(estimated_size),
+                    scale_factor,
+                );
+
+                let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+                    cx,
+                    fret_ui::Invalidation::Layout,
+                    window_margin,
+                );
+
+                let align = match align {
+                    TooltipAlign::Start => Align::Start,
+                    TooltipAlign::Center => Align::Center,
+                    TooltipAlign::End => Align::End,
+                };
+                let side = match side {
+                    TooltipSide::Top => Side::Top,
+                    TooltipSide::Right => Side::Right,
+                    TooltipSide::Bottom => Side::Bottom,
+                    TooltipSide::Left => Side::Left,
+                };
+
+                let placement =
+                    popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                        .with_shift_cross_axis(true)
+                        .with_hide_when_detached(hide_when_detached);
+                let reference_hidden = placement.reference_hidden(outer, anchor);
+
+                let layout =
+                    popper::popper_content_layout_sized(outer, anchor, content_size, placement);
+                let placed = layout.rect;
+
+                let wrapper = popper_content::popper_wrapper_panel_at(
+                    cx,
+                    placed,
+                    Edges::all(Px(0.0)),
+                    fret_ui::element::Overflow::Visible,
+                    move |_cx| vec![content],
+                );
+
+                let origin = popper::popper_content_transform_origin(&layout, anchor, None);
+                let origin_inv = fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0));
+                let transform = fret_core::Transform2D::translation(origin)
+                    * fret_core::Transform2D::scale_uniform(scale)
+                    * fret_core::Transform2D::translation(origin_inv);
+
+                let opacity = if reference_hidden { 0.0 } else { opacity };
+                vec![
+                    fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
+                        cx,
+                        opacity,
+                        transform,
+                        !reference_hidden,
+                        vec![wrapper],
+                    ),
+                ]
+            })
         });
 
         let mut request =

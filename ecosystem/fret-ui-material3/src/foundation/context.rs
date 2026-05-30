@@ -219,6 +219,22 @@ pub fn resolved_layout_direction<H: UiHost>(
     }
 }
 
+pub fn material_layout_direction_in_scope<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> LayoutDirection {
+    let theme = Theme::global(&*cx.app);
+    resolved_layout_direction(cx, theme_default_layout_direction(theme))
+}
+
+#[track_caller]
+pub fn with_material_layout_direction_in_scope<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>, LayoutDirection) -> R,
+) -> R {
+    let direction = material_layout_direction_in_scope(cx);
+    cx.provide(direction, |cx| f(cx, direction))
+}
+
 #[track_caller]
 pub fn with_material_resolved_layout_direction<H: UiHost, R>(
     cx: &mut ElementContext<'_, H>,
@@ -745,6 +761,39 @@ mod tests {
                 });
 
                 assert_eq!(cx.provided::<LayoutDirection>().copied(), None);
+            },
+        );
+    }
+
+    #[test]
+    fn material_layout_direction_in_scope_uses_theme_default_and_local_override() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut cfg =
+            crate::tokens::v30::theme_config(crate::tokens::v30::TypographyOptions::default());
+        cfg.numbers
+            .insert("md.sys.fret.layout.is-rtl".to_string(), 1.0);
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-context-layout-direction-in-scope",
+            |cx| {
+                assert_eq!(material_layout_direction_in_scope(cx), LayoutDirection::Rtl);
+
+                with_material_layout_direction(cx, LayoutDirection::Ltr, |cx| {
+                    assert_eq!(material_layout_direction_in_scope(cx), LayoutDirection::Ltr);
+                });
+
+                with_material_layout_direction_in_scope(cx, |cx, direction| {
+                    assert_eq!(direction, LayoutDirection::Rtl);
+                    assert_eq!(
+                        cx.provided::<LayoutDirection>().copied(),
+                        Some(LayoutDirection::Rtl)
+                    );
+                });
             },
         );
     }

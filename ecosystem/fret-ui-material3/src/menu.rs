@@ -47,6 +47,8 @@ pub struct MenuStyle {
     pub container_background: OverrideSlot<ColorRef>,
     pub container_corner_radii: OverrideSlot<Corners>,
     pub container_elevation: OverrideSlot<Px>,
+    pub item_min_width: OverrideSlot<Px>,
+    pub item_max_width: OverrideSlot<Px>,
     pub item_label_color: OverrideSlot<ColorRef>,
     pub item_state_layer_color: OverrideSlot<ColorRef>,
     pub item_label_text_style: OverrideSlot<TextStyle>,
@@ -68,6 +70,16 @@ impl MenuStyle {
 
     pub fn container_elevation(mut self, elevation: WidgetStateProperty<Option<Px>>) -> Self {
         self.container_elevation = Some(elevation);
+        self
+    }
+
+    pub fn item_min_width(mut self, width: WidgetStateProperty<Option<Px>>) -> Self {
+        self.item_min_width = Some(width);
+        self
+    }
+
+    pub fn item_max_width(mut self, width: WidgetStateProperty<Option<Px>>) -> Self {
+        self.item_max_width = Some(width);
         self
     }
 
@@ -100,6 +112,8 @@ impl MenuStyle {
                 self.container_elevation,
                 other.container_elevation,
             ),
+            item_min_width: merge_override_slot(self.item_min_width, other.item_min_width),
+            item_max_width: merge_override_slot(self.item_max_width, other.item_max_width),
             item_label_color: merge_override_slot(self.item_label_color, other.item_label_color),
             item_state_layer_color: merge_override_slot(
                 self.item_state_layer_color,
@@ -236,30 +250,46 @@ impl Menu {
             } = self;
             let (item_layout, vertical_padding, container_bg, shadow, corner) = {
                 let theme = Theme::global(&*cx.app);
+                let states = WidgetStates::empty();
+                let min_width = resolve_override_slot_with(
+                    style.item_min_width.as_ref(),
+                    states,
+                    |v| *v,
+                    || menu_tokens::item_min_width(theme),
+                );
+                let mut max_width = resolve_override_slot_with(
+                    style.item_max_width.as_ref(),
+                    states,
+                    |v| *v,
+                    || menu_tokens::item_max_width(theme),
+                );
+                if max_width.0 < min_width.0 {
+                    max_width = min_width;
+                }
                 let item_layout = MenuItemLayout {
                     height: menu_tokens::list_item_height(theme),
-                    min_width: menu_tokens::item_min_width(theme),
-                    max_width: menu_tokens::item_max_width(theme),
+                    min_width,
+                    max_width,
                     horizontal_padding: menu_tokens::item_horizontal_padding(theme),
                 };
                 let vertical_padding = menu_tokens::container_vertical_padding(theme);
 
                 let container_bg = resolve_override_slot_with(
                     style.container_background.as_ref(),
-                    WidgetStates::empty(),
+                    states,
                     |color| color.resolve(theme),
                     || menu_tokens::container_background(theme),
                 );
                 let elevation = resolve_override_slot_with(
                     style.container_elevation.as_ref(),
-                    WidgetStates::empty(),
+                    states,
                     |v| *v,
                     || menu_tokens::container_elevation(theme),
                 );
                 let shadow_color = menu_tokens::container_shadow_color(theme);
                 let corner = resolve_override_slot_with(
                     style.container_corner_radii.as_ref(),
-                    WidgetStates::empty(),
+                    states,
                     |v| *v,
                     || menu_tokens::container_shape(theme),
                 );

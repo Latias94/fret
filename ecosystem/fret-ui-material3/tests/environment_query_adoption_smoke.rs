@@ -12,3 +12,24 @@ fn overlay_outer_bounds_use_environment_snapshot_helpers() {
         "tooltip overlay should derive outer bounds from the committed environment snapshot"
     );
 }
+
+#[test]
+fn material_recipes_resolve_layout_direction_through_material_context() {
+    let sources = [
+        ("autocomplete.rs", include_str!("../src/autocomplete.rs")),
+        ("dropdown_menu.rs", include_str!("../src/dropdown_menu.rs")),
+        ("search_view.rs", include_str!("../src/search_view.rs")),
+        ("tooltip.rs", include_str!("../src/tooltip.rs")),
+    ];
+
+    for (name, source) in sources {
+        assert!(
+            !source.contains("use_direction_in_scope(cx, None)"),
+            "{name} should not bypass Material context for layout direction"
+        );
+        assert!(
+            source.contains("material_layout_direction_in_scope(cx)"),
+            "{name} should use the Material-facing layout direction helper"
+        );
+    }
+}

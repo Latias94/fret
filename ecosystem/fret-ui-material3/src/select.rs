@@ -38,16 +38,15 @@ use fret_ui_kit::{
 use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
 use crate::foundation::field::{
-    material_field_active_indicator_layer, material_field_text_start_inset_x,
+    MaterialFieldFloatingLabelProps, MaterialFieldSupportingTextProps, MaterialFieldVariant,
+    material_field_active_indicator_layer, material_field_floating_label,
+    material_field_supporting_text,
 };
-use crate::foundation::field_motion::{FieldInputPhase, FieldMotionTargets, field_motion_frame};
+use crate::foundation::field_motion::{FieldMotionTargets, field_input_phase, field_motion_frame};
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
-};
-use crate::foundation::logical_edges::{
-    set_inset_inline_end, set_inset_inline_start, set_margin_inline_end, set_margin_inline_start,
 };
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
@@ -107,6 +106,13 @@ pub enum SelectVariant {
     #[default]
     Outlined,
     Filled,
+}
+
+fn material_field_variant(variant: SelectVariant) -> MaterialFieldVariant {
+    match variant {
+        SelectVariant::Filled => MaterialFieldVariant::Filled,
+        SelectVariant::Outlined => MaterialFieldVariant::Outlined,
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1018,13 +1024,7 @@ fn select_trigger_element<H: UiHost>(
                 );
 
                 let should_float = focused || open || populated;
-                let input_phase = if focused {
-                    FieldInputPhase::Focused
-                } else if populated {
-                    FieldInputPhase::UnfocusedNotEmpty
-                } else {
-                    FieldInputPhase::UnfocusedEmpty
-                };
+                let input_phase = field_input_phase(focused, populated);
                 let show_placeholder = if label.is_some() {
                     (focused || open) && !populated
                 } else {
@@ -1441,54 +1441,22 @@ fn select_trigger_label<H: UiHost>(
         (style, color)
     };
 
-    let (x, y) = floating_label::material_floating_label_offsets(progress);
-
-    let x = material_field_text_start_inset_x(x, leading_icon_size);
-
-    let mut layout = fret_ui::element::LayoutStyle::default();
-    layout.position = fret_ui::element::PositionStyle::Absolute;
-    layout.inset.top = Some(y).into();
-    set_inset_inline_start(&mut layout, layout_direction, x);
-    set_inset_inline_end(&mut layout, layout_direction, Px(16.0));
-    layout.overflow = Overflow::Visible;
-
-    let floated = floating_label::is_floated(progress);
-
-    let mut patch = ContainerProps::default();
-    if variant == SelectVariant::Outlined {
-        let patch_padding_x = Px(4.0);
-        let patch_padding_y = Px((outline_width.0 + 1.0).max(0.0));
-        patch.padding = (if floated {
-            Edges {
-                top: patch_padding_y,
-                right: patch_padding_x,
-                bottom: patch_padding_y,
-                left: patch_padding_x,
-            }
-        } else {
-            Edges::all(Px(0.0))
-        })
-        .into();
-        patch.background = floated.then_some(input_bg);
-    }
-    patch.layout = layout;
-
-    let mut label = cx.container(patch, move |cx| {
-        vec![cx.text_props(TextProps {
-            layout: fret_ui::element::LayoutStyle::default(),
-            text: text.clone(),
+    material_field_floating_label(
+        cx,
+        MaterialFieldFloatingLabelProps {
+            variant: material_field_variant(variant),
+            text,
+            progress,
             style,
-            color: Some(color),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: Default::default(),
-        })]
-    });
-    if let Some(test_id) = test_id {
-        label = label.test_id(test_id);
-    }
-    label
+            color,
+            input_bg,
+            outline_width,
+            test_id,
+            leading_icon_size,
+            layout_direction,
+            focus_target: None,
+        },
+    )
 }
 
 fn select_supporting_text<H: UiHost>(
@@ -1523,28 +1491,17 @@ fn select_supporting_text<H: UiHost>(
         (style, color)
     };
 
-    let mut layout = fret_ui::element::LayoutStyle::default();
-    set_margin_inline_start(
-        &mut layout,
-        layout_direction,
-        material_field_text_start_inset_x(Px(16.0), leading_icon_size),
-    );
-    set_margin_inline_end(&mut layout, layout_direction, Px(16.0));
-
-    let mut element = cx.text_props(TextProps {
-        layout,
-        text,
-        style,
-        color: Some(color),
-        wrap: TextWrap::Word,
-        overflow: TextOverflow::Clip,
-        align: fret_core::TextAlign::Start,
-        ink_overflow: Default::default(),
-    });
-    if let Some(test_id) = test_id {
-        element = element.test_id(test_id);
-    }
-    element
+    material_field_supporting_text(
+        cx,
+        MaterialFieldSupportingTextProps {
+            text,
+            style,
+            color,
+            test_id,
+            leading_icon_size,
+            layout_direction,
+        },
+    )
 }
 
 fn with_opacity(mut color: Color, opacity: f32) -> Color {

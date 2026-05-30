@@ -10,9 +10,9 @@ use fret_runtime::{ModelHost, PlatformCapabilities};
 use fret_ui::element::{Length, PressableA11y, PressableProps};
 use fret_ui::{UiTree, declarative};
 use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
-use fret_ui_material3::DropdownMenu;
 use fret_ui_material3::menu::{Menu, MenuEntry, MenuItem};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
+use fret_ui_material3::{DropdownMenu, DropdownMenuAlign};
 
 mod interaction_harness;
 mod support;
@@ -21,7 +21,7 @@ use support::events::{key_down, key_up, pointer_down, pointer_move};
 use support::goldens::run_overlay_frame_with_scene_scaled;
 use support::host::{FakeUiServices, TestHost};
 use support::layout::{semantics_node_id_by_test_id, with_padding};
-use support::theme::apply_material_theme;
+use support::theme::{apply_material_theme, apply_material_theme_rtl};
 
 fn assert_px_close(actual: f32, expected: f32, context: &str) {
     let delta = (actual - expected).abs();
@@ -44,6 +44,10 @@ fn live_test_id_layout_bounds(
                 .or_else(|| ui.debug_node_visual_bounds(m.node))
         })
         .unwrap_or_else(|| panic!("expected live layout bounds for test_id {id}"))
+}
+
+fn rect_right(rect: Rect) -> f32 {
+    rect.origin.x.0 + rect.size.width.0
 }
 
 fn semantics_node_by_test_id(ui: &UiTree<TestHost>, test_id: &str) -> SemanticsNode {
@@ -384,6 +388,111 @@ fn menu_roving_focus_includes_disabled_items_without_activation() {
         ui.focus(),
         Some(gamma),
         "expected ArrowDown from a disabled menu item to move to the next item"
+    );
+}
+
+#[test]
+fn dropdown_menu_rtl_start_align_uses_material_theme_direction() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(640.0), Px(420.0)),
+    );
+    let open = app.models_mut().insert(true);
+    let render = move |ui: &mut UiTree<TestHost>,
+                       app: &mut TestHost,
+                       services: &mut dyn UiServices| {
+        let open = open.clone();
+        declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let dropdown = DropdownMenu::new(open)
+                .align(DropdownMenuAlign::Start)
+                .min_width(Px(260.0))
+                .a11y_label("RTL dropdown menu")
+                .test_id("m3-dropdown-rtl")
+                .into_element(
+                    cx,
+                    |cx| {
+                        let mut props = PressableProps::default();
+                        props.layout.size.width = Length::Px(Px(160.0));
+                        props.layout.size.height = Length::Px(Px(40.0));
+                        props.a11y = PressableA11y {
+                            label: Some(Arc::<str>::from("Open RTL menu")),
+                            test_id: Some(Arc::<str>::from("m3-dropdown-rtl-trigger")),
+                            ..Default::default()
+                        };
+                        cx.pressable(props, |_cx, _st| Vec::new())
+                    },
+                    |_cx| {
+                        vec![
+                            MenuEntry::Item(
+                                MenuItem::new("Alpha").test_id("m3-dropdown-rtl-alpha"),
+                            ),
+                            MenuEntry::Item(MenuItem::new("Beta").test_id("m3-dropdown-rtl-beta")),
+                        ]
+                    },
+                );
+            vec![with_padding(cx, Px(120.0), dropdown)]
+        })
+    };
+
+    let mut opened = false;
+    for _ in 0..24 {
+        run_overlay_frame_with_scene_scaled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            1.0,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        if stack
+            .stack
+            .iter()
+            .any(|entry| entry.kind == OverlayStackEntryKind::Popover && entry.open)
+        {
+            opened = true;
+            break;
+        }
+    }
+    assert!(opened, "expected RTL dropdown overlay to open");
+
+    run_overlay_frame_with_scene_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger = live_test_id_layout_bounds(&ui, &app, window, "m3-dropdown-rtl-trigger");
+    let menu = live_test_id_layout_bounds(&ui, &app, window, "m3-dropdown-rtl.chrome");
+
+    assert!(
+        menu.size.width.0 > trigger.size.width.0 + 40.0,
+        "expected test menu to be wider than trigger; trigger={trigger:?}, menu={menu:?}"
+    );
+    assert_px_close(
+        rect_right(menu),
+        rect_right(trigger),
+        "RTL dropdown start alignment right edge",
+    );
+    assert!(
+        menu.origin.x.0 < trigger.origin.x.0 - 40.0,
+        "expected RTL start-aligned wider menu to extend left from trigger; trigger={trigger:?}, menu={menu:?}"
     );
 }
 

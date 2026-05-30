@@ -27,12 +27,12 @@ use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::primitives::active_descendant::active_option_for_index;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
+use crate::foundation::context::material_layout_direction_in_scope;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
@@ -738,7 +738,7 @@ fn autocomplete_into_element<H: UiHost>(
             );
             let desired = Size::new(desired_width, desired_height);
 
-            let direction = direction_prim::use_direction_in_scope(cx, None);
+            let direction = material_layout_direction_in_scope(cx);
             let placement = popper::PopperContentPlacement::new(
                 direction,
                 Side::Bottom,
@@ -780,29 +780,31 @@ fn autocomplete_into_element<H: UiHost>(
                     let query_model = autocomplete.query.clone();
 
                     move |cx| {
-                        vec![autocomplete_listbox_panel(
-                            cx,
-                            variant,
-                            labelled_by,
-                            a11y_label.clone(),
-                            test_id.clone(),
-                            query.clone(),
-                            query_model.clone(),
-                            selected_value.clone(),
-                            selected_value_model.clone(),
-                            disabled,
-                            open.clone(),
-                            suppress_open.clone(),
-                            active_index.clone(),
-                            layout.rect.size.width,
-                            scroll_handle.clone(),
-                            items.clone(),
-                            listbox_element_id_out.clone(),
-                            option_elements_out.clone(),
-                            scroll_viewport_id_out.clone(),
-                            set_query_on_select,
-                            on_select.clone(),
-                        )]
+                        cx.provide(direction, |cx| {
+                            vec![autocomplete_listbox_panel(
+                                cx,
+                                variant,
+                                labelled_by,
+                                a11y_label.clone(),
+                                test_id.clone(),
+                                query.clone(),
+                                query_model.clone(),
+                                selected_value.clone(),
+                                selected_value_model.clone(),
+                                disabled,
+                                open.clone(),
+                                suppress_open.clone(),
+                                active_index.clone(),
+                                layout.rect.size.width,
+                                scroll_handle.clone(),
+                                items.clone(),
+                                listbox_element_id_out.clone(),
+                                option_elements_out.clone(),
+                                scroll_viewport_id_out.clone(),
+                                set_query_on_select,
+                                on_select.clone(),
+                            )]
+                        })
                     }
                 },
             );

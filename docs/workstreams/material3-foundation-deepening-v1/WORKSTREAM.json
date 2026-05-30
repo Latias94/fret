@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "slug": "material3-foundation-deepening-v1",
+  "title": "Material3 Foundation Deepening v1",
+  "status": "active",
+  "updated": "2026-05-30",
+  "scope_kind": "execution",
+  "follow_on_of": "material3-visual-behavior-layout-parity-v2",
+  "problem": "Material3 has useful foundation modules, but Material context, field-family chrome, and token matrix outcomes are still shallow enough that RTL, field geometry, and token drift fixes can spread across large recipe modules.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-foundation-deepening-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-foundation-deepening-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-foundation-deepening-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-foundation-deepening-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-foundation-deepening-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Audit residual Material3 direction bypasses, field-family duplication, and token matrix module shape.",
+    "commands": [
+      "rg -n \"direction_prim::use_direction_in_scope|use_direction_in_scope\\\\(\" ecosystem/fret-ui-material3/src -g \"*.rs\"",
+      "cargo nextest run -p fret-ui-material3 --test environment_query_adoption_smoke material_recipes_resolve_layout_direction_through_material_context",
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test select_behavior select_rtl_label_and_supporting_text_use_logical_inline_insets",
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test text_field_hover text_field_rtl_label_and_supporting_text_use_logical_inline_insets",
+      "cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes"
+    ]
+  },
+  "gates": [
+    {
+      "name": "material3-format",
+      "command": "cargo fmt -p fret-ui-material3"
+    },
+    {
+      "name": "material3-context-helper",
+      "command": "cargo nextest run -p fret-ui-material3 --lib material_layout_direction_in_scope_uses_theme_default_and_local_override"
+    },
+    {
+      "name": "material3-context-source-audit",
+      "command": "cargo nextest run -p fret-ui-material3 --test environment_query_adoption_smoke material_recipes_resolve_layout_direction_through_material_context"
+    },
+    {
+      "name": "material3-dropdown-rtl",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test menu_state dropdown_menu_rtl_start_align_uses_material_theme_direction"
+    },
+    {
+      "name": "material3-context-select-rtl",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test select_behavior select_rtl_start_aligned_popup_anchors_to_trigger_inline_start select_rtl_listbox_items_place_logical_leading_slot_on_right"
+    },
+    {
+      "name": "material3-field-select-rtl",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test select_behavior select_rtl_label_and_supporting_text_use_logical_inline_insets"
+    },
+    {
+      "name": "material3-field-text-field-rtl",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test text_field_hover text_field_rtl_label_and_supporting_text_use_logical_inline_insets"
+    },
+    {
+      "name": "material3-token-matrix",
+      "command": "cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes"
+    },
+    {
+      "name": "material3-tests-check",
+      "command": "cargo check -p fret-ui-material3 --features diagnostics --tests"
+    },
+    {
+      "name": "material3-tests-clippy",
+      "command": "cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings"
+    },
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-foundation-deepening-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/material3-foundation-deepening-v1/DESIGN.md",
+    "docs/workstreams/material3-foundation-deepening-v1/TODO.md",
+    "ecosystem/fret-ui-material3/src/foundation/context.rs",
+    "ecosystem/fret-ui-material3/src/foundation/field.rs",
+    "ecosystem/fret-ui-material3/src/foundation/field_motion.rs",
+    "ecosystem/fret-ui-material3/src/select.rs",
+    "ecosystem/fret-ui-material3/src/text_field.rs",
+    "ecosystem/fret-ui-material3/src/tokens/visual_fixture_model.rs",
+    "ecosystem/fret-ui-material3/src/tokens/visual_fixtures.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0032-style-tokens-and-theme-resolution.md",
+    "docs/adr/0057-declarative-layout-style-and-flex-semantics.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane until Material context, field-family chrome, and token matrix interfaces are deepened or split into explicit narrow follow-ons."
+  }
+}

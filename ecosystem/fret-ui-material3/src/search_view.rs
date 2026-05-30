@@ -21,6 +21,7 @@ use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::SearchBar;
+use crate::foundation::context::material_layout_direction_in_scope;
 use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::search_motion::{
     SearchMotionKind, drive_search_motion, search_full_screen_geometry_transform,
@@ -439,7 +440,7 @@ impl SearchView {
             let animated_height = (self.max_height.0 * motion.progress).max(1.0);
             let desired = fret_core::Size::new(anchor.size.width, Px(animated_height));
 
-            let direction = fret_ui_kit::primitives::direction::use_direction_in_scope(cx, None);
+            let direction = material_layout_direction_in_scope(cx);
             let placement = fret_ui_kit::primitives::popper::PopperContentPlacement::new(
                 direction,
                 fret_ui_kit::primitives::popper::Side::Bottom,
@@ -485,60 +486,62 @@ impl SearchView {
                 Edges::all(Px(0.0)),
                 Overflow::Visible,
                 move |cx| {
-                    let mut container = ContainerProps::default();
-                    container.layout.size.width = Length::Fill;
-                    container.layout.size.height = Length::Fill;
-                    container.layout.overflow = Overflow::Clip;
-                    container.background = Some(container_color);
-                    container.corner_radii = container_shape;
-                    container.shadow = shadow;
+                    cx.provide(direction, |cx| {
+                        let mut container = ContainerProps::default();
+                        container.layout.size.width = Length::Fill;
+                        container.layout.size.height = Length::Fill;
+                        container.layout.overflow = Overflow::Clip;
+                        container.background = Some(container_color);
+                        container.corner_radii = container_shape;
+                        container.shadow = shadow;
 
-                    let panel = cx.container(container, move |cx| {
-                        let mut divider = cx.container(
-                            ContainerProps {
-                                layout: fret_ui::element::LayoutStyle {
-                                    size: fret_ui::element::SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Px(Px(1.0)),
+                        let panel = cx.container(container, move |cx| {
+                            let mut divider = cx.container(
+                                ContainerProps {
+                                    layout: fret_ui::element::LayoutStyle {
+                                        size: fret_ui::element::SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Px(Px(1.0)),
+                                            ..Default::default()
+                                        },
                                         ..Default::default()
                                     },
+                                    background: Some(divider_color),
                                     ..Default::default()
                                 },
-                                background: Some(divider_color),
-                                ..Default::default()
-                            },
-                            |_cx| Vec::<AnyElement>::new(),
-                        );
-                        if let Some(test_id) = divider_test_id.clone() {
-                            divider = divider.test_id(test_id);
-                        }
+                                |_cx| Vec::<AnyElement>::new(),
+                            );
+                            if let Some(test_id) = divider_test_id.clone() {
+                                divider = divider.test_id(test_id);
+                            }
 
-                        let mut body = cx.container(
-                            ContainerProps {
-                                padding: Edges::all(Px(8.0)).into(),
-                                ..Default::default()
-                            },
-                            content,
-                        );
-                        if let Some(test_id) = body_test_id.clone() {
-                            body = body.test_id(test_id);
-                        }
+                            let mut body = cx.container(
+                                ContainerProps {
+                                    padding: Edges::all(Px(8.0)).into(),
+                                    ..Default::default()
+                                },
+                                content,
+                            );
+                            if let Some(test_id) = body_test_id.clone() {
+                                body = body.test_id(test_id);
+                            }
 
-                        vec![divider, body]
-                    });
+                            vec![divider, body]
+                        });
 
-                    let sem = SemanticsProps {
-                        role: SemanticsRole::Panel,
-                        test_id: overlay_test_id.clone(),
-                        labelled_by_element,
-                        ..Default::default()
-                    };
-                    let panel = cx.semantics_with_id(sem, move |_cx, panel_id| {
-                        controlled_element_id_out.set(Some(panel_id));
+                        let sem = SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            test_id: overlay_test_id.clone(),
+                            labelled_by_element,
+                            ..Default::default()
+                        };
+                        let panel = cx.semantics_with_id(sem, move |_cx, panel_id| {
+                            controlled_element_id_out.set(Some(panel_id));
+                            vec![panel]
+                        });
+
                         vec![panel]
-                    });
-
-                    vec![panel]
+                    })
                 },
             );
 

@@ -1,0 +1,11 @@
+{"role":"domain","path":"CONTEXT.md","why":"Defines Fret terms such as Runtime Substrate, Policy Layer, Component Surface, and Component Ecosystem."}
+{"role":"architecture","path":"docs/architecture.md","why":"Defines core framework layers and ecosystem responsibilities."}
+{"role":"adr","path":"docs/adr/0032-style-tokens-and-theme-resolution.md","why":"Locks typed token and theme-resolution principles used by Material3 token work."}
+{"role":"adr","path":"docs/adr/0057-declarative-layout-style-and-flex-semantics.md","why":"Locks layout vocabulary and fit-content/flex expectations used by Material field recipes."}
+{"role":"adr","path":"docs/adr/0066-fret-ui-runtime-contract-surface.md","why":"Locks Runtime Substrate versus Policy Layer ownership."}
+{"role":"workstream","path":"docs/workstreams/material3/material3-refactor-plan.md","why":"Historical Material3 foundation plan and boundary decisions."}
+{"role":"workstream","path":"docs/workstreams/material3-layout-direction-provider-bridge-v1/CLOSEOUT_AUDIT_2026-05-30.md","why":"Closed direction provider bridge proof this lane extends."}
+{"role":"workstream","path":"docs/workstreams/material3-field-logical-insets-v1/CLOSEOUT_AUDIT_2026-05-30.md","why":"Closed field logical inset proof this lane extends."}
+{"role":"workstream","path":"docs/workstreams/material3-select-popup-rtl-v1/CLOSEOUT_AUDIT_2026-05-30.md","why":"Closed Select popup RTL proof this lane uses as exemplar."}
+{"role":"workstream","path":"docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json","why":"Token matrix lane state and follow-on policy."}
+

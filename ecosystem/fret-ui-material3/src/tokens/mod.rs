@@ -48,4 +48,6 @@ pub(crate) mod top_app_bar;
 pub(crate) mod typography;
 
 #[cfg(test)]
+mod visual_fixture_model;
+#[cfg(test)]
 mod visual_fixtures;
