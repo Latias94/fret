@@ -2,7 +2,7 @@
 
 #[test]
 fn combo_model_wrapper_does_not_materialize_items_vec_each_frame() {
-    let source = include_str!("../src/imui/combo_model_controls.rs");
+    let source = include_str!("../src/imui/combo_model_controls/entry.rs");
     assert!(
         !source.contains("let items: Vec<Arc<str>> = items.to_vec();"),
         "combo_model_with_options should keep items borrowed instead of cloning into Vec each frame"

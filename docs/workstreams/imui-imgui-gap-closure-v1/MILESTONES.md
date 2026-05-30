@@ -1675,6 +1675,13 @@ trigger `ResponseExt` population, and the open/menu badge chrome. `combo_control
 identity normalization, popup open/close model wiring, popup mounting, and aggregate
 `ComboResponse` open/toggled state. The public combo and combo-model facade APIs remain unchanged.
 
+2026-05-30 combo-model owner split result:
+`ecosystem/fret-ui-kit/src/imui/combo_model_controls.rs` is now a thin module/re-export hub.
+`combo_model_controls/entry.rs` owns model reads, preview fallback, combo option forwarding, and
+canonical combo mounting. `combo_model_controls/popup_items.rs` owns borrowed item iteration,
+selectable item rows, option test-id suffixes, model updates, and popup close. `response.rs` owns
+changed/edited/deactivated-after-edit response projection.
+
 2026-05-26 boolean visual owner-split result:
 `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs` now owns checkbox badges, radio
 indicators, switch state badges, and shared boolean label text. `boolean_controls.rs` keeps
