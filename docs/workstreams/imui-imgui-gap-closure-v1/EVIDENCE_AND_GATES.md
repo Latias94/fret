@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Interaction-Runtime Element-Model Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI interaction-runtime element-scoped model helpers split into context-menu,
+press, lifecycle, and floating child owners without changing context-menu anchor model creation,
+long-press signal storage, pointer-click modifier storage, lifecycle session storage,
+floating-window collapsed storage, or public interaction runtime re-exports.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/models/element.rs` is now a private
+  module/re-export hub for element-scoped interaction models.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/models/element/context_menu.rs` owns
+  context-menu anchor models.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/models/element/press.rs` owns long-press
+  signal and pointer-click modifier models.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/models/element/lifecycle.rs` owns lifecycle
+  session models.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/models/element/floating.rs` owns
+  floating-window collapsed models.
+- `tools/gate_imui_workstream_source.py` now checks the element hub/context-menu/press/lifecycle/
+  floating split.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass after narrowing a forbidden source marker
+  from `Point` to `fret_core::Point` so it does not match `PointerClick`.
+- `cargo nextest run -p fret-imui interaction_press interaction_shortcuts
+  popup_hover::context_basics
+  floating::window_options::floating_window_title_bar_double_click_toggles_collapsed
+  --no-fail-fast`: pass (22 passed, 164 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke --test
+  imui_floating_window_options_smoke --no-fail-fast`: pass (5 passed).
+
 ## Table-Column Visibility Menu-Items Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI table-column visibility repeated menu item composition moved into a private

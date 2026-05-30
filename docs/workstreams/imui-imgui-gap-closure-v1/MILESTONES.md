@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 interaction-runtime element-model child-owner result:
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/models/element.rs` is now a private
+module/re-export hub. `element/context_menu.rs` owns context-menu anchor models,
+`element/press.rs` owns long-press signal and pointer-click modifier models,
+`element/lifecycle.rs` owns lifecycle session models, and `element/floating.rs` owns floating-window
+collapsed models. Public interaction-runtime re-exports and model identity semantics remain
+unchanged.
+
 2026-05-30 table-column visibility menu-items child-owner result:
 `ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu.rs` now keeps header context-menu
 trigger selection and popup orchestration. `menu/items.rs` owns repeated column-menu item

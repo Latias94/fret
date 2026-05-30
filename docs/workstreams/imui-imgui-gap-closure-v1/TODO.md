@@ -989,6 +989,14 @@ Last updated: 2026-05-30
       Result: `interaction_runtime/models.rs` is now a private module/re-export index.
       `models/element.rs`, `models/window.rs`, `models/scope.rs`, and `models/state.rs` own the
       respective helper families and state shapes.
+- [x] Split IMUI interaction-runtime element-scoped model helpers into context-menu, press,
+      lifecycle, and floating child owners without changing context-menu anchor model creation,
+      long-press signal storage, pointer-click modifier storage, lifecycle session storage,
+      float-window collapsed storage, or public interaction runtime re-exports.
+      Result: `interaction_runtime/models/element.rs` is now a private module/re-export hub.
+      `element/context_menu.rs` owns context-menu anchor models, `element/press.rs` owns
+      long-press and pointer-click modifier models, `element/lifecycle.rs` owns lifecycle session
+      models, and `element/floating.rs` owns floating-window collapsed models.
 - [x] Split IMUI input-text props and assistive-semantics assembly into a private owner without
       changing model reads, response lifecycle population, select-all-on-focus effect dispatch,
       input filters/custom filter ordering, password mode, accessibility metadata, placeholder/
