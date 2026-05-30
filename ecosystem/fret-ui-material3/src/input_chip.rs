@@ -31,7 +31,9 @@ use fret_ui_kit::{
     resolve_override_slot_with,
 };
 
-use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
+use crate::foundation::context::{
+    theme_default_layout_direction, with_material_resolved_layout_direction,
+};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -42,6 +44,7 @@ use crate::foundation::interaction::pressable_interaction;
 use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, enforce_minimum_interactive_size, minimum_interactive_size,
 };
+use crate::foundation::logical_edges::{horizontal_logical_edges, set_inset_inline_end};
 use crate::foundation::test_id::optional_part_test_id;
 use crate::tokens::input_chip as input_chip_tokens;
 
@@ -511,29 +514,32 @@ impl InputChip {
                         let trailing_icon = self.trailing_icon;
                         let trailing_icon_size = trailing_icon.as_ref().map(|_| trailing_icon_px);
 
-                        let layout_direction =
-                            resolved_layout_direction(cx, default_layout_direction);
-
-                        let content = chip_content(
+                        let content = with_material_resolved_layout_direction(
                             cx,
-                            label_style.clone(),
-                            &self.label,
-                            label_color,
-                            leading_icon,
-                            leading_icon_size,
-                            leading_icon_color,
-                            trailing_icon,
-                            trailing_icon_size,
-                            trailing_icon_color,
-                            enabled,
-                            selected,
-                            self.test_id.clone(),
-                            self.trailing_action.clone(),
-                            self.on_trailing_icon_activate.clone(),
-                            self.trailing_icon_a11y_label.clone(),
-                            pressable_id,
-                            layout_direction,
-                            height,
+                            default_layout_direction,
+                            |cx, layout_direction| {
+                                chip_content(
+                                    cx,
+                                    label_style.clone(),
+                                    &self.label,
+                                    label_color,
+                                    leading_icon,
+                                    leading_icon_size,
+                                    leading_icon_color,
+                                    trailing_icon,
+                                    trailing_icon_size,
+                                    trailing_icon_color,
+                                    enabled,
+                                    selected,
+                                    self.test_id.clone(),
+                                    self.trailing_action.clone(),
+                                    self.on_trailing_icon_activate.clone(),
+                                    self.trailing_icon_a11y_label.clone(),
+                                    pressable_id,
+                                    layout_direction,
+                                    height,
+                                )
+                            },
                         );
 
                         let mut chrome = ContainerProps::default();
@@ -609,12 +615,12 @@ fn chip_content<H: UiHost>(
     let trailing_icon_is_actionable =
         trailing_action.is_some() || on_trailing_icon_activate.is_some();
 
-    let padding_left = if leading_icon.is_some() {
+    let padding_inline_start = if leading_icon.is_some() {
         WITH_LEADING_ICON_LEADING_SPACE
     } else {
         LEADING_SPACE
     };
-    let padding_right = if trailing_icon.is_some() {
+    let padding_inline_end = if trailing_icon.is_some() {
         WITH_TRAILING_ICON_TRAILING_SPACE
     } else {
         TRAILING_SPACE
@@ -625,12 +631,13 @@ fn chip_content<H: UiHost>(
     props.justify = MainAlign::Center;
     props.align = CrossAlign::Center;
     props.gap = Px(0.0).into();
-    props.padding = Edges {
-        left: padding_left,
-        right: padding_right,
-        top: Px(0.0),
-        bottom: Px(0.0),
-    }
+    props.padding = horizontal_logical_edges(
+        layout_direction,
+        padding_inline_start,
+        padding_inline_end,
+        Px(0.0),
+        Px(0.0),
+    )
     .into();
     props.layout.size.height = Length::Px(height);
     props.layout.position = PositionStyle::Relative;
@@ -782,7 +789,7 @@ fn trailing_icon_touch_target_overlay<H: UiHost>(
             layout.inset.top = Some(top).into();
             // In flex layout, absolute positioning uses the content rect (excluding padding).
             // Offset by the chip's trailing padding so the touch target covers the visible edge.
-            layout.inset.right = Some(Px(-8.0)).into();
+            set_inset_inline_end(&mut layout, layout_direction, Px(-8.0));
             layout.size.width = Length::Px(width);
             layout.size.height = Length::Px(min_touch);
 
