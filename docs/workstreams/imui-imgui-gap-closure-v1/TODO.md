@@ -44,6 +44,12 @@ Last updated: 2026-05-30
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI floating-window closed/open-model response construction out of the root window
+      wrapper without changing open-model read semantics, hidden-window sentinel area id,
+      initial-position/size response preservation, normal floating-area routing, on-area chrome
+      rendering, or public `FloatingWindowResponse` behavior.
+      Result: `floating_window.rs` now keeps open-model reads and normal floating-area render
+      routing. `floating_window/closed.rs` owns the open=false sentinel response.
 - [x] Split IMUI menu-item interaction parts/pressable props out of the interaction hub without
       changing enabled/action gating, menubar policy capture, close-popup/action runtime data,
       pressable a11y fields, active-trigger installation, keyboard behavior, or response

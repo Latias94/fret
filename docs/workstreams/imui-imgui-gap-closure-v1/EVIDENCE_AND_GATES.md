@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Floating-Window Closed Response Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI floating-window closed/open-model response construction split into a private
+child owner without changing open-model read semantics, hidden-window sentinel area id,
+initial-position/size response preservation, normal floating-area routing, on-area chrome
+rendering, or public `FloatingWindowResponse` behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window.rs` keeps open-model reads and normal
+  floating-area render routing.
+- `ecosystem/fret-ui-kit/src/imui/floating_window/closed.rs` owns the open=false sentinel response,
+  including the zero area id, initial position/size preservation, and inactive response flags.
+- `tools/gate_imui_workstream_source.py` now checks the root/closed split and keeps sentinel
+  response construction out of the root window wrapper.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the root and closed
+  owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke
+  --no-fail-fast`: pass (3 passed).
+- `cargo nextest run -p fret-imui
+  floating::movement_z_order::floating_window_close_button_sets_open_false --no-fail-fast`: pass
+  (1 passed, 185 skipped).
+
 ## Menu Item Interaction Parts Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI menu-item interaction parts and pressable props split into a private child

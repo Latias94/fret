@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 floating-window closed response child-owner result:
+`ecosystem/fret-ui-kit/src/imui/floating_window.rs` now keeps open-model reads and normal
+floating-area render routing. `floating_window/closed.rs` owns the open=false sentinel response,
+including the zero area id, initial position/size preservation, and inactive
+`FloatingWindowResponse` flags. Normal floating-area routing, on-area chrome rendering, and public
+window response behavior remain unchanged.
+
 2026-05-30 menu item interaction parts child-owner result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` now keeps enabled/action gating,
 menubar policy capture, and thin behavior forwarding. `interaction/parts.rs` owns

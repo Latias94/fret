@@ -3,12 +3,14 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::Point;
-use fret_ui::{GlobalElementId, UiHost};
+use fret_ui::UiHost;
 
 use super::{
-    FloatingAreaOptions, FloatingAreaResponse, FloatingWindowResponse, ImUiFacade,
-    UiWriterImUiFacadeExt, WindowOptions, floating_window_on_area,
+    FloatingAreaOptions, FloatingWindowResponse, ImUiFacade, UiWriterImUiFacadeExt, WindowOptions,
+    floating_window_on_area,
 };
+
+mod closed;
 
 pub(super) fn floating_window_show<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -39,18 +41,7 @@ pub(super) fn floating_window_show_with_options<H: UiHost, W: UiWriterImUiFacade
             .with_cx_mut(|cx| cx.read_model(open, fret_ui::Invalidation::Paint, |_app, v| *v))
             .unwrap_or(false);
         if !is_open {
-            return FloatingWindowResponse {
-                area: FloatingAreaResponse {
-                    id: GlobalElementId(0),
-                    rect: None,
-                    position: initial_position,
-                    dragging: false,
-                    drag_kind: super::float_window_drag_kind_for_element(GlobalElementId(0)),
-                },
-                size: initial_size,
-                resizing: false,
-                collapsed: false,
-            };
+            return closed::closed_floating_window_response(initial_position, initial_size);
         }
     }
 
