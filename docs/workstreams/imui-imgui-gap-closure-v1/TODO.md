@@ -2509,6 +2509,12 @@ Last updated: 2026-05-31
       activate-handler popup close/click signaling, keyboard owner delegation, transient clicked
       reads, and `ResponseExt` population. `selectable_controls.rs` keeps label identity,
       `SelectableOptions` a11y wiring, selected/highlighted state reads, and row visual assembly.
+- [x] Split IMUI selectable regression tests into private palette and row-text owners without
+      changing selected/hover/disabled palette resolution, highlight semantics, shared list-row
+      text role layout, or inherited foreground assertions.
+      Result: `selectable_controls/tests.rs` now keeps shared helpers and module routing only.
+      `tests/palette.rs` owns palette policy coverage, while `tests/row_text.rs` owns row label
+      text-role coverage.
 - [x] Split IMUI child-region resize handle/drag ownership out of
       `ecosystem/fret-ui-kit/src/imui/child_region.rs` into a private owner module without
       changing the public child-region facade or response surface.

@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Selectable Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI selectable regression tests split into private palette and row-text owners
+without changing selected/hover/disabled palette resolution, highlight semantics, shared list-row
+text role layout, or inherited foreground assertions.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/tests.rs` is now a thin hub with shared
+  helpers and module routing only.
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/tests/palette.rs` owns selected, hover,
+  disabled, and highlighted palette coverage.
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/tests/row_text.rs` owns selectable row
+  label text-role coverage.
+- `tools/gate_imui_workstream_source.py` now checks the hub and both private test owners and
+  rejects palette or row-text coverage from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the selectable test-owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  selectable_palette_prefers_selected_background_hover_foreground_and_disabled_muted
+  selectable_palette_highlight_uses_hover_style_without_selected_semantics
+  selectable_row_label_uses_shared_list_row_text_role --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Table-Column Visibility Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI table-column visibility regression tests split into private state and menu

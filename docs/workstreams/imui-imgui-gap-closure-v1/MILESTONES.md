@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 selectable test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/selectable_controls/tests.rs` is now a thin test hub.
+`tests/palette.rs` owns selected/hover/disabled palette and highlight coverage, while
+`tests/row_text.rs` owns shared list-row text-role coverage for selectable rows. Public selectable
+behavior remains unchanged.
+
 2026-05-31 table-column visibility test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/table_column_visibility/tests.rs` is now a thin test hub.
 `tests/state.rs` owns runtime override, snapshot, and column-application coverage, while
