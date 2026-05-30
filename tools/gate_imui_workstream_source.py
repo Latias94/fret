@@ -6398,6 +6398,11 @@ def main() -> None:
             Path("ecosystem/fret-ui-kit/src/imui/image_item_controls/tests.rs"),
             required=[
                 "use super::visual::{",
+                "mod helpers;",
+                "mod props;",
+            ],
+            forbidden=[
+                "#[test]",
                 "image_item_helpers_sanitize_size_opacity_and_uv",
                 "image_props_fill_the_interactive_item_box",
                 "sanitize_item_size(Size::new(Px(-8.0), Px(f32::NAN)))",
@@ -6406,8 +6411,38 @@ def main() -> None:
                 "image_props_for_item(",
                 "props.layout.size.width, Length::Fill",
                 "props.uv, Some(UvRect::FULL)",
+                "pub fn ",
+                "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/image_item_controls/tests/helpers.rs"),
+            required=[
+                "use super::*;",
+                "image_item_helpers_sanitize_size_opacity_and_uv",
+                "sanitize_item_size(Size::new(Px(-8.0), Px(f32::NAN)))",
+                "normalize_opacity(f32::NAN)",
+                "uv_rect_is_valid(UvRect::FULL)",
             ],
             forbidden=[
+                "image_props_for_item(",
+                "props.layout.size.width",
+                "pub fn ",
+                "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/image_item_controls/tests/props.rs"),
+            required=[
+                "use super::*;",
+                "image_props_fill_the_interactive_item_box",
+                "image_props_for_item(",
+                "props.layout.size.width, Length::Fill",
+                "props.uv, Some(UvRect::FULL)",
+            ],
+            forbidden=[
+                "sanitize_item_size(",
+                "normalize_opacity(",
                 "pub fn ",
                 "fret_imui",
             ],

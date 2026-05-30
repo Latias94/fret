@@ -629,6 +629,8 @@
     "ecosystem/fret-ui-kit/src/imui/image_item_controls/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/image_item_controls/visual.rs",
     "ecosystem/fret-ui-kit/src/imui/image_item_controls/tests.rs",
+    "ecosystem/fret-ui-kit/src/imui/image_item_controls/tests/helpers.rs",
+    "ecosystem/fret-ui-kit/src/imui/image_item_controls/tests/props.rs",
     "ecosystem/fret-ui-kit/src/imui/combo_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/combo_controls/trigger.rs",
     "ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/behavior.rs",

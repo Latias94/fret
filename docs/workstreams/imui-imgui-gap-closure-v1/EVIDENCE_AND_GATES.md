@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Image-Item Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI image-item visual helper regressions split into private helpers and props
+owners without changing size/opacity/UV normalization or image props box-fill semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/image_item_controls/tests.rs` is now a thin hub with shared
+  imports and module routing only.
+- `ecosystem/fret-ui-kit/src/imui/image_item_controls/tests/helpers.rs` owns size/opacity/UV
+  normalization coverage.
+- `ecosystem/fret-ui-kit/src/imui/image_item_controls/tests/props.rs` owns image props
+  fill/fit/sampling/UV coverage.
+- `tools/gate_imui_workstream_source.py` now checks the hub and both private test owners and
+  rejects image-item regression bodies from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the image-item test-owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  image_item_helpers_sanitize_size_opacity_and_uv
+  image_props_fill_the_interactive_item_box --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_image_item_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Label-Identity Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI label-identity porting-sugar regressions split into private double-hash and

@@ -61,6 +61,11 @@ Last updated: 2026-05-31
       Result: `label_identity/tests.rs` now keeps module routing only. `tests/double_hash.rs` owns
       plain and `##` identity coverage, while `tests/triple_hash.rs` owns `###` stable identity and
       precedence coverage.
+- [x] Split IMUI image-item visual helper regressions into private helpers and props owners
+      without changing size/opacity/UV normalization or image props box-fill semantics.
+      Result: `image_item_controls/tests.rs` now keeps shared imports and module routing only.
+      `tests/helpers.rs` owns normalization coverage, while `tests/props.rs` owns image props
+      fill/fit/sampling/UV coverage.
 - [x] Split IMUI debug-draw path-builder regression coverage into private sub-owners without
       changing path stroke/fill command recording, rectangle/rounded-rectangle sampling, Bezier
       defaults, circular/elliptical arc defaults, or invalid finished-path cleanup.

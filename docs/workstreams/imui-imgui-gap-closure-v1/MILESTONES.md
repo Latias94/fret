@@ -27,6 +27,11 @@ no-trigger fallback coverage. Public drag/drop behavior remains unchanged.
 `tests/double_hash.rs` owns plain and `##` identity coverage, while `tests/triple_hash.rs` owns
 `###` stable identity and precedence coverage. Public label identity behavior remains unchanged.
 
+2026-05-31 image-item test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/image_item_controls/tests.rs` is now a thin test hub.
+`tests/helpers.rs` owns size/opacity/UV normalization coverage, while `tests/props.rs` owns image
+props fill/fit/sampling/UV coverage. Public image-item behavior remains unchanged.
+
 2026-05-31 facade-writer text test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` is now a thin test hub.
 `tests/text.rs` owns `ui.text(...)` dense single-line coverage, while `tests/wrapped.rs` owns
