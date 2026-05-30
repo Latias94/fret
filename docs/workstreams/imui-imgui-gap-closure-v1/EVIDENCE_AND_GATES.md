@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Debug-Draw Draw-List Summary Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI debug-draw draw-list summary regression coverage split into private
+merge/counts/clip-stack sub-owners without changing channel merge summary ordering, visible command
+class counts, effective clip-stack projection, or clip push/pop command recording.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/summaries.rs` is now a thin
+  test hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/summaries/merge_order.rs`
+  owns command-summary merge ordering coverage.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/summaries/counts.rs` owns
+  aggregate list-summary counts.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/summaries/clip_stack.rs`
+  owns effective clip-stack projection and clip push/pop command coverage.
+- `tools/gate_imui_workstream_source.py` now checks the summary test hub/sub-owner split and
+  rejects summary regression bodies from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the summary test owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui
+  debug_draw_list_reports_command_summaries_in_merge_order
+  debug_draw_list_summary_counts_visible_command_classes
+  debug_draw_command_summaries_track_effective_clip_stack
+  debug_draw_list_records_clip_stack_commands --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Container Identity Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI container identity regression tests split into private outer-surface and scroll

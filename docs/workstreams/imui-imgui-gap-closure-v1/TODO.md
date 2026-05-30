@@ -60,6 +60,14 @@ Last updated: 2026-05-31
       `tests/draw_list/commands/meshes.rs` owns triangle mesh coverage,
       `tests/draw_list/commands/media.rs` owns image/SVG overlay coverage, and
       `tests/draw_list/commands/polygons.rs` owns concave fill coverage.
+- [x] Split IMUI debug-draw draw-list summary regression coverage into private merge/counts/clip
+      sub-owners without changing channel merge summary ordering, visible command class counts,
+      effective clip-stack projection, or clip push/pop command recording.
+      Result: `debug_draw_controls/tests/draw_list/summaries.rs` is now a thin test hub.
+      `tests/draw_list/summaries/merge_order.rs` owns command-summary merge ordering,
+      `tests/draw_list/summaries/counts.rs` owns aggregate list-summary counts, and
+      `tests/draw_list/summaries/clip_stack.rs` owns effective clip-stack and clip-command
+      coverage.
 - [x] Split IMUI debug-draw path helper regression coverage into private sub-owners without
       changing rect/polyline/polygon/triangle/quad path closure, circle/ngon/ellipse path
       generation, ellipse defaults/rotation, or native Bezier path command routing.

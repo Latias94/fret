@@ -28,6 +28,13 @@ lives in `tests/draw_list/commands/media.rs`, and concave polygon fill coverage 
 `tests/draw_list/commands/polygons.rs`. `ImUiDebugDrawList` command recording behavior and public
 debug-draw authoring APIs remain unchanged.
 
+2026-05-31 debug-draw draw-list summary test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/summaries.rs` is now a thin
+test hub. `tests/draw_list/summaries/merge_order.rs` owns command-summary merge ordering,
+`tests/draw_list/summaries/counts.rs` owns aggregate list-summary counts, and
+`tests/draw_list/summaries/clip_stack.rs` owns effective clip-stack plus clip push/pop command
+coverage.
+
 2026-05-31 debug-draw path helper test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/paths.rs` is now a thin test hub.
 Rect/polyline/polygon/triangle/quad path closure coverage lives in `tests/paths/linear.rs`,
