@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-21",
   "scope_kind": "execution",
+  "lane_slug": "diagnostics-performance",
   "problem": "Make Fret performance evidence explainable and reviewable by keeping stats, diffs, triage, gates, and trace artifacts versioned, additive-only, source-labeled, and tied to runnable repros. This lane owns attribution tooling, not the underlying UI hot-path optimizations.",
   "authoritative_docs": [
     {

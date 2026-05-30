@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-15",
   "scope_kind": "execution",
+  "lane_slug": "diagnostics-performance",
   "problem": "Make Fret performance profiling surfaces review-grade by keeping frame stats, phase timelines, CPU-vs-wall signals, trace artifacts, and perf key contracts explainable, additive, and tied to reproducible evidence.",
   "authoritative_docs": [
     {

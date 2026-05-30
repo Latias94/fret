@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-29",
   "scope_kind": "execution",
+  "lane_slug": "fret-node-mechanisms",
   "problem": "`fret-node` must converge on a declarative-first, controller/binding-first public consumer surface without leaking retained compatibility internals as the taught default.",
   "authoritative_docs": [
     {

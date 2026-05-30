@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-30",
   "scope_kind": "execution",
+  "lane_slug": "framework-boundaries",
   "problem": "`fret-node` mixes reusable headless node/flow graph engine contracts with Fret UI adapter responsibilities; Jellyflow needs a stable in-workspace package boundary before any future standalone repository extraction.",
   "authoritative_docs": [
     {

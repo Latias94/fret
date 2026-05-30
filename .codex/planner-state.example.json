@@ -1,0 +1,25 @@
+{
+  "updated": "YYYY-MM-DD",
+  "baseline": {
+    "repo": "<primary fret repo or planner worktree>",
+    "branch": "main",
+    "head": "<short sha>",
+    "status": "clean",
+    "ahead_behind": ""
+  },
+  "terminals": [
+    {
+      "role": "planner",
+      "lane_slug": null,
+      "repo_path": "<planner repo path>",
+      "branch": "main",
+      "head": "<short sha>",
+      "workstream": null,
+      "task": null,
+      "status": "ready",
+      "shared_scopes": [],
+      "validation": []
+    }
+  ],
+  "related_repos": []
+}

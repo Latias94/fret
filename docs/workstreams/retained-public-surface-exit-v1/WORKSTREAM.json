@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-25",
   "scope_kind": "execution",
+  "lane_slug": "framework-boundaries",
   "follow_on_of": "retained-bridge-exit-v1",
   "problem": "Make retained widget authoring explicit compatibility surface instead of the default `fret-ui` public authoring model, while keeping the remaining `fret-node` retained canvas island compiling behind its migration feature.",
   "authoritative_docs": [
