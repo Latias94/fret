@@ -2063,6 +2063,14 @@ Last updated: 2026-05-30
       keyboard lifecycle marking, selected-model writes, activate-shortcut handling, clicked
       transient reads, and `ResponseExt` population. `trigger.rs` keeps tab trigger props,
       collection a11y, keyed trigger assembly, and visual mounting.
+- [x] Split IMUI tab trigger behavior into activation, keyboard, and response owners without
+      changing active-trigger installation options, selected-tab model writes, keyboard lifecycle
+      marking, activate-shortcut repeat/IME gating, clicked response projection, or public tab-bar
+      facade behavior.
+      Result: `tab_family_controls/trigger/behavior.rs` keeps input structure, active-trigger
+      behavior installation, and owner dispatch. `behavior/activation.rs` owns activate selection
+      writes, `behavior/keyboard.rs` owns shortcut selection writes, and `behavior/response.rs`
+      owns active-trigger response projection.
 - [x] Split IMUI popup-menu policy state and panel composition out of
       `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu.rs` into private owner modules without
       changing popup/menu/submenu behavior or facade entry points.

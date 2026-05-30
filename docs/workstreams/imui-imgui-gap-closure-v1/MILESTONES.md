@@ -1324,6 +1324,12 @@ behavior installation, keyboard lifecycle marking, selected-model writes, activa
 handling, clicked transient reads, and `ResponseExt` population. `trigger.rs` now keeps tab trigger
 props, collection a11y, keyed trigger assembly, and visual mounting.
 
+2026-05-30 tab trigger behavior sub-owner split result:
+`ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger/behavior.rs` now keeps input structure,
+active-trigger behavior installation, and owner dispatch only. `trigger/behavior/activation.rs`
+owns activate selected-model writes, `trigger/behavior/keyboard.rs` owns activate-shortcut selected
+model writes, and `trigger/behavior/response.rs` owns active-trigger response projection.
+
 2026-05-27 control chrome palette owner-split result:
 `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome.rs` now owns `ImUiControlPalette`, button
 theme color resolution, field theme color resolution, and compact button/field container chrome.

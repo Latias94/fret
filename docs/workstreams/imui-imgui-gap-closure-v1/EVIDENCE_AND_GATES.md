@@ -5720,6 +5720,42 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Tab Trigger Behavior Sub-Owner Evidence - 2026-05-30
+
+Claim verified: IMUI tab trigger activation, keyboard, and response projection split into private
+owners without changing active-trigger installation options, selected-tab model writes, keyboard
+lifecycle marking, activate-shortcut repeat/IME gating, clicked response projection, or public
+tab-bar facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger/behavior.rs` keeps input structure,
+  active-trigger behavior installation, and owner dispatch.
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger/behavior/activation.rs` owns activate
+  selected-model writes, keyboard lifecycle marking, and clicked transient emission.
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger/behavior/keyboard.rs` owns activate
+  shortcut repeat/IME gating, selected-model writes, lifecycle marking, and clicked transient
+  emission.
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger/behavior/response.rs` owns clicked
+  transient extraction and active-trigger response projection.
+- `tools/gate_imui_workstream_source.py` now rejects activation, keyboard, and response projection
+  logic from drifting back into the tab trigger behavior hub and checks the three child owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib tab_family_controls --no-fail-fast`:
+  pass; 1 tab visual role test passed.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::tabs --no-fail-fast`: pass; 3 tab
+  interaction tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Floating Drag Surface Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI floating-area drag-surface behavior moved into a private owner without
