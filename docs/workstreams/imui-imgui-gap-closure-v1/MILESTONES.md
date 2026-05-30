@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 debug-draw filled polygon child-owner result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/polygons.rs` is now
+a private re-export hub. `polygons/multi.rs` owns convex and concave polygon fill painting, while
+`polygons/primitives.rs` owns quad and triangle fill painting plus degenerate-triangle filtering.
+Filled path command generation, shared fill style, canvas path dispatch, and draw-list behavior
+remain unchanged.
+
 2026-05-30 debug-draw media dispatch child-owner result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/dispatch.rs` is now a private
 dispatch hub for media-command routing. `dispatch/raster_commands.rs` owns image/image-region/

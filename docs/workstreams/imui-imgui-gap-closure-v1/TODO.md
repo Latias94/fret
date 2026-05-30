@@ -770,6 +770,9 @@ Last updated: 2026-05-30
       Result: `paint_shapes/paths/filled/polygons.rs` owns convex/concave/quad/triangle fills and
       `paint_shapes/paths/filled/round.rs` owns circle/ngon/ellipse fills. `filled.rs` keeps the
       shared fill style plus private re-exports.
+      2026-05-30 follow-up: `paint_shapes/paths/filled/polygons.rs` is now itself a private
+      re-export hub. `polygons/multi.rs` owns convex/concave polygon fills, while
+      `polygons/primitives.rs` owns quad/triangle fills and degenerate-triangle filtering.
 - [x] Split IMUI disclosure header indicator, padding, and border metrics into a private owner
       without changing header row composition, palette resolution, indicator glyph text role, tree
       row label text role, or tree-node/collapsing-header public behavior.

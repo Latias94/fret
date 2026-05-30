@@ -3821,34 +3821,45 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
-## Debug-Draw Filled Path Painter Owner-Split Evidence - 2026-05-28
+## Debug-Draw Filled Path Painter Owner-Split Evidence - 2026-05-28 / 2026-05-30
 
 Claim verified: IMUI debug-draw filled path painters split into polygon-fill and round-fill private
-owners without changing public draw-list commands, path command generation, shared fill style,
+owners, with the polygon-fill owner further split into multi-polygon and primitive-shape child
+owners, without changing public draw-list commands, path command generation, shared fill style,
 canvas path dispatch, summaries, or debug-draw smoke behavior.
 
 Evidence:
 
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled.rs` keeps the
   shared fill style and private re-exports.
-- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/polygons.rs` owns
-  convex/concave/quad/triangle fill painting.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/polygons.rs` is
+  now a private re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/polygons/multi.rs`
+  owns convex and concave polygon fill painting.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/polygons/primitives.rs`
+  owns quad and triangle fill painting plus degenerate-triangle filtering.
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/round.rs` owns
   circle/ngon/ellipse fill painting.
 - `tools/gate_imui_workstream_source.py` now rejects filled path painter bodies from drifting back
-  into `filled.rs` and checks the dedicated polygon/round fill owners.
+  into `filled.rs`, checks the polygon/round fill owners, and freezes the polygon child split.
 
 Focused gates:
 
-- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo fmt -p fret-ui-kit`: pass.
 - `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
-- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
 - `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls::tests::paths
+  debug_draw_controls::tests::draw_list::commands::debug_draw_list_records_concave_poly_fill_command
+  debug_draw_controls::tests::draw_list::commands::debug_draw_list_records_commands_in_order
+  --no-fail-fast`: pass (12 passed, 678 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass (1 passed).
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
-- `cargo check -p fret-ui-kit --features imui --lib`: pass.
-- `cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast`: pass; 39
-  debug-draw tests passed.
 
 ## Disclosure Header Metrics Owner-Split Evidence - 2026-05-28
 
