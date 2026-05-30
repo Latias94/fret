@@ -8821,6 +8821,43 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Menu Item Visual-Row Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI menu-item visual row layout and trailing/indicator content details moved into
+private child owners without changing menu item row structure, checkbox/radio/submenu indicators,
+shortcut semantics, shortcut test-id derivation, text-role helpers, pressable behavior, or facade
+APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/element/visual_row.rs` keeps option projection and
+  render orchestration for the visible menu-item row.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/element/visual_row/layout.rs` owns menu item
+  panel/row props, width/height policy, padding, and row gap.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/element/visual_row/content.rs` owns
+  checkbox/radio/submenu indicator selection, shortcut mounting, spacer insertion, and shortcut
+  test-id stamping.
+- `tools/gate_imui_workstream_source.py` now rejects layout props, spacer/semantics decoration,
+  shortcut text mounting, indicator glyphs, and helper bodies from drifting back into
+  `visual_row.rs` while requiring the two private child owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_controls::tests --no-fail-fast`:
+  pass; 4 tests, 686 skipped.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation
+  interaction_menu_tabs::submenu_shortcuts
+  interaction_shortcuts::command_metadata::menu_item_command_uses_command_metadata_shortcut_and_gating
+  popup_hover::item_keyboard --no-fail-fast`: pass; 15 tests, 171 skipped.
+- `python tools\check_workstream_catalog.py`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `git diff --check`: pass.
+
 ## Button Behavior Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI button pressable/action behavior moved into a focused private owner without

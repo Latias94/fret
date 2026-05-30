@@ -1770,6 +1770,12 @@ props, checkbox/radio/submenu indicator selection, label/shortcut/submenu glyph 
 shortcut test-id stamping. `menu_controls/element.rs` keeps pressable orchestration, interaction
 owner wiring, response population, and the custom `pressable_hook` insertion point.
 
+2026-05-30 menu-item visual-row child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/element/visual_row.rs` now keeps menu-item visual row
+option projection and render orchestration only. `visual_row/layout.rs` owns panel/row props, and
+`visual_row/content.rs` owns checkbox/radio/submenu indicator selection, shortcut mounting, and
+shortcut test-id stamping.
+
 2026-05-26 menu-item keyboard owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard.rs` now owns item-local activate shortcut
 handling, popup menu roving focus, menubar close-auto-focus suppression, and horizontal-arrow menu

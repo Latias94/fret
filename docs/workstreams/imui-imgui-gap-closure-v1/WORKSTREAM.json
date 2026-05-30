@@ -643,6 +643,8 @@
     "ecosystem/fret-ui-kit/src/imui/menu_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/element.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/element/visual_row.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls/element/visual_row/content.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls/element/visual_row/layout.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/routing.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/core.rs",
