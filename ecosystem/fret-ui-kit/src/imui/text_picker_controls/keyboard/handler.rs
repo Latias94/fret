@@ -3,9 +3,11 @@ use std::sync::Arc;
 use fret_core::{KeyCode, Modifiers};
 use fret_runtime::Model;
 use fret_ui::UiHost;
-use fret_ui::action::UiActionHostExt as _;
 
-use super::{InputTextPickerKeyboardPick, InputTextPickerKeyboardState};
+use super::InputTextPickerKeyboardState;
+
+mod navigation;
+mod pick;
 
 pub(in crate::imui::text_picker_controls) fn install_picker_keyboard_handler<H: UiHost>(
     cx: &mut fret_ui::ElementContext<'_, H>,
@@ -31,69 +33,21 @@ pub(in crate::imui::text_picker_controls) fn install_picker_keyboard_handler<H: 
             }
 
             match down.key {
-                KeyCode::ArrowDown | KeyCode::ArrowUp => {
-                    let forward = down.key == KeyCode::ArrowDown;
-                    let current_source_index = host
-                        .models_mut()
-                        .read(&state, |state| state.active_source_index)
-                        .ok()
-                        .unwrap_or(None);
-                    let current_visible_index = current_source_index.and_then(|source_index| {
-                        visible_candidates
-                            .iter()
-                            .position(|(candidate_source, _)| *candidate_source == source_index)
-                    });
-                    let disabled = vec![false; visible_candidates.len()];
-                    let Some(next_visible_index) =
-                        crate::headless::cmdk_selection::next_active_index(
-                            &disabled,
-                            current_visible_index,
-                            forward,
-                            true,
-                        )
-                    else {
-                        return false;
-                    };
-                    let next_source_index = visible_candidates[next_visible_index].0;
-                    let _ = host.update_model(&state, |state| {
-                        state.active_source_index = Some(next_source_index);
-                        state.active_element = None;
-                        state.picked = None;
-                    });
-                    host.request_redraw(action_cx.window);
-                    true
-                }
-                KeyCode::Enter | KeyCode::NumpadEnter => {
-                    let current_source_index = host
-                        .models_mut()
-                        .read(&state, |state| state.active_source_index)
-                        .ok()
-                        .unwrap_or(None);
-                    let Some(current_visible_index) =
-                        current_source_index.and_then(|source_index| {
-                            visible_candidates
-                                .iter()
-                                .position(|(candidate_source, _)| *candidate_source == source_index)
-                        })
-                    else {
-                        return false;
-                    };
-                    let (source_index, candidate) =
-                        visible_candidates[current_visible_index].clone();
-                    let next_value = candidate.to_string();
-                    let _ = host.update_model(&model, |value| *value = next_value);
-                    let _ = host.update_model(&popup_open, |open| *open = false);
-                    let _ = host.update_model(&state, |state| {
-                        state.active_source_index = Some(source_index);
-                        state.active_element = None;
-                        state.picked = Some(InputTextPickerKeyboardPick {
-                            source_index,
-                            value: candidate,
-                        });
-                    });
-                    host.request_redraw(action_cx.window);
-                    true
-                }
+                KeyCode::ArrowDown | KeyCode::ArrowUp => navigation::move_picker_highlight(
+                    host,
+                    action_cx,
+                    down.key == KeyCode::ArrowDown,
+                    &state,
+                    &visible_candidates,
+                ),
+                KeyCode::Enter | KeyCode::NumpadEnter => pick::commit_picker_highlight(
+                    host,
+                    action_cx,
+                    &model,
+                    &popup_open,
+                    &state,
+                    &visible_candidates,
+                ),
                 _ => false,
             }
         }),

@@ -901,6 +901,13 @@ Focused gates passed: `cargo fmt -p fret-ui-kit`, `cargo check -p fret-ui-kit --
 `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`, source gate, catalog, and
 `git diff --check`.
 
+2026-05-30 text-picker keyboard handler sub-owner split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard/handler.rs` now keeps key-down
+capture, repeat/IME/modifier gating, and key dispatch. `keyboard/handler/navigation.rs` owns Arrow
+highlight movement through the cmdk active-index helper. `keyboard/handler/pick.rs` owns
+Enter/NumpadEnter highlighted candidate commit, input model writes, popup close, pending pick
+storage, and redraw.
+
 2026-05-28 menu routing dispatch owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/entries.rs` now owns
 public-in-IMUI menu-item entry wrappers plus semantics/action selection.

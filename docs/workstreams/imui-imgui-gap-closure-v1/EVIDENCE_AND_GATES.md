@@ -4643,12 +4643,47 @@ Focused gates:
 
 - `cargo fmt -p fret-ui-kit`: pass.
 - `cargo check -p fret-ui-kit --features imui --lib`: pass.
-- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass (6 passed,
+  180 skipped).
 - `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
   pass.
 - `python tools\gate_imui_workstream_source.py`: pass.
 - `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Text-Picker Keyboard Handler Sub-Owner Evidence - 2026-05-30
+
+Claim verified: IMUI input-text picker keyboard handler split into private navigation and commit
+child owners without changing key-down capture, repeat/IME/modifier gating, Arrow highlight
+movement, Enter/NumpadEnter pick handling, popup close, model writes, or picker response
+projection.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard/handler.rs` keeps key-down capture,
+  repeat/IME/modifier gating, visible-candidate gating, and key dispatch.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard/handler/navigation.rs` owns Arrow
+  highlight movement through the shared cmdk active-index helper and clears pending pick state on
+  movement.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard/handler/pick.rs` owns
+  Enter/NumpadEnter highlighted candidate commit, input model writes, popup close, pending pick
+  storage, and redraw.
+- `tools/gate_imui_workstream_source.py` now checks the navigation/commit child owners and rejects
+  navigation or commit bodies from drifting back into `handler.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass (6 passed,
+  180 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass; validated 504 dedicated directories and 47
+  standalone markdown files.
 - `git diff --check`: pass.
 
 ## Menu Routing Dispatch Owner-Split Evidence - 2026-05-28

@@ -1030,6 +1030,13 @@ Last updated: 2026-05-30
       Result: `text_picker_controls/keyboard/handler.rs` owns key-down capture plus Arrow/Enter
       model writes. `text_picker_controls/keyboard.rs` keeps keyboard pick/state/snapshot storage
       and reconciliation.
+- [x] Split IMUI input-text picker keyboard handler into navigation and commit child owners without
+      changing key-down capture, repeat/IME/modifier gating, Arrow highlight movement, Enter/
+      NumpadEnter pick handling, popup close, model writes, or picker response projection.
+      Result: `text_picker_controls/keyboard/handler.rs` keeps capture/gating and key dispatch.
+      `text_picker_controls/keyboard/handler/navigation.rs` owns Arrow highlight movement.
+      `text_picker_controls/keyboard/handler/pick.rs` owns highlighted candidate commit, model
+      writes, popup close, pending pick storage, and redraw.
 - [x] Split IMUI menu item routing dispatch into private entry and core owners without changing
       menu item method names, checkbox/radio/action semantics roles, action forwarding,
       label-identity scoping, pressable hook injection, mount routing, response population, or
