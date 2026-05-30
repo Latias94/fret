@@ -1855,6 +1855,12 @@ Last updated: 2026-05-31
       `containers/linear.rs` owns horizontal/vertical flex containers, `containers/scroll.rs` owns
       scroll-area construction, and `containers/grid.rs` owns grid row batching/keyed rows. The
       root `containers.rs` is now a thin module/re-export index plus tests.
+- [x] Split IMUI container identity regression tests into private outer-surface and scroll
+      viewport owners without changing horizontal/vertical/grid/scroll test-id placement or inner
+      scroll viewport test-id assertions.
+      Result: `containers/tests/identity.rs` now keeps identity test imports and module routing
+      only. `identity/outer.rs` owns outer-surface test-id coverage, while `identity/viewport.rs`
+      owns scroll viewport test-id coverage.
 - [x] Split shared IMUI active-trigger keyboard, pointer, and response behavior out of
       `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs` into private owner modules
       without changing active-item lifecycle, right-click context-menu signaling, keyboard

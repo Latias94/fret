@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Container Identity Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI container identity regression tests split into private outer-surface and scroll
+viewport owners without changing horizontal/vertical/grid/scroll test-id placement or inner scroll
+viewport test-id assertions.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/containers/tests/identity.rs` keeps identity test imports and
+  module routing only.
+- `ecosystem/fret-ui-kit/src/imui/containers/tests/identity/outer.rs` owns horizontal, vertical,
+  grid, and scroll outer-surface test-id coverage.
+- `ecosystem/fret-ui-kit/src/imui/containers/tests/identity/viewport.rs` owns inner scroll
+  viewport test-id coverage.
+- `tools/gate_imui_workstream_source.py` now checks the identity test hub/sub-owner split and
+  rejects migrated test bodies from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the container identity
+  test owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui container_option_test_ids_land_on_outer_surface
+  scroll_option_viewport_test_id_lands_on_inner_scroll_root --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test
+  imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Table Control Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI table-control regression tests split into private header-text and rendering

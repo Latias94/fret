@@ -1715,6 +1715,11 @@ focus propagation. `containers/linear.rs` owns horizontal/vertical flex composit
 `containers/scroll.rs` owns scroll-area construction, and `containers/grid.rs` owns grid row
 batching plus keyed row assembly.
 
+2026-05-31 container identity test owner split result:
+`ecosystem/fret-ui-kit/src/imui/containers/tests/identity.rs` now keeps identity test imports and
+module routing only. `identity/outer.rs` owns horizontal/vertical/grid/scroll outer-surface test-id
+coverage, while `identity/viewport.rs` owns inner scroll viewport test-id coverage.
+
 2026-05-27 flow option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/containers/flow.rs` is now a private module/re-export
 index. `flow/spacing.rs` owns the IMUI layout-token defaults, `flow/inline.rs` is the current

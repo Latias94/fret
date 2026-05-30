@@ -749,6 +749,8 @@
     "ecosystem/fret-ui-kit/src/imui/containers/tests/mod.rs",
     "ecosystem/fret-ui-kit/src/imui/containers/tests/layout.rs",
     "ecosystem/fret-ui-kit/src/imui/containers/tests/identity.rs",
+    "ecosystem/fret-ui-kit/src/imui/containers/tests/identity/outer.rs",
+    "ecosystem/fret-ui-kit/src/imui/containers/tests/identity/viewport.rs",
     "ecosystem/fret-ui-kit/src/imui/layout_sugar.rs",
     "ecosystem/fret-ui-kit/src/imui/layout_sugar/scoped.rs",
     "ecosystem/fret-ui-kit/src/imui/layout_sugar/scoped/flow.rs",
