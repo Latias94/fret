@@ -15,6 +15,10 @@ fn token_key(suffix: &str) -> String {
     format!("{COMPONENT_PREFIX}.{suffix}")
 }
 
+fn uniform_corners_from_metric(theme: &Theme, key: &str) -> Option<Corners> {
+    theme.metric_by_key(key).map(Corners::all)
+}
+
 pub(crate) fn container_color(theme: &Theme) -> Color {
     MaterialTokenResolver::new(theme).color_comp_or_sys(
         &token_key("container.color"),
@@ -29,8 +33,10 @@ pub(crate) fn container_elevation(theme: &Theme) -> Px {
 }
 
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
+    let key = token_key("container.shape");
     theme
-        .corners_by_key(&token_key("container.shape"))
+        .corners_by_key(&key)
+        .or_else(|| uniform_corners_from_metric(theme, &key))
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-large"))
         .unwrap_or(Corners::all(Px(28.0)))
 }
@@ -64,8 +70,10 @@ pub(crate) fn clock_dial_background(theme: &Theme) -> Color {
 }
 
 pub(crate) fn clock_dial_shape(theme: &Theme) -> Corners {
+    let key = token_key("clock-dial.shape");
     theme
-        .corners_by_key(&token_key("clock-dial.shape"))
+        .corners_by_key(&key)
+        .or_else(|| uniform_corners_from_metric(theme, &key))
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
         .unwrap_or(Corners::all(Px(9999.0)))
 }
@@ -108,8 +116,10 @@ pub(crate) fn clock_dial_handle_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn clock_dial_handle_shape(theme: &Theme) -> Corners {
+    let key = token_key("clock-dial.selector.handle.container.shape");
     theme
-        .corners_by_key(&token_key("clock-dial.selector.handle.container.shape"))
+        .corners_by_key(&key)
+        .or_else(|| uniform_corners_from_metric(theme, &key))
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
         .unwrap_or(Corners::all(Px(9999.0)))
 }
@@ -128,8 +138,10 @@ pub(crate) fn clock_dial_selector_center_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn clock_dial_selector_center_shape(theme: &Theme) -> Corners {
+    let key = token_key("clock-dial.selector.center.container.shape");
     theme
-        .corners_by_key(&token_key("clock-dial.selector.center.container.shape"))
+        .corners_by_key(&key)
+        .or_else(|| uniform_corners_from_metric(theme, &key))
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
         .unwrap_or(Corners::all(Px(9999.0)))
 }
@@ -160,8 +172,10 @@ pub(crate) fn time_selector_container_height(theme: &Theme) -> Px {
 }
 
 pub(crate) fn time_selector_shape(theme: &Theme) -> Corners {
+    let key = token_key("time-selector.container.shape");
     theme
-        .corners_by_key(&token_key("time-selector.container.shape"))
+        .corners_by_key(&key)
+        .or_else(|| uniform_corners_from_metric(theme, &key))
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.small"))
         .unwrap_or(Corners::all(Px(8.0)))
 }
@@ -308,8 +322,10 @@ pub(crate) fn period_selector_container_height(theme: &Theme) -> Px {
 }
 
 pub(crate) fn period_selector_shape(theme: &Theme) -> Corners {
+    let key = token_key("period-selector.container.shape");
     theme
-        .corners_by_key(&token_key("period-selector.container.shape"))
+        .corners_by_key(&key)
+        .or_else(|| uniform_corners_from_metric(theme, &key))
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.small"))
         .unwrap_or(Corners::all(Px(8.0)))
 }

@@ -15,6 +15,10 @@ fn token_key(suffix: &str) -> String {
     format!("{COMPONENT_PREFIX}.{suffix}")
 }
 
+fn uniform_corners_from_metric(theme: &Theme, key: &str) -> Option<Corners> {
+    theme.metric_by_key(key).map(Corners::all)
+}
+
 pub(crate) fn time_input_field_container_width(theme: &Theme) -> Px {
     theme
         .metric_by_key(&token_key("time-input-field.container.width"))
@@ -28,8 +32,10 @@ pub(crate) fn time_input_field_container_height(theme: &Theme) -> Px {
 }
 
 pub(crate) fn time_input_field_container_shape(theme: &Theme) -> Corners {
+    let key = token_key("time-input-field.container.shape");
     theme
-        .corners_by_key(&token_key("time-input-field.container.shape"))
+        .corners_by_key(&key)
+        .or_else(|| uniform_corners_from_metric(theme, &key))
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.small"))
         .unwrap_or(Corners::all(Px(8.0)))
 }
@@ -184,8 +190,10 @@ pub(crate) fn period_selector_container_height(theme: &Theme) -> Px {
 }
 
 pub(crate) fn period_selector_shape(theme: &Theme) -> Corners {
+    let key = token_key("period-selector.container.shape");
     theme
-        .corners_by_key(&token_key("period-selector.container.shape"))
+        .corners_by_key(&key)
+        .or_else(|| uniform_corners_from_metric(theme, &key))
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.small"))
         .unwrap_or(Corners::all(Px(8.0)))
 }

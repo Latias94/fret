@@ -894,47 +894,47 @@
         "component_to_system_color": 7,
         "default_unwrap": 3,
         "literal_unwrap_or": 10,
-        "theme_or_else_chain": 5
+        "theme_or_else_chain": 7
       },
       "fallback_samples": [
         {
           "kind": "literal_unwrap_or",
-          "line": 28,
+          "line": 32,
           "path": "ecosystem/fret-ui-material3/src/tokens/date_picker.rs",
           "text": ".unwrap_or(Px(360.0))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 34,
+          "line": 38,
           "path": "ecosystem/fret-ui-material3/src/tokens/date_picker.rs",
           "text": ".unwrap_or(Px(456.0))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 40,
+          "line": 44,
           "path": "ecosystem/fret-ui-material3/src/tokens/date_picker.rs",
           "text": ".unwrap_or(Px(3.0))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 46,
+          "line": 51,
+          "path": "ecosystem/fret-ui-material3/src/tokens/date_picker.rs",
+          "text": ".or_else(|| uniform_corners_from_metric(theme, &key))"
+        },
+        {
+          "kind": "theme_or_else_chain",
+          "line": 52,
           "path": "ecosystem/fret-ui-material3/src/tokens/date_picker.rs",
           "text": ".or_else(|| theme.corners_by_key(\"md.sys.shape.corner.large\"))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 47,
+          "line": 53,
           "path": "ecosystem/fret-ui-material3/src/tokens/date_picker.rs",
           "text": ".unwrap_or(Corners::all(Px(16.0)))"
-        },
-        {
-          "kind": "component_to_system_color",
-          "line": 51,
-          "path": "ecosystem/fret-ui-material3/src/tokens/date_picker.rs",
-          "text": "MaterialTokenResolver::new(theme).color_comp_or_sys("
         }
       ],
-      "fallback_site_count": 25,
+      "fallback_site_count": 27,
       "magic_visual_constant_count": 10,
       "magic_visual_constant_role_counts": {
         "metric": 8,
@@ -946,7 +946,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 28,
+          "line": 32,
           "path": "ecosystem/fret-ui-material3/src/tokens/date_picker.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(360.0))",
@@ -957,7 +957,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 34,
+          "line": 38,
           "path": "ecosystem/fret-ui-material3/src/tokens/date_picker.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(456.0))",
@@ -968,7 +968,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 40,
+          "line": 44,
           "path": "ecosystem/fret-ui-material3/src/tokens/date_picker.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(3.0))",
@@ -979,7 +979,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 47,
+          "line": 53,
           "path": "ecosystem/fret-ui-material3/src/tokens/date_picker.rs",
           "role": "shape",
           "text": ".unwrap_or(Corners::all(Px(16.0)))",
@@ -990,7 +990,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 78,
+          "line": 84,
           "path": "ecosystem/fret-ui-material3/src/tokens/date_picker.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(12.0))",
@@ -1001,7 +1001,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 99,
+          "line": 105,
           "path": "ecosystem/fret-ui-material3/src/tokens/date_picker.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(40.0))",
@@ -4330,47 +4330,47 @@
         "component_to_system_color": 14,
         "default_unwrap": 4,
         "literal_unwrap_or": 10,
-        "theme_or_else_chain": 8
+        "theme_or_else_chain": 10
       },
       "fallback_samples": [
         {
           "kind": "literal_unwrap_or",
-          "line": 21,
+          "line": 25,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_input.rs",
           "text": ".unwrap_or(Px(96.0))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 27,
+          "line": 31,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_input.rs",
           "text": ".unwrap_or(Px(72.0))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 33,
+          "line": 38,
+          "path": "ecosystem/fret-ui-material3/src/tokens/time_input.rs",
+          "text": ".or_else(|| uniform_corners_from_metric(theme, &key))"
+        },
+        {
+          "kind": "theme_or_else_chain",
+          "line": 39,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_input.rs",
           "text": ".or_else(|| theme.corners_by_key(\"md.sys.shape.corner.small\"))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 34,
+          "line": 40,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_input.rs",
           "text": ".unwrap_or(Corners::all(Px(8.0)))"
         },
         {
           "kind": "component_to_system_color",
-          "line": 39,
+          "line": 45,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_input.rs",
           "text": "return MaterialTokenResolver::new(theme).color_comp_or_sys("
-        },
-        {
-          "kind": "component_to_system_color",
-          "line": 49,
-          "path": "ecosystem/fret-ui-material3/src/tokens/time_input.rs",
-          "text": "MaterialTokenResolver::new(theme).color_comp_or_sys("
         }
       ],
-      "fallback_site_count": 36,
+      "fallback_site_count": 38,
       "magic_visual_constant_count": 10,
       "magic_visual_constant_role_counts": {
         "metric": 8,
@@ -4382,7 +4382,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 21,
+          "line": 25,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_input.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(96.0))",
@@ -4393,7 +4393,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 27,
+          "line": 31,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_input.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(72.0))",
@@ -4404,7 +4404,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 34,
+          "line": 40,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_input.rs",
           "role": "shape",
           "text": ".unwrap_or(Corners::all(Px(8.0)))",
@@ -4415,7 +4415,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 66,
+          "line": 72,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_input.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(2.0))",
@@ -4426,7 +4426,7 @@
             "fallback"
           ],
           "kind": "number_fallback",
-          "line": 133,
+          "line": 139,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_input.rs",
           "role": "metric",
           "text": ".unwrap_or(0.0)",
@@ -4437,7 +4437,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 177,
+          "line": 183,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_input.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(52.0))",
@@ -4465,47 +4465,47 @@
         "component_to_system_color": 15,
         "default_unwrap": 5,
         "literal_unwrap_or": 19,
-        "theme_or_else_chain": 13
+        "theme_or_else_chain": 19
       },
       "fallback_samples": [
         {
           "kind": "component_to_system_color",
-          "line": 19,
+          "line": 23,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_picker.rs",
           "text": "MaterialTokenResolver::new(theme).color_comp_or_sys("
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 28,
+          "line": 32,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_picker.rs",
           "text": ".unwrap_or(Px(3.0))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 34,
+          "line": 39,
+          "path": "ecosystem/fret-ui-material3/src/tokens/time_picker.rs",
+          "text": ".or_else(|| uniform_corners_from_metric(theme, &key))"
+        },
+        {
+          "kind": "theme_or_else_chain",
+          "line": 40,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_picker.rs",
           "text": ".or_else(|| theme.corners_by_key(\"md.sys.shape.corner.extra-large\"))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 35,
+          "line": 41,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_picker.rs",
           "text": ".unwrap_or(Corners::all(Px(28.0)))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 41,
+          "line": 47,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_picker.rs",
           "text": ".or_else(|| theme.text_style_by_key(\"md.sys.typescale.label-medium\"))"
-        },
-        {
-          "kind": "default_unwrap",
-          "line": 42,
-          "path": "ecosystem/fret-ui-material3/src/tokens/time_picker.rs",
-          "text": ".unwrap_or_default();"
         }
       ],
-      "fallback_site_count": 52,
+      "fallback_site_count": 58,
       "magic_visual_constant_count": 19,
       "magic_visual_constant_role_counts": {
         "metric": 13,
@@ -4517,7 +4517,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 28,
+          "line": 32,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_picker.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(3.0))",
@@ -4528,7 +4528,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 35,
+          "line": 41,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_picker.rs",
           "role": "shape",
           "text": ".unwrap_or(Corners::all(Px(28.0)))",
@@ -4539,7 +4539,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 56,
+          "line": 62,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_picker.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(256.0))",
@@ -4550,7 +4550,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 70,
+          "line": 78,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_picker.rs",
           "role": "shape",
           "text": ".unwrap_or(Corners::all(Px(9999.0)))",
@@ -4561,7 +4561,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 100,
+          "line": 108,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_picker.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(48.0))",
@@ -4572,7 +4572,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 114,
+          "line": 124,
           "path": "ecosystem/fret-ui-material3/src/tokens/time_picker.rs",
           "role": "shape",
           "text": ".unwrap_or(Corners::all(Px(9999.0)))",
@@ -5134,7 +5134,7 @@
           "module": "chip"
         },
         {
-          "fallback_site_count": 25,
+          "fallback_site_count": 27,
           "magic_visual_constant_count": 10,
           "module": "date_picker"
         },
@@ -6825,9 +6825,9 @@
       "default_unwrap": 16,
       "literal_unwrap_or": 426,
       "system_color_resolver": 39,
-      "theme_or_else_chain": 367
+      "theme_or_else_chain": 377
     },
-    "component_token_fallback_site_count": 1150,
+    "component_token_fallback_site_count": 1160,
     "component_token_magic_visual_constant_count": 505,
     "component_token_magic_visual_constant_role_counts": {
       "metric": 458,

@@ -140,3 +140,32 @@ cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D
     - `python tools/check_workstream_catalog.py`: passed with 511 dedicated directories and 47
       standalone markdown files.
     - `git diff --check`: passed.
+- 2026-05-30: M3TVM-040B completed the remaining field-family token visual harness coverage.
+  - Fixture suite:
+    `ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json`.
+  - Runner:
+    `ecosystem/fret-ui-material3/src/tokens/visual_fixtures.rs`.
+  - Result: SearchBar, SearchView, DatePicker, and TimePicker matrix rows moved to
+    `covered_fixture`, closing M3TVM-040. The suite now covers search container/input/header,
+    date-picker docked/modal picker surfaces and date-cell roles, and time-picker dial/input
+    field/period-selector clock roles across color, metric, number, shape, and typography source
+    outcomes.
+  - Bugs fixed:
+    - DatePicker, TimePicker, and TimeInput shape accessors now consume metric-backed Material Web
+      `*.shape` tokens where generated tokens are scalar metrics rather than `Corners`.
+    - TimeInput error/focus fixture expectations now document the current generated-token reality:
+      Material Web v30 does not provide time-input error comp color tokens, so accessors intentionally
+      fall back through `MaterialTokenResolver::color_comp_or_sys`.
+    - The fixture runner now distinguishes control and content typography intent; time-input
+      supporting text asserts the Content intent instead of forcing Control metrics.
+  - Fresh verification:
+    - `cargo fmt -p fret-ui-material3 -- --check`: passed.
+    - `cargo check -p fret-ui-material3`: passed.
+    - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`: passed.
+    - `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures`: passed, 1 test run.
+    - `cargo nextest run -p fret-ui-material3 --lib tokens::v30`: passed, 6 tests run.
+    - `python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json`: passed.
+    - `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json | Out-Null`; `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null`; `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null`; `python -m json.tool ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json | Out-Null`: passed.
+    - `python tools/check_workstream_catalog.py`: passed with 511 dedicated directories and 47
+      standalone markdown files.
+    - `git diff --check`: passed.

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "suite": "material3-token-visual-cases-v1",
-  "notes": "Fixture-driven token outcome cases for Material3 token visual matrix M3TVM-030 and M3TVM-040A.",
+  "notes": "Fixture-driven token outcome cases for Material3 token visual matrix M3TVM-030, M3TVM-040A, and M3TVM-040B.",
   "cases": [
     {
       "id": "button-filled-enabled-light",
@@ -301,6 +301,159 @@
         { "role": "menu_container_background", "kind": "color", "token": "md.comp.outlined-autocomplete.menu.container.color" },
         { "role": "menu_list_item_height", "kind": "metric", "token": "md.comp.outlined-autocomplete.menu.list-item.container.height" },
         { "role": "menu_list_item_selected_container_color", "kind": "color", "token": "md.comp.outlined-autocomplete.menu.list-item.selected.container.color" }
+      ]
+    },
+    {
+      "id": "search-bar-hovered-light",
+      "component": "search_bar",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "standalone", "hovered": true, "interaction": "none" },
+      "assertions": [
+        { "role": "container_height", "kind": "metric", "token": "md.comp.search-bar.container.height" },
+        { "role": "container_color", "kind": "color", "token": "md.comp.search-bar.container.color" },
+        { "role": "container_elevation", "kind": "metric", "token": "md.comp.search-bar.container.elevation" },
+        { "role": "container_shape", "kind": "corners_metric", "token": "md.comp.search-bar.container.shape" },
+        { "role": "leading_icon_color", "kind": "color", "token": "md.comp.search-bar.leading-icon.color" },
+        { "role": "trailing_icon_color", "kind": "color", "token": "md.comp.search-bar.trailing-icon.color" },
+        { "role": "input_text_color", "kind": "color", "token": "md.comp.search-bar.input-text.color" },
+        { "role": "supporting_text_color", "kind": "color", "token": "md.comp.search-bar.hover.supporting-text.color" },
+        { "role": "hover_state_layer_color", "kind": "color", "token": "md.comp.search-bar.hover.state-layer.color" },
+        { "role": "hover_state_layer_opacity", "kind": "number", "token": "md.comp.search-bar.hover.state-layer.opacity" },
+        { "role": "input_text_style", "kind": "text_style_source", "source_token": "md.comp.search-bar.input-text" }
+      ]
+    },
+    {
+      "id": "search-view-docked-light",
+      "component": "search_view",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "docked" },
+      "assertions": [
+        { "role": "container_color", "kind": "color", "token": "md.comp.search-view.container.color" },
+        { "role": "container_elevation", "kind": "metric", "token": "md.comp.search-view.container.elevation" },
+        { "role": "docked_container_shape", "kind": "corners_metric", "token": "md.comp.search-view.docked.container.shape" },
+        { "role": "full_screen_header_container_height", "kind": "metric", "token": "md.comp.search-view.full-screen.header.container.height" },
+        { "role": "divider_color", "kind": "color", "token": "md.comp.search-view.divider.color" },
+        { "role": "header_leading_icon_color", "kind": "color", "token": "md.comp.search-view.header.leading-icon.color" },
+        { "role": "header_trailing_icon_color", "kind": "color", "token": "md.comp.search-view.header.trailing-icon.color" },
+        { "role": "header_input_text_color", "kind": "color", "token": "md.comp.search-view.header.input-text.color" },
+        { "role": "header_supporting_text_color", "kind": "color", "token": "md.comp.search-view.header.supporting-text.color" },
+        { "role": "header_input_text_style", "kind": "text_style_source", "source_token": "md.comp.search-view.header.input-text" }
+      ]
+    },
+    {
+      "id": "date-picker-docked-light",
+      "component": "date_picker",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "docked" },
+      "assertions": [
+        { "role": "container_width", "kind": "metric", "token": "md.comp.date-picker.docked.container.width" },
+        { "role": "container_height", "kind": "metric", "token": "md.comp.date-picker.docked.container.height" },
+        { "role": "container_elevation", "kind": "metric", "token": "md.comp.date-picker.docked.container.elevation" },
+        { "role": "container_shape", "kind": "corners_metric", "token": "md.comp.date-picker.docked.container.shape" },
+        { "role": "container_color", "kind": "color", "token": "md.comp.date-picker.docked.container.color" },
+        { "role": "weekdays_label_text_color", "kind": "color", "token": "md.comp.date-picker.docked.weekdays.label-text.color" },
+        { "role": "weekdays_label_text_style", "kind": "text_style_source", "source_token": "md.comp.date-picker.docked.weekdays.label-text" },
+        { "role": "date_cell_width", "kind": "metric", "token": "md.comp.date-picker.docked.date.container.width" },
+        { "role": "date_cell_height", "kind": "metric", "token": "md.comp.date-picker.docked.date.container.height" },
+        { "role": "date_cell_shape", "kind": "corners_metric", "token": "md.comp.date-picker.docked.date.container.shape" },
+        { "role": "date_today_outline_width", "kind": "metric", "token": "md.comp.date-picker.docked.date.today.container.outline.width" },
+        { "role": "date_today_outline_color", "kind": "color", "token": "md.comp.date-picker.docked.date.today.container.outline.color" },
+        { "role": "date_unselected_label_text_color", "kind": "color", "token": "md.comp.date-picker.docked.date.unselected.label-text.color" },
+        { "role": "date_selected_container_color", "kind": "color", "token": "md.comp.date-picker.docked.date.selected.container.color" },
+        { "role": "date_selected_label_text_color", "kind": "color", "token": "md.comp.date-picker.docked.date.selected.label-text.color" },
+        { "role": "date_outside_month_opacity", "kind": "number", "token": "md.comp.date-picker.docked.date.unselected.outside-month.label-text.opacity" },
+        { "role": "date_label_text_style", "kind": "text_style_source", "source_token": "md.comp.date-picker.docked.date.label-text" }
+      ]
+    },
+    {
+      "id": "date-picker-modal-light",
+      "component": "date_picker",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "modal" },
+      "assertions": [
+        { "role": "container_width", "kind": "metric", "token": "md.comp.date-picker.modal.container.width" },
+        { "role": "container_height", "kind": "metric", "token": "md.comp.date-picker.modal.container.height" },
+        { "role": "container_shape", "kind": "corners_metric", "token": "md.comp.date-picker.modal.container.shape" },
+        { "role": "container_color", "kind": "color", "token": "md.comp.date-picker.modal.container.color" },
+        { "role": "header_headline_color", "kind": "color", "token": "md.comp.date-picker.modal.header.headline.color" },
+        { "role": "header_headline_style", "kind": "text_style_source", "source_token": "md.comp.date-picker.modal.header.headline" },
+        { "role": "date_cell_shape", "kind": "corners_metric", "token": "md.comp.date-picker.modal.date.container.shape" },
+        { "role": "date_label_text_style", "kind": "text_style_source", "source_token": "md.comp.date-picker.modal.date.label-text" }
+      ]
+    },
+    {
+      "id": "time-picker-dial-hovered-selected-light",
+      "component": "time_picker",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "dial", "selected": true, "interaction": "hovered" },
+      "assertions": [
+        { "role": "container_color", "kind": "color", "token": "md.comp.time-picker.container.color" },
+        { "role": "container_elevation", "kind": "metric", "token": "md.comp.time-picker.container.elevation" },
+        { "role": "container_shape", "kind": "corners_metric", "token": "md.comp.time-picker.container.shape" },
+        { "role": "headline_color", "kind": "color", "token": "md.comp.time-picker.headline.color" },
+        { "role": "headline_style", "kind": "text_style_source", "source_token": "md.comp.time-picker.headline" },
+        { "role": "clock_dial_size", "kind": "metric", "token": "md.comp.time-picker.clock-dial.container.size" },
+        { "role": "clock_dial_background", "kind": "color", "token": "md.comp.time-picker.clock-dial.color" },
+        { "role": "clock_dial_shape", "kind": "corners_metric", "token": "md.comp.time-picker.clock-dial.shape" },
+        { "role": "clock_dial_label_text_color", "kind": "color", "token": "md.comp.time-picker.clock-dial.selected.label-text.color" },
+        { "role": "clock_dial_label_text_style", "kind": "text_style_source", "source_token": "md.comp.time-picker.clock-dial.label-text" },
+        { "role": "clock_dial_handle_size", "kind": "metric", "token": "md.comp.time-picker.clock-dial.selector.handle.container.size" },
+        { "role": "clock_dial_handle_color", "kind": "color", "token": "md.comp.time-picker.clock-dial.selector.handle.container.color" },
+        { "role": "clock_dial_handle_shape", "kind": "corners_metric", "token": "md.comp.time-picker.clock-dial.selector.handle.container.shape" },
+        { "role": "clock_dial_selector_center_size", "kind": "metric", "token": "md.comp.time-picker.clock-dial.selector.center.container.size" },
+        { "role": "clock_dial_selector_center_color", "kind": "color", "token": "md.comp.time-picker.clock-dial.selector.center.container.color" },
+        { "role": "clock_dial_selector_center_shape", "kind": "corners_metric", "token": "md.comp.time-picker.clock-dial.selector.center.container.shape" },
+        { "role": "clock_dial_selector_track_width", "kind": "metric", "token": "md.comp.time-picker.clock-dial.selector.track.container.width" },
+        { "role": "clock_dial_selector_track_color", "kind": "color", "token": "md.comp.time-picker.clock-dial.selector.track.container.color" },
+        { "role": "time_selector_container_width", "kind": "metric", "token": "md.comp.time-picker.time-selector.container.width" },
+        { "role": "time_selector_container_height", "kind": "metric", "token": "md.comp.time-picker.time-selector.container.height" },
+        { "role": "time_selector_shape", "kind": "corners_metric", "token": "md.comp.time-picker.time-selector.container.shape" },
+        { "role": "time_selector_container_color", "kind": "color", "token": "md.comp.time-picker.time-selector.selected.container.color" },
+        { "role": "time_selector_label_color", "kind": "color", "token": "md.comp.time-picker.time-selector.selected.hover.label-text.color" },
+        { "role": "time_selector_state_layer_color", "kind": "color", "token": "md.comp.time-picker.time-selector.selected.hover.state-layer.color" },
+        { "role": "time_selector_state_layer_opacity", "kind": "number", "token": "md.comp.time-picker.time-selector.hover.state-layer.opacity" },
+        { "role": "time_selector_label_text_style", "kind": "text_style_source", "source_token": "md.comp.time-picker.time-selector.label-text" },
+        { "role": "time_selector_separator_color", "kind": "color", "token": "md.comp.time-picker.time-selector.separator.color" },
+        { "role": "time_selector_separator_style", "kind": "text_style_source", "source_token": "md.comp.time-picker.time-selector.separator" },
+        { "role": "period_selector_shape", "kind": "corners_metric", "token": "md.comp.time-picker.period-selector.container.shape" },
+        { "role": "period_selector_outline_width", "kind": "metric", "token": "md.comp.time-picker.period-selector.outline.width" },
+        { "role": "period_selector_outline_color", "kind": "color", "token": "md.comp.time-picker.period-selector.outline.color" },
+        { "role": "period_selector_label_color", "kind": "color", "token": "md.comp.time-picker.period-selector.selected.hover.label-text.color" },
+        { "role": "period_selector_state_layer_color", "kind": "color", "token": "md.comp.time-picker.period-selector.selected.hover.state-layer.color" },
+        { "role": "period_selector_state_layer_opacity", "kind": "number", "token": "md.comp.time-picker.period-selector.hover.state-layer.opacity" },
+        { "role": "period_selector_label_text_style", "kind": "text_style_source", "source_token": "md.comp.time-picker.period-selector.label-text" }
+      ]
+    },
+    {
+      "id": "time-picker-input-error-focused-light",
+      "component": "time_picker",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "input", "selected": true, "focused": true, "hovered": true, "error": true, "interaction": "hovered" },
+      "assertions": [
+        { "role": "time_input_field_container_width", "kind": "metric", "token": "md.comp.time-input.time-input-field.container.width" },
+        { "role": "time_input_field_container_height", "kind": "metric", "token": "md.comp.time-input.time-input-field.container.height" },
+        { "role": "time_input_field_container_shape", "kind": "corners_metric", "token": "md.comp.time-input.time-input-field.container.shape" },
+        { "role": "time_input_field_container_color", "kind": "color", "token": "md.sys.color.error-container" },
+        { "role": "time_input_field_focus_outline_width", "kind": "metric", "token": "md.comp.time-input.time-input-field.focus.outline.width" },
+        { "role": "time_input_field_focus_outline_color", "kind": "color", "token": "md.sys.color.error" },
+        { "role": "time_input_field_label_color", "kind": "color", "token": "md.sys.color.on-error-container" },
+        { "role": "time_input_field_label_text_style", "kind": "text_style_source", "source_token": "md.comp.time-input.time-input-field.label-text" },
+        { "role": "time_input_field_state_layer_color", "kind": "color", "token": "md.comp.time-input.time-input-field.hover.state-layer.color" },
+        { "role": "time_input_field_state_layer_opacity", "kind": "number", "token": "md.comp.time-input.time-input-field.hover.state-layer.opacity" },
+        { "role": "time_input_field_separator_color", "kind": "color", "token": "md.comp.time-input.time-input-field.separator.color" },
+        { "role": "time_input_field_separator_style", "kind": "text_style_source", "source_token": "md.comp.time-input.time-input-field.separator" },
+        { "role": "time_input_field_supporting_text_color", "kind": "color", "token": "md.sys.color.error" },
+        { "role": "time_input_field_supporting_text_style", "kind": "text_style_content_source", "source_token": "md.comp.time-input.time-input-field.supporting-text" },
+        { "role": "time_input_period_selector_container_width", "kind": "metric", "token": "md.comp.time-input.period-selector.container.width" },
+        { "role": "time_input_period_selector_container_height", "kind": "metric", "token": "md.comp.time-input.period-selector.container.height" },
+        { "role": "time_input_period_selector_shape", "kind": "corners_metric", "token": "md.comp.time-input.period-selector.container.shape" },
+        { "role": "time_input_period_selector_outline_width", "kind": "metric", "token": "md.comp.time-input.period-selector.outline.width" },
+        { "role": "time_input_period_selector_outline_color", "kind": "color", "token": "md.comp.time-input.period-selector.outline.color" },
+        { "role": "time_input_period_selector_selected_container_color", "kind": "color", "token": "md.comp.time-input.period-selector.selected.container.color" },
+        { "role": "time_input_period_selector_label_color", "kind": "color", "token": "md.comp.time-input.period-selector.selected.hover.label-text.color" },
+        { "role": "time_input_period_selector_state_layer_color", "kind": "color", "token": "md.comp.time-input.period-selector.selected.hover.state-layer.color" },
+        { "role": "time_input_period_selector_state_layer_opacity", "kind": "number", "token": "md.comp.time-input.period-selector.hover.state-layer.opacity" },
+        { "role": "time_input_period_selector_label_text_style", "kind": "text_style_source", "source_token": "md.comp.time-input.period-selector.label-text" }
       ]
     }
   ]

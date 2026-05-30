@@ -22,6 +22,10 @@ fn token_key(variant: DatePickerTokenVariant, suffix: &str) -> String {
     }
 }
 
+fn uniform_corners_from_metric(theme: &Theme, key: &str) -> Option<Corners> {
+    theme.metric_by_key(key).map(Corners::all)
+}
+
 pub(crate) fn container_width(theme: &Theme, variant: DatePickerTokenVariant) -> Px {
     theme
         .metric_by_key(&token_key(variant, "container.width"))
@@ -41,8 +45,10 @@ pub(crate) fn container_elevation(theme: &Theme, variant: DatePickerTokenVariant
 }
 
 pub(crate) fn container_shape(theme: &Theme, variant: DatePickerTokenVariant) -> Corners {
+    let key = token_key(variant, "container.shape");
     theme
-        .corners_by_key(&token_key(variant, "container.shape"))
+        .corners_by_key(&key)
+        .or_else(|| uniform_corners_from_metric(theme, &key))
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.large"))
         .unwrap_or(Corners::all(Px(16.0)))
 }
@@ -106,8 +112,10 @@ pub(crate) fn date_cell_height(theme: &Theme, variant: DatePickerTokenVariant) -
 }
 
 pub(crate) fn date_cell_shape(theme: &Theme, variant: DatePickerTokenVariant) -> Corners {
+    let key = token_key(variant, "date.container.shape");
     theme
-        .corners_by_key(&token_key(variant, "date.container.shape"))
+        .corners_by_key(&key)
+        .or_else(|| uniform_corners_from_metric(theme, &key))
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
         .unwrap_or(Corners::all(Px(9999.0)))
 }

@@ -55,12 +55,24 @@ Task IDs use `M3TVM-*`.
   Handoff: Continue M3TVM-040 with SearchBar/SearchView, DatePicker, and TimePicker, or switch to
   M3TVM-050 now that the fixture runner has field-overlay coverage.
 
-- [ ] M3TVM-040 [owner=codex] [deps=M3TVM-030] [scope=ecosystem/fret-ui-material3/src/{tokens,foundation,text_field.rs,select.rs,autocomplete.rs,exposed_dropdown.rs,search_bar.rs,search_view.rs,date_picker.rs,time_picker.rs},ecosystem/fret-ui-material3/tests]
+- [x] M3TVM-040B [owner=codex] [deps=M3TVM-040A] [scope=ecosystem/fret-ui-material3/src/{tokens,search_bar.rs,search_view.rs,date_picker.rs,time_picker.rs,time_input.rs},ecosystem/fret-ui-material3/tests/fixtures,docs/workstreams/material3-token-visual-matrix-v1]
+  Goal: Close the remaining field-family subset for SearchBar, SearchView, DatePicker, and
+  TimePicker with fixture-driven token outcomes.
+  Validation: fixture rows for search surfaces, picker surfaces, state-layer, disabled/sys fallback,
+  shape, outline/indicator, icon/content, and typography source outcomes; narrow material3 token gates.
+  Review: DONE. SearchBar, SearchView, DatePicker, and TimePicker matrix rows moved to
+  `covered_fixture`. The fixture runner now covers search container/input/header/divider/icon
+  outcomes, date-picker docked/modal surface/date-cell/today/typography outcomes, and time-picker
+  dial/input field/period-selector/clock/token typography outcomes. It also fixed metric-backed
+  shape resolution for DatePicker, TimePicker, and TimeInput shape tokens.
+  Handoff: Field-family token visual coverage is closed; continue with M3TVM-050 controls/chips.
+
+- [x] M3TVM-040 [owner=codex] [deps=M3TVM-030] [scope=ecosystem/fret-ui-material3/src/{tokens,foundation,text_field.rs,select.rs,autocomplete.rs,exposed_dropdown.rs,search_bar.rs,search_view.rs,date_picker.rs,time_picker.rs},ecosystem/fret-ui-material3/tests]
   Goal: Close field-family token visual matrix rows for TextField, Select, Autocomplete,
   ExposedDropdown, SearchBar, SearchView, DatePicker, and TimePicker.
   Validation: fixture rows plus existing field-family M3PV2 gates.
-  Review: Pending. M3TVM-040A completed the Select/Autocomplete/ExposedDropdown field-overlay
-  subset; SearchBar/SearchView, DatePicker, and TimePicker remain.
+  Review: DONE. TextField was covered in M3TVM-030, Select/Autocomplete/ExposedDropdown in
+  M3TVM-040A, and SearchBar/SearchView/DatePicker/TimePicker in M3TVM-040B.
 
 - [ ] M3TVM-050 [owner=codex] [deps=M3TVM-030] [scope=ecosystem/fret-ui-material3/src/{tokens,foundation,button.rs,checkbox.rs,radio.rs,switch.rs,slider.rs,segmented_button.rs,icon_button.rs,chip*.rs,*chip.rs},ecosystem/fret-ui-material3/tests]
   Goal: Close action/control/chip token visual matrix rows for state layers, checked/selected

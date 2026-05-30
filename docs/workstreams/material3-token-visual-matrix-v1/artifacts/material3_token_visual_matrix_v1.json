@@ -352,9 +352,11 @@
         "open",
         "closed"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-040",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-040B",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
     },
     {
       "id": "dialog",
@@ -732,9 +734,11 @@
         "open",
         "closed"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-040",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-040B",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
     },
     {
       "id": "search_view",
@@ -753,9 +757,11 @@
         "open",
         "closed"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-040",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-040B",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
     },
     {
       "id": "segmented_button",
@@ -965,9 +971,11 @@
         "open",
         "closed"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-040",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-040B",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
     },
     {
       "id": "tooltip",
