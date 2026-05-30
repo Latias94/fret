@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 editor theme preset picker render child-owner result:
+`ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs` now keeps preset
+installation, theme resolution, and render dispatch only. `render.rs` owns listbox semantics,
+header row, preset rows, and color mixing. Selected preset sync, item test IDs, activation
+behavior, and theme replay semantics remain unchanged.
+
 2026-05-30 textarea element and props child-owner result:
 `ecosystem/fret-ui-kit/src/imui/text_controls/textarea.rs` now only owns the public wrapper and
 `ResponseExt` plumbing. `text_controls/textarea/element.rs` owns lifecycle, select-all, policy

@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Editor Theme Preset Picker Render Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: editor theme preset picker policy/installation split from listbox rendering and row
+chrome assembly without changing preset installation, selected preset sync, label fallback,
+listbox semantics, preset activation, item test IDs, or theme replay behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs` now keeps preset
+  installation, theme resolution, and render dispatch only.
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render.rs` owns the listbox
+  semantics, header row, preset rows, and color mixing.
+- `tools/gate_imui_workstream_source.py` now checks the picker root/render split and keeps listbox
+  semantics out of the policy owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new render owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass after relaxing the root-file semantic test
+  forbids and moving the production semantics to `render.rs`.
+- `cargo nextest run -p fret-ui-editor editor_theme_preset_picker_stamps_listbox_options_and_selected_state editor_theme_preset_picker_click_updates_model_and_replays_reversible_preset --no-fail-fast`: pass (2 passed, 184 skipped).
+
 ## Textarea Element and Props Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI textarea lifecycle/element assembly split from textarea props/style resolution

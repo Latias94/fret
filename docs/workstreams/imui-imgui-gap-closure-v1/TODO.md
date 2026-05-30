@@ -44,6 +44,12 @@ Last updated: 2026-05-30
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor theme preset picker policy/installation from listbox rendering and row chrome
+      assembly without changing preset installation, selected preset sync, label fallback,
+      listbox semantics, preset activation, item test IDs, or theme replay behavior.
+      Result: `editor_theme_preset_picker.rs` now keeps preset installation, theme resolution, and
+      render dispatch only. `editor_theme_preset_picker/render.rs` owns the listbox semantics,
+      header row, preset rows, and color mixing.
 - [x] Split IMUI textarea lifecycle/element assembly from textarea props/style resolution without
       changing textarea facade calls, enabled gating, focus tracking, select-all policy, response
       lifecycle, submit command behavior, IMUI chrome, or layout semantics.
