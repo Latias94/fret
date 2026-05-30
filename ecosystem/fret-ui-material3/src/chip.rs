@@ -18,7 +18,6 @@ use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
@@ -293,11 +292,7 @@ impl AssistChip {
                             let theme = Theme::global(&*cx.app);
 
                             let height = chip_tokens::container_height(theme);
-                            let label_style = theme
-                                .text_style_by_key("md.sys.typescale.label-large")
-                                .unwrap_or_default();
-                            let label_style =
-                                typography::with_intent(label_style, TextIntent::Control);
+                            let label_style = chip_tokens::label_text_style(theme);
                             let leading_icon_size = chip_tokens::leading_icon_size(theme);
 
                             let label_color = chip_tokens::label_color(theme, enabled, interaction);

@@ -23,7 +23,6 @@ use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
@@ -315,10 +314,7 @@ impl FilterChip {
                     let leading_icon_px = filter_chip_tokens::leading_icon_size(theme);
                     let trailing_icon_px = filter_chip_tokens::trailing_icon_size(theme);
                     let default_layout_direction = theme_default_layout_direction(theme);
-                    let label_style = theme
-                        .text_style_by_key("md.sys.typescale.label-large")
-                        .unwrap_or_default();
-                    let label_style = typography::with_intent(label_style, TextIntent::Control);
+                    let label_style = filter_chip_tokens::label_text_style(theme);
                     (
                         corner_radii,
                         focus_ring,

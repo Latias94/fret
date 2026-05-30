@@ -5,11 +5,10 @@ Last updated: 2026-05-30
 
 ## Current State
 
-M3TVM-010 through M3TVM-040 are complete, and M3TVM-050A has completed the non-chip controls
-subset. The workstream exists, the matrix covers all 39 M3PV2 components, the generated inventory
-report maps all 38 component token modules to matrix rows, and the fixture-driven token visual
-harness covers Button, the full field-family packet, and Checkbox/Radio/Switch/Slider/
-SegmentedButton/IconButton.
+M3TVM-010 through M3TVM-050 are complete. The workstream exists, the matrix covers all 39 M3PV2
+components, the generated inventory report maps all 38 component token modules to matrix rows, and
+the fixture-driven token visual harness covers Button, the full field-family packet,
+Checkbox/Radio/Switch/Slider/SegmentedButton/IconButton, and the chip family.
 
 ## Decisions
 
@@ -22,9 +21,10 @@ SegmentedButton/IconButton.
 
 ## Next Recommended Action
 
-Continue M3TVM-050 with the chip subset: Chip, ChipSet, FilterChip, InputChip, and SuggestionChip.
-Extend `material3_token_visual_cases_v1.json` first, let fixture failures identify route/fallback
-bugs, then update the matrix and evidence after the narrow gates pass.
+Start M3TVM-060 for navigation/app-chrome rows: Tabs, NavigationBar, NavigationRail,
+NavigationDrawer, and TopAppBar. Extend `material3_token_visual_cases_v1.json` first, let fixture
+failures identify route/fallback bugs, then update the matrix and evidence after the narrow gates
+pass.
 
 ## Useful Gates
 

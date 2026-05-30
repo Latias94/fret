@@ -87,12 +87,24 @@ Task IDs use `M3TVM-*`.
   Handoff: Continue M3TVM-050 with chip rows: Chip, ChipSet, FilterChip, InputChip, and
   SuggestionChip.
 
-- [ ] M3TVM-050 [owner=codex] [deps=M3TVM-030] [scope=ecosystem/fret-ui-material3/src/{tokens,foundation,button.rs,checkbox.rs,radio.rs,switch.rs,slider.rs,segmented_button.rs,icon_button.rs,chip*.rs,*chip.rs},ecosystem/fret-ui-material3/tests]
+- [x] M3TVM-050B [owner=codex] [deps=M3TVM-050A] [scope=ecosystem/fret-ui-material3/src/{tokens,chip.rs,chip_set.rs,filter_chip.rs,input_chip.rs,suggestion_chip.rs},ecosystem/fret-ui-material3/tests/fixtures,docs/workstreams/material3-token-visual-matrix-v1]
+  Goal: Close the chip subset for Chip, ChipSet, FilterChip, InputChip, and SuggestionChip with
+  fixture-driven token outcomes.
+  Validation: fixture rows for elevated/flat chip variants, selected/disabled visuals,
+  container/elevation/outline/shape, leading/trailing icon colors, label typography/color, and
+  state-layer outcomes.
+  Review: DONE. The fixture runner now covers AssistChip, FilterChip, InputChip, and
+  SuggestionChip token outcomes; ChipSet is covered as the aggregate chip-family row because it has
+  no independent Material token module. Chip label typography is now routed through typed token
+  accessors instead of per-recipe sys typescale reads.
+  Handoff: M3TVM-050 is closed; continue with M3TVM-060 navigation/app-chrome rows.
+
+- [x] M3TVM-050 [owner=codex] [deps=M3TVM-030] [scope=ecosystem/fret-ui-material3/src/{tokens,foundation,button.rs,checkbox.rs,radio.rs,switch.rs,slider.rs,segmented_button.rs,icon_button.rs,chip*.rs,*chip.rs},ecosystem/fret-ui-material3/tests]
   Goal: Close action/control/chip token visual matrix rows for state layers, checked/selected
   visuals, disabled opacity, shape, elevation, and icon/content color.
   Validation: fixture rows plus existing choice/control M3PV2 gates.
-  Review: Pending. Button was covered in M3TVM-030 and non-chip controls were covered in
-  M3TVM-050A; chip rows remain.
+  Review: DONE. Button was covered in M3TVM-030, non-chip controls in M3TVM-050A, and chip rows in
+  M3TVM-050B.
 
 - [ ] M3TVM-060 [owner=codex] [deps=M3TVM-030] [scope=ecosystem/fret-ui-material3/src/{tokens,foundation,tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests]
   Goal: Close navigation/app-chrome token visual matrix rows for active indicators, destination

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "suite": "material3-token-visual-cases-v1",
-  "notes": "Fixture-driven token outcome cases for Material3 token visual matrix M3TVM-030, M3TVM-040A, M3TVM-040B, and M3TVM-050A.",
+  "notes": "Fixture-driven token outcome cases for Material3 token visual matrix M3TVM-030, M3TVM-040A, M3TVM-040B, M3TVM-050A, and M3TVM-050B.",
   "cases": [
     {
       "id": "button-filled-enabled-light",
@@ -631,6 +631,134 @@
       "assertions": [
         { "role": "container_color", "kind": "color_alpha", "color_token": "md.comp.icon-button.filled.disabled.container.color", "opacity_token": "md.comp.icon-button.filled.disabled.container.opacity" },
         { "role": "icon_color", "kind": "color_alpha", "color_token": "md.comp.icon-button.filled.disabled.icon.color", "opacity_token": "md.comp.icon-button.filled.disabled.icon.opacity" }
+      ]
+    },
+    {
+      "id": "assist-chip-elevated-hovered-light",
+      "component": "chip",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "elevated", "interaction": "hovered" },
+      "assertions": [
+        { "role": "container_height", "kind": "metric", "token": "md.comp.assist-chip.container.height" },
+        { "role": "container_shape", "kind": "corners_metric", "token": "md.comp.assist-chip.container.shape" },
+        { "role": "label_text_style", "kind": "text_style_weight_source", "source_token": "md.sys.typescale.label-large", "token": "md.comp.assist-chip.label-text.weight" },
+        { "role": "leading_icon_size", "kind": "metric", "token": "md.comp.assist-chip.with-icon.icon.size" },
+        { "role": "container_color", "kind": "color", "token": "md.comp.assist-chip.elevated.container.color" },
+        { "role": "container_elevation", "kind": "metric", "token": "md.comp.assist-chip.elevated.hover.container.elevation" },
+        { "role": "shadow_color", "kind": "color", "token": "md.comp.assist-chip.elevated.container.shadow-color" },
+        { "role": "label_color", "kind": "color", "token": "md.comp.assist-chip.hover.label-text.color" },
+        { "role": "leading_icon_color", "kind": "color", "token": "md.comp.assist-chip.with-icon.hover.icon.color" },
+        { "role": "state_layer_color", "kind": "color", "token": "md.comp.assist-chip.hover.state-layer.color" },
+        { "role": "state_layer_opacity", "kind": "number", "token": "md.comp.assist-chip.hover.state-layer.opacity" }
+      ]
+    },
+    {
+      "id": "assist-chip-flat-disabled-light",
+      "component": "chip",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "flat", "enabled": false },
+      "assertions": [
+        { "role": "outline_width", "kind": "metric", "token": "md.comp.assist-chip.flat.outline.width" },
+        { "role": "outline_color", "kind": "color_alpha", "color_token": "md.comp.assist-chip.flat.disabled.outline.color", "opacity_token": "md.comp.assist-chip.flat.disabled.outline.opacity" },
+        { "role": "label_color", "kind": "color_alpha", "color_token": "md.comp.assist-chip.disabled.label-text.color", "opacity_token": "md.comp.assist-chip.disabled.label-text.opacity" },
+        { "role": "leading_icon_color", "kind": "color_alpha", "color_token": "md.comp.assist-chip.with-icon.disabled.icon.color", "opacity_token": "md.comp.assist-chip.with-icon.disabled.icon.opacity" }
+      ]
+    },
+    {
+      "id": "filter-chip-elevated-selected-pressed-light",
+      "component": "filter_chip",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "elevated", "selected": true, "interaction": "pressed" },
+      "assertions": [
+        { "role": "container_height", "kind": "metric", "token": "md.comp.filter-chip.container.height" },
+        { "role": "container_shape", "kind": "corners_metric", "token": "md.comp.filter-chip.container.shape" },
+        { "role": "label_text_style", "kind": "text_style_weight_source", "source_token": "md.sys.typescale.label-large", "token": "md.comp.filter-chip.label-text.weight" },
+        { "role": "leading_icon_size", "kind": "metric", "token": "md.comp.filter-chip.with-icon.icon.size" },
+        { "role": "trailing_icon_size", "kind": "metric", "token": "md.comp.filter-chip.with-icon.icon.size" },
+        { "role": "container_color", "kind": "color", "token": "md.comp.filter-chip.elevated.selected.container.color" },
+        { "role": "container_elevation", "kind": "metric", "token": "md.comp.filter-chip.elevated.pressed.container.elevation" },
+        { "role": "shadow_color", "kind": "color", "token": "md.comp.filter-chip.elevated.container.shadow-color" },
+        { "role": "label_color", "kind": "color", "token": "md.comp.filter-chip.selected.pressed.label-text.color" },
+        { "role": "leading_icon_color", "kind": "color", "token": "md.comp.filter-chip.with-leading-icon.selected.pressed.leading-icon.color" },
+        { "role": "trailing_icon_color", "kind": "color", "token": "md.comp.filter-chip.with-trailing-icon.selected.pressed.trailing-icon.color" },
+        { "role": "state_layer_color", "kind": "color", "token": "md.comp.filter-chip.selected.pressed.state-layer.color" },
+        { "role": "state_layer_opacity", "kind": "number", "token": "md.comp.filter-chip.selected.pressed.state-layer.opacity" }
+      ]
+    },
+    {
+      "id": "filter-chip-flat-disabled-unselected-light",
+      "component": "filter_chip",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "flat", "selected": false, "enabled": false },
+      "assertions": [
+        { "role": "outline_width", "kind": "metric", "token": "md.comp.filter-chip.flat.unselected.outline.width" },
+        { "role": "outline_color", "kind": "color_alpha", "color_token": "md.comp.filter-chip.flat.disabled.unselected.outline.color", "opacity_token": "md.comp.filter-chip.flat.disabled.unselected.outline.opacity" },
+        { "role": "label_color", "kind": "color_alpha", "color_token": "md.comp.filter-chip.disabled.label-text.color", "opacity_token": "md.comp.filter-chip.disabled.label-text.opacity" },
+        { "role": "leading_icon_color", "kind": "color_alpha", "color_token": "md.comp.filter-chip.with-leading-icon.disabled.leading-icon.color", "opacity_token": "md.comp.filter-chip.with-leading-icon.disabled.leading-icon.opacity" },
+        { "role": "trailing_icon_color", "kind": "color_alpha", "color_token": "md.comp.filter-chip.with-trailing-icon.disabled.trailing-icon.color", "opacity_token": "md.comp.filter-chip.with-trailing-icon.disabled.trailing-icon.opacity" }
+      ]
+    },
+    {
+      "id": "input-chip-selected-hovered-light",
+      "component": "input_chip",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "input", "selected": true, "interaction": "hovered" },
+      "assertions": [
+        { "role": "container_height", "kind": "metric", "token": "md.comp.input-chip.container.height" },
+        { "role": "container_shape", "kind": "corners_metric", "token": "md.comp.input-chip.container.shape" },
+        { "role": "label_text_style", "kind": "text_style_weight_source", "source_token": "md.sys.typescale.label-large", "token": "md.comp.input-chip.label-text.weight" },
+        { "role": "leading_icon_size", "kind": "metric", "token": "md.comp.input-chip.with-leading-icon.leading-icon.size" },
+        { "role": "trailing_icon_size", "kind": "metric", "token": "md.comp.input-chip.with-trailing-icon.trailing-icon.size" },
+        { "role": "container_color", "kind": "color", "token": "md.comp.input-chip.selected.container.color" },
+        { "role": "label_color", "kind": "color", "token": "md.comp.input-chip.selected.hover.label-text.color" },
+        { "role": "leading_icon_color", "kind": "color", "token": "md.comp.input-chip.with-leading-icon.selected.hover.leading-icon.color" },
+        { "role": "trailing_icon_color", "kind": "color", "token": "md.comp.input-chip.with-trailing-icon.selected.hover.trailing-icon.color" },
+        { "role": "state_layer_color", "kind": "color", "token": "md.comp.input-chip.selected.hover.state-layer.color" },
+        { "role": "state_layer_opacity", "kind": "number", "token": "md.comp.input-chip.selected.hover.state-layer.opacity" }
+      ]
+    },
+    {
+      "id": "input-chip-disabled-unselected-light",
+      "component": "input_chip",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "input", "selected": false, "enabled": false },
+      "assertions": [
+        { "role": "outline_width", "kind": "metric", "token": "md.comp.input-chip.unselected.outline.width" },
+        { "role": "outline_color", "kind": "color_alpha", "color_token": "md.comp.input-chip.disabled.unselected.outline.color", "opacity_token": "md.comp.input-chip.disabled.unselected.outline.opacity" },
+        { "role": "label_color", "kind": "color_alpha", "color_token": "md.comp.input-chip.disabled.label-text.color", "opacity_token": "md.comp.input-chip.disabled.label-text.opacity" },
+        { "role": "leading_icon_color", "kind": "color_alpha", "color_token": "md.comp.input-chip.with-leading-icon.disabled.leading-icon.color", "opacity_token": "md.comp.input-chip.with-leading-icon.disabled.leading-icon.opacity" },
+        { "role": "trailing_icon_color", "kind": "color_alpha", "color_token": "md.comp.input-chip.with-trailing-icon.disabled.trailing-icon.color", "opacity_token": "md.comp.input-chip.with-trailing-icon.disabled.trailing-icon.opacity" }
+      ]
+    },
+    {
+      "id": "suggestion-chip-elevated-hovered-light",
+      "component": "suggestion_chip",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "elevated", "interaction": "hovered" },
+      "assertions": [
+        { "role": "container_height", "kind": "metric", "token": "md.comp.suggestion-chip.container.height" },
+        { "role": "container_shape", "kind": "corners_metric", "token": "md.comp.suggestion-chip.container.shape" },
+        { "role": "label_text_style", "kind": "text_style_weight_source", "source_token": "md.sys.typescale.label-large", "token": "md.comp.suggestion-chip.label-text.weight" },
+        { "role": "leading_icon_size", "kind": "metric", "token": "md.comp.suggestion-chip.with-leading-icon.leading-icon.size" },
+        { "role": "container_color", "kind": "color", "token": "md.comp.suggestion-chip.elevated.container.color" },
+        { "role": "container_elevation", "kind": "metric", "token": "md.comp.suggestion-chip.elevated.hover.container.elevation" },
+        { "role": "shadow_color", "kind": "color", "token": "md.comp.suggestion-chip.elevated.container.shadow-color" },
+        { "role": "label_color", "kind": "color", "token": "md.comp.suggestion-chip.hover.label-text.color" },
+        { "role": "leading_icon_color", "kind": "color", "token": "md.comp.suggestion-chip.with-leading-icon.hover.leading-icon.color" },
+        { "role": "state_layer_color", "kind": "color", "token": "md.comp.suggestion-chip.hover.state-layer.color" },
+        { "role": "state_layer_opacity", "kind": "number", "token": "md.comp.suggestion-chip.hover.state-layer.opacity" }
+      ]
+    },
+    {
+      "id": "suggestion-chip-flat-disabled-light",
+      "component": "suggestion_chip",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "flat", "enabled": false },
+      "assertions": [
+        { "role": "outline_width", "kind": "metric", "token": "md.comp.suggestion-chip.flat.outline.width" },
+        { "role": "outline_color", "kind": "color_alpha", "color_token": "md.comp.suggestion-chip.flat.disabled.outline.color", "opacity_token": "md.comp.suggestion-chip.flat.disabled.outline.opacity" },
+        { "role": "label_color", "kind": "color_alpha", "color_token": "md.comp.suggestion-chip.disabled.label-text.color", "opacity_token": "md.comp.suggestion-chip.disabled.label-text.opacity" },
+        { "role": "leading_icon_color", "kind": "color_alpha", "color_token": "md.comp.suggestion-chip.with-leading-icon.disabled.leading-icon.color", "opacity_token": "md.comp.suggestion-chip.with-leading-icon.disabled.leading-icon.opacity" }
       ]
     }
   ]

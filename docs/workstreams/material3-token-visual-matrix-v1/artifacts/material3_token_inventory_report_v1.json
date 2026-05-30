@@ -749,53 +749,54 @@
     },
     {
       "component_family_counts": {
-        "assist-chip": 17,
-        "system": 7
+        "assist-chip": 18,
+        "system": 8
       },
       "fallback_pattern_counts": {
         "closure_unwrap_or_else": 11,
+        "default_unwrap": 1,
         "literal_unwrap_or": 11,
         "theme_or_else_chain": 12
       },
       "fallback_samples": [
         {
           "kind": "literal_unwrap_or",
-          "line": 23,
+          "line": 24,
           "path": "ecosystem/fret-ui-material3/src/tokens/chip.rs",
           "text": ".unwrap_or(Px(32.0))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 30,
+          "line": 31,
           "path": "ecosystem/fret-ui-material3/src/tokens/chip.rs",
           "text": ".or_else(|| {"
         },
         {
           "kind": "closure_unwrap_or_else",
-          "line": 35,
+          "line": 36,
           "path": "ecosystem/fret-ui-material3/src/tokens/chip.rs",
           "text": ".unwrap_or_else(|| Corners::all(Px(8.0)))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 46,
+          "line": 47,
           "path": "ecosystem/fret-ui-material3/src/tokens/chip.rs",
           "text": ".or_else(|| theme.color_by_key(\"md.sys.color.on-surface\"))"
         },
         {
           "kind": "closure_unwrap_or_else",
-          "line": 47,
+          "line": 48,
           "path": "ecosystem/fret-ui-material3/src/tokens/chip.rs",
           "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.on-surface\"));"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 50,
+          "line": 51,
           "path": "ecosystem/fret-ui-material3/src/tokens/chip.rs",
           "text": ".unwrap_or(0.38);"
         }
       ],
-      "fallback_site_count": 34,
+      "fallback_site_count": 35,
       "magic_visual_constant_count": 12,
       "magic_visual_constant_role_counts": {
         "metric": 11,
@@ -807,7 +808,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 23,
+          "line": 24,
           "path": "ecosystem/fret-ui-material3/src/tokens/chip.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(32.0))",
@@ -818,7 +819,7 @@
             "px_literal"
           ],
           "kind": "px_literal",
-          "line": 35,
+          "line": 36,
           "path": "ecosystem/fret-ui-material3/src/tokens/chip.rs",
           "role": "shape",
           "text": ".unwrap_or_else(|| Corners::all(Px(8.0)))",
@@ -829,7 +830,7 @@
             "fallback"
           ],
           "kind": "number_fallback",
-          "line": 50,
+          "line": 51,
           "path": "ecosystem/fret-ui-material3/src/tokens/chip.rs",
           "role": "metric",
           "text": ".unwrap_or(0.38);",
@@ -840,7 +841,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 71,
+          "line": 82,
           "path": "ecosystem/fret-ui-material3/src/tokens/chip.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(18.0))",
@@ -851,7 +852,7 @@
             "fallback"
           ],
           "kind": "number_fallback",
-          "line": 86,
+          "line": 97,
           "path": "ecosystem/fret-ui-material3/src/tokens/chip.rs",
           "role": "metric",
           "text": ".unwrap_or(0.38);",
@@ -862,7 +863,7 @@
             "fallback"
           ],
           "kind": "number_fallback",
-          "line": 129,
+          "line": 140,
           "path": "ecosystem/fret-ui-material3/src/tokens/chip.rs",
           "role": "metric",
           "text": ".unwrap_or(0.0)",
@@ -879,10 +880,10 @@
       "module": "chip",
       "path": "ecosystem/fret-ui-material3/src/tokens/chip.rs",
       "token_domain_counts": {
-        "component": 17,
-        "system": 7
+        "component": 18,
+        "system": 8
       },
-      "token_key_count": 24
+      "token_key_count": 26
     },
     {
       "component_family_counts": {
@@ -1416,53 +1417,54 @@
     },
     {
       "component_family_counts": {
-        "filter-chip": 20,
-        "system": 9
+        "filter-chip": 21,
+        "system": 10
       },
       "fallback_pattern_counts": {
         "closure_unwrap_or_else": 15,
+        "default_unwrap": 1,
         "literal_unwrap_or": 14,
         "theme_or_else_chain": 16
       },
       "fallback_samples": [
         {
           "kind": "literal_unwrap_or",
-          "line": 19,
+          "line": 20,
           "path": "ecosystem/fret-ui-material3/src/tokens/filter_chip.rs",
           "text": ".unwrap_or(Px(32.0))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 26,
+          "line": 27,
           "path": "ecosystem/fret-ui-material3/src/tokens/filter_chip.rs",
           "text": ".or_else(|| {"
         },
         {
           "kind": "closure_unwrap_or_else",
-          "line": 31,
+          "line": 32,
           "path": "ecosystem/fret-ui-material3/src/tokens/filter_chip.rs",
           "text": ".unwrap_or_else(|| Corners::all(Px(8.0)))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 37,
+          "line": 38,
           "path": "ecosystem/fret-ui-material3/src/tokens/filter_chip.rs",
           "text": ".unwrap_or(Px(18.0))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 43,
+          "line": 44,
           "path": "ecosystem/fret-ui-material3/src/tokens/filter_chip.rs",
           "text": ".unwrap_or(Px(18.0))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 50,
+          "line": 51,
           "path": "ecosystem/fret-ui-material3/src/tokens/filter_chip.rs",
           "text": ".or_else(|| theme.color_by_key(\"md.sys.color.secondary-container\"))"
         }
       ],
-      "fallback_site_count": 45,
+      "fallback_site_count": 46,
       "magic_visual_constant_count": 15,
       "magic_visual_constant_role_counts": {
         "metric": 14,
@@ -1474,7 +1476,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 19,
+          "line": 20,
           "path": "ecosystem/fret-ui-material3/src/tokens/filter_chip.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(32.0))",
@@ -1485,7 +1487,7 @@
             "px_literal"
           ],
           "kind": "px_literal",
-          "line": 31,
+          "line": 32,
           "path": "ecosystem/fret-ui-material3/src/tokens/filter_chip.rs",
           "role": "shape",
           "text": ".unwrap_or_else(|| Corners::all(Px(8.0)))",
@@ -1496,7 +1498,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 37,
+          "line": 38,
           "path": "ecosystem/fret-ui-material3/src/tokens/filter_chip.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(18.0))",
@@ -1507,7 +1509,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 43,
+          "line": 44,
           "path": "ecosystem/fret-ui-material3/src/tokens/filter_chip.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(18.0))",
@@ -1518,7 +1520,7 @@
             "fallback"
           ],
           "kind": "number_fallback",
-          "line": 59,
+          "line": 60,
           "path": "ecosystem/fret-ui-material3/src/tokens/filter_chip.rs",
           "role": "metric",
           "text": ".unwrap_or(0.12);",
@@ -1529,7 +1531,7 @@
             "fallback"
           ],
           "kind": "number_fallback",
-          "line": 90,
+          "line": 91,
           "path": "ecosystem/fret-ui-material3/src/tokens/filter_chip.rs",
           "role": "metric",
           "text": ".unwrap_or(0.12);",
@@ -1543,10 +1545,10 @@
       "module": "filter_chip",
       "path": "ecosystem/fret-ui-material3/src/tokens/filter_chip.rs",
       "token_domain_counts": {
-        "component": 20,
-        "system": 9
+        "component": 21,
+        "system": 10
       },
-      "token_key_count": 29
+      "token_key_count": 31
     },
     {
       "component_family_counts": {
@@ -1683,53 +1685,54 @@
     },
     {
       "component_family_counts": {
-        "input-chip": 17,
-        "system": 7
+        "input-chip": 18,
+        "system": 8
       },
       "fallback_pattern_counts": {
         "closure_unwrap_or_else": 12,
+        "default_unwrap": 1,
         "literal_unwrap_or": 11,
         "theme_or_else_chain": 13
       },
       "fallback_samples": [
         {
           "kind": "literal_unwrap_or",
-          "line": 19,
+          "line": 20,
           "path": "ecosystem/fret-ui-material3/src/tokens/input_chip.rs",
           "text": ".unwrap_or(Px(32.0))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 26,
+          "line": 27,
           "path": "ecosystem/fret-ui-material3/src/tokens/input_chip.rs",
           "text": ".or_else(|| {"
         },
         {
           "kind": "closure_unwrap_or_else",
-          "line": 31,
+          "line": 32,
           "path": "ecosystem/fret-ui-material3/src/tokens/input_chip.rs",
           "text": ".unwrap_or_else(|| Corners::all(Px(8.0)))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 37,
+          "line": 38,
           "path": "ecosystem/fret-ui-material3/src/tokens/input_chip.rs",
           "text": ".unwrap_or(Px(18.0))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 43,
+          "line": 44,
           "path": "ecosystem/fret-ui-material3/src/tokens/input_chip.rs",
           "text": ".unwrap_or(Px(18.0))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 50,
+          "line": 51,
           "path": "ecosystem/fret-ui-material3/src/tokens/input_chip.rs",
           "text": ".or_else(|| theme.color_by_key(\"md.sys.color.secondary-container\"))"
         }
       ],
-      "fallback_site_count": 36,
+      "fallback_site_count": 37,
       "magic_visual_constant_count": 12,
       "magic_visual_constant_role_counts": {
         "metric": 11,
@@ -1741,7 +1744,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 19,
+          "line": 20,
           "path": "ecosystem/fret-ui-material3/src/tokens/input_chip.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(32.0))",
@@ -1752,7 +1755,7 @@
             "px_literal"
           ],
           "kind": "px_literal",
-          "line": 31,
+          "line": 32,
           "path": "ecosystem/fret-ui-material3/src/tokens/input_chip.rs",
           "role": "shape",
           "text": ".unwrap_or_else(|| Corners::all(Px(8.0)))",
@@ -1763,7 +1766,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 37,
+          "line": 38,
           "path": "ecosystem/fret-ui-material3/src/tokens/input_chip.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(18.0))",
@@ -1774,7 +1777,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 43,
+          "line": 44,
           "path": "ecosystem/fret-ui-material3/src/tokens/input_chip.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(18.0))",
@@ -1785,7 +1788,7 @@
             "fallback"
           ],
           "kind": "number_fallback",
-          "line": 59,
+          "line": 60,
           "path": "ecosystem/fret-ui-material3/src/tokens/input_chip.rs",
           "role": "metric",
           "text": ".unwrap_or(0.12);",
@@ -1796,7 +1799,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 73,
+          "line": 74,
           "path": "ecosystem/fret-ui-material3/src/tokens/input_chip.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(1.0));",
@@ -1810,10 +1813,10 @@
       "module": "input_chip",
       "path": "ecosystem/fret-ui-material3/src/tokens/input_chip.rs",
       "token_domain_counts": {
-        "component": 17,
-        "system": 7
+        "component": 18,
+        "system": 8
       },
-      "token_key_count": 24
+      "token_key_count": 26
     },
     {
       "component_family_counts": {
@@ -3789,53 +3792,54 @@
     },
     {
       "component_family_counts": {
-        "suggestion-chip": 17,
-        "system": 8
+        "suggestion-chip": 18,
+        "system": 9
       },
       "fallback_pattern_counts": {
         "closure_unwrap_or_else": 11,
+        "default_unwrap": 1,
         "literal_unwrap_or": 11,
         "theme_or_else_chain": 12
       },
       "fallback_samples": [
         {
           "kind": "literal_unwrap_or",
-          "line": 19,
+          "line": 20,
           "path": "ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs",
           "text": ".unwrap_or(Px(32.0))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 26,
+          "line": 27,
           "path": "ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs",
           "text": ".or_else(|| {"
         },
         {
           "kind": "closure_unwrap_or_else",
-          "line": 31,
+          "line": 32,
           "path": "ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs",
           "text": ".unwrap_or_else(|| Corners::all(Px(8.0)))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 37,
+          "line": 38,
           "path": "ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs",
           "text": ".unwrap_or(Px(18.0))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 44,
+          "line": 45,
           "path": "ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs",
           "text": ".or_else(|| theme.color_by_key(\"md.sys.color.surface-container-low\"))"
         },
         {
           "kind": "closure_unwrap_or_else",
-          "line": 45,
+          "line": 46,
           "path": "ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs",
           "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.surface-container-low\"))"
         }
       ],
-      "fallback_site_count": 34,
+      "fallback_site_count": 35,
       "magic_visual_constant_count": 12,
       "magic_visual_constant_role_counts": {
         "metric": 11,
@@ -3847,7 +3851,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 19,
+          "line": 20,
           "path": "ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(32.0))",
@@ -3858,7 +3862,7 @@
             "px_literal"
           ],
           "kind": "px_literal",
-          "line": 31,
+          "line": 32,
           "path": "ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs",
           "role": "shape",
           "text": ".unwrap_or_else(|| Corners::all(Px(8.0)))",
@@ -3869,7 +3873,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 37,
+          "line": 38,
           "path": "ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(18.0))",
@@ -3880,7 +3884,7 @@
             "fallback"
           ],
           "kind": "number_fallback",
-          "line": 53,
+          "line": 54,
           "path": "ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs",
           "role": "metric",
           "text": ".unwrap_or(0.12);",
@@ -3891,7 +3895,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 68,
+          "line": 69,
           "path": "ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(0.0));",
@@ -3902,7 +3906,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 80,
+          "line": 81,
           "path": "ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(0.0))",
@@ -3916,10 +3920,10 @@
       "module": "suggestion_chip",
       "path": "ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs",
       "token_domain_counts": {
-        "component": 17,
-        "system": 8
+        "component": 18,
+        "system": 9
       },
-      "token_key_count": 25
+      "token_key_count": 27
     },
     {
       "component_family_counts": {
@@ -5129,7 +5133,7 @@
           "module": "checkbox"
         },
         {
-          "fallback_site_count": 34,
+          "fallback_site_count": 35,
           "magic_visual_constant_count": 12,
           "module": "chip"
         },
@@ -5149,7 +5153,7 @@
           "module": "fab"
         },
         {
-          "fallback_site_count": 45,
+          "fallback_site_count": 46,
           "magic_visual_constant_count": 15,
           "module": "filter_chip"
         },
@@ -5159,7 +5163,7 @@
           "module": "icon_button"
         },
         {
-          "fallback_site_count": 36,
+          "fallback_site_count": 37,
           "magic_visual_constant_count": 12,
           "module": "input_chip"
         }
@@ -6822,12 +6826,12 @@
       "closure_unwrap_or_else": 252,
       "component_to_system_color": 48,
       "component_to_system_number": 2,
-      "default_unwrap": 16,
+      "default_unwrap": 20,
       "literal_unwrap_or": 426,
       "system_color_resolver": 39,
       "theme_or_else_chain": 384
     },
-    "component_token_fallback_site_count": 1167,
+    "component_token_fallback_site_count": 1171,
     "component_token_magic_visual_constant_count": 505,
     "component_token_magic_visual_constant_role_counts": {
       "metric": 458,
