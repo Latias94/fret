@@ -2850,6 +2850,12 @@ Last updated: 2026-05-31
       `virtual_list_controls/row.rs` owns row packing, test-id suffixing, row-height resolution,
       striped row chrome, and fixed-height clipping. The root file keeps keyed list assembly,
       render-range tracking, focus child mounting, and list-level semantics.
+- [x] Split IMUI virtual-list regression tests into private fixed/known and measured owners without
+      changing fixed-height clipping, known-height clipping, measured overflow visibility, or
+      row-height helper assertions.
+      Result: `virtual_list_controls/tests.rs` now keeps `bounds`, oversized-content fixtures, and
+      module routing only. `tests/fixed_known.rs` owns fixed and known row clipping coverage, while
+      `tests/measured.rs` owns measured overflow visibility coverage.
 
 ## P0 - Source Baseline
 

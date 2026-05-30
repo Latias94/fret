@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Virtual-List Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI virtual-list regression tests split into private fixed/known and measured
+owners without changing fixed-height clipping, known-height clipping, measured overflow
+visibility, or row-height helper assertions.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/tests.rs` is now a thin hub with bounds
+  and oversized-content fixtures only.
+- `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/tests/fixed_known.rs` owns fixed and
+  known row clipping coverage.
+- `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/tests/measured.rs` owns measured overflow
+  visibility coverage.
+- `tools/gate_imui_workstream_source.py` now checks the hub and both private test owners and
+  rejects clipping regression bodies from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the virtual-list test-owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  fixed_virtual_list_rows_clip_content_to_row_height
+  known_virtual_list_rows_clip_content_to_known_row_height
+  measured_virtual_list_rows_keep_content_overflow_visible_for_measurement --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_virtual_list_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui virtual_list --no-fail-fast`: pass.
+
 ## IMUI Multi-Select Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI multi-select regression tests split into private click-policy and
