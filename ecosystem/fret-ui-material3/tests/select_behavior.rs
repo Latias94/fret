@@ -42,6 +42,24 @@ fn horizontal_gaps(child: Rect, parent: Rect) -> (f32, f32) {
 }
 
 #[cfg(feature = "diagnostics")]
+fn rect_right(rect: Rect) -> f32 {
+    rect.origin.x.0 + rect.size.width.0
+}
+
+#[cfg(feature = "diagnostics")]
+fn rect_center_x(rect: Rect) -> f32 {
+    rect.origin.x.0 + rect.size.width.0 * 0.5
+}
+
+#[cfg(feature = "diagnostics")]
+fn assert_close_px(actual: f32, expected: f32, label: &str) {
+    assert!(
+        (actual - expected).abs() <= 0.5,
+        "expected {label} to be {expected}px, got {actual}px"
+    );
+}
+
+#[cfg(feature = "diagnostics")]
 #[test]
 fn select_initial_selected_label_mounts_at_settled_floating_position() {
     use fret_ui_material3::{Select, SelectItem, SelectVariant};
@@ -213,6 +231,278 @@ fn select_rtl_label_and_supporting_text_use_logical_inline_insets() {
             "expected {label} RTL select supporting text inline-start gap on the right; left={supporting_left}, right={supporting_right}"
         );
     }
+}
+
+#[cfg(feature = "diagnostics")]
+#[test]
+fn select_rtl_start_aligned_popup_anchors_to_trigger_inline_start() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::select::SelectMenuAlign;
+    use fret_ui_material3::{Select, SelectItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(640.0), Px(420.0)),
+    );
+
+    let selected = app.models_mut().insert(None::<Arc<str>>);
+    let items: Arc<[SelectItem]> = vec![
+        SelectItem::new("alpha", "Alpha"),
+        SelectItem::new("beta", "Beta"),
+    ]
+    .into();
+
+    let selected_model = selected.clone();
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let selected_model = selected_model.clone();
+            let items = items.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let mut l = fret_ui::element::LayoutStyle::default();
+                l.position = fret_ui::element::PositionStyle::Absolute;
+                l.inset = fret_ui::element::InsetStyle {
+                    top: Some(Px(80.0)).into(),
+                    left: Some(Px(120.0)).into(),
+                    right: None.into(),
+                    bottom: None.into(),
+                };
+                l.size.width = fret_ui::element::Length::Px(Px(160.0));
+                l.size.height = fret_ui::element::Length::Auto;
+                l.overflow = fret_ui::element::Overflow::Visible;
+
+                vec![cx.container(
+                    fret_ui::element::ContainerProps {
+                        layout: l,
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![
+                            Select::new(selected_model)
+                                .a11y_label("select")
+                                .placeholder("Pick one")
+                                .menu_align(SelectMenuAlign::Start)
+                                .match_anchor_width(false)
+                                .menu_width_floor(Px(260.0))
+                                .items(items)
+                                .test_id("select-trigger")
+                                .into_element(cx),
+                        ]
+                    },
+                )]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
+            })
+        })
+        .expect("expected select-trigger in semantics snapshot");
+
+    ui.set_focus(Some(trigger_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    let mut opened = false;
+    for _ in 0..24 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        if stack
+            .stack
+            .iter()
+            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
+        {
+            opened = true;
+            break;
+        }
+    }
+    assert!(opened, "expected select overlay to open");
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger = live_test_id_layout_bounds(&ui, &app, window, "select-trigger.chrome");
+    let listbox = live_test_id_layout_bounds(&ui, &app, window, "select-trigger.listbox");
+
+    assert!(
+        listbox.size.width.0 > trigger.size.width.0 + 40.0,
+        "expected the test menu to be wider than the trigger"
+    );
+    assert_close_px(
+        rect_right(listbox),
+        rect_right(trigger),
+        "RTL start-aligned popup right edge",
+    );
+    assert!(
+        listbox.origin.x.0 < trigger.origin.x.0 - 40.0,
+        "expected RTL start-aligned wider popup to extend left from the trigger; trigger={trigger:?}, listbox={listbox:?}"
+    );
+}
+
+#[cfg(feature = "diagnostics")]
+#[test]
+fn select_rtl_listbox_items_place_logical_leading_slot_on_right() {
+    use fret_icons::ids;
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Select, SelectItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(420.0)),
+    );
+
+    let selected = app.models_mut().insert(None::<Arc<str>>);
+    let items: Arc<[SelectItem]> = vec![
+        SelectItem::new("alpha", "Alpha")
+            .leading_icon(ids::ui::SEARCH)
+            .trailing_icon(ids::ui::CHEVRON_RIGHT)
+            .test_id("rich-option"),
+        SelectItem::new("beta", "Beta"),
+    ]
+    .into();
+
+    let selected_model = selected.clone();
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let selected_model = selected_model.clone();
+            let items = items.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let mut fixed = fret_ui::element::ContainerProps::default();
+                fixed.layout.size.width = fret_ui::element::Length::Px(Px(260.0));
+                fixed.layout.size.height = fret_ui::element::Length::Auto;
+                fixed.layout.overflow = fret_ui::element::Overflow::Visible;
+
+                vec![cx.container(fixed, move |cx| {
+                    vec![
+                        Select::new(selected_model)
+                            .a11y_label("select")
+                            .placeholder("Pick one")
+                            .items(items)
+                            .test_id("select-trigger")
+                            .into_element(cx),
+                    ]
+                })]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
+            })
+        })
+        .expect("expected select-trigger in semantics snapshot");
+
+    ui.set_focus(Some(trigger_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    let mut opened = false;
+    for _ in 0..24 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        if stack
+            .stack
+            .iter()
+            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
+        {
+            opened = true;
+            break;
+        }
+    }
+    assert!(opened, "expected select overlay to open");
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let item = live_test_id_layout_bounds(&ui, &app, window, "rich-option.chrome");
+    let leading = live_test_id_layout_bounds(&ui, &app, window, "rich-option.leading-icon");
+    let trailing = live_test_id_layout_bounds(&ui, &app, window, "rich-option.trailing-icon");
+    let item_center = rect_center_x(item);
+
+    assert!(
+        rect_center_x(leading) > item_center,
+        "expected RTL leading icon on the physical right side; item={item:?}, leading={leading:?}, trailing={trailing:?}"
+    );
+    assert!(
+        rect_center_x(trailing) < item_center,
+        "expected RTL trailing icon on the physical left side; item={item:?}, trailing={trailing:?}"
+    );
+    assert!(
+        rect_center_x(leading) > rect_center_x(trailing) + 32.0,
+        "expected RTL leading icon to appear to the right of trailing icon; leading={leading:?}, trailing={trailing:?}"
+    );
 }
 
 #[cfg(feature = "diagnostics")]

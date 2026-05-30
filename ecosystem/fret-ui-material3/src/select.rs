@@ -26,7 +26,6 @@ use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::{ElementContextThemeExt as _, controllable_state};
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::typography::{self, TextIntent};
@@ -611,9 +610,8 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
                 Px((item_height.0 * (items.len().max(1) as f32)) + menu_vertical_padding.0 * 2.0);
             let desired = Size::new(desired_width, desired_height);
 
-            let direction = direction_prim::use_direction_in_scope(cx, None);
             let placement = popper::PopperContentPlacement::new(
-                direction,
+                layout_direction,
                 Side::Bottom,
                 match menu_align {
                     SelectMenuAlign::Start => Align::Start,
@@ -642,23 +640,26 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
                 Edges::all(Px(0.0)),
                 Overflow::Visible,
                 move |cx| {
-                    vec![select_listbox_panel(
-                        cx,
-                        variant,
-                        model.clone(),
-                        open_model_for_panel.clone(),
-                        items.clone(),
-                        selected.clone(),
-                        a11y_label.clone(),
-                        test_id.clone(),
-                        Some(anchor_id.0),
-                        initial_focus_id_for_list,
-                        listbox_element_id_out,
-                        layout.rect.size.width,
-                        runtime.scroll_handle.clone(),
-                        typeahead_delay_ms,
-                        style.clone(),
-                    )]
+                    vec![cx.provide(layout_direction, |cx| {
+                        select_listbox_panel(
+                            cx,
+                            variant,
+                            model.clone(),
+                            open_model_for_panel.clone(),
+                            items.clone(),
+                            selected.clone(),
+                            a11y_label.clone(),
+                            test_id.clone(),
+                            Some(anchor_id.0),
+                            initial_focus_id_for_list,
+                            listbox_element_id_out,
+                            layout.rect.size.width,
+                            runtime.scroll_handle.clone(),
+                            typeahead_delay_ms,
+                            layout_direction,
+                            style.clone(),
+                        )
+                    })]
                 },
             );
 
@@ -1382,6 +1383,27 @@ fn select_menu_item_icon<H: UiHost>(
     cx.svg_icon_props(props)
 }
 
+fn select_menu_item_icon_slot<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    icon: &IconId,
+    color: Color,
+    size: Px,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    let icon = select_menu_item_icon(cx, icon, color, size);
+
+    let mut props = ContainerProps::default();
+    props.layout.size.width = Length::Px(size);
+    props.layout.size.height = Length::Px(size);
+    props.layout.overflow = Overflow::Visible;
+
+    let mut slot = cx.container(props, move |_cx| vec![icon]);
+    if let Some(test_id) = test_id {
+        slot = slot.test_id(test_id);
+    }
+    slot
+}
+
 #[derive(Debug, Default)]
 struct SelectChevronRuntime {
     target_open: bool,
@@ -1627,7 +1649,7 @@ fn estimate_select_menu_content_width<H: UiHost>(
 mod item_text_tests {
     use super::*;
     use fret_app::App;
-    use fret_core::{Point, Px, Rect, Size};
+    use fret_core::{LayoutDirection, Point, Px, Rect, Size};
     use fret_ui::element::{ElementKind, Length, TextProps};
 
     fn bounds() -> Rect {
@@ -1796,6 +1818,7 @@ mod item_text_tests {
                     true,
                     0,
                     1,
+                    LayoutDirection::Ltr,
                     initial_focus.clone(),
                 )
             },
@@ -1842,6 +1865,7 @@ mod item_text_tests {
                     true,
                     0,
                     1,
+                    LayoutDirection::Ltr,
                     initial_focus.clone(),
                 )
             },
@@ -1907,6 +1931,7 @@ mod item_text_tests {
                     true,
                     0,
                     1,
+                    LayoutDirection::Ltr,
                     initial_focus.clone(),
                 )
             },
@@ -2029,6 +2054,7 @@ fn select_listbox_panel<H: UiHost>(
     listbox_width: Px,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     typeahead_delay_ms: u32,
+    layout_direction: LayoutDirection,
     style: Arc<SelectStyle>,
 ) -> AnyElement {
     #[derive(Default)]
@@ -2265,6 +2291,7 @@ fn select_listbox_panel<H: UiHost>(
                                             tab_stop,
                                             idx,
                                             count,
+                                            layout_direction,
                                             initial_focus_id_out.clone(),
                                         ));
                                     }
@@ -2292,6 +2319,7 @@ fn select_list_item<H: UiHost>(
     tab_stop: bool,
     idx: usize,
     set_size: usize,
+    layout_direction: LayoutDirection,
     initial_focus_id_out: Rc<Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
     let height = {
@@ -2564,159 +2592,155 @@ fn select_list_item<H: UiHost>(
                 .into();
 
                 let mut chrome = cx.container(chrome, move |cx| {
-                    vec![cx.flex(row, move |cx| {
-                        let body_slot = if has_secondary_text {
-                            let headline_el = {
-                                let mut props = TextProps::new(item.label.clone());
-                                props.style = label_style;
-                                props.color = Some(label_color);
-                                props.wrap = TextWrap::None;
-                                props.overflow = TextOverflow::Clip;
-                                props.layout.size.width = Length::Fill;
-                                props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-                                props.layout.flex.grow = 1.0;
-                                props.layout.flex.basis = Length::Px(Px(0.0));
-                                cx.text_props(props)
-                            };
-
-                            let supporting_el = supporting_text.as_ref().map(|text| {
-                                let mut props = TextProps::new(text.clone());
-                                props.style = supporting_style;
-                                props.color = Some(supporting_color);
-                                props.wrap = TextWrap::None;
-                                props.overflow = TextOverflow::Clip;
-                                props.layout.size.width = Length::Fill;
-                                props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-                                props.layout.flex.grow = 1.0;
-                                props.layout.flex.basis = Length::Px(Px(0.0));
-                                cx.text_props(props)
-                            });
-
-                            let trailing_supporting_el =
-                                trailing_supporting_text.as_ref().map(|text| {
-                                    let mut props = TextProps::new(text.clone());
-                                    props.style = trailing_supporting_style;
-                                    props.color = Some(trailing_supporting_color);
+                    vec![
+                        cx.flex(row, move |cx| {
+                            let body_slot = if has_secondary_text {
+                                let headline_el = {
+                                    let mut props = TextProps::new(item.label.clone());
+                                    props.style = label_style;
+                                    props.color = Some(label_color);
                                     props.wrap = TextWrap::None;
                                     props.overflow = TextOverflow::Clip;
+                                    props.align = fret_core::TextAlign::Start;
+                                    props.layout.size.width = Length::Fill;
                                     props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-                                    props.layout.flex.shrink = 1.0;
-                                    cx.text_props(props)
+                                    props.layout.flex.grow = 1.0;
+                                    props.layout.flex.basis = Length::Px(Px(0.0));
+                                    cx.text_props(props).with_layout_direction(layout_direction)
+                                };
+
+                                let supporting_el = supporting_text.as_ref().map(|text| {
+                                    let mut props = TextProps::new(text.clone());
+                                    props.style = supporting_style;
+                                    props.color = Some(supporting_color);
+                                    props.wrap = TextWrap::None;
+                                    props.overflow = TextOverflow::Clip;
+                                    props.align = fret_core::TextAlign::Start;
+                                    props.layout.size.width = Length::Fill;
+                                    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                    props.layout.flex.grow = 1.0;
+                                    props.layout.flex.basis = Length::Px(Px(0.0));
+                                    cx.text_props(props).with_layout_direction(layout_direction)
                                 });
 
-                            let mut column = FlexProps::default();
-                            column.direction = Axis::Vertical;
-                            column.justify = MainAlign::Start;
-                            column.align = CrossAlign::Stretch;
-                            column.gap = Px(2.0).into();
-                            column.layout.size.width = Length::Fill;
-                            column.layout.size.min_width = Some(Length::Px(Px(0.0)));
-                            column.layout.overflow = Overflow::Clip;
-                            column.layout.flex.grow = 1.0;
-                            column.layout.flex.basis = Length::Px(Px(0.0));
+                                let trailing_supporting_el =
+                                    trailing_supporting_text.as_ref().map(|text| {
+                                        let mut props = TextProps::new(text.clone());
+                                        props.style = trailing_supporting_style;
+                                        props.color = Some(trailing_supporting_color);
+                                        props.wrap = TextWrap::None;
+                                        props.overflow = TextOverflow::Clip;
+                                        props.align = fret_core::TextAlign::Start;
+                                        props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                        props.layout.flex.shrink = 1.0;
+                                        cx.text_props(props).with_layout_direction(layout_direction)
+                                    });
 
-                            cx.flex(column, move |cx| {
-                                let mut out = Vec::new();
-                                out.push(headline_el);
+                                let mut column = FlexProps::default();
+                                column.direction = Axis::Vertical;
+                                column.justify = MainAlign::Start;
+                                column.align = CrossAlign::Stretch;
+                                column.gap = Px(2.0).into();
+                                column.layout.size.width = Length::Fill;
+                                column.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                column.layout.overflow = Overflow::Clip;
+                                column.layout.flex.grow = 1.0;
+                                column.layout.flex.basis = Length::Px(Px(0.0));
 
-                                let mut second_row = FlexProps::default();
-                                second_row.direction = Axis::Horizontal;
-                                second_row.justify = MainAlign::Start;
-                                second_row.align = CrossAlign::Center;
-                                second_row.gap = Px(8.0).into();
-                                second_row.layout.size.width = Length::Fill;
-                                second_row.layout.size.min_width = Some(Length::Px(Px(0.0)));
-                                second_row.layout.overflow = Overflow::Clip;
+                                cx.flex(column, move |cx| {
+                                    let mut out = Vec::new();
+                                    out.push(headline_el);
 
-                                out.push(cx.flex(second_row, move |cx| {
-                                    let mut flex_spacer = fret_ui::element::SpacerProps::default();
-                                    flex_spacer.layout.size.width = Length::Fill;
-                                    flex_spacer.layout.size.height = Length::Px(Px(0.0));
-                                    flex_spacer.layout.flex.grow = 1.0;
-                                    let flex_spacer = cx.spacer(flex_spacer);
+                                    let mut second_row = FlexProps::default();
+                                    second_row.direction = Axis::Horizontal;
+                                    second_row.justify = MainAlign::Start;
+                                    second_row.align = CrossAlign::Center;
+                                    second_row.gap = Px(8.0).into();
+                                    second_row.layout.size.width = Length::Fill;
+                                    second_row.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                    second_row.layout.overflow = Overflow::Clip;
 
-                                    let mut children = Vec::new();
-                                    if let Some(el) = supporting_el {
-                                        children.push(el);
-                                    }
-                                    children.push(flex_spacer);
-                                    if let Some(el) = trailing_supporting_el {
-                                        children.push(el);
-                                    }
-                                    children
-                                }));
-                                out
-                            })
-                        } else {
-                            let label_el = {
-                                let mut props = TextProps::new(item.label.clone());
-                                props.style = label_style;
-                                props.color = Some(label_color);
-                                props.wrap = TextWrap::None;
-                                props.overflow = TextOverflow::Clip;
-                                props.layout.size.width = Length::Fill;
-                                props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-                                props.layout.flex.grow = 1.0;
-                                props.layout.flex.basis = Length::Px(Px(0.0));
-                                cx.text_props(props)
+                                    out.push(
+                                        cx.flex(second_row, move |cx| {
+                                            let mut flex_spacer =
+                                                fret_ui::element::SpacerProps::default();
+                                            flex_spacer.layout.size.width = Length::Fill;
+                                            flex_spacer.layout.size.height = Length::Px(Px(0.0));
+                                            flex_spacer.layout.flex.grow = 1.0;
+                                            let flex_spacer = cx.spacer(flex_spacer);
+
+                                            let mut children = Vec::new();
+                                            if let Some(el) = supporting_el {
+                                                children.push(el);
+                                            }
+                                            children.push(flex_spacer);
+                                            if let Some(el) = trailing_supporting_el {
+                                                children.push(el);
+                                            }
+                                            children
+                                        })
+                                        .with_layout_direction(layout_direction),
+                                    );
+                                    out
+                                })
+                                .with_layout_direction(layout_direction)
+                            } else {
+                                let label_el = {
+                                    let mut props = TextProps::new(item.label.clone());
+                                    props.style = label_style;
+                                    props.color = Some(label_color);
+                                    props.wrap = TextWrap::None;
+                                    props.overflow = TextOverflow::Clip;
+                                    props.align = fret_core::TextAlign::Start;
+                                    props.layout.size.width = Length::Fill;
+                                    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                    props.layout.flex.grow = 1.0;
+                                    props.layout.flex.basis = Length::Px(Px(0.0));
+                                    cx.text_props(props).with_layout_direction(layout_direction)
+                                };
+
+                                cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut l = fret_ui::element::LayoutStyle::default();
+                                            l.size.width = Length::Fill;
+                                            l.size.min_width = Some(Length::Px(Px(0.0)));
+                                            l.flex.grow = 1.0;
+                                            l.flex.basis = Length::Px(Px(0.0));
+                                            l.overflow = Overflow::Clip;
+                                            l
+                                        },
+                                        ..Default::default()
+                                    },
+                                    move |_cx| vec![label_el],
+                                )
                             };
 
-                            cx.container(
-                                ContainerProps {
-                                    layout: {
-                                        let mut l = fret_ui::element::LayoutStyle::default();
-                                        l.size.width = Length::Fill;
-                                        l.size.min_width = Some(Length::Px(Px(0.0)));
-                                        l.flex.grow = 1.0;
-                                        l.flex.basis = Length::Px(Px(0.0));
-                                        l.overflow = Overflow::Clip;
-                                        l
-                                    },
-                                    ..Default::default()
-                                },
-                                move |_cx| vec![label_el],
-                            )
-                        };
-
-                        let leading_icon_el = leading_icon.as_ref().map(|icon| {
-                            let icon = select_menu_item_icon(
-                                cx,
-                                icon,
-                                leading_icon_color,
-                                leading_icon_size,
-                            );
-                            if let Some(test_id) = leading_icon_test_id.clone() {
-                                icon.test_id(test_id)
-                            } else {
-                                icon
+                            let mut children = Vec::new();
+                            children.push(overlay);
+                            if let Some(icon) = leading_icon.as_ref() {
+                                children.push(select_menu_item_icon_slot(
+                                    cx,
+                                    icon,
+                                    leading_icon_color,
+                                    leading_icon_size,
+                                    leading_icon_test_id.clone(),
+                                ));
                             }
-                        });
-
-                        let trailing_icon_el = trailing_icon.as_ref().map(|icon| {
-                            let icon = select_menu_item_icon(
-                                cx,
-                                icon,
-                                trailing_icon_color,
-                                trailing_icon_size,
-                            );
-                            if let Some(test_id) = trailing_icon_test_id.clone() {
-                                icon.test_id(test_id)
-                            } else {
-                                icon
+                            children.push(body_slot);
+                            if let Some(icon) = trailing_icon.as_ref() {
+                                children.push(select_menu_item_icon_slot(
+                                    cx,
+                                    icon,
+                                    trailing_icon_color,
+                                    trailing_icon_size,
+                                    trailing_icon_test_id.clone(),
+                                ));
                             }
-                        });
-
-                        let mut children = Vec::new();
-                        children.push(overlay);
-                        if let Some(icon) = leading_icon_el {
-                            children.push(icon);
-                        }
-                        children.push(body_slot);
-                        if let Some(icon) = trailing_icon_el {
-                            children.push(icon);
-                        }
-                        children
-                    })]
+                            children
+                        })
+                        .with_layout_direction(layout_direction),
+                    ]
                 });
                 if let Some(test_id) = chrome_test_id.clone() {
                     chrome = chrome.test_id(test_id);
