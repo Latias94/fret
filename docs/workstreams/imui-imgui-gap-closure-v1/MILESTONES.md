@@ -1682,6 +1682,13 @@ checkbox/radio pressable orchestration, shortcut/context-menu handling, and resp
 while `boolean_controls/switch.rs` keeps switch active-trigger behavior and model updates. The
 public checkbox, radio, and switch APIs remain unchanged.
 
+2026-05-30 switch entry/props owner split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs` is now a thin module/re-export hub.
+`switch/entry.rs` owns label identity, model reads, active-trigger behavior installation, field
+chrome, switch state badge mounting, boolean label mounting, and fill-row visual assembly.
+`switch/props.rs` owns `PressableProps` construction plus switch a11y label, checked state, and
+test-id wiring.
+
 2026-05-26 hover query owner-split result:
 `ecosystem/fret-ui-kit/src/imui/response/hover/flags.rs` now owns `ImUiHoveredFlags`, while
 `ecosystem/fret-ui-kit/src/imui/response/hover/query.rs` owns the ImGui-style hovered query

@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Switch Entry/Props Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI switch entry and props ownership split without changing label identity, model
+reads, `SwitchOptions` a11y/test-id wiring, active-trigger behavior installation, field chrome, or
+visual row layout.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs` is now a thin module/re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/entry.rs` owns label identity, model
+  reads, active-trigger behavior installation, field chrome, switch state badge mounting, boolean
+  label mounting, and fill-row visual assembly.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/props.rs` owns `PressableProps`
+  construction plus switch a11y label, checked state, and test-id wiring.
+- `tools/gate_imui_workstream_source.py` now checks the switch root, entry, props, and behavior
+  owner boundaries.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_controls::switch label_identity::model_controls
+  composition::control_geometry --no-fail-fast`: pass (7 passed, 179 skipped).
+
 ## Text Picker Popup Sub-Owner Evidence - 2026-05-30
 
 Claim verified: IMUI input-text picker popup keyboard installation and popup data shapes split out

@@ -1702,6 +1702,13 @@ Last updated: 2026-05-30
       behavior installation, and owner dispatch. `behavior/activation.rs` owns click toggling,
       `behavior/keyboard.rs` owns shortcut key handling, and `behavior/response.rs` owns
       active-trigger response projection.
+- [x] Split IMUI switch entry and props owners without changing label identity, model reads,
+      `SwitchOptions` a11y/test-id wiring, active-trigger behavior installation, field chrome, or
+      visual row layout.
+      Result: `boolean_controls/switch.rs` is now a thin module/re-export hub,
+      `switch/entry.rs` owns label identity, model read, behavior installation, field chrome, and
+      visual row assembly, and `switch/props.rs` owns `PressableProps` plus switch semantics
+      wiring.
 - [x] Split IMUI interaction-runtime hover internals out of
       `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs` into private owner modules
       without changing hovered-query, shared-delay, active-item block, or long-press behavior.

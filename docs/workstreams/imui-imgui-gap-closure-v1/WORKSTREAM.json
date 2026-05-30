@@ -594,6 +594,8 @@
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/radio/behavior/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/radio/behavior/response.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs",
+    "ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/entry.rs",
+    "ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/props.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/behavior/activation.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/behavior/keyboard.rs",
