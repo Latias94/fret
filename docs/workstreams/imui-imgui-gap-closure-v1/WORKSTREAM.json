@@ -657,6 +657,8 @@
     "ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard/menubar.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard/popup.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard/popup/nav.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard/popup/shortcut.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu.rs",

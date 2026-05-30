@@ -799,6 +799,12 @@ popup-close-on-key activation, and Arrow/Home/End item focus movement. `keyboard
 menubar horizontal-arrow close-focus suppression and primitive trigger-row horizontal switching
 wiring.
 
+2026-05-30 popup menu keyboard sub-owner split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard/popup.rs` now keeps only the popup key-handler
+composition point. `keyboard/popup/shortcut.rs` owns activate-shortcut repeat/IME gating, lifecycle
+instant marking, popup close, clicked transient emission, and action dispatch. `keyboard/popup/nav.rs`
+owns popup menu nav item registration and Arrow/Home/End roving focus movement.
+
 2026-05-28 interaction-runtime models owner-split result:
 `ecosystem/fret-ui-kit/src/imui/interaction_runtime/models.rs` is now a private module/re-export
 index. `models/element.rs` owns element-scoped context-menu anchor, long-press, pointer-click

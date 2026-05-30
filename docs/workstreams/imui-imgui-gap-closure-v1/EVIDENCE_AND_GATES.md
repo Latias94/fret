@@ -4136,6 +4136,41 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Popup Menu Keyboard Sub-Owner Evidence - 2026-05-30
+
+Claim verified: IMUI popup menu-item keyboard behavior split into private shortcut and navigation
+child owners without changing popup-menu item registration, activate-shortcut repeat/IME gating,
+popup close on keyboard activation, clicked transient emission, action dispatch, Arrow/Home/End
+focus movement, or menubar keyboard behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard/popup.rs` keeps the popup key-handler
+  composition point and delegates shortcut handling plus roving focus to child owners.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard/popup/shortcut.rs` owns
+  activate-shortcut gating, lifecycle instant marking, popup close, clicked transient emission,
+  and keyboard action dispatch.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard/popup/nav.rs` owns popup nav item
+  registration and Arrow/Home/End roving focus movement.
+- `tools/gate_imui_workstream_source.py` now checks the popup shortcut/nav owners separately and
+  rejects shortcut or navigation bodies from drifting back into `keyboard/popup.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui popup_hover::item_keyboard --no-fail-fast`: pass (5 passed,
+  181 skipped).
+- `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass (18 passed,
+  168 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass; validated 504 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+
 ## Interaction Runtime Models Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI interaction runtime model helpers split into private element, window, scope,

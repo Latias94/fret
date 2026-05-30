@@ -2129,6 +2129,13 @@ Last updated: 2026-05-30
       roving focus, menubar close-auto-focus suppression, and horizontal-arrow menu switching.
       `interaction.rs` now keeps enabled/action gating, pressable props, activation dispatch, and
       response population.
+- [x] Split IMUI popup menu-item keyboard owner into shortcut and navigation child owners without
+      changing popup-menu item registration, activate-shortcut repeat/IME gating, popup close on
+      keyboard activation, action dispatch, Arrow/Home/End focus movement, or menubar behavior.
+      Result: `menu_controls/keyboard/popup.rs` keeps the popup key-handler composition point.
+      `menu_controls/keyboard/popup/shortcut.rs` owns activate-shortcut lifecycle marking, popup
+      close, transient clicked emission, and action dispatch. `menu_controls/keyboard/popup/nav.rs`
+      owns menu nav item registration and roving focus movement.
 - [x] Split IMUI menu-item active-trigger/activation/response behavior out of
       `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` into a nested private owner
       without changing enabled/action gating, pressable props, popup close-on-activate, command
