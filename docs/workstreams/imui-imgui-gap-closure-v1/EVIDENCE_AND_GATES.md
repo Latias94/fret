@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Editor Transform Section Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: editor transform section chrome and link-toggle layout split into a private child
+owner without changing TransformEdit public options, Vec3Edit composition, section badge/heading
+text roles, link-scale test IDs, row/column layout selection, or uniform-scale sync logic.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/transform_edit.rs` now keeps TransformEdit public surface,
+  Vec3 composition, outcome routing, and linked-scale model/sync logic.
+- `ecosystem/fret-ui-editor/src/controls/transform_edit/sections.rs` owns row/column section
+  chrome, badge/heading text-role routing, and link/uniform toggle layout.
+- `tools/gate_imui_workstream_source.py` now checks the transform root/sections split and keeps
+  direct text-prop/chrome assembly out of the root TransformEdit owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new transform
+  section owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  transform_edit_axis_outcome_exposes_read_only_signals
+  transform_edit_from_presentations_adopts_section_format_parse_and_affixes
+  editor_section_badge_text_is_single_line_centered_badge_label
+  editor_section_heading_text_is_single_line_and_shrinkable
+  editor_inline_control_label_text_is_single_line_and_shrinkable --no-fail-fast`: pass (5 passed,
+  187 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Editor Slider Value-Math Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: editor slider value-domain math split into a private child owner without changing

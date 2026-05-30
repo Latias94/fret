@@ -74,6 +74,12 @@ Last updated: 2026-05-30
       Result: `controls/vec_edit.rs` keeps Vec2/Vec3/Vec4 public control orchestration.
       `controls/vec_edit/axis.rs` owns `VecEditAxis`, `VecEditAxisOutcome`, axis reset options,
       reset action packaging, axis group rendering, and the focused axis-outcome test.
+- [x] Split editor transform section chrome and link-toggle layout into a private child owner
+      without changing TransformEdit public options, Vec3Edit composition, section badge/heading
+      text roles, link-scale test IDs, row/column layout selection, or uniform-scale sync logic.
+      Result: `controls/transform_edit.rs` keeps TransformEdit public surface, Vec3 composition,
+      outcome routing, and linked-scale model/sync. `controls/transform_edit/sections.rs` owns
+      row/column section chrome, badge/heading text-role routing, and link/uniform toggle layout.
 - [x] Split editor slider chrome/color resolution into a private child owner without changing
       pointer/typing behavior, value formatting, theme token precedence, hover/pressed/disabled
       color mixing, or slider option/public constructor behavior.

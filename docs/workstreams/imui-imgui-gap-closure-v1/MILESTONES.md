@@ -45,6 +45,13 @@ reset action packaging, axis group rendering, and the focused axis-outcome test.
 constructors, reset options, outcome accessors, transform-edit routing, identity derivation, and
 row/column auto layout remain unchanged.
 
+2026-05-30 editor transform section child-owner result:
+`ecosystem/fret-ui-editor/src/controls/transform_edit.rs` now keeps TransformEdit public surface,
+Vec3 composition, outcome routing, and linked-scale model/sync logic.
+`controls/transform_edit/sections.rs` owns row/column section chrome, badge/heading text-role
+routing, and link/uniform toggle layout. Public options, Vec3 composition, section text roles,
+link-scale test IDs, row/column selection, and uniform-scale sync remain unchanged.
+
 2026-05-30 editor slider chrome child-owner result:
 `ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider state, value flow, pointer/input
 switching, and layout orchestration. `controls/slider/chrome.rs` owns token fallback, color mixing,
