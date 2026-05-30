@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Bullet-Text Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI bullet-text compact paragraph regression coverage split into a private
+text-role owner without changing bullet indicator layout, label test-id forwarding, inherited
+foreground, or shared compact paragraph semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/bullet_text_controls/tests.rs` is now a thin hub with shared
+  fixtures and module routing only.
+- `ecosystem/fret-ui-kit/src/imui/bullet_text_controls/tests/text_role.rs` owns compact paragraph
+  text-role coverage for bullet labels.
+- `tools/gate_imui_workstream_source.py` now checks the hub and private text-role owner and rejects
+  the compact paragraph regression body from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the bullet-text test-owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  bullet_text_uses_shared_compact_paragraph_role --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test
+  imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Facade-Writer Text Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI facade writer text regression tests split into private text and wrapped

@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 bullet-text test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/bullet_text_controls/tests.rs` is now a thin test hub.
+`tests/text_role.rs` owns compact paragraph text-role coverage for bullet labels. Public
+bullet-text behavior remains unchanged.
+
 2026-05-31 facade-writer text test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` is now a thin test hub.
 `tests/text.rs` owns `ui.text(...)` dense single-line coverage, while `tests/wrapped.rs` owns

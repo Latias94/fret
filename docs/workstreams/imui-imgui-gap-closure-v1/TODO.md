@@ -44,6 +44,11 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI bullet-text compact paragraph regression coverage into a private text-role owner
+      without changing bullet indicator layout, label test-id forwarding, inherited foreground, or
+      shared compact paragraph semantics.
+      Result: `bullet_text_controls/tests.rs` now keeps shared fixtures and module routing only.
+      `tests/text_role.rs` owns compact paragraph text-role coverage.
 - [x] Split IMUI debug-draw path-builder regression coverage into private sub-owners without
       changing path stroke/fill command recording, rectangle/rounded-rectangle sampling, Bezier
       defaults, circular/elliptical arc defaults, or invalid finished-path cleanup.

@@ -6261,6 +6261,22 @@ def main() -> None:
             required=[
                 "fn first_text",
                 "fn test_bounds() -> Rect",
+                "mod text_role;",
+            ],
+            forbidden=[
+                "#[test]",
+                "bullet_text_uses_shared_compact_paragraph_role",
+                "TextWrap::Word",
+                "TextOverflow::Clip",
+                "text.inherited_foreground, Some(expected_foreground)",
+                "pub fn ",
+                "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/bullet_text_controls/tests/text_role.rs"),
+            required=[
+                "use super::*;",
                 "bullet_text_uses_shared_compact_paragraph_role",
                 "bullet_text_element(",
                 "TextWrap::Word",
