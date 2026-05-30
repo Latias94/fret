@@ -8378,8 +8378,9 @@ Evidence:
   horizontal-arrow switching, command dispatch source metadata, and active-trigger response
   population.
 - `ecosystem/fret-ui-kit/src/imui/menu_controls/element.rs` keeps the menu row panel, indicator,
-  label, shortcut/submenu glyph visual assembly, and the custom `pressable_hook` insertion point
-  used by submenu helpers.
+  label, shortcut/submenu glyph visual assembly for this slice; the 2026-05-30 visual-row split
+  below moves those visuals into a private child owner while preserving the custom `pressable_hook`
+  insertion point used by submenu helpers.
 - `tools/gate_imui_workstream_source.py` now requires the interaction owner and rejects
   pressable/a11y props, active-trigger installation, keyboard handlers, menubar wiring, command
   dispatch, and response population from drifting back into `menu_controls/element.rs`.
@@ -8396,6 +8397,39 @@ Focused gates:
   interaction_shortcuts::command_metadata::menu_item_command_uses_command_metadata_shortcut_and_gating
   popup_hover::item_keyboard --no-fail-fast`: pass; 15 tests, 166 skipped.
 - `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Menu Item Visual Row Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI menu-item visual row assembly moved out of the element orchestrator without
+changing menu item row structure, checkbox/radio/submenu indicators, shortcut semantics, shortcut
+test-id derivation, text-role helpers, pressable behavior, or facade APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/element/visual_row.rs` owns menu item panel/row
+  props, checkbox/radio/submenu indicator selection, label/shortcut/submenu glyph mounting, and
+  shortcut test-id stamping.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/element.rs` now keeps pressable orchestration,
+  interaction-owner wiring, response population, and the custom `pressable_hook` insertion point.
+- `tools/gate_imui_workstream_source.py` now rejects row props, spacer/semantics decoration,
+  indicator glyphs, and menu text-role calls from drifting back into `menu_controls/element.rs`
+  while requiring the private `menu_controls/element/visual_row.rs` owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_controls::tests --no-fail-fast`:
+  pass; 4 tests, 685 skipped.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation
+  interaction_menu_tabs::submenu_shortcuts
+  interaction_shortcuts::command_metadata::menu_item_command_uses_command_metadata_shortcut_and_gating
+  popup_hover::item_keyboard --no-fail-fast`: pass; 15 tests, 171 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
 - `python tools\gate_imui_workstream_source.py`: pass.
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.

@@ -2045,8 +2045,16 @@ Last updated: 2026-05-30
       Result: `menu_controls/interaction.rs` owns enabled/action gating, pressable props,
       activation/shortcut handlers, popup menu roving focus, menubar horizontal-arrow switching,
       command dispatch source metadata, and menu-item `ResponseExt` population. The element file
-      keeps row panel/indicator/shortcut/label visual assembly and the custom `pressable_hook`
-      insertion point.
+      kept row panel/indicator/shortcut/label visual assembly until the later visual-row split
+      below; it keeps the custom `pressable_hook` insertion point.
+- [x] Split IMUI menu-item visual row assembly out of
+      `ecosystem/fret-ui-kit/src/imui/menu_controls/element.rs` into a private visual-row owner
+      without changing menu item row structure, checkbox/radio/submenu indicators, shortcut
+      semantics, shortcut test-id derivation, text-role helpers, pressable behavior, or facade APIs.
+      Result: `menu_controls/element/visual_row.rs` owns panel/row props, indicator selection,
+      label/shortcut/submenu glyph mounting, and shortcut test-id stamping. `element.rs` now keeps
+      pressable orchestration, interaction-owner wiring, response population, and the custom
+      `pressable_hook` insertion point.
 - [x] Split IMUI menu-item keyboard/navigation behavior out of
       `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` into a private owner module
       without changing popup menu roving focus, shortcut, or menubar horizontal-arrow behavior.

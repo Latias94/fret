@@ -1686,9 +1686,15 @@ unchanged.
 `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` now owns menu item enabled/action
 gating, pressable props, activation and shortcut handlers, popup menu roving focus, menubar
 horizontal-arrow switching, command dispatch source metadata, and `ResponseExt` population.
-`menu_controls/element.rs` keeps the row panel, checkbox/radio/submenu indicators, shortcut text,
-label text, and custom `pressable_hook` insertion point. Public menu item and command menu item
-facade APIs remain unchanged.
+`menu_controls/element.rs` kept the row panel, checkbox/radio/submenu indicators, shortcut text,
+and label text until the later visual-row split; it keeps the custom `pressable_hook` insertion
+point. Public menu item and command menu item facade APIs remain unchanged.
+
+2026-05-30 menu-item visual row owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/element/visual_row.rs` now owns menu item panel/row
+props, checkbox/radio/submenu indicator selection, label/shortcut/submenu glyph mounting, and
+shortcut test-id stamping. `menu_controls/element.rs` keeps pressable orchestration, interaction
+owner wiring, response population, and the custom `pressable_hook` insertion point.
 
 2026-05-26 menu-item keyboard owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard.rs` now owns item-local activate shortcut
