@@ -38,6 +38,13 @@ re-exports theme preset picker text helpers. `primitives/readout/theme_preset.rs
 picker header, row label, row status text props, and fixed-line tests. Compact header sizing, row
 label/status line boxes, re-export paths, and style/theme picker rendering remain unchanged.
 
+2026-05-30 editor vec-edit axis child-owner result:
+`ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps Vec2/Vec3/Vec4 public control
+orchestration. `controls/vec_edit/axis.rs` owns `VecEditAxis`, `VecEditAxisOutcome`, reset options,
+reset action packaging, axis group rendering, and the focused axis-outcome test. Public
+constructors, reset options, outcome accessors, transform-edit routing, identity derivation, and
+row/column auto layout remain unchanged.
+
 2026-05-30 editor enum-select row child-owner result:
 `ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps public control/options, trigger
 composition, and overlay orchestration. `controls/enum_select/row.rs` owns option-row rendering,

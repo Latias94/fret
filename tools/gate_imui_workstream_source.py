@@ -438,7 +438,7 @@ def main() -> None:
             ["DragValueCoreResponse"],
         ),
         OpaqueStructCheck(
-            Path("ecosystem/fret-ui-editor/src/controls/vec_edit.rs"),
+            Path("ecosystem/fret-ui-editor/src/controls/vec_edit/axis.rs"),
             ["VecEditAxisOutcome"],
         ),
         OpaqueStructCheck(
@@ -30553,10 +30553,38 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/vec_edit.rs"),
             required=[
+                "mod axis;",
+                "pub use axis::{",
+                "use axis::axis_group;",
+                "axis_group(",
+                "pub struct Vec2Edit<T>",
+                "pub struct Vec3Edit<T>",
+                "pub struct Vec4Edit<T>",
+                "vec3_edit_from_presentation_adopts_format_parse_and_chrome_affixes",
+            ],
+            forbidden=[
+                "pub type OnAxisReset",
+                "pub struct AxisResetOptions",
+                "pub struct AxisReset {",
+                "pub struct VecEditAxisOutcome",
+                "fn axis_group",
+                "VecEditAxisOutcome::new(axis, outcome)",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/vec_edit/axis.rs"),
+            required=[
+                "pub type OnAxisReset",
+                "pub enum VecEditAxis",
                 "pub struct VecEditAxisOutcome {\n    axis: VecEditAxis,\n    outcome: AxisDragValueOutcome,\n}",
                 "pub(crate) fn new(axis: VecEditAxis, outcome: AxisDragValueOutcome) -> Self",
                 "pub fn axis(self) -> VecEditAxis",
                 "pub fn outcome(self) -> AxisDragValueOutcome",
+                "pub type OnVecEditAxisOutcome",
+                "pub struct AxisResetOptions",
+                "pub struct AxisReset {",
+                "pub(super) fn axis_group",
+                "AxisDragValueResetAction",
                 "VecEditAxisOutcome::new(axis, outcome)",
                 "vec_edit_axis_outcome_exposes_read_only_signals",
             ],

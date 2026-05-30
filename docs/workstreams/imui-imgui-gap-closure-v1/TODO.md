@@ -67,6 +67,13 @@ Last updated: 2026-05-30
       Result: `primitives/readout.rs` now keeps the shared non-popup readout hub and re-exports the
       theme-preset helpers. `primitives/readout/theme_preset.rs` owns the theme picker header, row
       label, row status text props, and focused fixed-line tests.
+- [x] Split editor vector axis/reset/outcome policy and axis group rendering into a private child
+      owner without changing Vec2/Vec3/Vec4 public constructors, reset options, axis outcome
+      accessors, transform-edit outcome routing, id-source/test-id derivation, or row/column auto
+      layout policy.
+      Result: `controls/vec_edit.rs` keeps Vec2/Vec3/Vec4 public control orchestration.
+      `controls/vec_edit/axis.rs` owns `VecEditAxis`, `VecEditAxisOutcome`, axis reset options,
+      reset action packaging, axis group rendering, and the focused axis-outcome test.
 - [x] Split editor enum-select row rendering, selection commit policy, and item test-id
       sanitization into a private child owner without changing trigger composition, overlay
       dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row

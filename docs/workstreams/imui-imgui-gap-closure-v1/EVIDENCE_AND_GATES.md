@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Editor VecEdit Axis Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: editor vector axis/reset/outcome policy and axis group rendering split into a
+private child owner without changing Vec2/Vec3/Vec4 public constructors, reset options, axis
+outcome accessors, transform-edit outcome routing, id-source/test-id derivation, or row/column
+auto layout policy.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps Vec2/Vec3/Vec4 public control
+  orchestration and re-exports the original axis/reset public types.
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/axis.rs` owns `VecEditAxis`,
+  `VecEditAxisOutcome`, axis reset options, reset action packaging, axis group rendering, and the
+  focused axis-outcome test.
+- `tools/gate_imui_workstream_source.py` now checks the root/axis split and keeps
+  `VecEditAxisOutcome` opaque in the axis child owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new vec-edit axis
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor vec_edit_axis_outcome_exposes_read_only_signals
+  vec3_edit_from_presentation_adopts_format_parse_and_chrome_affixes
+  transform_edit_axis_outcome_exposes_read_only_signals --no-fail-fast`: pass (3 passed, 185
+  skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Editor Readout Theme-Preset Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: editor theme-preset picker readout text roles split into a private child owner
