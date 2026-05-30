@@ -6793,6 +6793,44 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Begin-Menu Trigger Behavior Sub-Owner Evidence - 2026-05-30
+
+Claim verified: IMUI begin-menu trigger base activation, keyboard, and response projection split
+into private owners without changing active-trigger installation options, click transient emission,
+keyboard lifecycle marking, activate-shortcut repeat/IME gating, menubar row behavior, arrow-open
+behavior, trigger response projection, or public begin-menu facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior.rs` keeps input structure,
+  active-trigger behavior installation, menubar owner dispatch, and base owner dispatch.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior/activation.rs` owns click
+  activation, keyboard lifecycle marking, and click transient emission.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior/keyboard.rs` owns activate
+  shortcut repeat/IME gating, lifecycle marking, and click transient emission.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior/response.rs` owns clicked
+  transient extraction and active-trigger response projection.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior/menubar.rs` remains the
+  menubar row behavior owner.
+- `tools/gate_imui_workstream_source.py` now rejects base activation, keyboard, and response
+  projection logic from drifting back into the menu trigger behavior hub and keeps the menubar owner
+  separately guarded.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_family_controls --no-fail-fast`:
+  pass; 1 menu trigger visual role test passed.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation --no-fail-fast`: pass;
+  6 begin-menu activation and menubar behavior tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Switch Behavior Owner-Split Evidence - 2026-05-27
 
 Claim verified: switch pressable behavior moved out of the switch visual/model shell into a private

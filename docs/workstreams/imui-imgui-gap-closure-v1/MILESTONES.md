@@ -1291,6 +1291,13 @@ row registry/sync wiring, arrow-down/up open behavior, transient click reads, an
 `ResponseExt` population. `trigger.rs` keeps label identity, `PressableA11y`, pressable shell
 construction, and `visual::menu_trigger_visual(...)` mounting.
 
+2026-05-30 begin-menu trigger behavior sub-owner split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior.rs` now keeps input
+structure, active-trigger behavior installation, menubar owner dispatch, and base owner dispatch
+only. `trigger/behavior/activation.rs` owns click activation, `trigger/behavior/keyboard.rs` owns
+shortcut activation, `trigger/behavior/response.rs` owns trigger response projection, and
+`trigger/behavior/menubar.rs` keeps menubar-specific row behavior.
+
 2026-05-27 switch behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/behavior.rs` now owns active-trigger
 behavior installation, activate/shortcut model toggling, lifecycle edit marking, transient

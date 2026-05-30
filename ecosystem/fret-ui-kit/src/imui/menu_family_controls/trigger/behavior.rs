@@ -1,17 +1,17 @@
 use std::sync::Arc;
 
 use fret_runtime::{KeyChord, Model};
-use fret_ui::action::ActivateReason;
 use fret_ui::element::PressableState;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
-use crate::imui::{
-    KEY_CLICKED, ResponseExt, active_trigger_behavior, mark_lifecycle_instant_if_inactive,
-};
+use crate::imui::{ResponseExt, active_trigger_behavior};
 
 use super::super::ImUiMenubarPolicyState;
 
+mod activation;
+mod keyboard;
 mod menubar;
+mod response;
 
 pub(super) struct MenuTriggerBehaviorInput {
     pub(super) logical_key: Arc<str>,
@@ -34,59 +34,22 @@ pub(super) fn install_menu_trigger_behavior<H: UiHost>(
         id,
         active_trigger_behavior::ActiveTriggerBehaviorOptions::default(),
     );
-    let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
 
-    cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
-        if reason == ActivateReason::Keyboard {
-            mark_lifecycle_instant_if_inactive(host, acx, &lifecycle_model_for_activate, false);
-        }
-        host.record_transient_event(acx, KEY_CLICKED);
-        host.notify(acx);
-    }));
+    activation::install_menu_trigger_activation(cx, behavior.lifecycle_model.clone());
 
     if input.enabled {
-        let lifecycle_model_for_shortcut = behavior.lifecycle_model.clone();
-        let activate_shortcut = input.activate_shortcut;
-        let shortcut_repeat = input.shortcut_repeat;
-        cx.key_on_key_down_for(
+        keyboard::install_menu_trigger_keyboard(
+            cx,
             id,
-            Arc::new(move |host, acx, down| {
-                if let Some(shortcut) = activate_shortcut {
-                    let matches_shortcut =
-                        down.key == shortcut.key && down.modifiers == shortcut.mods;
-                    if matches_shortcut && (!down.repeat || shortcut_repeat) && !down.ime_composing
-                    {
-                        mark_lifecycle_instant_if_inactive(
-                            host,
-                            acx,
-                            &lifecycle_model_for_shortcut,
-                            false,
-                        );
-                        host.record_transient_event(acx, KEY_CLICKED);
-                        host.notify(acx);
-                        return true;
-                    }
-                }
-
-                false
-            }),
+            keyboard::MenuTriggerKeyboardInput {
+                activate_shortcut: input.activate_shortcut,
+                shortcut_repeat: input.shortcut_repeat,
+                lifecycle_model: behavior.lifecycle_model.clone(),
+            },
         );
     }
 
     menubar::install_menubar_trigger_behavior(cx, id, state, &input);
 
-    let clicked = cx.take_transient_for(id, KEY_CLICKED);
-    active_trigger_behavior::populate_active_trigger_response(
-        cx,
-        id,
-        state,
-        &behavior,
-        active_trigger_behavior::ActiveTriggerResponseInput {
-            enabled: input.enabled,
-            clicked,
-            changed: false,
-            lifecycle_edited: false,
-        },
-        response,
-    );
+    response::populate_menu_trigger_response(cx, id, state, &behavior, input.enabled, response);
 }

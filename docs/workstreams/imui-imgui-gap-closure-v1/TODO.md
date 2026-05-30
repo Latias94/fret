@@ -1972,6 +1972,15 @@ Last updated: 2026-05-30
       registry/sync wiring, arrow-down/up open behavior, transient click reads, and trigger
       `ResponseExt` population. `trigger.rs` keeps label identity, `PressableA11y`, pressable shell
       construction, and `visual::menu_trigger_visual(...)` mounting.
+- [x] Split IMUI begin-menu trigger base behavior into activation, keyboard, and response owners
+      without changing active-trigger installation options, click transient emission, keyboard
+      lifecycle marking, activate-shortcut repeat/IME gating, menubar row behavior, arrow-open
+      behavior, trigger response projection, or public begin-menu facade behavior.
+      Result: `menu_family_controls/trigger/behavior.rs` keeps input structure, active-trigger
+      behavior installation, menubar owner dispatch, and base owner dispatch.
+      `behavior/activation.rs` owns click activation, `behavior/keyboard.rs` owns shortcut
+      activation, `behavior/response.rs` owns trigger response projection, and `behavior/menubar.rs`
+      keeps menubar-specific row behavior.
 - [x] Split IMUI table header row assembly out of
       `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` into a private owner module
       without changing header visibility, sortable/plain header cells, resize response metadata,
