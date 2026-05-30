@@ -91,6 +91,11 @@ Last updated: 2026-05-31
       focus ring token routing.
       Result: `primitives/chrome.rs` keeps editor chrome/style resolution plus test-owner routing.
       `primitives/chrome/tests.rs` owns text-field/text-area chrome policy coverage.
+- [x] Split editor semantic color fallback regressions into a private test owner without changing
+      editor-owned token precedence, legacy text-field fallback behavior, shared palette fallbacks,
+      invalid lane fallback, or popup/panel fallback order.
+      Result: `primitives/colors.rs` keeps semantic color helper implementation plus test-owner
+      routing. `primitives/colors/tests.rs` owns color fallback policy coverage.
 - [x] Split editor widget-visuals selection/focus/invalid/hover regressions into a private test
       owner without changing shared visual policy, selected-frame fill/foreground behavior,
       disabled alpha attenuation, invalid chrome routing, or icon-button hover overlay source.

@@ -69,6 +69,12 @@ test-owner routing. `primitives/chrome/tests.rs` owns text-field/text-area chrom
 Editor token precedence, legacy component fallback behavior, line-height policy, and focus ring
 token routing remain unchanged.
 
+2026-05-31 editor colors tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/colors.rs` now keeps semantic color helper implementation
+and test-owner routing. `primitives/colors/tests.rs` owns color fallback policy coverage.
+Editor-owned token precedence, legacy text-field fallback behavior, shared palette fallbacks,
+invalid lane fallback, and popup/panel fallback order remain unchanged.
+
 2026-05-31 editor visuals tests child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/visuals.rs` now keeps editor widget visual policy and
 test-owner routing. `primitives/visuals/tests.rs` owns visual-state policy coverage. Shared visual

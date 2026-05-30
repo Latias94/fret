@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Colors Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor semantic color fallback regressions split into a private test owner without
+changing editor-owned token precedence, legacy text-field fallback behavior, shared palette
+fallbacks, invalid lane fallback, or popup/panel fallback order.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/colors.rs` now keeps semantic color helper
+  implementation and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/primitives/colors/tests.rs` owns color fallback policy coverage.
+- `tools/gate_imui_workstream_source.py` now checks the colors root/test split and keeps migrated
+  regression test names out of the root primitive file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the colors root and test
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  editor_semantic_color_helpers_prefer_editor_owned_keys
+  editor_focus_ring_color_falls_back_to_text_field_focus_border
+  editor_muted_foreground_keeps_shared_palette_fallback
+  editor_invalid_border_falls_back_to_numeric_error_lane
+  editor_panel_helpers_keep_shared_surface_fallbacks
+  editor_popup_helpers_fall_back_to_legacy_component_then_popover_and_panel_tokens
+  --no-fail-fast`: pass (6 passed, 192 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Visuals Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor widget-visuals selection/focus/invalid/hover regressions split into a
