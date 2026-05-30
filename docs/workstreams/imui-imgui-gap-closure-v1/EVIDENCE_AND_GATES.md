@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Table-Column Visibility Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI table-column visibility regression tests split into private state and menu
+owners without changing runtime override, snapshot roundtrip, last-entry-wins, stable menu-column
+id, visible label, or test-id suffix assertions.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/tests.rs` is now a thin hub with imports
+  and module routing only.
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/tests/state.rs` owns runtime override,
+  snapshot, restore, and column-application coverage.
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/tests/menu.rs` owns stable menu-column
+  id, visible label, and test-id suffix coverage.
+- `tools/gate_imui_workstream_source.py` now checks the hub and both private test owners and
+  rejects the split coverage from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new test-owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  visibility_state_applies_runtime_overrides_by_stable_column_id
+  visibility_state_leaves_unlisted_and_unidentified_columns_at_declared_visibility
+  visibility_state_toggle_uses_current_override_or_default_visibility
+  visibility_state_snapshot_roundtrips_stable_column_ids
+  visibility_state_snapshot_restore_ignores_empty_ids_and_last_entry_wins
+  menu_group_filters_to_stable_human_labeled_columns
+  menu_group_test_id_suffix_uses_stable_column_id_slug --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Menu Control Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI menu-control regression tests split into private text-role and root owners

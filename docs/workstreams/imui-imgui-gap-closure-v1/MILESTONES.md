@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 table-column visibility test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/table_column_visibility/tests.rs` is now a thin test hub.
+`tests/state.rs` owns runtime override, snapshot, and column-application coverage, while
+`tests/menu.rs` owns stable menu-column id, visible label, and test-id suffix coverage. Public
+table-column visibility behavior remains unchanged.
+
 2026-05-31 menu-control test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/tests.rs` is now a thin test hub.
 `tests/text_roles.rs` owns label/shortcut/indicator text-role coverage, while

@@ -1387,6 +1387,12 @@ Last updated: 2026-05-31
       public snapshot re-export. `state/overrides.rs` owns runtime override mutation/query,
       `state/snapshot_io.rs` owns snapshot conversion/restoration, and `state/columns.rs` owns
       `TableColumn` application.
+- [x] Split IMUI table-column visibility regression tests into private state and menu owners
+      without changing runtime override, snapshot roundtrip, last-entry-wins, stable menu-column id,
+      visible label, or test-id suffix assertions.
+      Result: `table_column_visibility/tests.rs` now keeps imports and module routing only.
+      `tests/state.rs` owns override/snapshot/application coverage, while `tests/menu.rs` owns
+      menu identity and suffix coverage.
 - [x] Split IMUI child-region resize responses into private X/Y response owners without changing
       public `ChildRegionResizeXResponse` / `ChildRegionResizeYResponse` re-exports, enabled/min/
       max accessors, drag edge accessors, drag delta/total projection, clamp-from-start helpers, or

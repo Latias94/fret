@@ -1570,6 +1570,8 @@
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/snapshot.rs",
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/snapshot_io.rs",
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility/tests.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_column_visibility/tests/menu.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_column_visibility/tests/state.rs",
     "ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/virtual_list_controls/range.rs",
     "ecosystem/fret-ui-kit/src/imui/virtual_list_controls/row.rs",
