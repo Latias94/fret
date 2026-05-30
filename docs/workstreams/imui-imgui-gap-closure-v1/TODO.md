@@ -82,6 +82,13 @@ Last updated: 2026-05-31
       `tests/draw_list/commands/meshes.rs` owns triangle mesh coverage,
       `tests/draw_list/commands/media.rs` owns image/SVG overlay coverage, and
       `tests/draw_list/commands/polygons.rs` owns concave fill coverage.
+- [x] Split IMUI debug-draw broad command-order regression coverage into private linear,
+      round/curve, text, and aggregate order owners without changing command insertion order or
+      command-count assertions.
+      Result: `tests/draw_list/commands/core.rs` is now a thin nested hub. `core/linear.rs` owns
+      line/poly/rect/quad/triangle command ordering, `core/round_curve.rs` owns circle/ngon/
+      ellipse/Bezier ordering, `core/text.rs` owns text command ordering, and `core/order.rs`
+      retains the all-command aggregate order proof.
 - [x] Split IMUI debug-draw draw-list summary regression coverage into private merge/counts/clip
       sub-owners without changing channel merge summary ordering, visible command class counts,
       effective clip-stack projection, or clip push/pop command recording.

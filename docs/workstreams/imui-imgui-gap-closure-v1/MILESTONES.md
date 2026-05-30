@@ -99,6 +99,13 @@ lives in `tests/draw_list/commands/media.rs`, and concave polygon fill coverage 
 `tests/draw_list/commands/polygons.rs`. `ImUiDebugDrawList` command recording behavior and public
 debug-draw authoring APIs remain unchanged.
 
+2026-05-31 debug-draw core command-order test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/commands/core.rs` is now a
+thin nested hub. `core/linear.rs` owns line/poly/rect/quad/triangle command ordering,
+`core/round_curve.rs` owns circle/ngon/ellipse/Bezier ordering, `core/text.rs` owns text command
+ordering, and `core/order.rs` retains the all-command aggregate order proof. Public debug-draw
+behavior remains unchanged.
+
 2026-05-31 debug-draw draw-list summary test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/summaries.rs` is now a thin
 test hub. `tests/draw_list/summaries/merge_order.rs` owns command-summary merge ordering,

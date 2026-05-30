@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Debug-Draw Core Command-Order Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI debug-draw broad command-order regression coverage split into private linear,
+round/curve, text, and aggregate order owners without changing command insertion order or
+command-count assertions.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/commands/core.rs` is now a
+  thin nested hub with module routing only.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/commands/core/linear.rs`
+  owns line/poly/rect/quad/triangle command ordering.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/commands/core/round_curve.rs`
+  owns circle/ngon/ellipse/Bezier command ordering.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/commands/core/text.rs` owns
+  text command ordering.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/commands/core/order.rs`
+  retains the all-command aggregate order proof.
+- `tools/gate_imui_workstream_source.py` now checks the nested hub and all four private owners and
+  rejects direct command bodies from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the nested core command-order
+  test-owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  debug_draw_list_records_commands_in_order
+  debug_draw_list_records_linear_commands_in_order
+  debug_draw_list_records_round_and_curve_commands_in_order
+  debug_draw_list_records_text_command_in_order --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Image-Item Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI image-item visual helper regressions split into private helpers and props
