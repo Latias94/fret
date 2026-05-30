@@ -3,6 +3,45 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Textarea Element and Props Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI textarea lifecycle/element assembly split from textarea props/style resolution
+without changing textarea facade calls, enabled gating, focus tracking, select-all policy, response
+lifecycle, submit command behavior, IMUI chrome, or layout semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_controls/textarea.rs` now only owns the public wrapper and
+  `ResponseExt` plumbing.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/textarea/element.rs` owns lifecycle, select-all,
+  policy commands, and element mounting.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/textarea/props.rs` owns `TextAreaProps` and IMUI
+  chrome/style resolution.
+- `tools/gate_imui_workstream_source.py` now checks the textarea wrapper/element/props split and
+  keeps prop assembly out of the lifecycle owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new textarea child
+  owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib text_controls::tests --no-fail-fast`:
+  pass (3 passed, 687 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_textarea_smoke --no-fail-fast`:
+  pass (1 passed).
+- `cargo nextest run -p fret-imui models_text_area --no-fail-fast`: pass after `cargo clean -p
+  fret-imui` cleared stale link artifacts (8 passed, 178 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  textarea_model_uses_compact_imui_chrome_without_focus_ring --no-fail-fast`: pass (1 passed,
+  689 skipped).
+- `cargo nextest run -p fret-imui composition::control_geometry --no-fail-fast`: pass
+  (4 passed, 182 skipped).
+
 ## Slider Entry Element Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI slider entry label-identity routing split from element/response assembly

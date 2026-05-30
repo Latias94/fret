@@ -767,6 +767,8 @@
     "ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/input.rs",
     "ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/textarea.rs",
     "ecosystem/fret-ui-kit/src/imui/text_controls/textarea.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_controls/textarea/element.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_controls/textarea/props.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/candidates.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs",

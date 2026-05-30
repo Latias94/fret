@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 textarea element and props child-owner result:
+`ecosystem/fret-ui-kit/src/imui/text_controls/textarea.rs` now only owns the public wrapper and
+`ResponseExt` plumbing. `text_controls/textarea/element.rs` owns lifecycle, select-all, policy
+commands, and element mounting, while `text_controls/textarea/props.rs` owns `TextAreaProps` and
+IMUI chrome/style resolution. Facade calls, enabled gating, focus tracking, submit command
+behavior, and textarea layout semantics remain unchanged.
+
 2026-05-30 slider entry element child-owner result:
 `ecosystem/fret-ui-kit/src/imui/slider_controls/entry.rs` now owns label identity parsing,
 visible-label suffix stripping, and scoped facade routing only.

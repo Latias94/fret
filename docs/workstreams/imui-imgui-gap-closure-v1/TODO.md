@@ -44,6 +44,13 @@ Last updated: 2026-05-30
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI textarea lifecycle/element assembly from textarea props/style resolution without
+      changing textarea facade calls, enabled gating, focus tracking, select-all policy, response
+      lifecycle, submit command behavior, IMUI chrome, or layout semantics.
+      Result: `text_controls/textarea.rs` now only owns the public wrapper and `ResponseExt`
+      plumbing. `text_controls/textarea/element.rs` owns lifecycle, select-all, policy commands,
+      and element mounting, while `text_controls/textarea/props.rs` owns `TextAreaProps` and style
+      resolution.
 - [x] Split IMUI slider entry label-identity routing from element/response assembly without
       changing slider facade calls, visible-label suffix stripping, push-id scoping, enabled/
       disabled gating, a11y range semantics, pointer/keyboard handlers, hover query hooks, field
