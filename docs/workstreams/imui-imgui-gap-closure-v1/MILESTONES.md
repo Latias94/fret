@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 multi-select test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/multi_select/tests.rs` is now a thin test hub.
+`tests/clicks.rs` owns plain/primary/shift click policy coverage, while
+`tests/ordered_selection.rs` owns ordered-selection normalization and anchor repair coverage.
+Public multi-select behavior remains unchanged.
+
 2026-05-31 tooltip test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/tests.rs` is now a thin test hub.
 `tests/mount.rs` owns no-trigger mount behavior, `tests/text_role.rs` owns compact body text-role

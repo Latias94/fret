@@ -2836,6 +2836,13 @@ Last updated: 2026-05-31
       while `multi_select/state/selection.rs` owns selected-order normalization, anchor repair,
       crate-local mutation helpers, and `is_selected(...)`. The root `multi_select.rs` keeps model
       hook, selectable response wiring, click-modifier policy, and response changed reporting.
+- [x] Split IMUI multi-select regression tests into private click-policy and ordered-selection
+      owners without changing plain click, primary-modifier toggle, shift range, no-anchor fallback,
+      collection-order normalization, deduplication, external-key retention, or anchor repair
+      assertions.
+      Result: `multi_select/tests.rs` now keeps key fixtures and module routing only.
+      `tests/clicks.rs` owns click-modifier coverage, while `tests/ordered_selection.rs` owns
+      ordered-selection normalization and anchor repair coverage.
 - [x] Split IMUI virtual-list runtime projection and row mechanics out of
       `ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs` into private owner modules without
       changing the facade virtual-list API or row clipping semantics.
