@@ -1049,6 +1049,9 @@ Last updated: 2026-05-30
       `shape_methods/rects.rs` owns rect and rounded-rect point appending,
       `shape_methods/beziers.rs` owns quadratic/cubic Bezier sampling, and
       `shape_methods/arcs.rs` owns circular, fast 12-step, and elliptical arc sampling.
+      2026-05-30 follow-up: `shape_methods/arcs.rs` is now itself a private module hub.
+      `arcs/circular.rs` owns `arc_to` and `arc_to_fast`, while `arcs/elliptical.rs` owns
+      `elliptical_arc_to`.
 - [x] Split IMUI shared hover-delay state/store/model lookup out of
       `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay.rs` into a private
       state owner without changing window-scoped shared-delay model allocation, short/normal delay

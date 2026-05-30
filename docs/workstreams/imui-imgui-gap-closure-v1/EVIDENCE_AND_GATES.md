@@ -5059,12 +5059,12 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
-## Debug Draw Path-Builder Shape-Method Owner-Split Evidence - 2026-05-28
+## Debug Draw Path-Builder Shape-Method Owner-Split Evidence - 2026-05-28 / 2026-05-30
 
 Claim verified: IMUI debug-draw path-builder shape methods split into private rect, Bezier, and
-arc owners without changing `ImUiDebugDrawPath` method names, path point storage, invalid input
-handling, default segment fallback, rounded-rect sampling, Bezier sampling, arc sampling, or public
-debug-draw APIs.
+arc owners, with the arc owner further split into circular and elliptical child owners, without
+changing `ImUiDebugDrawPath` method names, path point storage, invalid input handling, default
+segment fallback, rounded-rect sampling, Bezier sampling, arc sampling, or public debug-draw APIs.
 
 Evidence:
 
@@ -5074,21 +5074,31 @@ Evidence:
   rect and rounded-rect point appending.
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods/beziers.rs` owns
   quadratic/cubic Bezier sampling.
-- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods/arcs.rs` owns
-  circular, fast 12-step, and elliptical arc sampling.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods/arcs.rs` is now
+  a private module hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods/arcs/circular.rs`
+  owns `arc_to` and `arc_to_fast`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods/arcs/elliptical.rs`
+  owns `elliptical_arc_to`.
 - `tools/gate_imui_workstream_source.py` now rejects rect/Bezier/arc shape-method bodies from
-  drifting back into `shape_methods.rs`.
+  drifting back into `shape_methods.rs` and freezes the arc child split.
 
 Focused gates:
 
 - `cargo fmt -p fret-ui-kit`: pass.
-- `cargo check -p fret-ui-kit --features imui --lib`: pass.
-- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_path_builder
-  --no-fail-fast`: pass; 12 path-builder tests passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_path_builder_appends_arc_samples
+  debug_draw_path_builder_arc_helpers_handle_fast_default_and_degenerate_inputs
+  debug_draw_path_builder_appends_elliptical_arc_samples
+  debug_draw_path_builder_elliptical_arc_handles_rotation_default_and_invalid_inputs
+  --no-fail-fast`: pass (4 passed, 686 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass (1 passed after a build-lock timeout rerun).
+- `cargo fmt -p fret-ui-kit --check`: pass.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
   pass.
-- `python tools\gate_imui_workstream_source.py`: pass.
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 

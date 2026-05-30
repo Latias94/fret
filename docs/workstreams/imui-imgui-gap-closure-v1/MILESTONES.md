@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 debug-draw path-builder arc child-owner result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods/arcs.rs` is now a
+private module hub. `arcs/circular.rs` owns `arc_to` and `arc_to_fast`, while
+`arcs/elliptical.rs` owns `elliptical_arc_to`. Method names, invalid-input handling, default
+segment fallback, 12-step fast arc behavior, elliptical rotation handling, and path point storage
+remain unchanged.
+
 2026-05-30 debug-draw rounded rect child-owner result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/rects/rounded.rs` now keeps only
 rounded-rect point append orchestration. `rounded/corners.rs` owns per-corner rounding selection
