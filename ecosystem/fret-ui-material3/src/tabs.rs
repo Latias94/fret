@@ -21,7 +21,6 @@ use fret_ui::element::{
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
-use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
 };
@@ -738,10 +737,7 @@ fn primary_tab_label<H: UiHost>(
 
         let style = {
             let theme = Theme::global(&*cx.app);
-            let style = theme
-                .text_style_by_key("md.sys.typescale.title-small")
-                .unwrap_or_default();
-            typography::with_intent(style, TextIntent::Control)
+            tabs_tokens::label_text_style(theme)
         };
 
         let mut props = TextProps::new(label.clone());

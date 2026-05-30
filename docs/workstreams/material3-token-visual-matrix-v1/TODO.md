@@ -106,11 +106,15 @@ Task IDs use `M3TVM-*`.
   Review: DONE. Button was covered in M3TVM-030, non-chip controls in M3TVM-050A, and chip rows in
   M3TVM-050B.
 
-- [ ] M3TVM-060 [owner=codex] [deps=M3TVM-030] [scope=ecosystem/fret-ui-material3/src/{tokens,foundation,tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests]
+- [x] M3TVM-060 [owner=codex] [deps=M3TVM-030] [scope=ecosystem/fret-ui-material3/src/{tokens,foundation,tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests]
   Goal: Close navigation/app-chrome token visual matrix rows for active indicators, destination
   labels/icons, drawer surfaces, and app-bar container/title states.
   Validation: fixture rows plus existing navigation M3PV2 gates.
-  Review: Pending.
+  Review: DONE. The fixture runner now covers Tabs, NavigationBar, NavigationRail,
+  NavigationDrawer, ModalNavigationDrawer, and TopAppBar token outcomes. Navigation label
+  typography and modal drawer scrim routing now flow through typed token accessors; Tabs intrinsic
+  active-indicator and scrollable metrics are seeded in the v30 theme.
+  Handoff: M3TVM-060 is closed; continue with M3TVM-070 overlay/surface/data-display rows.
 
 - [ ] M3TVM-070 [owner=codex] [deps=M3TVM-030] [scope=ecosystem/fret-ui-material3/src/{tokens,foundation,dialog.rs,bottom_sheet.rs,tooltip.rs,snackbar.rs,menu.rs,dropdown_menu.rs,card.rs,badge.rs,fab.rs,list.rs,progress_indicator.rs,divider.rs,carousel_item.rs},ecosystem/fret-ui-material3/tests,goldens/material3-headless/v1]
   Goal: Close overlay/surface/data-display token visual matrix rows for container color, shape,

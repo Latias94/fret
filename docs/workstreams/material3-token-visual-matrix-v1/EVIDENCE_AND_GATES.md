@@ -195,6 +195,33 @@ cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D
     - `python tools/check_workstream_catalog.py`: passed with 511 dedicated directories and 47
       standalone markdown files.
     - `git diff --check`: passed.
+- 2026-05-30: M3TVM-060 completed the navigation/app-chrome token visual harness coverage.
+  - Fixture suite:
+    `ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json`.
+  - Runner:
+    `ecosystem/fret-ui-material3/src/tokens/visual_fixtures.rs`.
+  - Result: Tabs, NavigationBar, NavigationRail, NavigationDrawer, ModalNavigationDrawer, and
+    TopAppBar matrix rows moved to `covered_fixture`, closing M3TVM-060. The suite covers active
+    indicators, destination icon/label colors, state-layer opacity/color, drawer surfaces and
+    scrim, app-bar container/title states, shape/elevation, and typography source/weight outcomes.
+  - Bugs fixed:
+    - NavigationBar, NavigationRail, NavigationDrawer, and Tabs label typography is now routed
+      through typed token accessors instead of each recipe reading sys typescale tokens directly.
+    - ModalNavigationDrawer now consumes shared navigation drawer token accessors for scrim
+      color/opacity and drawer width instead of direct string-key reads.
+    - Tabs intrinsic active-indicator min-width and scrollable metrics are seeded in the v30 theme
+      injection layer, removing fallback-only visual constants from the fixture path.
+  - Fresh verification:
+    - `cargo fmt -p fret-ui-material3 -- --check`: passed.
+    - `cargo check -p fret-ui-material3`: passed.
+    - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`: passed.
+    - `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures`: passed, 1 test run.
+    - `cargo nextest run -p fret-ui-material3 --lib tokens::v30`: passed, 6 tests run.
+    - `python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json`: passed.
+    - `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json | Out-Null`; `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null`; `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null`; `python -m json.tool ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json | Out-Null`: passed.
+    - `python tools/check_workstream_catalog.py`: passed with 511 dedicated directories and 47
+      standalone markdown files.
+    - `git diff --check`: passed.
 - 2026-05-30: M3TVM-050A extended the fixture-driven token visual harness to non-chip controls.
   - Fixture suite:
     `ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json`.

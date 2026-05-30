@@ -3,8 +3,9 @@
 //! This module centralizes token key mapping and fallback chains so tab visuals remain stable and
 //! drift-resistant during refactors.
 
-use fret_core::{Color, Corners, Px};
+use fret_core::{Color, Corners, FontWeight, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::{self, TextIntent};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum TabInteraction {
@@ -86,6 +87,23 @@ pub(crate) fn label_color(theme: &Theme, active: bool, interaction: TabInteracti
                 theme.color_token("md.sys.color.on-surface-variant")
             }
         })
+}
+
+pub(crate) fn label_weight(theme: &Theme) -> FontWeight {
+    let weight = theme
+        .number_by_key("md.comp.primary-navigation-tab.with-label-text.label-text.weight")
+        .unwrap_or(500.0);
+    FontWeight(weight.round().clamp(1.0, 1000.0) as u16)
+}
+
+pub(crate) fn label_text_style(theme: &Theme) -> TextStyle {
+    let style = theme
+        .text_style_by_key("md.comp.primary-navigation-tab.with-label-text.label-text")
+        .or_else(|| theme.text_style_by_key("md.sys.typescale.title-small"))
+        .unwrap_or_default();
+    let mut style = typography::with_intent(style, TextIntent::Control);
+    style.weight = label_weight(theme);
+    style
 }
 
 pub(crate) fn state_layer_color(theme: &Theme, active: bool, interaction: TabInteraction) -> Color {

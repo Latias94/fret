@@ -2099,11 +2099,12 @@
     {
       "component_family_counts": {
         "navigation-bar": 39,
-        "system": 10
+        "system": 11
       },
       "fallback_pattern_counts": {
         "closure_unwrap_or_else": 3,
         "component_to_system_color": 3,
+        "default_unwrap": 1,
         "literal_unwrap_or": 14,
         "system_color_resolver": 3,
         "theme_or_else_chain": 7
@@ -2111,42 +2112,42 @@
       "fallback_samples": [
         {
           "kind": "literal_unwrap_or",
-          "line": 22,
+          "line": 23,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs",
           "text": ".unwrap_or(Px(80.0))"
         },
         {
           "kind": "component_to_system_color",
-          "line": 26,
+          "line": 27,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs",
           "text": "MaterialTokenResolver::new(theme).color_comp_or_sys("
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 35,
+          "line": 36,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs",
           "text": ".unwrap_or(Px(0.0))"
         },
         {
           "kind": "component_to_system_color",
-          "line": 39,
+          "line": 40,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs",
           "text": "MaterialTokenResolver::new(theme).color_comp_or_sys("
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 48,
+          "line": 49,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs",
           "text": ".unwrap_or(Px(0.0));"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 55,
+          "line": 56,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs",
           "text": ".unwrap_or(Px(64.0))"
         }
       ],
-      "fallback_site_count": 30,
+      "fallback_site_count": 31,
       "magic_visual_constant_count": 14,
       "magic_visual_constant_role_counts": {
         "metric": 14
@@ -2157,7 +2158,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 22,
+          "line": 23,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(80.0))",
@@ -2168,7 +2169,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 35,
+          "line": 36,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(0.0))",
@@ -2179,7 +2180,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 48,
+          "line": 49,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(0.0));",
@@ -2190,7 +2191,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 55,
+          "line": 56,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(64.0))",
@@ -2201,7 +2202,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 61,
+          "line": 62,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(32.0))",
@@ -2212,7 +2213,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 67,
+          "line": 68,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(12.0))",
@@ -2226,62 +2227,64 @@
       "path": "ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs",
       "token_domain_counts": {
         "component": 39,
-        "system": 10
+        "system": 11
       },
-      "token_key_count": 49
+      "token_key_count": 50
     },
     {
       "component_family_counts": {
-        "navigation-drawer": 38,
-        "system": 11
+        "navigation-drawer": 42,
+        "system": 14
       },
       "fallback_pattern_counts": {
         "closure_unwrap_or_else": 6,
-        "literal_unwrap_or": 13,
+        "component_to_system_color": 2,
+        "default_unwrap": 2,
+        "literal_unwrap_or": 15,
         "theme_or_else_chain": 11
       },
       "fallback_samples": [
         {
           "kind": "literal_unwrap_or",
-          "line": 22,
+          "line": 24,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs",
           "text": ".unwrap_or(Px(360.0))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 28,
+          "line": 30,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs",
           "text": ".unwrap_or(Px(336.0))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 40,
+          "line": 42,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs",
           "text": ".or_else(|| theme.corners_by_key(\"md.sys.shape.corner.extra-large\"))"
         },
         {
           "kind": "closure_unwrap_or_else",
-          "line": 41,
+          "line": 43,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs",
           "text": ".unwrap_or_else(|| Corners::all(Px(0.0)))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 58,
+          "line": 60,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs",
           "text": ".or_else(|| theme.color_by_key(fallback))"
         },
         {
           "kind": "closure_unwrap_or_else",
-          "line": 59,
+          "line": 61,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs",
           "text": ".unwrap_or_else(|| theme.color_token(fallback))"
         }
       ],
-      "fallback_site_count": 30,
-      "magic_visual_constant_count": 14,
+      "fallback_site_count": 36,
+      "magic_visual_constant_count": 16,
       "magic_visual_constant_role_counts": {
-        "metric": 13,
+        "metric": 15,
         "shape": 1
       },
       "magic_visual_constant_samples": [
@@ -2290,7 +2293,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 22,
+          "line": 24,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(360.0))",
@@ -2301,7 +2304,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 28,
+          "line": 30,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(336.0))",
@@ -2312,7 +2315,7 @@
             "px_literal"
           ],
           "kind": "px_literal",
-          "line": 41,
+          "line": 43,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs",
           "role": "shape",
           "text": ".unwrap_or_else(|| Corners::all(Px(0.0)))",
@@ -2323,7 +2326,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 66,
+          "line": 68,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(0.0)),",
@@ -2334,7 +2337,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 69,
+          "line": 71,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(1.0)),",
@@ -2345,7 +2348,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 76,
+          "line": 78,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(56.0))",
@@ -2359,19 +2362,20 @@
       "module": "navigation_drawer",
       "path": "ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs",
       "token_domain_counts": {
-        "component": 38,
-        "system": 11
+        "component": 42,
+        "system": 14
       },
-      "token_key_count": 49
+      "token_key_count": 56
     },
     {
       "component_family_counts": {
         "navigation-rail": 39,
-        "system": 10
+        "system": 11
       },
       "fallback_pattern_counts": {
         "closure_unwrap_or_else": 4,
         "component_to_system_color": 2,
+        "default_unwrap": 1,
         "literal_unwrap_or": 14,
         "system_color_resolver": 3,
         "theme_or_else_chain": 9
@@ -2379,42 +2383,42 @@
       "fallback_samples": [
         {
           "kind": "literal_unwrap_or",
-          "line": 22,
+          "line": 23,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs",
           "text": ".unwrap_or(Px(80.0))"
         },
         {
           "kind": "closure_unwrap_or_else",
-          "line": 28,
+          "line": 29,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs",
           "text": ".unwrap_or_else(|| container_width(theme))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 34,
+          "line": 35,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs",
           "text": ".or_else(|| theme.metric_by_key(\"md.comp.navigation-rail.active-indicator.width\"))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 35,
+          "line": 36,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs",
           "text": ".unwrap_or(Px(56.0))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 41,
+          "line": 42,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs",
           "text": ".unwrap_or(Px(4.0))"
         },
         {
           "kind": "component_to_system_color",
-          "line": 45,
+          "line": 46,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs",
           "text": "MaterialTokenResolver::new(theme).color_comp_or_sys("
         }
       ],
-      "fallback_site_count": 32,
+      "fallback_site_count": 33,
       "magic_visual_constant_count": 14,
       "magic_visual_constant_role_counts": {
         "metric": 14
@@ -2425,7 +2429,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 22,
+          "line": 23,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(80.0))",
@@ -2436,7 +2440,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 35,
+          "line": 36,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(56.0))",
@@ -2447,7 +2451,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 41,
+          "line": 42,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(4.0))",
@@ -2458,7 +2462,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 55,
+          "line": 56,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(0.0));",
@@ -2469,7 +2473,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 62,
+          "line": 63,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(56.0))",
@@ -2480,7 +2484,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 69,
+          "line": 70,
           "path": "ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(32.0))",
@@ -2494,9 +2498,9 @@
       "path": "ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs",
       "token_domain_counts": {
         "component": 39,
-        "system": 10
+        "system": 11
       },
-      "token_key_count": 49
+      "token_key_count": 50
     },
     {
       "component_family_counts": {
@@ -4060,56 +4064,57 @@
     },
     {
       "component_family_counts": {
-        "primary-navigation-tab": 28,
-        "system": 7
+        "primary-navigation-tab": 30,
+        "system": 8
       },
       "fallback_pattern_counts": {
         "closure_unwrap_or_else": 4,
-        "literal_unwrap_or": 9,
-        "theme_or_else_chain": 7
+        "default_unwrap": 1,
+        "literal_unwrap_or": 10,
+        "theme_or_else_chain": 8
       },
       "fallback_samples": [
         {
           "kind": "literal_unwrap_or",
-          "line": 20,
+          "line": 21,
           "path": "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
           "text": ".unwrap_or(Px(48.0))"
         },
         {
           "kind": "theme_or_else_chain",
-          "line": 26,
+          "line": 27,
           "path": "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
           "text": ".or_else(|| theme.color_by_key(\"md.sys.color.surface-container\"))"
         },
         {
           "kind": "closure_unwrap_or_else",
-          "line": 27,
+          "line": 28,
           "path": "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
           "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.surface-container\"))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 33,
+          "line": 34,
           "path": "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
           "text": ".unwrap_or(Px(3.0))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 39,
+          "line": 40,
           "path": "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
           "text": ".unwrap_or(Px(24.0))"
         },
         {
           "kind": "literal_unwrap_or",
-          "line": 45,
+          "line": 46,
           "path": "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
           "text": ".unwrap_or(Px(52.0))"
         }
       ],
-      "fallback_site_count": 20,
-      "magic_visual_constant_count": 12,
+      "fallback_site_count": 23,
+      "magic_visual_constant_count": 13,
       "magic_visual_constant_role_counts": {
-        "metric": 12
+        "metric": 13
       },
       "magic_visual_constant_samples": [
         {
@@ -4117,7 +4122,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 20,
+          "line": 21,
           "path": "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(48.0))",
@@ -4128,7 +4133,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 33,
+          "line": 34,
           "path": "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(3.0))",
@@ -4139,7 +4144,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 39,
+          "line": 40,
           "path": "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(24.0))",
@@ -4150,7 +4155,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 45,
+          "line": 46,
           "path": "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(52.0))",
@@ -4161,7 +4166,7 @@
             "fallback"
           ],
           "kind": "px_literal",
-          "line": 51,
+          "line": 52,
           "path": "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
           "role": "metric",
           "text": ".unwrap_or(Px(90.0))",
@@ -4172,7 +4177,7 @@
             "px_literal"
           ],
           "kind": "px_literal",
-          "line": 65,
+          "line": 66,
           "path": "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
           "role": "metric",
           "text": "top_left: Px(3.0),",
@@ -4185,10 +4190,10 @@
       "module": "tabs",
       "path": "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
       "token_domain_counts": {
-        "component": 28,
-        "system": 7
+        "component": 30,
+        "system": 8
       },
-      "token_key_count": 35
+      "token_key_count": 38
     },
     {
       "component_family_counts": {
@@ -5177,7 +5182,7 @@
     {
       "evidence": {
         "domain_counts": {
-          "component": 48,
+          "component": 51,
           "fret_sys_extension": 18,
           "system": 1
         },
@@ -5190,7 +5195,7 @@
           "menu": 1,
           "outlined-segmented-button": 1,
           "plain-tooltip": 1,
-          "primary-navigation-tab": 1,
+          "primary-navigation-tab": 4,
           "rich-tooltip": 3,
           "search-bar": 2,
           "search-view": 2,
@@ -5200,7 +5205,7 @@
           "time-picker": 5,
           "top-app-bar": 11
         },
-        "non_generated_manual_write_key_count": 67
+        "non_generated_manual_write_key_count": 70
       },
       "finding": "The v30 injection surface writes non-generated Fret aliases and extensions on top of the Material Web snapshot; those keys need to stay documented as Fret-owned compatibility aliases.",
       "id": "M3TVM-F02",
@@ -6824,17 +6829,17 @@
   "summary": {
     "component_token_fallback_pattern_counts": {
       "closure_unwrap_or_else": 252,
-      "component_to_system_color": 48,
+      "component_to_system_color": 50,
       "component_to_system_number": 2,
-      "default_unwrap": 20,
-      "literal_unwrap_or": 426,
+      "default_unwrap": 25,
+      "literal_unwrap_or": 429,
       "system_color_resolver": 39,
-      "theme_or_else_chain": 384
+      "theme_or_else_chain": 385
     },
-    "component_token_fallback_site_count": 1171,
-    "component_token_magic_visual_constant_count": 505,
+    "component_token_fallback_site_count": 1182,
+    "component_token_magic_visual_constant_count": 508,
     "component_token_magic_visual_constant_role_counts": {
-      "metric": 458,
+      "metric": 461,
       "opacity": 9,
       "shape": 38
     },
@@ -6847,7 +6852,7 @@
     "matrix_token_module_count": 38,
     "unmapped_component_token_modules": [],
     "v30_injection_function_count": 107,
-    "v30_non_generated_manual_write_key_count": 67
+    "v30_non_generated_manual_write_key_count": 70
   },
   "v30_injection_surface": {
     "injection_function_count": 107,
@@ -6960,7 +6965,7 @@
       "inject_comp_elevated_card_colors_from_sys",
       "inject_comp_outlined_card_colors_from_sys"
     ],
-    "manual_write_key_count": 543,
+    "manual_write_key_count": 546,
     "material_web_delegate_count": 91,
     "material_web_delegates": [
       "inject_comp_assist_chip_colors_from_sys",
@@ -7064,7 +7069,7 @@
       "menu": 1,
       "outlined-segmented-button": 1,
       "plain-tooltip": 1,
-      "primary-navigation-tab": 1,
+      "primary-navigation-tab": 4,
       "rich-tooltip": 3,
       "search-bar": 2,
       "search-view": 2,
@@ -7075,11 +7080,11 @@
       "top-app-bar": 11
     },
     "non_generated_manual_write_domain_counts": {
-      "component": 48,
+      "component": 51,
       "fret_sys_extension": 18,
       "system": 1
     },
-    "non_generated_manual_write_key_count": 67,
+    "non_generated_manual_write_key_count": 70,
     "non_generated_manual_write_keys": [
       "md.comp.badge.large.label-text",
       "md.comp.date-picker.modal.header.headline",
@@ -7088,6 +7093,9 @@
       "md.comp.menu.list-item.label-text",
       "md.comp.outlined-segmented-button.label-text",
       "md.comp.plain-tooltip.supporting-text",
+      "md.comp.primary-navigation-tab.active-indicator.min-width",
+      "md.comp.primary-navigation-tab.scrollable.edge-padding",
+      "md.comp.primary-navigation-tab.scrollable.min-tab-width",
       "md.comp.primary-navigation-tab.with-label-text.label-text",
       "md.comp.rich-tooltip.action.label-text",
       "md.comp.rich-tooltip.subhead",
@@ -7150,19 +7158,19 @@
       "md.sys.layout.minimum-touch-target.size"
     ],
     "non_generated_referenced_domain_counts": {
-      "component": 103,
+      "component": 106,
       "fret_sys_extension": 18,
       "reference": 1,
       "system": 21
     },
-    "non_generated_referenced_key_count": 143,
+    "non_generated_referenced_key_count": 146,
     "path": "ecosystem/fret-ui-material3/src/tokens/v30.rs",
     "referenced_token_domain_counts": {
-      "component": 579,
+      "component": 582,
       "fret_sys_extension": 18,
       "reference": 2,
       "system": 69
     },
-    "referenced_token_key_count": 668
+    "referenced_token_key_count": 671
   }
 }

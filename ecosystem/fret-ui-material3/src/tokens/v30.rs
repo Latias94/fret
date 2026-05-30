@@ -1888,6 +1888,15 @@ fn inject_comp_filled_autocomplete_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_primary_navigation_tab_scalars(cfg);
+    cfg.metrics
+        .entry("md.comp.primary-navigation-tab.active-indicator.min-width".to_string())
+        .or_insert(24.0);
+    cfg.metrics
+        .entry("md.comp.primary-navigation-tab.scrollable.edge-padding".to_string())
+        .or_insert(52.0);
+    cfg.metrics
+        .entry("md.comp.primary-navigation-tab.scrollable.min-tab-width".to_string())
+        .or_insert(90.0);
 }
 
 fn inject_comp_navigation_bar_scalars(cfg: &mut ThemeConfig) {

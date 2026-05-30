@@ -22,8 +22,8 @@ use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::foundation::test_id::{optional_part_test_id, part_test_id};
-use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion;
+use crate::tokens::navigation_drawer as drawer_tokens;
 
 const MODAL_NAVIGATION_DRAWER_PANE_LABEL: &str = "Navigation menu";
 const MODAL_NAVIGATION_DRAWER_CLOSE_LABEL: &str = "Close drawer";
@@ -148,18 +148,9 @@ impl ModalNavigationDrawer {
                     },
                 );
 
-                let tokens = MaterialTokenResolver::new(theme);
-                let scrim_color_base = tokens.color_comp_or_sys(
-                    "md.comp.navigation-drawer.scrim.color",
-                    "md.sys.color.scrim",
-                );
-                let scrim_opacity = theme
-                    .number_by_key("md.comp.navigation-drawer.scrim.opacity")
-                    .unwrap_or(0.4);
-
-                let drawer_w = theme
-                    .metric_by_key("md.comp.navigation-drawer.container.width")
-                    .unwrap_or(Px(360.0));
+                let scrim_color_base = drawer_tokens::scrim_color(theme);
+                let scrim_opacity = drawer_tokens::scrim_opacity(theme);
+                let drawer_w = drawer_tokens::container_width(theme);
 
                 (
                     open_ms,

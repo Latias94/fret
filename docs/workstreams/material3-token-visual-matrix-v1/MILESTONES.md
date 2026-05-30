@@ -37,6 +37,9 @@ Exit criteria:
 
 ## M3 - Family Rows Closed
 
+Status: In progress. Field, control/chip, and navigation/app-chrome families are complete as of
+M3TVM-060; overlay/surface/data-display rows remain in M3TVM-070.
+
 Exit criteria:
 
 - Field, control/chip, navigation, and overlay/surface families have matrix rows with explicit

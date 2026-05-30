@@ -106,6 +106,6 @@
   ],
   "continue_policy": {
     "default_action": "run_next_task",
-    "notes": "M3TVM-040 and M3TVM-050 are complete. Continue with M3TVM-060 navigation/app-chrome fixture expansion before deleting broader fallback logic."
+    "notes": "M3TVM-040, M3TVM-050, and M3TVM-060 are complete. Continue with M3TVM-070 overlay/surface/data-display fixture expansion before deleting broader fallback logic."
   }
 }

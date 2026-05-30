@@ -3,9 +3,11 @@
 //! This module centralizes token key mapping and fallback chains so navigation drawer outcomes
 //! remain stable and drift-resistant during refactors.
 
-use fret_core::{Color, Corners, FontWeight, Px};
+use fret_core::{Color, Corners, FontWeight, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::{self, TextIntent};
 
+use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::navigation_drawer::NavigationDrawerVariant;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -83,11 +85,28 @@ pub(crate) fn active_indicator_radius(theme: &Theme) -> Px {
         .unwrap_or(Px(9999.0))
 }
 
+pub(crate) fn active_indicator_shape(theme: &Theme) -> Corners {
+    Corners::all(active_indicator_radius(theme))
+}
+
 pub(crate) fn active_indicator_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.navigation-drawer.active-indicator.color")
         .or_else(|| theme.color_by_key("md.sys.color.secondary-container"))
         .unwrap_or_else(|| theme.color_token("md.sys.color.secondary-container"))
+}
+
+pub(crate) fn scrim_color(theme: &Theme) -> Color {
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.navigation-drawer.scrim.color",
+        "md.sys.color.scrim",
+    )
+}
+
+pub(crate) fn scrim_opacity(theme: &Theme) -> f32 {
+    theme
+        .number_by_key("md.comp.navigation-drawer.scrim.opacity")
+        .unwrap_or(0.4)
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme) -> f32 {
@@ -287,6 +306,34 @@ pub(crate) fn label_weight(theme: &Theme, active: bool) -> FontWeight {
             .unwrap_or(500.0)
     };
     FontWeight(weight.round().clamp(1.0, 1000.0) as u16)
+}
+
+pub(crate) fn label_text_style(theme: &Theme, active: bool) -> TextStyle {
+    let style = theme
+        .text_style_by_key("md.sys.typescale.label-large")
+        .unwrap_or_default();
+    let mut style = typography::with_intent(style, TextIntent::Control);
+    style.weight = label_weight(theme, active);
+    style
+}
+
+pub(crate) fn large_badge_label_text_style(theme: &Theme) -> TextStyle {
+    let style = theme
+        .text_style_by_key("md.sys.typescale.label-small")
+        .unwrap_or_default();
+    let mut style = typography::with_intent(style, TextIntent::Control);
+    let weight = theme
+        .number_by_key("md.comp.navigation-drawer.large-badge-label.weight")
+        .unwrap_or(500.0);
+    style.weight = FontWeight(weight.round().clamp(1.0, 1000.0) as u16);
+    style
+}
+
+pub(crate) fn large_badge_label_color(theme: &Theme) -> Color {
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.navigation-drawer.large-badge-label.color",
+        "md.sys.color.on-surface-variant",
+    )
 }
 
 pub(crate) fn icon_size(theme: &Theme) -> Px {

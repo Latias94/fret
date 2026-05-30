@@ -9,8 +9,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, KeyCode, Px, SemanticsOrientation, SemanticsRole, TextOverflow,
-    TextStyle, TextWrap,
+    Axis, Color, Edges, KeyCode, Px, SemanticsOrientation, SemanticsRole, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -23,7 +23,6 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
-use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
@@ -396,16 +395,15 @@ fn navigation_drawer_item<H: UiHost>(
         config,
         selected_bg,
         icon_size,
-        label_style_base,
-        label_weight_active,
-        label_weight_inactive,
+        label_style_active,
+        label_style_inactive,
         badge_style,
         badge_color,
     ) = {
         let theme = Theme::global(&*cx.app);
 
         let height = drawer_tokens::active_indicator_height(theme);
-        let corner_radii = Corners::all(drawer_tokens::active_indicator_radius(theme));
+        let corner_radii = drawer_tokens::active_indicator_shape(theme);
         let focus_ring =
             material_focus_ring_for_component(theme, "md.comp.navigation-drawer", corner_radii);
 
@@ -415,29 +413,10 @@ fn navigation_drawer_item<H: UiHost>(
         let selected_bg = drawer_tokens::active_indicator_color(theme);
         let icon_size = drawer_tokens::icon_size(theme);
 
-        let label_style_base = theme
-            .text_style_by_key("md.sys.typescale.label-large")
-            .unwrap_or_default();
-        let label_style_base = typography::with_intent(label_style_base, TextIntent::Control);
-        let label_weight_active = drawer_tokens::label_weight(theme, true);
-        let label_weight_inactive = drawer_tokens::label_weight(theme, false);
-
-        let mut badge_style = theme
-            .text_style_by_key("md.sys.typescale.label-small")
-            .unwrap_or_default();
-        badge_style = typography::with_intent(badge_style, TextIntent::Control);
-        let weight = theme
-            .number_by_key("md.comp.navigation-drawer.large-badge-label.weight")
-            .unwrap_or(500.0);
-        badge_style.weight = fret_core::FontWeight(weight.round().clamp(1.0, 1000.0) as u16);
-
-        let badge_color = theme
-            .color_by_key("md.comp.navigation-drawer.large-badge-label.color")
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-            .unwrap_or_else(|| {
-                crate::foundation::token_resolver::MaterialTokenResolver::new(theme)
-                    .color_sys("md.sys.color.on-surface-variant")
-            });
+        let label_style_active = drawer_tokens::label_text_style(theme, true);
+        let label_style_inactive = drawer_tokens::label_text_style(theme, false);
+        let badge_style = drawer_tokens::large_badge_label_text_style(theme);
+        let badge_color = drawer_tokens::large_badge_label_color(theme);
 
         (
             height,
@@ -447,9 +426,8 @@ fn navigation_drawer_item<H: UiHost>(
             config,
             selected_bg,
             icon_size,
-            label_style_base,
-            label_weight_active,
-            label_weight_inactive,
+            label_style_active,
+            label_style_inactive,
             badge_style,
             badge_color,
         )
@@ -560,11 +538,10 @@ fn navigation_drawer_item<H: UiHost>(
                 }
 
                 let mut label_el = {
-                    let mut style = label_style_base.clone();
-                    style.weight = if selected {
-                        label_weight_active
+                    let style = if selected {
+                        label_style_active.clone()
                     } else {
-                        label_weight_inactive
+                        label_style_inactive.clone()
                     };
                     drawer_label(cx, &label, style, label_color)
                 };

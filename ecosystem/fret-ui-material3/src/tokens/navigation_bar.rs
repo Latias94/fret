@@ -3,8 +3,9 @@
 //! This module centralizes token key mapping and fallback chains so navigation bar outcomes remain
 //! stable and drift-resistant during refactors.
 
-use fret_core::{Color, Corners, FontWeight, Px};
+use fret_core::{Color, Corners, FontWeight, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
 
@@ -173,6 +174,15 @@ pub(crate) fn label_weight(theme: &Theme, active: bool) -> FontWeight {
             .unwrap_or(500.0)
     };
     FontWeight(weight.round().clamp(1.0, 1000.0) as u16)
+}
+
+pub(crate) fn label_text_style(theme: &Theme, active: bool) -> TextStyle {
+    let style = theme
+        .text_style_by_key("md.sys.typescale.label-medium")
+        .unwrap_or_default();
+    let mut style = typography::with_intent(style, TextIntent::Control);
+    style.weight = label_weight(theme, active);
+    style
 }
 
 pub(crate) fn icon_size(theme: &Theme) -> Px {
