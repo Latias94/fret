@@ -8616,6 +8616,41 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Floating Drag Surface Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI floating-area drag-surface pointer behavior and content setup moved into
+private child owners without changing drag setup delegation, focusable key stub installation,
+double-click hooks, activation signals, drag threshold handling, or IMUI child mounting.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/drag_surface.rs` keeps the public entrypoint,
+  pointer-region shell, and bring-to-front orchestration.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/drag_surface/behavior.rs` owns pointer
+  down/move/up drag behavior, double-click dispatch, drag threshold use, and activation signals.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/drag_surface/content.rs` owns setup callback
+  invocation, focusable key stub installation, and IMUI child mounting.
+- `tools/gate_imui_workstream_source.py` now rejects pointer drag behavior, key setup, and
+  `ImUiFacade` child mounting from drifting back into `drag_surface.rs` while requiring the two
+  child owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui
+  floating::movement_z_order::floating_area_bring_to_front_updates_hit_test_order
+  floating::movement_z_order::floating_layer_bring_to_front_updates_hit_test_order
+  floating::window_options::floating_window_title_bar_double_click_toggles_collapsed
+  floating::input_modes::floating_window_activate_on_click_can_be_disabled_for_resize_handles
+  --no-fail-fast`: pass; 4 tests, 182 skipped.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Textarea Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI textarea element assembly moved out of the root text-controls owner without

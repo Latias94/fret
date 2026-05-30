@@ -1827,6 +1827,13 @@ Last updated: 2026-05-30
       move/up handling, setup callback invocation, and IMUI child mounting. The root
       `floating_surface.rs` is now a module index/re-export hub for area, drag-surface, kinds,
       layer, and state owners.
+- [x] Split IMUI floating-area drag-surface pointer behavior and content setup into private child
+      owners without changing drag setup delegation, focusable key stub installation,
+      double-click hooks, activation signals, drag threshold handling, or IMUI child mounting.
+      Result: `floating_surface/drag_surface.rs` keeps the public entrypoint, pointer-region shell,
+      and bring-to-front orchestration. `drag_surface/behavior.rs` owns pointer down/move/up drag
+      behavior, double-click dispatch, and activation signals, while `drag_surface/content.rs` owns
+      setup callback invocation, key stub installation, and IMUI child mounting.
 - [x] Split IMUI floating-window resize state/snapshot ownership out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs` into a private owner module
       without changing resize handles, left/right/top/bottom/corner resize behavior, collapse

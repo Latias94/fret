@@ -1376,6 +1376,13 @@ activation event recording, pointer drag move/up handling, setup callback invoca
 mounting. `floating_surface.rs` is now a module index/re-export hub for area, drag-surface, kinds,
 layer, and state owners.
 
+2026-05-30 floating drag-surface child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_surface/drag_surface.rs` now keeps the public entrypoint,
+pointer-region shell, and bring-to-front orchestration. `drag_surface/behavior.rs` owns pointer
+down/move/up drag behavior, double-click dispatch, and activation signals, while
+`drag_surface/content.rs` owns setup callback invocation, key stub installation, and IMUI child
+mounting.
+
 2026-05-27 drag response source/target owner-split result:
 `ecosystem/fret-ui-kit/src/imui/response/drag/source.rs` now owns `DragSourceResponse` storage,
 inactive/new constructors, and source read accessors.
