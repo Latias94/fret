@@ -11,7 +11,7 @@ use fret_core::{
 use fret_runtime::{Model, ModelHost, PlatformCapabilities};
 use fret_ui::UiTree;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
-use fret_ui_material3::{TabItem, Tabs};
+use fret_ui_material3::{TabItem, Tabs, TabsVariant};
 
 mod interaction_harness;
 mod support;
@@ -55,12 +55,33 @@ fn render_tabs(
     selected: Model<Arc<str>>,
     scrollable: bool,
 ) {
+    render_tabs_with_variant(
+        ui,
+        app,
+        services,
+        window,
+        selected,
+        scrollable,
+        TabsVariant::Primary,
+    );
+}
+
+fn render_tabs_with_variant(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+    scrollable: bool,
+    variant: TabsVariant,
+) {
     let root =
         fret_ui::declarative::render_root(ui, app, services, window, bounds(), "root", |cx| {
             let tabs = Tabs::new(selected)
                 .a11y_label("Material tabs")
                 .test_id("m3-tabs")
                 .scrollable(scrollable)
+                .variant(variant)
                 .items(vec![
                     TabItem::new("a", "A").test_id("m3-tab-a"),
                     TabItem::new("b", "B").test_id("m3-tab-b"),
@@ -90,9 +111,37 @@ fn settle_tabs(
     selected: Model<Arc<str>>,
     scrollable: bool,
 ) -> Scene {
+    settle_tabs_with_variant(
+        ui,
+        app,
+        services,
+        window,
+        selected,
+        scrollable,
+        TabsVariant::Primary,
+    )
+}
+
+fn settle_tabs_with_variant(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+    scrollable: bool,
+    variant: TabsVariant,
+) -> Scene {
     let mut scene = Scene::default();
     for _ in 0..6 {
-        render_tabs(ui, app, services, window, selected.clone(), scrollable);
+        render_tabs_with_variant(
+            ui,
+            app,
+            services,
+            window,
+            selected.clone(),
+            scrollable,
+            variant,
+        );
         scene = paint(ui, app, services);
         app.advance_frame();
     }
@@ -230,6 +279,34 @@ fn fixed_primary_tabs_use_content_sized_active_indicator() {
 }
 
 #[test]
+fn fixed_secondary_tabs_use_full_width_active_indicator() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    let scene = settle_tabs_with_variant(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        selected,
+        false,
+        TabsVariant::Secondary,
+    );
+
+    let tab = ui
+        .debug_node_visual_bounds(semantics_node(&ui, "m3-tab-a").id)
+        .expect("expected tab visual bounds");
+    let indicator = active_indicator_rect(&scene);
+
+    assert!(
+        (indicator.origin.x.0 - tab.origin.x.0).abs() <= 0.5,
+        "expected secondary tab indicator to start at the selected tab edge; tab={tab:?} indicator={indicator:?}"
+    );
+    assert!(
+        (indicator.size.width.0 - tab.size.width.0).abs() <= 0.5,
+        "expected secondary tab indicator to span the selected tab width; tab={tab:?} indicator={indicator:?}"
+    );
+}
+
+#[test]
 fn scrollable_primary_tabs_use_material_edge_padding_and_min_width() {
     let (mut app, window, mut services, mut ui, selected) = tabs_harness();
     let _scene = settle_tabs(&mut ui, &mut app, &mut services, window, selected, true);
@@ -247,5 +324,43 @@ fn scrollable_primary_tabs_use_material_edge_padding_and_min_width() {
         (tab.size.width.0 - 90.0).abs() <= 0.5,
         "expected scrollable primary tab to use Material 90px min width, got {:?}",
         tab
+    );
+}
+
+#[test]
+fn scrollable_secondary_tabs_use_material_metrics_and_full_width_indicator() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    let scene = settle_tabs_with_variant(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        selected,
+        true,
+        TabsVariant::Secondary,
+    );
+
+    let chrome = visual_bounds_by_test_id(&ui, &app, window, "m3-tabs.chrome");
+    let tab = ui
+        .debug_node_visual_bounds(semantics_node(&ui, "m3-tab-a").id)
+        .expect("expected tab visual bounds");
+    let indicator = active_indicator_rect(&scene);
+
+    assert!(
+        (tab.origin.x.0 - (chrome.origin.x.0 + 52.0)).abs() <= 0.5,
+        "expected scrollable secondary tabs to start after Material 52px edge padding; chrome={chrome:?} tab={tab:?}"
+    );
+    assert!(
+        (tab.size.width.0 - 90.0).abs() <= 0.5,
+        "expected scrollable secondary tab to use Material 90px min width, got {:?}",
+        tab
+    );
+    assert!(
+        (indicator.origin.x.0 - tab.origin.x.0).abs() <= 0.5,
+        "expected scrollable secondary indicator to start at the selected tab edge; tab={tab:?} indicator={indicator:?}"
+    );
+    assert!(
+        (indicator.size.width.0 - tab.size.width.0).abs() <= 0.5,
+        "expected scrollable secondary indicator to span the selected tab width; tab={tab:?} indicator={indicator:?}"
     );
 }

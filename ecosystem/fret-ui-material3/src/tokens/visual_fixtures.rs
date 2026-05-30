@@ -3701,25 +3701,27 @@ fn actual_tabs_color(
     interaction: tabs::TabInteraction,
     role: &str,
 ) -> Color {
+    let kind = tabs::NavigationTabKind::Primary;
     match role {
-        "container_color" => tabs::container_background(theme),
+        "container_color" => tabs::container_background_for(theme, kind),
         "active_indicator_color" => tabs::active_indicator_color(theme),
-        "label_color" => tabs::label_color(theme, active, interaction),
-        "state_layer_color" => tabs::state_layer_color(theme, active, interaction),
+        "label_color" => tabs::label_color_for(theme, kind, active, interaction),
+        "state_layer_color" => tabs::state_layer_color_for(theme, kind, active, interaction),
         other => panic!("unsupported tabs color role {other}"),
     }
 }
 
 fn actual_tabs_metric(theme: &Theme, variant: &str, role: &str) -> Px {
+    let kind = tabs::NavigationTabKind::Primary;
     match role {
-        "container_height" => tabs::container_height(theme),
+        "container_height" => tabs::container_height_for(theme, kind),
         "active_indicator_height" => tabs::active_indicator_height(theme),
         "active_indicator_min_width" => tabs::active_indicator_min_width(theme),
         "scrollable_edge_padding" if variant == "scrollable" => {
-            tabs::scrollable_edge_padding(theme)
+            tabs::scrollable_edge_padding_for(theme, kind)
         }
         "scrollable_min_tab_width" if variant == "scrollable" => {
-            tabs::scrollable_min_tab_width(theme)
+            tabs::scrollable_min_tab_width_for(theme, kind)
         }
         other => panic!("unsupported tabs metric role {other}"),
     }
@@ -3731,23 +3733,26 @@ fn actual_tabs_number(
     interaction: tabs::TabInteraction,
     role: &str,
 ) -> f32 {
+    let kind = tabs::NavigationTabKind::Primary;
     match role {
-        "state_layer_opacity" => tabs::state_layer_opacity(theme, active, interaction),
-        "pressed_state_layer_opacity" => tabs::pressed_state_layer_opacity(theme, active),
+        "state_layer_opacity" => tabs::state_layer_opacity_for(theme, kind, active, interaction),
+        "pressed_state_layer_opacity" => tabs::pressed_state_layer_opacity_for(theme, kind, active),
         other => panic!("unsupported tabs number role {other}"),
     }
 }
 
 fn actual_tabs_corners(theme: &Theme, role: &str) -> Corners {
+    let kind = tabs::NavigationTabKind::Primary;
     match role {
-        "active_indicator_shape" => tabs::active_indicator_shape(theme),
+        "active_indicator_shape" => tabs::active_indicator_shape_for(theme, kind),
         other => panic!("unsupported tabs corners role {other}"),
     }
 }
 
 fn actual_tabs_text_style(theme: &Theme, role: &str) -> TextStyle {
+    let kind = tabs::NavigationTabKind::Primary;
     match role {
-        "label_text_style" => tabs::label_text_style(theme),
+        "label_text_style" => tabs::label_text_style_for(theme, kind),
         other => panic!("unsupported tabs text style role {other}"),
     }
 }

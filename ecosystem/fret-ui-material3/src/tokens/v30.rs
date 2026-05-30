@@ -114,6 +114,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_text_field_text_styles(cfg);
     inject_comp_menu_text_styles(cfg);
     inject_comp_primary_navigation_tab_text_styles(cfg);
+    inject_comp_secondary_navigation_tab_text_styles(cfg);
     inject_comp_tooltip_text_styles(cfg);
     inject_comp_snackbar_text_styles(cfg);
     inject_comp_date_picker_text_styles(cfg);
@@ -137,6 +138,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_outlined_autocomplete_scalars(cfg);
     inject_comp_filled_autocomplete_scalars(cfg);
     inject_comp_primary_navigation_tab_scalars(cfg);
+    inject_comp_secondary_navigation_tab_scalars(cfg);
     inject_comp_navigation_bar_scalars(cfg);
     inject_comp_navigation_drawer_scalars(cfg);
     inject_comp_navigation_rail_scalars(cfg);
@@ -358,6 +360,17 @@ fn inject_comp_primary_navigation_tab_text_styles(cfg: &mut ThemeConfig) {
 
     cfg.text_styles.insert(
         "md.comp.primary-navigation-tab.with-label-text.label-text".to_string(),
+        title_small,
+    );
+}
+
+fn inject_comp_secondary_navigation_tab_text_styles(cfg: &mut ThemeConfig) {
+    let Some(title_small) = cfg.text_styles.get("md.sys.typescale.title-small").cloned() else {
+        return;
+    };
+
+    cfg.text_styles.insert(
+        "md.comp.secondary-navigation-tab.with-label-text.label-text".to_string(),
         title_small,
     );
 }
@@ -787,6 +800,7 @@ pub fn theme_config_with_colors(
     inject_comp_outlined_autocomplete_colors_from_sys(&mut cfg);
     inject_comp_filled_autocomplete_colors_from_sys(&mut cfg);
     inject_comp_primary_navigation_tab_colors_from_sys(&mut cfg);
+    inject_comp_secondary_navigation_tab_colors_from_sys(&mut cfg);
     inject_comp_navigation_bar_colors_from_sys(&mut cfg);
     inject_comp_navigation_drawer_colors_from_sys(&mut cfg);
     inject_comp_navigation_rail_colors_from_sys(&mut cfg);
@@ -1913,6 +1927,42 @@ fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
         .or_insert(90.0);
 }
 
+fn inject_comp_secondary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
+    // Source: Compose Material3 `SecondaryNavigationTabTokens` and `TabRowDefaults`.
+    cfg.metrics
+        .entry("md.comp.secondary-navigation-tab.container.height".to_string())
+        .or_insert(48.0);
+    cfg.metrics
+        .entry("md.comp.secondary-navigation-tab.scrollable.edge-padding".to_string())
+        .or_insert(52.0);
+    cfg.metrics
+        .entry("md.comp.secondary-navigation-tab.scrollable.min-tab-width".to_string())
+        .or_insert(90.0);
+    cfg.numbers
+        .entry("md.comp.secondary-navigation-tab.with-label-text.label-text.weight".to_string())
+        .or_insert(500.0);
+
+    for key in [
+        "md.comp.secondary-navigation-tab.active.focus.state-layer.opacity",
+        "md.comp.secondary-navigation-tab.active.hover.state-layer.opacity",
+        "md.comp.secondary-navigation-tab.active.pressed.state-layer.opacity",
+        "md.comp.secondary-navigation-tab.inactive.focus.state-layer.opacity",
+        "md.comp.secondary-navigation-tab.inactive.hover.state-layer.opacity",
+        "md.comp.secondary-navigation-tab.inactive.pressed.state-layer.opacity",
+    ] {
+        let sys_key = if key.contains(".focus.") {
+            "md.sys.state.focus.state-layer-opacity"
+        } else if key.contains(".hover.") {
+            "md.sys.state.hover.state-layer-opacity"
+        } else {
+            "md.sys.state.pressed.state-layer-opacity"
+        };
+        if let Some(value) = cfg.numbers.get(sys_key).copied() {
+            cfg.numbers.entry(key.to_string()).or_insert(value);
+        }
+    }
+}
+
 fn inject_comp_navigation_bar_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_navigation_bar_scalars(cfg);
 }
@@ -2680,6 +2730,40 @@ fn inject_comp_primary_navigation_tab_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.sys.color.on-surface",
     );
     material_web_v30::inject_comp_primary_navigation_tab_colors_from_sys(cfg);
+}
+
+fn inject_comp_secondary_navigation_tab_colors_from_sys(cfg: &mut ThemeConfig) {
+    // Source: Compose Material3 `SecondaryNavigationTabTokens`.
+
+    copy_color(
+        cfg,
+        "md.comp.secondary-navigation-tab.container.color",
+        "md.sys.color.surface",
+    );
+
+    for key in [
+        "md.comp.secondary-navigation-tab.with-label-text.active.label-text.color",
+        "md.comp.secondary-navigation-tab.with-label-text.active.focus.label-text.color",
+        "md.comp.secondary-navigation-tab.with-label-text.active.hover.label-text.color",
+        "md.comp.secondary-navigation-tab.with-label-text.active.pressed.label-text.color",
+        "md.comp.secondary-navigation-tab.with-label-text.inactive.focus.label-text.color",
+        "md.comp.secondary-navigation-tab.with-label-text.inactive.hover.label-text.color",
+        "md.comp.secondary-navigation-tab.with-label-text.inactive.pressed.label-text.color",
+        "md.comp.secondary-navigation-tab.active.focus.state-layer.color",
+        "md.comp.secondary-navigation-tab.active.hover.state-layer.color",
+        "md.comp.secondary-navigation-tab.active.pressed.state-layer.color",
+        "md.comp.secondary-navigation-tab.inactive.focus.state-layer.color",
+        "md.comp.secondary-navigation-tab.inactive.hover.state-layer.color",
+        "md.comp.secondary-navigation-tab.inactive.pressed.state-layer.color",
+    ] {
+        copy_color(cfg, key, "md.sys.color.on-surface");
+    }
+
+    copy_color(
+        cfg,
+        "md.comp.secondary-navigation-tab.with-label-text.inactive.label-text.color",
+        "md.sys.color.on-surface-variant",
+    );
 }
 
 fn inject_comp_navigation_bar_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -3948,6 +4032,11 @@ mod tests {
         );
         assert!(
             cfg.text_styles
+                .contains_key("md.comp.secondary-navigation-tab.with-label-text.label-text"),
+            "expected secondary navigation tab label text style token"
+        );
+        assert!(
+            cfg.text_styles
                 .contains_key("md.comp.plain-tooltip.supporting-text"),
             "expected plain tooltip supporting text style token"
         );
@@ -3982,6 +4071,12 @@ mod tests {
             cfg.corners
                 .contains_key("md.comp.primary-navigation-tab.active-indicator.shape"),
             "expected component corner set token"
+        );
+        assert_eq!(
+            cfg.metrics
+                .get("md.comp.secondary-navigation-tab.container.height")
+                .copied(),
+            Some(48.0)
         );
         assert_eq!(
             cfg.metrics
@@ -4168,6 +4263,11 @@ mod tests {
             cfg.colors
                 .contains_key("md.comp.radio-button.selected.icon.color"),
             "expected radio-button color tokens to be derived from sys roles"
+        );
+        assert!(
+            cfg.colors
+                .contains_key("md.comp.secondary-navigation-tab.container.color"),
+            "expected secondary navigation tab color tokens to be derived from sys roles"
         );
     }
 

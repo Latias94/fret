@@ -89,6 +89,8 @@ pub(crate) fn material_active_indicator_layer<H: UiHost>(
     props.layout.position = PositionStyle::Absolute;
     props.layout.size.width = Length::Fill;
     props.layout.size.height = Length::Fill;
+    props.layout.size.min_width = Some(Length::Px(Px((target.x + target.width).max(0.0))));
+    props.layout.size.min_height = Some(Length::Px(Px((target.y + target.height).max(0.0))));
     props.layout.inset.top = Some(Px(0.0)).into();
     props.layout.inset.right = Some(Px(0.0)).into();
     props.layout.inset.bottom = Some(Px(0.0)).into();
