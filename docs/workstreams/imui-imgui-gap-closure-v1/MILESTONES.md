@@ -1298,6 +1298,13 @@ changed/clicked reads, and `ResponseExt` population. `switch.rs` keeps label ide
 `SwitchOptions` a11y wiring, field chrome, switch state badge mounting, boolean label mounting, and
 fill-row visual assembly.
 
+2026-05-30 switch behavior sub-owner split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/behavior.rs` now keeps option
+normalization, active-trigger behavior installation, and owner dispatch only.
+`switch/behavior/activation.rs` owns click toggling, lifecycle edit marking, and clicked/changed
+transient emission. `switch/behavior/keyboard.rs` owns activate shortcuts, and
+`switch/behavior/response.rs` owns active-trigger response projection.
+
 2026-05-27 disclosure trigger behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior.rs` now owns pressable
 callback installation, activate shortcut/context-menu key handling, pointer down/up hooks,

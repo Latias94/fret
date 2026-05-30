@@ -1646,6 +1646,14 @@ Last updated: 2026-05-30
       changed/clicked reads, and `ResponseExt` population. `switch.rs` keeps label identity,
       `SwitchOptions` a11y wiring, field chrome, switch state badge mounting, boolean label
       mounting, and fill-row visual assembly.
+- [x] Split IMUI switch behavior into activation, keyboard, and response owners without changing
+      active-trigger installation options, model toggling, lifecycle edit marking, clicked/changed
+      transient emission, activate-shortcut repeat/IME gating, pressable response projection, or
+      public switch facade behavior.
+      Result: `boolean_controls/switch/behavior.rs` keeps option normalization, active-trigger
+      behavior installation, and owner dispatch. `behavior/activation.rs` owns click toggling,
+      `behavior/keyboard.rs` owns shortcut key handling, and `behavior/response.rs` owns
+      active-trigger response projection.
 - [x] Split IMUI interaction-runtime hover internals out of
       `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs` into private owner modules
       without changing hovered-query, shared-delay, active-item block, or long-press behavior.

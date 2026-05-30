@@ -1,13 +1,12 @@
-use std::sync::Arc;
-
 use fret_runtime::{KeyChord, Model};
-use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::PressableState;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
-use super::super::super::{
-    KEY_CHANGED, KEY_CLICKED, ResponseExt, active_trigger_behavior, mark_lifecycle_edit,
-};
+use super::super::super::{ResponseExt, active_trigger_behavior};
+
+mod activation;
+mod keyboard;
+mod response;
 
 pub(super) struct SwitchBehaviorOptions {
     pub(super) enabled: bool,
@@ -24,6 +23,12 @@ pub(super) fn install_switch_behavior<H: UiHost>(
     options: SwitchBehaviorOptions,
     response: &mut ResponseExt,
 ) {
+    let SwitchBehaviorOptions {
+        enabled,
+        focusable,
+        activate_shortcut,
+        shortcut_repeat,
+    } = options;
     let behavior = active_trigger_behavior::install_active_trigger_behavior(
         cx,
         id,
@@ -33,57 +38,27 @@ pub(super) fn install_switch_behavior<H: UiHost>(
             clear_pointer_move: true,
         },
     );
-    let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
-    let lifecycle_model_for_shortcut = behavior.lifecycle_model.clone();
 
-    let model_for_activate = model.clone();
-    cx.pressable_on_activate(crate::on_activate(move |host, acx, _reason| {
-        let _ = host.update_model(&model_for_activate, |v: &mut bool| *v = !*v);
-        mark_lifecycle_edit(host, acx, &lifecycle_model_for_activate);
-        host.record_transient_event(acx, KEY_CLICKED);
-        host.record_transient_event(acx, KEY_CHANGED);
-        host.notify(acx);
-    }));
+    activation::install_switch_activation(
+        cx,
+        activation::SwitchActivationInput {
+            model: model.clone(),
+            lifecycle_model: behavior.lifecycle_model.clone(),
+        },
+    );
 
-    if options.enabled && options.focusable {
-        let model_for_shortcut = model.clone();
-        cx.key_on_key_down_for(
+    if enabled && focusable {
+        keyboard::install_switch_keyboard(
+            cx,
             id,
-            Arc::new(move |host, acx, down| {
-                if let Some(shortcut) = options.activate_shortcut {
-                    let matches_shortcut =
-                        down.key == shortcut.key && down.modifiers == shortcut.mods;
-                    if matches_shortcut
-                        && (!down.repeat || options.shortcut_repeat)
-                        && !down.ime_composing
-                    {
-                        let _ = host.update_model(&model_for_shortcut, |v: &mut bool| *v = !*v);
-                        mark_lifecycle_edit(host, acx, &lifecycle_model_for_shortcut);
-                        host.record_transient_event(acx, KEY_CLICKED);
-                        host.record_transient_event(acx, KEY_CHANGED);
-                        host.notify(acx);
-                        return true;
-                    }
-                }
-
-                false
-            }),
+            keyboard::SwitchKeyboardInput {
+                model,
+                activate_shortcut,
+                shortcut_repeat,
+                lifecycle_model: behavior.lifecycle_model.clone(),
+            },
         );
     }
 
-    let clicked = cx.take_transient_for(id, KEY_CLICKED);
-    let changed = cx.take_transient_for(id, KEY_CHANGED);
-    active_trigger_behavior::populate_active_trigger_response(
-        cx,
-        id,
-        state,
-        &behavior,
-        active_trigger_behavior::ActiveTriggerResponseInput {
-            enabled: options.enabled,
-            clicked,
-            changed,
-            lifecycle_edited: changed,
-        },
-        response,
-    );
+    response::populate_switch_response(cx, id, state, &behavior, enabled, response);
 }

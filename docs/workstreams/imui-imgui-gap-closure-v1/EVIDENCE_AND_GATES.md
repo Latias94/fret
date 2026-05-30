@@ -6791,6 +6791,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Switch Behavior Sub-Owner Evidence - 2026-05-30
+
+Claim verified: IMUI switch activation, keyboard, and response projection split into private
+owners without changing active-trigger installation options, model toggling, lifecycle edit
+marking, clicked/changed transient emission, activate-shortcut repeat/IME gating, active-trigger
+response projection, or public switch facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/behavior.rs` keeps option normalization,
+  active-trigger behavior installation, and owner dispatch.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/behavior/activation.rs` owns click model
+  toggling, lifecycle edit marking, and clicked/changed transient emission.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/behavior/keyboard.rs` owns activate
+  shortcut repeat/IME gating and no-op fallback behavior.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/behavior/response.rs` owns clicked/
+  changed transient extraction and active-trigger response projection.
+- `tools/gate_imui_workstream_source.py` now rejects activation, keyboard, and response projection
+  logic from drifting back into the switch behavior hub and checks the three child owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_controls::switch --no-fail-fast`: pass; 2 switch behavior
+  tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Disclosure Trigger Behavior Owner-Split Evidence - 2026-05-27
 
 Claim verified: disclosure trigger pressable behavior and trigger-response population moved out of
