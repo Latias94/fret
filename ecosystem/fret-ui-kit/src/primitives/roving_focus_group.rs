@@ -230,7 +230,7 @@ pub fn nav_apg_with_direction<H: UiHost>(cx: &mut ElementContext<'_, H>, dir: La
             (fret_core::Axis::Vertical, KeyCode::ArrowDown) => Some(true),
             (fret_core::Axis::Vertical, KeyCode::ArrowUp) => Some(false),
             (fret_core::Axis::Horizontal, KeyCode::ArrowRight | KeyCode::ArrowLeft) => {
-                horizontal_forward_for_key(it.key, dir)
+                direction_prim::horizontal_forward_for_key(it.key, dir)
             }
             _ => None,
         };
@@ -290,7 +290,7 @@ pub fn nav_apg_entry_fallback_with_direction<H: UiHost>(
             (fret_core::Axis::Vertical, KeyCode::ArrowDown) => Some(true),
             (fret_core::Axis::Vertical, KeyCode::ArrowUp) => Some(false),
             (fret_core::Axis::Horizontal, KeyCode::ArrowRight | KeyCode::ArrowLeft) => {
-                horizontal_forward_for_key(it.key, dir)
+                direction_prim::horizontal_forward_for_key(it.key, dir)
             }
             _ => None,
         };
@@ -303,16 +303,6 @@ pub fn nav_apg_entry_fallback_with_direction<H: UiHost>(
             target: roving_focus::next_enabled(&it.disabled, current, forward, it.wrap),
         }
     }));
-}
-
-fn horizontal_forward_for_key(key: fret_core::KeyCode, dir: LayoutDirection) -> Option<bool> {
-    match (key, dir) {
-        (fret_core::KeyCode::ArrowRight, LayoutDirection::Ltr) => Some(true),
-        (fret_core::KeyCode::ArrowLeft, LayoutDirection::Ltr) => Some(false),
-        (fret_core::KeyCode::ArrowRight, LayoutDirection::Rtl) => Some(false),
-        (fret_core::KeyCode::ArrowLeft, LayoutDirection::Rtl) => Some(true),
-        _ => None,
-    }
 }
 
 fn entry_fallback_target_for_key(
@@ -331,7 +321,7 @@ fn entry_fallback_target_for_key(
             roving_focus::last_enabled(disabled)
         }
         (fret_core::Axis::Horizontal, KeyCode::ArrowRight | KeyCode::ArrowLeft) => {
-            match horizontal_forward_for_key(key, dir) {
+            match direction_prim::horizontal_forward_for_key(key, dir) {
                 Some(true) => roving_focus::first_enabled(disabled),
                 Some(false) => roving_focus::last_enabled(disabled),
                 None => None,
@@ -350,19 +340,19 @@ mod tests {
         use fret_core::KeyCode;
 
         assert_eq!(
-            horizontal_forward_for_key(KeyCode::ArrowRight, LayoutDirection::Ltr),
+            direction_prim::horizontal_forward_for_key(KeyCode::ArrowRight, LayoutDirection::Ltr),
             Some(true)
         );
         assert_eq!(
-            horizontal_forward_for_key(KeyCode::ArrowLeft, LayoutDirection::Ltr),
+            direction_prim::horizontal_forward_for_key(KeyCode::ArrowLeft, LayoutDirection::Ltr),
             Some(false)
         );
         assert_eq!(
-            horizontal_forward_for_key(KeyCode::ArrowRight, LayoutDirection::Rtl),
+            direction_prim::horizontal_forward_for_key(KeyCode::ArrowRight, LayoutDirection::Rtl),
             Some(false)
         );
         assert_eq!(
-            horizontal_forward_for_key(KeyCode::ArrowLeft, LayoutDirection::Rtl),
+            direction_prim::horizontal_forward_for_key(KeyCode::ArrowLeft, LayoutDirection::Rtl),
             Some(true)
         );
     }

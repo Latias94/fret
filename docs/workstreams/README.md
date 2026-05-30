@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 516
+- Dedicated directories: 517
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -1985,6 +1985,7 @@ Rule:
 - `docs/workstreams/diag-simplification-v1/` — first 2026-02-13, latest 2026-03-09, 4 markdown docs
 - `docs/workstreams/diag-skill-evidence-owner-drift-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the narrow `fret-diag-workflow` evidence-owner correction between public `fretboard` and workspace-dev `fretboard-dev` diagnostics help surfaces)
 - `docs/workstreams/diag-v2-hardening-and-switches-v1/` — first 2026-02-26, latest 2026-03-03, 10 markdown docs
+- `docs/workstreams/direction-infrastructure-v1/` — first n/a, latest n/a, 6 markdown docs (closed refactor lane for shared layout-direction policy helpers and cross-design-system RTL boundary cleanup; includes `WORKSTREAM.json`)
 - `docs/workstreams/docking-arbitration-diag-hardening-v1/` — first 2026-02-28, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/docking-hovered-window-contract-v1/` — first 2026-02-17, latest 2026-02-18, 2 markdown docs
 - `docs/workstreams/docking-multiviewport-arbitration-v1/` — first 2026-01-27, latest 2026-03-02, 2 markdown docs

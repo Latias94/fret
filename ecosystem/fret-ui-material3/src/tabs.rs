@@ -22,6 +22,7 @@ use fret_ui::element::{
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::{ElementContextThemeExt as _, controllable_state};
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
 };
@@ -458,9 +459,10 @@ impl Tabs {
                                     return RovingNavigateResult::Handled { target };
                                 }
 
-                                let Some(forward) =
-                                    navigation_forward_for_key(layout_direction_for_roving, it.key)
-                                else {
+                                let Some(forward) = direction_prim::horizontal_forward_for_key(
+                                    it.key,
+                                    layout_direction_for_roving,
+                                ) else {
                                     return RovingNavigateResult::NotHandled;
                                 };
 
@@ -1018,26 +1020,6 @@ mod tests {
     }
 
     #[test]
-    fn tab_keyboard_direction_maps_arrow_keys_by_layout_direction() {
-        assert_eq!(
-            navigation_forward_for_key(LayoutDirection::Ltr, KeyCode::ArrowRight),
-            Some(true)
-        );
-        assert_eq!(
-            navigation_forward_for_key(LayoutDirection::Ltr, KeyCode::ArrowLeft),
-            Some(false)
-        );
-        assert_eq!(
-            navigation_forward_for_key(LayoutDirection::Rtl, KeyCode::ArrowLeft),
-            Some(true)
-        );
-        assert_eq!(
-            navigation_forward_for_key(LayoutDirection::Rtl, KeyCode::ArrowRight),
-            Some(false)
-        );
-    }
-
-    #[test]
     fn tab_indicator_fallback_position_mirrors_logical_index_in_rtl() {
         assert_eq!(visual_tab_index(0, 3, LayoutDirection::Ltr), 0);
         assert_eq!(visual_tab_index(2, 3, LayoutDirection::Ltr), 2);
@@ -1345,16 +1327,6 @@ fn tab_list_indicator<H: UiHost>(
             indicator_test_id.clone(),
         )
     })
-}
-
-fn navigation_forward_for_key(layout_direction: LayoutDirection, key: KeyCode) -> Option<bool> {
-    match (layout_direction, key) {
-        (LayoutDirection::Ltr, KeyCode::ArrowRight) => Some(true),
-        (LayoutDirection::Ltr, KeyCode::ArrowLeft) => Some(false),
-        (LayoutDirection::Rtl, KeyCode::ArrowLeft) => Some(true),
-        (LayoutDirection::Rtl, KeyCode::ArrowRight) => Some(false),
-        _ => None,
-    }
 }
 
 fn visual_tab_index(

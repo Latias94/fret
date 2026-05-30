@@ -12,6 +12,7 @@
 
 pub use fret_ui::overlay_placement::LayoutDirection;
 
+use fret_core::KeyCode;
 use fret_ui::{ElementContext, UiHost};
 
 /// Resolve direction using the Radix rule: `local || inherited || Ltr`.
@@ -50,6 +51,53 @@ pub fn use_direction_in_scope<H: UiHost>(
     use_direction(local, inherited_direction(cx))
 }
 
+/// Returns whether a horizontal arrow key means "move forward" in logical item order.
+///
+/// This mirrors Radix/Base UI component behavior: in RTL, ArrowLeft advances and ArrowRight moves
+/// backward. Non-horizontal keys return `None`.
+pub fn horizontal_forward_for_key(key: KeyCode, dir: LayoutDirection) -> Option<bool> {
+    match (key, dir) {
+        (KeyCode::ArrowRight, LayoutDirection::Ltr) => Some(true),
+        (KeyCode::ArrowLeft, LayoutDirection::Ltr) => Some(false),
+        (KeyCode::ArrowRight, LayoutDirection::Rtl) => Some(false),
+        (KeyCode::ArrowLeft, LayoutDirection::Rtl) => Some(true),
+        _ => None,
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct HorizontalVisualItemPosition {
+    pub is_visual_first: bool,
+    pub is_visual_last: bool,
+    pub order: Option<i32>,
+}
+
+/// Computes visual first/last and optional flex order for a horizontal row.
+///
+/// Until Fret's Flex mechanism has a global RTL physical placement contract, components that need
+/// DOM-like horizontal RTL visual order can use this helper to keep the policy centralized.
+#[inline]
+pub fn horizontal_visual_item_position(
+    dir: LayoutDirection,
+    idx: usize,
+    len: usize,
+) -> HorizontalVisualItemPosition {
+    debug_assert!(len > 0, "horizontal_visual_item_position requires len > 0");
+
+    match dir {
+        LayoutDirection::Ltr => HorizontalVisualItemPosition {
+            is_visual_first: idx == 0,
+            is_visual_last: idx + 1 == len,
+            order: None,
+        },
+        LayoutDirection::Rtl => HorizontalVisualItemPosition {
+            is_visual_first: idx + 1 == len,
+            is_visual_last: idx == 0,
+            order: Some((len - 1 - idx) as i32),
+        },
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -86,5 +134,61 @@ mod tests {
             assert_eq!(inherited_direction(cx), None);
             assert_eq!(use_direction_in_scope(cx, None), LayoutDirection::Ltr);
         });
+    }
+
+    #[test]
+    fn horizontal_forward_for_key_flips_arrow_semantics_in_rtl() {
+        assert_eq!(
+            horizontal_forward_for_key(KeyCode::ArrowRight, LayoutDirection::Ltr),
+            Some(true)
+        );
+        assert_eq!(
+            horizontal_forward_for_key(KeyCode::ArrowLeft, LayoutDirection::Ltr),
+            Some(false)
+        );
+        assert_eq!(
+            horizontal_forward_for_key(KeyCode::ArrowRight, LayoutDirection::Rtl),
+            Some(false)
+        );
+        assert_eq!(
+            horizontal_forward_for_key(KeyCode::ArrowLeft, LayoutDirection::Rtl),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn horizontal_visual_item_position_marks_visual_edges_and_order() {
+        assert_eq!(
+            horizontal_visual_item_position(LayoutDirection::Ltr, 0, 3),
+            HorizontalVisualItemPosition {
+                is_visual_first: true,
+                is_visual_last: false,
+                order: None,
+            }
+        );
+        assert_eq!(
+            horizontal_visual_item_position(LayoutDirection::Ltr, 2, 3),
+            HorizontalVisualItemPosition {
+                is_visual_first: false,
+                is_visual_last: true,
+                order: None,
+            }
+        );
+        assert_eq!(
+            horizontal_visual_item_position(LayoutDirection::Rtl, 0, 3),
+            HorizontalVisualItemPosition {
+                is_visual_first: false,
+                is_visual_last: true,
+                order: Some(2),
+            }
+        );
+        assert_eq!(
+            horizontal_visual_item_position(LayoutDirection::Rtl, 2, 3),
+            HorizontalVisualItemPosition {
+                is_visual_first: true,
+                is_visual_last: false,
+                order: Some(0),
+            }
+        );
     }
 }

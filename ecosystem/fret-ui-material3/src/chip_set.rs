@@ -9,12 +9,13 @@
 
 use std::sync::Arc;
 
-use fret_core::{Axis, KeyCode, LayoutDirection, Modifiers, Px, SemanticsRole};
+use fret_core::{Axis, KeyCode, Modifiers, Px, SemanticsRole};
 use fret_ui::UiHost;
 use fret_ui::action::RovingNavigateResult;
 use fret_ui::element::{AnyElement, RovingFlexProps, SemanticsProps};
 use fret_ui::elements::ElementContext;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::primitives::direction as direction_prim;
 
 use crate::chip::AssistChip;
 use crate::filter_chip::FilterChip;
@@ -211,13 +212,8 @@ impl ChipSet {
                         return RovingNavigateResult::Handled { target };
                     }
 
-                    let forward = match (layout_direction, it.key) {
-                        (LayoutDirection::Ltr, KeyCode::ArrowRight) => Some(true),
-                        (LayoutDirection::Ltr, KeyCode::ArrowLeft) => Some(false),
-                        (LayoutDirection::Rtl, KeyCode::ArrowLeft) => Some(true),
-                        (LayoutDirection::Rtl, KeyCode::ArrowRight) => Some(false),
-                        _ => None,
-                    };
+                    let forward =
+                        direction_prim::horizontal_forward_for_key(it.key, layout_direction);
                     let Some(forward) = forward else {
                         return RovingNavigateResult::NotHandled;
                     };

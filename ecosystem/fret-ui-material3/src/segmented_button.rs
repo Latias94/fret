@@ -9,8 +9,8 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, KeyCode, LayoutDirection, Modifiers, Px, SemanticsCheckedState,
-    SemanticsRole, SvgFit, TextOverflow, TextWrap,
+    Axis, Color, Corners, KeyCode, Modifiers, Px, SemanticsCheckedState, SemanticsRole, SvgFit,
+    TextOverflow, TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -21,6 +21,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::arc_str::empty_arc_str;
@@ -241,13 +242,8 @@ impl SegmentedButtonSet {
                         return RovingNavigateResult::Handled { target };
                     }
 
-                    let forward = match (layout_direction, it.key) {
-                        (LayoutDirection::Ltr, KeyCode::ArrowRight) => Some(true),
-                        (LayoutDirection::Ltr, KeyCode::ArrowLeft) => Some(false),
-                        (LayoutDirection::Rtl, KeyCode::ArrowLeft) => Some(true),
-                        (LayoutDirection::Rtl, KeyCode::ArrowRight) => Some(false),
-                        _ => None,
-                    };
+                    let forward =
+                        direction_prim::horizontal_forward_for_key(it.key, layout_direction);
                     let Some(forward) = forward else {
                         return RovingNavigateResult::NotHandled;
                     };
