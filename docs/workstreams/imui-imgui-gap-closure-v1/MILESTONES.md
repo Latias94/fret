@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 disclosure entry child-owner result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/entry.rs` now keeps public
+collapsing-header/tree-node wrappers, label identity normalization, and aggregate
+`DisclosureResponse` assembly. `entry/state.rs` owns collapsible open-model setup, open reads,
+toggled detection, and enabled gating; `entry/body.rs` owns trigger/content child construction.
+Public disclosure facade calls, root layout, trigger/content mounting, and response semantics remain
+unchanged.
+
 2026-05-29 facade root surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` now keeps the single public
 `UiWriterImUiFacadeExt` trait hub plus surface macro expansion only. Scope, basic text/separator

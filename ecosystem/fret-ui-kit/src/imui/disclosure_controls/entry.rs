@@ -2,13 +2,14 @@ use std::sync::Arc;
 
 use fret_ui::UiHost;
 
+mod body;
+mod state;
+
 use super::super::label_identity::parse_label_identity;
 use super::super::{
     CollapsingHeaderOptions, DisclosureResponse, ImUiFacade, TreeNodeOptions, UiWriterImUiFacadeExt,
 };
-use super::{layout, spec::DisclosureSpec, trigger};
-use crate::declarative::ModelWatchExt;
-use crate::primitives::collapsible as radix_collapsible;
+use super::{layout, spec::DisclosureSpec};
 
 pub(in crate::imui) fn collapsing_header_with_options<
     H: UiHost,
@@ -49,47 +50,21 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
         let scope_key = format!("fret-ui-kit.imui.disclosure.{id}");
         cx.named(scope_key.as_str(), |cx| {
             let trigger_response = &mut response.trigger;
-            let root = radix_collapsible::CollapsibleRoot::new()
-                .open(spec.open.clone())
-                .default_open(spec.default_open);
-            let open_model = root.use_open_model(cx).model();
-            let open_now = if spec.has_children() {
-                cx.watch_model(&open_model)
-                    .layout()
-                    .copied()
-                    .unwrap_or(false)
-            } else {
-                false
-            };
-            let toggled = super::super::model_value_changed_for(cx, cx.root_id(), open_now);
-            let enabled = spec.enabled && !super::super::imui_is_disabled(cx);
-            let mut build = Some(f);
+            let disclosure_state = state::prepare_disclosure_entry_state(cx, &spec);
             let content_id = cx.named("content", |cx| cx.root_id());
-
-            let mut root_children = Vec::new();
-            let header = trigger::disclosure_header_element(
+            let root_children = body::disclosure_root_children(
                 cx,
-                spec.clone(),
-                open_model,
+                &spec,
+                disclosure_state.open_model,
                 content_id,
-                open_now,
-                enabled,
+                disclosure_state.open_now,
+                disclosure_state.enabled,
                 trigger_response,
+                f,
             );
-            root_children.push(header);
 
-            if spec.has_children() && open_now {
-                root_children.push(layout::disclosure_content_element(
-                    cx,
-                    &spec,
-                    build
-                        .take()
-                        .expect("disclosure body builder should be available"),
-                ));
-            }
-
-            response.open = open_now;
-            response.toggled = toggled;
+            response.open = disclosure_state.open_now;
+            response.toggled = disclosure_state.toggled;
 
             layout::disclosure_root_element(cx, &spec, root_children)
         })

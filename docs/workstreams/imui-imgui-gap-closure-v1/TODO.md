@@ -44,6 +44,13 @@ Last updated: 2026-05-30
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI disclosure entry state reads and root-child assembly into private child owners
+      without changing collapsing-header/tree-node label identity parsing, open-model setup,
+      trigger/content mounting, root layout, open/toggled response reporting, or public disclosure
+      facade calls.
+      Result: `disclosure_controls/entry.rs` keeps public entry wrappers and aggregate response
+      assembly. `entry/state.rs` owns open-model reads, toggled detection, and enabled gating,
+      while `entry/body.rs` owns trigger/content child construction.
 - [x] Split remaining IMUI facade root scope/basic/disclosure trait default method declarations out
       of `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, push-id/disabled-scope, text,

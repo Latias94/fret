@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Disclosure Entry State/Body Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI disclosure entry state reads and root-child assembly split into private child
+owners without changing collapsing-header/tree-node label identity parsing, open-model setup,
+trigger/content mounting, root layout, open/toggled response reporting, or public disclosure facade
+calls.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/entry.rs` keeps public entry wrappers, label
+  identity normalization, state/body owner dispatch, aggregate `DisclosureResponse` assembly, and
+  root element delegation.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/entry/state.rs` owns collapsible open-model
+  setup, open reads, toggled detection, and enabled gating.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/entry/body.rs` owns header trigger mounting
+  and conditional content child construction.
+- `tools/gate_imui_workstream_source.py` now checks the disclosure entry/state/body split.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui disclosure --no-fail-fast`: timed out while building the
+  `fret-imui` test binary; no failed test result was reported, and no residual cargo/rustc/nextest
+  process remained before rerun.
+- `cargo nextest run -p fret-imui interaction_shortcuts::disclosure_tree --no-fail-fast`: pass
+  (4 passed, 182 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --lib disclosure_controls::tests
+  --no-fail-fast`: pass (6 passed, 684 skipped).
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Begin-Submenu State/Popup Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI begin-submenu open-state reads/writeback and popup mounting split into child
