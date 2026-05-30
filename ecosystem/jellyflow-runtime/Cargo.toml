@@ -1,0 +1,36 @@
+[package]
+name = "jellyflow-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "Headless store, rules, schema, profile, and change pipeline for Jellyflow."
+
+[dependencies]
+jellyflow-core = { version = "0.1.0", path = "../jellyflow-core" }
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+
+[lints.rust]
+dead_code = "allow"
+
+[lints.clippy]
+arc_with_non_send_sync = "allow"
+default_constructed_unit_structs = "allow"
+doc_lazy_continuation = "allow"
+field_reassign_with_default = "allow"
+map_entry = "allow"
+new_without_default = "allow"
+ok_expect = "allow"
+question_mark = "allow"
+redundant_closure = "allow"
+reserve_after_initialization = "allow"
+too_many_arguments = "allow"
+type_complexity = "allow"

@@ -66,7 +66,7 @@ const UI_GALLERY_NODE_GRAPH_CULL_TORTURE_RS: &str = include_str!(
 );
 const WORKFLOW_NODE_GRAPH_DEMO_RS: &str =
     include_str!("../../../apps/fret-ui-gallery/src/ui/snippets/ai/workflow_node_graph_demo.rs");
-const RUNTIME_STORE_RS: &str = include_str!("runtime/store.rs");
+const RUNTIME_STORE_RS: &str = include_str!("../../jellyflow-runtime/src/runtime/store.rs");
 
 fn public_surface() -> &'static str {
     LIB_RS.split("#[cfg(test)]").next().unwrap_or(LIB_RS)

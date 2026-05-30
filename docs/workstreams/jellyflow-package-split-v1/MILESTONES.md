@@ -23,6 +23,15 @@ Status: complete for JF-010. Fresh evidence is recorded in `EVIDENCE_AND_GATES.m
 
 ## M3 - Runtime Follow-Up
 
-- Decide whether runtime store/callback helpers and any remaining geometry seams belong in
-  `jellyflow-runtime`.
-- Extract runtime only after the previous slice's gates stay green.
+- `jellyflow-runtime` exists as a workspace crate.
+- `io`, `profile`, `rules`, `schema`, and `runtime` moved out of `fret-node`.
+- `fret-node` preserves old module paths with wrapper re-exports.
+- `DataflowProfile` remains kit-owned in `fret-node`, not in the runtime crate.
+
+Status: complete for JF-020. Fresh evidence is recorded in `EVIDENCE_AND_GATES.md`.
+
+## M4 - Geometry Follow-Up
+
+- Decide whether canvas-space geometry, route math, spatial indexes, and hit-test helpers belong in
+  `jellyflow-geometry`.
+- Move geometry only after the runtime package gates stay green.

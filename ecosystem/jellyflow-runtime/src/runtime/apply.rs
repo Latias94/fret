@@ -3,7 +3,7 @@
 //! In ReactFlow, consumers that keep their own node/edge state receive `NodeChange`/`EdgeChange`
 //! and apply them via helpers (`applyNodeChanges`, `applyEdgeChanges`).
 //!
-//! In `fret-node`, the authoritative representation is a `Graph` (hash maps) and undo/redo is
+//! In Jellyflow, the authoritative representation is a `Graph` (hash maps) and undo/redo is
 //! powered by reversible `GraphTransaction`. This module provides best-effort, order-preserving
 //! application of change events to a `Graph` for controlled integrations.
 

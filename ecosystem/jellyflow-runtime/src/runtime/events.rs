@@ -43,7 +43,7 @@ pub struct NodeGraphDocumentSnapshot<'a> {
 /// View-state projection change events.
 ///
 /// These are the B-layer equivalent of XyFlow's selection/viewport updates (which are embedded in
-/// their node/edge arrays). In fret-node, view-state is intentionally separate from the serialized
+/// their node/edge arrays). In Jellyflow, view-state is intentionally separate from the serialized
 /// graph document.
 ///
 /// Only viewport/selection changes are surfaced here. Other persisted editor configuration is

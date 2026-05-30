@@ -5,7 +5,7 @@
 //! - `edgeLookup` (id -> edge)
 //! - `connectionLookup` (node/handle -> connections)
 //!
-//! In fret-node the serialized document (`core::Graph`) is already map-based, but a first-class,
+//! In Jellyflow the serialized document (`core::Graph`) is already map-based, but a first-class,
 //! headless-safe lookup surface is still useful for:
 //! - consistent adjacency queries (node/port -> incident edges),
 //! - avoiding repeated full scans in editor shells,

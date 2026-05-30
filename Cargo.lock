@@ -2607,6 +2607,7 @@ dependencies = [
  "fret-ui",
  "fret-ui-kit",
  "jellyflow-core",
+ "jellyflow-runtime",
  "serde",
  "serde_json",
  "slotmap",
@@ -4411,6 +4412,18 @@ name = "jellyflow-core"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "uuid",
+]
+
+[[package]]
+name = "jellyflow-runtime"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "jellyflow-core",
  "serde",
  "serde_json",
  "thiserror 2.0.18",

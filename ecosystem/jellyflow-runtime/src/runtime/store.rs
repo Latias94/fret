@@ -835,7 +835,8 @@ impl NodeGraphStore {
         }
     }
 
-    pub(crate) fn emit_gesture(&mut self, event: NodeGraphGestureEvent) {
+    /// Emits a transient gesture event for adapter layers that own pointer/keyboard gestures.
+    pub fn emit_gesture(&mut self, event: NodeGraphGestureEvent) {
         for (_, sub) in &mut self.gesture_subscriptions {
             sub(event.clone());
         }

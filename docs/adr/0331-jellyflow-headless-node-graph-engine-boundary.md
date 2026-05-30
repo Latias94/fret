@@ -29,7 +29,8 @@ The intended package direction is:
 
 - `jellyflow-core`: headless graph document model, stable IDs, type descriptors, and interaction
   policy value types.
-- `jellyflow-runtime`: future headless store/history/apply/callback/controlled-mode substrate.
+- `jellyflow-runtime`: headless I/O/view-state payloads, rules, schema/profile pipeline,
+  store/apply/callback/controlled-mode substrate.
 - `jellyflow-geometry`: future headless geometry, spatial, path, and hit-test substrate when those
   contracts are ready to leave the Fret adapter.
 - `jellyflow-fret` or `fret-node`: Fret UI adapter, controller/binding, declarative surface,
@@ -53,19 +54,29 @@ The first slice creates `ecosystem/jellyflow-core` and moves the stable headless
 and `interaction` modules there. `fret-node` now depends on `jellyflow-core` and keeps
 compatibility wrapper modules for `fret_node::{core,types,interaction}`.
 
-Follow-on slice:
+Core follow-on slice:
 
 `ops` (graph transactions, history, fragment/diff/normalize helpers, and transaction sanity
-checks) now lives in `ecosystem/jellyflow-core`. `fret-node` keeps the XyFlow-style node/edge
-change projection helpers in `ecosystem/fret-node/src/runtime/changes.rs` and re-exports
-`jellyflow_core::ops` from `ecosystem/fret-node/src/ops/mod.rs` for compatibility.
+checks) now lives in `ecosystem/jellyflow-core`. The XyFlow-style node/edge change projection
+helpers now live in `ecosystem/jellyflow-runtime/src/runtime/changes.rs`, while `fret-node`
+re-exports `jellyflow_core::ops` from `ecosystem/fret-node/src/ops/mod.rs` for compatibility.
+
+Runtime follow-on slice:
+
+`io`, `profile`, `rules`, `schema`, and `runtime` now live in `ecosystem/jellyflow-runtime`.
+`fret-node` keeps compatibility wrapper modules for
+`fret_node::{io,profile,rules,schema,runtime}`. `DataflowProfile` remains in the `fret-node` kit
+layer instead of becoming part of the runtime crate.
 
 Evidence:
 
 - `ecosystem/jellyflow-core/Cargo.toml`
 - `ecosystem/jellyflow-core/src/lib.rs`
 - `ecosystem/jellyflow-core/src/ops/mod.rs`
+- `ecosystem/jellyflow-runtime/Cargo.toml`
+- `ecosystem/jellyflow-runtime/src/lib.rs`
+- `ecosystem/jellyflow-runtime/src/{io,profile,rules,schema,runtime}/`
 - `ecosystem/fret-node/src/{core,types,interaction}/mod.rs`
 - `ecosystem/fret-node/src/ops/mod.rs`
-- `ecosystem/fret-node/src/runtime/{changes.rs,store.rs,tests.rs}`
+- `ecosystem/fret-node/src/{io,profile,rules,schema,runtime}/mod.rs`
 - `docs/workstreams/jellyflow-package-split-v1/`

@@ -1,22 +1,22 @@
 # Jellyflow Package Split v1 - Handoff
 
 Status: Active
-Last updated: 2026-05-29
+Last updated: 2026-05-30
 
 ## Current State
 
-JF-010 is complete. `jellyflow-core` now owns the first stable headless modules plus `ops`
-transaction/history helpers. `fret-node` depends on `jellyflow-core`, preserves the old module
-paths with compatibility re-exports, and keeps the XyFlow-style change projection in
-`runtime/changes.rs`.
+JF-020 is complete. `jellyflow-core` owns the stable graph model, interaction, type, ops, and
+transaction/history helpers. `jellyflow-runtime` now owns the headless `io`, `profile`, `rules`,
+`schema`, and `runtime` modules. `fret-node` depends on both Jellyflow crates, preserves old module
+paths with compatibility re-exports, and keeps Fret UI/kit/profile recipes in the adapter crate.
 
 ## Active Task
 
-- Task ID: JF-020
+- Task ID: JF-030
 - Owner: current Codex session
 - Status: next
-- Claim: decide whether runtime store/callback helpers and any remaining geometry seams belong in
-  `jellyflow-runtime` or should stay in the Fret adapter after the `ops` split.
+- Claim: decide whether canvas-space geometry, route math, spatial indexes, and hit-test helpers
+  belong in `jellyflow-geometry` or should stay in the Fret adapter.
 
 ## JF-001 Evidence
 
@@ -39,8 +39,19 @@ paths with compatibility re-exports, and keeps the XyFlow-style change projectio
 - `cargo fmt --check`: passed after rustfmt cleanup.
 - `python3 tools/check_layering.py`: passed after the `ops` split.
 
+## JF-020 Evidence
+
+- `cargo check -p jellyflow-runtime`: passed.
+- `cargo nextest run -p jellyflow-runtime`: passed with 67 tests.
+- `cargo clippy -p jellyflow-runtime --all-targets -- -D warnings`: passed.
+- `cargo check -p fret-node --all-features --tests`: passed.
+- `cargo nextest run -p fret-node --no-default-features`: passed with 24 tests.
+- `cargo fmt --check`: passed.
+
 ## Next Steps
 
-1. Audit the remaining runtime helper ownership in `fret-node/src/runtime`.
-2. Decide whether store/callback helpers should move into `jellyflow-runtime`.
-3. Add focused compatibility gates before moving the next seam.
+1. Audit `ecosystem/fret-node/src/ui/canvas`, declarative paint-only route math, and spatial
+   indexes before moving geometry.
+2. Decide whether `runtime::fit_view` and `runtime::utils` stay in runtime or become the first
+   `jellyflow-geometry` inputs.
+3. Add focused compatibility gates before moving geometry or UI measurement state.

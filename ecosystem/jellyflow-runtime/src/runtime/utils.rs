@@ -3,7 +3,7 @@
 //! XyFlow exposes a set of convenience utilities in `@xyflow/system/src/utils/*` for common
 //! graph queries (e.g. "incomers/outgoers", "connected edges", "nodes inside rect", bounds).
 //!
-//! In fret-node, the canonical document (`core::Graph`) is port-based (edges connect ports), so
+//! In Jellyflow, the canonical document (`core::Graph`) is port-based (edges connect ports), so
 //! these helpers are built on top of `runtime::lookups::NodeGraphLookups` which provides a stable,
 //! headless-safe adjacency surface.
 
