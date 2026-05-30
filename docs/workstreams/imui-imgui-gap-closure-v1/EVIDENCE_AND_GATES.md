@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Theme Preset Picker Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor theme preset picker behavior regressions split into a private test owner
+without changing preset installation, selected preset sync, listbox semantics, item test IDs, click
+activation, reversible preset replay, or render dispatch boundaries.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs` now keeps preset
+  installation, theme resolution, render dispatch, and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/tests.rs` owns listbox
+  semantics, selected state, click activation, and reversible preset replay coverage.
+- `tools/gate_imui_workstream_source.py` now checks the picker root/test split and keeps migrated
+  behavior regression test names out of the root owner file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the picker test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  editor_theme_preset_picker_stamps_listbox_options_and_selected_state
+  editor_theme_preset_picker_click_updates_model_and_replays_reversible_preset --no-fail-fast`:
+  pass (2 passed, 196 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test
+  imui_surface_policy --no-fail-fast`: pass (3 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Field-Status Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor field-status badge palette regressions split into a private test owner

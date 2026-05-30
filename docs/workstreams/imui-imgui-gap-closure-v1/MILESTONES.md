@@ -278,6 +278,12 @@ installation, theme resolution, and render dispatch only. `render.rs` owns listb
 header row, preset rows, and color mixing. Selected preset sync, item test IDs, activation
 behavior, and theme replay semantics remain unchanged.
 
+2026-05-31 editor theme preset picker tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs` now keeps preset
+installation, theme resolution, render dispatch, and test-owner routing.
+`controls/editor_theme_preset_picker/tests.rs` owns listbox semantics, selected state, click
+activation, and reversible preset replay coverage. Render child-owner boundaries remain unchanged.
+
 2026-05-31 editor numeric-input tests child-owner result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps numeric input control
 orchestration and test-owner routing. `controls/numeric_input/tests.rs` owns edit line-box and

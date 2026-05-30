@@ -35360,6 +35360,7 @@ def main() -> None:
             required=[
                 "mod options;",
                 "mod render;",
+                "mod tests;",
                 "pub use options::EditorThemePresetPickerOptions;",
                 "pub struct EditorThemePresetPicker {",
                 "EDITOR_THEME_PRESETS_V1",
@@ -35368,8 +35369,6 @@ def main() -> None:
                 "installed_editor_theme_preset_v1",
                 "use render::build_editor_theme_preset_picker_element;",
                 "build_editor_theme_preset_picker_element(",
-                "editor_theme_preset_picker_stamps_listbox_options_and_selected_state",
-                "editor_theme_preset_picker_click_updates_model_and_replays_reversible_preset",
             ],
             forbidden=[
                 "pub struct EditorThemePresetPickerOptions",
@@ -35384,7 +35383,23 @@ def main() -> None:
                 "editor_theme_preset_picker_row_status_text_props",
                 "TextProps {",
                 "TextStyle {",
+                "editor_theme_preset_picker_stamps_listbox_options_and_selected_state",
+                "editor_theme_preset_picker_click_updates_model_and_replays_reversible_preset",
             ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/tests.rs"),
+            required=[
+                "editor_theme_preset_picker_stamps_listbox_options_and_selected_state",
+                "editor_theme_preset_picker_click_updates_model_and_replays_reversible_preset",
+                "SemanticsRole::ListBox",
+                "SemanticsRole::ListBoxOption",
+                "installed_editor_theme_preset_v1",
+                "reapply_installed_editor_theme_preset_v1",
+                "EditorTokenKeys::DENSITY_ROW_HEIGHT",
+                "click_test_id",
+            ],
+            forbidden=[],
         ),
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render.rs"),
