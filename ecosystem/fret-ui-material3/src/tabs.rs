@@ -16,8 +16,8 @@ use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
-    PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, ScrollAxis, ScrollProps,
-    SemanticsDecoration, SemanticsProps, SvgIconProps, TextProps,
+    PointerRegionProps, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, ScrollAxis,
+    ScrollProps, SemanticsDecoration, SemanticsProps, SvgIconProps, TextProps,
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
@@ -50,6 +50,7 @@ struct TabListLayoutRuntime {
 struct TabPartTestIds {
     chrome: Arc<str>,
     active_indicator: Arc<str>,
+    divider: Arc<str>,
 }
 
 impl TabPartTestIds {
@@ -57,6 +58,7 @@ impl TabPartTestIds {
         Self {
             chrome: part_test_id(base, "chrome"),
             active_indicator: part_test_id(base, "active-indicator"),
+            divider: part_test_id(base, "divider"),
         }
     }
 }
@@ -343,6 +345,7 @@ impl Tabs {
             let indicator_test_id = part_test_ids
                 .as_ref()
                 .map(|ids| ids.active_indicator.clone());
+            let divider_test_id = part_test_ids.as_ref().map(|ids| ids.divider.clone());
 
             let container_states = if disabled {
                 WidgetStates::DISABLED
@@ -421,6 +424,7 @@ impl Tabs {
                             token_kind,
                             &style,
                         );
+                        let divider = tab_row_divider(cx, token_kind, divider_test_id.clone());
 
                         let roving = cx.roving_flex(props, move |cx| {
                             let values_for_roving = values.clone();
@@ -535,7 +539,7 @@ impl Tabs {
                             tabs = tabs.test_id(chrome_test_id);
                         }
 
-                        vec![indicator, tabs]
+                        vec![divider, indicator, tabs]
                     },
                 )]
             })
@@ -947,6 +951,37 @@ fn tab_label<H: UiHost>(
             label_el = label_el.test_id(test_id);
         }
         label_el
+    })
+}
+
+fn tab_row_divider<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    token_kind: tabs_tokens::NavigationTabKind,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    cx.named("tab_row_divider", move |cx| {
+        let (height, color) = {
+            let theme = Theme::global(&*cx.app);
+            (
+                tabs_tokens::divider_height_for(theme, token_kind),
+                tabs_tokens::divider_color_for(theme, token_kind),
+            )
+        };
+
+        let mut props = ContainerProps::default();
+        props.background = Some(color);
+        props.layout.position = PositionStyle::Absolute;
+        props.layout.size.width = Length::Fill;
+        props.layout.size.height = Length::Px(height);
+        props.layout.inset.left = Some(Px(0.0)).into();
+        props.layout.inset.right = Some(Px(0.0)).into();
+        props.layout.inset.bottom = Some(Px(0.0)).into();
+
+        let divider = cx.container(props, |_cx| Vec::new());
+        match test_id {
+            Some(test_id) => divider.test_id(test_id),
+            None => divider,
+        }
     })
 }
 

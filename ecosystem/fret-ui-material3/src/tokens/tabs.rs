@@ -61,6 +61,21 @@ pub(crate) fn active_indicator_min_width(theme: &Theme) -> Px {
         .unwrap_or(Px(24.0))
 }
 
+pub(crate) fn divider_height_for(theme: &Theme, kind: NavigationTabKind) -> Px {
+    theme
+        .metric_by_key(divider_height_key(kind))
+        .or_else(|| theme.metric_by_key("md.comp.divider.thickness"))
+        .unwrap_or(Px(1.0))
+}
+
+pub(crate) fn divider_color_for(theme: &Theme, kind: NavigationTabKind) -> Color {
+    theme
+        .color_by_key(divider_color_key(kind))
+        .or_else(|| theme.color_by_key("md.comp.divider.color"))
+        .or_else(|| theme.color_by_key("md.sys.color.outline-variant"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.outline-variant"))
+}
+
 pub(crate) fn horizontal_text_padding() -> fret_core::Edges {
     fret_core::Edges {
         left: Px(16.0),
@@ -256,6 +271,20 @@ fn container_height_key(kind: NavigationTabKind) -> &'static str {
     match kind {
         NavigationTabKind::Primary => "md.comp.primary-navigation-tab.container.height",
         NavigationTabKind::Secondary => "md.comp.secondary-navigation-tab.container.height",
+    }
+}
+
+fn divider_height_key(kind: NavigationTabKind) -> &'static str {
+    match kind {
+        NavigationTabKind::Primary => "md.comp.primary-navigation-tab.divider.height",
+        NavigationTabKind::Secondary => "md.comp.secondary-navigation-tab.divider.height",
+    }
+}
+
+fn divider_color_key(kind: NavigationTabKind) -> &'static str {
+    match kind {
+        NavigationTabKind::Primary => "md.comp.primary-navigation-tab.divider.color",
+        NavigationTabKind::Secondary => "md.comp.secondary-navigation-tab.divider.color",
     }
 }
 

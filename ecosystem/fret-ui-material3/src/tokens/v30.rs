@@ -1939,6 +1939,9 @@ fn inject_comp_secondary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
         .entry("md.comp.secondary-navigation-tab.container.height".to_string())
         .or_insert(48.0);
     cfg.metrics
+        .entry("md.comp.secondary-navigation-tab.divider.height".to_string())
+        .or_insert(1.0);
+    cfg.metrics
         .entry("md.comp.secondary-navigation-tab.scrollable.edge-padding".to_string())
         .or_insert(52.0);
     cfg.metrics
@@ -2754,6 +2757,11 @@ fn inject_comp_secondary_navigation_tab_colors_from_sys(cfg: &mut ThemeConfig) {
         cfg,
         "md.comp.secondary-navigation-tab.container.color",
         "md.sys.color.surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.secondary-navigation-tab.divider.color",
+        "md.sys.color.outline-variant",
     );
 
     for key in [
@@ -4107,6 +4115,12 @@ mod tests {
         );
         assert_eq!(
             cfg.metrics
+                .get("md.comp.secondary-navigation-tab.divider.height")
+                .copied(),
+            Some(1.0)
+        );
+        assert_eq!(
+            cfg.metrics
                 .get("md.comp.secondary-navigation-tab.with-icon.icon.size")
                 .copied(),
             Some(24.0)
@@ -4322,6 +4336,11 @@ mod tests {
             cfg.colors
                 .contains_key("md.comp.secondary-navigation-tab.with-icon.active.icon.color"),
             "expected secondary navigation tab icon color tokens to be derived from sys roles"
+        );
+        assert!(
+            cfg.colors
+                .contains_key("md.comp.secondary-navigation-tab.divider.color"),
+            "expected secondary navigation tab divider color token to be derived from sys roles"
         );
     }
 

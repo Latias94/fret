@@ -408,6 +408,39 @@ fn fixed_primary_tabs_use_content_sized_active_indicator() {
 }
 
 #[test]
+fn fixed_primary_tabs_render_bottom_divider_under_active_indicator() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    let scene = settle_tabs(&mut ui, &mut app, &mut services, window, selected, false);
+
+    let chrome = visual_bounds_by_test_id(&ui, &app, window, "m3-tabs.chrome");
+    let divider = layout_bounds_by_test_id(&ui, &app, window, "m3-tabs.divider");
+    let indicator = active_indicator_rect(&scene);
+
+    assert!(
+        (divider.size.height.0 - 1.0).abs() <= 0.5,
+        "expected TabRow divider to use Material HorizontalDivider thickness, got {divider:?}"
+    );
+    assert!(
+        (divider.origin.x.0 - chrome.origin.x.0).abs() <= 0.5
+            && (divider.size.width.0 - chrome.size.width.0).abs() <= 0.5,
+        "expected TabRow divider to span the row width; chrome={chrome:?} divider={divider:?}"
+    );
+    assert!(
+        (divider.origin.y.0 + divider.size.height.0 - (chrome.origin.y.0 + chrome.size.height.0))
+            .abs()
+            <= 0.5,
+        "expected TabRow divider at the row bottom; chrome={chrome:?} divider={divider:?}"
+    );
+    assert!(
+        (indicator.origin.y.0 + indicator.size.height.0
+            - (divider.origin.y.0 + divider.size.height.0))
+            .abs()
+            <= 0.5,
+        "expected active indicator to share the bottom edge with the divider; indicator={indicator:?} divider={divider:?}"
+    );
+}
+
+#[test]
 fn fixed_secondary_tabs_use_full_width_active_indicator() {
     let (mut app, window, mut services, mut ui, selected) = tabs_harness();
     let scene = settle_tabs_with_variant(

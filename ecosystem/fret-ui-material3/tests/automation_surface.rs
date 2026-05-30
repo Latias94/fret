@@ -1103,6 +1103,7 @@ fn material3_tabs_exposes_stable_part_test_ids() {
         "m3-tabs",
         "m3-tabs.chrome",
         "m3-tabs.active-indicator",
+        "m3-tabs.divider",
         "m3-tab-overview",
         "m3-tab-overview.chrome",
         "m3-tab-overview.label",
