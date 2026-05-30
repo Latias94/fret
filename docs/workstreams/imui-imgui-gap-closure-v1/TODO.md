@@ -50,6 +50,13 @@ Last updated: 2026-05-30
       Result: `controls/text_field.rs` now keeps the public control/options and layout orchestration
       only. `controls/text_field/buffered.rs` owns the draft controller, buffered state, session
       planning, commit/cancel helpers, clear-button session reset, and the buffered unit tests.
+- [x] Split editor text-assist field option/model records into a private child owner without
+      changing public option names, default unbuffered input policy, item test-id prefix fallback,
+      rendered panel handoff, inline empty-label behavior, or anchored-overlay height policy.
+      Result: `controls/text_assist_field.rs` keeps control orchestration, panel rendering, overlay
+      request, key handling, and accept commits. `controls/text_assist_field/model.rs` owns
+      `OnTextAssistFieldAccept`, `TextAssistFieldSurface`, `TextAssistFieldOptions`,
+      `RenderedTextAssistPanel`, and the focused option/default tests.
 - [x] Split editor-owned property-row reset affordance handling into a private child owner without
       changing row layout, value-slot growth, reset keying, glyph render, accessibility label, or
       property chrome semantics.

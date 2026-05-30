@@ -11,6 +11,8 @@
 //! - input-owned focus with `active_descendant`,
 //! - default accept wiring that commits the chosen label back into the bound query model.
 
+mod model;
+
 use std::cell::Cell;
 use std::panic::Location;
 use std::rc::Rc;
@@ -27,8 +29,8 @@ use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::headless::text_assist::{
-    InputOwnedTextAssistKeyOptions, TextAssistController, TextAssistItem, TextAssistMatch,
-    active_match_index, controller_with_active_item_id, input_owned_text_assist_expanded,
+    TextAssistController, TextAssistItem, TextAssistMatch, active_match_index,
+    controller_with_active_item_id, input_owned_text_assist_expanded,
     input_owned_text_assist_key_handler, input_owned_text_assist_semantics,
 };
 use fret_ui_kit::primitives::{popper, popper_content};
@@ -46,58 +48,10 @@ use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
 use crate::primitives::readout::{editor_popup_empty_text_props, editor_popup_list_row_text_props};
 use crate::primitives::style::EditorStyle;
 
+use model::RenderedTextAssistPanel;
+pub use model::{OnTextAssistFieldAccept, TextAssistFieldOptions, TextAssistFieldSurface};
+
 const TEXT_ASSIST_ROOT_GAP: Px = Px(6.0);
-
-pub type OnTextAssistFieldAccept =
-    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, TextAssistMatch) + 'static>;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum TextAssistFieldSurface {
-    #[default]
-    Inline,
-    AnchoredOverlay,
-}
-
-#[derive(Debug, Clone)]
-pub struct TextAssistFieldOptions {
-    /// Base `TextField` options for the owning input.
-    ///
-    /// Note: this recipe currently forces `buffered = false` because its input-owned key policy
-    /// reads and writes the bound query model directly.
-    pub field: TextFieldOptions,
-    pub surface: TextAssistFieldSurface,
-    pub list_label: Arc<str>,
-    pub empty_label: Arc<str>,
-    pub key_options: InputOwnedTextAssistKeyOptions,
-    pub list_test_id: Option<Arc<str>>,
-    pub item_test_id_prefix: Option<Arc<str>>,
-    pub empty_test_id: Option<Arc<str>>,
-    /// Maximum visible list content height before the recipe introduces scrolling.
-    ///
-    /// For anchored overlays, leaving this unset still applies a conservative editor default so
-    /// the popup does not grow to the full window height.
-    pub max_list_height: Option<Px>,
-}
-
-impl Default for TextAssistFieldOptions {
-    fn default() -> Self {
-        let field = TextFieldOptions {
-            buffered: false,
-            ..Default::default()
-        };
-        Self {
-            field,
-            surface: TextAssistFieldSurface::Inline,
-            list_label: Arc::from("Suggestions"),
-            empty_label: Arc::from("No matches"),
-            key_options: InputOwnedTextAssistKeyOptions::default(),
-            list_test_id: None,
-            item_test_id_prefix: None,
-            empty_test_id: None,
-            max_list_height: None,
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct TextAssistField {
@@ -107,13 +61,6 @@ pub struct TextAssistField {
     items: Arc<[TextAssistItem]>,
     on_accept: Option<OnTextAssistFieldAccept>,
     options: TextAssistFieldOptions,
-}
-
-struct RenderedTextAssistPanel {
-    panel: AnyElement,
-    listbox_id: Option<GlobalElementId>,
-    option_elements: Vec<GlobalElementId>,
-    surface_height: Px,
 }
 
 impl TextAssistField {
@@ -747,35 +694,10 @@ fn overlay_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> 
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use super::{
-        TextAssistFieldOptions, TextAssistFieldSurface, should_render_inline_empty_label,
-        text_assist_max_content_height,
+        TextAssistFieldSurface, should_render_inline_empty_label, text_assist_max_content_height,
     };
     use fret_core::Px;
-
-    #[test]
-    fn text_assist_field_defaults_to_unbuffered_field_policy() {
-        let options = TextAssistFieldOptions::default();
-        assert!(!options.field.buffered);
-        assert!(matches!(options.surface, TextAssistFieldSurface::Inline));
-        assert_eq!(options.list_label.as_ref(), "Suggestions");
-        assert_eq!(options.empty_label.as_ref(), "No matches");
-    }
-
-    #[test]
-    fn text_assist_field_item_test_id_prefix_can_fallback_to_list_test_id() {
-        let options = TextAssistFieldOptions {
-            list_test_id: Some(Arc::from("editor.name-assist.list")),
-            ..Default::default()
-        };
-        let prefix = options
-            .item_test_id_prefix
-            .clone()
-            .or_else(|| options.list_test_id.clone());
-        assert_eq!(prefix.as_deref(), Some("editor.name-assist.list"));
-    }
 
     #[test]
     fn empty_label_is_inline_only() {

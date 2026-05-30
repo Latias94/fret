@@ -1081,6 +1081,7 @@
     "ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select/row.rs",
     "ecosystem/fret-ui-editor/src/controls/text_assist_field.rs",
+    "ecosystem/fret-ui-editor/src/controls/text_assist_field/model.rs",
     "ecosystem/fret-ui-editor/src/controls/vec_edit.rs",
     "ecosystem/fret-ui-editor/src/controls/vec_edit/axis.rs",
     "ecosystem/fret-ui-editor/src/controls/transform_edit.rs",

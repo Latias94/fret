@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Editor TextAssistField Model Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: editor text-assist field option/model records split into a private child owner
+without changing public option names, default unbuffered input policy, item test-id prefix fallback,
+rendered panel handoff, inline empty-label behavior, or anchored-overlay height policy.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now keeps control orchestration,
+  panel rendering, overlay request, key handling, and accept commits.
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field/model.rs` owns
+  `OnTextAssistFieldAccept`, `TextAssistFieldSurface`, `TextAssistFieldOptions`,
+  `RenderedTextAssistPanel`, and the focused option/default tests.
+- `tools/gate_imui_workstream_source.py` now checks the text-assist root/model split and keeps
+  option records out of the root control file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new text-assist model
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  text_assist_field_defaults_to_unbuffered_field_policy
+  text_assist_field_item_test_id_prefix_can_fallback_to_list_test_id
+  empty_label_is_inline_only
+  anchored_overlay_defaults_to_capped_content_height --no-fail-fast`: pass (4 passed, 194 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Editor PropertyRow Tests Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: editor property-row wrapping/value-slot regressions split into a private test owner

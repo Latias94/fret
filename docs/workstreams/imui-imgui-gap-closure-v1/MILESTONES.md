@@ -19,6 +19,14 @@ state, session planning, commit/cancel helpers, clear-button session reset, and 
 tests. Public TextField options, draft-controller API, buffered blur behavior, and
 `text_field_api_smoke` coverage remain unchanged.
 
+2026-05-30 text-assist field model child-owner result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now keeps control orchestration, panel
+rendering, overlay request, key handling, and accept commits. `controls/text_assist_field/model.rs`
+owns `OnTextAssistFieldAccept`, `TextAssistFieldSurface`, `TextAssistFieldOptions`,
+`RenderedTextAssistPanel`, and the focused option/default tests. Public option names, default
+unbuffered input policy, item test-id prefix fallback, rendered panel handoff, inline empty-label
+behavior, and anchored-overlay height policy remain unchanged.
+
 2026-05-30 property-row reset child-owner result:
 `ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the row layout and value
 orchestration plus reset delegation only. `composites/property_row/reset.rs` owns
