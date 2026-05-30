@@ -2216,6 +2216,13 @@ semantics, root container construction, text input mounting, and keyboard handle
 render-generation preparation. `popup_store.rs` keeps popup store state, generation entry points,
 scoped entry lookup, and explicit scope dropping.
 
+2026-05-31 popup-store state/entry/drop owner split result:
+`ecosystem/fret-ui-kit/src/imui/popup_store.rs` is now a thin private re-export hub.
+`popup_store/state.rs` owns the per-window/per-id storage records and model creation,
+`popup_store/entry.rs` owns render-generation marking plus scoped lookup, and
+`popup_store/drop_scope.rs` owns explicit scope removal/model reset. The stale-generation cleanup
+owner remains `popup_store/lifecycle.rs`.
+
 2026-05-26 disclosure spec owner-split result:
 `ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs` now owns the private
 `DisclosureKind` / `DisclosureSpec` model, option normalization, level clamping, test-id routing,

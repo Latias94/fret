@@ -1,89 +1,9 @@
 //! Internal popup-scope state storage for immediate-mode helpers.
 
-use std::collections::HashMap;
-use std::sync::Arc;
-
-use fret_authoring::mark_immediate_render_frame;
-use fret_core::AppWindowId;
-use fret_ui::{ElementContext, GlobalElementId, UiHost};
-
+mod drop_scope;
+mod entry;
 mod lifecycle;
+mod state;
 
-use lifecycle::prepare_popup_store_for_generation;
-
-#[derive(Clone)]
-pub(super) struct PopupStoreState {
-    pub(super) open: fret_runtime::Model<bool>,
-    pub(super) anchor: fret_runtime::Model<Option<fret_core::Rect>>,
-    pub(super) panel_id: Option<GlobalElementId>,
-    /// Last IMUI render generation where the popup was "kept alive" by a `begin_popup_*` call.
-    ///
-    /// This is intentionally decoupled from the app's global `FrameId`: idle ticks can advance
-    /// frame ids without any IMUI render pass, and open popups must not be treated as stale just
-    /// because no redraw happened for a while.
-    pub(super) keep_alive_generation: Option<u64>,
-}
-
-#[derive(Default)]
-struct PopupStoreWindowState {
-    by_id: HashMap<Arc<str>, PopupStoreState>,
-}
-
-#[derive(Default)]
-struct ImUiPopupStore {
-    by_window: HashMap<AppWindowId, PopupStoreWindowState>,
-}
-
-pub(super) fn popup_render_generation_for_window<H: UiHost>(cx: &mut ElementContext<'_, H>) -> u64 {
-    let window = cx.window;
-    let render_generation = mark_immediate_render_frame(cx);
-    cx.app
-        .with_global_mut_untracked(ImUiPopupStore::default, |store, app| {
-            prepare_popup_store_for_generation(store, app, window, render_generation);
-            render_generation
-        })
-}
-
-pub(super) fn with_popup_store_for_id<H: UiHost, R>(
-    cx: &mut ElementContext<'_, H>,
-    id: &str,
-    f: impl FnOnce(&mut PopupStoreState, &mut H) -> R,
-) -> R {
-    let window = cx.window;
-    let render_generation = mark_immediate_render_frame(cx);
-    cx.app
-        .with_global_mut_untracked(ImUiPopupStore::default, |store, app| {
-            prepare_popup_store_for_generation(store, app, window, render_generation);
-
-            let state = store.by_window.entry(window).or_default();
-            if let Some(existing) = state.by_id.get_mut(id) {
-                return f(existing, app);
-            }
-
-            let key: Arc<str> = Arc::from(id);
-            let entry = state.by_id.entry(key).or_insert_with(|| PopupStoreState {
-                open: app.models_mut().insert(false),
-                anchor: app.models_mut().insert(None::<fret_core::Rect>),
-                panel_id: None,
-                keep_alive_generation: None,
-            });
-            f(entry, app)
-        })
-}
-
-pub(super) fn drop_popup_scope_for_id<H: UiHost>(cx: &mut ElementContext<'_, H>, id: &str) {
-    let render_generation = mark_immediate_render_frame(cx);
-    cx.app
-        .with_global_mut_untracked(ImUiPopupStore::default, |store, app| {
-            prepare_popup_store_for_generation(store, app, cx.window, render_generation);
-            let Some(window_state) = store.by_window.get_mut(&cx.window) else {
-                return;
-            };
-            let Some(entry) = window_state.by_id.remove(id) else {
-                return;
-            };
-            let _ = app.models_mut().update(&entry.open, |v| *v = false);
-            let _ = app.models_mut().update(&entry.anchor, |v| *v = None);
-        });
-    cx.app.request_redraw(cx.window);
-}
+pub(super) use drop_scope::drop_popup_scope_for_id;
+pub(super) use entry::{popup_render_generation_for_window, with_popup_store_for_id};

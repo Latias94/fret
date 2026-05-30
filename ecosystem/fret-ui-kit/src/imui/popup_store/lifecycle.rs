@@ -1,7 +1,7 @@
 use fret_core::AppWindowId;
 use fret_ui::UiHost;
 
-use super::ImUiPopupStore;
+use super::state::ImUiPopupStore;
 
 pub(super) fn prepare_popup_store_for_generation<H: UiHost>(
     store: &mut ImUiPopupStore,

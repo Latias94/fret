@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Popup Store State/Entry/Drop Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI popup-store state, entry lookup, and explicit scope-drop behavior split into
+private child owners without changing per-window state shape, popup model identity,
+render-generation preparation, scoped entry lookup, stale popup cleanup, or explicit scope-drop
+redraw requests.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/popup_store.rs` is now a thin private re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/popup_store/state.rs` owns per-window/per-id popup store records
+  and new-entry model creation.
+- `ecosystem/fret-ui-kit/src/imui/popup_store/entry.rs` owns render generation marking, lifecycle
+  preparation calls, and scoped store lookup by id.
+- `ecosystem/fret-ui-kit/src/imui/popup_store/drop_scope.rs` owns explicit popup scope removal,
+  open/anchor model reset, and redraw requests.
+- `ecosystem/fret-ui-kit/src/imui/popup_store/lifecycle.rs` remains the stale popup cleanup owner.
+- `tools/gate_imui_workstream_source.py` now checks the popup-store hub/state/entry/drop/lifecycle
+  split and rejects drift back into the root hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the popup-store child
+  owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_popup_options_smoke
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui popup_hover::lifecycle_modal --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test
+  imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Hovered Query Pointer/Delay Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI hovered query pointer and delay gates split into private child owners without

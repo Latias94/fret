@@ -1950,6 +1950,14 @@ Last updated: 2026-05-31
       Result: `popup_store/lifecycle.rs` owns stale popup cleanup during render generation
       preparation. `popup_store.rs` keeps popup store state, generation entry points, scoped entry
       lookup, and explicit scope dropping.
+- [x] Split IMUI popup-store state, entry, and explicit drop behavior out of
+      `ecosystem/fret-ui-kit/src/imui/popup_store.rs` into private child owners without changing
+      per-window state shape, popup model identity, render-generation preparation, scoped entry
+      lookup, or explicit scope-drop redraw requests.
+      Result: `popup_store.rs` is now a thin re-export hub. `popup_store/state.rs` owns the
+      per-window/per-id storage and new-entry model creation; `popup_store/entry.rs` owns render
+      generation marking and scoped lookup; `popup_store/drop_scope.rs` owns explicit popup scope
+      removal and model reset; `popup_store/lifecycle.rs` keeps stale popup cleanup.
 - [x] Split IMUI input-text picker popup open policy out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into a private owner module without
       changing popup open/panel-id reads, active-descendant wiring, open-on-focus behavior,
