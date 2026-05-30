@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 input-text element child-owner result:
+`ecosystem/fret-ui-kit/src/imui/text_controls/input.rs` now keeps the public input-text wrapper,
+assistive-semantics re-export, and shared model-changed helper. `input/element.rs` owns
+ElementContext element assembly, response lifecycle population, select-all-on-focus command
+emission, input-text props mounting, and policy-command installation. Input-text facade calls,
+picker assistive semantics, filters, compact chrome/style, and changed/focus response semantics
+remain unchanged.
+
 2026-05-30 submenu clear reset child-owner result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state/clear/reset.rs` is now a
 private reset module/re-export hub. `reset/active.rs` owns active submenu value/trigger/geometry

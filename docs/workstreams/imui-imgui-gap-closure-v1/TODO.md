@@ -1613,6 +1613,15 @@ Last updated: 2026-05-30
       response lifecycle population, select-all command emission, input filters, policy-command
       installation, and compact input chrome/style selection. `text_controls.rs` is now a private
       focus/input/policy/style/textarea module index and re-export hub.
+- [x] Split IMUI input-text ElementContext assembly out of
+      `ecosystem/fret-ui-kit/src/imui/text_controls/input.rs` into a private element owner without
+      changing input-text facade calls, text-picker assistive semantics, response lifecycle
+      population, select-all-on-focus command emission, input filters, submit/cancel command
+      policy, compact chrome, or text style selection.
+      Result: `text_controls/input.rs` keeps the public input-text wrapper, assistive-semantics
+      re-export, and shared model-changed helper. `text_controls/input/element.rs` owns
+      ElementContext assembly, response population, select-all command emission, props mounting,
+      and policy-command installation.
 - [x] Split IMUI text-control style palette and chrome/layout details into private child owners
       without changing input-text or textarea chrome, field layout, theme token fallback,
       selection/preedit color derivation, text style selection, or facade APIs.

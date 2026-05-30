@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Input-Text Element Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI input-text ElementContext assembly moved into a private element owner without
+changing input-text facade calls, text-picker assistive semantics, response lifecycle population,
+select-all-on-focus command emission, input filters, submit/cancel command policy, compact chrome,
+or text style selection.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_controls/input.rs` now keeps the public input-text wrapper,
+  assistive-semantics re-export, and shared model-changed helper.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/input/element.rs` owns ElementContext assembly,
+  response lifecycle population, select-all command emission, input-text props mounting, and
+  policy-command installation.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/input/props.rs` remains the input props/filter/
+  chrome/text-style owner.
+- `tools/gate_imui_workstream_source.py` now checks the input root/element/props split.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib text_controls::tests
+  --no-fail-fast`: pass (3 passed, 687 skipped).
+- `cargo nextest run -p fret-imui models_text_basic models_text_lifecycle models_text_modes
+  models_text_commands --no-fail-fast`: pass (11 passed, 175 skipped).
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass (6 passed,
+  180 skipped).
+
 ## Submenu Clear Reset Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI submenu clear reset ownership split into active, pending, and runtime child

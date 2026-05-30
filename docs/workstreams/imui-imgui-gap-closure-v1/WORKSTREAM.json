@@ -756,6 +756,7 @@
     "ecosystem/fret-ui-kit/src/imui/text_controls/style/chrome.rs",
     "ecosystem/fret-ui-kit/src/imui/text_controls/style/palette.rs",
     "ecosystem/fret-ui-kit/src/imui/text_controls/input.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_controls/input/element.rs",
     "ecosystem/fret-ui-kit/src/imui/text_controls/input/props.rs",
     "ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands.rs",
     "ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/input.rs",
