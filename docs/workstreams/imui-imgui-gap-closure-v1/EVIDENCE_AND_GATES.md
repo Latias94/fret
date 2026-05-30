@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Tooltip Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI tooltip regression tests split into private mount, text-role, and options
+owners without changing no-trigger false/no-output behavior, compact body text layout, or default
+top-center placement, delay, and test-id assertions.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/tests.rs` is now a thin hub with `TestWriter`
+  and module routing only.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/tests/mount.rs` owns no-trigger false/no-output
+  coverage.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/tests/text_role.rs` owns compact body text-role
+  coverage.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/tests/options.rs` owns default placement, delay,
+  and test-id coverage.
+- `tools/gate_imui_workstream_source.py` now checks the hub and all three private test owners and
+  rejects tooltip regression bodies from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the tooltip test-owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  tooltip_returns_false_without_trigger_id
+  tooltip_body_text_uses_compact_paragraph_role
+  tooltip_default_options_use_top_center_placement --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_tooltip_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Control-Chrome Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI control-chrome regression tests split into private text-role and layout

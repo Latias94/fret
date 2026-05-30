@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 tooltip test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/tooltip_overlay/tests.rs` is now a thin test hub.
+`tests/mount.rs` owns no-trigger mount behavior, `tests/text_role.rs` owns compact body text-role
+coverage, and `tests/options.rs` owns default placement/delay/test-id coverage. Public tooltip
+behavior remains unchanged.
+
 2026-05-31 control-chrome test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/control_chrome/tests.rs` is now a thin test hub.
 `tests/text_roles.rs` owns control/fill text single-line shrink coverage, while `tests/layout.rs`

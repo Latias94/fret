@@ -2557,6 +2557,12 @@ Last updated: 2026-05-31
       content column assembly, `tooltip_overlay/runtime.rs` owns tooltip lifecycle, interaction
       bounds, update, dismissal, and request orchestration, and the root file is now a thin module
       index.
+- [x] Split IMUI tooltip regression tests into private mount, text-role, and options owners
+      without changing no-trigger false/no-output behavior, body compact paragraph layout, or
+      default top-center placement/delay/test-id assertions.
+      Result: `tooltip_overlay/tests.rs` now keeps `TestWriter` and module routing only.
+      `tests/mount.rs` owns no-trigger mount behavior, `tests/text_role.rs` owns body text-role
+      coverage, and `tests/options.rs` owns default options coverage.
 - [x] Split IMUI menu/popup/tab/tooltip option types out of
       `ecosystem/fret-ui-kit/src/imui/options/menus.rs` into private owner modules without
       changing option type names, fields, defaults, or re-export paths.
