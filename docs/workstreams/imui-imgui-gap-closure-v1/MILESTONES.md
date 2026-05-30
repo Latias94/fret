@@ -633,6 +633,12 @@ merging.
 disabled alpha, and visual dimensions. `header/resize.rs` keeps pointer-region drag setup, cursor
 behavior, response writeback, drag response edge merging, and test-id attachment.
 
+2026-05-30 table header resize props/behavior owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/header/resize/props.rs` now owns pointer-region
+sizing and enabled props. `header/resize/behavior.rs` owns pointer down/move/up hooks, cursor
+behavior, and resize drag response edge merging. `header/resize.rs` keeps column identity, keyed
+shell, visual mounting, and test-id attachment.
+
 2026-05-28 debug-draw filled path painter owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/polygons.rs` now owns
 convex/concave/quad/triangle fill painting, and `paint_shapes/paths/filled/round.rs` owns

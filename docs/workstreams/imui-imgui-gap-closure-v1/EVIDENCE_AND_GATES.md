@@ -3254,6 +3254,37 @@ Focused gates:
 - `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_resizable_column_api_compiles --no-fail-fast`:
   pass; 1 table resize API smoke test passed.
 
+## Table Header Resize Props/Behavior Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI table header resize pointer props and drag behavior moved into private child
+owners without changing pointer region hit width, resize drag lifecycle hooks, cursor behavior,
+drag response edge merging, resize test-id attachment, or table column resize public behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/resize.rs` keeps column identity, keyed
+  shell, visual mounting, response routing, and test-id attachment.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/resize/props.rs` owns pointer-region
+  sizing and enabled props.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/resize/behavior.rs` owns pointer
+  down/move/up hooks, cursor behavior, and resize drag response edge merging.
+- `tools/gate_imui_workstream_source.py` now rejects pointer-region props and drag behavior from
+  drifting back into `header/resize.rs` while requiring the two child owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_controls::tests --no-fail-fast`:
+  pass; 7 tests, 683 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`: pass;
+  9 tests.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Filled Path Painter Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI debug-draw filled path painters split into polygon-fill and round-fill private

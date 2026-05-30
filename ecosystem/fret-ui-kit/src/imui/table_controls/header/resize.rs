@@ -1,25 +1,15 @@
 use std::sync::Arc;
 
-use fret_core::{CursorIcon, Px};
-use fret_ui::element::{AnyElement, Length, PointerRegionProps};
+use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
-use crate::imui::{
-    DragResponse, ResponseExt, TableColumn, TableColumnResizeResponse, drag_kind_for_element,
-    drag_threshold_for, finish_pointer_region_drag, handle_pointer_region_drag_move_with_threshold,
-    imui_is_disabled, populate_pressable_drag_response, prepare_pointer_region_drag_on_left_down,
-};
+use crate::imui::{TableColumn, TableColumnResizeResponse, imui_is_disabled};
 
+mod behavior;
+mod props;
 mod visual;
 
-use visual::{TABLE_RESIZE_HANDLE_MIN_HEIGHT, table_resize_handle_visual};
-
-const TABLE_RESIZE_HANDLE_HIT_WIDTH: Px = Px(12.0);
-
-#[derive(Default)]
-struct TableResizeHandleDragState {
-    was_dragging: bool,
-}
+use visual::table_resize_handle_visual;
 
 pub(super) fn table_resize_handle<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -36,64 +26,10 @@ pub(super) fn table_resize_handle<H: UiHost>(
     response.enabled = enabled;
 
     let handle = cx.keyed(("table-column-resize", column_key, column_index), |cx| {
-        let mut props = PointerRegionProps::default();
-        props.enabled = enabled;
-        props.layout.size.width = Length::Px(TABLE_RESIZE_HANDLE_HIT_WIDTH);
-        props.layout.size.height = Length::Auto;
-        props.layout.size.min_height = Some(Length::Px(TABLE_RESIZE_HANDLE_MIN_HEIGHT));
-        props.layout.flex.shrink = 0.0;
-
-        cx.pointer_region(props, move |cx| {
+        cx.pointer_region(props::table_resize_handle_props(enabled), move |cx| {
             let region_id = cx.root_id();
-            let drag_kind = drag_kind_for_element(region_id);
-            let drag_threshold = drag_threshold_for(cx);
-
-            cx.pointer_region_on_pointer_down(Arc::new(move |host, acx, down| {
-                prepare_pointer_region_drag_on_left_down(
-                    host,
-                    acx,
-                    down,
-                    enabled.then_some(drag_kind),
-                    Some(CursorIcon::ColResize),
-                )
-            }));
-            cx.pointer_region_on_pointer_move(Arc::new(move |host, acx, mv| {
-                if !enabled {
-                    return false;
-                }
-                host.set_cursor_icon(CursorIcon::ColResize);
-                handle_pointer_region_drag_move_with_threshold(
-                    host,
-                    acx,
-                    mv,
-                    drag_kind,
-                    drag_threshold,
-                )
-            }));
-            cx.pointer_region_on_pointer_up(Arc::new(move |host, acx, up| {
-                if !enabled {
-                    return false;
-                }
-                finish_pointer_region_drag(host, acx, up.pointer_id, drag_kind)
-            }));
-
-            let mut drag_response = ResponseExt::default();
-            populate_pressable_drag_response(cx, region_id, &mut drag_response);
-            response.drag = drag_response.drag();
-            let dragging = response.drag.dragging();
-            let (started, stopped) =
-                cx.state_for(region_id, TableResizeHandleDragState::default, |state| {
-                    let started = dragging && !state.was_dragging;
-                    let stopped = !dragging && state.was_dragging;
-                    state.was_dragging = dragging;
-                    (started, stopped)
-                });
-            response.drag.merge_edges({
-                let mut edges = DragResponse::default();
-                edges.set_started(started);
-                edges.set_stopped(stopped);
-                edges
-            });
+            behavior::install_table_resize_handle_drag(cx, region_id, enabled);
+            behavior::populate_table_resize_drag_response(cx, region_id, response);
 
             vec![table_resize_handle_visual(cx, enabled)]
         })

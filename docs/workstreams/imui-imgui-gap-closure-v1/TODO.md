@@ -727,6 +727,14 @@ Last updated: 2026-05-30
       Result: `table_controls/header/resize/visual.rs` owns resize grip color, disabled alpha, and
       visual dimensions. `header/resize.rs` keeps pointer-region drag setup, response writeback,
       and test-id attachment.
+- [x] Split IMUI table header resize pointer props and drag behavior into private child owners
+      without changing pointer region hit width, resize drag lifecycle hooks, cursor behavior,
+      drag response edge merging, resize test-id attachment, or table column resize public
+      behavior.
+      Result: `table_controls/header/resize/props.rs` owns pointer-region sizing/enabled props,
+      `resize/behavior.rs` owns pointer down/move/up hooks and resize drag response edge merging,
+      and `header/resize.rs` keeps column identity, keyed shell, visual mounting, and test-id
+      attachment.
 - [x] Split IMUI debug-draw filled path painters into polygon-fill and round-fill private owners
       without changing public draw-list commands, path command generation, shared fill style,
       canvas path dispatch, summaries, or debug-draw smoke behavior.

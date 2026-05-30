@@ -1371,6 +1371,8 @@
     "ecosystem/fret-ui-kit/src/imui/table_controls/header_row.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/header/labels.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/header/resize.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls/header/resize/behavior.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls/header/resize/props.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/header/resize/visual.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/header/trigger.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/header/trigger/visual.rs",
