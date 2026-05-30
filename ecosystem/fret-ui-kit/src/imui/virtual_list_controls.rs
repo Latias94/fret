@@ -1,5 +1,6 @@
 use std::cell::Cell;
 use std::rc::Rc;
+mod range;
 mod row;
 mod runtime;
 
@@ -10,6 +11,7 @@ use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use super::containers::build_imui_children_with_focus;
 use super::{ImUiFacade, VirtualListOptions, VirtualListResponse};
+use range::VirtualListRenderedRangeTracker;
 use row::{pack_row_children, row_height_for_index, row_test_id, wrap_row};
 use runtime::{list_layout, resolved_measure_mode, runtime_options};
 
@@ -34,10 +36,8 @@ where
         let root_test_id = options.test_id.clone();
         let row_height_fn = options.known_row_height_at.clone();
         let resolved_measure_mode = resolved_measure_mode(&options);
-        let first_rendered = Rc::new(Cell::new(None::<usize>));
-        let last_rendered = Rc::new(Cell::new(None::<usize>));
-        let first_rendered_out = first_rendered.clone();
-        let last_rendered_out = last_rendered.clone();
+        let rendered_range = VirtualListRenderedRangeTracker::new();
+        let rendered_range_out = rendered_range.clone();
 
         let list = cx.virtual_list_keyed_with_layout(
             list_layout(&options),
@@ -46,10 +46,7 @@ where
             &handle,
             &mut key_at,
             move |cx, index| {
-                if first_rendered.get().is_none() {
-                    first_rendered.set(Some(index));
-                }
-                last_rendered.set(Some(index));
+                rendered_range.record(index);
 
                 let mut out = Vec::new();
                 build_imui_children_with_focus(cx, &mut out, build_focus.clone(), |ui| {
@@ -84,7 +81,7 @@ where
             list,
             VirtualListResponse {
                 handle,
-                rendered_range: first_rendered_out.get().zip(last_rendered_out.get()),
+                rendered_range: rendered_range_out.range(),
             },
         )
     })

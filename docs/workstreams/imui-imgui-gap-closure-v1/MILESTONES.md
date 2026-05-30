@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 virtual-list rendered-range child-owner result:
+`ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs` now keeps virtual-list element assembly,
+row wrapping, build-focus forwarding, runtime option resolution, and response packaging.
+`virtual_list_controls/range.rs` owns first/last rendered index tracking and rendered-range
+projection. Row height resolution, row test IDs, clipping semantics, and public
+`VirtualListResponse` reporting remain unchanged.
+
 2026-05-30 porting-sugar scoped layout child-owner result:
 `ecosystem/fret-ui-kit/src/imui/layout_sugar/scoped.rs` is now a private hub.
 `scoped/flow.rs` owns `items` and `same_line` container routing, while `scoped/indent.rs` owns

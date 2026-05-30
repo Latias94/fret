@@ -44,6 +44,12 @@ Last updated: 2026-05-30
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI virtual-list rendered-range tracking out of the root element without changing
+      keyed list assembly, row height resolution, build-focus forwarding, row test IDs, clipping
+      semantics, runtime options, or public `VirtualListResponse` reporting.
+      Result: `virtual_list_controls.rs` keeps virtual-list element assembly, row wrapping, and
+      response packaging. `virtual_list_controls/range.rs` owns first/last rendered index tracking
+      and rendered-range projection.
 - [x] Split IMUI porting-sugar scoped layout helpers into flow and indent child owners without
       changing `items`, `same_line`, `indent`, item-spacing token use, content test IDs, focus
       forwarding, dummy spacer composition, or public facade behavior.

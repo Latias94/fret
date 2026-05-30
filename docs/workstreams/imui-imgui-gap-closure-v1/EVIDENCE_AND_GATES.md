@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Virtual-List Rendered-Range Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI virtual-list rendered-range tracking split into a private child owner without
+changing keyed list assembly, row height resolution, build-focus forwarding, row test IDs, clipping
+semantics, runtime options, or public `VirtualListResponse` reporting.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs` keeps virtual-list element assembly,
+  row wrapping, build-focus forwarding, runtime option resolution, and response packaging.
+- `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/range.rs` owns first/last rendered index
+  tracking and rendered-range projection.
+- `tools/gate_imui_workstream_source.py` now checks the root/range split and keeps raw first/last
+  rendered cells out of the root virtual-list element owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new range owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_virtual_list_smoke
+  --no-fail-fast`: pass (1 passed).
+- `cargo nextest run -p fret-ui-kit --features imui --lib virtual_list_controls::tests
+  --no-fail-fast`: pass on rerun after the first command wrapper timed out before a nextest
+  summary (3 passed, 687 skipped).
+- `cargo nextest run -p fret-imui virtual_list_fixed_rows_clip_oversized_row_content
+  --no-fail-fast`: pass on rerun after an earlier invocation exited before a nextest summary
+  (1 passed, 185 skipped).
+
 ## Porting-Sugar Scoped Layout Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI porting-sugar scoped layout helpers split into flow and indent child owners
