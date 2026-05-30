@@ -62,6 +62,11 @@ Last updated: 2026-05-30
       Result: `composites/property_row.rs` keeps the public composite and child assembly.
       `composites/property_row/layout.rs` owns `PropertyRowLayoutVariant`, resolved layout/chrome
       metrics, auto stack selection, min-height application, and focused layout-policy tests.
+- [x] Split editor-owned property-row wrapping/value-slot regressions into a private test owner
+      without changing public row options, test-facing value-slot marker, label line-box behavior,
+      wrapping value growth, or layout-query coverage.
+      Result: `composites/property_row.rs` keeps implementation only plus `mod tests;`.
+      `composites/property_row/tests.rs` owns the wrapping/value-slot regression harness.
 - [x] Split the shared editor popup-list readout helpers into a private child owner without
       changing popup row geometry, alignment, empty-state copy, or popup-list text-role coverage.
       Result: `primitives/readout.rs` now keeps the non-popup editor readout helpers only.

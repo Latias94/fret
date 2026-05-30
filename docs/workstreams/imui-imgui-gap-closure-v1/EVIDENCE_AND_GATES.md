@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Editor PropertyRow Tests Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: editor property-row wrapping/value-slot regressions split into a private test owner
+without changing public row options, test-facing value-slot marker, label line-box behavior,
+wrapping value growth, or layout-query coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps implementation and a thin
+  `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/composites/property_row/tests.rs` owns the wrapping label/value-slot
+  regression harness, including value-slot marker lookup, wrapping text services, and layout-query
+  assertions.
+- `tools/gate_imui_workstream_source.py` now checks the implementation/test split and keeps the
+  wrapping regression harness out of the root composite file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the property-row test
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  property_row_auto_layout_variant_stacks_only_below_nonzero_width_threshold
+  property_row_resolved_layout_preserves_minimum_affordance_slots
+  property_row_min_height_applies_density_row_height_without_clobbering_override
+  row_value_slot_keeps_overflow_visible_for_wrapping_value_children
+  row_label_slot_keeps_fixed_line_box_when_label_text_wraps_under_narrow_layout
+  row_value_slot_grows_to_wrapping_value_text_under_narrow_layout --no-fail-fast`: pass (6
+  passed, 192 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Editor PropertyRow Layout Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: editor property-row layout policy split into a private child owner without changing

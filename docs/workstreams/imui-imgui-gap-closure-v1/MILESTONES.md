@@ -34,6 +34,13 @@ selection, min-height application, and focused layout-policy tests. Public row o
 column rendering, value-slot growth, fixed label line boxes, and reset/action slot mounting remain
 unchanged.
 
+2026-05-30 property-row tests child-owner result:
+`ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps implementation and a thin
+`mod tests;` hook. `composites/property_row/tests.rs` owns the wrapping label/value-slot regression
+harness, including value-slot marker lookup, wrapping text services, and layout-query assertions.
+Public row options, label line-box behavior, wrapping value growth, and value-slot overflow
+contracts remain unchanged.
+
 2026-05-30 editor readout popup-list child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the non-popup editor readout
 helpers only. `primitives/readout/popup_list.rs` owns the popup-list row, centered-row,

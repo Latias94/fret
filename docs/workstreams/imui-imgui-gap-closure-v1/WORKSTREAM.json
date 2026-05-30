@@ -1044,6 +1044,7 @@
     "ecosystem/fret-ui-editor/src/composites/property_row.rs",
     "ecosystem/fret-ui-editor/src/composites/property_row/layout.rs",
     "ecosystem/fret-ui-editor/src/composites/property_row/reset.rs",
+    "ecosystem/fret-ui-editor/src/composites/property_row/tests.rs",
     "ecosystem/fret-ui-editor/src/test_support.rs",
     "ecosystem/fret-ui-editor/src/controls/field_status.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field.rs",
