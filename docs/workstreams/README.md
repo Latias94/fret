@@ -13,6 +13,7 @@ current sequencing and active cross-workstream stance, start with:
 - `docs/workstreams/standalone/ecosystem-status.md`
 - `docs/workstreams/standalone/icon-system-status.md`
 - `docs/todo-tracker.md`
+- `docs/architecture/LANES.md` for multi-terminal planner routing
 
 ## Layout Snapshot
 

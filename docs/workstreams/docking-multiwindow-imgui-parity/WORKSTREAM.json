@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-30",
   "scope_kind": "execution",
+  "lane_slug": "imui-docking",
   "problem": "Close the remaining runner/backend-owned editor-grade multi-window docking hand-feel gaps without widening `crates/fret-ui` or reopening generic `imui` helper growth.",
   "authoritative_docs": [
     {

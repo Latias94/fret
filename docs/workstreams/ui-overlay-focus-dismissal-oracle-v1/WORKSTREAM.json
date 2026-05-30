@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-25",
   "scope_kind": "execution",
+  "lane_slug": "ui-frame-overlay",
   "follow_on_of": "ui-focus-overlay-fearless-refactor-v1",
   "problem": "Create a reusable policy oracle for overlay dismissal, focus restore, modal barriers, and nested focus scopes so Radix/Base UI behavior does not drift across recipes and diagnostics scripts.",
   "authoritative_docs": [

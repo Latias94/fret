@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-04-08",
   "scope_kind": "execution",
+  "lane_slug": "framework-boundaries",
   "problem": "Keep Fret's bundled-font story correct at the package boundary: the framework must ship a minimal portable text baseline for startup and diagnostics, while optional script coverage and demo-grade large font assets must be explicit extension packages instead of silently inflating the main published crate.",
   "authoritative_docs": [
     {

@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-30",
   "scope_kind": "execution",
+  "lane_slug": "imui-docking",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "Refresh the Dear ImGui gap read from current Fret sources and repo-ref/imgui before further fearless refactors: identify stale parity conclusions, rank the remaining gaps, name delete/refactor candidates, and keep each follow-on tied to repro, gate, and evidence.",
   "authoritative_docs": [

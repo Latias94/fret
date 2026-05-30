@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-04-02",
   "scope_kind": "execution",
+  "lane_slug": "diagnostics-performance",
   "problem": "Diagnostics is now a shared automation, debugging, and evidence platform. This lane keeps contracts, artifact vocabulary, and orchestration refactors coherent across CLI, GUI, MCP, and CI without reintroducing monolithic growth.",
   "authoritative_docs": [
     {

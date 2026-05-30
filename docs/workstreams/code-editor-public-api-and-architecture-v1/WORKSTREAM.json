@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-12",
   "scope_kind": "execution",
+  "lane_slug": "editor-canvas",
   "follow_on_of": "code-editor-ecosystem-v1",
   "problem": "Stabilize the Fret code editor as an editor-grade subsystem by auditing and tightening its public API, buffer/view/surface boundaries, feature extension points, and performance gates before adding more editor features or broad hot-path rewrites.",
   "authoritative_docs": [

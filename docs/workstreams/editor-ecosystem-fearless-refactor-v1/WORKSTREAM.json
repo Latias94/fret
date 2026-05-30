@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-12",
   "scope_kind": "execution",
+  "lane_slug": "framework-boundaries",
   "problem": "Keep Fret's editor-facing ecosystem coherent while it scales: reusable editor widgets stay in fret-ui-editor, authoring syntax stays thin in fret-imui, shell chrome stays in fret-workspace, dock-aware policy stays in fret-docking, viewport tooling converges through fret-viewport-tooling and fret-gizmo, and app-local inspector/project protocols stay app-owned until a second consumer justifies extraction.",
   "authoritative_docs": [
     {

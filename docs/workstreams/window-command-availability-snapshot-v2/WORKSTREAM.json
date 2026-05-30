@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-16",
   "scope_kind": "execution",
+  "lane_slug": "ui-frame-overlay",
   "problem": "Window runtime command/action availability publication must be bounded, observable, and frame-scoped. Pointer movement over overlay-heavy UI must not synchronously recompute full widget availability, overlay pointer-move dispatch must stay under the initial 1.5ms gate, and command availability frames above 500us must expose per-command/per-route attribution.",
   "authoritative_docs": [
     {
