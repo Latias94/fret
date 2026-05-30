@@ -887,6 +887,12 @@ state, transient consumption, shared-delay flag reads, and `HoverQueryDelayRead`
 `interaction_runtime/hover.rs` keeps active-item blocking, hover-change hook installation, timer
 dispatch, shared-delay delegation, and long-press delegation.
 
+2026-05-30 hover active-block/hooks child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/active_block.rs` now owns active-item
+blocking reads. `interaction_runtime/hover/hooks.rs` owns hover-change and timer hook
+installation, stationary/short/normal delay timers, shared-delay delegation, and long-press
+delegation. `interaction_runtime/hover.rs` is now a private module/re-export hub.
+
 2026-05-28 layout sugar scoped/spacer owner-split result:
 `ecosystem/fret-ui-kit/src/imui/layout_sugar/scoped.rs` now owns item-flow, same-line, and indent
 container composition. `ecosystem/fret-ui-kit/src/imui/layout_sugar/spacers.rs` owns dummy/spacing

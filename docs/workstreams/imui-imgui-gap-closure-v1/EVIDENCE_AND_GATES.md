@@ -4593,6 +4593,38 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Hover Active-Block and Hooks Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI hover active-item blocking and hook installation moved into private child
+owners without changing hover blocked-by-active-item semantics, stationary/short/normal delay
+timers, shared-delay timers, long-press timer handling, transient consumption, or
+`HoverQueryDelayRead` values.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs` is now a private
+  module/re-export hub for active-block, hook, read, shared-delay, timer, and long-press owners.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/active_block.rs` owns active-item
+  blocking reads.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/hooks.rs` owns hover-change and timer
+  hook installation, stationary/short/normal delay timers, shared-delay delegation, and
+  long-press delegation.
+- `tools/gate_imui_workstream_source.py` now rejects active-item reads, pressable hover hooks,
+  timer hooks, shared-delay dispatch, and long-press dispatch from drifting back into `hover.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui popup_hover::hover_flags interaction_press::press_hold
+  interaction_menu_tabs::submenu_hover --no-fail-fast`: pass; 13 tests, 173 skipped.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Layout Sugar Scoped/Spacer Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI porting layout sugar split into private scoped-layout and spacer owners
