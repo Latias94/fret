@@ -1711,6 +1711,13 @@ Last updated: 2026-05-30
       `slider_controls/interaction.rs` owns pointer/key model editing and lifecycle signals, and
       `slider_controls/visual.rs` owns track/fill/value badge assembly. The root slider file keeps
       label identity, option normalization, response population, and final element assembly.
+- [x] Split IMUI slider entry assembly and pressable props into private child owners without
+      changing label identity, push-id scoping, a11y semantics, hover/changed response population,
+      interaction handler installation, field chrome, or visual assembly.
+      Result: `slider_controls/entry.rs` owns label identity normalization, push-id scoping, slider
+      element assembly, interaction/response wiring, and final add. `slider_controls/props.rs` owns
+      pressable enabled/focus/layout/a11y props, while `slider_controls.rs` is now a private
+      module/re-export hub.
 - [x] Split IMUI slider pointer and keyboard interaction out of
       `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction.rs` into private owner modules
       without changing pointer capture, active-item state, pointer model editing, keyboard

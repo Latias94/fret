@@ -1321,6 +1321,12 @@ gating, arrow/page/home/end value edits, snapping, and keyboard lifecycle edit s
 `interaction.rs` keeps handler clearing, active/lifecycle model lookup, shared range input, and
 owner dispatch.
 
+2026-05-30 slider entry/props owner-split result:
+`ecosystem/fret-ui-kit/src/imui/slider_controls/entry.rs` now owns label identity normalization,
+push-id scoping, slider element assembly, interaction/response wiring, and final add.
+`slider_controls/props.rs` owns pressable enabled/focus/layout/a11y props, and
+`slider_controls.rs` is now a private module/re-export hub.
+
 2026-05-27 begin-menu trigger behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior.rs` now owns active-trigger
 behavior installation, keyboard activation lifecycle marking, activate shortcut handling, menubar

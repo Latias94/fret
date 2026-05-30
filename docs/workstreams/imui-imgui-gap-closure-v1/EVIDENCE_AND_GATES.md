@@ -9756,6 +9756,36 @@ Focused gates:
   markdown files.
 - `git diff --check`: pass.
 
+## Slider Entry/Props Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI slider entry assembly and pressable props moved into private child owners
+without changing label identity, push-id scoping, a11y semantics, hover/changed response
+population, interaction handler installation, field chrome, or visual assembly.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/slider_controls.rs` is now a private module/re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/entry.rs` owns label identity normalization,
+  push-id scoping, slider element assembly, interaction/response wiring, and final add.
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/props.rs` owns pressable enabled/focus/layout/a11y
+  props.
+- `tools/gate_imui_workstream_source.py` now rejects entry assembly and pressable prop construction
+  from drifting back into `slider_controls.rs` while requiring the child owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_controls::slider label_identity::model_controls
+  composition::control_geometry --no-fail-fast`: pass; 7 tests, 179 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_leaf_control_options_smoke
+  slider_option_defaults_compile --no-fail-fast`: pass; 1 test, 2 skipped.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Interaction Runtime Drag Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI drag runtime internals moved into focused private owners without changing
