@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Pressable Drag Phase Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI pressable drag pointer phases split into down, move, and up child owners
+without changing active item marking/cleanup, long-press timer arming/cancelation, thresholded move
+transitions, drag started/stopped transient events, pointer-up cleanup, drag kind/threshold helpers,
+or public response drag state.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pressable.rs` is now a private phase hub
+  that re-exports pressable drag pointer phase functions.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pressable/down.rs` owns pointer-down
+  active-item marking, long-press timer arming, and drag begin setup.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pressable/move_phase.rs` owns
+  thresholded drag move transitions, drag-started/stopped transients, cancelation, and move
+  notifications.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pressable/up.rs` owns pointer-up
+  active-item/timer cleanup, stopped transients, drag cancelation, and notifications.
+- `tools/gate_imui_workstream_source.py` now checks the hub/down/move/up split and rejects state
+  transition bodies from drifting back into the hub.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_drag --no-fail-fast`: pass (8 passed, 178 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_drag_drop_smoke --test
+  imui_response_contract_smoke --no-fail-fast`: pass (3 passed).
+
 ## Floating Window Shell Props Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI floating-window shell props split into frame, body, and title-bar child owners

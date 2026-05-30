@@ -791,6 +791,14 @@ Last updated: 2026-05-30
       Result: `interaction_runtime/drag/pressable.rs` owns pressable pointer down/move/up drag
       state transitions. `interaction_runtime/drag.rs` keeps drag kind/threshold helpers and
       private sub-owner re-exports.
+- [x] Split IMUI pressable drag pointer phases into down, move, and up child owners without
+      changing active item marking/cleanup, long-press timer arming/cancelation, thresholded move
+      transitions, drag started/stopped transient events, pointer-up cleanup, drag kind/threshold
+      helpers, or public response drag state.
+      Result: `interaction_runtime/drag/pressable.rs` is now a private phase hub.
+      `pressable/down.rs` owns pointer-down active-item/timer/drag begin setup,
+      `pressable/move_phase.rs` owns thresholded move transitions and started/stopped transients,
+      and `pressable/up.rs` owns pointer-up cleanup and drag cancelation.
 - [x] Split IMUI drag-source payload lifecycle hooks into a private owner without changing
       drag-source trigger-id gating, enabled/cross-window pointer-down policy, active payload
       tracking, hovered-target preservation, drop delivery writeback, or public drag/drop response

@@ -677,6 +677,13 @@ down/move/up drag state transitions, long-press timer coordination, active item 
 drag-started/stopped transients. `interaction_runtime/drag.rs` keeps drag kind/threshold helpers
 and private sub-owner re-exports.
 
+2026-05-30 pressable drag phase child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pressable.rs` is now a private phase hub.
+`pressable/down.rs` owns pointer-down active-item/timer/drag begin setup, `pressable/move_phase.rs`
+owns thresholded move transitions and drag started/stopped transients, and `pressable/up.rs` owns
+pointer-up active-item/timer cleanup and drag cancelation. Drag kind/threshold helpers and public
+response drag state remain unchanged.
+
 2026-05-28 drag-source payload lifecycle owner-split result:
 `ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks/payload_lifecycle.rs` now owns pointer-move
 active payload tracking, hovered-target preservation, and pointer-up delivery insertion.
