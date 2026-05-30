@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "suite": "material3-token-visual-cases-v1",
-  "notes": "Fixture-driven token outcome cases for Material3 token visual matrix M3TVM-030, M3TVM-040A, and M3TVM-040B.",
+  "notes": "Fixture-driven token outcome cases for Material3 token visual matrix M3TVM-030, M3TVM-040A, M3TVM-040B, and M3TVM-050A.",
   "cases": [
     {
       "id": "button-filled-enabled-light",
@@ -454,6 +454,183 @@
         { "role": "time_input_period_selector_state_layer_color", "kind": "color", "token": "md.comp.time-input.period-selector.selected.hover.state-layer.color" },
         { "role": "time_input_period_selector_state_layer_opacity", "kind": "number", "token": "md.comp.time-input.period-selector.hover.state-layer.opacity" },
         { "role": "time_input_period_selector_label_text_style", "kind": "text_style_source", "source_token": "md.comp.time-input.period-selector.label-text" }
+      ]
+    },
+    {
+      "id": "checkbox-selected-pressed-light",
+      "component": "checkbox",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "default", "selected": true, "interaction": "pressed" },
+      "assertions": [
+        { "role": "container_size", "kind": "metric", "token": "md.comp.checkbox.container.size" },
+        { "role": "icon_size", "kind": "metric", "token": "md.comp.checkbox.icon.size" },
+        { "role": "state_layer_size", "kind": "metric", "token": "md.comp.checkbox.state-layer.size" },
+        { "role": "container_shape", "kind": "metric", "token": "md.comp.checkbox.container.shape" },
+        { "role": "container_color", "kind": "color", "token": "md.comp.checkbox.selected.pressed.container.color" },
+        { "role": "icon_color", "kind": "color", "token": "md.comp.checkbox.selected.pressed.icon.color" },
+        { "role": "state_layer_color", "kind": "color", "token": "md.comp.checkbox.selected.pressed.state-layer.color" },
+        { "role": "state_layer_opacity", "kind": "number", "token": "md.comp.checkbox.selected.pressed.state-layer.opacity" }
+      ]
+    },
+    {
+      "id": "checkbox-disabled-selected-light",
+      "component": "checkbox",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "default", "selected": true, "enabled": false },
+      "assertions": [
+        { "role": "container_color", "kind": "color_alpha", "color_token": "md.comp.checkbox.selected.disabled.container.color", "opacity_token": "md.comp.checkbox.selected.disabled.container.opacity" },
+        { "role": "icon_color", "kind": "color_alpha", "color_token": "md.comp.checkbox.selected.disabled.icon.color", "opacity_token": "md.comp.checkbox.disabled.selected.icon.opacity" }
+      ]
+    },
+    {
+      "id": "radio-unselected-hovered-light",
+      "component": "radio",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "default", "selected": false, "interaction": "hovered" },
+      "assertions": [
+        { "role": "icon_size", "kind": "metric", "token": "md.comp.radio-button.icon.size" },
+        { "role": "state_layer_size", "kind": "metric", "token": "md.comp.radio-button.state-layer.size" },
+        { "role": "icon_color", "kind": "color", "token": "md.comp.radio-button.unselected.hover.icon.color" },
+        { "role": "state_layer_color", "kind": "color", "token": "md.comp.radio-button.unselected.hover.state-layer.color" },
+        { "role": "state_layer_opacity", "kind": "number", "token": "md.comp.radio-button.unselected.hover.state-layer.opacity" }
+      ]
+    },
+    {
+      "id": "radio-disabled-selected-light",
+      "component": "radio",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "default", "selected": true, "enabled": false },
+      "assertions": [
+        { "role": "icon_color", "kind": "color_alpha", "color_token": "md.comp.radio-button.disabled.selected.icon.color", "opacity_token": "md.comp.radio-button.disabled.selected.icon.opacity" }
+      ]
+    },
+    {
+      "id": "switch-selected-hovered-light",
+      "component": "switch",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "default", "selected": true, "interaction": "hovered" },
+      "assertions": [
+        { "role": "icon_size", "kind": "metric", "token": "md.comp.switch.selected.icon.size" },
+        { "role": "track_shape", "kind": "corners_metric", "token": "md.comp.switch.track.shape" },
+        { "role": "handle_shape", "kind": "corners_metric", "token": "md.comp.switch.handle.shape" },
+        { "role": "state_layer_shape", "kind": "corners_metric", "token": "md.comp.switch.state-layer.shape" },
+        { "role": "track_color", "kind": "color", "token": "md.comp.switch.selected.hover.track.color" },
+        { "role": "handle_color", "kind": "color", "token": "md.comp.switch.selected.hover.handle.color" },
+        { "role": "icon_color", "kind": "color", "token": "md.comp.switch.selected.hover.icon.color" },
+        { "role": "state_layer_color", "kind": "color", "token": "md.comp.switch.selected.hover.state-layer.color" },
+        { "role": "state_layer_opacity", "kind": "number", "token": "md.comp.switch.selected.hover.state-layer.opacity" }
+      ]
+    },
+    {
+      "id": "switch-disabled-selected-light",
+      "component": "switch",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "default", "selected": true, "enabled": false },
+      "assertions": [
+        { "role": "track_color", "kind": "color_alpha", "color_token": "md.comp.switch.disabled.selected.track.color", "opacity_token": "md.comp.switch.disabled.track.opacity" },
+        { "role": "handle_color", "kind": "color_alpha", "color_token": "md.comp.switch.disabled.selected.handle.color", "opacity_token": "md.comp.switch.disabled.selected.handle.opacity" },
+        { "role": "icon_color", "kind": "color_alpha", "color_token": "md.comp.switch.disabled.selected.icon.color", "opacity_token": "md.comp.switch.disabled.selected.icon.opacity" }
+      ]
+    },
+    {
+      "id": "slider-pressed-selected-light",
+      "component": "slider",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "single", "selected": true, "interaction": "pressed" },
+      "assertions": [
+        { "role": "state_layer_size", "kind": "metric", "token": "md.comp.slider.state-layer.size" },
+        { "role": "state_layer_color", "kind": "color", "token": "md.comp.slider.pressed.state-layer.color" },
+        { "role": "state_layer_opacity", "kind": "number", "token": "md.comp.slider.pressed.state-layer.opacity" },
+        { "role": "value_indicator_bottom_space", "kind": "metric", "token": "md.comp.slider.value-indicator.active.bottom-space" },
+        { "role": "value_indicator_container_color", "kind": "color", "token": "md.comp.slider.value-indicator.container.color" },
+        { "role": "value_indicator_label_color", "kind": "color", "token": "md.comp.slider.value-indicator.label.label-text.color" },
+        { "role": "value_indicator_label_style", "kind": "text_style_weight_source", "source_token": "md.sys.typescale.label-large", "token": "md.comp.slider.value-indicator.label.label-text.weight" },
+        { "role": "tick_mark_size", "kind": "metric", "token": "md.comp.slider.with-tick-marks.container.size" },
+        { "role": "tick_mark_shape", "kind": "corners_metric", "token": "md.comp.slider.with-tick-marks.container.shape" },
+        { "role": "tick_mark_color", "kind": "color", "token": "md.comp.slider.with-tick-marks.active.container.color" },
+        { "role": "tick_mark_opacity", "kind": "number", "token": "md.comp.slider.with-tick-marks.active.container.opacity" },
+        { "role": "stop_indicator_size", "kind": "metric", "token": "md.comp.slider.stop-indicator.size" },
+        { "role": "stop_indicator_shape", "kind": "corners_metric", "token": "md.comp.slider.stop-indicator.shape" },
+        { "role": "stop_indicator_trailing_space", "kind": "metric", "token": "md.comp.slider.stop-indicator.trailing-space" },
+        { "role": "stop_indicator_color", "kind": "color", "token": "md.comp.slider.stop-indicator.color-selected" },
+        { "role": "active_track_height", "kind": "metric", "token": "md.comp.slider.active.track.height" },
+        { "role": "inactive_track_height", "kind": "metric", "token": "md.comp.slider.inactive.track.height" },
+        { "role": "active_track_color", "kind": "color", "token": "md.comp.slider.pressed.active.track.color" },
+        { "role": "inactive_track_color", "kind": "color", "token": "md.comp.slider.pressed.inactive.track.color" },
+        { "role": "track_shape", "kind": "corners_metric", "token": "md.comp.slider.active.track.shape" },
+        { "role": "handle_height", "kind": "metric", "token": "md.comp.slider.handle.height" },
+        { "role": "handle_width", "kind": "metric", "token": "md.comp.slider.pressed.handle.width" },
+        { "role": "handle_color", "kind": "color", "token": "md.comp.slider.pressed.handle.color" },
+        { "role": "handle_shape", "kind": "corners_metric", "token": "md.comp.slider.handle.shape" }
+      ]
+    },
+    {
+      "id": "slider-disabled-selected-light",
+      "component": "slider",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "single", "selected": true, "enabled": false },
+      "assertions": [
+        { "role": "active_track_color", "kind": "color_alpha", "color_token": "md.comp.slider.disabled.active.track.color", "opacity_token": "md.comp.slider.disabled.active.track.opacity" },
+        { "role": "inactive_track_color", "kind": "color_alpha", "color_token": "md.comp.slider.disabled.inactive.track.color", "opacity_token": "md.comp.slider.disabled.inactive.track.opacity" },
+        { "role": "handle_color", "kind": "color_alpha", "color_token": "md.comp.slider.disabled.handle.color", "opacity_token": "md.comp.slider.disabled.handle.opacity" }
+      ]
+    },
+    {
+      "id": "segmented-button-selected-hovered-light",
+      "component": "segmented_button",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "outlined", "selected": true, "interaction": "hovered" },
+      "assertions": [
+        { "role": "container_height", "kind": "metric", "token": "md.comp.outlined-segmented-button.container.height" },
+        { "role": "outline_width", "kind": "metric", "token": "md.comp.outlined-segmented-button.outline.width" },
+        { "role": "shape", "kind": "metric", "token": "md.comp.outlined-segmented-button.shape" },
+        { "role": "icon_size", "kind": "metric", "token": "md.comp.outlined-segmented-button.with-icon.icon.size" },
+        { "role": "container_color", "kind": "color", "token": "md.comp.outlined-segmented-button.selected.container.color" },
+        { "role": "outline_color", "kind": "color", "token": "md.comp.outlined-segmented-button.outline.color" },
+        { "role": "label_color", "kind": "color", "token": "md.comp.outlined-segmented-button.selected.hover.label-text.color" },
+        { "role": "icon_color", "kind": "color", "token": "md.comp.outlined-segmented-button.selected.hover.icon.color" },
+        { "role": "state_layer_color", "kind": "color", "token": "md.comp.outlined-segmented-button.selected.hover.state-layer.color" },
+        { "role": "state_layer_opacity", "kind": "number", "token": "md.comp.outlined-segmented-button.hover.state-layer.opacity" }
+      ]
+    },
+    {
+      "id": "segmented-button-disabled-unselected-light",
+      "component": "segmented_button",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "outlined", "selected": false, "enabled": false },
+      "assertions": [
+        { "role": "container_color", "kind": "none" },
+        { "role": "outline_color", "kind": "color_alpha", "color_token": "md.comp.outlined-segmented-button.disabled.outline.color", "opacity_token": "md.comp.outlined-segmented-button.disabled.outline.opacity" },
+        { "role": "label_color", "kind": "color_alpha", "color_token": "md.comp.outlined-segmented-button.disabled.label-text.color", "opacity_token": "md.comp.outlined-segmented-button.disabled.label-text.opacity" },
+        { "role": "icon_color", "kind": "color_alpha", "color_token": "md.comp.outlined-segmented-button.disabled.icon.color", "opacity_token": "md.comp.outlined-segmented-button.disabled.icon.opacity" }
+      ]
+    },
+    {
+      "id": "icon-button-tonal-selected-hovered-light",
+      "component": "icon_button",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "tonal", "toggle": true, "selected": true, "interaction": "hovered" },
+      "assertions": [
+        { "role": "container_size", "kind": "metric", "token": "md.comp.icon-button.small.container.height" },
+        { "role": "leading_space", "kind": "metric", "token": "md.comp.icon-button.small.default.leading-space" },
+        { "role": "trailing_space", "kind": "metric", "token": "md.comp.icon-button.small.default.trailing-space" },
+        { "role": "icon_size", "kind": "metric", "token": "md.comp.icon-button.small.icon.size" },
+        { "role": "container_shape", "kind": "metric", "token": "md.comp.icon-button.container.shape.round" },
+        { "role": "selected_container_shape", "kind": "metric", "token": "md.comp.icon-button.selected.container.shape.round" },
+        { "role": "container_color", "kind": "color", "token": "md.comp.icon-button.tonal.selected.container.color" },
+        { "role": "icon_color", "kind": "color", "token": "md.comp.icon-button.tonal.selected.hovered.icon.color" },
+        { "role": "state_layer_color", "kind": "color", "token": "md.comp.icon-button.tonal.selected.hovered.state-layer.color" },
+        { "role": "state_layer_opacity", "kind": "number", "token": "md.comp.icon-button.selected.hover.state-layer.opacity" }
+      ]
+    },
+    {
+      "id": "icon-button-filled-disabled-light",
+      "component": "icon_button",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "filled", "enabled": false },
+      "assertions": [
+        { "role": "container_color", "kind": "color_alpha", "color_token": "md.comp.icon-button.filled.disabled.container.color", "opacity_token": "md.comp.icon-button.filled.disabled.container.opacity" },
+        { "role": "icon_color", "kind": "color_alpha", "color_token": "md.comp.icon-button.filled.disabled.icon.color", "opacity_token": "md.comp.icon-button.filled.disabled.icon.opacity" }
       ]
     }
   ]

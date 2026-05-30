@@ -617,13 +617,13 @@
     },
     {
       "component_family_counts": {
-        "checkbox": 38,
+        "checkbox": 44,
         "system": 9
       },
       "fallback_pattern_counts": {
         "closure_unwrap_or_else": 7,
         "literal_unwrap_or": 15,
-        "theme_or_else_chain": 14
+        "theme_or_else_chain": 16
       },
       "fallback_samples": [
         {
@@ -663,7 +663,7 @@
           "text": ".unwrap_or(0.1),"
         }
       ],
-      "fallback_site_count": 36,
+      "fallback_site_count": 38,
       "magic_visual_constant_count": 12,
       "magic_visual_constant_role_counts": {
         "metric": 12
@@ -742,10 +742,10 @@
       "module": "checkbox",
       "path": "ecosystem/fret-ui-material3/src/tokens/checkbox.rs",
       "token_domain_counts": {
-        "component": 38,
+        "component": 44,
         "system": 9
       },
-      "token_key_count": 47
+      "token_key_count": 53
     },
     {
       "component_family_counts": {
@@ -3529,7 +3529,7 @@
         "closure_unwrap_or_else": 18,
         "default_unwrap": 1,
         "literal_unwrap_or": 24,
-        "theme_or_else_chain": 18
+        "theme_or_else_chain": 22
       },
       "fallback_samples": [
         {
@@ -3569,7 +3569,7 @@
           "text": ".or_else(|| theme.number_by_key(\"md.sys.state.hover.state-layer-opacity\"))"
         }
       ],
-      "fallback_site_count": 61,
+      "fallback_site_count": 65,
       "magic_visual_constant_count": 28,
       "magic_visual_constant_role_counts": {
         "metric": 24,
@@ -3929,7 +3929,7 @@
       "fallback_pattern_counts": {
         "closure_unwrap_or_else": 16,
         "literal_unwrap_or": 8,
-        "theme_or_else_chain": 11
+        "theme_or_else_chain": 12
       },
       "fallback_samples": [
         {
@@ -3969,7 +3969,7 @@
           "text": ".unwrap_or_else(|| theme.color_token(\"md.sys.color.on-primary\"))"
         }
       ],
-      "fallback_site_count": 35,
+      "fallback_site_count": 36,
       "magic_visual_constant_count": 9,
       "magic_visual_constant_role_counts": {
         "metric": 8,
@@ -4003,7 +4003,7 @@
             "px_literal"
           ],
           "kind": "px_literal",
-          "line": 69,
+          "line": 70,
           "path": "ecosystem/fret-ui-material3/src/tokens/switch.rs",
           "role": "shape",
           "text": ".unwrap_or_else(|| Corners::all(Px(9999.0)))",
@@ -4014,7 +4014,7 @@
             "fallback"
           ],
           "kind": "number_fallback",
-          "line": 102,
+          "line": 103,
           "path": "ecosystem/fret-ui-material3/src/tokens/switch.rs",
           "role": "metric",
           "text": ".unwrap_or(0.1),",
@@ -4025,7 +4025,7 @@
             "fallback"
           ],
           "kind": "number_fallback",
-          "line": 109,
+          "line": 110,
           "path": "ecosystem/fret-ui-material3/src/tokens/switch.rs",
           "role": "metric",
           "text": ".unwrap_or(0.1),",
@@ -4036,7 +4036,7 @@
             "fallback"
           ],
           "kind": "number_fallback",
-          "line": 116,
+          "line": 117,
           "path": "ecosystem/fret-ui-material3/src/tokens/switch.rs",
           "role": "metric",
           "text": ".unwrap_or(0.08),",
@@ -5124,7 +5124,7 @@
           "module": "carousel_item"
         },
         {
-          "fallback_site_count": 36,
+          "fallback_site_count": 38,
           "magic_visual_constant_count": 12,
           "module": "checkbox"
         },
@@ -6825,9 +6825,9 @@
       "default_unwrap": 16,
       "literal_unwrap_or": 426,
       "system_color_resolver": 39,
-      "theme_or_else_chain": 377
+      "theme_or_else_chain": 384
     },
-    "component_token_fallback_site_count": 1160,
+    "component_token_fallback_site_count": 1167,
     "component_token_magic_visual_constant_count": 505,
     "component_token_magic_visual_constant_role_counts": {
       "metric": 458,

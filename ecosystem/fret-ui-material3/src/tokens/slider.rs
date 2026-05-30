@@ -111,6 +111,11 @@ pub(crate) fn tick_mark_size(theme: &Theme) -> Px {
 pub(crate) fn tick_mark_shape(theme: &Theme) -> Corners {
     theme
         .corners_by_key("md.comp.slider.with-tick-marks.container.shape")
+        .or_else(|| {
+            theme
+                .metric_by_key("md.comp.slider.with-tick-marks.container.shape")
+                .map(Corners::all)
+        })
         .unwrap_or_else(|| Corners::all(Px(9999.0)))
 }
 
@@ -156,6 +161,11 @@ pub(crate) fn stop_indicator_size(theme: &Theme) -> Px {
 pub(crate) fn stop_indicator_shape(theme: &Theme) -> Corners {
     theme
         .corners_by_key("md.comp.slider.stop-indicator.shape")
+        .or_else(|| {
+            theme
+                .metric_by_key("md.comp.slider.stop-indicator.shape")
+                .map(Corners::all)
+        })
         .unwrap_or_else(|| Corners::all(Px(9999.0)))
 }
 
@@ -293,6 +303,11 @@ pub(crate) fn handle_color(theme: &Theme, enabled: bool, interaction: SliderInte
 pub(crate) fn track_shape(theme: &Theme) -> Corners {
     theme
         .corners_by_key("md.comp.slider.active.track.shape")
+        .or_else(|| {
+            theme
+                .metric_by_key("md.comp.slider.active.track.shape")
+                .map(Corners::all)
+        })
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
         .unwrap_or_else(|| Corners::all(Px(9999.0)))
 }
@@ -329,6 +344,11 @@ pub(crate) fn handle_width(theme: &Theme, enabled: bool, interaction: SliderInte
 pub(crate) fn handle_shape(theme: &Theme) -> Corners {
     theme
         .corners_by_key("md.comp.slider.handle.shape")
+        .or_else(|| {
+            theme
+                .metric_by_key("md.comp.slider.handle.shape")
+                .map(Corners::all)
+        })
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
         .unwrap_or_else(|| Corners::all(Px(9999.0)))
 }

@@ -279,9 +279,11 @@
         "selected",
         "error"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-050",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-050A",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
     },
     {
       "id": "chip",
@@ -515,9 +517,11 @@
         "disabled",
         "selected"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-050",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-050A",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
     },
     {
       "id": "input_chip",
@@ -711,9 +715,11 @@
         "selected",
         "error"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-050",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-050A",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
     },
     {
       "id": "search_bar",
@@ -781,9 +787,11 @@
         "disabled",
         "selected"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-050",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-050A",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
     },
     {
       "id": "select",
@@ -832,9 +840,11 @@
         "pressed",
         "disabled"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-050",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-050A",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
     },
     {
       "id": "snackbar",
@@ -895,9 +905,11 @@
         "disabled",
         "selected"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-050",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-050A",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
     },
     {
       "id": "tabs",

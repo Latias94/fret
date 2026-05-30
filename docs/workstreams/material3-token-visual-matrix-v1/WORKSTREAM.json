@@ -106,6 +106,6 @@
   ],
   "continue_policy": {
     "default_action": "run_next_task",
-    "notes": "M3TVM-040 is complete across TextField, Select, Autocomplete, ExposedDropdown, SearchBar, SearchView, DatePicker, and TimePicker fixture coverage. Continue with M3TVM-050 control/chip fixture expansion before deleting broader fallback logic."
+    "notes": "M3TVM-040 is complete and M3TVM-050A covers Checkbox, Radio, Switch, Slider, SegmentedButton, and IconButton. Continue M3TVM-050 with chip fixture expansion before deleting broader fallback logic."
   }
 }

@@ -74,11 +74,25 @@ Task IDs use `M3TVM-*`.
   Review: DONE. TextField was covered in M3TVM-030, Select/Autocomplete/ExposedDropdown in
   M3TVM-040A, and SearchBar/SearchView/DatePicker/TimePicker in M3TVM-040B.
 
+- [x] M3TVM-050A [owner=codex] [deps=M3TVM-040] [scope=ecosystem/fret-ui-material3/src/{tokens,foundation,checkbox.rs,radio.rs,switch.rs,slider.rs,segmented_button.rs,icon_button.rs},ecosystem/fret-ui-material3/tests/fixtures,docs/workstreams/material3-token-visual-matrix-v1]
+  Goal: Close the non-chip action/control subset for Checkbox, Radio, Switch, Slider,
+  SegmentedButton, and IconButton with fixture-driven token outcomes.
+  Validation: fixture rows for state-layer, checked/selected visuals, disabled alpha, shape,
+  icon/content/container colors, Slider value-indicator typography, matrix/inventory gates, and
+  narrow material3 token tests.
+  Review: DONE. The fixture runner now covers Checkbox, Radio, Switch, Slider, SegmentedButton,
+  and IconButton. It fixed Checkbox selected interaction color routing, Switch/Slider
+  metric-backed shape token resolution, and Slider value-indicator typography weight assertion
+  support.
+  Handoff: Continue M3TVM-050 with chip rows: Chip, ChipSet, FilterChip, InputChip, and
+  SuggestionChip.
+
 - [ ] M3TVM-050 [owner=codex] [deps=M3TVM-030] [scope=ecosystem/fret-ui-material3/src/{tokens,foundation,button.rs,checkbox.rs,radio.rs,switch.rs,slider.rs,segmented_button.rs,icon_button.rs,chip*.rs,*chip.rs},ecosystem/fret-ui-material3/tests]
   Goal: Close action/control/chip token visual matrix rows for state layers, checked/selected
   visuals, disabled opacity, shape, elevation, and icon/content color.
   Validation: fixture rows plus existing choice/control M3PV2 gates.
-  Review: Pending.
+  Review: Pending. Button was covered in M3TVM-030 and non-chip controls were covered in
+  M3TVM-050A; chip rows remain.
 
 - [ ] M3TVM-060 [owner=codex] [deps=M3TVM-030] [scope=ecosystem/fret-ui-material3/src/{tokens,foundation,tabs.rs,navigation_bar.rs,navigation_rail.rs,navigation_drawer.rs,top_app_bar.rs},ecosystem/fret-ui-material3/tests]
   Goal: Close navigation/app-chrome token visual matrix rows for active indicators, destination

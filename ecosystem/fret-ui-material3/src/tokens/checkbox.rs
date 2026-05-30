@@ -201,6 +201,24 @@ fn unselected_outline_color_key(interaction: CheckboxInteraction) -> &'static st
     }
 }
 
+fn selected_container_color_key(interaction: CheckboxInteraction) -> &'static str {
+    match interaction {
+        CheckboxInteraction::Pressed => "md.comp.checkbox.selected.pressed.container.color",
+        CheckboxInteraction::Focused => "md.comp.checkbox.selected.focus.container.color",
+        CheckboxInteraction::Hovered => "md.comp.checkbox.selected.hover.container.color",
+        CheckboxInteraction::None => "md.comp.checkbox.selected.container.color",
+    }
+}
+
+fn selected_icon_color_key(interaction: CheckboxInteraction) -> &'static str {
+    match interaction {
+        CheckboxInteraction::Pressed => "md.comp.checkbox.selected.pressed.icon.color",
+        CheckboxInteraction::Focused => "md.comp.checkbox.selected.focus.icon.color",
+        CheckboxInteraction::Hovered => "md.comp.checkbox.selected.hover.icon.color",
+        CheckboxInteraction::None => "md.comp.checkbox.selected.icon.color",
+    }
+}
+
 pub(crate) fn chrome(
     theme: &Theme,
     selected: bool,
@@ -209,12 +227,14 @@ pub(crate) fn chrome(
 ) -> CheckboxChrome {
     if selected {
         let mut container = theme
-            .color_by_key("md.comp.checkbox.selected.container.color")
+            .color_by_key(selected_container_color_key(interaction))
+            .or_else(|| theme.color_by_key("md.comp.checkbox.selected.container.color"))
             .or_else(|| theme.color_by_key("md.sys.color.primary"))
             .unwrap_or_else(|| theme.color_token("md.sys.color.primary"));
 
         let mut icon_color = theme
-            .color_by_key("md.comp.checkbox.selected.icon.color")
+            .color_by_key(selected_icon_color_key(interaction))
+            .or_else(|| theme.color_by_key("md.comp.checkbox.selected.icon.color"))
             .or_else(|| theme.color_by_key("md.sys.color.on-primary"))
             .unwrap_or_else(|| theme.color_token("md.sys.color.on-primary"));
 
