@@ -25,6 +25,9 @@ Exit criteria:
 
 ## M2 - Fixture Harness Ready
 
+Status: Complete as of M3TVM-030 for the Button/TextField pilot. Family expansion remains in
+M3TVM-040 through M3TVM-070.
+
 Exit criteria:
 
 - A fixture-driven harness can validate at least color, alpha, shape, elevation, outline, and

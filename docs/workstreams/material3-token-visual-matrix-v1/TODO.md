@@ -24,16 +24,21 @@ Task IDs use `M3TVM-*`.
   Validation: `python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json`; generated report plus JSON/schema gates; targeted `cargo nextest run -p fret-ui-material3 --lib tokens::v30`.
   Review: DONE. The generated report covers all 38 component token modules mapped by the 39
   component rows, classifies 3,580 generated Material Web keys, 67 non-generated v30 manual writes,
-  1,138 component token fallback sites, and 506 component token visual constants.
+  1,136 component token fallback sites, and 504 component token visual constants after the
+  M3TVM-030 TextField disabled-opacity cleanup.
   Handoff: Start M3TVM-030 by turning the report's heaviest fallback families into declarative
   fixture rows before refactoring fallback logic.
 
-- [ ] M3TVM-030 [owner=codex] [deps=M3TVM-020] [scope=ecosystem/fret-ui-material3/tests,ecosystem/fret-ui-material3/tests/fixtures,docs/workstreams/material3-token-visual-matrix-v1]
+- [x] M3TVM-030 [owner=codex] [deps=M3TVM-020] [scope=ecosystem/fret-ui-material3/tests,ecosystem/fret-ui-material3/tests/fixtures,docs/workstreams/material3-token-visual-matrix-v1]
   Goal: Add a fixture-driven visual-token harness for token outcomes and rendered scene assertions.
   Validation: a small fixture suite proving color/alpha/shape/elevation/outline outcomes for at
   least Button and TextField.
-  Review: Pending.
-  Handoff: Keep fixtures declarative and stable; do not encode screenshot-only expectations.
+  Validation: `python -m json.tool ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json | Out-Null`; `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures`; `cargo nextest run -p fret-ui-material3 --lib tokens::v30`; report/catalog/diff gates.
+  Review: DONE. The crate-internal runner consumes a stable JSON fixture suite and covers Button
+  and TextField token outcomes for color, alpha, shape, outline, elevation, and typography aliases.
+  It also caught and fixed a TextField disabled input-text opacity double-application.
+  Handoff: Start M3TVM-040 or M3TVM-050 by extending the same fixture schema before changing more
+  fallback logic.
 
 ## M2 - Family Token Matrix Packets
 

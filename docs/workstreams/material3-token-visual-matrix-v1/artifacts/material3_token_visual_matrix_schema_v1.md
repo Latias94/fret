@@ -49,6 +49,8 @@ instead of broad component behavior axes.
 - Generated inventory report:
   `docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json`
 - Inventory generator: `tools/parity-discovery/material3_token_inventory.py`
+- Fixture suite: `ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json`
+- Fixture runner: `ecosystem/fret-ui-material3/src/tokens/visual_fixtures.rs`
 - Closed component-axis reference:
   `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_v2_closeout_audit.md`
 - Local source references: `repo-ref/compose-multiplatform-core`, `repo-ref/base-ui`

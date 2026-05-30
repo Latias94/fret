@@ -25,7 +25,7 @@ CONST_NUMBER_RE = re.compile(
 )
 COLOR_HEX_RE = re.compile(r"Color::from_srgb_hex_rgb\((0x[0-9a-fA-F_]+)\)")
 
-TOKEN_MODULE_SKIP = {"material_web_v30.rs", "mod.rs", "v30.rs"}
+TOKEN_MODULE_SKIP = {"material_web_v30.rs", "mod.rs", "v30.rs", "visual_fixtures.rs"}
 FALLBACK_MARKERS = {
     "component_to_system_color": "color_comp_or_sys(",
     "component_to_system_number": "number_comp_or_sys(",

@@ -207,9 +207,11 @@
         "pressed",
         "disabled"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-050",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-030",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
     },
     {
       "id": "card",
@@ -927,9 +929,11 @@
         "disabled",
         "error"
       ],
-      "gate_state": "inventory_audited",
+      "gate_state": "covered_fixture",
       "first_packet": "M3TVM-040",
-      "inventory_task": "M3TVM-020"
+      "inventory_task": "M3TVM-020",
+      "fixture_task": "M3TVM-030",
+      "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
     },
     {
       "id": "time_picker",
@@ -1002,5 +1006,6 @@
       "inventory_task": "M3TVM-020"
     }
   ],
-  "inventory_report": "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json"
+  "inventory_report": "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json",
+  "fixture_suite": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
 }

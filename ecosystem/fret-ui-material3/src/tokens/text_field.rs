@@ -417,7 +417,7 @@ fn outlined_text_input_style(
     style.border_color = outline_color;
     style.border_color_focused = focused_outline_color;
 
-    style.text_color = outlined_input_text_color(theme, hovered, disabled, error, focused);
+    style.text_color = outlined_input_text_color(theme, hovered, error, focused);
     style.placeholder_color = theme
         .color_by_key("md.comp.outlined-text-field.input-text.placeholder.color")
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
@@ -522,7 +522,7 @@ fn filled_text_input_style(
     style.border_color = indicator_color;
     style.border_color_focused = focused_indicator_color;
 
-    style.text_color = filled_input_text_color(theme, hovered, disabled, error, focused);
+    style.text_color = filled_input_text_color(theme, hovered, error, focused);
     style.placeholder_color = theme
         .color_by_key("md.comp.filled-text-field.input-text.placeholder.color")
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
@@ -586,13 +586,7 @@ fn filled_caret_color(theme: &Theme, disabled: bool, error: bool, focused: bool)
     }
 }
 
-fn outlined_input_text_color(
-    theme: &Theme,
-    hovered: bool,
-    disabled: bool,
-    error: bool,
-    focused: bool,
-) -> Color {
+fn outlined_input_text_color(theme: &Theme, hovered: bool, error: bool, focused: bool) -> Color {
     let key = if error && focused {
         "md.comp.outlined-text-field.error.focus.input-text.color"
     } else if error && hovered {
@@ -607,28 +601,13 @@ fn outlined_input_text_color(
         "md.comp.outlined-text-field.input-text.color"
     };
 
-    let mut c = theme
+    theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-
-    if disabled {
-        let opacity = theme
-            .number_by_key("md.comp.outlined-text-field.disabled.input-text.opacity")
-            .unwrap_or(0.38);
-        c = alpha_mul(c, opacity);
-    }
-
-    c
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
 }
 
-fn filled_input_text_color(
-    theme: &Theme,
-    hovered: bool,
-    disabled: bool,
-    error: bool,
-    focused: bool,
-) -> Color {
+fn filled_input_text_color(theme: &Theme, hovered: bool, error: bool, focused: bool) -> Color {
     let key = if error && focused {
         "md.comp.filled-text-field.error.focus.input-text.color"
     } else if error && hovered {
@@ -643,19 +622,10 @@ fn filled_input_text_color(
         "md.comp.filled-text-field.input-text.color"
     };
 
-    let mut c = theme
+    theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-
-    if disabled {
-        let opacity = theme
-            .number_by_key("md.comp.filled-text-field.disabled.input-text.opacity")
-            .unwrap_or(0.38);
-        c = alpha_mul(c, opacity);
-    }
-
-    c
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
 }
 
 fn outlined_outline_color(

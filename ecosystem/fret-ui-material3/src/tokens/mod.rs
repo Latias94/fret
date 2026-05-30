@@ -44,3 +44,6 @@ pub(crate) mod time_input;
 pub(crate) mod time_picker;
 pub(crate) mod tooltip;
 pub(crate) mod top_app_bar;
+
+#[cfg(test)]
+mod visual_fixtures;

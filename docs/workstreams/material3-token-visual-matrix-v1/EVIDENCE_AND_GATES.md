@@ -11,6 +11,7 @@ The initial repro is schema/catalog validation:
 python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json | Out-Null
 python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null
 python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null
+python -m json.tool ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json | Out-Null
 python tools/check_workstream_catalog.py
 ```
 
@@ -22,6 +23,7 @@ python tools/check_workstream_catalog.py
 python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json | Out-Null
 python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null
 python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null
+python -m json.tool ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json | Out-Null
 python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json
 python tools/check_workstream_catalog.py
 git diff --check
@@ -33,6 +35,7 @@ Use narrow gates while the inventory and fixture harness are young:
 
 ```powershell
 cargo nextest run -p fret-ui-material3 --lib tokens::v30
+cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures
 cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface
 cargo check -p fret-ui-material3 --features diagnostics --tests
 cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings
@@ -46,6 +49,8 @@ cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D
 - `docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_schema_v1.md`
 - `docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json`
 - `tools/parity-discovery/material3_token_inventory.py`
+- `ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json`
+- `ecosystem/fret-ui-material3/src/tokens/visual_fixtures.rs`
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_v2_closeout_audit.md`
 - `ecosystem/fret-ui-material3/src/tokens/v30.rs`
 - `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`
@@ -69,7 +74,7 @@ cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D
     `docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json`.
   - Result: all 38 component token modules are mapped to matrix rows; the report classifies 3,580
     generated Material Web token keys, 107 v30 injection functions, 67 non-generated v30 manual
-    writes, 1,138 component token fallback sites, 506 component token visual constants, 45
+    writes, 1,136 component token fallback sites, 504 component token visual constants, 45
     foundation/interaction fallback sites, and 50 foundation/interaction visual constants.
   - Main finding: the next fix should build fixture rows before deleting fallback logic, with
     field-family, slider/list/chip/fab/icon-button, and time-picker modules highest in the queue.
@@ -82,3 +87,24 @@ cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D
   - Broader gates not run: `cargo check -p fret-ui-material3 --features diagnostics --tests` and
     diagnostics automation tests were skipped because M3TVM-020 only adds a Python report generator
     plus docs/artifact updates and does not change Rust component behavior.
+- 2026-05-30: M3TVM-030 added the fixture-driven token visual harness pilot.
+  - Fixture suite: `ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json`.
+  - Runner: `ecosystem/fret-ui-material3/src/tokens/visual_fixtures.rs`.
+  - Result: Button and TextField matrix rows moved to `covered_fixture`; the suite covers Button
+    label/container/icon/state-layer/elevation/shadow/typography outcomes and TextField
+    container/background/outline/active-indicator/label/supporting/input/caret/shape/typography
+    outcomes.
+  - Bug fixed: TextField disabled input text was applying disabled opacity twice in the private
+    token helper plus style assembly path; the helper now returns the base token color and the
+    style assembly path applies disabled opacity once.
+  - Fresh verification:
+    - `cargo fmt -p fret-ui-material3 -- --check`: passed.
+    - `cargo check -p fret-ui-material3`: passed.
+    - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`: passed.
+    - `python -m json.tool ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json | Out-Null`: passed.
+    - `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures`: passed, 1 test run.
+    - `cargo nextest run -p fret-ui-material3 --lib tokens::v30`: passed, 6 tests run.
+    - `python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json`: passed.
+    - `python tools/check_workstream_catalog.py`: passed with 511 dedicated directories and 47
+      standalone markdown files.
+    - `git diff --check`: passed.

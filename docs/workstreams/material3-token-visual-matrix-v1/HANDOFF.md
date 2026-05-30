@@ -5,10 +5,9 @@ Last updated: 2026-05-30
 
 ## Current State
 
-M3TVM-010 and M3TVM-020 are complete. The workstream exists, the matrix covers all 39 M3PV2
-components, and the generated inventory report maps all 38 component token modules to matrix rows.
-The report classifies generated Material Web keys, v30 manual writes, fallback chains, and magic
-visual constants without refactoring component recipes.
+M3TVM-010 through M3TVM-030 are complete. The workstream exists, the matrix covers all 39 M3PV2
+components, the generated inventory report maps all 38 component token modules to matrix rows, and
+the first fixture-driven token visual harness covers Button and TextField.
 
 ## Decisions
 
@@ -21,10 +20,11 @@ visual constants without refactoring component recipes.
 
 ## Next Recommended Action
 
-Start M3TVM-030: build the fixture-driven visual-token harness. Use
-`material3_token_inventory_report_v1.json` to prioritize the heaviest fallback modules first:
-`text_field`, `autocomplete`, `slider`, `select`, `time_picker`, `list`, chips, `fab`, `checkbox`,
-`time_input`, and `icon_button`.
+Start M3TVM-040 or M3TVM-050 by extending `material3_token_visual_cases_v1.json` before touching
+more fallback code. Field-family expansion should reuse the TextField cases for Select,
+Autocomplete, ExposedDropdown, SearchBar/SearchView, DatePicker, and TimePicker. Control-family
+expansion should reuse the Button case shape for Checkbox, Radio, Switch, Slider, segmented
+buttons, icon buttons, and chips.
 
 ## Useful Gates
 
@@ -32,7 +32,9 @@ Start M3TVM-030: build the fixture-driven visual-token harness. Use
 python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json | Out-Null
 python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null
 python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null
+python -m json.tool ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json | Out-Null
 python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json
 python tools/check_workstream_catalog.py
 cargo nextest run -p fret-ui-material3 --lib tokens::v30
+cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures
 ```

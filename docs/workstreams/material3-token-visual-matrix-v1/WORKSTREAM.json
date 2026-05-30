@@ -34,6 +34,10 @@
     {
       "role": "token_inventory_report",
       "path": "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json"
+    },
+    {
+      "role": "token_visual_fixture_suite",
+      "path": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
     }
   ],
   "repro": {
@@ -43,7 +47,9 @@
       "python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json | Out-Null",
       "python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null",
       "python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null",
+      "python -m json.tool ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json | Out-Null",
       "python tools/check_workstream_catalog.py",
+      "cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures",
       "git diff --check"
     ]
   },
@@ -65,6 +71,14 @@
       "command": "python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null"
     },
     {
+      "name": "material3-token-visual-fixture-json",
+      "command": "python -m json.tool ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json | Out-Null"
+    },
+    {
+      "name": "material3-token-visual-fixture-runner",
+      "command": "cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures"
+    },
+    {
       "name": "workstream-catalog",
       "command": "python tools/check_workstream_catalog.py"
     },
@@ -78,6 +92,8 @@
     "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_schema_v1.md",
     "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json",
     "tools/parity-discovery/material3_token_inventory.py",
+    "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json",
+    "ecosystem/fret-ui-material3/src/tokens/visual_fixtures.rs",
     "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_v2_closeout_audit.md",
     "ecosystem/fret-ui-material3/src/tokens",
     "ecosystem/fret-ui-material3/src/foundation",
@@ -90,6 +106,6 @@
   ],
   "continue_policy": {
     "default_action": "run_next_task",
-    "notes": "Continue with M3TVM-030 fixture-driven visual-token harness before refactoring component recipe fallback logic."
+    "notes": "Continue with M3TVM-040 field-family fixture expansion or M3TVM-050 control/chip fixture expansion before deleting broader fallback logic."
   }
 }

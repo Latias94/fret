@@ -4193,7 +4193,7 @@
       },
       "fallback_pattern_counts": {
         "closure_unwrap_or_else": 12,
-        "literal_unwrap_or": 38,
+        "literal_unwrap_or": 36,
         "theme_or_else_chain": 16
       },
       "fallback_samples": [
@@ -4234,10 +4234,10 @@
           "text": "theme.metric_by_key(key).unwrap_or(Px(24.0))"
         }
       ],
-      "fallback_site_count": 66,
-      "magic_visual_constant_count": 37,
+      "fallback_site_count": 64,
+      "magic_visual_constant_count": 35,
       "magic_visual_constant_role_counts": {
-        "metric": 35,
+        "metric": 33,
         "opacity": 1,
         "shape": 1
       },
@@ -6822,14 +6822,14 @@
       "component_to_system_color": 48,
       "component_to_system_number": 2,
       "default_unwrap": 16,
-      "literal_unwrap_or": 427,
+      "literal_unwrap_or": 425,
       "system_color_resolver": 39,
       "theme_or_else_chain": 358
     },
-    "component_token_fallback_site_count": 1138,
-    "component_token_magic_visual_constant_count": 506,
+    "component_token_fallback_site_count": 1136,
+    "component_token_magic_visual_constant_count": 504,
     "component_token_magic_visual_constant_role_counts": {
-      "metric": 459,
+      "metric": 457,
       "opacity": 9,
       "shape": 38
     },
