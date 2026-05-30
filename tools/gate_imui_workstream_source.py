@@ -31346,14 +31346,27 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/slider/value_math.rs"),
             required=[
+                "mod tests;",
                 "pub(super) fn quantize_value",
                 "pub(super) fn t_from_value",
                 "pub(super) fn value_from_x",
                 "NumericValueConstraints",
+            ],
+            forbidden=[
                 "slider_t_from_value_returns_zero_for_degenerate_ranges",
                 "slider_t_from_value_clamps_when_requested",
                 "slider_value_from_x_accounts_for_thumb_radius_and_step_quantization",
                 "slider_value_from_x_returns_quantized_min_when_track_has_no_available_width",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/slider/value_math/tests.rs"),
+            required=[
+                "slider_t_from_value_returns_zero_for_degenerate_ranges",
+                "slider_t_from_value_clamps_when_requested",
+                "slider_value_from_x_accounts_for_thumb_radius_and_step_quantization",
+                "slider_value_from_x_returns_quantized_min_when_track_has_no_available_width",
+                "value_from_x(0.0, 10.0, true, Some(0.5)",
             ],
             forbidden=[],
         ),

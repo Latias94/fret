@@ -228,6 +228,12 @@ normalized progress, pointer-position projection, and focused value-math tests. 
 clamp/step quantization, thumb-radius compensation, track-degenerate behavior, typing fallback, and
 public slider options remain unchanged.
 
+2026-05-31 editor slider value-math tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/slider/value_math.rs` now keeps value-domain math
+implementation and test-owner routing. `controls/slider/value_math/tests.rs` owns value-math
+coverage. Quantization, normalized progress, thumb-radius pointer projection, degenerate track
+fallback, and slider control routing remain unchanged.
+
 2026-05-31 editor slider tests child-owner result:
 `ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider control orchestration and
 child-owner routing. `controls/slider/tests.rs` owns affixed-value composition and presentation

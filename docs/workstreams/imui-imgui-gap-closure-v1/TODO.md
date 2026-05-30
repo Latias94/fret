@@ -228,6 +228,11 @@ Last updated: 2026-05-31
       Result: `controls/slider.rs` keeps slider state, event handling, typing handoff, and layout
       orchestration. `controls/slider/value_math.rs` owns value quantization, normalized progress,
       pointer-position projection, and focused value-math tests.
+- [x] Split editor slider value-domain math regressions into a private test owner without changing
+      quantization, normalized progress, thumb-radius pointer projection, degenerate track fallback,
+      or slider control routing.
+      Result: `controls/slider/value_math.rs` keeps value-domain math implementation plus
+      test-owner routing. `controls/slider/value_math/tests.rs` owns value-math coverage.
 - [x] Split editor slider affixed-value and presentation regression tests into a private test owner
       without changing slider public constructors, NumericPresentation adoption, duplicate chrome
       affix suppression, or slider chrome/value-math child owner boundaries.

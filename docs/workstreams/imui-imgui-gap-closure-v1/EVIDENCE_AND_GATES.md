@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Slider Value-Math Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor slider value-domain math regressions split into a private test owner without
+changing quantization, normalized progress, thumb-radius pointer projection, degenerate track
+fallback, or slider control routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/slider/value_math.rs` now keeps value-domain math
+  implementation and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/controls/slider/value_math/tests.rs` owns value-math coverage.
+- `tools/gate_imui_workstream_source.py` now checks the slider value-math root/test split and keeps
+  migrated regression test names out of the root owner file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the slider value-math
+  test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  slider_t_from_value_returns_zero_for_degenerate_ranges
+  slider_t_from_value_clamps_when_requested
+  slider_value_from_x_accounts_for_thumb_radius_and_step_quantization
+  slider_value_from_x_returns_quantized_min_when_track_has_no_available_width --no-fail-fast`:
+  pass (4 passed, 194 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Readout Theme-Preset Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor theme-preset picker readout regressions split into a private test owner
