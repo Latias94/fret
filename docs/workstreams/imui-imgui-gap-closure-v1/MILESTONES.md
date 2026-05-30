@@ -1173,6 +1173,13 @@ normalization, shared pressable item behavior installation, and owner dispatch o
 transient emission. `checkbox/behavior/keyboard.rs` owns activate shortcuts plus
 ContextMenu/Shift+F10 requests. `checkbox/behavior/response.rs` owns changed response projection.
 
+2026-05-30 checkbox entry/props owner split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox.rs` is now a thin module/re-export hub.
+`checkbox/entry.rs` owns label identity, model reads, behavior installation, field chrome, checkbox
+indicator mounting, boolean label mounting, and fill-row visual assembly. `checkbox/props.rs` owns
+`PressableProps` construction plus `SemanticsRole::Checkbox`, checked-state, a11y label, and test-id
+wiring.
+
 2026-05-27 radio behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio/behavior.rs` now owns pressable behavior
 installation, activate/shortcut click signaling, context-menu key handling, transient clicked

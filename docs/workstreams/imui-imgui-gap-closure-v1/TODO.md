@@ -1654,6 +1654,13 @@ Last updated: 2026-05-30
       item behavior installation, and owner dispatch. `behavior/activation.rs` owns click toggling,
       `behavior/keyboard.rs` owns shortcut/context-menu key handling, and `behavior/response.rs`
       owns changed response projection.
+- [x] Split IMUI checkbox entry and props owners without changing label identity, model reads,
+      `CheckboxOptions` a11y/test-id wiring, checkbox behavior installation, field chrome, or
+      visual row layout.
+      Result: `boolean_controls/checkbox.rs` is now a thin module/re-export hub,
+      `checkbox/entry.rs` owns label identity, model read, behavior installation, field chrome, and
+      visual row assembly, and `checkbox/props.rs` owns `PressableProps` plus checkbox semantics
+      wiring.
 - [x] Split IMUI radio pressable behavior out of
       `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio.rs` into a private owner module
       without changing label identity, radio a11y, shortcut gating, context-menu keyboard

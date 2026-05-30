@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Checkbox Entry/Props Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI checkbox entry and props ownership split without changing label identity,
+model reads, `CheckboxOptions` a11y/test-id wiring, checkbox behavior installation, field chrome, or
+visual row layout.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox.rs` is now a thin module/re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/entry.rs` owns label identity, model
+  reads, behavior installation, field chrome, checkbox indicator mounting, boolean label mounting,
+  and fill-row visual assembly.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/props.rs` owns `PressableProps`
+  construction plus checkbox role, checked state, a11y label, and test-id wiring.
+- `tools/gate_imui_workstream_source.py` now checks the new entry/props owners and rejects entry
+  or props behavior from drifting back into `checkbox.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_controls::checkbox label_identity::model_controls
+  composition::control_geometry --no-fail-fast`: pass (7 passed, 179 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke
+  --no-fail-fast`: pass (3 passed).
+
 ## Facade Root Surface Owner-Split Evidence - 2026-05-29
 
 Claim verified: remaining IMUI facade root scope/basic/disclosure trait default method declarations
