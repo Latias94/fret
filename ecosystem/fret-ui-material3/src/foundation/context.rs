@@ -219,6 +219,16 @@ pub fn resolved_layout_direction<H: UiHost>(
     }
 }
 
+#[track_caller]
+pub fn with_material_resolved_layout_direction<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    fallback: LayoutDirection,
+    f: impl FnOnce(&mut ElementContext<'_, H>, LayoutDirection) -> R,
+) -> R {
+    let direction = resolved_layout_direction(cx, fallback);
+    cx.provide(direction, |cx| f(cx, direction))
+}
+
 pub fn resolved_text_style<H: UiHost>(
     cx: &ElementContext<'_, H>,
     fallback: Option<TextStyle>,
@@ -317,6 +327,7 @@ pub fn with_material_layout_direction<H: UiHost, R>(
     with_material_layout_direction_override(
         cx,
         MaterialLayoutDirectionOverride::Custom(direction),
+        direction,
         f,
     )
 }
@@ -324,18 +335,29 @@ pub fn with_material_layout_direction<H: UiHost, R>(
 #[track_caller]
 pub fn with_default_material_layout_direction<H: UiHost, R>(
     cx: &mut ElementContext<'_, H>,
+    fallback: LayoutDirection,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    with_material_layout_direction_override(cx, MaterialLayoutDirectionOverride::UseDefault, f)
+    with_material_layout_direction_override(
+        cx,
+        MaterialLayoutDirectionOverride::UseDefault,
+        fallback,
+        f,
+    )
 }
 
 #[track_caller]
 pub fn with_material_layout_direction_override<H: UiHost, R>(
     cx: &mut ElementContext<'_, H>,
     override_policy: MaterialLayoutDirectionOverride,
+    fallback: LayoutDirection,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
-    cx.provide(override_policy, f)
+    let direction = match override_policy {
+        MaterialLayoutDirectionOverride::Custom(direction) => direction,
+        MaterialLayoutDirectionOverride::UseDefault => fallback,
+    };
+    cx.provide(override_policy, |cx| cx.provide(direction, f))
 }
 
 #[track_caller]
@@ -619,8 +641,14 @@ mod tests {
             "m3-context-layout-direction",
             |cx| {
                 assert_eq!(inherited_layout_direction_override(cx), None);
+                assert_eq!(cx.provided::<LayoutDirection>().copied(), None);
                 assert_eq!(
                     resolved_layout_direction(cx, LayoutDirection::Ltr),
+                    LayoutDirection::Ltr
+                );
+                assert_eq!(
+                    cx.spacer(fret_ui::element::SpacerProps::default())
+                        .layout_direction,
                     LayoutDirection::Ltr
                 );
 
@@ -632,18 +660,36 @@ mod tests {
                         ))
                     );
                     assert_eq!(
+                        cx.provided::<LayoutDirection>().copied(),
+                        Some(LayoutDirection::Rtl)
+                    );
+                    assert_eq!(
                         resolved_layout_direction(cx, LayoutDirection::Ltr),
                         LayoutDirection::Rtl
                     );
+                    assert_eq!(
+                        cx.spacer(fret_ui::element::SpacerProps::default())
+                            .layout_direction,
+                        LayoutDirection::Rtl
+                    );
 
-                    with_default_material_layout_direction(cx, |cx| {
+                    with_default_material_layout_direction(cx, LayoutDirection::Ltr, |cx| {
                         assert_eq!(
                             inherited_layout_direction_override(cx),
                             Some(MaterialLayoutDirectionOverride::UseDefault)
                         );
                         assert_eq!(
-                            resolved_layout_direction(cx, LayoutDirection::Rtl),
-                            LayoutDirection::Rtl
+                            cx.provided::<LayoutDirection>().copied(),
+                            Some(LayoutDirection::Ltr)
+                        );
+                        assert_eq!(
+                            resolved_layout_direction(cx, LayoutDirection::Ltr),
+                            LayoutDirection::Ltr
+                        );
+                        assert_eq!(
+                            cx.spacer(fret_ui::element::SpacerProps::default())
+                                .layout_direction,
+                            LayoutDirection::Ltr
                         );
                     });
 
@@ -654,6 +700,51 @@ mod tests {
                 });
 
                 assert_eq!(inherited_layout_direction_override(cx), None);
+                assert_eq!(cx.provided::<LayoutDirection>().copied(), None);
+            },
+        );
+    }
+
+    #[test]
+    fn material_resolved_layout_direction_provides_core_direction_for_elements() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-context-resolved-layout-direction",
+            |cx| {
+                with_material_resolved_layout_direction(cx, LayoutDirection::Rtl, |cx, dir| {
+                    assert_eq!(dir, LayoutDirection::Rtl);
+                    assert_eq!(
+                        cx.provided::<LayoutDirection>().copied(),
+                        Some(LayoutDirection::Rtl)
+                    );
+                    assert_eq!(
+                        cx.spacer(fret_ui::element::SpacerProps::default())
+                            .layout_direction,
+                        LayoutDirection::Rtl
+                    );
+                });
+
+                with_material_layout_direction(cx, LayoutDirection::Ltr, |cx| {
+                    with_material_resolved_layout_direction(cx, LayoutDirection::Rtl, |cx, dir| {
+                        assert_eq!(dir, LayoutDirection::Ltr);
+                        assert_eq!(
+                            cx.provided::<LayoutDirection>().copied(),
+                            Some(LayoutDirection::Ltr)
+                        );
+                        assert_eq!(
+                            cx.spacer(fret_ui::element::SpacerProps::default())
+                                .layout_direction,
+                            LayoutDirection::Ltr
+                        );
+                    });
+                });
+
+                assert_eq!(cx.provided::<LayoutDirection>().copied(), None);
             },
         );
     }

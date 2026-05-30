@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "slug": "material3-layout-direction-provider-bridge-v1",
+  "title": "Material3 Layout Direction Provider Bridge v1",
+  "status": "closed",
+  "updated": "2026-05-30",
+  "scope_kind": "follow_on",
+  "follow_on_of": "flex-rtl-physical-placement-v1",
+  "problem": "Material3 components resolve layout direction through Material-owned context helpers, but the resolved direction was not consistently installed as the core LayoutDirection provider consumed by layout mechanisms such as Flex row RTL placement.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-layout-direction-provider-bridge-v1/CLOSEOUT_AUDIT_2026-05-30.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-layout-direction-provider-bridge-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-layout-direction-provider-bridge-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-layout-direction-provider-bridge-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-layout-direction-provider-bridge-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-layout-direction-provider-bridge-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run Material3 context direction-provider tests and a Tabs RTL physical-order consumer test.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --lib layout_direction_inherits_masks_and_restores material_resolved_layout_direction_provides_core_direction_for_elements",
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test tabs_state rtl_tabs_theme_direction_mirrors_physical_tab_order"
+    ]
+  },
+  "gates": [
+    {
+      "name": "material3-format",
+      "command": "cargo fmt -p fret-ui-material3"
+    },
+    {
+      "name": "material3-context-direction",
+      "command": "cargo nextest run -p fret-ui-material3 --lib layout_direction_inherits_masks_and_restores material_resolved_layout_direction_provides_core_direction_for_elements"
+    },
+    {
+      "name": "material3-tabs-rtl-physical-order",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test tabs_state rtl_tabs_theme_direction_mirrors_physical_tab_order"
+    },
+    {
+      "name": "material3-tests-check",
+      "command": "cargo check -p fret-ui-material3 --features diagnostics --tests"
+    },
+    {
+      "name": "material3-tests-clippy",
+      "command": "cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings"
+    },
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-layout-direction-provider-bridge-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/flex-rtl-physical-placement-v1/CLOSEOUT_AUDIT_2026-05-30.md",
+    "ecosystem/fret-ui-material3/src/foundation/context.rs",
+    "ecosystem/fret-ui-material3/src/tabs.rs",
+    "ecosystem/fret-ui-material3/tests/tabs_state.rs",
+    "docs/workstreams/material3-layout-direction-provider-bridge-v1/CLOSEOUT_AUDIT_2026-05-30.md",
+    "crates/fret-ui/src/elements/cx.rs",
+    "crates/fret-ui/src/tree/layout/flex.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed after bridging resolved Material layout direction into the core provider and proving one Tabs consumer. Split logical edge padding/margins and full component RTL visual audits into follow-ons."
+  }
+}

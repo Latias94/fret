@@ -120,7 +120,8 @@ pub mod context {
         with_material_content_color_policy, with_material_design_variant,
         with_material_design_variant_override, with_material_layout_direction,
         with_material_layout_direction_override, with_material_motion_scheme,
-        with_material_motion_scheme_override, with_material_ripple_configuration,
+        with_material_motion_scheme_override, with_material_resolved_layout_direction,
+        with_material_ripple_configuration,
     };
 }
 

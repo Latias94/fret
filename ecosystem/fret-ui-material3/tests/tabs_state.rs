@@ -425,6 +425,21 @@ fn rtl_tabs_arrow_left_moves_to_next_logical_tab_without_wrapping() {
 }
 
 #[test]
+fn rtl_tabs_theme_direction_mirrors_physical_tab_order() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+    render_tabs(&mut ui, &mut app, &mut services, window, selected, false);
+
+    let first = visual_bounds_by_test_id(&ui, &app, window, "m3-tab-a");
+    let second = visual_bounds_by_test_id(&ui, &app, window, "m3-tab-b");
+
+    assert!(
+        first.origin.x.0 > second.origin.x.0,
+        "expected RTL tab row to place the first logical tab to the physical right of the second logical tab, first={first:?}, second={second:?}"
+    );
+}
+
+#[test]
 fn fixed_primary_tabs_use_content_sized_active_indicator() {
     let (mut app, window, mut services, mut ui, selected) = tabs_harness();
     let scene = settle_tabs(&mut ui, &mut app, &mut services, window, selected, false);
