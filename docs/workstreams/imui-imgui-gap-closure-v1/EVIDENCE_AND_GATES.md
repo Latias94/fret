@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Begin-Menu Open-Policy Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI begin-menu open-policy responsibilities split into trigger-click toggle,
+open-request resolve, and disabled-popup cleanup child owners without changing menubar open-menu
+toggling, stale-open close behavior, disabled menu cleanup, popup close calls, or begin-menu
+response reporting.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy.rs` is now a private
+  module/re-export hub for begin-menu open-policy helpers.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/toggle.rs` owns
+  trigger-click menubar/popup toggling.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/resolve.rs` owns
+  open-request resolution and stale row/popup close cleanup.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/disabled.rs` owns
+  disabled-popup close cleanup.
+- `tools/gate_imui_workstream_source.py` now checks the hub/toggle/resolve/disabled split.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_family_controls::tests
+  --no-fail-fast`: pass (1 passed, 689 skipped).
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation
+  interaction_menu_tabs::submenu_hover --no-fail-fast`: pass (12 passed, 174 skipped).
+- `cargo nextest run -p fret-imui interaction_menu_tabs::submenu_shortcuts --no-fail-fast`:
+  pass (3 passed, 183 skipped).
+- `cargo fmt -p fret-ui-kit --check`: pass.
+
 ## Button Root Wrapper Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI button root wrapper routing split into plain and action child owners without

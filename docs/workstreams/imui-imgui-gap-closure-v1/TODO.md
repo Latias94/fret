@@ -2128,6 +2128,15 @@ Last updated: 2026-05-30
       synchronization, post-trigger reconciliation, and `MenubarActiveTrigger` writes.
       `open_policy.rs` now keeps trigger-click toggling, open-request resolution,
       disabled-popup cleanup, and the private owner re-export.
+- [x] Split remaining IMUI begin-menu open-policy responsibilities out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy.rs` into
+      trigger-click toggle, open-request resolve, and disabled-popup cleanup child owners without
+      changing menubar open-menu toggling, stale-open close behavior, disabled menu cleanup, popup
+      close calls, or begin-menu response reporting.
+      Result: `menu_family_controls/menu_state/open_policy.rs` is now a private re-export hub.
+      `open_policy/toggle.rs` owns trigger-click menubar/popup toggling,
+      `open_policy/resolve.rs` owns open-request resolution and stale row/popup close cleanup, and
+      `open_policy/disabled.rs` owns disabled-popup close cleanup.
 - [x] Split IMUI begin-submenu trigger wiring and open-policy reconciliation out of
       `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu.rs` into private owner modules
       without changing submenu trigger geometry hints, hover/shortcut behavior, sibling switching,

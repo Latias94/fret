@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 begin-menu open-policy child-owner result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy.rs` is now a private
+module/re-export hub. `open_policy/toggle.rs` owns trigger-click menubar/popup toggling,
+`open_policy/resolve.rs` owns open-request resolution and stale row/popup close cleanup, and
+`open_policy/disabled.rs` owns disabled-popup close cleanup. Menubar open-menu synchronization,
+active-trigger behavior, popup open/close semantics, and `DisclosureResponse` reporting remain
+unchanged.
+
 2026-05-30 table header-row cells child-owner result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/header_row.rs` now keeps the keyed header row and
 row wrapping only. `header_row/cells.rs` owns visible-header-cell assembly, sortable/plain wrapper
