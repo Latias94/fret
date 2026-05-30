@@ -811,6 +811,8 @@
     "ecosystem/fret-ui-kit/src/imui/response/hover/lifecycle.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover/press_context.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover/query.rs",
+    "ecosystem/fret-ui-kit/src/imui/response/hover/query/delay.rs",
+    "ecosystem/fret-ui-kit/src/imui/response/hover/query/pointer.rs",
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime.rs",
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag.rs",
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/active_item.rs",

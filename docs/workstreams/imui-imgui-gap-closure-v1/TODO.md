@@ -1448,6 +1448,14 @@ Last updated: 2026-05-31
       consumption, shared-delay flag reads, and `HoverQueryDelayRead` projection.
       `interaction_runtime/hover.rs` keeps active-item blocking, hover-change hook installation,
       timer dispatch, shared-delay delegation, and long-press delegation.
+- [x] Split IMUI hovered query pointer and delay gates into private child owners without changing
+      `hovered_like_imgui`, `FOR_TOOLTIP` expansion, disabled-item hover policy, popup-barrier
+      underlay hover, active-item blocking, nav override behavior, stationary requirements,
+      short/normal delay handling, or `NO_SHARED_DELAY` behavior.
+      Result: `response/hover/query.rs` keeps the public query API and tooltip flag expansion.
+      `response/hover/query/pointer.rs` owns nav, disabled, popup barrier, and active-item
+      pointer gating. `response/hover/query/delay.rs` owns stationary, short/normal, and shared
+      delay query gating.
 - [x] Split IMUI hover active-item blocking and hook installation into private child owners
       without changing hover blocked-by-active-item semantics, stationary/short/normal delay timers,
       shared-delay timers, long-press timer handling, transient consumption, or

@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Hovered Query Pointer/Delay Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI hovered query pointer and delay gates split into private child owners without
+changing `hovered_like_imgui`, `FOR_TOOLTIP` expansion, disabled-item hover policy, popup-barrier
+underlay hover, active-item blocking, nav override behavior, stationary requirements, short/normal
+delay handling, or `NO_SHARED_DELAY` behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/hover/query.rs` keeps the public `hovered_like_imgui` /
+  `is_hovered` API and tooltip flag expansion.
+- `ecosystem/fret-ui-kit/src/imui/response/hover/query/pointer.rs` owns nav override,
+  disabled-item, popup-barrier underlay, and active-item pointer gating.
+- `ecosystem/fret-ui-kit/src/imui/response/hover/query/delay.rs` owns stationary, short/normal
+  delay, and shared-delay query gating.
+- `tools/gate_imui_workstream_source.py` now checks the hovered-query root/pointer/delay split and
+  keeps concrete pointer/delay logic out of `query.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the hovered query child
+  owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-imui disabled_scope_blocks_underlay_and_suppresses_hover_and_click
+  hovered_for_tooltip_requires_stationary_and_delay_short_even_when_disabled
+  hovered_allow_when_blocked_by_popup_reads_underlay_hit_test
+  hovered_allow_when_blocked_by_active_item_allows_hover_while_other_item_is_active
+  no_shared_delay_disables_window_scoped_hover_delay_sharing --no-fail-fast`: pass (5 passed, 181
+  skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test
+  imui_response_contract_smoke --no-fail-fast`: pass (5 passed).
+
 ## IMUI Hover Hook Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI hover hook installation split into hover-change and timer child owners without

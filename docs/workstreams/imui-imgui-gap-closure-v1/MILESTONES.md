@@ -1417,6 +1417,13 @@ state, transient consumption, shared-delay flag reads, and `HoverQueryDelayRead`
 `interaction_runtime/hover.rs` keeps active-item blocking, hover-change hook installation, timer
 dispatch, shared-delay delegation, and long-press delegation.
 
+2026-05-31 hovered query pointer/delay owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/hover/query.rs` keeps the public `hovered_like_imgui` /
+`is_hovered` API and tooltip flag expansion. `response/hover/query/pointer.rs` owns nav override,
+disabled-item, popup-barrier underlay, and active-item pointer gating.
+`response/hover/query/delay.rs` owns stationary, short/normal delay, and shared-delay query
+gating. The Dear ImGui-style `ImUiHoveredFlags` semantics remain unchanged.
+
 2026-05-30 hover active-block/hooks child-owner split result:
 `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/active_block.rs` now owns active-item
 blocking reads. `interaction_runtime/hover/hooks.rs` owns hover-change and timer hook
