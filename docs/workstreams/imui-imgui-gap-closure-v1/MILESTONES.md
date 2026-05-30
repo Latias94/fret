@@ -1129,6 +1129,13 @@ installation, activate/shortcut model toggling, context-menu key handling, trans
 and `ResponseExt` population. `checkbox.rs` keeps label identity, `CheckboxOptions` a11y wiring,
 field chrome, checkbox indicator mounting, boolean label mounting, and fill-row visual assembly.
 
+2026-05-30 checkbox behavior sub-owner split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/behavior.rs` now keeps option
+normalization, shared pressable item behavior installation, and owner dispatch only.
+`checkbox/behavior/activation.rs` owns click toggling, lifecycle edit marking, and changed
+transient emission. `checkbox/behavior/keyboard.rs` owns activate shortcuts plus
+ContextMenu/Shift+F10 requests. `checkbox/behavior/response.rs` owns changed response projection.
+
 2026-05-27 radio behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio/behavior.rs` now owns pressable behavior
 installation, activate/shortcut click signaling, context-menu key handling, transient clicked

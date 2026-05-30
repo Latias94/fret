@@ -5869,6 +5869,42 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Checkbox Behavior Sub-Owner Evidence - 2026-05-30
+
+Claim verified: IMUI checkbox activation, keyboard, and response projection split into private
+owners without changing model toggling, lifecycle edit marking, changed transient emission,
+activate-shortcut repeat/IME gating, ContextMenu/Shift+F10 requests, pressable response
+projection, or public checkbox facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/behavior.rs` keeps option normalization,
+  shared pressable item behavior installation, and owner dispatch.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/behavior/activation.rs` owns click
+  model toggling, lifecycle edit marking, and changed transient emission.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/behavior/keyboard.rs` owns activate
+  shortcut repeat/IME gating plus ContextMenu/Shift+F10 context-menu requests.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/behavior/response.rs` owns changed
+  transient extraction and pressable item response projection.
+- `tools/gate_imui_workstream_source.py` now rejects activation, keyboard, and response projection
+  logic from drifting back into the checkbox behavior hub and checks the three child owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_controls::checkbox --no-fail-fast`: pass; 2 checkbox
+  model behavior tests passed.
+- `cargo nextest run -p fret-imui
+  interaction_shortcuts::disclosure_tree::checkbox_activate_shortcut_preserves_shift_f10_context_menu_request
+  --no-fail-fast`: pass; 1 checkbox shortcut/context-menu test passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Radio Behavior Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI radio pressable behavior moved into a private owner without changing label

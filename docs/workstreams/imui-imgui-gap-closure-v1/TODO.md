@@ -1611,6 +1611,14 @@ Last updated: 2026-05-30
       transient changed reads, and `ResponseExt` population. `checkbox.rs` keeps label identity,
       `CheckboxOptions` a11y wiring, field chrome, checkbox indicator mounting, boolean label
       mounting, and fill-row visual assembly.
+- [x] Split IMUI checkbox behavior into activation, keyboard, and response owners without changing
+      model toggling, lifecycle edit marking, changed transient emission, activate-shortcut
+      repeat/IME gating, ContextMenu/Shift+F10 requests, pressable response projection, or public
+      checkbox facade behavior.
+      Result: `boolean_controls/checkbox/behavior.rs` keeps option normalization, shared pressable
+      item behavior installation, and owner dispatch. `behavior/activation.rs` owns click toggling,
+      `behavior/keyboard.rs` owns shortcut/context-menu key handling, and `behavior/response.rs`
+      owns changed response projection.
 - [x] Split IMUI radio pressable behavior out of
       `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio.rs` into a private owner module
       without changing label identity, radio a11y, shortcut gating, context-menu keyboard
