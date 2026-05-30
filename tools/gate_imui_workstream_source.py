@@ -49,10 +49,13 @@ IMUI_DIRECT_TEXT_PROPS_ALLOWED: dict[Path, dict[str, int]] = {}
 
 EDITOR_DIRECT_TEXT_PROPS_ALLOWED = {
     Path("ecosystem/fret-ui-editor/src/primitives/readout.rs"): {
-        "TextProps {": 20,
+        "TextProps {": 17,
     },
     Path("ecosystem/fret-ui-editor/src/primitives/readout/popup_list.rs"): {
         "TextProps {": 2,
+    },
+    Path("ecosystem/fret-ui-editor/src/primitives/readout/theme_preset.rs"): {
+        "TextProps {": 3,
     },
 }
 
@@ -30101,6 +30104,8 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/readout.rs"),
             required=[
+                "mod theme_preset;",
+                "pub(crate) use theme_preset::{",
                 "pub(crate) fn editor_status_badge_text_props",
                 "pub(crate) fn editor_inline_error_text_props",
                 "pub(crate) fn editor_section_badge_text_props",
@@ -30139,7 +30144,14 @@ def main() -> None:
                 "editor_empty_state_text_is_single_line_and_shrinkable",
                 "editor_tooltip_readout_text_is_single_line_and_shrinkable",
             ],
-            forbidden=[],
+            forbidden=[
+                "pub(crate) fn editor_theme_preset_picker_header_text_props",
+                "pub(crate) fn editor_theme_preset_picker_row_label_text_props",
+                "pub(crate) fn editor_theme_preset_picker_row_status_text_props",
+                "fn editor_theme_preset_picker_header_text_is_single_line_and_shrinkable",
+                "fn editor_theme_preset_picker_row_label_text_keeps_fixed_row_line_box",
+                "fn editor_theme_preset_picker_row_status_text_keeps_fixed_slot",
+            ],
         ),
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/readout/popup_list.rs"),
@@ -34542,11 +34554,13 @@ def main() -> None:
             ],
         ),
         SourceCheck(
-            Path("ecosystem/fret-ui-editor/src/primitives/readout.rs"),
+            Path("ecosystem/fret-ui-editor/src/primitives/readout/theme_preset.rs"),
             required=[
                 "pub(crate) fn editor_theme_preset_picker_header_text_props",
                 "pub(crate) fn editor_theme_preset_picker_row_label_text_props",
                 "pub(crate) fn editor_theme_preset_picker_row_status_text_props",
+                "compact_readout_text_px(text_px)",
+                "weight: FontWeight::MEDIUM,",
                 "editor_theme_preset_picker_header_text_is_single_line_and_shrinkable",
                 "editor_theme_preset_picker_row_label_text_keeps_fixed_row_line_box",
                 "editor_theme_preset_picker_row_status_text_keeps_fixed_slot",

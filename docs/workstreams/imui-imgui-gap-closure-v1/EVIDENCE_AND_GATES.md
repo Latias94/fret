@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Editor Readout Theme-Preset Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: editor theme-preset picker readout text roles split into a private child owner
+without changing compact header sizing, fixed row label/status line boxes, re-export paths, or
+style/theme picker rendering.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the shared non-popup readout hub
+  and re-exports theme preset picker text helpers.
+- `ecosystem/fret-ui-editor/src/primitives/readout/theme_preset.rs` owns the theme picker header,
+  row label, row status text props, and focused fixed-line tests.
+- `tools/gate_imui_workstream_source.py` now checks the root/theme-preset split and keeps direct
+  `TextProps` construction allowlist counts scoped to each readout child owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new theme-preset
+  readout owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  editor_theme_preset_picker_header_text_is_single_line_and_shrinkable
+  editor_theme_preset_picker_row_label_text_keeps_fixed_row_line_box
+  editor_theme_preset_picker_row_status_text_keeps_fixed_slot
+  editor_theme_preset_picker_stamps_listbox_options_and_selected_state
+  editor_theme_preset_picker_click_updates_model_and_replays_reversible_preset --no-fail-fast`:
+  pass (5 passed, 183 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## EnumSelect Overlay Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: editor enum-select overlay request, popup panel/list composition, selected-row

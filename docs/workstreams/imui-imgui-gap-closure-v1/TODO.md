@@ -61,6 +61,12 @@ Last updated: 2026-05-30
       Result: `primitives/readout.rs` now keeps the non-popup editor readout helpers only.
       `primitives/readout/popup_list.rs` owns the popup-list row, centered-row, option-caption, and
       empty-state text helpers plus their focused tests.
+- [x] Split the editor theme-preset picker readout text roles into a private child owner without
+      changing compact header sizing, fixed row label/status line boxes, re-export paths, or
+      style/theme picker rendering.
+      Result: `primitives/readout.rs` now keeps the shared non-popup readout hub and re-exports the
+      theme-preset helpers. `primitives/readout/theme_preset.rs` owns the theme picker header, row
+      label, row status text props, and focused fixed-line tests.
 - [x] Split editor enum-select row rendering, selection commit policy, and item test-id
       sanitization into a private child owner without changing trigger composition, overlay
       dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row

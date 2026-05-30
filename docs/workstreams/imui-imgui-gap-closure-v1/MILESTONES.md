@@ -32,6 +32,12 @@ helpers only. `primitives/readout/popup_list.rs` owns the popup-list row, center
 option-caption, and empty-state text helpers plus the focused popup-list tests. Popup row geometry,
 alignment, empty-state copy, and popup-list text-role coverage remain unchanged.
 
+2026-05-30 editor readout theme-preset child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the shared non-popup readout hub and
+re-exports theme preset picker text helpers. `primitives/readout/theme_preset.rs` owns the theme
+picker header, row label, row status text props, and fixed-line tests. Compact header sizing, row
+label/status line boxes, re-export paths, and style/theme picker rendering remain unchanged.
+
 2026-05-30 editor enum-select row child-owner result:
 `ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps public control/options, trigger
 composition, and overlay orchestration. `controls/enum_select/row.rs` owns option-row rendering,
