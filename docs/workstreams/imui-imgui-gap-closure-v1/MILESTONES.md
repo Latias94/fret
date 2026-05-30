@@ -26,6 +26,14 @@ orchestration plus reset delegation only. `composites/property_row/reset.rs` own
 activation helpers. Row layout, value-slot growth, reset keying, and property chrome semantics
 remain unchanged.
 
+2026-05-30 property-row layout child-owner result:
+`ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the public composite,
+test-facing value slot marker, and row/column child assembly. `composites/property_row/layout.rs`
+owns `PropertyRowLayoutVariant`, theme-derived resolved layout/chrome metrics, auto-stack variant
+selection, min-height application, and focused layout-policy tests. Public row options, row vs
+column rendering, value-slot growth, fixed label line boxes, and reset/action slot mounting remain
+unchanged.
+
 2026-05-30 editor readout popup-list child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the non-popup editor readout
 helpers only. `primitives/readout/popup_list.rs` owns the popup-list row, centered-row,

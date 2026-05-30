@@ -56,6 +56,12 @@ Last updated: 2026-05-30
       Result: `composites/property_row.rs` now keeps the row layout and value orchestration only.
       `composites/property_row/reset.rs` owns `OnPropertyRowReset`,
       `PropertyRowResetOptions`, `PropertyRowReset`, and the reset pressable/activation helpers.
+- [x] Split editor-owned property-row layout policy into a private child owner without changing
+      public row options, row/column/auto variant semantics, theme-derived chrome metrics, slot
+      minimum sizing, fixed label line boxes, value-slot growth, or reset/action slot mounting.
+      Result: `composites/property_row.rs` keeps the public composite and child assembly.
+      `composites/property_row/layout.rs` owns `PropertyRowLayoutVariant`, resolved layout/chrome
+      metrics, auto stack selection, min-height application, and focused layout-policy tests.
 - [x] Split the shared editor popup-list readout helpers into a private child owner without
       changing popup row geometry, alignment, empty-state copy, or popup-list text-role coverage.
       Result: `primitives/readout.rs` now keeps the non-popup editor readout helpers only.

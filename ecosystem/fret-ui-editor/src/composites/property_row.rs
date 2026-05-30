@@ -1,4 +1,5 @@
 //! Inspector-style property row composite (label + value + actions).
+mod layout;
 mod reset;
 
 use std::sync::Arc;
@@ -14,6 +15,11 @@ use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
 use crate::primitives::readout::editor_property_row_label_text_props;
 
+pub use layout::PropertyRowLayoutVariant;
+use layout::{
+    PropertyRowResolvedLayout, apply_property_row_min_height, resolve_property_row_layout,
+    resolve_property_row_layout_variant,
+};
 pub use reset::{OnPropertyRowReset, PropertyRowReset, PropertyRowResetOptions};
 
 #[cfg(test)]
@@ -90,15 +96,6 @@ impl Default for PropertyRowOptions {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum PropertyRowLayoutVariant {
-    #[default]
-    Row,
-    Column,
-    /// Choose `Row` vs `Column` based on last frame bounds.
-    Auto,
-}
-
 #[derive(Clone, Default)]
 pub struct PropertyRow {
     pub options: PropertyRowOptions,
@@ -154,7 +151,7 @@ impl PropertyRow {
             .as_ref()
             .is_some_and(|reset| reset.options.enabled);
 
-        let (
+        let PropertyRowResolvedLayout {
             density,
             affordance_extent,
             gap,
@@ -165,72 +162,12 @@ impl PropertyRow {
             value_max_w,
             status_slot_w,
             reset_slot_w,
-        ) = {
-            let theme = Theme::global(&*cx.app);
-            let metrics = InspectorLayoutMetrics::resolve(theme);
-            let density = metrics.density;
-            let affordance_extent = density.affordance_extent();
-            let gap = self.options.gap.unwrap_or(metrics.column_gap);
-            let trailing_gap = self.options.trailing_gap.unwrap_or(metrics.trailing_gap);
-            let reset_fg = editor_muted_foreground(theme);
-            let auto_below = self
-                .options
-                .auto_stack_below
-                .unwrap_or(metrics.auto_stack_below);
-            let label_w = self.options.label_width.unwrap_or(metrics.label_width);
-            let value_max_w = self
-                .options
-                .value_max_width
-                .unwrap_or(metrics.value_max_width);
-            let status_slot_w = self
-                .options
-                .status_slot_width
-                .unwrap_or(metrics.status_slot_width);
-            let status_slot_w = if status_slot_w.0 > 0.0 {
-                status_slot_w.max(affordance_extent)
-            } else {
-                status_slot_w
-            };
-            let reset_slot_w = self
-                .options
-                .reset_slot_width
-                .unwrap_or(metrics.reset_slot_width);
-            let reset_slot_w = if has_reset_slot {
-                reset_slot_w.max(affordance_extent)
-            } else {
-                reset_slot_w
-            };
+        } = resolve_property_row_layout(Theme::global(&*cx.app), &self.options, has_reset_slot);
 
-            (
-                density,
-                affordance_extent,
-                gap,
-                trailing_gap,
-                reset_fg,
-                auto_below,
-                label_w,
-                value_max_w,
-                status_slot_w,
-                reset_slot_w,
-            )
-        };
-
-        let variant = match self.options.variant {
-            PropertyRowLayoutVariant::Row => PropertyRowLayoutVariant::Row,
-            PropertyRowLayoutVariant::Column => PropertyRowLayoutVariant::Column,
-            PropertyRowLayoutVariant::Auto => {
-                if bounds.is_some_and(|b| b.size.width.0 > 0.0 && b.size.width.0 < auto_below.0) {
-                    PropertyRowLayoutVariant::Column
-                } else {
-                    PropertyRowLayoutVariant::Row
-                }
-            }
-        };
+        let variant = resolve_property_row_layout_variant(self.options.variant, bounds, auto_below);
 
         let mut layout = self.options.layout;
-        if layout.size.min_height.is_none() {
-            layout.size.min_height = Some(Length::Px(density.row_height));
-        }
+        apply_property_row_min_height(&mut layout, density.row_height);
 
         let reset = self.reset.clone();
 
