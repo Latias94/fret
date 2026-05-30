@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Disclosure Visual Style Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI disclosure visual style split into private padding and palette owners without
+changing content padding, theme fallback order, selected/hover/pressed resolution, or foreground
+inheritance.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/style.rs` is now a thin re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/style/padding.rs` owns content
+  padding by disclosure kind.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/style/palette.rs` owns
+  `DisclosurePalette` and palette resolution.
+- `tools/gate_imui_workstream_source.py` now checks the style hub plus both private owners and
+  rejects padding/palette bodies from drifting into the wrong owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the disclosure visual style
+  owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  tree_node_hover_palette_prefers_accent_chrome_over_popover_fill
+  tree_row_label_uses_shared_list_row_text_role
+  disclosure_indicator_uses_shared_chrome_glyph_text_role
+  collapsing_header_default_open_mounts_body --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_disclosure_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Radio Entry/Props Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI radio entry and props owners split without changing label identity,

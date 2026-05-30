@@ -38,6 +38,11 @@ props fill/fit/sampling/UV coverage. Public image-item behavior remains unchange
 while `radio/props.rs` owns `PressableProps` plus radio semantics wiring. Public radio behavior
 remains unchanged.
 
+2026-05-31 disclosure visual style owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/style.rs` is now a thin re-export hub.
+`style/padding.rs` owns content padding by disclosure kind, while `style/palette.rs` owns
+`DisclosurePalette` and palette resolution. Public disclosure behavior remains unchanged.
+
 2026-05-31 facade-writer text test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` is now a thin test hub.
 `tests/text.rs` owns `ui.text(...)` dense single-line coverage, while `tests/wrapped.rs` owns

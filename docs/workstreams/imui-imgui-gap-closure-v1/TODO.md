@@ -71,6 +71,12 @@ Last updated: 2026-05-31
       Result: `boolean_controls/radio.rs` is now a thin module/re-export hub,
       `radio/entry.rs` owns label identity, behavior installation, field chrome, and visual row
       assembly, and `radio/props.rs` owns `PressableProps` plus radio semantics wiring.
+- [x] Split IMUI disclosure visual style into private padding and palette owners without changing
+      content padding, theme fallback order, selected/hover/pressed resolution, or foreground
+      inheritance.
+      Result: `disclosure_controls/visual/style.rs` is now a thin re-export hub.
+      `style/padding.rs` owns content padding by disclosure kind, while `style/palette.rs` owns
+      `DisclosurePalette` and palette resolution.
 - [x] Split IMUI debug-draw path-builder regression coverage into private sub-owners without
       changing path stroke/fill command recording, rectangle/rounded-rectangle sampling, Bezier
       defaults, circular/elliptical arc defaults, or invalid finished-path cleanup.
