@@ -1511,6 +1511,12 @@ Last updated: 2026-05-30
       response lifecycle population, select-all command emission, input filters, policy-command
       installation, and compact input chrome/style selection. `text_controls.rs` is now a private
       focus/input/policy/style/textarea module index and re-export hub.
+- [x] Split IMUI text-control style palette and chrome/layout details into private child owners
+      without changing input-text or textarea chrome, field layout, theme token fallback,
+      selection/preedit color derivation, text style selection, or facade APIs.
+      Result: `text_controls/style.rs` keeps style assembly and public text-style helper routing.
+      `style/palette.rs` owns theme color fallback and selection/preedit derivation, while
+      `style/chrome.rs` owns input padding, border, radius, and fixed field layout.
 - [x] Split IMUI disclosure spec construction out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` into a private owner module without
       changing the public collapsing-header/tree-node surface.

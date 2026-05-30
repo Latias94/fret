@@ -8648,6 +8648,38 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Text-Control Style Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI text-control style palette and chrome/layout details moved into private child
+owners without changing input-text or textarea chrome, field layout, theme token fallback,
+selection/preedit color derivation, text style selection, or facade APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_controls/style.rs` keeps input/textarea style assembly and
+  public text-style helper routing.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/style/palette.rs` owns theme color fallback,
+  selection color normalization, and preedit background alpha derivation.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/style/chrome.rs` owns input padding, border,
+  corner radius, and fixed field layout.
+- `tools/gate_imui_workstream_source.py` now rejects theme palette derivation and chrome layout
+  constants from drifting back into `style.rs` while requiring the two child owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui
+  input_text_model_uses_compact_imui_chrome_without_focus_ring
+  textarea_model_uses_compact_imui_chrome_without_focus_ring --no-fail-fast`: pass; 2 tests,
+  749 skipped.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Menu Item Keyboard Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI menu-item keyboard/navigation behavior moved out of the menu item

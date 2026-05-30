@@ -1804,6 +1804,12 @@ installation, and text-area chrome/text-style selection. `text_controls.rs` keep
 assembly plus shared helper routing. Public `textarea_model(...)` and `textarea_model_with_options`
 facade behavior remains unchanged.
 
+2026-05-30 text-control style child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/text_controls/style.rs` now keeps input/textarea style assembly
+and public text-style helper routing. `style/palette.rs` owns theme color fallback plus
+selection/preedit derivation, while `style/chrome.rs` owns input padding, border, radius, and fixed
+field layout. Input-text and textarea chrome behavior remains unchanged.
+
 2026-05-26 floating-window resize state owner-split result:
 `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs` now owns active resize snapshot
 lookup, drag delta application, min/max size clamping, left/top origin updates, collapse reset,

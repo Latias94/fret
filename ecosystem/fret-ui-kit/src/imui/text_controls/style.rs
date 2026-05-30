@@ -1,58 +1,26 @@
-use fret_core::{Color, Corners, Edges, Px};
-use fret_ui::element::{LayoutStyle, Length, SizeStyle};
+use fret_ui::element::LayoutStyle;
+
+mod chrome;
+mod palette;
 
 pub(super) fn imui_text_input_style_from_theme(theme: &fret_ui::Theme) -> fret_ui::TextInputStyle {
-    let background = theme
-        .color_by_key("card")
-        .or_else(|| theme.color_by_key("muted"))
-        .or_else(|| theme.color_by_key("background"))
-        .unwrap_or_else(|| theme.color_token("background"));
-    let foreground = theme
-        .color_by_key("foreground")
-        .unwrap_or_else(|| theme.color_token("foreground"));
-    let muted_foreground = theme
-        .color_by_key("muted-foreground")
-        .unwrap_or_else(|| theme.color_token("muted-foreground"));
-    let border_idle = theme
-        .color_by_key("input")
-        .or_else(|| theme.color_by_key("border"))
-        .unwrap_or_else(|| theme.color_token("input"));
-    let ring = theme
-        .color_by_key("ring")
-        .unwrap_or_else(|| theme.color_token("ring"));
-    let primary = theme
-        .color_by_key("primary")
-        .unwrap_or_else(|| theme.color_token("primary"));
-    let selection = theme
-        .color_by_key("component.input.selection")
-        .unwrap_or_else(|| theme.color_token("selection.background"));
-    let selection_color = Color {
-        a: 1.0,
-        ..selection
-    };
-    let mut preedit_bg_color = selection_color;
-    preedit_bg_color.a = (preedit_bg_color.a * 0.35).clamp(0.0, 1.0);
+    let palette = palette::imui_text_input_palette(theme);
 
     fret_ui::TextInputStyle {
-        padding: Edges {
-            left: Px(8.0),
-            right: Px(8.0),
-            top: Px(3.0),
-            bottom: Px(3.0),
-        },
-        background,
-        border: Edges::all(Px(1.0)),
-        border_color: border_idle,
-        border_color_focused: ring,
+        padding: chrome::input_padding(),
+        background: palette.background,
+        border: chrome::input_border(),
+        border_color: palette.border_idle,
+        border_color_focused: palette.ring,
         focus_ring: None,
-        corner_radii: Corners::all(super::super::control_chrome::CONTROL_RADIUS),
-        text_color: foreground,
-        placeholder_color: muted_foreground,
-        selection_color,
-        caret_color: foreground,
-        preedit_bg_color,
-        preedit_color: primary,
-        preedit_underline_color: primary,
+        corner_radii: chrome::input_corner_radii(),
+        text_color: palette.foreground,
+        placeholder_color: palette.muted_foreground,
+        selection_color: palette.selection_color,
+        caret_color: palette.foreground,
+        preedit_bg_color: palette.preedit_bg_color,
+        preedit_color: palette.primary,
+        preedit_underline_color: palette.primary,
     }
 }
 
@@ -88,14 +56,5 @@ pub(super) fn default_input_text_style_from_theme(theme: &fret_ui::Theme) -> fre
 }
 
 pub(super) fn input_text_layout() -> LayoutStyle {
-    LayoutStyle {
-        size: SizeStyle {
-            width: Length::Fill,
-            height: Length::Px(super::super::control_chrome::FIELD_MIN_HEIGHT),
-            min_height: Some(Length::Px(super::super::control_chrome::FIELD_MIN_HEIGHT)),
-            max_height: Some(Length::Px(super::super::control_chrome::FIELD_MIN_HEIGHT)),
-            ..Default::default()
-        },
-        ..Default::default()
-    }
+    chrome::input_text_layout()
 }
