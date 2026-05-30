@@ -44,6 +44,12 @@ Last updated: 2026-05-30
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI porting-sugar scoped layout helpers into flow and indent child owners without
+      changing `items`, `same_line`, `indent`, item-spacing token use, content test IDs, focus
+      forwarding, dummy spacer composition, or public facade behavior.
+      Result: `layout_sugar/scoped.rs` is now a private hub. `scoped/flow.rs` owns `items` and
+      `same_line` container routing, while `scoped/indent.rs` owns indent spacer/content
+      composition.
 - [x] Split IMUI floating-window closed/open-model response construction out of the root window
       wrapper without changing open-model read semantics, hidden-window sentinel area id,
       initial-position/size response preservation, normal floating-area routing, on-area chrome

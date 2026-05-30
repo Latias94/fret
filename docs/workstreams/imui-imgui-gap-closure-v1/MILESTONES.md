@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 porting-sugar scoped layout child-owner result:
+`ecosystem/fret-ui-kit/src/imui/layout_sugar/scoped.rs` is now a private hub.
+`scoped/flow.rs` owns `items` and `same_line` container routing, while `scoped/indent.rs` owns
+indent spacer/content composition. Item-spacing token behavior, dummy spacer sizing, content test
+IDs, focus forwarding, and public porting-sugar facade behavior remain unchanged.
+
 2026-05-30 floating-window closed response child-owner result:
 `ecosystem/fret-ui-kit/src/imui/floating_window.rs` now keeps open-model reads and normal
 floating-area render routing. `floating_window/closed.rs` owns the open=false sentinel response,

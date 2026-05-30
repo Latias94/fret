@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Porting-Sugar Scoped Layout Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI porting-sugar scoped layout helpers split into flow and indent child owners
+without changing `items`, `same_line`, `indent`, item-spacing token use, content test IDs, focus
+forwarding, dummy spacer composition, or public facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/layout_sugar/scoped.rs` is now a private hub for scoped layout
+  helper re-exports.
+- `ecosystem/fret-ui-kit/src/imui/layout_sugar/scoped/flow.rs` owns `items` and `same_line`
+  container routing.
+- `ecosystem/fret-ui-kit/src/imui/layout_sugar/scoped/indent.rs` owns indent spacer/content
+  composition.
+- `tools/gate_imui_workstream_source.py` now checks the scoped/flow/indent split and keeps
+  spacer-only helpers in `layout_sugar/spacers.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new flow and indent
+  owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-imui
+  porting_sugar_items_same_line_spacing_dummy_and_indent_use_imgui_style_layout_tokens
+  --no-fail-fast`: pass (1 passed, 185 skipped).
+
 ## Floating-Window Closed Response Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI floating-window closed/open-model response construction split into a private
