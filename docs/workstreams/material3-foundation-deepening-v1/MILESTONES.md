@@ -21,7 +21,7 @@ Status: Complete
 
 ## M2 - Token Matrix Split
 
-Status: Partial
+Status: Complete
 
 - Token source adapters, typed registry, and outcome fixture runners have explicit seams.
 - Large visual fixture logic is reduced or split into family modules.

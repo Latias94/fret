@@ -35,12 +35,11 @@ Last updated: 2026-05-30
     token outcome interface.
   - Gate: token visual fixture tests.
 
-- [ ] M3FD-060: Split large token visual fixture logic into fixture-driven families.
+- [x] M3FD-060: Split large token visual fixture logic into fixture-driven families.
   - Scope: `tokens/visual_fixtures.rs`, `tests/fixtures`, goldens if needed.
-  - Expected result: adding a component family eventually does not require editing one giant outcome module.
+  - Expected result: adding a component family does not require editing one giant outcome module.
   - Gate: `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes`.
-  - Note: M3FD-050 extracted the fixture schema/theme adapter to `visual_fixture_model.rs`; family
-    runner extraction remains a narrow follow-on.
+  - Note: outcome runners now live under `tokens/visual_fixtures/{fields,selection,navigation,overlays,surfaces}.rs`.
 
 - [ ] M3FD-070: Verify and close the lane.
   - Scope: formatting, check, clippy, layering, workstream catalog, diff hygiene.

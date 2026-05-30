@@ -53,6 +53,11 @@ Last updated: 2026-05-30
 - `ecosystem/fret-ui-material3/src/text_field.rs`
 - `ecosystem/fret-ui-material3/src/tokens/visual_fixtures.rs`
 - `ecosystem/fret-ui-material3/src/tokens/visual_fixture_model.rs`
+- `ecosystem/fret-ui-material3/src/tokens/visual_fixtures/fields.rs`
+- `ecosystem/fret-ui-material3/src/tokens/visual_fixtures/selection.rs`
+- `ecosystem/fret-ui-material3/src/tokens/visual_fixtures/navigation.rs`
+- `ecosystem/fret-ui-material3/src/tokens/visual_fixtures/overlays.rs`
+- `ecosystem/fret-ui-material3/src/tokens/visual_fixtures/surfaces.rs`
 - `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`
 - `ecosystem/fret-ui-material3/src/tokens/v30.rs`
 - `docs/workstreams/material3-foundation-deepening-v1/TODO.md`

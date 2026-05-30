@@ -106,7 +106,12 @@
     "ecosystem/fret-ui-material3/src/select.rs",
     "ecosystem/fret-ui-material3/src/text_field.rs",
     "ecosystem/fret-ui-material3/src/tokens/visual_fixture_model.rs",
-    "ecosystem/fret-ui-material3/src/tokens/visual_fixtures.rs"
+    "ecosystem/fret-ui-material3/src/tokens/visual_fixtures.rs",
+    "ecosystem/fret-ui-material3/src/tokens/visual_fixtures/fields.rs",
+    "ecosystem/fret-ui-material3/src/tokens/visual_fixtures/selection.rs",
+    "ecosystem/fret-ui-material3/src/tokens/visual_fixtures/navigation.rs",
+    "ecosystem/fret-ui-material3/src/tokens/visual_fixtures/overlays.rs",
+    "ecosystem/fret-ui-material3/src/tokens/visual_fixtures/surfaces.rs"
   ],
   "adr_refs": [
     "docs/adr/0032-style-tokens-and-theme-resolution.md",

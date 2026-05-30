@@ -25,6 +25,8 @@ This workstream remains active for the next token-family split follow-on.
   Select; field input phase resolution is in `field_motion`.
 - Token visual fixture schema/theme loading moved to `tokens::visual_fixture_model`, leaving
   `visual_fixtures` focused on outcome runners.
+- Token visual fixture outcome runners are split by family:
+  `fields`, `selection`, `navigation`, `overlays`, and `surfaces`.
 
 ## Verified Gates
 
@@ -43,11 +45,10 @@ This workstream remains active for the next token-family split follow-on.
 
 ## Next Executable Task
 
-Continue M3FD-060:
+Continue M3FD-070:
 
-- Split `tokens::visual_fixtures` outcome runners by component family.
-- Keep `visual_fixture_model` as the fixture schema/theme adapter.
-- Preserve `material3_token_visual_fixtures_match_expected_token_outcomes` as the proof surface.
+- Decide whether this lane should close now or stay open for a narrower token registry follow-on.
+- If closing, add a closeout note and keep the final gate list in `EVIDENCE_AND_GATES.md`.
 
 ## Guardrails
 
