@@ -673,6 +673,7 @@
     "ecosystem/fret-ui-kit/src/imui/menu_controls/tests.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/parts.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard/menubar.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard/popup.rs",

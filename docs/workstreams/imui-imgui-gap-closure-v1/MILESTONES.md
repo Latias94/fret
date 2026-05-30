@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 menu item interaction parts child-owner result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` now keeps enabled/action gating,
+menubar policy capture, and thin behavior forwarding. `interaction/parts.rs` owns
+`MenuItemInteractionParts`, `MenuItemInteraction`, pressable prop/a11y construction, and runtime
+data packaging. Menu item enabled/action gating, close-popup/action behavior, keyboard wiring,
+active-trigger installation, and response semantics remain unchanged.
+
 2026-05-30 floating-area drag snapshot child-owner result:
 `ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state.rs` now keeps position/test-id
 state reconciliation, scale-factor lookup, device-pixel snapping, and final state readback.

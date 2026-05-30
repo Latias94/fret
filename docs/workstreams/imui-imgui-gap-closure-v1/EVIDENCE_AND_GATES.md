@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Menu Item Interaction Parts Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI menu-item interaction parts and pressable props split into a private child
+owner without changing enabled/action gating, menubar policy capture, close-popup/action runtime
+data, pressable a11y fields, active-trigger installation, keyboard behavior, or response
+population.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` keeps enabled/action gating,
+  menubar policy capture, and thin forwarding into the behavior owner.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/parts.rs` owns
+  `MenuItemInteractionParts`, `MenuItemInteraction`, pressable props, a11y fields, and runtime data
+  packaging.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` remains the active-trigger,
+  keyboard-install, activation, and response owner.
+- `tools/gate_imui_workstream_source.py` now checks the interaction/parts/behavior split and keeps
+  pressable prop construction out of the interaction hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new parts owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass after keeping interaction fields
+  visible inside `crate::imui::menu_controls` for element and keyboard owners.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_controls::tests --no-fail-fast`:
+  pass (4 passed, 686 skipped).
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation --no-fail-fast`: pass
+  (6 passed, 180 skipped).
+
 ## Floating-Area Drag Snapshot Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI floating-area active drag snapshot discovery split into a private child owner

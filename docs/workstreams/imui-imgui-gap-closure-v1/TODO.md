@@ -44,6 +44,13 @@ Last updated: 2026-05-30
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI menu-item interaction parts/pressable props out of the interaction hub without
+      changing enabled/action gating, menubar policy capture, close-popup/action runtime data,
+      pressable a11y fields, active-trigger installation, keyboard behavior, or response
+      population.
+      Result: `menu_controls/interaction.rs` now keeps enabled/action gating and behavior
+      forwarding. `interaction/parts.rs` owns `MenuItemInteractionParts`,
+      `MenuItemInteraction`, pressable props, a11y fields, and runtime data packaging.
 - [x] Split IMUI floating-area active drag snapshot discovery out of the drag-state owner without
       changing same-window drag filtering, dragging flag readback, start/current pointer position
       reconciliation, device-pixel snapping, test-id refresh, final state readback, or public

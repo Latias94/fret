@@ -3,29 +3,19 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_runtime::ActionId;
 use fret_ui::action::ActivateReason;
-use fret_ui::element::{Length, PressableA11y, PressableProps, PressableState};
+use fret_ui::element::PressableState;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::command::ElementCommandGatingExt as _;
 use crate::imui::menu_family_controls::ImUiMenubarPolicyState;
 use crate::imui::{MenuItemOptions, ResponseExt, active_trigger_behavior, imui_is_disabled};
+use parts::{MenuItemInteractionInput, menu_item_interaction_parts};
 
 mod behavior;
+mod parts;
 
-pub(super) struct MenuItemInteractionParts {
-    pub(super) props: PressableProps,
-    pub(super) runtime: MenuItemInteraction,
-}
-
-pub(super) struct MenuItemInteraction {
-    pub(super) enabled: bool,
-    pub(super) close_popup: Option<fret_runtime::Model<bool>>,
-    pub(super) action: Option<ActionId>,
-    pub(super) activate_shortcut: Option<fret_runtime::KeyChord>,
-    pub(super) shortcut_repeat: bool,
-    pub(super) menubar_policy: Option<ImUiMenubarPolicyState>,
-}
+pub(super) use parts::{MenuItemInteraction, MenuItemInteractionParts};
 
 pub(super) fn resolve_menu_item_interaction<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -40,22 +30,11 @@ pub(super) fn resolve_menu_item_interaction<H: UiHost>(
         enabled = enabled && cx.action_is_enabled(action);
     }
 
-    let mut props = PressableProps::default();
-    props.enabled = enabled;
-    props.focusable = enabled;
-    props.layout.size.width = Length::Fill;
-    props.layout.size.height = Length::Auto;
-    props.a11y = PressableA11y {
-        role: Some(role),
-        label: Some(label.clone()),
-        test_id: options.test_id.clone(),
+    menu_item_interaction_parts(MenuItemInteractionInput {
+        label,
+        options,
+        role,
         checked,
-        expanded: options.expanded,
-        ..Default::default()
-    };
-
-    MenuItemInteractionParts {
-        props,
         runtime: MenuItemInteraction {
             enabled,
             close_popup: options.close_popup.clone(),
@@ -64,7 +43,7 @@ pub(super) fn resolve_menu_item_interaction<H: UiHost>(
             shortcut_repeat: options.shortcut_repeat,
             menubar_policy: cx.provided::<ImUiMenubarPolicyState>().cloned(),
         },
-    }
+    })
 }
 
 pub(super) fn install_menu_item_interaction<H: UiHost>(
