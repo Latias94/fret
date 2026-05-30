@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Facade-Writer Text Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI facade writer text regression tests split into private text and wrapped
+owners without changing dense single-line text semantics, explicit wrapped-text semantics,
+inherited text style assertions, or `UiWriterImUiFacadeExt` forwarding coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` is now a thin hub with `TestWriter` and
+  module routing only.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/tests/text.rs` owns `ui.text(...)` dense
+  single-line coverage.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/tests/wrapped.rs` owns `ui.text_wrapped(...)`
+  explicit wrapping coverage.
+- `tools/gate_imui_workstream_source.py` now checks the hub and both private test owners and
+  rejects text regression bodies from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the facade-writer test-owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  imui_text_item_is_single_line_and_shrinkable
+  imui_text_wrapped_is_explicit_wrapping_text --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test
+  imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Virtual-List Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI virtual-list regression tests split into private fixed/known and measured

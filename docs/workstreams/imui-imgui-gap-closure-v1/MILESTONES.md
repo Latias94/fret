@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 facade-writer text test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` is now a thin test hub.
+`tests/text.rs` owns `ui.text(...)` dense single-line coverage, while `tests/wrapped.rs` owns
+`ui.text_wrapped(...)` explicit wrapping coverage. Public facade writer behavior remains unchanged.
+
 2026-05-31 virtual-list test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/tests.rs` is now a thin test hub.
 `tests/fixed_known.rs` owns fixed and known row clipping coverage, while `tests/measured.rs`

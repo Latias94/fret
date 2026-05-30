@@ -436,6 +436,12 @@ Last updated: 2026-05-31
       text, wrapped text, and bullet text forwarding; `basic_surface/debug_draw.rs` owns
       debug-draw forwarding; and `basic_surface/separators.rs` owns separator and separator-text
       forwarding.
+- [x] Split IMUI facade writer text regression tests into private text and wrapped owners without
+      changing dense single-line text semantics, explicit wrapped-text semantics, inherited text
+      style assertions, or `UiWriterImUiFacadeExt` forwarding coverage.
+      Result: `facade_writer/tests.rs` now keeps `TestWriter` and module routing only.
+      `tests/text.rs` owns `ui.text(...)` single-line coverage, while `tests/wrapped.rs` owns
+      `ui.text_wrapped(...)` explicit wrapping coverage.
 - [x] Split IMUI facade disclosure surface macro owner into collapsing-header and tree-node child
       owners without changing public trait method names, stable identity/depth docs, response
       returns, macro expansion order, or concrete `disclosure_controls` behavior ownership.
