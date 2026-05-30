@@ -19,6 +19,13 @@ state, session planning, commit/cancel helpers, clear-button session reset, and 
 tests. Public TextField options, draft-controller API, buffered blur behavior, and
 `text_field_api_smoke` coverage remain unchanged.
 
+2026-05-30 property-row reset child-owner result:
+`ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the row layout and value
+orchestration plus reset delegation only. `composites/property_row/reset.rs` owns
+`OnPropertyRowReset`, `PropertyRowResetOptions`, `PropertyRowReset`, and the reset pressable /
+activation helpers. Row layout, value-slot growth, reset keying, and property chrome semantics
+remain unchanged.
+
 2026-05-30 editor theme preset picker render child-owner result:
 `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs` now keeps preset
 installation, theme resolution, and render dispatch only. `render.rs` owns listbox semantics,

@@ -1040,6 +1040,7 @@
     "ecosystem/fret-ui-editor/src/composites/property_group.rs",
     "ecosystem/fret-ui-editor/src/composites/property_grid.rs",
     "ecosystem/fret-ui-editor/src/composites/property_row.rs",
+    "ecosystem/fret-ui-editor/src/composites/property_row/reset.rs",
     "ecosystem/fret-ui-editor/src/test_support.rs",
     "ecosystem/fret-ui-editor/src/controls/field_status.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field.rs",

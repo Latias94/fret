@@ -50,6 +50,12 @@ Last updated: 2026-05-30
       Result: `controls/text_field.rs` now keeps the public control/options and layout orchestration
       only. `controls/text_field/buffered.rs` owns the draft controller, buffered state, session
       planning, commit/cancel helpers, clear-button session reset, and the buffered unit tests.
+- [x] Split editor-owned property-row reset affordance handling into a private child owner without
+      changing row layout, value-slot growth, reset keying, glyph render, accessibility label, or
+      property chrome semantics.
+      Result: `composites/property_row.rs` now keeps the row layout and value orchestration only.
+      `composites/property_row/reset.rs` owns `OnPropertyRowReset`,
+      `PropertyRowResetOptions`, `PropertyRowReset`, and the reset pressable/activation helpers.
 - [x] Split editor theme preset picker policy/installation from listbox rendering and row chrome
       assembly without changing preset installation, selected preset sync, label fallback,
       listbox semantics, preset activation, item test IDs, or theme replay behavior.

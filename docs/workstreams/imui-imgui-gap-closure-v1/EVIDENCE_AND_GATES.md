@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Property Row Reset Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: editor-owned property-row reset affordance handling split into a private child owner
+without changing row layout, value-slot growth, reset keying, glyph render, accessibility label,
+or property chrome semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the row layout, label/value
+  orchestration, and reset delegation only.
+- `ecosystem/fret-ui-editor/src/composites/property_row/reset.rs` owns `OnPropertyRowReset`,
+  `PropertyRowResetOptions`, `PropertyRowReset`, and the reset pressable/activation helpers.
+- `tools/gate_imui_workstream_source.py` now checks the root/reset split and keeps reset
+  affordance rendering out of the row orchestrator.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new reset owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor reset_defaults_keep_ascii_glyph_and_accessible_label
+  reset_options_builder_replaces_defaults
+  editor_property_row_reset_glyph_text_keeps_fixed_button_line_box
+  row_label_slot_keeps_fixed_line_box_when_label_text_wraps_under_narrow_layout
+  row_value_slot_keeps_overflow_visible_for_wrapping_value_children
+  row_value_slot_grows_to_wrapping_value_text_under_narrow_layout --no-fail-fast`: pass
+  (6 passed, 182 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `python tools/gate_imui_workstream_source.py`: pass.
+
 ## Editor Theme Preset Picker Render Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: editor theme preset picker policy/installation split from listbox rendering and row
@@ -11677,6 +11710,7 @@ Gate notes:
   - `ecosystem/fret-ui-editor/src/primitives/readout.rs`
   - `ecosystem/fret-ui-editor/src/composites/property_group.rs`
   - `ecosystem/fret-ui-editor/src/composites/property_row.rs`
+  - `ecosystem/fret-ui-editor/src/composites/property_row/reset.rs`
   - `ecosystem/fret-ui-editor/src/controls/field_status.rs`
   - `ecosystem/fret-ui-editor/src/controls/color_edit.rs`
   - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/copy.rs`
