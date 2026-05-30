@@ -1,10 +1,13 @@
 use fret_core::{Point, Size};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
-use super::super::{FloatingWindowResizeHandleTestIds, FloatingWindowResizeSnapshot};
+use super::super::FloatingWindowResizeSnapshot;
 use super::drag_apply::apply_resize_drag;
 use super::initial::initial_float_window_state;
 use super::output::FloatingWindowResizeStateOutput;
+use output_pack::{CommittedResizeState, output_from_committed_resize_state};
+
+mod output_pack;
 
 pub(super) struct ResizeStateCommitInput<'a> {
     pub(super) window_id: GlobalElementId,
@@ -22,20 +25,7 @@ pub(super) fn commit_resize_state<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     input: ResizeStateCommitInput<'_>,
 ) -> FloatingWindowResizeStateOutput {
-    let (
-        position_after_resize,
-        size,
-        title_bar_test_id,
-        close_button_test_id,
-        resize_left_test_id,
-        resize_right_test_id,
-        resize_top_test_id,
-        resize_bottom_test_id,
-        resize_top_left_test_id,
-        resize_top_right_test_id,
-        resize_bottom_left_test_id,
-        resize_corner_test_id,
-    ) = cx.state_for(
+    let committed = cx.state_for(
         input.window_id,
         || initial_float_window_state(input.id, input.initial_size),
         |st| {
@@ -61,38 +51,9 @@ pub(super) fn commit_resize_state<H: UiHost>(
             position =
                 super::super::super::snap_point_to_device_pixels(input.scale_factor, position);
 
-            (
-                position,
-                st.size,
-                st.title_bar_test_id.clone(),
-                st.close_button_test_id.clone(),
-                st.resize_left_test_id.clone(),
-                st.resize_right_test_id.clone(),
-                st.resize_top_test_id.clone(),
-                st.resize_bottom_test_id.clone(),
-                st.resize_top_left_test_id.clone(),
-                st.resize_top_right_test_id.clone(),
-                st.resize_bottom_left_test_id.clone(),
-                st.resize_corner_test_id.clone(),
-            )
+            CommittedResizeState::from_window_state(position, st)
         },
     );
 
-    FloatingWindowResizeStateOutput {
-        position_after_resize,
-        size,
-        resizing: input.resizing,
-        title_bar_test_id,
-        close_button_test_id,
-        handle_test_ids: FloatingWindowResizeHandleTestIds {
-            left: resize_left_test_id,
-            right: resize_right_test_id,
-            top: resize_top_test_id,
-            bottom: resize_bottom_test_id,
-            top_left: resize_top_left_test_id,
-            top_right: resize_top_right_test_id,
-            bottom_left: resize_bottom_left_test_id,
-            bottom_right: resize_corner_test_id,
-        },
-    }
+    output_from_committed_resize_state(committed, input.resizing)
 }

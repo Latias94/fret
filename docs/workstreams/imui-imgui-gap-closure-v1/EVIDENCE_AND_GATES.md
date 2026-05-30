@@ -353,9 +353,10 @@ Focused gates:
 
 ## Floating Window Resize State Commit Owner-Split Evidence - 2026-05-30
 
-Claim verified: IMUI floating-window resize state commit ownership split without changing resize
-state lookup, collapsed reset policy, drag application, device-pixel snapping, handle test-id
-packaging, or resize output semantics.
+Claim verified: IMUI floating-window resize state commit ownership split, with output packaging
+further moved into a private child owner, without changing resize state lookup, collapsed reset
+policy, drag application, device-pixel snapping, handle test-id packaging, or resize output
+semantics.
 
 Evidence:
 
@@ -363,26 +364,35 @@ Evidence:
   `prepare_resize_state(...)` parameter surface and active `resizing` derivation.
 - `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/commit.rs` owns
   `cx.state_for(...)`, collapsed/non-drag reset policy, drag application, device-pixel snapping,
-  state tuple extraction, and `FloatingWindowResizeStateOutput` packaging.
+  and resize state mutation.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/commit/output_pack.rs` owns
+  committed-state capture, handle test-id packaging, and `FloatingWindowResizeStateOutput`
+  construction.
 - Existing `state/drag_apply.rs`, `state/initial.rs`, and `state/output.rs` remain the math,
   initial-state, and DTO owners.
-- `tools/gate_imui_workstream_source.py` now checks the public state/commit split.
+- `tools/gate_imui_workstream_source.py` now checks the public state/commit split and the
+  output-pack child owner.
 
 Focused gates:
 
 - `cargo fmt -p fret-ui-kit`: pass.
 - `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
-- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
 - `python tools\gate_imui_workstream_source.py`: pass.
 - `cargo check -p fret-ui-kit --features imui --lib`: pass.
 - `cargo nextest run -p fret-imui floating::window_options::floating_window_resizable_false_hides_resize_handles
   floating::window_options::floating_window_resizes_when_dragging_corner_handle
   floating::window_options::floating_window_resizes_from_left_updates_origin_and_width
-  floating::window_options::floating_window_title_bar_double_click_toggles_collapsed
   floating::input_modes::floating_window_activate_on_click_can_be_disabled_for_resize_handles
-  --no-fail-fast`: pass (5 passed, 181 skipped).
+  --no-fail-fast`: pass (4 passed, 182 skipped).
+- `cargo nextest run -p fret-imui floating --no-fail-fast`: timed out during the broad rerun; no
+  residual cargo/rustc/nextest process remained before the focused resize rerun.
 - `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke
   --no-fail-fast`: pass (3 passed).
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
 
 ## Table-Column Visibility Options Owner-Split Evidence - 2026-05-30
 

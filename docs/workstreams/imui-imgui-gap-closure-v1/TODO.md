@@ -2008,6 +2008,10 @@ Last updated: 2026-05-30
       Result: `floating_window_resize/state/commit.rs` owns `cx.state_for(...)`, reset/snap/drag
       orchestration, state tuple extraction, and output packaging. `state.rs` now keeps public
       `prepare_resize_state(...)` parameters plus active `resizing` derivation.
+      2026-05-30 follow-up: `state/commit/output_pack.rs` now owns committed-state capture,
+      handle test-id packaging, and `FloatingWindowResizeStateOutput` construction, while
+      `state/commit.rs` keeps `cx.state_for(...)`, reset/snap/drag orchestration, and resize
+      mutation only.
 - [x] Split IMUI floating-window resize handle layout and pointer behavior out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles.rs` into private owner modules
       without changing resize handle placement, cursors, drag lifecycle, activation handoff, or

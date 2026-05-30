@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 floating-window resize state commit output-pack result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/commit.rs` now keeps resize state
+lookup, collapsed/non-drag reset, drag application, and device-pixel snapping. The new
+`state/commit/output_pack.rs` owns committed state capture, handle test-id packaging, and
+`FloatingWindowResizeStateOutput` construction. Resize handle IDs, size/position output, and active
+`resizing` semantics remain unchanged.
+
 2026-05-30 debug-draw path-builder arc child-owner result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods/arcs.rs` is now a
 private module hub. `arcs/circular.rs` owns `arc_to` and `arc_to_fast`, while
