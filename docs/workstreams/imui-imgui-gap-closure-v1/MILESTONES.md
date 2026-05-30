@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 debug-draw media dispatch child-owner result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/dispatch.rs` is now a private
+dispatch hub for media-command routing. `dispatch/raster_commands.rs` owns image/image-region/
+image-quad routing, `dispatch/rounded_commands.rs` owns rounded image/region routing,
+`dispatch/svg_commands.rs` owns SVG image/mask-icon routing, and `dispatch/non_media.rs` keeps an
+exhaustive non-media no-op guard. Raster, rounded, and SVG paint behavior remains in the existing
+paint owners.
+
 2026-05-30 button root wrapper child-owner result:
 `ecosystem/fret-ui-kit/src/imui/button_controls.rs` is now a private re-export hub for
 public-in-IMUI button wrappers. `button_controls/plain.rs` owns button, small-button, arrow, and

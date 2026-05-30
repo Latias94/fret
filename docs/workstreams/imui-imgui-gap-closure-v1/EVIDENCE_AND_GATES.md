@@ -6916,17 +6916,24 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
-## Debug-Draw Media Dispatch Owner-Split Evidence - 2026-05-30
+## Debug-Draw Media Dispatch Child-Owner Split Evidence - 2026-05-30
 
-Claim verified: debug-draw media command dispatch moved from the media hub into a private dispatch
-owner without changing image/region/quad/rounded-image/SVG/mask-icon routing, non-media no-op
-behavior, or raster/rounded/SVG paint behavior.
+Claim verified: debug-draw media command dispatch split into raster, rounded, SVG, and non-media
+child owners without changing image/region/quad/rounded-image/SVG/mask-icon routing, non-media
+no-op behavior, or raster/rounded/SVG paint behavior.
 
 Evidence:
 
-- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/dispatch.rs` owns
-  `paint_debug_draw_media_command(...)` match routing for image, image-region, image-quad,
-  rounded-image, rounded-image-region, SVG image, SVG mask icon, and non-media no-op commands.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/dispatch.rs` is now a private
+  dispatch hub for `paint_debug_draw_media_command(...)`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/dispatch/raster_commands.rs`
+  owns image, image-region, and image-quad routing.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/dispatch/rounded_commands.rs`
+  owns rounded image and rounded image-region routing.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/dispatch/svg_commands.rs` owns
+  SVG image and SVG mask-icon routing.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/dispatch/non_media.rs` keeps an
+  exhaustive non-media no-op guard so future command variants cannot silently bypass routing review.
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` is now a module/type hub for
   `MediaPaintKey`, `RasterImage`, `RasterUvRect`, and the private dispatch/raster/rounded/SVG
   owners.
@@ -6934,20 +6941,21 @@ Evidence:
   `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/rounded.rs`, and
   `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/svg.rs` keep the actual paint
   behavior.
-- `tools/gate_imui_workstream_source.py` now rejects media command match routing from
-  `paint/media.rs` and requires the private `paint/media/dispatch.rs` owner.
+- `tools/gate_imui_workstream_source.py` now checks the dispatch hub and the child routing owners.
 
 Focused gates:
 
 - `cargo fmt -p fret-ui-kit`: pass.
-- `cargo check -p fret-ui-kit --features imui --lib`: pass.
-- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
-  pass; 1 test.
-- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls --no-fail-fast`:
-  pass; 38 tests, 651 skipped.
 - `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
-- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
 - `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls::tests::draw_list
+  --no-fail-fast`: pass (10 passed, 680 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass (1 passed).
+- `cargo fmt -p fret-ui-kit --check`: pass.
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 

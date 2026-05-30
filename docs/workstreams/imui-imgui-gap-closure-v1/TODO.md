@@ -1305,6 +1305,11 @@ Last updated: 2026-05-30
       Result: `paint/media/dispatch.rs` owns `paint_debug_draw_media_command(...)` media match
       routing. `paint/media.rs` is now only the media paint module/type hub for `MediaPaintKey`,
       `RasterImage`, `RasterUvRect`, and child owner wiring.
+      2026-05-30 follow-up: `paint/media/dispatch.rs` is now itself a dispatch hub.
+      `dispatch/raster_commands.rs` owns image/image-region/image-quad routing,
+      `dispatch/rounded_commands.rs` owns rounded image/region routing,
+      `dispatch/svg_commands.rs` owns SVG image/mask-icon routing, and
+      `dispatch/non_media.rs` keeps the exhaustive non-media no-op guard.
 - [x] Split IMUI debug-draw pressable element behavior out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element.rs` into a private owner module
       without changing noninteractive canvas output, pressable canvas wrapping, keyboard activation
