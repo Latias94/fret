@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 table header-row cells child-owner result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/header_row.rs` now keeps the keyed header row and
+row wrapping only. `header_row/cells.rs` owns visible-header-cell assembly, sortable/plain wrapper
+selection, resize response initialization, `TableHeaderResponse` collection, and prepared-cell
+projection. Header visibility, sort/resize metadata, header test IDs, pinned/horizontal-scroll
+wrapping, and aggregate `TableResponse` semantics remain unchanged.
+
 2026-05-30 floating-window resize state commit output-pack result:
 `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/commit.rs` now keeps resize state
 lookup, collapsed/non-drag reset, drag application, and device-pixel snapping. The new

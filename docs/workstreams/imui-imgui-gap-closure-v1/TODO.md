@@ -2171,6 +2171,10 @@ Last updated: 2026-05-30
       collection, and header row wrapping. `render.rs` keeps palette, visible-column, scroll, and
       header-presence decisions plus body rows, root chrome, semantics, and final response
       assembly.
+      2026-05-30 follow-up: `table_controls/header_row.rs` now keeps keyed header-row wrapping
+      only. `header_row/cells.rs` owns visible-header-cell assembly, sortable/plain wrapper
+      selection, resize response initialization, `TableHeaderResponse` collection, and
+      prepared-cell projection.
 - [x] Split IMUI table body-row preparation out of
       `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` into a private owner module
       without changing hidden-column filtering, fallback empty cells, default/explicit test-id
