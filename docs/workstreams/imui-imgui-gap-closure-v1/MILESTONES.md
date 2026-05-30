@@ -94,6 +94,13 @@ presentation coverage. Fixed decimal formatting, plain parsing, affix format/par
 duplicate chrome affix suppression, presentation chrome layering, and degrees helper behavior
 remain unchanged.
 
+2026-05-31 editor numeric-text-entry tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/numeric_text_entry.rs` now keeps numeric text-entry policy
+implementation and test-owner routing. `primitives/numeric_text_entry/tests.rs` owns
+replacement-plan coverage. Focus handoff state, replace-on-focus arming, draft/error
+synchronization, paste/delete/navigation key planning, and text-insertion key detection remain
+unchanged.
+
 2026-05-31 editor numeric-value tests child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/numeric_value.rs` now keeps numeric constraint
 implementation and test-owner routing. `primitives/numeric_value/tests.rs` owns bounds and

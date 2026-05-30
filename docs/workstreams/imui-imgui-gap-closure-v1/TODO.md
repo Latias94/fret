@@ -110,6 +110,12 @@ Last updated: 2026-05-31
       suppression, presentation chrome layering, or degrees helper behavior.
       Result: `primitives/numeric_format.rs` keeps numeric format implementation plus test-owner
       routing. `primitives/numeric_format/tests.rs` owns formatting and presentation coverage.
+- [x] Split editor numeric-text-entry replacement-plan regressions into a private test owner
+      without changing focus handoff state, replace-on-focus arming, draft/error synchronization,
+      paste/delete/navigation key planning, or text-insertion key detection.
+      Result: `primitives/numeric_text_entry.rs` keeps numeric text-entry policy implementation
+      plus test-owner routing. `primitives/numeric_text_entry/tests.rs` owns replacement-plan
+      coverage.
 - [x] Split editor numeric-value constraint regressions into a private test owner without changing
       bound normalization, finite-step filtering, clamp ordering, quantization origin, or scalar
       conversion behavior.

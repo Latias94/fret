@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Numeric-Text-Entry Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor numeric-text-entry replacement-plan regressions split into a private test
+owner without changing focus handoff state, replace-on-focus arming, draft/error synchronization,
+paste/delete/navigation key planning, or text-insertion key detection.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/numeric_text_entry.rs` now keeps numeric text-entry
+  policy implementation and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/primitives/numeric_text_entry/tests.rs` owns replacement-plan
+  coverage.
+- `tools/gate_imui_workstream_source.py` now checks the numeric-text-entry root/test split and
+  keeps migrated regression test names out of the root primitive file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the numeric-text-entry
+  root and test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  replacement_plan_clears_on_plain_character_keys
+  replacement_plan_consumes_delete_keys
+  replacement_plan_disarms_on_navigation_keys
+  replacement_plan_clears_on_platform_paste_shortcut --no-fail-fast`: pass (4 passed, 194
+  skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Numeric-Format Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor numeric-format helper regressions split into a private test owner without

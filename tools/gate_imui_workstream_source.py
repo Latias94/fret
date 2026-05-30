@@ -30290,6 +30290,39 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/numeric_text_entry.rs"),
+            required=[
+                "mod tests;",
+                "pub enum NumericInputSelectionBehavior",
+                "pub(crate) struct NumericTextEntryFocusState",
+                "pub(crate) struct NumericTextEntryFocusHandoffState",
+                "fn replacement_plan(down: KeyDownCx) -> NumericReplacementPlan",
+                "fn is_text_insertion_key(key: KeyCode) -> bool",
+                "pub(crate) fn sync_numeric_text_entry_focus",
+                "pub(crate) fn clear_numeric_error_when_draft_changes",
+            ],
+            forbidden=[
+                "replacement_plan_clears_on_plain_character_keys",
+                "replacement_plan_consumes_delete_keys",
+                "replacement_plan_disarms_on_navigation_keys",
+                "replacement_plan_clears_on_platform_paste_shortcut",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/numeric_text_entry/tests.rs"),
+            required=[
+                "replacement_plan_clears_on_plain_character_keys",
+                "replacement_plan_consumes_delete_keys",
+                "replacement_plan_disarms_on_navigation_keys",
+                "replacement_plan_clears_on_platform_paste_shortcut",
+                "KeyCode::Digit2",
+                "KeyCode::Backspace",
+                "KeyCode::ArrowLeft",
+                "KeyCode::KeyV",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/numeric_value.rs"),
             required=[
                 "mod tests;",
