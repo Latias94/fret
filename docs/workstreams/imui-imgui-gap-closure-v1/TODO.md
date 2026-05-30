@@ -86,6 +86,11 @@ Last updated: 2026-05-31
       wrapping value growth, or layout-query coverage.
       Result: `composites/property_row.rs` keeps implementation only plus `mod tests;`.
       `composites/property_row/tests.rs` owns the wrapping/value-slot regression harness.
+- [x] Split editor inspector-panel narrow-header title regression into a private test owner without
+      changing panel composition, title text-role routing, toolbar/body slots, or layout query
+      coverage.
+      Result: `composites/inspector_panel.rs` keeps panel composition only plus test-owner routing.
+      `composites/inspector_panel/tests.rs` owns the single-line title layout regression harness.
 - [x] Split editor gradient empty-state text-role regression into a private test owner without
       changing gradient stop composition, preview canvas behavior, empty-state copy, or editor
       readout text-role routing.

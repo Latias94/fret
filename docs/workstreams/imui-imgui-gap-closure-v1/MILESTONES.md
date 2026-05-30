@@ -63,6 +63,12 @@ harness, including value-slot marker lookup, wrapping text services, and layout-
 Public row options, label line-box behavior, wrapping value growth, and value-slot overflow
 contracts remain unchanged.
 
+2026-05-31 editor inspector-panel tests child-owner result:
+`ecosystem/fret-ui-editor/src/composites/inspector_panel.rs` now keeps panel composition and
+test-owner routing. `composites/inspector_panel/tests.rs` owns the single-line title layout
+regression harness. Panel composition, title text-role routing, toolbar/body slots, and layout query
+coverage remain unchanged.
+
 2026-05-31 editor gradient tests child-owner result:
 `ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps gradient editor composition
 and preview implementation. `composites/gradient_editor/tests.rs` owns empty-state text-role

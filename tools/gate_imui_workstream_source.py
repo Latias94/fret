@@ -30262,11 +30262,28 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/composites/inspector_panel.rs"),
             required=[
+                "mod tests;",
                 "use crate::primitives::readout::editor_inspector_panel_title_text_props;",
                 "editor_inspector_panel_title_text_props(",
+            ],
+            forbidden=[
+                "row.push(cx.text(title.clone()))",
+                "SpacerProps",
+                "TextProps {",
+                "TextStyle {",
                 "inspector_panel_title_stays_single_line_when_header_is_narrow",
                 "current_bounds_for_element(",
                 "WrappingTextServices",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/composites/inspector_panel/tests.rs"),
+            required=[
+                "inspector_panel_title_stays_single_line_when_header_is_narrow",
+                "current_bounds_for_element(",
+                "WrappingTextServices",
+                "TextWrap::None",
+                "TextOverflow::Ellipsis",
             ],
             forbidden=[
                 "row.push(cx.text(title.clone()))",

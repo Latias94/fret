@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor InspectorPanel Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor inspector-panel narrow-header title regression split into a private test
+owner without changing panel composition, title text-role routing, toolbar/body slots, or layout
+query coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/inspector_panel.rs` now keeps panel composition and a
+  thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/composites/inspector_panel/tests.rs` owns the single-line title
+  layout regression harness.
+- `tools/gate_imui_workstream_source.py` now checks the inspector panel root/test split and keeps
+  migrated regression harness markers out of the root composite file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the inspector panel test
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  inspector_panel_title_stays_single_line_when_header_is_narrow --no-fail-fast`: pass (1 passed,
+  197 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Editor Gradient Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor gradient empty-state text-role regression split into a private test owner
