@@ -1938,6 +1938,9 @@ fn inject_comp_secondary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
     cfg.metrics
         .entry("md.comp.secondary-navigation-tab.scrollable.min-tab-width".to_string())
         .or_insert(90.0);
+    cfg.metrics
+        .entry("md.comp.secondary-navigation-tab.with-icon.icon.size".to_string())
+        .or_insert(24.0);
     cfg.numbers
         .entry("md.comp.secondary-navigation-tab.with-label-text.label-text.weight".to_string())
         .or_insert(500.0);
@@ -2749,6 +2752,13 @@ fn inject_comp_secondary_navigation_tab_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.secondary-navigation-tab.with-label-text.inactive.focus.label-text.color",
         "md.comp.secondary-navigation-tab.with-label-text.inactive.hover.label-text.color",
         "md.comp.secondary-navigation-tab.with-label-text.inactive.pressed.label-text.color",
+        "md.comp.secondary-navigation-tab.with-icon.active.icon.color",
+        "md.comp.secondary-navigation-tab.with-icon.active.focus.icon.color",
+        "md.comp.secondary-navigation-tab.with-icon.active.hover.icon.color",
+        "md.comp.secondary-navigation-tab.with-icon.active.pressed.icon.color",
+        "md.comp.secondary-navigation-tab.with-icon.inactive.focus.icon.color",
+        "md.comp.secondary-navigation-tab.with-icon.inactive.hover.icon.color",
+        "md.comp.secondary-navigation-tab.with-icon.inactive.pressed.icon.color",
         "md.comp.secondary-navigation-tab.active.focus.state-layer.color",
         "md.comp.secondary-navigation-tab.active.hover.state-layer.color",
         "md.comp.secondary-navigation-tab.active.pressed.state-layer.color",
@@ -2762,6 +2772,11 @@ fn inject_comp_secondary_navigation_tab_colors_from_sys(cfg: &mut ThemeConfig) {
     copy_color(
         cfg,
         "md.comp.secondary-navigation-tab.with-label-text.inactive.label-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.secondary-navigation-tab.with-icon.inactive.icon.color",
         "md.sys.color.on-surface-variant",
     );
 }
@@ -4080,6 +4095,12 @@ mod tests {
         );
         assert_eq!(
             cfg.metrics
+                .get("md.comp.secondary-navigation-tab.with-icon.icon.size")
+                .copied(),
+            Some(24.0)
+        );
+        assert_eq!(
+            cfg.metrics
                 .get("md.comp.button.small.container.height")
                 .copied(),
             Some(40.0)
@@ -4268,6 +4289,11 @@ mod tests {
             cfg.colors
                 .contains_key("md.comp.secondary-navigation-tab.container.color"),
             "expected secondary navigation tab color tokens to be derived from sys roles"
+        );
+        assert!(
+            cfg.colors
+                .contains_key("md.comp.secondary-navigation-tab.with-icon.active.icon.color"),
+            "expected secondary navigation tab icon color tokens to be derived from sys roles"
         );
     }
 

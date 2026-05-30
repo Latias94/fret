@@ -8,15 +8,16 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, KeyCode, Px, SemanticsOrientation, SemanticsRole, TextOverflow,
-    TextWrap,
+    Axis, Color, Corners, Edges, KeyCode, Px, Rect, SemanticsOrientation, SemanticsRole, SvgFit,
+    TextOverflow, TextWrap,
 };
+use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, ScrollAxis, ScrollProps,
-    SemanticsDecoration, SemanticsProps, TextProps,
+    SemanticsDecoration, SemanticsProps, SvgIconProps, TextProps,
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
@@ -28,6 +29,7 @@ use fret_ui_kit::{
 use crate::foundation::active_indicator::{ActiveIndicatorRect, material_active_indicator_layer};
 use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
+use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
@@ -41,6 +43,7 @@ use crate::tokens::tabs as tabs_tokens;
 struct TabListLayoutRuntime {
     tabs: LayoutProbeList,
     labels: LayoutProbeList,
+    icons: LayoutProbeList,
 }
 
 #[derive(Debug, Clone)]
@@ -62,6 +65,7 @@ impl TabPartTestIds {
 pub struct TabItem {
     value: Arc<str>,
     label: Arc<str>,
+    leading_icon: Option<IconId>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
@@ -72,6 +76,7 @@ impl TabItem {
         Self {
             value: value.into(),
             label: label.into(),
+            leading_icon: None,
             disabled: false,
             a11y_label: None,
             test_id: None,
@@ -80,6 +85,11 @@ impl TabItem {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -367,6 +377,7 @@ impl Tabs {
                         cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
                             rt.tabs.ensure_len(tab_count);
                             rt.labels.ensure_len(tab_count);
+                            rt.icons.ensure_len(tab_count);
                         });
                         let indicator = tab_list_indicator(
                             cx,
@@ -516,6 +527,7 @@ fn material_tab<H: UiHost>(
 ) -> AnyElement {
     let value = item.value.clone();
     let label = item.label.clone();
+    let leading_icon = item.leading_icon.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
 
@@ -525,7 +537,11 @@ fn material_tab<H: UiHost>(
         cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
             rt.tabs.ensure_len(set_size);
             rt.labels.ensure_len(set_size);
+            rt.icons.ensure_len(set_size);
             rt.tabs.set(idx, pressable_id);
+            if leading_icon.is_none() {
+                rt.icons.set(idx, GlobalElementId(0));
+            }
         });
 
         if enabled {
@@ -644,6 +660,8 @@ fn material_tab<H: UiHost>(
 
                 let (
                     label_color,
+                    icon_color,
+                    icon_size,
                     state_layer_color,
                     state_layer_target,
                     ripple_base_opacity,
@@ -656,6 +674,9 @@ fn material_tab<H: UiHost>(
                         |color| color.resolve(theme),
                         || tabs_tokens::label_color_for(theme, token_kind, selected, interaction),
                     );
+                    let icon_color =
+                        tabs_tokens::icon_color_for(theme, token_kind, selected, interaction);
+                    let icon_size = tabs_tokens::icon_size_for(theme, token_kind);
                     let state_layer_color = resolve_override_slot_with(
                         style_override.state_layer_color.as_ref(),
                         states,
@@ -680,6 +701,8 @@ fn material_tab<H: UiHost>(
                     let indication_config = material_pressable_indication_config(theme, None);
                     (
                         label_color,
+                        icon_color,
+                        icon_size,
                         state_layer_color,
                         state_layer_target,
                         ripple_base_opacity,
@@ -711,6 +734,20 @@ fn material_tab<H: UiHost>(
                     token_kind,
                     label_test_id,
                 );
+                let icon_test_id = test_id.as_ref().map(|id| part_test_id(id, "icon"));
+
+                let content = tab_content(
+                    cx,
+                    leading_icon.clone(),
+                    icon_size,
+                    icon_color,
+                    label_el,
+                    tabs_tokens::leading_icon_label_gap(),
+                    container_id,
+                    idx,
+                    set_size,
+                    icon_test_id,
+                );
 
                 let mut row = FlexProps::default();
                 row.layout.size.width = if scrollable {
@@ -734,18 +771,12 @@ fn material_tab<H: UiHost>(
                 row.justify = MainAlign::Center;
                 row.align = CrossAlign::Center;
                 row.padding = if scrollable {
-                    Edges {
-                        left: Px(16.0),
-                        right: Px(16.0),
-                        top: Px(0.0),
-                        bottom: Px(0.0),
-                    }
-                    .into()
+                    tabs_tokens::horizontal_text_padding().into()
                 } else {
                     Edges::all(Px(0.0)).into()
                 };
 
-                let mut chrome = cx.flex(row, move |_cx| vec![ink, label_el]);
+                let mut chrome = cx.flex(row, move |_cx| vec![ink, content]);
                 if let Some(test_id) = chrome_test_id.clone() {
                     chrome = chrome.test_id(test_id);
                 }
@@ -758,6 +789,86 @@ fn material_tab<H: UiHost>(
         }
 
         (pressable_props, vec![pointer_region])
+    })
+}
+
+fn tab_content<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    leading_icon: Option<IconId>,
+    icon_size: Px,
+    icon_color: Color,
+    label_el: AnyElement,
+    gap: Px,
+    container_id: GlobalElementId,
+    idx: usize,
+    set_size: usize,
+    icon_test_id: Option<Arc<str>>,
+) -> AnyElement {
+    cx.named("tab_content", move |cx| {
+        let mut children = Vec::new();
+        if let Some(icon) = leading_icon.clone() {
+            let mut icon_el = tab_icon(
+                cx,
+                container_id,
+                idx,
+                set_size,
+                &icon,
+                icon_size,
+                icon_color,
+            );
+            if let Some(icon_test_id) = icon_test_id.clone() {
+                icon_el = icon_el.test_id(icon_test_id);
+            }
+            children.push(icon_el);
+        }
+        children.push(label_el);
+
+        let mut content = FlexProps::default();
+        content.layout.size.width = Length::Auto;
+        content.layout.size.min_width = Some(Length::Px(Px(0.0)));
+        content.layout.size.max_width = Some(Length::Fill);
+        content.layout.flex.shrink = 1.0;
+        content.direction = Axis::Horizontal;
+        content.justify = MainAlign::Center;
+        content.align = CrossAlign::Center;
+        content.gap = if leading_icon.is_some() {
+            gap.into()
+        } else {
+            Px(0.0).into()
+        };
+        content.padding = Edges::all(Px(0.0)).into();
+
+        cx.flex(content, move |_cx| children)
+    })
+}
+
+fn tab_icon<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    container_id: GlobalElementId,
+    idx: usize,
+    set_size: usize,
+    icon: &IconId,
+    size: Px,
+    color: Color,
+) -> AnyElement {
+    let icon = icon.clone();
+
+    cx.named("tab_icon", move |cx| {
+        let svg = svg_source_for_icon(cx, &icon);
+
+        let mut props = SvgIconProps::new(svg);
+        props.fit = SvgFit::Contain;
+        props.layout.size.width = Length::Px(size);
+        props.layout.size.height = Length::Px(size);
+        props.layout.flex.shrink = 0.0;
+        props.color = color;
+        let icon_el = cx.svg_icon_props(props);
+        let icon_id = icon_el.id;
+        cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
+            rt.icons.ensure_len(set_size);
+            rt.icons.set(idx, icon_id);
+        });
+        icon_el
     })
 }
 
@@ -775,12 +886,6 @@ fn tab_label<H: UiHost>(
     let label = label.clone();
 
     cx.named("tab_label", move |cx| {
-        let label_id = cx.root_id();
-        cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
-            rt.labels.ensure_len(set_size);
-            rt.labels.set(idx, label_id);
-        });
-
         let style = {
             let theme = Theme::global(&*cx.app);
             tabs_tokens::label_text_style_for(theme, token_kind)
@@ -802,6 +907,11 @@ fn tab_label<H: UiHost>(
         props.overflow = TextOverflow::Clip;
 
         let mut label_el = cx.text_props(props);
+        let label_id = label_el.id;
+        cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
+            rt.labels.ensure_len(set_size);
+            rt.labels.set(idx, label_id);
+        });
         if let Some(test_id) = test_id.clone() {
             label_el = label_el.test_id(test_id);
         }
@@ -975,6 +1085,13 @@ fn tab_list_indicator<H: UiHost>(
                 })
             })
             .and_then(|label_id| cx.last_bounds_for_element(label_id));
+        let icon_bounds = selected_idx
+            .and_then(|idx| {
+                cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
+                    rt.icons.get(idx)
+                })
+            })
+            .and_then(|icon_id| cx.last_bounds_for_element(icon_id));
 
         let mut states = WidgetStates::empty();
         if disabled {
@@ -996,15 +1113,6 @@ fn tab_list_indicator<H: UiHost>(
                     } else {
                         0.0
                     };
-                    let content_width = if tabs_tokens::indicator_matches_content(token_kind) {
-                        label_bounds
-                            .map(|bounds| bounds.size.width.0)
-                            .unwrap_or(min_width)
-                            .max(min_width)
-                            .min(tab_bounds.size.width.0)
-                    } else {
-                        tab_bounds.size.width.0
-                    };
                     let color = resolve_override_slot_with(
                         style_override.active_indicator_color.as_ref(),
                         states,
@@ -1018,7 +1126,29 @@ fn tab_list_indicator<H: UiHost>(
                     let tab_y = container_bounds
                         .map(|bounds| tab_bounds.origin.y.0 - bounds.origin.y.0)
                         .unwrap_or(0.0);
-                    let x = tab_x + (tab_bounds.size.width.0 - content_width) * 0.5;
+                    let (x, content_width) = if tabs_tokens::indicator_matches_content(token_kind) {
+                        let content_span = tab_content_span(label_bounds, icon_bounds);
+                        if let Some((content_left, content_width)) = content_span {
+                            let target_width = content_width.max(min_width);
+                            let content_x = container_bounds
+                                .map(|bounds| content_left - bounds.origin.x.0)
+                                .unwrap_or_else(|| {
+                                    tab_x + (tab_bounds.size.width.0 - content_width) * 0.5
+                                });
+                            (
+                                content_x + (content_width - target_width) * 0.5,
+                                target_width,
+                            )
+                        } else {
+                            let target_width = min_width.min(tab_bounds.size.width.0);
+                            (
+                                tab_x + (tab_bounds.size.width.0 - target_width) * 0.5,
+                                target_width,
+                            )
+                        }
+                    } else {
+                        (tab_x, tab_bounds.size.width.0)
+                    };
                     let y = tab_y + (tab_bounds.size.height.0 - height.0).max(0.0);
                     (x, y, content_width, height.0, color)
                 } else if let Some(idx) = selected_idx {
@@ -1092,4 +1222,18 @@ fn tab_list_indicator<H: UiHost>(
             indicator_test_id.clone(),
         )
     })
+}
+
+fn tab_content_span(label_bounds: Option<Rect>, icon_bounds: Option<Rect>) -> Option<(f32, f32)> {
+    match (label_bounds, icon_bounds) {
+        (Some(label), Some(icon)) => {
+            let left = label.origin.x.0.min(icon.origin.x.0);
+            let right =
+                (label.origin.x.0 + label.size.width.0).max(icon.origin.x.0 + icon.size.width.0);
+            Some((left, (right - left).max(0.0)))
+        }
+        (Some(label), None) => Some((label.origin.x.0, label.size.width.0)),
+        (None, Some(icon)) => Some((icon.origin.x.0, icon.size.width.0)),
+        (None, None) => None,
+    }
 }

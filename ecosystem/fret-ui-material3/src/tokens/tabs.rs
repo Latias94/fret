@@ -55,6 +55,19 @@ pub(crate) fn active_indicator_min_width(theme: &Theme) -> Px {
         .unwrap_or(Px(24.0))
 }
 
+pub(crate) fn horizontal_text_padding() -> fret_core::Edges {
+    fret_core::Edges {
+        left: Px(16.0),
+        right: Px(16.0),
+        top: Px(0.0),
+        bottom: Px(0.0),
+    }
+}
+
+pub(crate) fn leading_icon_label_gap() -> Px {
+    Px(8.0)
+}
+
 pub(crate) fn scrollable_edge_padding_for(theme: &Theme, kind: NavigationTabKind) -> Px {
     theme
         .metric_by_key(scrollable_edge_padding_key(kind))
@@ -72,6 +85,40 @@ pub(crate) fn active_indicator_color(theme: &Theme) -> Color {
         .color_by_key("md.comp.primary-navigation-tab.active-indicator.color")
         .or_else(|| theme.color_by_key("md.sys.color.primary"))
         .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
+}
+
+pub(crate) fn icon_size_for(theme: &Theme, kind: NavigationTabKind) -> Px {
+    theme.metric_by_key(icon_size_key(kind)).unwrap_or(Px(24.0))
+}
+
+pub(crate) fn icon_color_for(
+    theme: &Theme,
+    kind: NavigationTabKind,
+    active: bool,
+    interaction: TabInteraction,
+) -> Color {
+    theme
+        .color_by_key(icon_color_key(kind, active, interaction))
+        .or_else(|| match (kind, active) {
+            (NavigationTabKind::Primary, true) => theme.color_by_key("md.sys.color.primary"),
+            (NavigationTabKind::Primary, false) => {
+                theme.color_by_key("md.sys.color.on-surface-variant")
+            }
+            (NavigationTabKind::Secondary, true) => theme.color_by_key("md.sys.color.on-surface"),
+            (NavigationTabKind::Secondary, false) => {
+                theme.color_by_key("md.sys.color.on-surface-variant")
+            }
+        })
+        .unwrap_or_else(|| match (kind, active) {
+            (NavigationTabKind::Primary, true) => theme.color_token("md.sys.color.primary"),
+            (NavigationTabKind::Primary, false) => {
+                theme.color_token("md.sys.color.on-surface-variant")
+            }
+            (NavigationTabKind::Secondary, true) => theme.color_token("md.sys.color.on-surface"),
+            (NavigationTabKind::Secondary, false) => {
+                theme.color_token("md.sys.color.on-surface-variant")
+            }
+        })
 }
 
 pub(crate) fn active_indicator_shape_for(theme: &Theme, kind: NavigationTabKind) -> Corners {
@@ -223,6 +270,13 @@ fn scrollable_min_tab_width_key(kind: NavigationTabKind) -> &'static str {
     }
 }
 
+fn icon_size_key(kind: NavigationTabKind) -> &'static str {
+    match kind {
+        NavigationTabKind::Primary => "md.comp.primary-navigation-tab.with-icon.icon.size",
+        NavigationTabKind::Secondary => "md.comp.secondary-navigation-tab.with-icon.icon.size",
+    }
+}
+
 fn label_text_style_key(kind: NavigationTabKind) -> &'static str {
     match kind {
         NavigationTabKind::Primary => "md.comp.primary-navigation-tab.with-label-text.label-text",
@@ -239,6 +293,63 @@ fn label_text_weight_key(kind: NavigationTabKind) -> &'static str {
         }
         NavigationTabKind::Secondary => {
             "md.comp.secondary-navigation-tab.with-label-text.label-text.weight"
+        }
+    }
+}
+
+fn icon_color_key(
+    kind: NavigationTabKind,
+    active: bool,
+    interaction: TabInteraction,
+) -> &'static str {
+    match (kind, active, interaction) {
+        (NavigationTabKind::Primary, true, TabInteraction::Focused) => {
+            "md.comp.primary-navigation-tab.with-icon.active.focus.icon.color"
+        }
+        (NavigationTabKind::Primary, true, TabInteraction::Hovered) => {
+            "md.comp.primary-navigation-tab.with-icon.active.hover.icon.color"
+        }
+        (NavigationTabKind::Primary, true, TabInteraction::Pressed) => {
+            "md.comp.primary-navigation-tab.with-icon.active.pressed.icon.color"
+        }
+        (NavigationTabKind::Primary, true, TabInteraction::Default) => {
+            "md.comp.primary-navigation-tab.with-icon.active.icon.color"
+        }
+        (NavigationTabKind::Primary, false, TabInteraction::Focused) => {
+            "md.comp.primary-navigation-tab.with-icon.inactive.focus.icon.color"
+        }
+        (NavigationTabKind::Primary, false, TabInteraction::Hovered) => {
+            "md.comp.primary-navigation-tab.with-icon.inactive.hover.icon.color"
+        }
+        (NavigationTabKind::Primary, false, TabInteraction::Pressed) => {
+            "md.comp.primary-navigation-tab.with-icon.inactive.pressed.icon.color"
+        }
+        (NavigationTabKind::Primary, false, TabInteraction::Default) => {
+            "md.comp.primary-navigation-tab.with-icon.inactive.icon.color"
+        }
+        (NavigationTabKind::Secondary, true, TabInteraction::Focused) => {
+            "md.comp.secondary-navigation-tab.with-icon.active.focus.icon.color"
+        }
+        (NavigationTabKind::Secondary, true, TabInteraction::Hovered) => {
+            "md.comp.secondary-navigation-tab.with-icon.active.hover.icon.color"
+        }
+        (NavigationTabKind::Secondary, true, TabInteraction::Pressed) => {
+            "md.comp.secondary-navigation-tab.with-icon.active.pressed.icon.color"
+        }
+        (NavigationTabKind::Secondary, true, TabInteraction::Default) => {
+            "md.comp.secondary-navigation-tab.with-icon.active.icon.color"
+        }
+        (NavigationTabKind::Secondary, false, TabInteraction::Focused) => {
+            "md.comp.secondary-navigation-tab.with-icon.inactive.focus.icon.color"
+        }
+        (NavigationTabKind::Secondary, false, TabInteraction::Hovered) => {
+            "md.comp.secondary-navigation-tab.with-icon.inactive.hover.icon.color"
+        }
+        (NavigationTabKind::Secondary, false, TabInteraction::Pressed) => {
+            "md.comp.secondary-navigation-tab.with-icon.inactive.pressed.icon.color"
+        }
+        (NavigationTabKind::Secondary, false, TabInteraction::Default) => {
+            "md.comp.secondary-navigation-tab.with-icon.inactive.icon.color"
         }
     }
 }

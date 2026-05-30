@@ -8,6 +8,7 @@ use fret_core::{
     AppWindowId, Paint, Point, Px, Rect, Scene, SceneOp, SemanticsNode, SemanticsOrientation,
     SemanticsRole, Size, UiServices,
 };
+use fret_icons::ids;
 use fret_runtime::{Model, ModelHost, PlatformCapabilities};
 use fret_ui::UiTree;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
@@ -148,6 +149,64 @@ fn settle_tabs_with_variant(
     scene
 }
 
+fn render_leading_icon_tabs(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+    scrollable: bool,
+    variant: TabsVariant,
+) {
+    let root =
+        fret_ui::declarative::render_root(ui, app, services, window, bounds(), "root", |cx| {
+            let tabs = Tabs::new(selected)
+                .a11y_label("Material tabs")
+                .test_id("m3-tabs")
+                .scrollable(scrollable)
+                .variant(variant)
+                .items(vec![
+                    TabItem::new("a", "Search")
+                        .leading_icon(ids::ui::SEARCH)
+                        .test_id("m3-tab-a"),
+                    TabItem::new("b", "Settings")
+                        .leading_icon(ids::ui::SETTINGS)
+                        .test_id("m3-tab-b"),
+                ])
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), tabs)]
+        });
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(app, services, bounds(), 1.0);
+}
+
+fn settle_leading_icon_tabs(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+    scrollable: bool,
+    variant: TabsVariant,
+) -> Scene {
+    let mut scene = Scene::default();
+    for _ in 0..6 {
+        render_leading_icon_tabs(
+            ui,
+            app,
+            services,
+            window,
+            selected.clone(),
+            scrollable,
+            variant,
+        );
+        scene = paint(ui, app, services);
+        app.advance_frame();
+    }
+    scene
+}
+
 fn semantics_node<'a>(ui: &'a UiTree<TestHost>, test_id: &str) -> &'a SemanticsNode {
     ui.semantics_snapshot()
         .and_then(|snapshot| {
@@ -172,6 +231,18 @@ fn visual_bounds_by_test_id(
                 .or_else(|| ui.debug_node_bounds(m.node))
         })
         .unwrap_or_else(|| panic!("expected visual bounds for test_id {test_id}"))
+}
+
+fn layout_bounds_by_test_id(
+    ui: &UiTree<TestHost>,
+    app: &TestHost,
+    window: AppWindowId,
+    test_id: &str,
+) -> Rect {
+    fret_ui::declarative::live_test_id_matches_for_window(app, window, test_id)
+        .into_iter()
+        .find_map(|m| ui.debug_node_bounds(m.node))
+        .unwrap_or_else(|| panic!("expected layout bounds for test_id {test_id}"))
 }
 
 fn active_indicator_rect(scene: &Scene) -> Rect {
@@ -303,6 +374,44 @@ fn fixed_secondary_tabs_use_full_width_active_indicator() {
     assert!(
         (indicator.size.width.0 - tab.size.width.0).abs() <= 0.5,
         "expected secondary tab indicator to span the selected tab width; tab={tab:?} indicator={indicator:?}"
+    );
+}
+
+#[test]
+fn primary_leading_icon_tabs_use_material_icon_size_and_content_indicator() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    let scene = settle_leading_icon_tabs(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        selected,
+        false,
+        TabsVariant::Primary,
+    );
+
+    let icon = layout_bounds_by_test_id(&ui, &app, window, "m3-tab-a.icon");
+    let label = layout_bounds_by_test_id(&ui, &app, window, "m3-tab-a.label");
+    let indicator = active_indicator_rect(&scene);
+    let icon_label_gap = label.origin.x.0 - (icon.origin.x.0 + icon.size.width.0);
+    let expected_indicator_width = icon.size.width.0 + 8.0 + label.size.width.0;
+
+    assert!(
+        (icon.size.width.0 - 24.0).abs() <= 0.5 && (icon.size.height.0 - 24.0).abs() <= 0.5,
+        "expected leading tab icon to use the Material 24px icon size, got {icon:?}"
+    );
+    assert!(
+        icon.origin.x.0 < label.origin.x.0,
+        "expected leading icon to be placed before the tab label; icon={icon:?} label={label:?}"
+    );
+    assert!(
+        (icon_label_gap - 8.0).abs() <= 0.5,
+        "expected leading icon and label to use the Material 8px gap; icon={icon:?} label={label:?}"
+    );
+    assert!(
+        (indicator.origin.x.0 - icon.origin.x.0).abs() <= 1.5
+            && (indicator.size.width.0 - expected_indicator_width).abs() <= 2.5,
+        "expected primary leading-icon tab indicator to match icon+gap+label content width; icon={icon:?} label={label:?} indicator={indicator:?}"
     );
 }
 
