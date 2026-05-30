@@ -8,12 +8,12 @@
 
 use std::sync::Arc;
 
-use fret_core::{Color, Px};
+use fret_core::{Color, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::{DismissReason, DismissRequestCx, OnActivate, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, FractionalRenderTransformProps, InsetStyle, InteractivityGateProps,
-    LayoutStyle, Length, PositionStyle, PressableA11y, PressableProps,
+    LayoutStyle, Length, PositionStyle, PressableA11y, PressableProps, SemanticsDecoration,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
@@ -21,8 +21,12 @@ use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
+use crate::foundation::test_id::{optional_part_test_id, part_test_id};
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion;
+
+const MODAL_NAVIGATION_DRAWER_PANE_LABEL: &str = "Navigation menu";
+const MODAL_NAVIGATION_DRAWER_CLOSE_LABEL: &str = "Close drawer";
 
 #[derive(Clone)]
 pub struct ModalNavigationDrawer {
@@ -200,22 +204,11 @@ impl ModalNavigationDrawer {
                     });
                 let dismiss_handler_for_request = dismiss_handler.clone();
 
-                #[derive(Default)]
-                struct DerivedTestId {
-                    base: Option<Arc<str>>,
-                    scrim: Option<Arc<str>>,
-                }
-
-                let scrim_test_id = cx.slot_state(DerivedTestId::default, |st| {
-                    if st.base.as_deref() != self.test_id.as_deref() {
-                        st.base = self.test_id.clone();
-                        st.scrim = st
-                            .base
-                            .as_ref()
-                            .map(|id| Arc::from(format!("{}-scrim", id.as_ref())));
-                    }
-                    st.scrim.clone()
-                });
+                let root_test_id = self.test_id.clone();
+                let scrim_test_id = optional_part_test_id(self.test_id.as_ref(), "scrim");
+                let scrim_chrome_test_id =
+                    scrim_test_id.as_ref().map(|id| part_test_id(id, "chrome"));
+                let panel_test_id = optional_part_test_id(self.test_id.as_ref(), "panel");
 
                 let root = cx.named("modal_navigation_drawer_root", |cx| {
                     let mut layout = LayoutStyle::default();
@@ -223,7 +216,12 @@ impl ModalNavigationDrawer {
                     layout.size.height = Length::Fill;
                     layout.overflow = fret_ui::element::Overflow::Visible;
 
-                    cx.container(
+                    let root_test_id = root_test_id.clone();
+                    let scrim_test_id = scrim_test_id.clone();
+                    let scrim_chrome_test_id = scrim_chrome_test_id.clone();
+                    let panel_test_id = panel_test_id.clone();
+
+                    let mut overlay_root = cx.container(
                         ContainerProps {
                             layout,
                             ..Default::default()
@@ -236,6 +234,9 @@ impl ModalNavigationDrawer {
                                         focusable: false,
                                         a11y: PressableA11y {
                                             test_id: scrim_test_id.clone(),
+                                            label: Some(Arc::<str>::from(
+                                                MODAL_NAVIGATION_DRAWER_CLOSE_LABEL,
+                                            )),
                                             ..Default::default()
                                         },
                                         layout: {
@@ -273,7 +274,7 @@ impl ModalNavigationDrawer {
                                             cx.pressable_on_activate(on_activate);
                                         }
 
-                                        vec![cx.container(
+                                        let mut chrome = cx.container(
                                             ContainerProps {
                                                 background: Some(scrim_color),
                                                 layout: {
@@ -285,7 +286,11 @@ impl ModalNavigationDrawer {
                                                 ..Default::default()
                                             },
                                             |_cx| Vec::<AnyElement>::new(),
-                                        )]
+                                        );
+                                        if let Some(test_id) = scrim_chrome_test_id.clone() {
+                                            chrome = chrome.test_id(test_id);
+                                        }
+                                        vec![chrome]
                                     },
                                 )
                             });
@@ -305,7 +310,7 @@ impl ModalNavigationDrawer {
 
                                 let translate_x_fraction = transition.progress - 1.0;
 
-                                cx.fractional_render_transform_props(
+                                let mut panel = cx.fractional_render_transform_props(
                                     FractionalRenderTransformProps {
                                         layout,
                                         translate_x_fraction,
@@ -325,12 +330,24 @@ impl ModalNavigationDrawer {
                                             },
                                         )]
                                     },
+                                );
+                                if let Some(test_id) = panel_test_id.clone() {
+                                    panel = panel.test_id(test_id);
+                                }
+                                panel.attach_semantics(
+                                    SemanticsDecoration::default()
+                                        .role(SemanticsRole::Dialog)
+                                        .label(MODAL_NAVIGATION_DRAWER_PANE_LABEL),
                                 )
                             });
 
                             vec![scrim, drawer_panel]
                         },
-                    )
+                    );
+                    if let Some(test_id) = root_test_id {
+                        overlay_root = overlay_root.test_id(test_id);
+                    }
+                    overlay_root
                 });
 
                 let overlay_id = cx.root_id();

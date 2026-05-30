@@ -34,6 +34,14 @@
       },
       "timeout_frames": 240
     },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-tabs.active-indicator" }
+      },
+      "timeout_frames": 240
+    },
 
     { "type": "wait_frames", "n": 10 },
     { "type": "capture_bundle", "label": "ui-gallery-material3-tabs-indicator-before" },

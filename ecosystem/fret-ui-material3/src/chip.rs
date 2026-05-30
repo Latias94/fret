@@ -34,6 +34,7 @@ use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
 };
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::optional_part_test_id;
 use crate::tokens::chip as chip_tokens;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -412,6 +413,7 @@ impl AssistChip {
                             self.leading_icon,
                             leading_icon_size,
                             leading_icon_color,
+                            self.test_id.clone(),
                             height,
                         );
 
@@ -450,6 +452,7 @@ fn assist_chip_content<H: UiHost>(
     leading_icon: Option<IconId>,
     leading_icon_size: Px,
     leading_icon_color: Color,
+    base_test_id: Option<Arc<str>>,
     height: Px,
 ) -> AnyElement {
     const LEADING_SPACE: Px = Px(16.0);
@@ -465,7 +468,12 @@ fn assist_chip_content<H: UiHost>(
     text.layout.size.min_width = Some(Length::Px(Px(0.0)));
     text.layout.flex.shrink = 1.0;
 
-    let label_el = cx.text_props(text);
+    let mut label_el = cx.text_props(text);
+    if let Some(test_id) = optional_part_test_id(base_test_id.as_ref(), "label") {
+        label_el = label_el.test_id(test_id);
+    }
+
+    let leading_icon_test_id = optional_part_test_id(base_test_id.as_ref(), "leading-icon");
 
     let padding_left = if leading_icon.is_some() {
         WITH_LEADING_ICON_LEADING_SPACE
@@ -494,12 +502,11 @@ fn assist_chip_content<H: UiHost>(
     cx.flex(props, move |cx| {
         let mut out = Vec::new();
         if let Some(icon) = leading_icon {
-            out.push(material_icon(
-                cx,
-                &icon,
-                leading_icon_size,
-                leading_icon_color,
-            ));
+            let mut icon = material_icon(cx, &icon, leading_icon_size, leading_icon_color);
+            if let Some(test_id) = leading_icon_test_id.clone() {
+                icon = icon.test_id(test_id);
+            }
+            out.push(icon);
         }
         out.push(label_el);
         out

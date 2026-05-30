@@ -1,0 +1,1182 @@
+{
+  "schema_version": 1,
+  "generated_date": "2026-05-27",
+  "source_inventory": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_coverage_inventory_v1.json",
+  "purpose": "Queue every fret-ui-material3 component for Material outcome alignment, packet evidence, and layer classification.",
+  "component_count": 39,
+  "strategy": {
+    "seeded_packets": [
+      "button",
+      "select",
+      "switch"
+    ],
+    "layer_labels": [
+      "mechanism",
+      "kit_policy",
+      "material_foundation",
+      "material_recipe",
+      "gallery",
+      "diagnostics",
+      "upstream",
+      "test_harness"
+    ],
+    "escalation_rule": "If two or more component rows show the same drift, evaluate a shared Material foundation or kit-policy refactor before duplicating recipe fixes."
+  },
+  "waves": [
+    {
+      "id": "wave0_evidence_stabilization",
+      "components": [],
+      "focus": "Classify the known controls golden drift and audit selector readiness."
+    },
+    {
+      "id": "wave1_navigation_indicator",
+      "components": [
+        "tabs",
+        "navigation_bar",
+        "navigation_rail",
+        "navigation_drawer",
+        "modal_navigation_drawer",
+        "top_app_bar"
+      ],
+      "focus": "Active indicator geometry, selection semantics, navigation item chrome, scroll/collapse behavior, and motion."
+    },
+    {
+      "id": "wave2_field_family",
+      "components": [
+        "text_field",
+        "autocomplete",
+        "exposed_dropdown",
+        "search_bar",
+        "search_view",
+        "date_picker",
+        "time_picker",
+        "select"
+      ],
+      "focus": "Committed value, editable query, floating labels, active indicators, supporting/error text, popup semantics, and picker dialogs."
+    },
+    {
+      "id": "wave3_overlay_feedback",
+      "components": [
+        "menu",
+        "dropdown_menu",
+        "dialog",
+        "bottom_sheet",
+        "tooltip",
+        "snackbar"
+      ],
+      "focus": "Dismissal, focus restore/trap, scrim, placement, live-region semantics, and overlay motion."
+    },
+    {
+      "id": "wave4_choice_controls",
+      "components": [
+        "checkbox",
+        "radio",
+        "slider",
+        "segmented_button",
+        "chip",
+        "chip_set",
+        "filter_chip",
+        "input_chip",
+        "suggestion_chip",
+        "icon_button",
+        "switch"
+      ],
+      "focus": "State layer, ripple, selected indicators, group semantics, gestures, and minimum interactive sizing."
+    },
+    {
+      "id": "wave5_surface_data_display",
+      "components": [
+        "badge",
+        "card",
+        "carousel_item",
+        "divider",
+        "fab",
+        "list",
+        "progress_indicator",
+        "button"
+      ],
+      "focus": "Visual chrome, semantics, gallery evidence, low-interaction goldens, and motion-only split points."
+    }
+  ],
+  "components": [
+    {
+      "id": "autocomplete",
+      "family": "field",
+      "status": "packet_done_foundation_refactored",
+      "wave": "wave2_field_family",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "field_follow_on_packet",
+      "first_gate_kind": "diag_filtering_and_semantics",
+      "selector_status": "field_selector_ready",
+      "selector_artifact": "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
+      "stable_part_ids": [
+        "autocomplete",
+        "autocomplete.chrome",
+        "autocomplete.active-indicator",
+        "autocomplete.label",
+        "autocomplete.supporting-text",
+        "autocomplete.leading-icon",
+        "autocomplete.trailing-icon",
+        "autocomplete.listbox",
+        "autocomplete.option.<value>",
+        "autocomplete.option.<value>.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns query filtering, active option, commit, suppress-reopen, item ids, and option chrome",
+        "material_foundation owns shared filled field active-indicator canvas paint",
+        "diagnostics/test_harness owned stale hyphen selector drift repaired by this packet",
+        "no new kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "badge",
+      "family": "data_display",
+      "status": "packet_done_low_risk",
+      "wave": "wave5_surface_data_display",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "audit_or_golden_only",
+      "first_gate_kind": "headless_golden_or_scene",
+      "selector_status": "surface_data_display_selector_ready",
+      "stable_part_ids": [
+        "badge"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns badge dot/text chrome, anchoring, and stable root selector",
+        "material_recipe now exposes explicit anchor_size for deterministic TopRight placement instead of relying on auto absolute positioning",
+        "test_harness refreshed badge headless goldens after classifying stale/ambiguous TopRight geometry",
+        "no kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "bottom_sheet",
+      "family": "overlay_feedback",
+      "status": "packet_done_chrome_alias_aligned",
+      "wave": "wave3_overlay_feedback",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "overlay_packet_plus_chrome_alias_follow_on",
+      "first_gate_kind": "layout_safe_chrome_anchor",
+      "selector_status": "overlay_feedback_selector_ready",
+      "stable_part_ids": [
+        "bottom_sheet",
+        "bottom_sheet.chrome",
+        "bottom_sheet.drag-handle",
+        "modal_bottom_sheet.scrim",
+        "modal_bottom_sheet.scrim.chrome",
+        "modal_bottom_sheet.sheet",
+        "modal_bottom_sheet.sheet.chrome",
+        "modal_bottom_sheet.sheet.drag-handle"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+        "docs/workstreams/material3-bottom-sheet-chrome-alias-packet-v1/artifacts/bottom_sheet_chrome_alias_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns docked/modal sheet composition, scrim/sheet/drag-handle part ids, and hidden layout-safe sheet chrome aliases",
+        "kit_policy owns modal overlay request, scrim dismiss, focus trap, and focus restore through existing overlay primitives",
+        "material_foundation owns the reusable hidden diagnostic anchor helper used to avoid layout and scene drift",
+        "no new mechanism gap found"
+      ]
+    },
+    {
+      "id": "button",
+      "family": "surface_action",
+      "status": "packet_done_low_risk",
+      "wave": "wave5_surface_data_display",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "seed_consumer_anchor",
+      "first_gate_kind": "existing_packet_report",
+      "selector_status": "surface_data_display_selector_ready",
+      "stable_part_ids": [
+        "button",
+        "button.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_parity_suite_report_v1.json",
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns variant chrome, icon/label composition, and stable root/chrome selectors",
+        "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
+        "test_harness covers Button through the seed parity report, controls golden, and surface automation selector gate",
+        "no new kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "card",
+      "family": "surface_action",
+      "status": "packet_done_low_risk",
+      "wave": "wave5_surface_data_display",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "gallery_then_audit",
+      "first_gate_kind": "gallery_scene_or_golden",
+      "selector_status": "surface_data_display_selector_ready",
+      "stable_part_ids": [
+        "card",
+        "card.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns filled/elevated/outlined surface chrome, action semantics, and stable root/chrome selectors",
+        "material_foundation owns shared indication state-layer/ripple when cards are interactive",
+        "test_harness covers Card through controls golden and surface automation selector gate",
+        "no kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "carousel_item",
+      "family": "data_display",
+      "status": "packet_done_low_risk",
+      "wave": "wave5_surface_data_display",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "audit_or_gallery",
+      "first_gate_kind": "headless_golden_or_scene",
+      "selector_status": "surface_data_display_selector_ready",
+      "stable_part_ids": [
+        "carousel_item",
+        "carousel_item.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns item surface, outline variant, disabled opacity, action semantics, and root/chrome selectors",
+        "material_foundation owns shared indication state-layer/ripple when carousel items are interactive",
+        "test_harness covers idle/hover/focus-visible carousel item goldens and the surface automation selector gate",
+        "no kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "checkbox",
+      "family": "choice_control",
+      "status": "packet_done_gallery_diagnostics_aligned",
+      "wave": "wave4_choice_controls",
+      "default_owner_bias": "material_foundation",
+      "packet_strategy": "choice_after_switch",
+      "first_gate_kind": "centered_chrome_and_tristate_gallery_diag",
+      "selector_status": "choice_selector_ready",
+      "stable_part_ids": [
+        "checkbox",
+        "checkbox.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-checkbox-gallery-diagnostics-packet-v1/artifacts/checkbox_gallery_diagnostics_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns bool/optional model mapping, tri-state toggle outcomes, checkbox semantics, and chrome assembly",
+        "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
+        "test_harness covers stable root/chrome selectors, pressed scene stability, tri-state semantics, centered chrome diagnostics, and tri-state gallery screenshots",
+        "diagnostics repaired stale centered-chrome navigation from the aggregate Material3 gallery page to the dedicated Checkbox page",
+        "no new kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "chip",
+      "family": "choice_control",
+      "status": "packet_done_visual_diagnostics_aligned",
+      "wave": "wave4_choice_controls",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "choice_chip_packet_or_gallery",
+      "first_gate_kind": "chip_visual_chrome_gallery_diag",
+      "selector_status": "choice_selector_ready",
+      "stable_part_ids": [
+        "assist_chip",
+        "assist_chip.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-chip-visual-diagnostics-packet-v1/artifacts/chip_visual_diagnostics_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns assist chip label/icon composition, variant chrome, and selectors",
+        "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
+        "diagnostics/test_harness covers stable chip-set automation selectors and representative chip visual chrome gallery diagnostics",
+        "no new kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "chip_set",
+      "family": "choice_control",
+      "status": "packet_done_roving_semantics_aligned",
+      "wave": "wave4_choice_controls",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "group_semantics_packet",
+      "first_gate_kind": "semantics_roving_focus",
+      "selector_status": "choice_selector_ready",
+      "stable_part_ids": [
+        "chip_set"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-chip-set-roving-packet-v1/artifacts/chip_set_roving_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns chip-set group semantics, gap/wrap defaults, roving focus, and chip tab-stop delegation",
+        "diagnostics/test_harness covers the stable root selector, chip visual gallery surface, and roving behavior where trailing-action focus still counts as the active chip",
+        "kit_policy follow-on only if another design-system consumer needs the same chip-set roving policy",
+        "no mechanism gap found"
+      ]
+    },
+    {
+      "id": "date_picker",
+      "family": "field",
+      "status": "packet_done_locale_strings_aligned",
+      "wave": "wave2_field_family",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "picker_after_field_foundation",
+      "first_gate_kind": "semantics_dialog_grid_value_ids_selectable_dates_month_live_region_locale_strings_and_date_descriptions",
+      "selector_status": "picker_selector_ready",
+      "stable_part_ids": [
+        "date_picker",
+        "date_picker.chrome",
+        "date_picker.docked.month-label",
+        "date_picker.docked.prev",
+        "date_picker.docked.next",
+        "date_picker.docked.weekday.<index>",
+        "date_picker.modal.title",
+        "date_picker.modal.month-label",
+        "date_picker.modal.prev",
+        "date_picker.modal.next",
+        "date_picker.modal.weekday.<index>",
+        "date_picker.cell.<row>.<col>",
+        "date_picker.cell.<yyyy-mm-dd>",
+        "date_picker.scrim",
+        "date_picker.scrim.chrome",
+        "date_picker.panel",
+        "date_picker.actions.cancel",
+        "date_picker.actions.confirm"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md",
+        "docs/workstreams/material3-date-picker-day-cell-selectors-packet-v1/artifacts/date_picker_day_cell_selectors_packet_v1.md",
+        "docs/workstreams/material3-date-picker-selectable-dates-packet-v1/artifacts/date_picker_selectable_dates_packet_v1.md",
+        "docs/workstreams/material3-date-picker-month-live-region-packet-v1/artifacts/date_picker_month_live_region_packet_v1.md",
+        "docs/workstreams/material3-date-picker-locale-strings-packet-v1/artifacts/date_picker_locale_strings_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns month navigation, displayed-month live region, staged selected-date draft, selectable-date disabling, day-grid selection, day-cell semantics/date-description consumption, modal panel composition, picker part ids, and value-derived day-cell selector aliases",
+        "material_foundation owns DatePicker string helpers over I18nService with English fallbacks, month/weekday fallback tables, and structured date-description arguments",
+        "kit_policy owns modal overlay request, scrim dismiss, focus trap, and focus restore through existing overlay/focus primitives",
+        "diagnostics/test_harness owned stale modal underlay/action stretch goldens and old hyphen selector drift",
+        "DatePicker locale-aware labels and date descriptions are closed for the current docked/modal calendar grid"
+      ]
+    },
+    {
+      "id": "dialog",
+      "family": "overlay_feedback",
+      "status": "packet_done_diagnostics_aligned",
+      "wave": "wave3_overlay_feedback",
+      "default_owner_bias": "kit_policy",
+      "packet_strategy": "overlay_packet",
+      "first_gate_kind": "diag_focus_trap_restore",
+      "selector_status": "overlay_feedback_selector_ready",
+      "stable_part_ids": [
+        "dialog.scrim",
+        "dialog.scrim.chrome",
+        "dialog.panel",
+        "dialog.panel.chrome",
+        "dialog.actions.<name>",
+        "dialog.actions.<name>.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+        "docs/workstreams/material3-dialog-diagnostics-packet-v1/artifacts/dialog_diagnostics_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns dotted scrim/panel/action part ids, panel chrome, and Dialog panel semantics role",
+        "kit_policy owns modal overlay request, scrim dismiss, focus trap, and focus restore through existing overlay primitives",
+        "diagnostics/test_harness covers dedicated Material3 gallery panel/scrim selectors, Dialog role, modal/focus barrier roots, Escape dismissal, focus restore, and focused Rust gates",
+        "no new mechanism gap found"
+      ]
+    },
+    {
+      "id": "divider",
+      "family": "data_display",
+      "status": "packet_done_low_risk",
+      "wave": "wave5_surface_data_display",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "audit_or_golden_only",
+      "first_gate_kind": "headless_golden_or_scene",
+      "selector_status": "surface_data_display_selector_ready",
+      "stable_part_ids": [
+        "divider"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns horizontal/vertical thickness, color, and stable root selector",
+        "test_harness refreshed divider headless goldens after classifying stale zero-width horizontal divider snapshots",
+        "no material_foundation, kit_policy, or mechanism gap found"
+      ]
+    },
+    {
+      "id": "dropdown_menu",
+      "family": "overlay_feedback",
+      "status": "packet_done_diagnostics_aligned",
+      "wave": "wave3_overlay_feedback",
+      "default_owner_bias": "kit_policy",
+      "packet_strategy": "menu_overlay_packet",
+      "first_gate_kind": "diag_menu_focus_dismiss",
+      "selector_status": "overlay_feedback_selector_ready",
+      "stable_part_ids": [
+        "dropdown_menu",
+        "dropdown_menu.chrome",
+        "dropdown_menu.item.<value>",
+        "dropdown_menu.item.<value>.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+        "docs/workstreams/material3-menu-dropdown-diagnostics-packet-v1/artifacts/menu_dropdown_diagnostics_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns Material menu surface/item chrome and stable part ids",
+        "kit_policy owns dismissible menu outside-press, Escape, non-click-through overlay, and focus restore",
+        "diagnostics/test_harness covers dedicated Material3 gallery Menu role, item focus, Escape dismiss/focus restore, item chrome fill, and focused Rust gates",
+        "no new mechanism gap found"
+      ]
+    },
+    {
+      "id": "exposed_dropdown",
+      "family": "field",
+      "status": "packet_done_diagnostics_aligned",
+      "wave": "wave2_field_family",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "field_follow_on_packet",
+      "first_gate_kind": "diag_filtering_popup_promoted",
+      "selector_status": "inherits_autocomplete_selector_surface",
+      "selector_artifact": "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
+      "stable_part_ids": [
+        "exposed_dropdown",
+        "exposed_dropdown.chrome",
+        "exposed_dropdown.active-indicator",
+        "exposed_dropdown.label",
+        "exposed_dropdown.supporting-text",
+        "exposed_dropdown.leading-icon",
+        "exposed_dropdown.trailing-icon",
+        "exposed_dropdown.listbox",
+        "exposed_dropdown.option.<value>",
+        "exposed_dropdown.option.<value>.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md",
+        "docs/workstreams/material3-exposed-dropdown-diagnostics-packet-v1/artifacts/exposed_dropdown_diagnostics_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns committed selection, editable query, trailing icon toggle, and blur revert",
+        "material_foundation is inherited through Autocomplete/TextField field chrome",
+        "diagnostics/test_harness covers promoted gallery filtering popup, listbox bounds, option selector presence/absence, and focused state-model gates",
+        "no mechanism gap found"
+      ]
+    },
+    {
+      "id": "fab",
+      "family": "surface_action",
+      "status": "packet_done_low_risk",
+      "wave": "wave5_surface_data_display",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "audit_or_gallery",
+      "first_gate_kind": "headless_golden_or_scene",
+      "selector_status": "surface_data_display_selector_ready",
+      "stable_part_ids": [
+        "fab",
+        "fab.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns FAB/extended-FAB variant chrome, label/icon composition, and root/chrome selectors",
+        "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
+        "test_harness covers idle/hover/focus-visible FAB goldens and the surface automation selector gate",
+        "no kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "filter_chip",
+      "family": "choice_control",
+      "status": "packet_done_visual_diagnostics_aligned",
+      "wave": "wave4_choice_controls",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "chip_family_packet",
+      "first_gate_kind": "chip_visual_chrome_gallery_diag",
+      "selector_status": "choice_selector_ready",
+      "stable_part_ids": [
+        "filter_chip",
+        "filter_chip.chrome",
+        "filter_chip.trailing-icon"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-chip-visual-diagnostics-packet-v1/artifacts/chip_visual_diagnostics_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns selected semantics, leading selected-check fallback, trailing action composition, and selectors",
+        "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
+        "test_harness covers checked-state semantics, trailing-action selector readiness, and representative selected/elevated visual chrome gallery diagnostics",
+        "no new kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "icon_button",
+      "family": "surface_action",
+      "status": "packet_done_diagnostics_aligned",
+      "wave": "wave4_choice_controls",
+      "default_owner_bias": "material_foundation",
+      "packet_strategy": "choice_surface_consumer",
+      "first_gate_kind": "centered_chrome_diag_and_pressed_scene",
+      "selector_status": "choice_selector_ready",
+      "stable_part_ids": [
+        "icon_button",
+        "icon_button.chrome",
+        "icon_toggle_button",
+        "icon_toggle_button.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-icon-button-diagnostics-packet-v1/artifacts/icon_button_diagnostics_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns icon-button variants, toggle semantics, expressive selected/pressed shape morphing, and selectors",
+        "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
+        "test_harness covers pressed scene stability, selector readiness, and centered chrome gallery diagnostics",
+        "diagnostics repaired stale centered-chrome navigation from the aggregate Material3 gallery page to the dedicated Icon Button page",
+        "no new kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "input_chip",
+      "family": "choice_control",
+      "status": "packet_done_visual_diagnostics_aligned",
+      "wave": "wave4_choice_controls",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "chip_family_packet",
+      "first_gate_kind": "chip_visual_chrome_gallery_diag",
+      "selector_status": "choice_selector_ready",
+      "stable_part_ids": [
+        "input_chip",
+        "input_chip.chrome",
+        "input_chip.trailing-icon"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-chip-visual-diagnostics-packet-v1/artifacts/chip_visual_diagnostics_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns selected semantics, leading/trailing icon composition, trailing action focus routing, and selectors",
+        "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
+        "test_harness covers checked-state semantics, trailing-action selector readiness, and representative selected/unselected visual chrome gallery diagnostics",
+        "no new kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "list",
+      "family": "data_display",
+      "status": "packet_done_low_risk",
+      "wave": "wave5_surface_data_display",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "audit_or_selection_packet",
+      "first_gate_kind": "scene_semantics",
+      "selector_status": "surface_data_display_selector_ready",
+      "stable_part_ids": [
+        "list",
+        "list.item",
+        "list.item.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns list/list-item semantics, selected state, item chrome, icon slots, and keyboard selection",
+        "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
+        "test_harness covers idle/hover/focus-visible list goldens and the surface automation selector gate",
+        "kit_policy follow-on only if another design system needs the same list selection/roving policy"
+      ]
+    },
+    {
+      "id": "menu",
+      "family": "overlay_feedback",
+      "status": "packet_done_diagnostics_aligned",
+      "wave": "wave3_overlay_feedback",
+      "default_owner_bias": "kit_policy",
+      "packet_strategy": "menu_overlay_packet",
+      "first_gate_kind": "diag_menu_focus_dismiss",
+      "selector_status": "overlay_feedback_selector_ready",
+      "stable_part_ids": [
+        "menu",
+        "menu.chrome",
+        "menu.item.<value>",
+        "menu.item.<value>.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+        "docs/workstreams/material3-menu-dropdown-diagnostics-packet-v1/artifacts/menu_dropdown_diagnostics_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns Material menu surface/item chrome and stable part ids",
+        "recipe-local focus and typeahead remain acceptable until another consumer proves a shared kit abstraction",
+        "diagnostics/test_harness covers dedicated Material3 gallery Menu role, item focus, Escape dismiss/focus restore, item chrome fill, and focused Rust gates",
+        "no new mechanism gap found"
+      ]
+    },
+    {
+      "id": "modal_navigation_drawer",
+      "family": "navigation",
+      "status": "packet_done_overlay_closed",
+      "wave": "wave1_navigation_indicator",
+      "default_owner_bias": "kit_policy",
+      "packet_strategy": "navigation_overlay_packet",
+      "first_gate_kind": "automation_focus_overlay_and_navigation_golden",
+      "selector_status": "modal_drawer_selector_ready",
+      "stable_part_ids": [
+        "modal_navigation_drawer",
+        "modal_navigation_drawer.scrim",
+        "modal_navigation_drawer.scrim.chrome",
+        "modal_navigation_drawer.panel"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_sweep_closeout_v1.md",
+        "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/artifacts/drawer_modal_packet_v1.md",
+        "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/artifacts/navigation_geometry_resolution_v1.md",
+        "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/CLOSEOUT_AUDIT_2026-05-27.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns modal drawer panel/scrim composition and navigation drawer panel skinning",
+        "kit_policy owns overlay containment, scrim dismissal, and focus restore through existing overlay primitives",
+        "test_harness covers modal drawer focus containment, live root/scrim/panel automation selectors, and refreshed navigation headless goldens",
+        "drawer/modal-drawer visual overlay packet is closed; future motion diagnostics require fresh evidence"
+      ]
+    },
+    {
+      "id": "navigation_bar",
+      "family": "navigation",
+      "status": "packet_done_foundation_refactored",
+      "wave": "wave1_navigation_indicator",
+      "default_owner_bias": "material_foundation",
+      "packet_strategy": "navigation_indicator_packet",
+      "first_gate_kind": "diag_indicator_geometry",
+      "selector_status": "ready_for_packet",
+      "stable_part_ids": [
+        "navigation_bar",
+        "navigation_bar.chrome",
+        "navigation_bar.active-indicator",
+        "navigation_bar.item",
+        "navigation_bar.item.chrome",
+        "navigation_bar.item.icon",
+        "navigation_bar.item.label",
+        "navigation_bar.item.badge"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_navigation_indicator_packet_v1.md",
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_navigation_indicator_adapter_report_v1.json"
+      ],
+      "layer_classification": [
+        "material_recipe owns selected icon-slot target geometry and fallback placement",
+        "material_foundation owns shared ActiveIndicatorRect motion, clamping, canvas paint, and optional decoration",
+        "diagnostics owns fixed-timestep pixel-change scripts",
+        "no kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "navigation_drawer",
+      "family": "navigation",
+      "status": "packet_done_selector_completed",
+      "wave": "wave1_navigation_indicator",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "navigation_selector_completion_packet",
+      "first_gate_kind": "automation_surface_part_selectors",
+      "selector_status": "drawer_selector_ready",
+      "stable_part_ids": [
+        "navigation_drawer",
+        "navigation_drawer.chrome",
+        "navigation_drawer.item",
+        "navigation_drawer.item.chrome",
+        "navigation_drawer.item.icon",
+        "navigation_drawer.item.label",
+        "navigation_drawer.item.badge"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_foundation_consolidation_v1.md",
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_sweep_closeout_v1.md",
+        "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/artifacts/drawer_modal_packet_v1.md",
+        "docs/workstreams/material3-navigation-drawer-selector-completion-packet-v1/artifacts/navigation_drawer_selector_completion_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns drawer root chrome, item root/chrome/icon/label/badge selectors, and selected item pill composition",
+        "test_harness covers standard and modal NavigationDrawer selector surfaces in automation_surface",
+        "visual/overlay drift was closed by the dedicated navigation drawer overlay packet",
+        "no mechanism gap found during part-id consolidation"
+      ]
+    },
+    {
+      "id": "navigation_rail",
+      "family": "navigation",
+      "status": "packet_done_foundation_refactored",
+      "wave": "wave1_navigation_indicator",
+      "default_owner_bias": "material_foundation",
+      "packet_strategy": "navigation_indicator_packet",
+      "first_gate_kind": "diag_indicator_geometry",
+      "selector_status": "ready_for_packet",
+      "stable_part_ids": [
+        "navigation_rail",
+        "navigation_rail.chrome",
+        "navigation_rail.active-indicator",
+        "navigation_rail.item",
+        "navigation_rail.item.chrome",
+        "navigation_rail.item.icon",
+        "navigation_rail.item.label",
+        "navigation_rail.item.badge"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_navigation_indicator_packet_v1.md",
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_navigation_indicator_adapter_report_v1.json"
+      ],
+      "layer_classification": [
+        "material_recipe owns rail item, label-mode, badge, and selected icon-slot target geometry",
+        "material_foundation owns shared ActiveIndicatorRect motion, clamping, canvas paint, and optional decoration",
+        "diagnostics owns fixed-timestep pixel-change scripts",
+        "no kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "progress_indicator",
+      "family": "data_display",
+      "status": "packet_done_canvas_rect_anchors_aligned",
+      "wave": "wave5_surface_data_display",
+      "default_owner_bias": "material_foundation",
+      "packet_strategy": "motion_packet_if_touched",
+      "first_gate_kind": "fixed_timestep_motion_diag",
+      "selector_status": "root_selector_ready_with_rectangular_canvas_part_anchors",
+      "stable_part_ids": [
+        "linear_progress_indicator",
+        "linear_progress_indicator.track",
+        "linear_progress_indicator.active-track",
+        "circular_progress_indicator"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md",
+        "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/artifacts/material3_canvas_draw_region_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe currently owns determinate/indeterminate linear and circular canvas paint plus root selectors",
+        "material_recipe now exposes truthful rectangular diagnostic anchors for linear track and active-track regions",
+        "test_harness refreshed progress indicator fixed-frame headless goldens after classifying stale scene snapshots",
+        "mechanism follow-on only covers exact named SceneOp diagnostics for non-rectangular circular arcs or indeterminate segments if a concrete consumer appears"
+      ]
+    },
+    {
+      "id": "radio",
+      "family": "choice_control",
+      "status": "packet_done_scene_semantics_aligned",
+      "wave": "wave4_choice_controls",
+      "default_owner_bias": "material_foundation",
+      "packet_strategy": "choice_after_switch",
+      "first_gate_kind": "scene_semantics_state_layer",
+      "selector_status": "choice_selector_ready",
+      "stable_part_ids": [
+        "radio_group",
+        "radio",
+        "radio.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-radio-scene-semantics-packet-v1/artifacts/radio_scene_semantics_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns radio group semantics, item selection, dot geometry, typeahead/roving wiring, and selectors",
+        "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
+        "test_harness covers selected-dot centering, pointer-origin ripple, pressed scene stability, and selector readiness",
+        "kit_policy follow-on only if another design-system consumer needs the same group roving/typeahead policy",
+        "no mechanism gap found"
+      ]
+    },
+    {
+      "id": "search_bar",
+      "family": "field",
+      "status": "packet_done_headless_automation_aligned",
+      "wave": "wave2_field_family",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "field_consumer_after_text_field",
+      "first_gate_kind": "headless_scene_and_automation_surface",
+      "selector_status": "field_selector_ready",
+      "selector_artifact": "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
+      "stable_part_ids": [
+        "search_bar",
+        "search_bar.chrome",
+        "search_bar.leading-icon",
+        "search_bar.trailing-icon"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md",
+        "docs/workstreams/material3-search-bar-headless-packet-v1/artifacts/search_bar_headless_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns pill field chrome, input surface, and leading/trailing icon slots",
+        "material_foundation owns SearchBar token plumbing, state-layer/ripple indication, and minimum interactive target policy",
+        "diagnostics/test_harness covers stable root/chrome/icon selectors plus idle/hover/pressed/focus-visible headless goldens across schemes/scales",
+        "no kit_policy or mechanism gap found; SearchView overlay policy remains in its own packet"
+      ]
+    },
+    {
+      "id": "search_view",
+      "family": "field",
+      "status": "packet_done_full_screen_state_aligned",
+      "wave": "wave2_field_family",
+      "default_owner_bias": "kit_policy",
+      "packet_strategy": "field_overlay_and_full_screen_packet",
+      "first_gate_kind": "modal_overlay_focus_escape",
+      "selector_status": "field_selector_ready",
+      "selector_artifact": "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
+      "stable_part_ids": [
+        "search_view",
+        "search_view.chrome",
+        "search_view.leading-icon",
+        "search_view.trailing-icon",
+        "search_view.overlay",
+        "search_view.overlay.header",
+        "search_view.overlay.header.chrome",
+        "search_view.overlay.header.leading-icon",
+        "search_view.overlay.header.trailing-icon"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md",
+        "docs/workstreams/material3-search-view-state-packet-v1/artifacts/search_view_source_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns docked/full-screen SearchView presentation selection, header/content composition, and stable part ids",
+        "kit_policy owns modal/dismiss routing, Escape collapse, focus containment, and focus handoff through existing overlay primitives",
+        "mechanism follow-on covers platform predictive-back events only if an app surface proves Escape/back-equivalent collapse is insufficient"
+      ]
+    },
+    {
+      "id": "segmented_button",
+      "family": "choice_control",
+      "status": "packet_done_diagnostics_aligned",
+      "wave": "wave4_choice_controls",
+      "default_owner_bias": "kit_policy",
+      "packet_strategy": "group_semantics_packet",
+      "first_gate_kind": "diag_roving_semantics_scene",
+      "selector_status": "choice_selector_ready",
+      "stable_part_ids": [
+        "segmented_button",
+        "segmented_button.item.<value>",
+        "segmented_button.item.<value>.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/artifacts/segmented_button_diagnostics_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns single/multi selection, group/item roles, checked state, per-segment chrome, and selectors",
+        "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
+        "diagnostics/test_harness covers promoted gallery roving semantics, selector readiness, semantics role parity, and segmented headless goldens",
+        "no kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "select",
+      "family": "field",
+      "status": "packet_done_foundation_refactored",
+      "wave": "wave2_field_family",
+      "default_owner_bias": "kit_policy",
+      "packet_strategy": "seed_field_anchor",
+      "first_gate_kind": "existing_packet_and_select_behavior",
+      "selector_status": "seed_packet_selector_ready",
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_foundation now owns shared filled field active-indicator canvas paint",
+        "material_recipe keeps combobox trigger, listbox, typeahead, selected-value display, and floating label behavior",
+        "kit_policy remains responsible for overlay dismissal and focus policy",
+        "no mechanism gap found"
+      ]
+    },
+    {
+      "id": "slider",
+      "family": "choice_control",
+      "status": "packet_done_canvas_rect_anchors_aligned",
+      "wave": "wave4_choice_controls",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "input_motion_packet",
+      "first_gate_kind": "pointer_semantics_motion",
+      "selector_status": "choice_selector_ready_with_rectangular_canvas_part_anchors",
+      "stable_part_ids": [
+        "slider",
+        "slider.track",
+        "slider.active-track",
+        "slider.handle",
+        "range_slider",
+        "range_slider.start",
+        "range_slider.start.handle",
+        "range_slider.end",
+        "range_slider.end.handle",
+        "range_slider.track",
+        "range_slider.active-track"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/artifacts/material3_canvas_draw_region_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns value/range state machines, keyboard and pointer updates, slider semantics, canvas track/handle rendering, and value indicator",
+        "material_recipe now exposes truthful rectangular diagnostic anchors for track, active-track, and handle regions",
+        "diagnostics/test_harness owns scene/golden proof for remaining internal tick, stop-indicator, and state-layer paint operations",
+        "mechanism follow-on covers exact named SceneOp diagnostics only if automation needs non-rectangular or per-op draw-region naming"
+      ]
+    },
+    {
+      "id": "snackbar",
+      "family": "overlay_feedback",
+      "status": "packet_done_action_close_parts_aligned",
+      "wave": "wave3_overlay_feedback",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "feedback_packet_plus_kit_part_selectors",
+      "first_gate_kind": "semantics_live_region_and_part_selectors",
+      "selector_status": "overlay_feedback_selector_ready",
+      "stable_part_ids": [
+        "snackbar",
+        "snackbar.action",
+        "snackbar.close"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+        "docs/workstreams/material3-snackbar-parts-selector-packet-v1/artifacts/snackbar_parts_selector_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns Snackbar request skinning and forwards stable root ids into ToastRequest",
+        "kit_policy owns toast viewport, dismissal, action routing, close/cancel affordances, live-region behavior, and root-derived toast subpart ids",
+        "test_harness covers snackbar command/dismiss behavior, refreshed headless goldens, and live root/action/close selectors",
+        "no new material_foundation or mechanism gap found"
+      ]
+    },
+    {
+      "id": "suggestion_chip",
+      "family": "choice_control",
+      "status": "packet_done_visual_diagnostics_aligned",
+      "wave": "wave4_choice_controls",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "chip_family_packet",
+      "first_gate_kind": "chip_visual_chrome_gallery_diag",
+      "selector_status": "choice_selector_ready",
+      "stable_part_ids": [
+        "suggestion_chip",
+        "suggestion_chip.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-chip-visual-diagnostics-packet-v1/artifacts/chip_visual_diagnostics_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns suggestion chip label/icon composition, variant chrome, and selectors",
+        "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
+        "diagnostics/test_harness covers stable chip-set automation selectors and representative flat/elevated visual chrome gallery diagnostics",
+        "no new kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "switch",
+      "family": "choice_control",
+      "status": "packet_done_diagnostics_aligned",
+      "wave": "wave4_choice_controls",
+      "default_owner_bias": "material_foundation",
+      "packet_strategy": "seed_choice_anchor",
+      "first_gate_kind": "switch_adapter_report_and_icons_state_matrix_diag",
+      "selector_status": "choice_selector_ready",
+      "stable_part_ids": [
+        "switch",
+        "switch.chrome",
+        "switch.track",
+        "switch.handle",
+        "switch.icon-on",
+        "switch.icon-off"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-switch-diagnostics-packet-v1/artifacts/switch_diagnostics_packet_v1.md",
+        "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_switch_adapter_report_v1.json"
+      ],
+      "layer_classification": [
+        "material_recipe owns switch track/handle/icon composition, selection animation, and selectors",
+        "material_foundation owns shared indication state-layer/ripple and minimum interactive target sizing",
+        "test_harness covers selector readiness, pointer/keyboard ripple origins, minimum press duration, pressed scene stability, adapter-report parts, and the promoted icons state-matrix gallery diagnostics",
+        "no new kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "tabs",
+      "family": "navigation",
+      "status": "packet_done_foundation_refactored",
+      "wave": "wave1_navigation_indicator",
+      "default_owner_bias": "material_foundation",
+      "packet_strategy": "navigation_indicator_packet",
+      "first_gate_kind": "fixed_timestep_indicator_diag",
+      "selector_status": "ready_for_packet",
+      "stable_part_ids": [
+        "tabs",
+        "tabs.chrome",
+        "tabs.active-indicator",
+        "tabs.item",
+        "tabs.item.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_navigation_indicator_packet_v1.md",
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_navigation_indicator_adapter_report_v1.json"
+      ],
+      "layer_classification": [
+        "material_recipe owns tab target geometry and equal-width fallback placement",
+        "material_foundation owns shared ActiveIndicatorRect motion, clamping, canvas paint, and optional decoration",
+        "diagnostics owns fixed-timestep pixel-change scripts",
+        "no kit_policy or mechanism gap found"
+      ]
+    },
+    {
+      "id": "text_field",
+      "family": "field",
+      "status": "packet_done_foundation_refactored",
+      "wave": "wave2_field_family",
+      "default_owner_bias": "material_foundation",
+      "packet_strategy": "field_foundation_packet",
+      "first_gate_kind": "scene_chrome_label_semantics",
+      "selector_status": "field_selector_ready",
+      "selector_artifact": "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
+      "stable_part_ids": [
+        "text_field",
+        "text_field.chrome",
+        "text_field.active-indicator",
+        "text_field.label",
+        "text_field.supporting-text",
+        "text_field.leading-icon",
+        "text_field.trailing-icon"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_foundation owns shared filled field active-indicator canvas paint",
+        "material_recipe owns floating label, placeholder opacity, icon slots, supporting text, and variant chrome assembly",
+        "diagnostics owns live active-indicator selector coverage",
+        "no mechanism gap found"
+      ]
+    },
+    {
+      "id": "time_picker",
+      "family": "field",
+      "status": "packet_done_string_registry_aligned",
+      "wave": "wave2_field_family",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "picker_after_field_foundation",
+      "first_gate_kind": "semantics_dialog_dial_value_ids_input_error_a11y_labels_and_string_registry",
+      "selector_status": "picker_selector_ready",
+      "stable_part_ids": [
+        "time_picker",
+        "time_picker.chrome",
+        "time_picker.mode-toggle",
+        "time_picker.hour-selector",
+        "time_picker.hour-selector.chrome",
+        "time_picker.minute-selector",
+        "time_picker.minute-selector.chrome",
+        "time_picker.clock-dial",
+        "time_picker.clock-dial.chrome",
+        "time_picker.clock-dial.hour.<HH>",
+        "time_picker.clock-dial.minute.<MM>",
+        "time_picker.period",
+        "time_picker.period.am",
+        "time_picker.period.pm",
+        "time_picker.input.hour",
+        "time_picker.input.hour.chrome",
+        "time_picker.input.hour.supporting-text",
+        "time_picker.input.minute",
+        "time_picker.input.minute.chrome",
+        "time_picker.input.minute.supporting-text",
+        "time_picker.input.period",
+        "time_picker.input.period.am",
+        "time_picker.input.period.pm",
+        "time_picker.scrim",
+        "time_picker.scrim.chrome",
+        "time_picker.panel",
+        "time_picker.actions.cancel",
+        "time_picker.actions.confirm"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md",
+        "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/artifacts/time_picker_dial_accessibility_packet_v1.md",
+        "docs/workstreams/material3-time-picker-input-error-packet-v1/artifacts/time_picker_input_error_packet_v1.md",
+        "docs/workstreams/material3-time-picker-a11y-labels-packet-v1/artifacts/time_picker_a11y_labels_packet_v1.md",
+        "docs/workstreams/material3-time-picker-string-registry-packet-v1/artifacts/time_picker_string_registry_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns dial/input display modes, staged time draft, selector keyboard edits, invalid input state/error text, dial drag/click handling, picker part ids, value-derived dial label ids, Compose-aligned selector roles/spoken values, period group labels, and TimePicker consumption of Material string helpers",
+        "material_foundation owns the Material string registry bridge over I18nService with English fallback",
+        "kit_policy owns modal overlay request, scrim dismiss, focus trap, and focus restore through existing overlay/focus primitives",
+        "diagnostics/test_harness owned stale modal underlay stretch goldens and old global selector drift",
+        "TimePicker localization registry wiring is closed; DatePicker locale-aware labels/date descriptions are closed by material3-date-picker-locale-strings-packet-v1"
+      ]
+    },
+    {
+      "id": "tooltip",
+      "family": "overlay_feedback",
+      "status": "packet_done_rich_parts_aligned",
+      "wave": "wave3_overlay_feedback",
+      "default_owner_bias": "kit_policy",
+      "packet_strategy": "overlay_packet_plus_rich_parts_follow_on",
+      "first_gate_kind": "rich_parts_selector_and_click_through_boundary",
+      "selector_status": "overlay_feedback_selector_ready",
+      "stable_part_ids": [
+        "tooltip",
+        "tooltip.chrome",
+        "tooltip.title",
+        "tooltip.supporting-text"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+        "docs/workstreams/material3-tooltip-rich-parts-packet-v1/artifacts/tooltip_rich_parts_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns PlainTooltip/RichTooltip content chrome, rich title/supporting-text part ids, and shared root/chrome semantics wiring",
+        "kit_policy owns tooltip provider delay, hover opening, safe-hover timing, and touch suppression",
+        "mechanism follow-on covers interactive rich tooltip actions because current tooltip overlays are click-through",
+        "no new material_foundation gap found"
+      ]
+    },
+    {
+      "id": "top_app_bar",
+      "family": "navigation",
+      "status": "packet_done_scroll_diagnostics_aligned",
+      "wave": "wave1_navigation_indicator",
+      "default_owner_bias": "material_recipe",
+      "packet_strategy": "scroll_behavior_packet_if_needed",
+      "first_gate_kind": "scroll_gallery_diag_and_scene",
+      "selector_status": "surface_data_display_selector_ready",
+      "stable_part_ids": [
+        "top_app_bar",
+        "top_app_bar.action",
+        "top_app_bar.action.chrome"
+      ],
+      "packet_artifacts": [
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md",
+        "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/artifacts/top_app_bar_scroll_diagnostics_packet_v1.md"
+      ],
+      "layer_classification": [
+        "material_recipe owns app-bar variants, toolbar semantics, action icon button wiring, and scroll behavior state",
+        "material_foundation is not needed for current scroll/color/elevation handling beyond token resolution",
+        "test_harness covers toolbar semantics, headless top-app-bar goldens, root/action selector readiness, and the promoted Material3 gallery scroll diagnostics script",
+        "gallery diagnostics passed for pinned, enter-always, enter-always-settle, exit-until-collapsed, and exit-until-collapsed-settle scenarios",
+        "no kit_policy or mechanism gap found"
+      ]
+    }
+  ]
+}

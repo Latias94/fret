@@ -63,7 +63,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-material3-autocomplete-option-alpha" }
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-autocomplete.option.alpha" }
       },
       "timeout_frames": 600
     },
@@ -73,7 +73,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-autocomplete-option-alpha.chrome"
+          "id": "ui-gallery-material3-autocomplete.option.alpha.chrome"
         }
       },
       "timeout_frames": 600
@@ -82,10 +82,10 @@
       "type": "assert",
       "predicate": {
         "kind": "bounds_approx_equal",
-        "a": { "kind": "test_id", "id": "ui-gallery-material3-autocomplete-option-alpha" },
+        "a": { "kind": "test_id", "id": "ui-gallery-material3-autocomplete.option.alpha" },
         "b": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-autocomplete-option-alpha.chrome"
+          "id": "ui-gallery-material3-autocomplete.option.alpha.chrome"
         },
         "eps_px": 1.0
       }
@@ -97,4 +97,3 @@
     }
   ]
 }
-

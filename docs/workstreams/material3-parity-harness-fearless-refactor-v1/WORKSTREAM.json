@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "slug": "material3-parity-harness-fearless-refactor-v1",
+  "title": "Material 3 Parity Harness Fearless Refactor v1",
+  "status": "closed",
+  "updated": "2026-05-27",
+  "scope_kind": "closeout",
+  "problem": "Closed lane that established the Material 3 parity harness baseline: suite manifest, Button/Select/Switch packets, reusable test support, Select test split, and gated Select/Switch automation surfaces.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-05-27.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/HANDOFF.md"
+    }
+  ],
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-parity-harness-fearless-refactor-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "parity-tool-compile",
+      "command": "python -m py_compile tools/parity-discovery/shadcn_parity_discovery.py"
+    },
+    {
+      "name": "material3-button-adapter-fixture-json",
+      "command": "python -m json.tool tools/parity-discovery/fixtures/material3_button_adapter_v1.json | Out-Null"
+    },
+    {
+      "name": "material3-button-adapter-pilot-json",
+      "command": "python -m json.tool docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json | Out-Null"
+    },
+    {
+      "name": "material3-coverage-inventory-json",
+      "command": "python -m json.tool docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_coverage_inventory_v1.json | Out-Null"
+    },
+    {
+      "name": "material3-suite-manifest-json",
+      "command": "python -m json.tool tools/parity-discovery/suites/material3_parity_discovery_v1.json | Out-Null"
+    },
+    {
+      "name": "material3-suite-report-from-existing",
+      "command": "python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/material3_parity_discovery_v1.json --suite-from-existing-reports --suite-output docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_parity_suite_report_v1.json"
+    },
+    {
+      "name": "material3-suite-report-json",
+      "command": "python -m json.tool docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_parity_suite_report_v1.json | Out-Null"
+    },
+    {
+      "name": "material3-select-adapter-fixture-json",
+      "command": "python -m json.tool tools/parity-discovery/fixtures/material3_select_adapter_v1.json | Out-Null"
+    },
+    {
+      "name": "material3-select-adapter-report-json",
+      "command": "python -m json.tool docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_select_adapter_report_v1.json | Out-Null"
+    },
+    {
+      "name": "material3-switch-adapter-fixture-json",
+      "command": "python -m json.tool tools/parity-discovery/fixtures/material3_switch_adapter_v1.json | Out-Null"
+    },
+    {
+      "name": "material3-switch-adapter-report-json",
+      "command": "python -m json.tool docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_switch_adapter_report_v1.json | Out-Null"
+    },
+    {
+      "name": "material3-radio-alignment-test-target-compile",
+      "command": "cargo test -p fret-ui-material3 --test radio_alignment --no-run"
+    },
+    {
+      "name": "material3-select-behavior",
+      "command": "cargo nextest run -p fret-ui-material3 --test select_behavior"
+    },
+    {
+      "name": "material3-radio-alignment-adjacent-chip-set",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment chip_set_roving_treats_trailing_action_focus_as_active_chip"
+    },
+    {
+      "name": "material3-automation-surface-default-compile",
+      "command": "cargo test -p fret-ui-material3 --test automation_surface --no-run"
+    },
+    {
+      "name": "material3-automation-surface-diagnostics",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/DESIGN.md",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/TODO.md",
+    "tools/parity-discovery/fixtures/material3_button_adapter_v1.json",
+    "tools/parity-discovery/fixtures/material3_select_adapter_v1.json",
+    "tools/parity-discovery/fixtures/material3_switch_adapter_v1.json",
+    "tools/parity-discovery/suites/material3_parity_discovery_v1.json",
+    "docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_coverage_inventory_v1.json",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_select_adapter_report_v1.json",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_switch_adapter_report_v1.json",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_parity_suite_report_v1.json",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_test_id_contract_v1.md",
+    "ecosystem/fret-ui-material3/tests/support",
+    "ecosystem/fret-ui-material3/tests/select_behavior.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "ecosystem/fret-ui-material3/src",
+    "ecosystem/fret-ui-material3/tests",
+    "apps/fret-ui-gallery/src/ui/snippets/material3",
+    "tools/diag-scripts/ui-gallery/material3"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md",
+    "docs/adr/0166-interactivity-pseudoclasses-and-structural-stability.md",
+    "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed. Start a narrow follow-on for the pre-existing Material controls golden drift, the next packet such as Tabs/navigation indicator, or any future packet-driven hardening/repair row."
+  }
+}

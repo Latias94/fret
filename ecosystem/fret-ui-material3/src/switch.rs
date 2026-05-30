@@ -7,20 +7,19 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::{
-    Axis, Color, Corners, Edges, KeyCode, Point, Px, Rect, SemanticsRole, Size, SvgFit, Transform2D,
-};
+use fret_core::{Axis, Color, Corners, Edges, KeyCode, Point, Px, Rect, Size, SvgFit, Transform2D};
 use fret_icons::IconId;
 use fret_runtime::{ActionId, Model};
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PointerRegionProps, PressableA11y, PressableProps, SvgIconProps,
+    PointerRegionProps, PressableProps, SvgIconProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::controllable_state;
+use fret_ui_kit::primitives::switch::switch_a11y;
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
@@ -33,10 +32,30 @@ use crate::foundation::indication::{
     material_pressable_indication_config,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
-use crate::foundation::interactive_size::{
-    centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
-};
+use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
+use crate::foundation::test_id::{chrome_part_test_id, part_test_id};
 use crate::tokens::switch as switch_tokens;
+
+#[derive(Debug, Clone)]
+struct SwitchPartTestIds {
+    chrome: Arc<str>,
+    track: Arc<str>,
+    handle: Arc<str>,
+    icon_on: Arc<str>,
+    icon_off: Arc<str>,
+}
+
+impl SwitchPartTestIds {
+    fn from_base(base: &Arc<str>) -> Self {
+        Self {
+            chrome: chrome_part_test_id(base),
+            track: part_test_id(base, "track"),
+            handle: part_test_id(base, "handle"),
+            icon_on: part_test_id(base, "icon-on"),
+            icon_off: part_test_id(base, "icon-off"),
+        }
+    }
+}
 
 fn material_web_easing_standard(x: f32) -> f32 {
     // Material Web: `md.sys.motion.easing.standard = cubic-bezier(0.2, 0, 0, 1)`
@@ -303,17 +322,13 @@ impl Switch {
 
                     (corner_radii, layout, focus_ring)
                 };
+                let mut a11y = switch_a11y(self.a11y_label.clone(), checked);
+                a11y.test_id = self.test_id.clone();
                 let pressable_props = PressableProps {
                     enabled,
                     focusable: enabled,
                     key_activation: Default::default(),
-                    a11y: PressableA11y {
-                        role: Some(SemanticsRole::Switch),
-                        label: self.a11y_label.clone(),
-                        test_id: self.test_id.clone(),
-                        checked: Some(checked),
-                        ..Default::default()
-                    },
+                    a11y,
                     layout,
                     focus_ring: Some(focus_ring),
                     focus_ring_always_paint: false,
@@ -689,6 +704,7 @@ impl Switch {
                             thumb_active_for_icons_from_motion || icon_keepalive;
                         let handle_child = material_switch_handle_icon(
                             cx,
+                            self.test_id.as_ref().map(SwitchPartTestIds::from_base),
                             icon_on_opacity_t,
                             icon_off_opacity_t,
                             icon_selected_only_rotation_degrees,
@@ -703,6 +719,7 @@ impl Switch {
                         );
                         let track = switch_track(
                             cx,
+                            self.test_id.as_ref().map(SwitchPartTestIds::from_base),
                             size,
                             geom,
                             chrome,
@@ -741,11 +758,17 @@ impl Switch {
                         outer.corner_radii = Corners::all(Px(0.0));
 
                         let chrome = cx.container(outer, move |_cx| vec![overlay, track]);
-                        vec![centered_fill_with_chrome_test_id(
-                            cx,
-                            pressable_props.a11y.test_id.as_ref(),
-                            chrome,
-                        )]
+                        let chrome = if let Some(ids) = pressable_props
+                            .a11y
+                            .test_id
+                            .as_ref()
+                            .map(SwitchPartTestIds::from_base)
+                        {
+                            chrome.test_id(ids.chrome)
+                        } else {
+                            chrome
+                        };
+                        vec![centered_fill(cx, chrome)]
                     })
                 });
 
@@ -911,6 +934,7 @@ fn switch_geometry(
 
 fn switch_track<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    part_test_ids: Option<SwitchPartTestIds>,
     size: SwitchSizeTokens,
     geom: SwitchGeometry,
     chrome: switch_tokens::SwitchChrome,
@@ -929,7 +953,9 @@ fn switch_track<H: UiHost>(
         track.border_color = Some(outline);
     }
 
-    cx.container(track, move |cx| {
+    let track_test_id = part_test_ids.as_ref().map(|ids| ids.track.clone());
+    let handle_test_id = part_test_ids.as_ref().map(|ids| ids.handle.clone());
+    let track = cx.container(track, move |cx| {
         let mut handle = ContainerProps::default();
         handle.layout.position = fret_ui::element::PositionStyle::Absolute;
         handle.layout.inset.left = Some(geom.handle_x).into();
@@ -939,7 +965,7 @@ fn switch_track<H: UiHost>(
         handle.corner_radii = handle_corner_radii;
         handle.background = Some(chrome.handle_color);
 
-        vec![cx.container(handle, move |cx| {
+        let handle = cx.container(handle, move |cx| {
             let Some(child) = handle_child else {
                 return Vec::new();
             };
@@ -959,8 +985,20 @@ fn switch_track<H: UiHost>(
                 },
                 move |_cx| vec![child],
             )]
-        })]
-    })
+        });
+        let handle = if let Some(id) = handle_test_id.clone() {
+            handle.test_id(id)
+        } else {
+            handle
+        };
+        vec![handle]
+    });
+
+    if let Some(id) = track_test_id {
+        track.test_id(id)
+    } else {
+        track
+    }
 }
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -1005,6 +1043,7 @@ fn consume_enter_key_handler() -> fret_ui::action::OnKeyDown {
 
 fn material_switch_handle_icon<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    part_test_ids: Option<SwitchPartTestIds>,
     icon_on_opacity_t: f32,
     icon_off_opacity_t: f32,
     icon_selected_only_rotation_degrees: f32,
@@ -1041,6 +1080,11 @@ fn material_switch_handle_icon<H: UiHost>(
 
         let layer =
             material_switch_icon_layer(cx, &on_icon, size, color, opacity, rotation_degrees);
+        let layer = if let Some(id) = part_test_ids.as_ref().map(|ids| ids.icon_on.clone()) {
+            layer.test_id(id)
+        } else {
+            layer
+        };
         return Some(material_switch_icon_overlay(cx, vec![layer]));
     }
 
@@ -1078,6 +1122,16 @@ fn material_switch_handle_icon<H: UiHost>(
     let on_layer = material_switch_icon_layer(cx, &on_icon, on.0, on_color, icon_on_opacity_t, 0.0);
     let off_layer =
         material_switch_icon_layer(cx, &off_icon, off.0, off_color, icon_off_opacity_t, 0.0);
+    let on_layer = if let Some(id) = part_test_ids.as_ref().map(|ids| ids.icon_on.clone()) {
+        on_layer.test_id(id)
+    } else {
+        on_layer
+    };
+    let off_layer = if let Some(id) = part_test_ids.map(|ids| ids.icon_off) {
+        off_layer.test_id(id)
+    } else {
+        off_layer
+    };
     Some(material_switch_icon_overlay(cx, vec![on_layer, off_layer]))
 }
 

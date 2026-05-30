@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "slug": "material3-time-picker-input-error-packet-v1",
+  "title": "Material 3 TimePicker Input Error Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "closeout",
+  "problem": "Closed lane that resolved the Material3 TimePicker invalid input/error-text follow-on by separating editable invalid input from committed time and adding focused semantics proof.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-time-picker-input-error-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-time-picker-input-error-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-time-picker-input-error-packet-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-time-picker-input-error-packet-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-time-picker-input-error-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-time-picker-input-error-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Render docked Material3 TimePicker in 24h input mode, type an invalid hour, inspect committed time, invalid semantics, supporting text, live-region semantics, then recover with a valid hour.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_time_input_rejects_invalid_values_and_recovers"
+    ]
+  },
+  "gates": [
+    {
+      "name": "material3-time-picker-input-error",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_time_input_rejects_invalid_values_and_recovers"
+    },
+    {
+      "name": "material3-time-picker-input-regression",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_time_input_replaces_and_auto_advances_hour"
+    },
+    {
+      "name": "material3-time-picker-automation-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_exposes_stable_part_test_ids"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-material3/src/time_picker.rs",
+    "ecosystem/fret-ui-material3/src/tokens/time_input.rs",
+    "ecosystem/fret-ui-material3/tests/radio_alignment.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "return_to_material3_sweep",
+    "notes": "Input error handling is closed. Selector spoken labels are closed by material3-time-picker-a11y-labels-packet-v1, and TimePicker localization is closed by material3-time-picker-string-registry-packet-v1."
+  }
+}

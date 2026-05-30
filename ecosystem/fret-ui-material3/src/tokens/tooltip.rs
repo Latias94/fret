@@ -36,9 +36,24 @@ pub(crate) fn plain_container_padding(theme: &Theme) -> Edges {
     }
 }
 
-pub(crate) fn max_width(theme: &Theme) -> Px {
+pub(crate) fn plain_container_max_width(theme: &Theme) -> Px {
     let _ = theme;
-    Px(240.0)
+    Px(200.0)
+}
+
+pub(crate) fn rich_container_max_width(theme: &Theme) -> Px {
+    let _ = theme;
+    Px(320.0)
+}
+
+pub(crate) fn container_min_width(theme: &Theme) -> Px {
+    let _ = theme;
+    Px(40.0)
+}
+
+pub(crate) fn container_min_height(theme: &Theme) -> Px {
+    let _ = theme;
+    Px(24.0)
 }
 
 pub(crate) fn rich_container_background(theme: &Theme) -> Color {
@@ -67,13 +82,15 @@ pub(crate) fn rich_container_shape_radius(theme: &Theme) -> Px {
         .unwrap_or(Px(12.0))
 }
 
-pub(crate) fn rich_container_padding(theme: &Theme) -> Edges {
+pub(crate) fn rich_container_padding(theme: &Theme, has_title: bool) -> Edges {
     let _ = theme;
+    let vertical = if has_title { Px(12.0) } else { Px(4.0) };
+    let bottom = if has_title { Px(16.0) } else { vertical };
     Edges {
         left: Px(16.0),
         right: Px(16.0),
-        top: Px(12.0),
-        bottom: Px(12.0),
+        top: vertical,
+        bottom,
     }
 }
 

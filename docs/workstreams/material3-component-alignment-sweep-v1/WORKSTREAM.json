@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "slug": "material3-component-alignment-sweep-v1",
+  "title": "Material 3 Component Alignment Sweep v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "closeout",
+  "problem": "Closed lane that applied the Material 3 parity harness loop across every fret-ui-material3 component, classified each finding by layer, refactored shared foundation/policy only when component packet evidence supported it, and split remaining work into narrow follow-ons.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-component-alignment-sweep-v1/CLOSEOUT_AUDIT_2026-05-27.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-component-alignment-sweep-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-component-alignment-sweep-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-component-alignment-sweep-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-component-alignment-sweep-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-component-alignment-sweep-v1/HANDOFF.md"
+    },
+    {
+      "role": "follow_on_closure",
+      "path": "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md"
+    }
+  ],
+  "repro": {
+    "summary": "Regenerate the existing Material Button/Select/Switch parity suite before expanding the component sweep.",
+    "commands": [
+      "python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/material3_parity_discovery_v1.json --suite-from-existing-reports --suite-output docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_parity_suite_report_v1.json",
+      "python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json | Out-Null"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "component-alignment-matrix-json",
+      "command": "python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "material3-suite-from-existing-reports",
+      "command": "python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/material3_parity_discovery_v1.json --suite-from-existing-reports --suite-output docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_parity_suite_report_v1.json"
+    },
+    {
+      "name": "material3-crate-compile",
+      "command": "cargo test -p fret-ui-material3 --lib --no-run"
+    },
+    {
+      "name": "material3-automation-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface"
+    },
+    {
+      "name": "material3-top-app-bar-alignment",
+      "command": "cargo nextest run -p fret-ui-material3 --test top_app_bar_alignment"
+    },
+    {
+      "name": "material3-select-behavior",
+      "command": "cargo nextest run -p fret-ui-material3 --test select_behavior"
+    },
+    {
+      "name": "material3-crate-check-diagnostics-tests",
+      "command": "cargo check -p fret-ui-material3 --features diagnostics --tests"
+    },
+    {
+      "name": "material3-crate-clippy-diagnostics-tests-no-deps",
+      "command": "cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/material3-component-alignment-sweep-v1/CLOSEOUT_AUDIT_2026-05-27.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_sweep_closeout_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_follow_on_closure_audit_v1.md",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_coverage_inventory_v1.json",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_parity_suite_report_v1.json",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_test_id_contract_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_selector_audit_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_navigation_indicator_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_navigation_indicator_adapter_report_v1.json",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_foundation_consolidation_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_test_modularization_v1.md",
+    "tools/parity-discovery/suites/material3_parity_discovery_v1.json",
+    "ecosystem/fret-ui-material3/src",
+    "ecosystem/fret-ui-material3/tests",
+    "apps/fret-ui-gallery/src/ui/snippets/material3",
+    "tools/diag-scripts/ui-gallery/material3"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md",
+    "docs/adr/0166-interactivity-pseudoclasses-and-structural-stability.md",
+    "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This broad sweep lane is closed, and the 2026-05-28 follow-on closure audit records no remaining matrix rows in packet_done_known_follow_ons. Start a new narrow follow-on only from fresh product evidence, source-backed drift, release-readiness gates, or future one-family-at-a-time test splits."
+  }
+}

@@ -34,7 +34,18 @@ pub(crate) fn time_input_field_container_shape(theme: &Theme) -> Corners {
         .unwrap_or(Corners::all(Px(8.0)))
 }
 
-pub(crate) fn time_input_field_container_color(theme: &Theme, focused: bool) -> Color {
+pub(crate) fn time_input_field_container_color(theme: &Theme, focused: bool, error: bool) -> Color {
+    if error {
+        return MaterialTokenResolver::new(theme).color_comp_or_sys(
+            &token_key(if focused {
+                "time-input-field.error.focus.container.color"
+            } else {
+                "time-input-field.error.container.color"
+            }),
+            "md.sys.color.error-container",
+        );
+    }
+
     MaterialTokenResolver::new(theme).color_comp_or_sys(
         &token_key(if focused {
             "time-input-field.focus.container.color"
@@ -55,7 +66,14 @@ pub(crate) fn time_input_field_focus_outline_width(theme: &Theme) -> Px {
         .unwrap_or(Px(2.0))
 }
 
-pub(crate) fn time_input_field_focus_outline_color(theme: &Theme) -> Color {
+pub(crate) fn time_input_field_focus_outline_color(theme: &Theme, error: bool) -> Color {
+    if error {
+        return MaterialTokenResolver::new(theme).color_comp_or_sys(
+            &token_key("time-input-field.error.focus.outline.color"),
+            "md.sys.color.error",
+        );
+    }
+
     MaterialTokenResolver::new(theme).color_comp_or_sys(
         &token_key("time-input-field.focus.outline.color"),
         "md.sys.color.primary",
@@ -70,7 +88,22 @@ pub(crate) fn time_input_field_label_text_style(theme: &Theme) -> TextStyle {
     typography::with_intent(style, TextIntent::Control)
 }
 
-pub(crate) fn time_input_field_label_color(theme: &Theme, focused: bool, hovered: bool) -> Color {
+pub(crate) fn time_input_field_label_color(
+    theme: &Theme,
+    focused: bool,
+    hovered: bool,
+    error: bool,
+) -> Color {
+    if error {
+        let suffix = match (focused, hovered) {
+            (true, _) => "time-input-field.error.focus.label-text.color",
+            (false, true) => "time-input-field.error.hover.label-text.color",
+            _ => "time-input-field.error.label-text.color",
+        };
+        return MaterialTokenResolver::new(theme)
+            .color_comp_or_sys(&token_key(suffix), "md.sys.color.on-error-container");
+    }
+
     let suffix = match (focused, hovered) {
         (true, _) => "time-input-field.focus.label-text.color",
         (false, true) => "time-input-field.hover.label-text.color",
@@ -124,7 +157,14 @@ pub(crate) fn time_input_field_supporting_text_style(theme: &Theme) -> TextStyle
     typography::with_intent(style, TextIntent::Content)
 }
 
-pub(crate) fn time_input_field_supporting_text_color(theme: &Theme) -> Color {
+pub(crate) fn time_input_field_supporting_text_color(theme: &Theme, error: bool) -> Color {
+    if error {
+        return MaterialTokenResolver::new(theme).color_comp_or_sys(
+            &token_key("time-input-field.error.supporting-text.color"),
+            "md.sys.color.error",
+        );
+    }
+
     MaterialTokenResolver::new(theme).color_comp_or_sys(
         &token_key("time-input-field.supporting-text.color"),
         "md.sys.color.on-surface-variant",

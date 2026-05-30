@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "slug": "material3-snackbar-parts-selector-packet-v1",
+  "title": "Material 3 Snackbar Parts Selector Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "closeout",
+  "problem": "Closed lane that resolved the Material3 Snackbar action/close automation follow-on by deriving toast subpart test ids in the shared fret-ui-kit toast renderer.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-snackbar-parts-selector-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-snackbar-parts-selector-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-snackbar-parts-selector-packet-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-snackbar-parts-selector-packet-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-snackbar-parts-selector-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-snackbar-parts-selector-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Render a Material3 Snackbar with an action and root test id, then inspect live root/action/close selectors.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_tooltip_and_snackbar_expose_stable_part_test_ids"
+    ]
+  },
+  "gates": [
+    {
+      "name": "kit-toast-part-selector-test",
+      "command": "cargo nextest run -p fret-ui-kit toast_action_cancel_and_close_test_ids_derive_from_root_test_id"
+    },
+    {
+      "name": "material3-snackbar-automation-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_tooltip_and_snackbar_expose_stable_part_test_ids"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-kit/src/window_overlays/render.rs",
+    "ecosystem/fret-ui-kit/src/window_overlays/tests/toast.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md"
+  ],
+  "continue_policy": {
+    "default_action": "return_to_material3_sweep",
+    "notes": "The Snackbar action/close selector follow-on is closed. Future message/supporting-text toast selectors should require a consumer-driven packet."
+  }
+}

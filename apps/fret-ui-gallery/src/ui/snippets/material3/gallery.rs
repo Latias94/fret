@@ -348,9 +348,16 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         material3::List::new(material3_list_value)
             .a11y_label("List")
             .items(vec![
-                material3::ListItem::new("alpha", "Alpha").leading_icon(ids::ui::SEARCH),
-                material3::ListItem::new("beta", "Beta").leading_icon(ids::ui::SETTINGS),
+                material3::ListItem::new("alpha", "Alpha")
+                    .leading_icon(ids::ui::SEARCH)
+                    .supporting_text("Supporting text"),
+                material3::ListItem::new("beta", "Beta")
+                    .leading_icon(ids::ui::SETTINGS)
+                    .supporting_text("Selected metadata")
+                    .trailing_supporting_text("Meta"),
                 material3::ListItem::new("disabled", "Disabled")
+                    .overline_text("Overline")
+                    .supporting_text("Disabled supporting text")
                     .leading_icon(ids::ui::SLASH)
                     .disabled(true),
             ])

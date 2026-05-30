@@ -114,6 +114,39 @@ pub(crate) fn clock_dial_handle_shape(theme: &Theme) -> Corners {
         .unwrap_or(Corners::all(Px(9999.0)))
 }
 
+pub(crate) fn clock_dial_selector_center_size(theme: &Theme) -> Px {
+    theme
+        .metric_by_key(&token_key("clock-dial.selector.center.container.size"))
+        .unwrap_or(Px(8.0))
+}
+
+pub(crate) fn clock_dial_selector_center_color(theme: &Theme) -> Color {
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        &token_key("clock-dial.selector.center.container.color"),
+        "md.sys.color.primary",
+    )
+}
+
+pub(crate) fn clock_dial_selector_center_shape(theme: &Theme) -> Corners {
+    theme
+        .corners_by_key(&token_key("clock-dial.selector.center.container.shape"))
+        .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
+        .unwrap_or(Corners::all(Px(9999.0)))
+}
+
+pub(crate) fn clock_dial_selector_track_width(theme: &Theme) -> Px {
+    theme
+        .metric_by_key(&token_key("clock-dial.selector.track.container.width"))
+        .unwrap_or(Px(2.0))
+}
+
+pub(crate) fn clock_dial_selector_track_color(theme: &Theme) -> Color {
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        &token_key("clock-dial.selector.track.container.color"),
+        "md.sys.color.primary",
+    )
+}
+
 pub(crate) fn time_selector_container_width(theme: &Theme) -> Px {
     theme
         .metric_by_key(&token_key("time-selector.container.width"))
@@ -169,6 +202,12 @@ pub(crate) fn time_selector_separator_color(theme: &Theme) -> Color {
         &token_key("time-selector.separator.color"),
         "md.sys.color.on-surface",
     )
+}
+
+pub(crate) fn display_separator_width(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.sys.fret.material.time-picker.display-separator.width")
+        .unwrap_or(Px(24.0))
 }
 
 pub(crate) fn time_selector_label_color(

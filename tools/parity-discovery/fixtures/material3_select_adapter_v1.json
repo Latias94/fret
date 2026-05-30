@@ -1,0 +1,405 @@
+{
+  "schema_version": 1,
+  "component": "select",
+  "style": "material3",
+  "source_family": "material3",
+  "adapter": {
+    "schema_version": 1,
+    "id": "material3.select.adapter.v1",
+    "goal": "Map Material Select / exposed-dropdown facts into the shared component parity packet so field-family overlay work can produce repair, hardening, and gate queues.",
+    "source_precedence": [
+      "Material spec and Material Web for Select visual intent, option richness, and token vocabulary",
+      "Compose Material3 for exposed-dropdown state, menu anchoring, touch, and toolkit semantics",
+      "Material UI for web-facing Select/Menu defaults and focus behavior",
+      "Base UI Select for headless a11y part composition",
+      "Fret shadcn Select for in-tree overlay/test_id/gate structure, not Material visuals"
+    ]
+  },
+  "report": {
+    "id": "material3_select_adapter_report_v1",
+    "schema_version": 1,
+    "generated_date": "2026-05-27",
+    "limitations": [
+      "This first Select packet is a harness baseline, not a full Material Select parity claim.",
+      "The packet relies on existing Material Select diagnostics scripts and source wiring; fresh bundle/layout captures must replace the live-measurement rows before component repair work starts.",
+      "Material Select has no single upstream reference. This fixture uses Material Web for select-specific API/chrome, Compose Material3 for exposed-dropdown state and menu patterns, MUI for web-facing Select/Menu defaults, and Base UI for headless select semantics.",
+      "The current fixture does not compare upstream DOM geometry because no Material Select upstream DOM snapshot is attached yet."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "material_web.select",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-web/select/internal/select.ts"
+      },
+      {
+        "id": "material_web.select_option",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-web/select/internal/selectoption/select-option.ts"
+      },
+      {
+        "id": "material_web.select_docs",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-web/docs/components/select.md"
+      },
+      {
+        "id": "material_ui.select",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Select/Select.js"
+      },
+      {
+        "id": "material_ui.select_input",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Select/SelectInput.js"
+      },
+      {
+        "id": "compose_material3.exposed_dropdown",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/ExposedDropdownMenu.kt"
+      },
+      {
+        "id": "compose_material3.menu",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Menu.kt"
+      },
+      {
+        "id": "base_ui.select",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/base-ui/packages/react/src/select"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.material3.select",
+        "path": "ecosystem/fret-ui-material3/src/select.rs"
+      },
+      {
+        "id": "fret.material3.select_tokens",
+        "path": "ecosystem/fret-ui-material3/src/tokens/select.rs"
+      },
+      {
+        "id": "fret.material3.select_gallery",
+        "path": "apps/fret-ui-gallery/src/ui/snippets/material3/select.rs"
+      },
+      {
+        "id": "fret.material3.select_a11y_diag",
+        "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-a11y-parity-bundle.json"
+      },
+      {
+        "id": "fret.material3.select_typeahead_diag",
+        "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-typeahead-delay.json"
+      },
+      {
+        "id": "fret.material3.select_width_floor_diag",
+        "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-menu-width-floor-screenshots.json"
+      },
+      {
+        "id": "fret.material3.select_item_chrome_diag",
+        "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-item-chrome-fill.json"
+      },
+      {
+        "id": "fret.material3.select_positioning_diag",
+        "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-menu-positioning-transform-screenshots.json"
+      },
+      {
+        "id": "fret.shadcn.select_exemplar",
+        "path": "ecosystem/fret-ui-shadcn/src/select.rs"
+      },
+      {
+        "id": "fret.ui_kit.select_primitive",
+        "path": "ecosystem/fret-ui-kit/src/primitives/select.rs"
+      },
+      {
+        "id": "fret.audit.shadcn_select",
+        "path": "docs/audits/shadcn-select.md"
+      }
+    ]
+  },
+  "parts": [
+    {
+      "id": "material3_select_stable_automation_surface",
+      "label": "Material 3 Select stable automation surface",
+      "axis": "semantics",
+      "upstream": {
+        "source_ref_ids": [
+          "material_web.select",
+          "material_web.select_option",
+          "base_ui.select"
+        ],
+        "facts": [
+          "A Select needs stable trigger/input, popup/listbox, option/item, and selected-state surfaces for automation.",
+          "Material Web select options expose display text, typeahead text, supporting text, and selected item state as component-level facts.",
+          "Base UI Select splits trigger, popup, list, item, item text, icon, and indicator into stable headless parts."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.material3.select",
+          "fret.material3.select_gallery"
+        ],
+        "test_ids": [
+          "ui-gallery-material3-select",
+          "ui-gallery-material3-select-listbox",
+          "ui-gallery-material3-select-a",
+          "ui-gallery-material3-select-a.chrome",
+          "ui-gallery-material3-select-typeahead",
+          "ui-gallery-material3-select-typeahead-listbox",
+          "ui-gallery-material3-select-typeahead-item-delta",
+          "ui-gallery-material3-select-unclamped",
+          "ui-gallery-material3-select-unclamped-listbox",
+          "ui-gallery-material3-select-rich",
+          "ui-gallery-material3-select-rich-item-alpha"
+        ],
+        "facts": [
+          "Select::test_id stamps the trigger semantics and chrome with the caller-provided id.",
+          "The listbox derives a stable '<base>-listbox' id from the trigger id, falling back to 'material3-select-listbox' when no base id exists.",
+          "SelectItem::test_id stamps option semantics and derives '<item>.chrome' for the list item chrome.",
+          "The Material3 gallery snippet exposes default, typeahead, unclamped-width, rich-option, and transformed-positioning probes."
+        ]
+      },
+      "checks": [
+        {
+          "id": "material3_select_selector_contract_is_wired",
+          "kind": "existing_gate",
+          "expected": "Material Select should expose stable trigger, derived listbox, option, and option chrome ids for diagnostics and future packet predicates.",
+          "observed": "pass",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "ecosystem/fret-ui-material3/src/select.rs",
+            "apps/fret-ui-gallery/src/ui/snippets/material3/select.rs",
+            "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_coverage_inventory_v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Selector stability is a recipe-level prerequisite for field-family packet automation."
+          }
+        }
+      ]
+    },
+    {
+      "id": "material3_select_combobox_listbox_semantics_flow",
+      "label": "Material 3 Select combobox, listbox, focus restore, and option semantics",
+      "axis": "semantics",
+      "upstream": {
+        "source_ref_ids": [
+          "material_ui.select",
+          "material_ui.select_input",
+          "compose_material3.exposed_dropdown",
+          "base_ui.select"
+        ],
+        "facts": [
+          "A closed Select trigger behaves like a combobox-style field control and reports expanded state when open.",
+          "Opening the Select exposes a listbox-like popup with selectable options, disabled option state, and selected state.",
+          "Dismissing the popup should restore focus to the trigger instead of losing focus to the page.",
+          "Headless Select implementations keep trigger, popup/list, and item semantics independently addressable."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.material3.select",
+          "fret.material3.select_a11y_diag",
+          "fret.ui_kit.select_primitive",
+          "fret.shadcn.select_exemplar"
+        ],
+        "test_ids": [
+          "ui-gallery-material3-select-typeahead",
+          "ui-gallery-material3-select-typeahead-listbox",
+          "ui-gallery-material3-select-typeahead-item-delta"
+        ],
+        "facts": [
+          "Fret Material3 Select sets SemanticsRole::ComboBox on the trigger and SemanticsRole::ListBox on the popup.",
+          "Fret Material3 Select sets SemanticsRole::ListBoxOption on each option with selected, pos_in_set, and set_size metadata.",
+          "The a11y parity diag script asserts typeahead navigation, Escape dismissal, and focus restoration to the trigger."
+        ]
+      },
+      "checks": [
+        {
+          "id": "material3_select_a11y_bundle_gate_needed",
+          "kind": "live_measurement_required",
+          "expected": "A fresh Material Select a11y bundle should prove trigger expanded state, popup/listbox presence, focused option after typeahead, disabled option semantics, and focus restoration after Escape.",
+          "observed": "unknown",
+          "live_fact_requirements": {
+            "fret_semantics_fact_count": 3,
+            "fret_interaction_fact_count": 3
+          },
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-a11y-parity-bundle.json",
+            "ecosystem/fret-ui-material3/src/select.rs",
+            "apps/fret-ui-gallery/src/ui/snippets/material3/select.rs"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "The invariant is an interaction/a11y flow and must be proven through a scripted bundle, not source inspection alone."
+          }
+        }
+      ]
+    },
+    {
+      "id": "material3_select_typeahead_delay",
+      "label": "Material 3 Select typeahead delay and disabled-item skipping",
+      "axis": "interaction",
+      "upstream": {
+        "source_ref_ids": [
+          "material_web.select",
+          "material_web.select_option",
+          "compose_material3.menu",
+          "base_ui.select"
+        ],
+        "facts": [
+          "Material Web exposes select option typeahead text and a select-level typeahead delay behavior.",
+          "Toolkit menus and exposed dropdowns should skip disabled items during keyboard navigation and typeahead.",
+          "Typeahead buffering is interaction policy, not a core rendering mechanism."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.material3.select",
+          "fret.material3.select_typeahead_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-material3-select-typeahead",
+          "ui-gallery-material3-select-typeahead-delay-200",
+          "ui-gallery-material3-select-typeahead-delay-1000",
+          "ui-gallery-material3-select-typeahead-item-delta",
+          "ui-gallery-material3-select-typeahead-item-echo",
+          "ui-gallery-material3-select-typeahead-item-charlie-disabled"
+        ],
+        "facts": [
+          "Select::typeahead_delay_ms defaults to 200ms and is passed into the listbox roving focus typeahead helper.",
+          "The gallery exposes 200ms, 500ms, and 1000ms delay controls plus enabled and disabled options.",
+          "The typeahead diag script asserts that buffered key presses respect the configured delay and skip disabled items."
+        ]
+      },
+      "checks": [
+        {
+          "id": "material3_select_typeahead_delay_script_exists",
+          "kind": "existing_gate",
+          "expected": "The Material Select typeahead delay should have a focused scripted repro that can distinguish buffered typing from expired typing.",
+          "observed": "pass",
+          "confidence": "medium",
+          "owner": "component_recipe",
+          "layer": "policy",
+          "evidence_refs": [
+            "ecosystem/fret-ui-material3/src/select.rs",
+            "apps/fret-ui-gallery/src/ui/snippets/material3/select.rs",
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-typeahead-delay.json"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "The current script should be promoted to a packet-backed regression gate after a fresh capture is attached."
+          }
+        }
+      ]
+    },
+    {
+      "id": "material3_select_width_and_positioning",
+      "label": "Material 3 Select menu width floor and transformed-anchor positioning",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "material_web.select",
+          "material_ui.select",
+          "compose_material3.exposed_dropdown"
+        ],
+        "facts": [
+          "Material Select menus are anchored to the trigger field and should not be clipped by local render transforms.",
+          "Material Select exposes menu width behavior as part of field/menu composition, while page-level width negotiation remains caller-owned.",
+          "A menu width floor is a recipe/policy constraint for unclamped menus, not a core layout default."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.material3.select",
+          "fret.material3.select_width_floor_diag",
+          "fret.material3.select_positioning_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-material3-select-unclamped",
+          "ui-gallery-material3-select-unclamped-listbox",
+          "ui-gallery-material3-select-menu-width-floor-toggle",
+          "ui-gallery-material3-select-transformed",
+          "ui-gallery-material3-select-transformed-listbox"
+        ],
+        "facts": [
+          "Select supports match_anchor_width(false), menu_width_floor(Px), and transformed-anchor positioning probes.",
+          "The gallery exposes an unclamped menu floor toggle and a transformed clipped parent probe.",
+          "Existing diag scripts cover width-floor screenshots and transformed-anchor positioning screenshots."
+        ]
+      },
+      "checks": [
+        {
+          "id": "material3_select_width_floor_and_positioning_scripts_exist",
+          "kind": "existing_gate",
+          "expected": "Material Select width-floor and transformed-anchor behavior should have focused diagnostics surfaces before any overlay policy refactor.",
+          "observed": "pass",
+          "confidence": "medium",
+          "owner": "component_recipe",
+          "layer": "policy",
+          "evidence_refs": [
+            "ecosystem/fret-ui-material3/src/select.rs",
+            "apps/fret-ui-gallery/src/ui/snippets/material3/select.rs",
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-menu-width-floor-screenshots.json",
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-menu-positioning-transform-screenshots.json"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "The packet should harden these scripts with sidecar predicates after the baseline field-family report exists."
+          }
+        }
+      ]
+    },
+    {
+      "id": "material3_select_rich_option_chrome",
+      "label": "Material 3 Select rich option chrome",
+      "axis": "chrome",
+      "upstream": {
+        "source_ref_ids": [
+          "material_web.select_option",
+          "compose_material3.menu"
+        ],
+        "facts": [
+          "Material Select options can expose display text, typeahead text, supporting text, trailing supporting text, leading icons, trailing icons, selected state, and disabled state.",
+          "Two-line option layouts must preserve label/supporting/trailing alignment without forcing a design-system-agnostic list policy into core."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.material3.select",
+          "fret.material3.select_gallery",
+          "fret.material3.select_item_chrome_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-material3-select-rich",
+          "ui-gallery-material3-select-rich-listbox",
+          "ui-gallery-material3-select-rich-item-alpha",
+          "ui-gallery-material3-select-rich-item-alpha.chrome",
+          "ui-gallery-material3-select-rich-item-charlie-disabled"
+        ],
+        "facts": [
+          "SelectItem supports display_text, typeahead_text, supporting_text, trailing_supporting_text, leading_icon, trailing_icon, disabled, and test_id.",
+          "The list item recipe derives selected container color through SelectStyle::menu_selected_container_color and Material select tokens.",
+          "The rich-options and item-chrome diag scripts expose multi-line option chrome and selected-row fill for future hardening."
+        ]
+      },
+      "checks": [
+        {
+          "id": "material3_select_rich_option_chrome_script_exists",
+          "kind": "existing_gate",
+          "expected": "Material Select rich option chrome should have a focused script and stable option chrome ids before recipe cleanup.",
+          "observed": "pass",
+          "confidence": "medium",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "ecosystem/fret-ui-material3/src/select.rs",
+            "apps/fret-ui-gallery/src/ui/snippets/material3/select.rs",
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-item-chrome-fill.json",
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-rich-options-screenshots.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "Rich-option chrome should become a component fixture after live sidecar/screenshot evidence is attached."
+          }
+        }
+      ]
+    }
+  ]
+}

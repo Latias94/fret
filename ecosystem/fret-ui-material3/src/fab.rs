@@ -24,6 +24,9 @@ use fret_ui_kit::{
 };
 
 use crate::foundation::arc_str::empty_arc_str;
+use crate::foundation::elevation::{
+    AnimatedElevationRuntime, MaterialElevationInteraction, animate_material_elevation,
+};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -48,8 +51,9 @@ pub enum FabVariant {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FabSize {
     #[default]
-    Medium,
+    Regular,
     Small,
+    Medium,
     Large,
 }
 
@@ -245,7 +249,7 @@ impl Fab {
                     let theme = Theme::global(&*cx.app);
 
                     let corner_radii = if extended {
-                        fab_tokens::extended_container_shape(theme)
+                        fab_tokens::extended_container_shape(theme, self.size)
                     } else {
                         fab_tokens::container_shape(theme, self.size)
                     };
@@ -291,7 +295,9 @@ impl Fab {
 
                         let now_frame = cx.frame_id.0;
                         let (
-                            surface,
+                            container_bg,
+                            elevation_target,
+                            shadow_color,
                             icon_color,
                             label_color,
                             state_layer_color,
@@ -370,7 +376,7 @@ impl Fab {
                                 || state_layer_color,
                             );
 
-                            let elevation = fab_tokens::container_elevation(
+                            let elevation_target = fab_tokens::container_elevation(
                                 theme,
                                 extended,
                                 self.variant,
@@ -380,13 +386,6 @@ impl Fab {
                             );
                             let shadow_color =
                                 fab_tokens::container_shadow_color(theme, extended, self.variant);
-                            let surface = material_surface_style(
-                                theme,
-                                background,
-                                elevation,
-                                Some(shadow_color),
-                                corner_radii,
-                            );
 
                             let ripple_base_opacity =
                                 fab_tokens::pressed_state_layer_opacity_for_variant(
@@ -397,32 +396,30 @@ impl Fab {
                             let config = material_pressable_indication_config(theme, None);
 
                             let content_tokens = ExtendedFabContentTokens {
-                                icon_size: fab_tokens::extended_icon_size(theme),
-                                icon_label_space: fab_tokens::extended_icon_label_space(theme),
-                                label_style: typography::with_intent(
-                                    theme
-                                        .text_style_by_key("md.comp.extended-fab.label-text")
-                                        .or_else(|| {
-                                            theme.text_style_by_key("md.sys.typescale.label-large")
-                                        })
-                                        .unwrap_or_default(),
-                                    TextIntent::Control,
+                                icon_size: fab_tokens::extended_icon_size(theme, self.size),
+                                icon_label_space: fab_tokens::extended_icon_label_space(
+                                    theme, self.size,
                                 ),
+                                label_style: extended_fab_label_style(theme, self.size),
                             };
 
                             let chrome_tokens = ExtendedFabChromeTokens {
-                                height: fab_tokens::extended_container_height(theme),
+                                min_width: fab_tokens::extended_min_width(theme, self.size),
+                                height: fab_tokens::extended_container_height(theme, self.size),
                                 pad_left: fab_tokens::extended_leading_space(
                                     theme,
+                                    self.size,
                                     self.icon.is_some(),
                                 ),
-                                pad_right: fab_tokens::extended_trailing_space(theme),
+                                pad_right: fab_tokens::extended_trailing_space(theme, self.size),
                             };
 
                             let icon_size = fab_tokens::icon_size(theme, self.size);
 
                             (
-                                surface,
+                                background,
+                                elevation_target,
+                                shadow_color,
                                 icon_color,
                                 label_color,
                                 state_layer_color,
@@ -434,6 +431,40 @@ impl Fab {
                                 icon_size,
                             )
                         };
+
+                        let elevation_interaction =
+                            interaction.map(|interaction| match interaction {
+                                fab_tokens::FabInteraction::Pressed => {
+                                    MaterialElevationInteraction::Pressed
+                                }
+                                fab_tokens::FabInteraction::Hovered => {
+                                    MaterialElevationInteraction::Hovered
+                                }
+                                fab_tokens::FabInteraction::Focused => {
+                                    MaterialElevationInteraction::Focused
+                                }
+                            });
+                        let (elevation, elevation_want_frames) =
+                            cx.state_for(pressable_id, AnimatedElevationRuntime::default, |rt| {
+                                animate_material_elevation(
+                                    rt,
+                                    now_frame,
+                                    enabled,
+                                    elevation_interaction,
+                                    elevation_target,
+                                )
+                            });
+                        let surface = {
+                            let theme = Theme::global(&*cx.app);
+                            material_surface_style(
+                                theme,
+                                container_bg,
+                                elevation,
+                                Some(shadow_color),
+                                corner_radii,
+                            )
+                        };
+
                         let overlay = material_ink_layer_for_pressable(
                             cx,
                             pressable_id,
@@ -445,7 +476,7 @@ impl Fab {
                             state_layer_target,
                             ripple_base_opacity,
                             config,
-                            false,
+                            elevation_want_frames,
                         );
 
                         let content = if extended {
@@ -520,6 +551,24 @@ fn state_layer_target_opacity(
     fab_tokens::state_layer_opacity(theme, extended, variant, interaction)
 }
 
+fn extended_fab_label_style(theme: &Theme, size: FabSize) -> fret_core::TextStyle {
+    let primary_key = match size {
+        FabSize::Small => "md.sys.typescale.title-medium",
+        FabSize::Regular => "md.comp.extended-fab.label-text",
+        FabSize::Medium => "md.sys.typescale.title-large",
+        FabSize::Large => "md.sys.typescale.headline-small",
+    };
+
+    typography::with_intent(
+        theme
+            .text_style_by_key(primary_key)
+            .or_else(|| theme.text_style_by_key("md.comp.extended-fab.label-text"))
+            .or_else(|| theme.text_style_by_key("md.sys.typescale.label-large"))
+            .unwrap_or_default(),
+        TextIntent::Control,
+    )
+}
+
 fn material_fab_chrome<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     container: Px,
@@ -531,8 +580,8 @@ fn material_fab_chrome<H: UiHost>(
 ) -> AnyElement {
     let mut props = ContainerProps::default();
     props.layout.overflow = Overflow::Clip;
-    props.layout.size.min_width = Some(Length::Px(container));
-    props.layout.size.min_height = Some(Length::Px(container));
+    props.layout.size.width = Length::Px(container);
+    props.layout.size.height = Length::Px(container);
     props.background = Some(background);
     props.shadow = shadow;
     props.corner_radii = corner_radii;
@@ -541,6 +590,7 @@ fn material_fab_chrome<H: UiHost>(
 
 #[derive(Debug, Clone, Copy)]
 struct ExtendedFabChromeTokens {
+    min_width: Px,
     height: Px,
     pad_left: Px,
     pad_right: Px,
@@ -562,12 +612,14 @@ fn material_extended_fab_chrome<H: UiHost>(
     overlay: AnyElement,
     content: AnyElement,
 ) -> AnyElement {
+    let min_width = tokens.min_width;
     let height = tokens.height;
     let pad_left = tokens.pad_left;
     let pad_right = tokens.pad_right;
 
     let mut props = ContainerProps::default();
     props.layout.overflow = Overflow::Clip;
+    props.layout.size.min_width = Some(Length::Px(min_width));
     props.layout.size.height = Length::Px(height);
     props.background = Some(background);
     props.shadow = shadow;

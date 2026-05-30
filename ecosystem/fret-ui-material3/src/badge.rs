@@ -10,12 +10,15 @@ use std::sync::Arc;
 use fret_core::{
     Color, Corners, Edges, LayoutDirection, Px, SemanticsRole, TextOverflow, TextWrap,
 };
-use fret_ui::element::{AnyElement, ContainerProps, FlexProps, InsetStyle, Length, PositionStyle};
+use fret_ui::element::{
+    AnyElement, ContainerProps, FlexProps, InsetStyle, Length, PositionStyle, SemanticsDecoration,
+};
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
 use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
+use crate::foundation::test_id::part_test_id;
 use crate::tokens::badge as badge_tokens;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -69,9 +72,17 @@ impl Badge {
         self
     }
 
-    pub fn navigation_anchor_size(mut self, size: Px) -> Self {
+    /// Sets the badge anchor box size used for deterministic placement.
+    ///
+    /// This is required when the anchor content is not enough to infer a stable relative box,
+    /// especially for `BadgePlacement::TopRight`.
+    pub fn anchor_size(mut self, size: Px) -> Self {
         self.anchor_size = Some(size);
         self
+    }
+
+    pub fn navigation_anchor_size(self, size: Px) -> Self {
+        self.anchor_size(size)
     }
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
@@ -95,6 +106,7 @@ impl Badge {
     {
         cx.scope(|cx| {
             let anchor_children: Vec<AnyElement> = anchor(cx).into_iter().collect();
+            let part_test_ids = self.test_id.clone().map(BadgePartTestIds::new);
 
             let (layout_direction, resolved) = {
                 let theme = Theme::global(&*cx.app);
@@ -107,6 +119,20 @@ impl Badge {
             let mut wrapper = ContainerProps::default();
             wrapper.layout.position = PositionStyle::Relative;
             wrapper.layout.overflow = fret_ui::element::Overflow::Visible;
+            if let Some(anchor_size) = self.anchor_size {
+                wrapper.layout.size.width = Length::Px(anchor_size);
+                wrapper.layout.size.height = Length::Px(anchor_size);
+            }
+
+            let mut anchor_wrapper = ContainerProps::default();
+            if let Some(anchor_size) = self.anchor_size {
+                anchor_wrapper.layout.size.width = Length::Px(anchor_size);
+                anchor_wrapper.layout.size.height = Length::Px(anchor_size);
+            }
+            let mut anchor = cx.container(anchor_wrapper, move |_cx| anchor_children);
+            if let Some(test_id) = part_test_ids.as_ref().map(|ids| ids.anchor.clone()) {
+                anchor = anchor.test_id(test_id);
+            }
 
             let badge = badge_element(
                 cx,
@@ -116,15 +142,36 @@ impl Badge {
                 self.placement,
                 self.anchor_size,
                 self.a11y_label.clone(),
-                self.test_id.clone(),
+                part_test_ids.as_ref().map(|ids| ids.badge.clone()),
             );
 
-            cx.container(wrapper, move |_cx| {
-                let mut out = anchor_children;
-                out.push(badge);
-                out
-            })
+            let mut root = cx.container(wrapper, move |_cx| vec![anchor, badge]);
+            if let Some(test_id) = part_test_ids.map(|ids| ids.root) {
+                root = root.a11y(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Group)
+                        .test_id(test_id),
+                );
+            }
+            root
         })
+    }
+}
+
+#[derive(Debug, Clone)]
+struct BadgePartTestIds {
+    root: Arc<str>,
+    anchor: Arc<str>,
+    badge: Arc<str>,
+}
+
+impl BadgePartTestIds {
+    fn new(root: Arc<str>) -> Self {
+        Self {
+            anchor: part_test_id(&root, "anchor"),
+            badge: part_test_id(&root, "badge"),
+            root,
+        }
     }
 }
 
@@ -171,6 +218,11 @@ fn badge_element<H: UiHost>(
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
+    let semantics_value = match &value {
+        BadgeValue::Dot => None,
+        BadgeValue::Text(text) => Some(text.clone()),
+    };
+
     let (is_large, inset_start_px, inset_top_px) = match value {
         BadgeValue::Dot => (false, Px(6.0), Px(4.0)),
         BadgeValue::Text(_) => (true, Px(2.0), Px(1.0)),
@@ -180,7 +232,16 @@ fn badge_element<H: UiHost>(
     match placement {
         BadgePlacement::TopRight => {
             inset.top = Some(Px(0.0)).into();
-            inset.right = Some(Px(0.0)).into();
+            if let Some(anchor) = anchor_size {
+                let badge_width = if is_large {
+                    resolved.large_size
+                } else {
+                    resolved.dot_size
+                };
+                inset.left = Some(Px((anchor.0 - badge_width.0).max(0.0))).into();
+            } else {
+                inset.right = Some(Px(0.0)).into();
+            }
         }
         BadgePlacement::NavigationIcon => {
             let anchor = anchor_size.unwrap_or(Px(24.0));
@@ -250,13 +311,16 @@ fn badge_element<H: UiHost>(
         }
     };
 
-    cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: SemanticsRole::Generic,
-            label: a11y_label,
-            test_id,
-            ..Default::default()
-        },
-        move |_cx| vec![content],
-    )
+    let mut decoration = SemanticsDecoration::default().role(SemanticsRole::Generic);
+    if let Some(label) = a11y_label {
+        decoration = decoration.label(label);
+    }
+    if let Some(value) = semantics_value {
+        decoration = decoration.value(value);
+    }
+    if let Some(test_id) = test_id {
+        decoration = decoration.test_id(test_id);
+    }
+
+    content.a11y(decoration)
 }

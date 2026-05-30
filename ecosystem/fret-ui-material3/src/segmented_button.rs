@@ -9,8 +9,8 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, KeyCode, LayoutDirection, Modifiers, Px, SemanticsRole, SvgFit,
-    TextOverflow, TextWrap,
+    Axis, Color, Corners, KeyCode, LayoutDirection, Modifiers, Px, SemanticsCheckedState,
+    SemanticsRole, SvgFit, TextOverflow, TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -34,6 +34,7 @@ use crate::foundation::interaction::{PressableInteraction, pressable_interaction
 use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
 };
+use crate::foundation::test_id::optional_part_test_id;
 use crate::tokens::segmented_button as segmented_tokens;
 
 #[derive(Debug, Clone)]
@@ -441,6 +442,11 @@ impl SegmentedButtonSegment {
                         test_id: self.item.test_id.clone(),
                         selected: false,
                         checked: Some(self.selected),
+                        checked_state: Some(if self.selected {
+                            SemanticsCheckedState::True
+                        } else {
+                            SemanticsCheckedState::False
+                        }),
                         pos_in_set: Some((self.idx + 1) as u32),
                         set_size: Some(self.len as u32),
                         ..Default::default()
@@ -582,6 +588,7 @@ impl SegmentedButtonSegment {
                             label_color,
                             icon_size,
                             icon_visible,
+                            pressable_props.a11y.test_id.as_ref(),
                         );
 
                         let chrome = material_segment_chrome(
@@ -670,8 +677,11 @@ fn material_segment_content<H: UiHost>(
     label_color: Color,
     icon_size: Px,
     icon_visible: bool,
+    base_test_id: Option<&Arc<str>>,
 ) -> AnyElement {
     let icon_gap = Px(8.0);
+    let icon_test_id = optional_part_test_id(base_test_id, "icon");
+    let label_test_id = optional_part_test_id(base_test_id, "label");
 
     let mut props = FlexProps::default();
     props.direction = Axis::Horizontal;
@@ -696,7 +706,7 @@ fn material_segment_content<H: UiHost>(
         text.layout.inset.left = Some(Px(-0.5 * (icon_size.0 + icon_gap.0))).into();
     }
 
-    let icon_slot = {
+    let mut icon_slot = {
         let mut icon_props = ContainerProps::default();
         icon_props.layout.size.width = Length::Px(icon_size);
         icon_props.layout.size.height = Length::Px(icon_size);
@@ -704,8 +714,16 @@ fn material_segment_content<H: UiHost>(
             leading.into_iter().collect::<Vec<_>>()
         })
     };
+    if let Some(test_id) = icon_test_id {
+        icon_slot = icon_slot.test_id(test_id);
+    }
 
-    cx.flex(props, move |cx| vec![icon_slot, cx.text_props(text)])
+    let mut label = cx.text_props(text);
+    if let Some(test_id) = label_test_id {
+        label = label.test_id(test_id);
+    }
+
+    cx.flex(props, move |_cx| vec![icon_slot, label])
 }
 
 fn material_icon<H: UiHost>(

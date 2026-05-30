@@ -190,6 +190,8 @@ pub struct SemanticsNodeExtra {
     pub url: Option<String>,
     /// Optional role description override (ARIA `aria-roledescription`-like outcome).
     pub role_description: Option<String>,
+    /// Optional state description override (ARIA/state-description-like outcome).
+    pub state_description: Option<String>,
     /// Optional hierarchy level for outline/tree semantics (1-based).
     pub level: Option<u32>,
     pub orientation: Option<SemanticsOrientation>,

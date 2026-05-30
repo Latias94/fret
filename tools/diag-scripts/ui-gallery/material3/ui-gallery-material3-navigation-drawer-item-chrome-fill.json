@@ -24,18 +24,18 @@
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
     { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "material3 gallery" },
+    { "type": "type_text", "text": "material3 navigation drawer" },
     { "type": "wait_frames", "n": 2 },
 
     {
       "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-gallery" }
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-navigation-drawer" }
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-material3-gallery" }
+        "target": { "kind": "test_id", "id": "ui-gallery-page-material3-navigation-drawer" }
       },
       "timeout_frames": 600
     },

@@ -1053,6 +1053,7 @@ fn declarative_attach_semantics_can_override_state_and_relations() {
                         .disabled(true)
                         .selected(true)
                         .expanded(true)
+                        .state_description("Expanded")
                         .checked(Some(true))
                         .labelled_by_element(labelled_by),
                 ),
@@ -1080,6 +1081,10 @@ fn declarative_attach_semantics_can_override_state_and_relations() {
     assert!(target_node.flags.disabled);
     assert!(target_node.flags.selected);
     assert!(target_node.flags.expanded);
+    assert_eq!(
+        target_node.extra.state_description.as_deref(),
+        Some("Expanded")
+    );
     assert_eq!(target_node.flags.checked, Some(true));
     assert!(
         target_node.labelled_by.contains(&label_node.id),
@@ -1221,6 +1226,7 @@ fn declarative_text_input_respects_a11y_role_override_and_expanded() {
         |cx| {
             let mut props = crate::element::TextInputProps::new(model);
             props.a11y_label = Some("Combobox".into());
+            props.a11y_state_description = Some("Suggestions below".into());
             props.a11y_role = Some(fret_core::SemanticsRole::ComboBox);
             props.expanded = Some(true);
             vec![cx.text_input(props)]
@@ -1237,6 +1243,7 @@ fn declarative_text_input_respects_a11y_role_override_and_expanded() {
             n.role == fret_core::SemanticsRole::ComboBox
                 && n.flags.expanded
                 && n.label.as_deref() == Some("Combobox")
+                && n.extra.state_description.as_deref() == Some("Suggestions below")
                 && n.value.as_deref() == Some("hello")
         }),
         "expected a ComboBox semantics node with expanded=true and correct label/value"

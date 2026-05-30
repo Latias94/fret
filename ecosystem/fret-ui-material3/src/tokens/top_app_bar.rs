@@ -3,10 +3,11 @@
 //! Reference: Material Web v30 `md.comp.top-app-bar.*` tokens.
 
 use fret_core::{Color, Corners, Px, TextStyle};
-use fret_ui::Theme;
+use fret_ui::{Theme, theme::CubicBezier};
 use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::motion::cubic_bezier_ease;
 use crate::top_app_bar::TopAppBarVariant;
 
 fn container_height_key(variant: TopAppBarVariant) -> &'static str {
@@ -124,6 +125,42 @@ pub(crate) fn container_background(
             "md.sys.color.surface"
         },
     )
+}
+
+pub(crate) fn container_background_for_fraction(
+    theme: &Theme,
+    variant: TopAppBarVariant,
+    transition_fraction: f32,
+) -> Color {
+    let fraction = transition_fraction.clamp(0.0, 1.0);
+    if fraction <= 0.0 {
+        return container_background(theme, variant, false);
+    }
+    if fraction >= 1.0 {
+        return container_background(theme, variant, true);
+    }
+
+    let easing = CubicBezier {
+        x1: 0.4,
+        y1: 0.0,
+        x2: 1.0,
+        y2: 1.0,
+    };
+    lerp_color(
+        container_background(theme, variant, false),
+        container_background(theme, variant, true),
+        cubic_bezier_ease(easing, fraction),
+    )
+}
+
+fn lerp_color(from: Color, to: Color, t: f32) -> Color {
+    let t = t.clamp(0.0, 1.0);
+    Color {
+        r: from.r + (to.r - from.r) * t,
+        g: from.g + (to.g - from.g) * t,
+        b: from.b + (to.b - from.b) * t,
+        a: from.a + (to.a - from.a) * t,
+    }
 }
 
 pub(crate) fn container_elevation(theme: &Theme, variant: TopAppBarVariant, scrolled: bool) -> Px {

@@ -351,11 +351,44 @@ pub fn material_ink_layer_for_pressable<H: UiHost>(
     config: IndicationConfig,
     extra_want_frames: bool,
 ) -> AnyElement {
+    material_ink_layer_for_pressable_with_last_down(
+        cx,
+        pressable_id,
+        now_frame,
+        None,
+        corner_radii,
+        ripple_clip,
+        state_layer_color,
+        pressed,
+        state_layer_target,
+        ripple_base_opacity,
+        config,
+        extra_want_frames,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn material_ink_layer_for_pressable_with_last_down<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    pressable_id: fret_ui::elements::GlobalElementId,
+    now_frame: u64,
+    last_down_override: Option<fret_ui::action::PointerDownCx>,
+    corner_radii: Corners,
+    ripple_clip: RippleClip,
+    state_layer_color: Color,
+    pressed: bool,
+    state_layer_target: f32,
+    ripple_base_opacity: f32,
+    config: IndicationConfig,
+    extra_want_frames: bool,
+) -> AnyElement {
     let bounds = cx
         .last_bounds_for_element(cx.root_id())
         .unwrap_or(cx.bounds);
-    let last_down = cx.root_state(fret_ui::element::PointerRegionState::default, |st| {
-        st.last_down
+    let last_down = last_down_override.or_else(|| {
+        cx.root_state(fret_ui::element::PointerRegionState::default, |st| {
+            st.last_down
+        })
     });
 
     let (runtime, ripple) = prepare_indication_for_pressable_with_ripple_bounds(

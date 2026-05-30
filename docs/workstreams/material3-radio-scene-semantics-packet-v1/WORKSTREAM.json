@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "slug": "material3-radio-scene-semantics-packet-v1",
+  "title": "Material 3 Radio Scene Semantics Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "follow_on",
+  "problem": "Closed the Radio matrix residual after Switch foundation evidence was available by recording Radio scene, selector, ripple, and semantics gates without moving roving/typeahead policy into kit or changing crates/*.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-radio-scene-semantics-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-radio-scene-semantics-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-radio-scene-semantics-packet-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-radio-scene-semantics-packet-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-radio-scene-semantics-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-radio-scene-semantics-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the focused Radio selector, selected-dot, ripple-origin, and pressed-scene gates.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_choice_controls_expose_stable_part_test_ids",
+      "cargo nextest run -p fret-ui-material3 --test radio_alignment radio_selected_dot_is_centered_in_outline radio_ripple_origin_tracks_pointer_down_position radio_pressed_scene_structure_is_stable"
+    ]
+  },
+  "gates": [
+    {
+      "name": "radio-selector-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_choice_controls_expose_stable_part_test_ids"
+    },
+    {
+      "name": "radio-scene-ripple-pressed",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment radio_selected_dot_is_centered_in_outline radio_ripple_origin_tracks_pointer_down_position radio_pressed_scene_structure_is_stable"
+    },
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-radio-scene-semantics-packet-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "component-matrix-json",
+      "command": "python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-material3/src/radio.rs",
+    "ecosystem/fret-ui-material3/src/foundation/indication.rs",
+    "ecosystem/fret-ui-material3/src/foundation/interactive_size.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "ecosystem/fret-ui-material3/tests/radio_alignment.rs",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+    "docs/workstreams/material3-switch-diagnostics-packet-v1/artifacts/switch_diagnostics_packet_v1.md",
+    "docs/workstreams/material3-radio-scene-semantics-packet-v1/artifacts/radio_scene_semantics_packet_v1.md",
+    "repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/RadioButton.kt",
+    "repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/RadioButtonTokens.kt",
+    "repo-ref/base-ui/packages/react/src/radio-group/RadioGroup.tsx",
+    "repo-ref/base-ui/packages/react/src/radio/root/RadioRoot.tsx"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "return_to_material3_sweep",
+    "notes": "Radio is closed for current selector, scene geometry, ripple origin, pressed-scene stability, and recipe/foundation split. Move RadioGroup roving/typeahead into kit only after another design system proves shared policy reuse."
+  }
+}

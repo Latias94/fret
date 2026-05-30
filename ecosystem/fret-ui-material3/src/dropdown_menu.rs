@@ -93,7 +93,7 @@ impl DropdownMenu {
             side: DropdownMenuSide::default(),
             side_offset: Px(4.0),
             window_margin: Px(0.0),
-            min_width: Px(128.0),
+            min_width: menu_tokens::ITEM_MIN_WIDTH_FALLBACK,
             close_on_select: true,
             on_dismiss_request: None,
             a11y_label: None,
@@ -216,10 +216,21 @@ impl DropdownMenu {
                     self.window_margin,
                 );
 
-                let (menu_item_height, divider_height, divider_margin, collision_padding) = {
+                let (
+                    menu_item_height,
+                    menu_item_min_width,
+                    menu_item_max_width,
+                    menu_vertical_padding,
+                    divider_height,
+                    divider_margin,
+                    collision_padding,
+                ) = {
                     let theme = Theme::global(&*cx.app);
                     (
                         menu_tokens::list_item_height(theme),
+                        menu_tokens::item_min_width(theme),
+                        menu_tokens::item_max_width(theme),
+                        menu_tokens::container_vertical_padding(theme),
                         menu_tokens::divider_height(theme),
                         dropdown_menu_tokens::divider_margin_total(theme),
                         dropdown_menu_tokens::collision_padding(theme),
@@ -233,11 +244,13 @@ impl DropdownMenu {
 
                 let estimated = estimated_menu_panel_size(
                     anchor,
-                    self.min_width,
+                    self.min_width.max(menu_item_min_width),
+                    menu_item_max_width,
                     &menu_entries,
                     menu_item_height,
                     divider_height,
                     divider_margin,
+                    menu_vertical_padding,
                 );
 
                 let align = match self.align {
@@ -368,12 +381,14 @@ fn wrap_close_on_select(entries: Vec<MenuEntry>, open: Model<bool>) -> Vec<MenuE
 fn estimated_menu_panel_size(
     anchor: Rect,
     min_width: Px,
+    max_width: Px,
     entries: &[MenuEntry],
     item_height: Px,
     divider_height: Px,
     divider_margin_total: Px,
+    vertical_padding: Px,
 ) -> Size {
-    let mut h = 0.0f32;
+    let mut h = (vertical_padding.0.max(0.0) * 2.0).max(0.0);
     for e in entries {
         match e {
             MenuEntry::Item(_) => h += item_height.0.max(0.0),
@@ -383,7 +398,8 @@ fn estimated_menu_panel_size(
         }
     }
 
-    let w = anchor.size.width.0.max(min_width.0).max(0.0);
+    let max_width = max_width.0.max(min_width.0).max(0.0);
+    let w = anchor.size.width.0.max(min_width.0).min(max_width).max(0.0);
     Size::new(Px(w), Px(h.max(1.0)))
 }
 
@@ -459,5 +475,42 @@ mod tests {
                 assert_ne!(a.open_model(), b.open_model());
             },
         );
+    }
+
+    #[test]
+    fn estimated_panel_size_uses_material_menu_intrinsic_bounds_and_padding() {
+        let entries = vec![
+            MenuEntry::Item(crate::menu::MenuItem::new("Alpha")),
+            MenuEntry::Separator,
+            MenuEntry::Item(crate::menu::MenuItem::new("Beta")),
+        ];
+        let wide_anchor = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(360.0), Px(40.0)));
+        let narrow_anchor = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(72.0), Px(40.0)));
+
+        let wide = estimated_menu_panel_size(
+            wide_anchor,
+            Px(112.0),
+            Px(280.0),
+            &entries,
+            Px(48.0),
+            Px(1.0),
+            Px(8.0),
+            Px(8.0),
+        );
+        assert_eq!(wide.width, Px(280.0));
+        assert_eq!(wide.height, Px(121.0));
+
+        let narrow = estimated_menu_panel_size(
+            narrow_anchor,
+            Px(112.0),
+            Px(280.0),
+            &entries,
+            Px(48.0),
+            Px(1.0),
+            Px(8.0),
+            Px(8.0),
+        );
+        assert_eq!(narrow.width, Px(112.0));
+        assert_eq!(narrow.height, Px(121.0));
     }
 }

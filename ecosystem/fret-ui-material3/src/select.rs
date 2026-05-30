@@ -12,13 +12,13 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, KeyCode, Point, Px, Rect, SemanticsRole, Size, SvgFit,
-    TextOverflow, TextWrap,
+    Axis, Color, Corners, Edges, KeyCode, Point, Px, SemanticsRole, Size, SvgFit, TextOverflow,
+    TextWrap,
 };
 use fret_icons::{IconId, ids};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, CanvasProps, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, ScrollProps,
     SemanticsProps, SvgIconProps, TextProps, VisualTransformProps,
 };
@@ -37,23 +37,64 @@ use fret_ui_kit::{
 };
 
 use crate::foundation::arc_str::empty_arc_str;
+use crate::foundation::field::{
+    material_field_active_indicator_layer, material_field_text_start_inset_x,
+};
+use crate::foundation::field_motion::{FieldInputPhase, FieldMotionTargets, field_motion_frame};
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
+use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
-use crate::interaction::state_layer::StateLayerAnimator;
-use crate::motion::ms_to_frames;
+use crate::foundation::test_id::{chrome_part_test_id, part_test_id};
+use crate::motion::{SpringAnimator, ms_to_frames};
 use crate::tokens::dropdown_menu as dropdown_menu_tokens;
 use crate::tokens::list as list_tokens;
 use crate::tokens::select as select_tokens;
 
 fn default_select_listbox_test_id() -> Arc<str> {
     static ID: OnceLock<Arc<str>> = OnceLock::new();
-    ID.get_or_init(|| Arc::<str>::from("material3-select-listbox"))
+    ID.get_or_init(|| Arc::<str>::from("material3-select.listbox"))
         .clone()
+}
+
+#[derive(Debug, Clone)]
+struct SelectPartTestIds {
+    chrome: Arc<str>,
+    active_indicator: Arc<str>,
+    label: Arc<str>,
+    trailing_icon: Arc<str>,
+}
+
+impl SelectPartTestIds {
+    fn from_base(base: &Arc<str>) -> Self {
+        Self {
+            chrome: chrome_part_test_id(base),
+            active_indicator: part_test_id(base, "active-indicator"),
+            label: part_test_id(base, "label"),
+            trailing_icon: part_test_id(base, "trailing-icon"),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct SelectItemPartTestIds {
+    chrome: Arc<str>,
+    leading_icon: Arc<str>,
+    trailing_icon: Arc<str>,
+}
+
+impl SelectItemPartTestIds {
+    fn from_base(base: &Arc<str>) -> Self {
+        Self {
+            chrome: chrome_part_test_id(base),
+            leading_icon: part_test_id(base, "leading-icon"),
+            trailing_icon: part_test_id(base, "trailing-icon"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -604,6 +645,7 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
                         Some(anchor_id.0),
                         initial_focus_id_for_list,
                         listbox_element_id_out,
+                        layout.rect.size.width,
                         runtime.scroll_handle.clone(),
                         typeahead_delay_ms,
                         style.clone(),
@@ -670,9 +712,13 @@ fn select_trigger_element<H: UiHost>(
     open_model: Model<bool>,
     style: Arc<SelectStyle>,
 ) -> SelectTriggerOutput {
-    let chrome_test_id = test_id
+    let part_test_ids = test_id.as_ref().map(SelectPartTestIds::from_base);
+    let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+    let label_test_id = part_test_ids.as_ref().map(|ids| ids.label.clone());
+    let trailing_icon_test_id = part_test_ids.as_ref().map(|ids| ids.trailing_icon.clone());
+    let active_indicator_test_id = part_test_ids
         .as_ref()
-        .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+        .map(|ids| ids.active_indicator.clone());
     let anchor_id_out: Cell<GlobalElementId> = Cell::new(GlobalElementId(0));
     let hovered_out: Cell<bool> = Cell::new(false);
     let focused_out: Cell<bool> = Cell::new(false);
@@ -774,11 +820,9 @@ fn select_trigger_element<H: UiHost>(
             focus_opacity,
             ripple_base_opacity,
             ripple_config,
-            float_duration_ms,
-            float_easing,
-            open_duration_ms,
-            close_duration_ms,
-            open_easing,
+            spatial,
+            fast_effects,
+            slow_effects,
             placeholder_color,
             input_text_style_fallback,
         ) = {
@@ -866,21 +910,9 @@ fn select_trigger_element<H: UiHost>(
             let ripple_base_opacity = pressed_opacity;
             let ripple_config = material_pressable_indication_config(theme, None);
 
-            let float_duration_ms = theme
-                .duration_ms_by_key("md.sys.motion.duration.short4")
-                .unwrap_or(200);
-            let float_easing = theme
-                .easing_by_key("md.sys.motion.easing.standard")
-                .unwrap_or(fret_ui::theme::CubicBezier {
-                    x1: 0.0,
-                    y1: 0.0,
-                    x2: 1.0,
-                    y2: 1.0,
-                });
-
-            let open_duration_ms = dropdown_menu_tokens::open_duration_ms(theme);
-            let close_duration_ms = dropdown_menu_tokens::close_duration_ms(theme);
-            let open_easing = dropdown_menu_tokens::easing(theme);
+            let spatial = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+            let fast_effects = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastEffects);
+            let slow_effects = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::SlowEffects);
 
             let placeholder_color =
                 select_tokens::placeholder_color(theme, variant, !enabled, error);
@@ -902,11 +934,9 @@ fn select_trigger_element<H: UiHost>(
                 focus_opacity,
                 ripple_base_opacity,
                 ripple_config,
-                float_duration_ms,
-                float_easing,
-                open_duration_ms,
-                close_duration_ms,
-                open_easing,
+                spatial,
+                fast_effects,
+                slow_effects,
                 placeholder_color,
                 input_text_style_fallback,
             )
@@ -974,50 +1004,63 @@ fn select_trigger_element<H: UiHost>(
                 );
 
                 let should_float = focused || open || populated;
-
-                let (float_progress, float_want_frames) =
-                    cx.slot_state(SelectTriggerRuntime::default, |rt| {
-                        if rt.float_target != should_float {
-                            rt.float_target = should_float;
-                            rt.float.set_target(
-                                now_frame,
-                                if should_float { 1.0 } else { 0.0 },
-                                float_duration_ms,
-                                float_easing,
-                            );
-                        }
-                        rt.float.advance(now_frame);
-                        (rt.float.value(), rt.float.is_active())
-                    });
-
-                let (chevron_progress, chevron_want_frames) =
-                    cx.slot_state(SelectChevronRuntime::default, |rt| {
-                        if rt.target_open != open {
-                            rt.target_open = open;
-                            rt.anim.set_target(
-                                now_frame,
-                                if open { 1.0 } else { 0.0 },
-                                if open {
-                                    open_duration_ms
-                                } else {
-                                    close_duration_ms
-                                },
-                                open_easing,
-                            );
-                        }
-                        rt.anim.advance(now_frame);
-                        (rt.anim.value(), rt.anim.is_active())
-                    });
-
-                if float_want_frames || chevron_want_frames {
-                    cx.request_animation_frame();
-                }
-
+                let input_phase = if focused {
+                    FieldInputPhase::Focused
+                } else if populated {
+                    FieldInputPhase::UnfocusedNotEmpty
+                } else {
+                    FieldInputPhase::UnfocusedEmpty
+                };
                 let show_placeholder = if label.is_some() {
                     (focused || open) && !populated
                 } else {
                     true
                 };
+                let placeholder_target_opacity = if show_placeholder { 1.0 } else { 0.0 };
+
+                let mut target_border = Edges::all(Px(0.0));
+                let mut target_border_color = Color::TRANSPARENT;
+                if let Some((width, color)) = outline {
+                    target_border = Edges::all(width);
+                    target_border_color = color;
+                } else if let Some((height, color)) = indicator {
+                    target_border.bottom = height;
+                    target_border_color = color;
+                }
+
+                let motion = field_motion_frame(
+                    cx,
+                    FieldMotionTargets {
+                        disabled: !enabled,
+                        should_float,
+                        input_phase,
+                        placeholder_target_opacity,
+                        border: target_border,
+                        border_color: target_border_color,
+                        spatial,
+                        fast_effects,
+                        slow_effects,
+                    },
+                );
+                let float_progress = motion.float_progress.clamp(0.0, 1.0);
+
+                let (chevron_progress, chevron_want_frames) =
+                    cx.slot_state(SelectChevronRuntime::default, |rt| {
+                        if !rt.anim.is_initialized() {
+                            rt.target_open = open;
+                            rt.anim.reset(now_frame, if open { 1.0 } else { 0.0 });
+                        } else if rt.target_open != open {
+                            rt.target_open = open;
+                            rt.anim
+                                .set_target(now_frame, if open { 1.0 } else { 0.0 }, spatial);
+                        }
+                        rt.anim.advance(now_frame);
+                        (rt.anim.value(), rt.anim.is_active())
+                    });
+
+                if chevron_want_frames {
+                    cx.request_animation_frame();
+                }
                 let display_text = if populated {
                     value_text.clone()
                 } else if show_placeholder {
@@ -1028,7 +1071,7 @@ fn select_trigger_element<H: UiHost>(
                 let is_placeholder = !populated && show_placeholder;
 
                 let display_color = if is_placeholder {
-                    placeholder_color
+                    with_opacity(placeholder_color, motion.placeholder_opacity)
                 } else {
                     text_color
                 };
@@ -1058,6 +1101,11 @@ fn select_trigger_element<H: UiHost>(
                     trailing_icon_size,
                     chevron_progress,
                 );
+                let icon_el = if let Some(test_id) = trailing_icon_test_id.clone() {
+                    icon_el.test_id(test_id)
+                } else {
+                    icon_el
+                };
 
                 let mut row = FlexProps::default();
                 row.layout.size.width = Length::Fill;
@@ -1081,32 +1129,21 @@ fn select_trigger_element<H: UiHost>(
                 chrome.background = container_bg;
                 chrome.corner_radii = corner;
                 let mut outline_width_for_notch = Px(0.0);
-                if let Some((outline_width, outline_color)) = outline
-                    && outline_width.0 > 0.0
-                {
-                    chrome.border = Edges::all(outline_width);
-                    chrome.border_color = Some(outline_color);
-                    outline_width_for_notch = outline_width;
+                if outline.is_some() && motion.border.top.0 > 0.0 {
+                    chrome.border = motion.border;
+                    chrome.border_color = Some(motion.border_color);
+                    outline_width_for_notch = motion.border.top;
                 }
 
-                let indicator_el = indicator.map(|(h, c)| {
-                    cx.canvas(CanvasProps::default(), move |p| {
-                        let bounds = p.bounds();
-                        let y = Px(bounds.origin.y.0 + bounds.size.height.0 - h.0);
-                        let rect = Rect::new(
-                            Point::new(bounds.origin.x, y),
-                            Size::new(bounds.size.width, h),
-                        );
-                        p.scene().push(fret_core::SceneOp::Quad {
-                            order: fret_core::DrawOrder(0),
-                            rect,
-                            background: fret_core::Paint::Solid(c).into(),
-                            border: Edges::all(Px(0.0)),
-                            border_paint: fret_core::Paint::TRANSPARENT.into(),
-                            corner_radii: Corners::all(Px(0.0)),
-                        });
-                    })
-                });
+                let indicator_el =
+                    (indicator.is_some() && motion.border.bottom.0 > 0.0).then(|| {
+                        material_field_active_indicator_layer(
+                            cx,
+                            motion.border.bottom,
+                            motion.border_color,
+                            active_indicator_test_id.clone(),
+                        )
+                    });
 
                 let style_override = style.clone();
 
@@ -1174,6 +1211,7 @@ fn select_trigger_element<H: UiHost>(
                             focused,
                             container_bg.unwrap_or(Color::TRANSPARENT),
                             outline_width_for_notch,
+                            label_test_id.clone(),
                         ));
                     }
                     if let Some(indicator_el) = indicator_el {
@@ -1325,15 +1363,9 @@ fn select_menu_item_icon<H: UiHost>(
 }
 
 #[derive(Debug, Default)]
-struct SelectTriggerRuntime {
-    float_target: bool,
-    float: StateLayerAnimator,
-}
-
-#[derive(Debug, Default)]
 struct SelectChevronRuntime {
     target_open: bool,
-    anim: StateLayerAnimator,
+    anim: SpringAnimator,
 }
 
 fn select_trigger_label<H: UiHost>(
@@ -1350,6 +1382,7 @@ fn select_trigger_label<H: UiHost>(
     focused: bool,
     input_bg: Color,
     outline_width: Px,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
@@ -1397,7 +1430,7 @@ fn select_trigger_label<H: UiHost>(
     }
     patch.layout = layout;
 
-    cx.container(patch, move |cx| {
+    let mut label = cx.container(patch, move |cx| {
         vec![cx.text_props(TextProps {
             layout: fret_ui::element::LayoutStyle::default(),
             text: text.clone(),
@@ -1408,17 +1441,11 @@ fn select_trigger_label<H: UiHost>(
             align: fret_core::TextAlign::Start,
             ink_overflow: Default::default(),
         })]
-    })
-}
-
-fn material_field_text_start_inset_x(default: Px, leading_icon_size: Option<Px>) -> Px {
-    // Align with Material Web field layout:
-    // - with-leading-icon leading space: 12px
-    // - icon-content space: 16px
-    // (see `tokens/_md-comp-(outlined|filled)-text-field.scss` in `repo-ref/material-web`)
-    leading_icon_size
-        .map(|icon_size| Px(12.0 + icon_size.0 + 16.0))
-        .unwrap_or(default)
+    });
+    if let Some(test_id) = test_id {
+        label = label.test_id(test_id);
+    }
+    label
 }
 
 fn select_supporting_text<H: UiHost>(
@@ -1503,9 +1530,13 @@ fn estimate_select_menu_content_width<H: UiHost>(
     items: &[SelectItem],
 ) -> Px {
     let theme = Theme::global(&*cx.app);
-    let padding_left = Px(12.0);
-    let padding_right = Px(12.0);
-    let gap = Px(8.0);
+    let outer_horizontal_padding =
+        select_tokens::menu_selectable_item_outer_horizontal_padding(theme, variant);
+    let content_horizontal_padding =
+        select_tokens::menu_list_item_content_horizontal_padding(theme, variant);
+    let padding_left = Px(outer_horizontal_padding.0 + content_horizontal_padding.0);
+    let padding_right = Px(outer_horizontal_padding.0 + content_horizontal_padding.0);
+    let gap = select_tokens::menu_list_item_icon_text_gap(theme, variant);
 
     let label_style = select_tokens::menu_list_item_label_text_style(theme, variant)
         .unwrap_or_else(|| fret_core::TextStyle {
@@ -1568,7 +1599,7 @@ fn estimate_select_menu_content_width<H: UiHost>(
 mod item_text_tests {
     use super::*;
     use fret_app::App;
-    use fret_core::{Point, Px, Size};
+    use fret_core::{Point, Px, Rect, Size};
     use fret_ui::element::{ElementKind, Length, TextProps};
 
     fn bounds() -> Rect {
@@ -1586,6 +1617,21 @@ mod item_text_tests {
                 .iter()
                 .find_map(|child| find_text_by_content(child, text)),
         }
+    }
+
+    fn collect_svg_icon_colors(el: &AnyElement, out: &mut Vec<Color>) {
+        if let ElementKind::SvgIcon(props) = &el.kind {
+            out.push(props.color);
+        }
+        for child in &el.children {
+            collect_svg_icon_colors(child, out);
+        }
+    }
+
+    fn apply_test_theme(app: &mut App) {
+        let cfg =
+            crate::tokens::v30::theme_config(crate::tokens::v30::TypographyOptions::default());
+        Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
     }
 
     #[test]
@@ -1718,6 +1764,7 @@ mod item_text_tests {
                     open.clone(),
                     None,
                     Color::TRANSPARENT,
+                    bounds().size.width,
                     true,
                     0,
                     1,
@@ -1733,6 +1780,66 @@ mod item_text_tests {
         assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(label.layout.flex.grow, 1.0);
         assert_eq!(label.layout.flex.basis, Length::Px(Px(0.0)));
+    }
+
+    #[test]
+    fn select_menu_selected_item_uses_selected_content_colors() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        apply_test_theme(&mut app);
+
+        let selected_value = Arc::<str>::from("beta");
+        let model = app.models_mut().insert(Some(selected_value.clone()));
+        let open = app.models_mut().insert(true);
+        let initial_focus = Rc::new(Cell::new(None));
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-select-selected-item",
+            |cx| {
+                select_list_item(
+                    cx,
+                    SelectVariant::Outlined,
+                    SelectItem::new(selected_value.clone(), "Beta")
+                        .leading_icon(ids::ui::SEARCH)
+                        .trailing_icon(ids::ui::CHECK),
+                    false,
+                    model.clone(),
+                    open.clone(),
+                    Some(selected_value.clone()),
+                    Color::TRANSPARENT,
+                    bounds().size.width,
+                    true,
+                    0,
+                    1,
+                    initial_focus.clone(),
+                )
+            },
+        );
+
+        let theme = Theme::global(&app);
+        let (expected_label, expected_icon, _, _) = list_tokens::item_outcomes(
+            theme,
+            true,
+            true,
+            list_tokens::ListItemInteraction::Default,
+        );
+
+        let label = find_text_by_content(&el, "Beta").expect("selected select menu item label");
+        assert_eq!(label.color, Some(expected_label));
+
+        let mut icon_colors = Vec::new();
+        collect_svg_icon_colors(&el, &mut icon_colors);
+        assert!(
+            icon_colors.len() >= 2,
+            "expected selected Select item leading and trailing icons"
+        );
+        assert!(
+            icon_colors.iter().all(|color| *color == expected_icon),
+            "expected selected Select item icons to use selected content color; got {icon_colors:?}"
+        );
     }
 
     #[test]
@@ -1768,6 +1875,7 @@ mod item_text_tests {
                     open.clone(),
                     None,
                     Color::TRANSPARENT,
+                    bounds().size.width,
                     true,
                     0,
                     1,
@@ -1890,6 +1998,7 @@ fn select_listbox_panel<H: UiHost>(
     labelled_by_element: Option<u64>,
     initial_focus_id_out: Rc<Cell<Option<GlobalElementId>>>,
     listbox_element_id_out: Rc<Cell<Option<GlobalElementId>>>,
+    listbox_width: Px,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     typeahead_delay_ms: u32,
     style: Arc<SelectStyle>,
@@ -1903,10 +2012,7 @@ fn select_listbox_panel<H: UiHost>(
     let listbox_test_id = cx.slot_state(DerivedTestIds::default, |st| {
         if st.base.as_deref() != test_id.as_deref() {
             st.base = test_id.clone();
-            st.listbox = st
-                .base
-                .as_ref()
-                .map(|id| Arc::<str>::from(format!("{}-listbox", id.as_ref())));
+            st.listbox = st.base.as_ref().map(|id| part_test_id(id, "listbox"));
         }
         st.listbox.clone()
     });
@@ -2127,6 +2233,7 @@ fn select_listbox_panel<H: UiHost>(
                                             open.clone(),
                                             selected.clone(),
                                             selected_bg,
+                                            listbox_width,
                                             tab_stop,
                                             idx,
                                             count,
@@ -2153,6 +2260,7 @@ fn select_list_item<H: UiHost>(
     open: Model<bool>,
     selected: Option<Arc<str>>,
     selected_bg: Color,
+    listbox_width: Px,
     tab_stop: bool,
     idx: usize,
     set_size: usize,
@@ -2166,10 +2274,10 @@ fn select_list_item<H: UiHost>(
             select_tokens::menu_list_item_height(theme, variant)
         }
     };
-    let chrome_test_id = item
-        .test_id
-        .as_ref()
-        .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+    let part_test_ids = item.test_id.as_ref().map(SelectItemPartTestIds::from_base);
+    let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+    let leading_icon_test_id = part_test_ids.as_ref().map(|ids| ids.leading_icon.clone());
+    let trailing_icon_test_id = part_test_ids.as_ref().map(|ids| ids.trailing_icon.clone());
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !item.disabled;
@@ -2260,6 +2368,11 @@ fn select_list_item<H: UiHost>(
                     leading_icon_size,
                     trailing_icon_color,
                     trailing_icon_size,
+                    selectable_outer_horizontal_padding,
+                    selectable_outer_vertical_padding,
+                    content_horizontal_padding,
+                    icon_text_gap,
+                    item_container_shape,
                 ) = {
                     let theme = Theme::global(&*cx.app);
                     let state_layer_color = theme
@@ -2277,8 +2390,12 @@ fn select_list_item<H: UiHost>(
                     let ripple_base_opacity = pressed_opacity;
                     let config = material_pressable_indication_config(theme, None);
 
-                    let label_color =
-                        select_tokens::menu_list_item_label_text_color(theme, variant);
+                    let label_color = select_tokens::menu_list_item_label_text_color(
+                        theme,
+                        variant,
+                        enabled,
+                        is_selected,
+                    );
                     let label_style =
                         select_tokens::menu_list_item_label_text_style(theme, variant)
                             .map(|style| typography::with_intent(style, TextIntent::Control));
@@ -2296,14 +2413,37 @@ fn select_list_item<H: UiHost>(
                         list_tokens::trailing_supporting_text_style(theme, is_selected)
                             .map(|style| typography::with_intent(style, TextIntent::Control));
 
-                    let leading_icon_color =
-                        select_tokens::menu_list_item_leading_icon_color(theme, variant);
+                    let leading_icon_color = select_tokens::menu_list_item_leading_icon_color(
+                        theme,
+                        variant,
+                        enabled,
+                        is_selected,
+                    );
                     let leading_icon_size =
                         select_tokens::menu_list_item_leading_icon_size(theme, variant);
-                    let trailing_icon_color =
-                        select_tokens::menu_list_item_trailing_icon_color(theme, variant);
+                    let trailing_icon_color = select_tokens::menu_list_item_trailing_icon_color(
+                        theme,
+                        variant,
+                        enabled,
+                        is_selected,
+                    );
                     let trailing_icon_size =
                         select_tokens::menu_list_item_trailing_icon_size(theme, variant);
+                    let selectable_outer_horizontal_padding =
+                        select_tokens::menu_selectable_item_outer_horizontal_padding(
+                            theme, variant,
+                        );
+                    let selectable_outer_vertical_padding =
+                        select_tokens::menu_selectable_item_outer_vertical_padding(
+                            theme,
+                            variant,
+                            has_secondary_text,
+                        );
+                    let content_horizontal_padding =
+                        select_tokens::menu_list_item_content_horizontal_padding(theme, variant);
+                    let icon_text_gap = select_tokens::menu_list_item_icon_text_gap(theme, variant);
+                    let item_container_shape =
+                        select_tokens::menu_list_item_container_shape(theme, variant, is_selected);
 
                     (
                         state_layer_color,
@@ -2324,6 +2464,11 @@ fn select_list_item<H: UiHost>(
                         leading_icon_size,
                         trailing_icon_color,
                         trailing_icon_size,
+                        selectable_outer_horizontal_padding,
+                        selectable_outer_vertical_padding,
+                        content_horizontal_padding,
+                        icon_text_gap,
+                        item_container_shape,
                     )
                 };
 
@@ -2353,15 +2498,18 @@ fn select_list_item<H: UiHost>(
                 );
 
                 let bg = if is_selected { Some(selected_bg) } else { None };
+                let chrome_width =
+                    Px((listbox_width.0 - selectable_outer_horizontal_padding.0 * 2.0).max(0.0));
                 let mut chrome = ContainerProps::default();
                 chrome.background = bg;
-                chrome.layout.size.width = Length::Fill;
-                chrome.layout.size.height = Length::Px(height);
+                chrome.corner_radii = item_container_shape;
+                chrome.layout.size.width = Length::Px(chrome_width);
+                chrome.layout.size.height = Length::Fill;
                 chrome.layout.overflow = Overflow::Clip;
 
                 let mut row = FlexProps::default();
                 row.layout.size.width = Length::Fill;
-                row.layout.size.height = Length::Px(height);
+                row.layout.size.height = Length::Fill;
                 row.layout.overflow = Overflow::Clip;
                 row.direction = Axis::Horizontal;
                 row.justify = MainAlign::Start;
@@ -2370,10 +2518,10 @@ fn select_list_item<H: UiHost>(
                 } else {
                     CrossAlign::Center
                 };
-                row.gap = Px(8.0).into();
+                row.gap = icon_text_gap.into();
                 row.padding = Edges {
-                    left: Px(12.0),
-                    right: Px(12.0),
+                    left: content_horizontal_padding,
+                    right: content_horizontal_padding,
                     top: if has_secondary_text {
                         item_top_space
                     } else {
@@ -2503,11 +2651,31 @@ fn select_list_item<H: UiHost>(
                         };
 
                         let leading_icon_el = leading_icon.as_ref().map(|icon| {
-                            select_menu_item_icon(cx, icon, leading_icon_color, leading_icon_size)
+                            let icon = select_menu_item_icon(
+                                cx,
+                                icon,
+                                leading_icon_color,
+                                leading_icon_size,
+                            );
+                            if let Some(test_id) = leading_icon_test_id.clone() {
+                                icon.test_id(test_id)
+                            } else {
+                                icon
+                            }
                         });
 
                         let trailing_icon_el = trailing_icon.as_ref().map(|icon| {
-                            select_menu_item_icon(cx, icon, trailing_icon_color, trailing_icon_size)
+                            let icon = select_menu_item_icon(
+                                cx,
+                                icon,
+                                trailing_icon_color,
+                                trailing_icon_size,
+                            );
+                            if let Some(test_id) = trailing_icon_test_id.clone() {
+                                icon.test_id(test_id)
+                            } else {
+                                icon
+                            }
                         });
 
                         let mut children = Vec::new();
@@ -2525,7 +2693,22 @@ fn select_list_item<H: UiHost>(
                 if let Some(test_id) = chrome_test_id.clone() {
                     chrome = chrome.test_id(test_id);
                 }
-                vec![chrome]
+
+                let mut inset = FlexProps::default();
+                inset.direction = Axis::Horizontal;
+                inset.justify = MainAlign::Start;
+                inset.align = CrossAlign::Stretch;
+                inset.layout.size.width = Length::Fill;
+                inset.layout.size.height = Length::Px(height);
+                inset.layout.overflow = Overflow::Visible;
+                inset.padding = Edges {
+                    left: selectable_outer_horizontal_padding,
+                    right: selectable_outer_horizontal_padding,
+                    top: selectable_outer_vertical_padding,
+                    bottom: selectable_outer_vertical_padding,
+                }
+                .into();
+                vec![cx.flex(inset, move |_cx| vec![chrome])]
             })
         });
 

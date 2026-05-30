@@ -1,0 +1,342 @@
+{
+  "schema_version": 1,
+  "component": "navigation_indicator",
+  "style": "material3",
+  "source_family": "material3",
+  "adapter": {
+    "schema_version": 1,
+    "id": "material3.navigation_indicator.adapter.v1",
+    "goal": "Map Material 3 Tabs, NavigationBar, and NavigationRail active-indicator geometry, selectors, and motion into one packet so shared foundation work is evidence-backed.",
+    "source_precedence": [
+      "Compose Material3 for toolkit indicator measurement, placement, and motion scheme vocabulary",
+      "Material Web for Material token names and active indicator DOM/CSS outcomes",
+      "Material UI for web-facing Tabs indicator measurement and slot boundaries",
+      "Base UI for headless active tab geometry exposure and hidden-until-measured behavior"
+    ]
+  },
+  "report": {
+    "id": "material3_navigation_indicator_adapter_report_v1",
+    "schema_version": 1,
+    "generated_date": "2026-05-27",
+    "limitations": [
+      "This packet classifies the boundary between recipe-owned target geometry and shared Material active-indicator paint/motion; it is not a full screenshot parity claim.",
+      "Tabs, NavigationBar, and NavigationRail use different upstream geometry models, so only the paint/motion canvas layer is shared.",
+      "Fixed-timestep diagnostics prove Fret-side indicator motion is script-addressable; upstream pixel matching remains a later hardening step."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "compose_material3.tab_row",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/TabRow.kt"
+      },
+      {
+        "id": "compose_material3.navigation_bar",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/NavigationBar.kt"
+      },
+      {
+        "id": "compose_material3.navigation_rail",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/NavigationRail.kt"
+      },
+      {
+        "id": "material_web.tabs",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-web/tabs/internal/tab.ts"
+      },
+      {
+        "id": "material_web.tabs_styles",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-web/tabs/internal/_tab.scss"
+      },
+      {
+        "id": "material_web.navigation_tab",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-web/labs/navigationtab/internal/navigation-tab.ts"
+      },
+      {
+        "id": "material_web.navigation_tab_styles",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-web/labs/navigationtab/internal/_navigation-tab.scss"
+      },
+      {
+        "id": "material_ui.tabs",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Tabs/Tabs.js"
+      },
+      {
+        "id": "base_ui.tabs_indicator",
+        "path": "repo-ref/base-ui/packages/react/src/tabs/indicator/TabsIndicator.tsx"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.material3.tabs",
+        "path": "ecosystem/fret-ui-material3/src/tabs.rs"
+      },
+      {
+        "id": "fret.material3.navigation_bar",
+        "path": "ecosystem/fret-ui-material3/src/navigation_bar.rs"
+      },
+      {
+        "id": "fret.material3.navigation_rail",
+        "path": "ecosystem/fret-ui-material3/src/navigation_rail.rs"
+      },
+      {
+        "id": "fret.material3.active_indicator_foundation",
+        "path": "ecosystem/fret-ui-material3/src/foundation/active_indicator.rs"
+      },
+      {
+        "id": "fret.material3.test_id_foundation",
+        "path": "ecosystem/fret-ui-material3/src/foundation/test_id.rs"
+      },
+      {
+        "id": "fret.material3.automation_surface",
+        "path": "ecosystem/fret-ui-material3/tests/automation_surface.rs"
+      },
+      {
+        "id": "fret.material3.tabs_diag",
+        "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-tabs-indicator-pixels-changed-fixed-frame-delta.json"
+      },
+      {
+        "id": "fret.material3.navigation_bar_diag",
+        "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-bar-indicator-pixels-changed-fixed-frame-delta.json"
+      },
+      {
+        "id": "fret.material3.navigation_rail_diag",
+        "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-rail-indicator-pixels-changed-fixed-frame-delta.json"
+      }
+    ]
+  },
+  "parts": [
+    {
+      "id": "material3_tabs_indicator_geometry_motion",
+      "label": "Material 3 Tabs active indicator geometry and motion",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "compose_material3.tab_row",
+          "material_web.tabs",
+          "material_ui.tabs",
+          "base_ui.tabs_indicator"
+        ],
+        "facts": [
+          "Compose Material3 TabRow computes selected tab positions and gives indicators a tabIndicatorOffset API that animates offset and width with the Material motion scheme.",
+          "Material Web tabs render an indicator element inside each tab and animate from the previous indicator rect to the new rect.",
+          "Material UI Tabs measures the selected tab relative to the tabs container and updates indicator start and size only when the measured delta changes."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.material3.tabs",
+          "fret.material3.active_indicator_foundation",
+          "fret.material3.test_id_foundation",
+          "fret.material3.automation_surface",
+          "fret.material3.tabs_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-material3-tabs",
+          "ui-gallery-material3-tabs.chrome",
+          "ui-gallery-material3-tabs.active-indicator",
+          "ui-gallery-material3-tab-overview",
+          "ui-gallery-material3-tab-settings"
+        ],
+        "facts": [
+          "Tabs records recipe-owned tab bounds in LayoutProbeList and falls back to evenly divided chrome width before bounds are available.",
+          "Tabs passes the target rect, color, shape, and Material FastSpatial spring to the shared active-indicator layer.",
+          "Tabs exposes a stable dotted active-indicator test id for diagnostics and automation."
+        ]
+      },
+      "checks": [
+        {
+          "id": "material3_tabs_indicator_recipe_boundary_is_wired",
+          "kind": "existing_gate",
+          "expected": "Tabs exposes root/chrome/active-indicator/item selectors and renders the active-indicator layer from recipe-owned tab geometry.",
+          "observed": "pass",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "ecosystem/fret-ui-material3/src/tabs.rs",
+            "ecosystem/fret-ui-material3/src/foundation/active_indicator.rs",
+            "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-tabs-indicator-pixels-changed-fixed-frame-delta.json"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "Tabs indicator movement is motion-sensitive and should stay covered by fixed-timestep diagnostics."
+          }
+        }
+      ]
+    },
+    {
+      "id": "material3_navigation_bar_indicator_geometry_motion",
+      "label": "Material 3 NavigationBar active indicator geometry and motion",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "compose_material3.navigation_bar",
+          "material_web.navigation_tab",
+          "material_web.navigation_tab_styles"
+        ],
+        "facts": [
+          "Compose Material3 NavigationBarItem measures the icon slot, derives active indicator width and height from icon size plus token padding, and keeps ripple and indicator as separate layout ids.",
+          "Compose animates selected indicator alpha with DefaultEffects and indicator size with FastSpatial.",
+          "Material Web navigation tabs render an active-indicator element whose opacity, width, height, color, and shape are token-driven."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.material3.navigation_bar",
+          "fret.material3.active_indicator_foundation",
+          "fret.material3.test_id_foundation",
+          "fret.material3.automation_surface",
+          "fret.material3.navigation_bar_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-material3-navigation-bar",
+          "ui-gallery-material3-navigation-bar.chrome",
+          "ui-gallery-material3-navigation-bar.active-indicator",
+          "ui-gallery-material3-nav-search",
+          "ui-gallery-material3-nav-settings"
+        ],
+        "facts": [
+          "NavigationBar records selected icon-slot bounds in LayoutProbeList and uses token fallback geometry when the slot has not been measured.",
+          "NavigationBar keeps item semantics, ripple, icon, label, and badge recipe-local while delegating active-indicator paint/motion to the shared foundation helper.",
+          "NavigationBar exposes stable dotted part ids for root chrome, active indicator, item chrome, icon, label, and badge."
+        ]
+      },
+      "checks": [
+        {
+          "id": "material3_navigation_bar_indicator_recipe_boundary_is_wired",
+          "kind": "existing_gate",
+          "expected": "NavigationBar active indicator is addressable, driven by selected icon-slot geometry, and painted through the shared Material active-indicator layer.",
+          "observed": "pass",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "ecosystem/fret-ui-material3/src/navigation_bar.rs",
+            "ecosystem/fret-ui-material3/src/foundation/active_indicator.rs",
+            "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-bar-indicator-pixels-changed-fixed-frame-delta.json"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "NavigationBar indicator movement should be covered with fixed-timestep pixel-change evidence."
+          }
+        }
+      ]
+    },
+    {
+      "id": "material3_navigation_rail_indicator_geometry_motion",
+      "label": "Material 3 NavigationRail active indicator geometry and motion",
+      "axis": "layout",
+      "upstream": {
+        "source_ref_ids": [
+          "compose_material3.navigation_rail",
+          "material_web.navigation_tab",
+          "material_web.navigation_tab_styles"
+        ],
+        "facts": [
+          "Compose Material3 NavigationRailItem measures icon, optional label, indicator ripple, and active indicator within the item layout.",
+          "Compose NavigationRail keeps active indicator placement tied to the selected icon slot and label visibility mode.",
+          "Material Web navigation tabs use token-driven active-indicator width, height, color, shape, and selected-state opacity."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.material3.navigation_rail",
+          "fret.material3.active_indicator_foundation",
+          "fret.material3.test_id_foundation",
+          "fret.material3.automation_surface",
+          "fret.material3.navigation_rail_diag"
+        ],
+        "test_ids": [
+          "ui-gallery-material3-navigation-rail",
+          "ui-gallery-material3-navigation-rail.chrome",
+          "ui-gallery-material3-navigation-rail.active-indicator",
+          "ui-gallery-material3-rail-search",
+          "ui-gallery-material3-rail-settings"
+        ],
+        "facts": [
+          "NavigationRail records selected icon-slot bounds in LayoutProbeList and intentionally keeps rail-specific item height, label mode, and badge placement in the recipe.",
+          "NavigationRail delegates shared canvas paint, target clamping, and Material FastSpatial spring motion to the active-indicator foundation helper.",
+          "NavigationRail exposes stable dotted part ids for root chrome, active indicator, item chrome, icon, label, and badge."
+        ]
+      },
+      "checks": [
+        {
+          "id": "material3_navigation_rail_indicator_recipe_boundary_is_wired",
+          "kind": "existing_gate",
+          "expected": "NavigationRail active indicator is addressable, driven by selected icon-slot geometry, and painted through the shared Material active-indicator layer.",
+          "observed": "pass",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "ecosystem/fret-ui-material3/src/navigation_rail.rs",
+            "ecosystem/fret-ui-material3/src/foundation/active_indicator.rs",
+            "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+            "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-rail-indicator-pixels-changed-fixed-frame-delta.json"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "NavigationRail indicator movement should be covered with fixed-timestep pixel-change evidence."
+          }
+        }
+      ]
+    },
+    {
+      "id": "material3_shared_active_indicator_foundation_boundary",
+      "label": "Material active indicator shared foundation boundary",
+      "axis": "chrome",
+      "upstream": {
+        "source_ref_ids": [
+          "compose_material3.tab_row",
+          "compose_material3.navigation_bar",
+          "compose_material3.navigation_rail",
+          "base_ui.tabs_indicator"
+        ],
+        "facts": [
+          "Upstream implementations keep target measurement component-specific because each surface has different placement constraints.",
+          "The reusable part across surfaces is the visual indicator layer behavior: it is hidden or empty when there is no selected/measured target and otherwise tracks a target rect.",
+          "Headless tabs expose active tab position and size separately from styling, which matches a split between recipe geometry and foundation paint/motion."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.material3.tabs",
+          "fret.material3.navigation_bar",
+          "fret.material3.navigation_rail",
+          "fret.material3.active_indicator_foundation"
+        ],
+        "test_ids": [
+          "ui-gallery-material3-tabs.active-indicator",
+          "ui-gallery-material3-navigation-bar.active-indicator",
+          "ui-gallery-material3-navigation-rail.active-indicator"
+        ],
+        "facts": [
+          "Fret keeps tab width, nav icon-slot bounds, and rail label-mode geometry in each recipe.",
+          "Fret shares only ActiveIndicatorRect, Material spring conversion, clamped absolute canvas paint, and optional semantics decoration.",
+          "No mechanism-layer or fret-ui-kit policy gap is proven by this packet."
+        ]
+      },
+      "checks": [
+        {
+          "id": "material3_active_indicator_foundation_has_three_consumers",
+          "kind": "existing_gate",
+          "expected": "The shared foundation helper has Tabs, NavigationBar, and NavigationRail consumers and targeted unit tests for empty/clamped targets.",
+          "observed": "pass",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "ecosystem/fret-ui-material3/src/foundation/active_indicator.rs",
+            "ecosystem/fret-ui-material3/src/tabs.rs",
+            "ecosystem/fret-ui-material3/src/navigation_bar.rs",
+            "ecosystem/fret-ui-material3/src/navigation_rail.rs"
+          ],
+          "promotion": {
+            "target": "none",
+            "reason": "This is a Material crate foundation split with three recipe consumers; no lower-layer promotion is needed."
+          }
+        }
+      ]
+    }
+  ]
+}

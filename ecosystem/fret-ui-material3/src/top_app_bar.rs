@@ -22,8 +22,9 @@ use fret_ui::{Theme, UiHost};
 use fret_ui_kit::{ColorRef, WidgetStateProperty};
 
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::{optional_part_test_id, part_test_id};
 use crate::icon_button::{IconButton, IconButtonStyle, IconButtonVariant};
-use crate::motion::{SpringAnimator, SpringSpec, ms_to_frames};
+use crate::motion::{SpringAnimator, SpringSpec, cubic_bezier_ease, ms_to_frames};
 use crate::tokens::top_app_bar as top_app_bar_tokens;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -533,6 +534,24 @@ impl TopAppBar {
                 .as_ref()
                 .map_or(expanded_height, |l| l.container_height);
             let collapsed_fraction = layout.as_ref().map_or(0.0, |l| l.collapsed_fraction);
+            let color_transition_fraction = match self.variant {
+                TopAppBarVariant::Medium | TopAppBarVariant::Large => {
+                    if layout.is_some() {
+                        collapsed_fraction
+                    } else if scrolled {
+                        1.0
+                    } else {
+                        0.0
+                    }
+                }
+                TopAppBarVariant::Small | TopAppBarVariant::SmallCentered => {
+                    if scrolled {
+                        1.0
+                    } else {
+                        0.0
+                    }
+                }
+            };
             let top_row_height = Px(container_height.0.min(collapsed_height.0));
             let (
                 surface,
@@ -545,8 +564,11 @@ impl TopAppBar {
                 collapsed_title_color,
             ) = {
                 let theme = Theme::global(&*cx.app);
-                let background =
-                    top_app_bar_tokens::container_background(theme, self.variant, scrolled);
+                let background = top_app_bar_tokens::container_background_for_fraction(
+                    theme,
+                    self.variant,
+                    color_transition_fraction,
+                );
                 let elevation =
                     top_app_bar_tokens::container_elevation(theme, self.variant, scrolled);
                 let corner_radii = top_app_bar_tokens::container_shape(theme, self.variant);
@@ -599,9 +621,10 @@ impl TopAppBar {
                 test_id: self.test_id.clone(),
                 ..Default::default()
             };
+            let chrome_test_id = self.test_id.as_ref().map(|id| part_test_id(id, "chrome"));
 
             cx.semantics(sem, move |cx| {
-                vec![cx.container(container, move |cx| match self.variant {
+                let mut chrome = cx.container(container, move |cx| match self.variant {
                     TopAppBarVariant::Small | TopAppBarVariant::SmallCentered => {
                         vec![top_app_bar_single_row(
                             cx,
@@ -626,7 +649,11 @@ impl TopAppBar {
                             collapsed_fraction,
                         )]
                     }
-                })]
+                });
+                if let Some(test_id) = chrome_test_id.clone() {
+                    chrome = chrome.test_id(test_id);
+                }
+                vec![chrome]
             })
         })
     }
@@ -689,6 +716,7 @@ fn top_app_bar_title_element_for_variant<H: UiHost>(
     title: Arc<str>,
     style: fret_core::TextStyle,
     color: Color,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let mut props = fret_ui::element::TextProps::new(title);
     props.layout.size.width = Length::Fill;
@@ -697,7 +725,11 @@ fn top_app_bar_title_element_for_variant<H: UiHost>(
     props.color = Some(color);
     props.wrap = TextWrap::None;
     props.overflow = TextOverflow::Ellipsis;
-    cx.text_props(props)
+    let mut text = cx.text_props(props);
+    if let Some(test_id) = test_id {
+        text = text.test_id(test_id);
+    }
+    text
 }
 
 fn top_app_bar_single_row<H: UiHost>(
@@ -721,11 +753,13 @@ fn top_app_bar_single_row<H: UiHost>(
 
     match bar.variant {
         TopAppBarVariant::SmallCentered => {
+            let title_test_id = optional_part_test_id(bar.test_id.as_ref(), "title");
             let title = top_app_bar_title_element_for_variant(
                 cx,
                 bar.title.clone(),
                 title_style,
                 title_color,
+                title_test_id,
             );
             let leading_reserved = if leading.is_some() { Px(48.0) } else { Px(0.0) };
             let trailing_reserved = Px((trailing_buttons.len() as f32) * 48.0);
@@ -781,11 +815,13 @@ fn top_app_bar_single_row<H: UiHost>(
             cx.stack_props(stack_props, move |_cx| vec![icons, title_overlay])
         }
         _ => {
+            let title_test_id = optional_part_test_id(bar.test_id.as_ref(), "title");
             let title = top_app_bar_title_element_for_variant(
                 cx,
                 bar.title.clone(),
                 title_style,
                 title_color,
+                title_test_id,
             );
             let mut row = FlexProps::default();
             row.direction = Axis::Horizontal;
@@ -881,9 +917,12 @@ fn top_app_bar_two_rows<H: UiHost>(
             bar.title.clone(),
             collapsed_title_style,
             collapsed_title_color,
+            optional_part_test_id(bar.test_id.as_ref(), "collapsed-title"),
         );
         let middle = cx.flex(title_container, move |cx| {
-            vec![cx.opacity(collapsed_fraction, move |_cx| vec![collapsed_title])]
+            vec![cx.opacity(top_title_alpha(collapsed_fraction), move |_cx| {
+                vec![collapsed_title]
+            })]
         });
 
         let trailing_slot = slot_container(cx, Px(0.0), trailing_buttons);
@@ -916,6 +955,7 @@ fn top_app_bar_two_rows<H: UiHost>(
             bar.title.clone(),
             expanded_title_style,
             expanded_title_color,
+            optional_part_test_id(bar.test_id.as_ref(), "expanded-title"),
         );
         cx.container(wrapper, move |cx| {
             let mut row = FlexProps::default();
@@ -932,6 +972,18 @@ fn top_app_bar_two_rows<H: UiHost>(
     };
 
     cx.flex(column, move |_cx| vec![top_row, bottom_row])
+}
+
+fn top_title_alpha(collapsed_fraction: f32) -> f32 {
+    cubic_bezier_ease(
+        fret_ui::theme::CubicBezier {
+            x1: 0.8,
+            y1: 0.0,
+            x2: 0.8,
+            y2: 0.15,
+        },
+        collapsed_fraction,
+    )
 }
 
 #[cfg(test)]

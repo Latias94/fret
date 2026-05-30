@@ -8,12 +8,15 @@
 //! - the pressable element should have a minimum size (default: 48x48),
 //! - the visual chrome should remain at the token-driven size (often 40x40) and be centered.
 
+use std::sync::Arc;
+
 use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui::UiHost;
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign};
 use fret_ui::elements::ElementContext;
-use std::sync::Arc;
+
+use crate::foundation::test_id::chrome_part_test_id;
 
 pub const DEFAULT_MINIMUM_INTERACTIVE_SIZE: Px = Px(48.0);
 
@@ -47,7 +50,7 @@ pub fn centered_fill_with_chrome_test_id<H: UiHost>(
     chrome: AnyElement,
 ) -> AnyElement {
     let chrome = if let Some(id) = base_test_id {
-        chrome.test_id(Arc::<str>::from(format!("{id}.chrome")))
+        chrome.test_id(chrome_part_test_id(id))
     } else {
         chrome
     };

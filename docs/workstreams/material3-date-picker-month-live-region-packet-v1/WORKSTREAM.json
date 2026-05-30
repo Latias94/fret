@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "slug": "material3-date-picker-month-live-region-packet-v1",
+  "title": "Material 3 DatePicker Month Live Region Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "closeout",
+  "problem": "Closed lane that resolved the DatePicker displayed-month live-region follow-on by adding stable month-label part ids and focused semantics proof.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-date-picker-month-live-region-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-date-picker-month-live-region-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-date-picker-month-live-region-packet-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-date-picker-month-live-region-packet-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-date-picker-month-live-region-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-date-picker-month-live-region-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Render docked DatePicker, inspect the month-label live-region semantics, activate next month, and verify the label updates.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_month_label_is_polite_live_region"
+    ]
+  },
+  "gates": [
+    {
+      "name": "material3-date-picker-month-live-region",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_month_label_is_polite_live_region"
+    },
+    {
+      "name": "material3-date-picker-selector-regression",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_exposes_stable_part_test_ids"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-material3/src/date_picker.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "return_to_material3_sweep",
+    "notes": "Displayed-month live-region coverage is closed. DatePicker localization remains a split accessibility follow-on."
+  }
+}

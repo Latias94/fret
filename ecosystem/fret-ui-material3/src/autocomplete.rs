@@ -33,17 +33,18 @@ use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
+use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
-use crate::interaction::state_layer::StateLayerAnimator;
-use crate::motion::ms_to_frames;
+use crate::foundation::test_id::part_test_id;
+use crate::motion::{SpringAnimator, ms_to_frames};
 use crate::text_field::{TextField, TextFieldTokenNamespace, TextFieldVariant};
 use crate::tokens::autocomplete as autocomplete_tokens;
 use crate::tokens::dropdown_menu as dropdown_menu_tokens;
 
 fn default_autocomplete_listbox_test_id() -> Arc<str> {
     static ID: OnceLock<Arc<str>> = OnceLock::new();
-    ID.get_or_init(|| Arc::<str>::from("material3-autocomplete-listbox"))
+    ID.get_or_init(|| Arc::<str>::from("material3-autocomplete.listbox"))
         .clone()
 }
 
@@ -362,7 +363,7 @@ struct AutocompleteFrameState {
 #[derive(Debug, Default)]
 struct AutocompleteChevronRuntime {
     target_open: bool,
-    anim: StateLayerAnimator,
+    anim: SpringAnimator,
 }
 
 fn first_enabled(items: &[AutocompleteItem]) -> Option<usize> {
@@ -584,27 +585,18 @@ fn autocomplete_into_element<H: UiHost>(
 
         let now_frame = cx.frame_id.0;
         let (chevron_progress, chevron_want_frames) = if autocomplete.show_trailing_dropdown_icon {
-            let (open_duration_ms, close_duration_ms, easing) = {
+            let spatial = {
                 let theme = Theme::global(&*cx.app);
-                (
-                    dropdown_menu_tokens::open_duration_ms(theme),
-                    dropdown_menu_tokens::close_duration_ms(theme),
-                    dropdown_menu_tokens::easing(theme),
-                )
+                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial)
             };
             cx.slot_state(AutocompleteChevronRuntime::default, |rt| {
-                if rt.target_open != open_now {
+                if !rt.anim.is_initialized() {
                     rt.target_open = open_now;
-                    rt.anim.set_target(
-                        now_frame,
-                        if open_now { 1.0 } else { 0.0 },
-                        if open_now {
-                            open_duration_ms
-                        } else {
-                            close_duration_ms
-                        },
-                        easing,
-                    );
+                    rt.anim.reset(now_frame, if open_now { 1.0 } else { 0.0 });
+                } else if rt.target_open != open_now {
+                    rt.target_open = open_now;
+                    rt.anim
+                        .set_target(now_frame, if open_now { 1.0 } else { 0.0 }, spatial);
                 }
                 rt.anim.advance(now_frame);
                 (rt.anim.value(), rt.anim.is_active())
@@ -716,12 +708,17 @@ fn autocomplete_into_element<H: UiHost>(
         );
 
         if overlay_presence.present {
-            let Some(anchor) = fret_ui_kit::overlay::anchor_bounds_for_element(cx, input_id) else {
+            let field_id = runtime.field_element_id.get();
+            let popup_anchor_id = field_id.unwrap_or(input_id);
+            let Some(anchor) =
+                fret_ui_kit::overlay::anchor_bounds_for_element(cx, popup_anchor_id)
+            else {
                 return trigger;
             };
 
-            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_element_root(
                 cx,
+                popup_anchor_id,
                 fret_ui::Invalidation::Layout,
                 Px(0.0),
             );
@@ -797,6 +794,7 @@ fn autocomplete_into_element<H: UiHost>(
                             open.clone(),
                             suppress_open.clone(),
                             active_index.clone(),
+                            layout.rect.size.width,
                             scroll_handle.clone(),
                             items.clone(),
                             listbox_element_id_out.clone(),
@@ -835,7 +833,7 @@ fn autocomplete_into_element<H: UiHost>(
             request.root_name = Some(format!("material3.autocomplete.{}", input_id.0));
             request.close_on_window_focus_lost = true;
             request.close_on_window_resize = true;
-            if let Some(field_id) = runtime.field_element_id.get() {
+            if let Some(field_id) = field_id {
                 request = request.add_dismissable_branch(field_id);
             }
 
@@ -1014,6 +1012,7 @@ fn autocomplete_listbox_panel<H: UiHost>(
     open: Model<bool>,
     suppress_open: Model<bool>,
     active_index: Model<Option<usize>>,
+    listbox_width: Px,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     items: Arc<[AutocompleteItem]>,
     listbox_element_id_out: Rc<Cell<Option<GlobalElementId>>>,
@@ -1022,22 +1021,7 @@ fn autocomplete_listbox_panel<H: UiHost>(
     set_query_on_select: bool,
     on_select: Option<OnAutocompleteSelect>,
 ) -> AnyElement {
-    #[derive(Default)]
-    struct DerivedTestIds {
-        base: Option<Arc<str>>,
-        listbox: Option<Arc<str>>,
-    }
-
-    let listbox_test_id = cx.slot_state(DerivedTestIds::default, |st| {
-        if st.base.as_deref() != test_id.as_deref() {
-            st.base = test_id.clone();
-            st.listbox = st
-                .base
-                .as_ref()
-                .map(|id| Arc::<str>::from(format!("{}-listbox", id.as_ref())));
-        }
-        st.listbox.clone()
-    });
+    let listbox_test_id = test_id.as_ref().map(|id| part_test_id(id, "listbox"));
 
     let sem = SemanticsProps {
         role: SemanticsRole::ListBox,
@@ -1073,11 +1057,11 @@ fn autocomplete_listbox_panel<H: UiHost>(
                     .map(|item| {
                         item.test_id.clone().or_else(|| {
                             base.map(|parent| {
-                                Arc::<str>::from(format!(
-                                    "{}-option-{}",
-                                    parent.as_ref(),
-                                    sanitize_test_id_suffix(item.value.as_ref())
-                                ))
+                                let option_base = part_test_id(parent, "option");
+                                part_test_id(
+                                    &option_base,
+                                    &sanitize_test_id_suffix(item.value.as_ref()),
+                                )
                             })
                         })
                     })
@@ -1091,48 +1075,58 @@ fn autocomplete_listbox_panel<H: UiHost>(
             .clone()
     });
 
-    let (surface, corner, selected_bg, label_style, label_color, item_height) = {
+    let (
+        surface,
+        corner,
+        selected_bg,
+        label_style,
+        item_height,
+        selectable_outer_horizontal_padding,
+        selectable_outer_vertical_padding,
+        content_horizontal_padding,
+    ) = {
         let theme = Theme::global(&*cx.app);
-        let menu_bg =
-            autocomplete_tokens::menu_container_background(theme, variant.as_text_field_variant());
-        let elevation =
-            autocomplete_tokens::menu_container_elevation(theme, variant.as_text_field_variant());
-        let shadow_color = autocomplete_tokens::menu_container_shadow_color(
-            theme,
-            variant.as_text_field_variant(),
-        );
-        let corner =
-            autocomplete_tokens::menu_container_shape(theme, variant.as_text_field_variant());
+        let token_variant = variant.as_text_field_variant();
+        let menu_bg = autocomplete_tokens::menu_container_background(theme, token_variant);
+        let elevation = autocomplete_tokens::menu_container_elevation(theme, token_variant);
+        let shadow_color = autocomplete_tokens::menu_container_shadow_color(theme, token_variant);
+        let corner = autocomplete_tokens::menu_container_shape(theme, token_variant);
         let surface = material_surface_style(theme, menu_bg, elevation, Some(shadow_color), corner);
 
-        let selected_bg = autocomplete_tokens::menu_list_item_selected_container_color(
-            theme,
-            variant.as_text_field_variant(),
-        );
-        let label_style = autocomplete_tokens::menu_list_item_label_text_style(
-            theme,
-            variant.as_text_field_variant(),
-        )
-        .unwrap_or_else(|| {
-            theme
-                .text_style_by_key("md.sys.typescale.body-large")
-                .unwrap_or_default()
-        });
+        let selected_bg =
+            autocomplete_tokens::menu_list_item_selected_container_color(theme, token_variant);
+        let label_style =
+            autocomplete_tokens::menu_list_item_label_text_style(theme, token_variant)
+                .unwrap_or_else(|| {
+                    theme
+                        .text_style_by_key("md.sys.typescale.body-large")
+                        .unwrap_or_default()
+                });
         let label_style = typography::with_intent(label_style, TextIntent::Control);
-        let label_color = autocomplete_tokens::menu_list_item_label_text_color(
-            theme,
-            variant.as_text_field_variant(),
-        );
-        let item_height =
-            autocomplete_tokens::menu_list_item_height(theme, variant.as_text_field_variant());
+        let item_height = autocomplete_tokens::menu_list_item_height(theme, token_variant);
+        let selectable_outer_horizontal_padding =
+            autocomplete_tokens::menu_selectable_item_outer_horizontal_padding(
+                theme,
+                token_variant,
+            );
+        let selectable_outer_vertical_padding =
+            autocomplete_tokens::menu_selectable_item_outer_vertical_padding(
+                theme,
+                token_variant,
+                false,
+            );
+        let content_horizontal_padding =
+            autocomplete_tokens::menu_list_item_content_horizontal_padding(theme, token_variant);
 
         (
             surface,
             corner,
             selected_bg,
             label_style,
-            label_color,
             item_height,
+            selectable_outer_horizontal_padding,
+            selectable_outer_vertical_padding,
+            content_horizontal_padding,
         )
     };
     let vertical_padding = Px(8.0);
@@ -1164,7 +1158,13 @@ fn autocomplete_listbox_panel<H: UiHost>(
                 props.justify = MainAlign::Start;
                 props.align = CrossAlign::Stretch;
                 props.layout.size.width = Length::Fill;
-                props.padding = Edges::all(vertical_padding).into();
+                props.padding = Edges {
+                    top: vertical_padding,
+                    right: Px(0.0),
+                    bottom: vertical_padding,
+                    left: Px(0.0),
+                }
+                .into();
                 vec![cx.flex(props, move |cx| {
                     let mut out: Vec<AnyElement> = Vec::with_capacity(items.len());
                     let count = items.len();
@@ -1179,9 +1179,8 @@ fn autocomplete_listbox_panel<H: UiHost>(
                         let query = query.clone();
                         let option_test_id =
                             option_test_ids.get(idx).cloned().unwrap_or(None);
-                        let option_chrome_test_id = option_test_id
-                            .as_ref()
-                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                        let option_chrome_test_id =
+                            option_test_id.as_ref().map(|id| part_test_id(id, "chrome"));
 
                         let open_for_select = open.clone();
                         let suppress_open_for_select = suppress_open.clone();
@@ -1255,6 +1254,23 @@ fn autocomplete_listbox_panel<H: UiHost>(
 
                             let mut text_layout = fret_ui::element::LayoutStyle::default();
                             text_layout.size.width = Length::Fill;
+                            let (label_color, item_container_shape) = {
+                                let theme = Theme::global(&*cx.app);
+                                let token_variant = variant.as_text_field_variant();
+                                (
+                                    autocomplete_tokens::menu_list_item_label_text_color(
+                                        theme,
+                                        token_variant,
+                                        enabled,
+                                        selected,
+                                    ),
+                                    autocomplete_tokens::menu_list_item_container_shape(
+                                        theme,
+                                        token_variant,
+                                        active || selected,
+                                    ),
+                                )
+                            };
 
                             let text = if let Some((start, end)) =
                                 find_ascii_case_insensitive_match(item.label.as_ref(), query.as_ref())
@@ -1300,14 +1316,26 @@ fn autocomplete_listbox_panel<H: UiHost>(
                             };
 
                             let mut child_layout = fret_ui::element::LayoutStyle::default();
-                            child_layout.size.width = Length::Fill;
+                            child_layout.size.width = Length::Px(Px(
+                                (listbox_width.0
+                                    - selectable_outer_horizontal_padding.0 * 2.0)
+                                    .max(0.0),
+                            ));
                             child_layout.size.height = Length::Fill;
+                            child_layout.overflow = Overflow::Clip;
 
                             let child = cx.container(
                                 ContainerProps {
                                     layout: child_layout,
-                                    padding: Edges::all(Px(12.0)).into(),
+                                    padding: Edges {
+                                        left: content_horizontal_padding,
+                                        right: content_horizontal_padding,
+                                        top: Px(12.0),
+                                        bottom: Px(12.0),
+                                    }
+                                    .into(),
                                     background: (active || selected).then_some(selected_bg),
+                                    corner_radii: item_container_shape,
                                     ..Default::default()
                                 },
                                 move |_cx| vec![text],
@@ -1318,7 +1346,22 @@ fn autocomplete_listbox_panel<H: UiHost>(
                                 chrome = chrome.test_id(test_id);
                             }
 
-                            (props, vec![chrome])
+                            let mut inset = FlexProps::default();
+                            inset.direction = Axis::Horizontal;
+                            inset.justify = MainAlign::Start;
+                            inset.align = CrossAlign::Stretch;
+                            inset.layout.size.width = Length::Fill;
+                            inset.layout.size.height = Length::Px(item_height);
+                            inset.layout.overflow = Overflow::Visible;
+                            inset.padding = Edges {
+                                left: selectable_outer_horizontal_padding,
+                                right: selectable_outer_horizontal_padding,
+                                top: selectable_outer_vertical_padding,
+                                bottom: selectable_outer_vertical_padding,
+                            }
+                            .into();
+
+                            (props, vec![cx.flex(inset, move |_cx| vec![chrome])])
                         });
 
                         out.push(row);
@@ -1398,16 +1441,43 @@ impl TextFieldExt for TextField {
 mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::ElementKind;
     use fret_ui::elements::with_element_cx;
     use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 
+    use crate::tokens::list as list_tokens;
+
     use super::*;
+
+    #[test]
+    fn autocomplete_default_listbox_test_id_uses_dotted_part_contract() {
+        assert_eq!(
+            default_autocomplete_listbox_test_id().as_ref(),
+            "material3-autocomplete.listbox"
+        );
+    }
 
     fn bounds() -> Rect {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(120.0)),
         )
+    }
+
+    fn apply_test_theme(app: &mut App) {
+        let cfg =
+            crate::tokens::v30::theme_config(crate::tokens::v30::TypographyOptions::default());
+        Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
     }
 
     #[test]
@@ -1467,5 +1537,64 @@ mod tests {
                 assert_ne!(a.query_model(), b.query_model());
             },
         );
+    }
+
+    #[test]
+    fn autocomplete_selected_item_uses_selected_label_color() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_test_theme(&mut app);
+
+        let selected_value = Arc::<str>::from("beta");
+        let query_model = app.models_mut().insert(String::new());
+        let selected_model = app.models_mut().insert(Some(selected_value.clone()));
+        let open = app.models_mut().insert(true);
+        let suppress_open = app.models_mut().insert(false);
+        let active_index = app.models_mut().insert(None::<usize>);
+        let items: Arc<[AutocompleteItem]> =
+            vec![AutocompleteItem::new(selected_value.clone(), "Beta")].into();
+
+        let el = with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-autocomplete-selected-listbox",
+            |cx| {
+                autocomplete_listbox_panel(
+                    cx,
+                    AutocompleteVariant::Outlined,
+                    None,
+                    Some(Arc::<str>::from("Autocomplete")),
+                    Some(Arc::<str>::from("m3-autocomplete")),
+                    Arc::<str>::from(""),
+                    query_model.clone(),
+                    Some(selected_value.clone()),
+                    Some(selected_model.clone()),
+                    false,
+                    open.clone(),
+                    suppress_open.clone(),
+                    active_index.clone(),
+                    bounds().size.width,
+                    fret_ui::scroll::ScrollHandle::default(),
+                    items.clone(),
+                    Rc::new(Cell::new(None)),
+                    Rc::new(RefCell::new(Vec::new())),
+                    Rc::new(Cell::new(None)),
+                    true,
+                    None,
+                )
+            },
+        );
+
+        let theme = Theme::global(&app);
+        let (expected_label, _, _, _) = list_tokens::item_outcomes(
+            theme,
+            true,
+            true,
+            list_tokens::ListItemInteraction::Default,
+        );
+        let label =
+            find_text_by_content(&el, "Beta").expect("selected autocomplete menu item label");
+        assert_eq!(label.color, Some(expected_label));
     }
 }

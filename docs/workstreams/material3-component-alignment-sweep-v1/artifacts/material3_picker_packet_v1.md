@@ -1,0 +1,202 @@
+# Material 3 Picker Packet v1
+
+Date: 2026-05-27
+Task: M3CAS-060
+Components: DatePicker, TimePicker
+
+## Scope
+
+This packet audited the picker family after field and overlay foundations were stable. The focus was
+not a full upstream port. It classified whether picker drift was caused by Material recipe code,
+shared Material foundation code, `fret-ui-kit` overlay/focus policy, diagnostics, or stale headless
+goldens.
+
+## Reference Baseline
+
+- Compose Material 3:
+  - `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/DatePicker.kt`
+  - `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/DatePickerDialog.kt`
+  - `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/TimePicker.kt`
+  - `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/TimePickerDialog.kt`
+- Token baseline:
+  - `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-date-picker-docked.scss`
+  - `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-date-picker-modal.scss`
+  - `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-time-picker.scss`
+  - `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-time-input.scss`
+
+## Findings
+
+| Area | Classification | Result |
+| --- | --- | --- |
+| Modal overlay, scrim, focus trap/restore | `kit_policy` | Existing overlay controller and focus-scope primitives are the right boundary. No new mechanism change was needed. |
+| Date month navigation and day grid | `material_recipe` | Existing staged month/selected-date model is recipe-owned and remains local to DatePicker. |
+| Time dial/input display modes | `material_recipe` | Existing staged time model, selector keyboard handling, dial pointer handling, and input auto-advance are recipe-owned. |
+| Stable automation selectors | `diagnostics` + `material_recipe` | Old hyphen/global ids were replaced with base-derived dotted part ids. |
+| Date selectable-date disabling | `material_recipe` | A DatePicker predicate now disables blocked day cells across docked and modal surfaces while preserving value-derived anchors. |
+| Date displayed-month live region | `material_recipe` | The month/year label now has docked/modal part ids and polite atomic live-region semantics. |
+| Time input invalid/error text | `material_recipe` | Editable invalid input stays staged, exposes invalid semantics, and switches supporting text without changing committed time. |
+| Time selector accessibility labels | `material_recipe` | Hour/minute selectors now expose Compose-aligned radio-button semantics, spoken values, dial labels, and period-group labels. |
+| Time string registry | `material_foundation` + `material_recipe` | TimePicker labels, spoken values, input supporting/error text, scrim, and actions now route through Material string helpers over `I18nService` with English fallback. |
+| Date string registry and date descriptions | `material_foundation` + `material_recipe` | DatePicker title, scrim, actions, month navigation, weekday labels, month/year labels, and day-cell descriptions now route through Material string helpers over `I18nService` with English fallback. |
+| Headless picker golden drift | `test_harness` | The current scenes are stable. Previous picker goldens encoded stale stretched underlay/action-button geometry. |
+| Accessibility parity depth | `follow_on` | Richer calendar/time-grid semantics should be split from this selector/golden packet. |
+
+## Implemented Contract
+
+DatePicker now derives stable ids from the supplied base:
+
+- `date_picker`
+- `date_picker.chrome`
+- `date_picker.docked.month-label`
+- `date_picker.docked.prev`
+- `date_picker.docked.next`
+- `date_picker.docked.weekday.<index>`
+- `date_picker.modal.title`
+- `date_picker.modal.month-label`
+- `date_picker.modal.prev`
+- `date_picker.modal.next`
+- `date_picker.modal.weekday.<index>`
+- `date_picker.cell.<row>.<col>`
+- `date_picker.cell.<yyyy-mm-dd>`
+- `date_picker.scrim`
+- `date_picker.scrim.chrome`
+- `date_picker.panel`
+- `date_picker.actions.cancel`
+- `date_picker.actions.confirm`
+
+DatePicker now also exposes recipe-level selectable-date policy:
+
+- `DockedDatePicker::selectable_dates(|date| ...)`
+- `DatePickerDialog::selectable_dates(|date| ...)`
+
+Predicate-blocked dates remain visible, expose disabled semantics through the row/column cell, keep
+their value-derived date anchor, and cannot update docked or dialog selection state.
+
+DatePicker now also exposes the displayed month/year label as a polite atomic live region:
+
+- `date_picker.docked.month-label`
+- `date_picker.modal.month-label`
+
+The label text updates when month navigation changes the displayed month.
+
+DatePicker strings now route through a Material-owned registry bridge:
+
+- `foundation::strings` reads `I18nService` from the host and falls back to English Material
+  outcomes when the app has no backend or key.
+- DatePicker title, month navigation labels, weekday short/long labels, month/year labels, day-cell
+  descriptions, today descriptions, scrim label, and action labels consume typed helpers.
+- Day cells expose button semantics, selected state, and localized date descriptions through the
+  row/column cell semantics node.
+- Bootstrap defaults seed `en-US` and `zh-CN` Fluent resources for DatePicker keys.
+
+TimePicker now derives stable ids from the supplied base:
+
+- `time_picker`
+- `time_picker.chrome`
+- `time_picker.mode-toggle`
+- `time_picker.hour-selector`
+- `time_picker.hour-selector.chrome`
+- `time_picker.minute-selector`
+- `time_picker.minute-selector.chrome`
+- `time_picker.clock-dial`
+- `time_picker.clock-dial.chrome`
+- `time_picker.clock-dial.hour.<HH>`
+- `time_picker.clock-dial.minute.<MM>`
+- `time_picker.period`
+- `time_picker.period.am`
+- `time_picker.period.pm`
+- `time_picker.input.hour`
+- `time_picker.input.hour.chrome`
+- `time_picker.input.hour.supporting-text`
+- `time_picker.input.minute`
+- `time_picker.input.minute.chrome`
+- `time_picker.input.minute.supporting-text`
+- `time_picker.input.period`
+- `time_picker.input.period.am`
+- `time_picker.input.period.pm`
+- `time_picker.scrim`
+- `time_picker.scrim.chrome`
+- `time_picker.panel`
+- `time_picker.actions.cancel`
+- `time_picker.actions.confirm`
+
+TimePicker input mode now keeps editable invalid state separate from the committed `Time`:
+
+- Invalid hour/minute input remains visible instead of clamping into the committed model.
+- Invalid fields expose `SemanticsInvalid::True`.
+- Supporting text switches between `Hour` / `Minute` and the Material error strings
+  `Hour must be 0-23`, `Hour must be 1-12`, or `Minute must be 0-59`.
+- Supporting text parts are polite atomic live regions.
+
+TimePicker selector accessibility labels now align with Compose Material3:
+
+- Hour/minute display selectors are `RadioButton` semantics with selected state.
+- Selector values and dial labels expose spoken labels such as `9 o'clock` and `41 minutes`.
+- Dial and input period controls have parent `Select AM or PM` group labels.
+
+TimePicker strings now route through a Material-owned registry bridge:
+
+- `foundation::strings` reads `I18nService` from the host and falls back to English Material
+  outcomes when the app has no backend or key.
+- TimePicker title, mode toggle, selector labels, spoken hour/minute values, input labels,
+  supporting/error text, period labels, scrim label, and action labels consume typed helpers.
+- Bootstrap defaults seed `en-US` and `zh-CN` Fluent resources for TimePicker keys.
+
+The UI gallery TimePicker chrome-fill diagnostic was updated to use these base-derived selectors.
+
+## Evidence
+
+- `ecosystem/fret-ui-material3/src/date_picker.rs`
+- `ecosystem/fret-ui-material3/src/foundation/strings.rs`
+- `ecosystem/fret-ui-material3/src/time_picker.rs`
+- `ecosystem/fret-ui-material3/tests/automation_surface.rs`
+- `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
+- `ecosystem/fret-bootstrap/src/lib.rs`
+- `docs/workstreams/material3-date-picker-day-cell-selectors-packet-v1/artifacts/date_picker_day_cell_selectors_packet_v1.md`
+- `docs/workstreams/material3-date-picker-selectable-dates-packet-v1/artifacts/date_picker_selectable_dates_packet_v1.md`
+- `docs/workstreams/material3-date-picker-month-live-region-packet-v1/artifacts/date_picker_month_live_region_packet_v1.md`
+- `docs/workstreams/material3-date-picker-locale-strings-packet-v1/artifacts/date_picker_locale_strings_packet_v1.md`
+- `docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/artifacts/time_picker_dial_accessibility_packet_v1.md`
+- `docs/workstreams/material3-time-picker-input-error-packet-v1/artifacts/time_picker_input_error_packet_v1.md`
+- `docs/workstreams/material3-time-picker-a11y-labels-packet-v1/artifacts/time_picker_a11y_labels_packet_v1.md`
+- `docs/workstreams/material3-time-picker-string-registry-packet-v1/artifacts/time_picker_string_registry_packet_v1.md`
+- `tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-time-picker-chrome-fill.json`
+- `goldens/material3-headless/v1/material3-date-picker.*.json`
+- `goldens/material3-headless/v1/material3-time-picker.*.json`
+
+## Gates
+
+```powershell
+cargo fmt --package fret-ui-material3
+cargo check -p fret-ui-material3 --features diagnostics --tests
+cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface
+cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_respects_selectable_dates
+cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_month_label_is_polite_live_region
+cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_uses_material_string_registry_and_date_descriptions
+cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_uses_compose_aligned_accessibility_labels
+cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_uses_material_string_registry
+cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_clock_dial_drag_updates_time
+cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_selector_keyboard_arrows_step_time
+cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_time_input_replaces_and_auto_advances_hour
+cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_time_input_rejects_invalid_values_and_recovers
+cargo test -p fret-bootstrap --lib default_i18n_formats_material3_time_picker_strings
+cargo test -p fret-bootstrap --lib default_i18n_formats_material3_date_picker_strings
+$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_date_picker_suite_goldens_v1; Remove-Item Env:FRET_UPDATE_GOLDENS
+$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_time_picker_suite_goldens_v1; Remove-Item Env:FRET_UPDATE_GOLDENS
+cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_date_picker_suite_goldens_v1
+cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_time_picker_suite_goldens_v1
+cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings
+python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/WORKSTREAM.json > $null
+python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json > $null
+python -m json.tool tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-time-picker-chrome-fill.json > $null
+python tools/check_workstream_catalog.py
+```
+
+## Residual Risk
+
+- DatePicker localized labels and date descriptions are closed for the current docked/modal calendar
+  grid.
+- TimePicker localized labels/strings are now routed through the Material string registry. Compose
+  only exposes `liveRegion = Polite` for input supporting text, which is already closed here.
+- Unbuilt picker modes such as text input, year selection, and range selection remain future feature
+  work and should be split into their own packets if the Material3 surface grows.

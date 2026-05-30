@@ -1,0 +1,30 @@
+{
+  "slug": "material3-time-picker-dial-accessibility-packet-v1",
+  "status": "closed",
+  "created": "2026-05-28",
+  "updated": "2026-05-28",
+  "objective": "Resolve the Material 3 TimePicker picker-packet follow-on for value-derived clock dial label ids.",
+  "owner": "Codex",
+  "authoritative_docs": [
+    "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/DESIGN.md",
+    "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/TODO.md",
+    "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/MILESTONES.md",
+    "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/HANDOFF.md"
+  ],
+  "artifacts": [
+    "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/artifacts/time_picker_dial_accessibility_packet_v1.md"
+  ],
+  "canonical_gates": [
+    "cargo fmt --package fret-ui-material3 -- --check",
+    "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_exposes_stable_part_test_ids",
+    "cargo check -p fret-ui-material3 --features diagnostics --tests",
+    "cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings",
+    "python -m json.tool docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/WORKSTREAM.json > $null",
+    "python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json > $null",
+    "python tools/check_workstream_catalog.py",
+    "git diff --check"
+  ],
+  "next_task": null,
+  "continuation_policy": "Closed. Invalid input is covered by material3-time-picker-input-error-packet-v1, selector spoken labels by material3-time-picker-a11y-labels-packet-v1, and DatePicker/localization semantics remain separate packets."
+}

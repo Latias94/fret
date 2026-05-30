@@ -2,19 +2,46 @@
 
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, DrawOrder, Edges, Px, Rect, Size, Transform2D};
+use fret_core::{Color, Corners, DrawOrder, Edges, Px, Rect, SemanticsRole, Size, Transform2D};
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, CanvasProps, Length, SemanticsProps};
+use fret_ui::element::{AnyElement, CanvasProps, InsetEdge, Length, SemanticsProps, StackProps};
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, UiHost};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 
+use crate::foundation::test_id::{
+    absolute_region_layout, diagnostic_anchor, optional_part_test_id,
+};
 use crate::tokens::progress_indicator as progress_tokens;
 
 #[derive(Debug, Clone)]
 enum ProgressValue {
     Determinate(Model<f32>),
     Indeterminate,
+}
+
+fn progress_semantics(
+    test_id: Option<Arc<str>>,
+    label: Option<Arc<str>>,
+    is_indeterminate: bool,
+    progress: f32,
+) -> SemanticsProps {
+    let mut props = SemanticsProps {
+        role: SemanticsRole::ProgressBar,
+        label,
+        test_id,
+        focusable: false,
+        busy: is_indeterminate,
+        ..Default::default()
+    };
+
+    if !is_indeterminate {
+        props.numeric_value = Some(progress as f64);
+        props.min_numeric_value = Some(0.0);
+        props.max_numeric_value = Some(1.0);
+    }
+
+    props
 }
 
 fn rect_with_size(bounds: Rect, size: Px) -> Rect {
@@ -78,6 +105,7 @@ fn paint_quad(
 pub struct LinearProgressIndicator {
     progress: ProgressValue,
     four_color: bool,
+    a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
 }
 
@@ -86,6 +114,7 @@ impl LinearProgressIndicator {
         Self {
             progress: ProgressValue::Determinate(progress),
             four_color: false,
+            a11y_label: None,
             test_id: None,
         }
     }
@@ -94,12 +123,18 @@ impl LinearProgressIndicator {
         Self {
             progress: ProgressValue::Indeterminate,
             four_color: false,
+            a11y_label: None,
             test_id: None,
         }
     }
 
     pub fn four_color(mut self, enabled: bool) -> Self {
         self.four_color = enabled;
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
         self
     }
 
@@ -139,7 +174,7 @@ impl LinearProgressIndicator {
 
         let progress = match &self.progress {
             ProgressValue::Determinate(m) => cx
-                .get_model_copied(m, Invalidation::Paint)
+                .get_model_copied(m, Invalidation::Layout)
                 .unwrap_or(0.0)
                 .clamp(0.0, 1.0),
             ProgressValue::Indeterminate => 0.0,
@@ -155,6 +190,15 @@ impl LinearProgressIndicator {
                     progress_tokens::active_shape(theme),
                 )
             });
+
+        let track_test_id = optional_part_test_id(self.test_id.as_ref(), "track");
+        let active_track_test_id = if is_indeterminate {
+            None
+        } else {
+            optional_part_test_id(self.test_id.as_ref(), "active-track")
+        };
+        let root_test_id = self.test_id;
+        let a11y_label = self.a11y_label;
 
         let mut props = CanvasProps::default();
         props.layout.size.width = Length::Fill;
@@ -478,16 +522,45 @@ impl LinearProgressIndicator {
             paint_quad(p.scene(), DrawOrder(0), active, active_color, active_shape);
         });
 
-        let Some(test_id) = self.test_id else {
-            return content;
+        let content = if track_test_id.is_some() || active_track_test_id.is_some() {
+            let mut stack = StackProps::default();
+            stack.layout.size.width = Length::Fill;
+            stack.layout.size.height = Length::Px(h);
+
+            cx.stack_props(stack, move |cx| {
+                let mut children = vec![content];
+                if let Some(test_id) = track_test_id.clone() {
+                    children.push(diagnostic_anchor(
+                        cx,
+                        test_id,
+                        absolute_region_layout(
+                            InsetEdge::Px(Px(0.0)),
+                            InsetEdge::Px(Px((h.0 - track_thickness) * 0.5)),
+                            Length::Fill,
+                            Length::Px(Px(track_thickness)),
+                        ),
+                    ));
+                }
+                if let Some(test_id) = active_track_test_id.clone() {
+                    children.push(diagnostic_anchor(
+                        cx,
+                        test_id,
+                        absolute_region_layout(
+                            InsetEdge::Px(Px(0.0)),
+                            InsetEdge::Px(Px((h.0 - active_thickness) * 0.5)),
+                            Length::Fraction(progress),
+                            Length::Px(Px(active_thickness)),
+                        ),
+                    ));
+                }
+                children
+            })
+        } else {
+            content
         };
 
         cx.semantics(
-            SemanticsProps {
-                test_id: Some(test_id),
-                focusable: false,
-                ..Default::default()
-            },
+            progress_semantics(root_test_id, a11y_label, is_indeterminate, progress),
             |_cx| vec![content],
         )
     }
@@ -497,6 +570,7 @@ impl LinearProgressIndicator {
 pub struct CircularProgressIndicator {
     progress: ProgressValue,
     four_color: bool,
+    a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
 }
 
@@ -505,6 +579,7 @@ impl CircularProgressIndicator {
         Self {
             progress: ProgressValue::Determinate(progress),
             four_color: false,
+            a11y_label: None,
             test_id: None,
         }
     }
@@ -513,12 +588,18 @@ impl CircularProgressIndicator {
         Self {
             progress: ProgressValue::Indeterminate,
             four_color: false,
+            a11y_label: None,
             test_id: None,
         }
     }
 
     pub fn four_color(mut self, enabled: bool) -> Self {
         self.four_color = enabled;
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
         self
     }
 
@@ -559,7 +640,7 @@ impl CircularProgressIndicator {
 
         let progress = match &self.progress {
             ProgressValue::Determinate(m) => cx
-                .get_model_copied(m, Invalidation::Paint)
+                .get_model_copied(m, Invalidation::Layout)
                 .unwrap_or(0.0)
                 .clamp(0.0, 1.0),
             ProgressValue::Indeterminate => 0.0,
@@ -568,13 +649,26 @@ impl CircularProgressIndicator {
         let (track_color, active_color, four_colors, track_shape, active_shape) =
             cx.with_theme(|theme| {
                 (
-                    progress_tokens::track_color(theme),
+                    if is_indeterminate {
+                        Color::TRANSPARENT
+                    } else {
+                        progress_tokens::track_color(theme)
+                    },
                     progress_tokens::active_color(theme),
                     progress_tokens::four_color_palette(theme),
                     progress_tokens::track_shape(theme),
                     progress_tokens::active_shape(theme),
                 )
             });
+
+        let track_test_id = optional_part_test_id(self.test_id.as_ref(), "track");
+        let active_track_test_id = if is_indeterminate {
+            None
+        } else {
+            optional_part_test_id(self.test_id.as_ref(), "active-track")
+        };
+        let root_test_id = self.test_id;
+        let a11y_label = self.a11y_label;
 
         let mut props = CanvasProps::default();
         props.layout.size.width = Length::Px(size);
@@ -752,16 +846,45 @@ impl CircularProgressIndicator {
             }
         });
 
-        let Some(test_id) = self.test_id else {
-            return content;
+        let content = if track_test_id.is_some() || active_track_test_id.is_some() {
+            let mut stack = StackProps::default();
+            stack.layout.size.width = Length::Px(size);
+            stack.layout.size.height = Length::Px(size);
+
+            cx.stack_props(stack, move |cx| {
+                let mut children = vec![content];
+                if let Some(test_id) = track_test_id.clone() {
+                    children.push(diagnostic_anchor(
+                        cx,
+                        test_id,
+                        absolute_region_layout(
+                            InsetEdge::Px(Px(0.0)),
+                            InsetEdge::Px(Px(0.0)),
+                            Length::Px(size),
+                            Length::Px(size),
+                        ),
+                    ));
+                }
+                if let Some(test_id) = active_track_test_id.clone() {
+                    children.push(diagnostic_anchor(
+                        cx,
+                        test_id,
+                        absolute_region_layout(
+                            InsetEdge::Px(Px(0.0)),
+                            InsetEdge::Px(Px(0.0)),
+                            Length::Px(size),
+                            Length::Px(size),
+                        ),
+                    ));
+                }
+                children
+            })
+        } else {
+            content
         };
 
         cx.semantics(
-            SemanticsProps {
-                test_id: Some(test_id),
-                focusable: false,
-                ..Default::default()
-            },
+            progress_semantics(root_test_id, a11y_label, is_indeterminate, progress),
             |_cx| vec![content],
         )
     }

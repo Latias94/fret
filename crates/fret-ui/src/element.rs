@@ -818,6 +818,8 @@ pub struct SemanticsDecoration {
     pub label: Option<Arc<str>>,
     /// Optional role description override (ARIA `aria-roledescription`-like outcome).
     pub role_description: Option<Arc<str>>,
+    /// Optional state description override for assistive technologies.
+    pub state_description: Option<Arc<str>>,
     /// Debug/test-only identifier for deterministic automation.
     ///
     /// This MUST NOT be mapped into platform accessibility name/label fields by default.
@@ -882,6 +884,7 @@ impl SemanticsDecoration {
             role: other.role.or(self.role),
             label: other.label.or(self.label),
             role_description: other.role_description.or(self.role_description),
+            state_description: other.state_description.or(self.state_description),
             test_id: other.test_id.or(self.test_id),
             value: other.value.or(self.value),
             disabled: other.disabled.or(self.disabled),
@@ -936,6 +939,11 @@ impl SemanticsDecoration {
 
     pub fn role_description(mut self, role_description: impl Into<Arc<str>>) -> Self {
         self.role_description = Some(role_description.into());
+        self
+    }
+
+    pub fn state_description(mut self, state_description: impl Into<Arc<str>>) -> Self {
+        self.state_description = Some(state_description.into());
         self
     }
 
@@ -1732,6 +1740,8 @@ pub struct PressableA11y {
     pub label: Option<Arc<str>>,
     /// Optional value text for composite pressables such as combobox/select triggers.
     pub value: Option<Arc<str>>,
+    /// Optional state description for assistive technologies.
+    pub state_description: Option<Arc<str>>,
     /// Optional hierarchy level for outline/tree semantics (1-based).
     pub level: Option<u32>,
     /// Debug/test-only identifier for deterministic automation.
@@ -2021,6 +2031,7 @@ pub struct TextInputProps {
     pub focusable: bool,
     pub model: Model<String>,
     pub a11y_label: Option<std::sync::Arc<str>>,
+    pub a11y_state_description: Option<std::sync::Arc<str>>,
     pub a11y_role: Option<SemanticsRole>,
     pub test_id: Option<std::sync::Arc<str>>,
     pub placeholder: Option<std::sync::Arc<str>>,
@@ -2036,6 +2047,18 @@ pub struct TextInputProps {
     pub a11y_required: bool,
     pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     pub active_descendant: Option<NodeId>,
+    /// Declarative-only: element ID of a node which labels this text input.
+    ///
+    /// This is an authoring convenience for relationships like `aria-labelledby` where the
+    /// target is another declarative element. The runtime resolves this into a `NodeId` during
+    /// semantics snapshot production.
+    pub labelled_by_element: Option<u64>,
+    /// Declarative-only: element ID of a node which describes this text input.
+    ///
+    /// This is an authoring convenience for relationships like `aria-describedby` where the
+    /// target is another declarative element. The runtime resolves this into a `NodeId` during
+    /// semantics snapshot production.
+    pub described_by_element: Option<u64>,
     /// Declarative-only: element ID of the active descendant for composite widgets.
     ///
     /// This is an authoring convenience for `aria-activedescendant`-style relationships where the
@@ -2069,6 +2092,7 @@ impl TextInputProps {
             focusable: true,
             model,
             a11y_label: None,
+            a11y_state_description: None,
             a11y_role: None,
             test_id: None,
             placeholder: None,
@@ -2078,6 +2102,8 @@ impl TextInputProps {
             a11y_required: false,
             a11y_invalid: None,
             active_descendant: None,
+            labelled_by_element: None,
+            described_by_element: None,
             active_descendant_element: None,
             controls_element: None,
             expanded: None,
@@ -2098,6 +2124,10 @@ impl std::fmt::Debug for TextInputProps {
             .field("focusable", &self.focusable)
             .field("model", &"<model>")
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field(
+                "a11y_state_description",
+                &self.a11y_state_description.as_ref().map(|s| s.as_ref()),
+            )
             .field("a11y_role", &self.a11y_role)
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field(
@@ -2107,6 +2137,8 @@ impl std::fmt::Debug for TextInputProps {
             .field("read_only", &self.read_only)
             .field("obscure_text", &self.obscure_text)
             .field("insert_filter", &self.insert_filter.is_some())
+            .field("labelled_by_element", &self.labelled_by_element)
+            .field("described_by_element", &self.described_by_element)
             .field("active_descendant_element", &self.active_descendant_element)
             .field("controls_element", &self.controls_element)
             .field("expanded", &self.expanded)
@@ -2134,6 +2166,19 @@ pub struct TextAreaProps {
     pub a11y_required: bool,
     pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     pub a11y_label: Option<std::sync::Arc<str>>,
+    pub a11y_state_description: Option<std::sync::Arc<str>>,
+    /// Declarative-only: element ID of a node which labels this text area.
+    ///
+    /// This is an authoring convenience for relationships like `aria-labelledby` where the
+    /// target is another declarative element. The runtime resolves this into a `NodeId` during
+    /// semantics snapshot production.
+    pub labelled_by_element: Option<u64>,
+    /// Declarative-only: element ID of a node which describes this text area.
+    ///
+    /// This is an authoring convenience for relationships like `aria-describedby` where the
+    /// target is another declarative element. The runtime resolves this into a `NodeId` during
+    /// semantics snapshot production.
+    pub described_by_element: Option<u64>,
     pub test_id: Option<std::sync::Arc<str>>,
     pub chrome: TextAreaStyle,
     /// When true, paints the focus ring even if focus-visible is currently false.
@@ -2144,6 +2189,7 @@ pub struct TextAreaProps {
     pub focus_ring_always_paint: bool,
     pub text_style: TextStyle,
     pub min_height: Px,
+    pub max_height: Option<Px>,
 }
 
 impl TextAreaProps {
@@ -2159,11 +2205,15 @@ impl TextAreaProps {
             a11y_required: false,
             a11y_invalid: None,
             a11y_label: None,
+            a11y_state_description: None,
+            labelled_by_element: None,
+            described_by_element: None,
             test_id: None,
             chrome: TextAreaStyle::default(),
             focus_ring_always_paint: false,
             text_style: TextStyle::default(),
             min_height: Px(80.0),
+            max_height: None,
         }
     }
 }
@@ -2182,11 +2232,18 @@ impl std::fmt::Debug for TextAreaProps {
             .field("read_only", &self.read_only)
             .field("allow_tab_input", &self.allow_tab_input)
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field(
+                "a11y_state_description",
+                &self.a11y_state_description.as_ref().map(|s| s.as_ref()),
+            )
+            .field("labelled_by_element", &self.labelled_by_element)
+            .field("described_by_element", &self.described_by_element)
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field("chrome", &self.chrome)
             .field("focus_ring_always_paint", &self.focus_ring_always_paint)
             .field("text_style", &self.text_style)
             .field("min_height", &self.min_height)
+            .field("max_height", &self.max_height)
             .finish()
     }
 }

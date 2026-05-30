@@ -54,7 +54,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-autocomplete-listbox"
+          "id": "ui-gallery-material3-autocomplete.listbox"
         }
       },
       "timeout_frames": 600
@@ -69,7 +69,7 @@
         "kind": "bounds_within_window",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-autocomplete-listbox"
+          "id": "ui-gallery-material3-autocomplete.listbox"
         },
         "padding_px": 8.0
       }
@@ -92,7 +92,7 @@
         "kind": "not_exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-autocomplete-listbox"
+          "id": "ui-gallery-material3-autocomplete.listbox"
         }
       },
       "timeout_frames": 600
@@ -162,7 +162,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-autocomplete-dialog-field-bottom-listbox"
+          "id": "ui-gallery-material3-autocomplete-dialog-field-bottom.listbox"
         }
       },
       "timeout_frames": 600
@@ -177,7 +177,7 @@
         "kind": "bounds_within_window",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-autocomplete-dialog-field-bottom-listbox"
+          "id": "ui-gallery-material3-autocomplete-dialog-field-bottom.listbox"
         },
         "padding_px": 8.0
       }
@@ -200,7 +200,7 @@
         "kind": "not_exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-autocomplete-dialog-field-bottom-listbox"
+          "id": "ui-gallery-material3-autocomplete-dialog-field-bottom.listbox"
         }
       },
       "timeout_frames": 600

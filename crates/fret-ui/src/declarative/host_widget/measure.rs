@@ -1364,10 +1364,13 @@ impl ElementHostWidget {
             align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
+        (cx.observe_model)(props.model.id(), Invalidation::Layout);
+        let text = cx.app.models().get_cloned(&props.model).unwrap_or_default();
+        let measure_text = if text.is_empty() { "M" } else { text.as_str() };
         let metrics = cx
             .services
             .text()
-            .measure_str("M", &props.text_style, constraints);
+            .measure_str(measure_text, &props.text_style, constraints);
         let border_h = props.chrome.border.top.0.max(0.0) + props.chrome.border.bottom.0.max(0.0);
         let pad_h = props.chrome.padding.top.0.max(0.0) + props.chrome.padding.bottom.0.max(0.0);
         let h = Px((metrics.size.height.0 + pad_h + border_h).max(0.0));
@@ -1409,7 +1412,11 @@ impl ElementHostWidget {
         let border_h = props.chrome.border.top.0.max(0.0) + props.chrome.border.bottom.0.max(0.0);
         let pad_h = props.chrome.padding_y.0.max(0.0) * 2.0;
         let min_h = props.min_height.0.max(0.0);
-        let h = Px((metrics.size.height.0 + pad_h + border_h).max(min_h));
+        let mut h = (metrics.size.height.0 + pad_h + border_h).max(min_h);
+        if let Some(max_h) = props.max_height {
+            h = h.min(max_h.0.max(min_h).max(0.0));
+        }
+        let h = Px(h);
 
         let avail = available_px_or_zero(cx.constraints);
         let w = match props.layout.size.width {

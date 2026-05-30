@@ -52,7 +52,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-select-transformed-listbox"
+          "id": "ui-gallery-material3-select-transformed.listbox"
         }
       },
       "timeout_frames": 600

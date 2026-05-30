@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "slug": "material3-time-picker-string-registry-packet-v1",
+  "title": "Material 3 TimePicker String Registry Packet v1",
+  "status": "closed",
+  "updated": "2026-05-28",
+  "scope_kind": "closeout",
+  "problem": "Closed the TimePicker localization follow-on by routing Material-owned TimePicker labels, spoken values, input supporting/error text, and dialog affordances through the existing Fret i18n service with English fallbacks.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-time-picker-string-registry-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-time-picker-string-registry-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-time-picker-string-registry-packet-v1/TODO.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-time-picker-string-registry-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-time-picker-string-registry-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Render docked and modal TimePicker surfaces with an injected I18nService and assert that selector labels, spoken values, input labels, period controls, scrim, and action buttons use registry values.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_uses_material_string_registry",
+      "cargo test -p fret-bootstrap --lib default_i18n_formats_material3_time_picker_strings"
+    ]
+  },
+  "gates": [
+    {
+      "name": "material3-time-picker-string-registry",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_uses_material_string_registry"
+    },
+    {
+      "name": "material3-time-picker-english-fallback-a11y",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_uses_compose_aligned_accessibility_labels"
+    },
+    {
+      "name": "material3-time-picker-input-error-regression",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_time_input_rejects_invalid_values_and_recovers"
+    },
+    {
+      "name": "bootstrap-default-i18n",
+      "command": "cargo test -p fret-bootstrap --lib default_i18n_formats_material3_time_picker_strings"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-material3/src/foundation/strings.rs",
+    "ecosystem/fret-ui-material3/src/time_picker.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "ecosystem/fret-bootstrap/src/lib.rs",
+    "docs/workstreams/material3-time-picker-string-registry-packet-v1/artifacts/time_picker_string_registry_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "return_to_material3_sweep",
+    "notes": "TimePicker registry wiring is closed. DatePicker locale-aware date descriptions remain a separate picker follow-on."
+  }
+}

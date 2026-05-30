@@ -23,6 +23,12 @@ pub(crate) fn container_elevation(theme: &Theme) -> Px {
         .unwrap_or(Px(6.0))
 }
 
+pub(crate) fn full_screen_header_container_height(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.search-view.full-screen.header.container.height")
+        .unwrap_or(Px(72.0))
+}
+
 pub(crate) fn divider_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.comp.search-view.divider.color")

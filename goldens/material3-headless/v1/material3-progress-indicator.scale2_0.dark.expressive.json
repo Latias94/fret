@@ -7,6 +7,26 @@
           "order": 0
         },
         {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
           "kind": "push_transform"
         },
         {
@@ -1906,6 +1926,141 @@
         }
       ],
       "quads": [
+        {
+          "order": 0,
+          "rect": [
+            240,
+            240,
+            1520,
+            40
+          ],
+          "background": [
+            114,
+            45,
+            84,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            20,
+            20,
+            20,
+            20
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            440,
+            1520,
+            40
+          ],
+          "background": [
+            114,
+            45,
+            84,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            20,
+            20,
+            20,
+            20
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            440,
+            456,
+            40
+          ],
+          "background": [
+            191,
+            680,
+            527,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            20,
+            20,
+            20,
+            20
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            640,
+            1520,
+            40
+          ],
+          "background": [
+            114,
+            45,
+            84,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            20,
+            20,
+            20,
+            20
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            640,
+            1520,
+            40
+          ],
+          "background": [
+            191,
+            680,
+            527,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            20,
+            20,
+            20,
+            20
+          ]
+        },
         {
           "order": 0,
           "rect": [
@@ -7095,6 +7250,14 @@
     "indeterminate.f60": {
       "signature": [
         {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
           "kind": "push_transform"
         },
         {
@@ -7470,6 +7633,60 @@
         }
       ],
       "quads": [
+        {
+          "order": 0,
+          "rect": [
+            240,
+            240,
+            400,
+            40
+          ],
+          "background": [
+            114,
+            45,
+            84,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            20,
+            20,
+            20,
+            20
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            373,
+            240,
+            267,
+            40
+          ],
+          "background": [
+            191,
+            680,
+            527,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            20,
+            0,
+            0,
+            20
+          ]
+        },
         {
           "order": 0,
           "rect": [
@@ -8501,6 +8718,14 @@
     "indeterminate.four_color.f60": {
       "signature": [
         {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
           "kind": "push_transform"
         },
         {
@@ -8876,6 +9101,60 @@
         }
       ],
       "quads": [
+        {
+          "order": 0,
+          "rect": [
+            240,
+            240,
+            400,
+            40
+          ],
+          "background": [
+            114,
+            45,
+            84,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            20,
+            20,
+            20,
+            20
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            373,
+            240,
+            267,
+            40
+          ],
+          "background": [
+            0,
+            82,
+            56,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            20,
+            0,
+            0,
+            20
+          ]
+        },
         {
           "order": 0,
           "rect": [

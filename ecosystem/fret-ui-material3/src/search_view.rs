@@ -7,25 +7,40 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Edges, Px, SemanticsRole};
+use fret_core::{Axis, Edges, Px, SemanticsRole};
 use fret_icons::IconId;
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, ContainerProps, Length, Overflow, SemanticsDecoration};
+use fret_ui::element::{
+    AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow, SemanticsProps,
+};
 use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
+use fret_ui_kit::overlay_controller;
+use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::SearchBar;
 use crate::foundation::elevation::shadow_for_elevation_with_color;
-use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
+use crate::foundation::search_motion::{
+    SearchMotionKind, drive_search_motion, search_full_screen_geometry_transform,
+};
+use crate::foundation::test_id::part_test_id;
 use crate::search_bar::SearchBarHeaderTokens;
 use crate::tokens::{dropdown_menu as dropdown_menu_tokens, search_view as search_view_tokens};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SearchViewPresentation {
+    #[default]
+    Docked,
+    FullScreen,
+}
 
 #[derive(Debug, Clone)]
 pub struct SearchView {
     open: Model<bool>,
     query: Model<String>,
+    presentation: SearchViewPresentation,
     disabled: bool,
     placeholder: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
@@ -42,6 +57,7 @@ impl SearchView {
         Self {
             open,
             query,
+            presentation: SearchViewPresentation::default(),
             disabled: false,
             placeholder: None,
             a11y_label: None,
@@ -88,6 +104,21 @@ impl SearchView {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn presentation(mut self, presentation: SearchViewPresentation) -> Self {
+        self.presentation = presentation;
+        self
+    }
+
+    pub fn full_screen(mut self) -> Self {
+        self.presentation = SearchViewPresentation::FullScreen;
+        self
+    }
+
+    pub fn docked(mut self) -> Self {
+        self.presentation = SearchViewPresentation::Docked;
         self
     }
 
@@ -138,8 +169,13 @@ impl SearchView {
         content: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
     ) -> AnyElement {
         cx.scope(|cx| {
+            let root_test_id = self.test_id.clone();
             let input_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
             let input_id_out_for_bar = input_id_out.clone();
+            let controlled_element_id: Rc<Cell<Option<GlobalElementId>>> = cx.slot_state(
+                || Rc::new(Cell::new(None::<GlobalElementId>)),
+                |id| id.clone(),
+            );
 
             // Keep the input surface in the underlay so:
             // - focus stays on the text input while the overlay is open (Compose-like),
@@ -148,10 +184,11 @@ impl SearchView {
                 .disabled(self.disabled)
                 .placeholder_opt(self.placeholder.clone())
                 .a11y_label_opt(self.a11y_label.clone())
-                .test_id_opt(self.test_id.clone())
+                .test_id_opt(root_test_id.clone())
                 .expanded_model(self.open.clone())
                 .header_tokens(SearchBarHeaderTokens::SearchView)
-                .input_id_out(input_id_out_for_bar);
+                .input_id_out(input_id_out_for_bar)
+                .controls_element_id(controlled_element_id.clone());
             if let Some(icon) = self.leading_icon.as_ref() {
                 bar = bar.leading_icon(icon.clone());
             }
@@ -193,19 +230,201 @@ impl SearchView {
                     dropdown_menu_tokens::close_duration_ms(theme),
                 ))
             };
-            let motion = drive_overlay_open_close_motion(cx, is_open, close_grace_frames);
+            let motion_kind = match self.presentation {
+                SearchViewPresentation::Docked => SearchMotionKind::Docked,
+                SearchViewPresentation::FullScreen => SearchMotionKind::FullScreen,
+            };
+            let motion = drive_search_motion(cx, is_open, motion_kind, close_grace_frames);
             let overlay_presence = OverlayPresence {
                 present: motion.present,
                 interactive: is_open,
             };
 
             if !overlay_presence.present {
+                controlled_element_id.set(None);
                 return bar;
             }
 
             let Some(input_id) = input_id_out.get() else {
                 return bar;
             };
+
+            if self.presentation == SearchViewPresentation::FullScreen {
+                let viewport =
+                    fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+                        cx,
+                        fret_ui::Invalidation::Layout,
+                        Px(0.0),
+                    );
+                let collapsed = fret_ui_kit::overlay::anchor_bounds_for_element(cx, input_id)
+                    .unwrap_or(viewport);
+                let full_screen_transform =
+                    search_full_screen_geometry_transform(motion.progress, viewport, collapsed);
+                let overlay_test_id = self
+                    .overlay_test_id
+                    .clone()
+                    .or_else(|| root_test_id.as_ref().map(|id| part_test_id(id, "overlay")));
+                let header_slot_test_id = root_test_id
+                    .as_ref()
+                    .map(|id| part_test_id(id, "overlay.header-slot"));
+                let header_test_id = root_test_id
+                    .as_ref()
+                    .map(|id| part_test_id(id, "overlay.header"));
+                let divider_test_id = root_test_id
+                    .as_ref()
+                    .map(|id| part_test_id(id, "overlay.divider"));
+                let body_test_id = root_test_id
+                    .as_ref()
+                    .map(|id| part_test_id(id, "overlay.body"));
+                let header_input_id_out: Rc<Cell<Option<GlobalElementId>>> =
+                    Rc::new(Cell::new(None));
+                let header_input_id_out_for_bar = header_input_id_out.clone();
+
+                let mut header = SearchBar::new(self.query.clone())
+                    .disabled(self.disabled)
+                    .placeholder_opt(self.placeholder.clone())
+                    .a11y_label_opt(self.a11y_label.clone())
+                    .test_id_opt(header_test_id)
+                    .expanded_model(self.open.clone())
+                    .header_tokens(SearchBarHeaderTokens::SearchView)
+                    .input_id_out(header_input_id_out_for_bar)
+                    .controls_element_id(controlled_element_id.clone());
+                if let Some(icon) = self.leading_icon.as_ref() {
+                    header = header.leading_icon(icon.clone());
+                }
+                if let Some(icon) = self.trailing_icon.as_ref() {
+                    header = header.trailing_icon(icon.clone());
+                }
+                let header = header.into_element(cx);
+                let initial_focus = header_input_id_out.get();
+                let labelled_by_element = initial_focus.map(|id| id.0);
+
+                let (container_color, divider_color, header_slot_height) = {
+                    let theme = Theme::global(&*cx.app);
+                    (
+                        search_view_tokens::container_color(theme),
+                        search_view_tokens::divider_color(theme),
+                        search_view_tokens::full_screen_header_container_height(theme),
+                    )
+                };
+
+                let controlled_element_id_out = controlled_element_id.clone();
+                let overlay_root = cx.named("full_screen_overlay", move |cx| {
+                    let mut panel_container = ContainerProps::default();
+                    panel_container.layout.size.width = Length::Fill;
+                    panel_container.layout.size.height = Length::Fill;
+                    panel_container.layout.overflow = Overflow::Clip;
+                    panel_container.background = Some(container_color);
+
+                    let mut column = FlexProps::default();
+                    column.direction = Axis::Vertical;
+                    column.justify = MainAlign::Start;
+                    column.align = CrossAlign::Stretch;
+                    column.wrap = false;
+                    column.gap = Px(0.0).into();
+                    column.layout.size.width = Length::Fill;
+                    column.layout.size.height = Length::Fill;
+
+                    let panel = cx.container(panel_container, move |cx| {
+                        let mut header_slot = ContainerProps::default();
+                        header_slot.layout.size.width = Length::Fill;
+                        header_slot.layout.size.height = Length::Px(header_slot_height);
+                        header_slot.layout.overflow = Overflow::Visible;
+                        header_slot.padding = Edges {
+                            left: Px(0.0),
+                            right: Px(0.0),
+                            top: Px(8.0),
+                            bottom: Px(8.0),
+                        }
+                        .into();
+                        let mut header_slot = cx.container(header_slot, move |_cx| vec![header]);
+                        if let Some(test_id) = header_slot_test_id.clone() {
+                            header_slot = header_slot.test_id(test_id);
+                        }
+
+                        let mut divider = cx.container(
+                            ContainerProps {
+                                layout: fret_ui::element::LayoutStyle {
+                                    size: fret_ui::element::SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Px(Px(1.0)),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                background: Some(divider_color),
+                                ..Default::default()
+                            },
+                            |_cx| Vec::<AnyElement>::new(),
+                        );
+                        if let Some(test_id) = divider_test_id.clone() {
+                            divider = divider.test_id(test_id);
+                        }
+
+                        let mut body = cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = fret_ui::element::LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout.flex.grow = 1.0;
+                                    layout
+                                },
+                                padding: Edges::all(Px(8.0)).into(),
+                                ..Default::default()
+                            },
+                            content,
+                        );
+                        if let Some(test_id) = body_test_id.clone() {
+                            body = body.test_id(test_id);
+                        }
+
+                        vec![cx.flex(column, move |_cx| vec![header_slot, divider, body])]
+                    });
+
+                    let sem = SemanticsProps {
+                        role: SemanticsRole::Dialog,
+                        test_id: overlay_test_id.clone(),
+                        labelled_by_element,
+                        ..Default::default()
+                    };
+                    let panel = cx.semantics_with_id(sem, move |_cx, panel_id| {
+                        controlled_element_id_out.set(Some(panel_id));
+                        vec![panel]
+                    });
+
+                    let trapped = focus_scope_prim::focus_trap(cx, move |_cx| vec![panel]);
+
+                    fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
+                        cx,
+                        motion.content_alpha,
+                        full_screen_transform,
+                        overlay_presence.interactive,
+                        vec![trapped],
+                    )
+                });
+
+                let overlay_id = cx.root_id();
+                let mut request = overlay_controller::OverlayRequest::modal(
+                    overlay_id,
+                    Some(input_id),
+                    self.open.clone(),
+                    overlay_presence,
+                    vec![overlay_root],
+                );
+                request.root_name = Some(format!("material3.search_view.full_screen.{}", input_id.0));
+                request.close_on_window_focus_lost = true;
+                request.close_on_window_resize = true;
+                request.initial_focus = initial_focus;
+                request.on_close_auto_focus = Some(Arc::new(|_host, _cx, request| {
+                    request.prevent_default();
+                }));
+
+                OverlayController::request(cx, request);
+
+                return bar;
+            }
+
             let Some(anchor) = fret_ui_kit::overlay::anchor_bounds_for_element(cx, input_id) else {
                 return bar;
             };
@@ -217,7 +436,8 @@ impl SearchView {
             );
 
             // Prefer a stable, scrollable max-height over intrinsic measurement for this MVP.
-            let desired = fret_core::Size::new(anchor.size.width, self.max_height);
+            let animated_height = (self.max_height.0 * motion.progress).max(1.0);
+            let desired = fret_core::Size::new(anchor.size.width, Px(animated_height));
 
             let direction = fret_ui_kit::primitives::direction::use_direction_in_scope(cx, None);
             let placement = fret_ui_kit::primitives::popper::PopperContentPlacement::new(
@@ -247,7 +467,18 @@ impl SearchView {
                 (container_color, container_shape, shadow, divider_color)
             };
 
-            let overlay_test_id = self.overlay_test_id.clone();
+            let overlay_test_id = self
+                .overlay_test_id
+                .clone()
+                .or_else(|| root_test_id.as_ref().map(|id| part_test_id(id, "overlay")));
+            let divider_test_id = root_test_id
+                .as_ref()
+                .map(|id| part_test_id(id, "overlay.divider"));
+            let body_test_id = root_test_id
+                .as_ref()
+                .map(|id| part_test_id(id, "overlay.body"));
+            let labelled_by_element = Some(input_id.0);
+            let controlled_element_id_out = controlled_element_id.clone();
             let overlay_panel = fret_ui_kit::primitives::popper_content::popper_wrapper_panel_at(
                 cx,
                 overlay_rect,
@@ -263,7 +494,7 @@ impl SearchView {
                     container.shadow = shadow;
 
                     let panel = cx.container(container, move |cx| {
-                        let divider = cx.container(
+                        let mut divider = cx.container(
                             ContainerProps {
                                 layout: fret_ui::element::LayoutStyle {
                                     size: fret_ui::element::SizeStyle {
@@ -278,41 +509,41 @@ impl SearchView {
                             },
                             |_cx| Vec::<AnyElement>::new(),
                         );
+                        if let Some(test_id) = divider_test_id.clone() {
+                            divider = divider.test_id(test_id);
+                        }
 
-                        let body = cx.container(
+                        let mut body = cx.container(
                             ContainerProps {
                                 padding: Edges::all(Px(8.0)).into(),
                                 ..Default::default()
                             },
                             content,
                         );
+                        if let Some(test_id) = body_test_id.clone() {
+                            body = body.test_id(test_id);
+                        }
 
                         vec![divider, body]
                     });
 
-                    let panel = if let Some(test_id) = overlay_test_id.as_ref() {
-                        panel.attach_semantics(
-                            SemanticsDecoration::default()
-                                .role(SemanticsRole::Panel)
-                                .test_id(test_id.clone()),
-                        )
-                    } else {
-                        panel
+                    let sem = SemanticsProps {
+                        role: SemanticsRole::Panel,
+                        test_id: overlay_test_id.clone(),
+                        labelled_by_element,
+                        ..Default::default()
                     };
+                    let panel = cx.semantics_with_id(sem, move |_cx, panel_id| {
+                        controlled_element_id_out.set(Some(panel_id));
+                        vec![panel]
+                    });
 
                     vec![panel]
                 },
             );
 
-            let opacity = motion.alpha;
-            let scale = motion.scale;
-            let origin = fret_ui_kit::primitives::popper::popper_content_transform_origin(
-                &layout, anchor, None,
-            );
-            let origin_inv = fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0));
-            let transform = fret_core::Transform2D::translation(origin)
-                * fret_core::Transform2D::scale_uniform(scale)
-                * fret_core::Transform2D::translation(origin_inv);
+            let opacity = motion.content_alpha;
+            let transform = fret_core::Transform2D::IDENTITY;
             let overlay_root =
                 fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
                     cx,

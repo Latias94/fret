@@ -9,7 +9,7 @@ use std::sync::Arc;
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole, SvgFit};
 use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
 use fret_runtime::Model;
-use fret_ui::action::{PressablePointerDownResult, UiPointerActionHost};
+use fret_ui::action::{PointerDownCx, PressablePointerDownResult, UiPointerActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, SvgIconProps, TextInputProps,
@@ -20,10 +20,32 @@ use fret_ui::{GlobalElementId, SvgSource, Theme, UiHost};
 use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable_with_last_down,
+    material_pressable_indication_config,
 };
+use crate::foundation::strings::{
+    material_search_bar_search_label, material_search_bar_suggestions_available_label,
+};
+use crate::foundation::test_id::part_test_id;
 use crate::tokens::search_bar as search_bar_tokens;
 use crate::tokens::search_view as search_view_tokens;
+
+#[derive(Debug, Clone)]
+struct SearchBarPartTestIds {
+    chrome: Arc<str>,
+    leading_icon: Arc<str>,
+    trailing_icon: Arc<str>,
+}
+
+impl SearchBarPartTestIds {
+    fn from_base(base: &Arc<str>) -> Self {
+        Self {
+            chrome: part_test_id(base, "chrome"),
+            leading_icon: part_test_id(base, "leading-icon"),
+            trailing_icon: part_test_id(base, "trailing-icon"),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) enum SearchBarHeaderTokens {
@@ -42,6 +64,7 @@ pub struct SearchBar {
     trailing_icon: Option<IconId>,
     test_id: Option<Arc<str>>,
     input_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    controls_element_id: Option<Rc<Cell<Option<GlobalElementId>>>>,
     expanded_model: Option<Model<bool>>,
     header_tokens: SearchBarHeaderTokens,
 }
@@ -57,6 +80,7 @@ impl SearchBar {
             trailing_icon: None,
             test_id: None,
             input_id_out: None,
+            controls_element_id: None,
             expanded_model: None,
             header_tokens: SearchBarHeaderTokens::default(),
         }
@@ -112,6 +136,14 @@ impl SearchBar {
         self
     }
 
+    pub(crate) fn controls_element_id(
+        mut self,
+        controls_element_id: Rc<Cell<Option<GlobalElementId>>>,
+    ) -> Self {
+        self.controls_element_id = Some(controls_element_id);
+        self
+    }
+
     pub fn expanded_model(mut self, model: Model<bool>) -> Self {
         self.expanded_model = Some(model);
         self
@@ -125,6 +157,13 @@ impl SearchBar {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
+            let part_test_ids = self.test_id.as_ref().map(SearchBarPartTestIds::from_base);
+            let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+            let leading_icon_test_id = part_test_ids.as_ref().map(|ids| ids.leading_icon.clone());
+            let trailing_icon_test_id = part_test_ids.as_ref().map(|ids| ids.trailing_icon.clone());
+            let pointer_down_state: Rc<Cell<Option<PointerDownCx>>> =
+                cx.slot_state(|| Rc::new(Cell::new(None)), |state| state.clone());
+
             let expanded = self
                 .expanded_model
                 .as_ref()
@@ -135,11 +174,14 @@ impl SearchBar {
                 let enabled = !self.disabled;
 
                 let now_frame = cx.frame_id.0;
-                let pressed = enabled && st.pressed;
+                let pointer_down = pointer_down_state.get();
+                let pressed = enabled && (st.pressed || pointer_down.is_some());
                 let hovered = enabled && st.hovered;
 
                 let (
                     container_height,
+                    container_min_width,
+                    container_max_width,
                     corner_radii,
                     state_layer_target,
                     state_layer_color,
@@ -156,6 +198,8 @@ impl SearchBar {
                     let theme = Theme::global(&*cx.app);
 
                     let container_height = search_bar_tokens::container_height(theme);
+                    let container_min_width = search_bar_tokens::container_min_width(theme);
+                    let container_max_width = search_bar_tokens::container_max_width(theme);
                     let corner_radii = search_bar_tokens::container_shape(theme);
 
                     let state_layer_target = if pressed {
@@ -209,6 +253,8 @@ impl SearchBar {
 
                     (
                         container_height,
+                        container_min_width,
+                        container_max_width,
                         corner_radii,
                         state_layer_target,
                         state_layer_color,
@@ -223,10 +269,11 @@ impl SearchBar {
                         focus_ring,
                     )
                 };
-                let overlay = material_ink_layer_for_pressable(
+                let overlay = material_ink_layer_for_pressable_with_last_down(
                     cx,
                     pressable_id,
                     now_frame,
+                    pointer_down,
                     corner_radii,
                     RippleClip::Bounded,
                     state_layer_color,
@@ -238,6 +285,12 @@ impl SearchBar {
                 );
 
                 let mut input_id = GlobalElementId(0);
+                let a11y_label = self
+                    .a11y_label
+                    .clone()
+                    .unwrap_or_else(|| material_search_bar_search_label(&*cx.app));
+                let a11y_state_description =
+                    expanded.then(|| material_search_bar_suggestions_available_label(&*cx.app));
                 let input = cx.text_input_with_id_props(|_cx, id| {
                     input_id = id;
 
@@ -245,10 +298,15 @@ impl SearchBar {
                     props.enabled = enabled;
                     props.focusable = enabled;
                     props.a11y_role = Some(SemanticsRole::TextField);
-                    props.a11y_label = self.a11y_label.clone();
+                    props.a11y_label = Some(a11y_label.clone());
+                    props.a11y_state_description = a11y_state_description.clone();
                     props.test_id = self.test_id.clone();
                     props.placeholder = self.placeholder.clone();
                     props.expanded = Some(expanded);
+                    props.controls_element = self
+                        .controls_element_id
+                        .as_ref()
+                        .and_then(|id| id.get().map(|id| id.0));
                     props.text_style = input_text_style;
                     props.chrome = input_chrome;
                     props.layout.size.width = Length::Fill;
@@ -277,7 +335,46 @@ impl SearchBar {
                     props.layout.size.width = Length::Fill;
                     props.layout.size.height = Length::Fill;
                     cx.pointer_region(props, move |cx| {
-                        cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
+                        let pointer_down_for_down = pointer_down_state.clone();
+                        cx.pointer_region_on_pointer_down(Arc::new(
+                            move |host, action_cx, down| {
+                                pointer_down_for_down.set(Some(down));
+                                host.invalidate(fret_ui::Invalidation::Paint);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                                false
+                            },
+                        ));
+
+                        let pointer_down_for_up = pointer_down_state.clone();
+                        cx.pointer_region_on_pointer_up(Arc::new(move |host, action_cx, up| {
+                            if pointer_down_for_up
+                                .get()
+                                .is_some_and(|down| down.pointer_id == up.pointer_id)
+                            {
+                                pointer_down_for_up.set(None);
+                                host.invalidate(fret_ui::Invalidation::Paint);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            }
+                            false
+                        }));
+
+                        let pointer_down_for_cancel = pointer_down_state.clone();
+                        cx.pointer_region_on_pointer_cancel(Arc::new(
+                            move |host, action_cx, cancel| {
+                                if pointer_down_for_cancel
+                                    .get()
+                                    .is_some_and(|down| down.pointer_id == cancel.pointer_id)
+                                {
+                                    pointer_down_for_cancel.set(None);
+                                    host.invalidate(fret_ui::Invalidation::Paint);
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }
+                                false
+                            },
+                        ));
 
                         let mut row = FlexProps::default();
                         row.layout.size.width = Length::Fill;
@@ -288,47 +385,61 @@ impl SearchBar {
 
                         let leading_icon = self.leading_icon;
                         let trailing_icon = self.trailing_icon;
+                        let leading_icon_test_id = leading_icon_test_id.clone();
+                        let trailing_icon_test_id = trailing_icon_test_id.clone();
 
                         let content = cx.flex(row, move |cx| {
                             let mut children: Vec<AnyElement> = Vec::new();
                             if let Some(icon) = leading_icon.as_ref() {
-                                children.push(material_search_bar_icon(
-                                    cx,
-                                    icon,
-                                    Px(24.0),
-                                    leading_color,
-                                ));
+                                let mut icon =
+                                    material_search_bar_icon(cx, icon, Px(24.0), leading_color);
+                                if let Some(test_id) = leading_icon_test_id.clone() {
+                                    icon = icon.test_id(test_id);
+                                }
+                                children.push(icon);
                             }
                             children.push(input);
                             if let Some(icon) = trailing_icon.as_ref() {
-                                children.push(material_search_bar_icon(
-                                    cx,
-                                    icon,
-                                    Px(24.0),
-                                    trailing_color,
-                                ));
+                                let mut icon =
+                                    material_search_bar_icon(cx, icon, Px(24.0), trailing_color);
+                                if let Some(test_id) = trailing_icon_test_id.clone() {
+                                    icon = icon.test_id(test_id);
+                                }
+                                children.push(icon);
                             }
                             children
                         });
 
-                        let mut container = ContainerProps::default();
-                        container.layout.size.width = Length::Fill;
-                        container.layout.size.height = Length::Px(container_height);
-                        container.layout.overflow = Overflow::Visible;
-                        container.padding = Edges {
+                        let mut content_container = ContainerProps::default();
+                        content_container.layout.size.width = Length::Fill;
+                        content_container.layout.size.height = Length::Fill;
+                        content_container.layout.overflow = Overflow::Visible;
+                        content_container.padding = Edges {
                             left: Px(16.0),
                             right: Px(16.0),
                             top: Px(0.0),
                             bottom: Px(0.0),
                         }
                         .into();
+                        let content_layer =
+                            cx.container(content_container, move |_cx| vec![content]);
+
+                        let mut container = ContainerProps::default();
+                        container.layout.size.width = Length::Fill;
+                        container.layout.size.height = Length::Px(container_height);
+                        container.layout.overflow = Overflow::Visible;
                         container.background = Some(container_color);
                         container.shadow = shadow;
                         container.corner_radii = corner_radii;
                         container.focus_within = true;
                         container.focus_ring = Some(focus_ring);
 
-                        vec![cx.container(container, move |_cx| vec![overlay, content])]
+                        let mut chrome =
+                            cx.container(container, move |_cx| vec![overlay, content_layer]);
+                        if let Some(test_id) = chrome_test_id.clone() {
+                            chrome = chrome.test_id(test_id);
+                        }
+                        vec![chrome]
                     })
                 });
 
@@ -346,6 +457,10 @@ impl SearchBar {
                         layout.overflow = Overflow::Visible;
                         layout.size.width = Length::Fill;
                         layout.size.height = Length::Px(container_height);
+                        if matches!(self.header_tokens, SearchBarHeaderTokens::SearchBar) {
+                            layout.size.min_width = Some(Length::Px(container_min_width));
+                            layout.size.max_width = Some(Length::Px(container_max_width));
+                        }
                         layout
                     },
                     ..Default::default()

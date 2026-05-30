@@ -6,13 +6,13 @@
 
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, Edges, KeyCode, Px, SemanticsRole, SvgFit};
+use fret_core::{Axis, Color, Corners, Edges, KeyCode, Px, SvgFit};
 use fret_icons::IconId;
 use fret_runtime::{ActionId, Model};
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
-    PointerRegionProps, PressableA11y, PressableProps, SvgIconProps,
+    PointerRegionProps, PressableProps, SvgIconProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
@@ -22,6 +22,7 @@ use fret_ui_headless::boolean_control::{
 use fret_ui_headless::checked_state::CheckedState;
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::controllable_state;
+use fret_ui_kit::primitives::checkbox::checkbox_a11y;
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
@@ -36,6 +37,9 @@ use crate::foundation::interaction::{PressableInteraction, pressable_interaction
 use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
 };
+use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::test_id::optional_part_test_id;
+use crate::motion::SpringAnimator;
 use crate::tokens::checkbox as checkbox_tokens;
 
 #[derive(Debug, Clone, Default)]
@@ -307,12 +311,10 @@ impl Checkbox {
                     enabled,
                     focusable: enabled,
                     key_activation: Default::default(),
-                    a11y: PressableA11y {
-                        role: Some(SemanticsRole::Checkbox),
-                        label: self.a11y_label.clone(),
-                        test_id: self.test_id.clone(),
-                        checked: checked_state.to_semantics_checked(),
-                        ..Default::default()
+                    a11y: {
+                        let mut a11y = checkbox_a11y(self.a11y_label.clone(), checked_state);
+                        a11y.test_id = self.test_id.clone();
+                        a11y
                     },
                     layout,
                     focus_ring: Some(focus_ring),
@@ -363,6 +365,7 @@ impl Checkbox {
                             state_layer_color,
                             ripple_base_opacity,
                             config,
+                            mark_spring,
                         ) = {
                             let theme = Theme::global(&*cx.app);
 
@@ -411,6 +414,8 @@ impl Checkbox {
                                 theme,
                                 Some(Px(size.state_layer.0 * 0.5)),
                             );
+                            let mark_spring =
+                                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultSpatial);
 
                             (
                                 chrome,
@@ -418,8 +423,49 @@ impl Checkbox {
                                 state_layer_color,
                                 ripple_base_opacity,
                                 config,
+                                mark_spring,
                             )
                         };
+
+                        #[derive(Default)]
+                        struct CheckboxMarkRuntime {
+                            target: f32,
+                            visual_state: CheckedState,
+                            mark: SpringAnimator,
+                        }
+
+                        let (mark_opacity, mark_active, visual_mark_state) =
+                            cx.state_for(pressable_id, CheckboxMarkRuntime::default, |rt| {
+                                let target = if checked_state.is_on() { 1.0 } else { 0.0 };
+
+                                if !rt.mark.is_initialized() {
+                                    rt.target = target;
+                                    rt.visual_state = checked_state;
+                                    rt.mark.reset(now_frame, target);
+                                    return (rt.mark.value(), false, rt.visual_state);
+                                }
+
+                                if checked_state.is_on() {
+                                    rt.visual_state = checked_state;
+                                }
+
+                                if (target - rt.target).abs() > 1e-6 {
+                                    rt.target = target;
+                                    if checked_state.is_on() {
+                                        rt.visual_state = checked_state;
+                                    }
+                                    rt.mark.set_target(now_frame, target, mark_spring);
+                                }
+
+                                rt.mark.advance(now_frame);
+                                let value = rt.mark.value();
+                                let active = rt.mark.is_active();
+                                if target <= 0.0 && !active && value <= 0.001 {
+                                    rt.visual_state = CheckedState::Unchecked;
+                                }
+
+                                (value, active, rt.visual_state)
+                            });
                         let overlay = material_ink_layer_for_pressable(
                             cx,
                             pressable_id,
@@ -431,10 +477,18 @@ impl Checkbox {
                             state_layer_target,
                             ripple_base_opacity,
                             config,
-                            false,
+                            mark_active,
                         );
 
-                        let content = checkbox_content(cx, size, checked_state, chrome);
+                        let content = checkbox_content(
+                            cx,
+                            size,
+                            visual_mark_state,
+                            mark_opacity,
+                            mark_active,
+                            chrome,
+                            pressable_props.a11y.test_id.as_ref(),
+                        );
                         let chrome = material_checkbox_chrome(cx, size, vec![overlay, content]);
 
                         vec![centered_fill_with_chrome_test_id(
@@ -483,10 +537,22 @@ fn material_checkbox_chrome<H: UiHost>(
 fn checkbox_content<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     size: CheckboxSizeTokens,
-    checked_state: CheckedState,
+    visual_mark_state: CheckedState,
+    mark_opacity: f32,
+    mark_active: bool,
     chrome: CheckboxChrome,
+    base_test_id: Option<&Arc<str>>,
 ) -> AnyElement {
-    let box_el = checkbox_box(cx, size, checked_state, chrome);
+    let box_el = checkbox_box(
+        cx,
+        size,
+        visual_mark_state,
+        mark_opacity,
+        mark_active,
+        chrome,
+        optional_part_test_id(base_test_id, "box"),
+        optional_part_test_id(base_test_id, "mark"),
+    );
 
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.size.width = Length::Px(size.state_layer);
@@ -509,8 +575,12 @@ fn checkbox_content<H: UiHost>(
 fn checkbox_box<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     size: CheckboxSizeTokens,
-    checked_state: CheckedState,
+    visual_mark_state: CheckedState,
+    mark_opacity: f32,
+    mark_active: bool,
     chrome: CheckboxChrome,
+    box_test_id: Option<Arc<str>>,
+    mark_test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let corner_radii = Corners::all(size.container_corner);
 
@@ -523,14 +593,23 @@ fn checkbox_box<H: UiHost>(
     props.border_color = chrome.outline_color;
     props.snap_to_device_pixels = true;
 
-    cx.container(props, move |cx| {
-        if chrome.container_bg.is_some() {
-            let icon_id = if checked_state.is_indeterminate() {
+    let box_el = cx.container(props, move |cx| {
+        if visual_mark_state.is_on() {
+            let icon_id = if visual_mark_state.is_indeterminate() {
                 &fret_icons::ids::ui::MINUS
             } else {
                 &fret_icons::ids::ui::CHECK
             };
-            let icon = material_icon(cx, icon_id, size.icon, chrome.icon_color);
+            let mut icon = material_icon(cx, icon_id, size.icon, chrome.icon_color);
+            if let Some(test_id) = mark_test_id.clone() {
+                icon = icon.test_id(test_id);
+            }
+            let mark_opacity = mark_opacity.clamp(0.0, 1.0);
+            let icon = if mark_active || mark_opacity < 0.999 {
+                cx.opacity(mark_opacity, move |_cx| vec![icon])
+            } else {
+                icon
+            };
             let mut layout = fret_ui::element::LayoutStyle::default();
             layout.size.width = Length::Fill;
             layout.size.height = Length::Fill;
@@ -549,7 +628,13 @@ fn checkbox_box<H: UiHost>(
         } else {
             Vec::new()
         }
-    })
+    });
+
+    if let Some(test_id) = box_test_id {
+        box_el.test_id(test_id)
+    } else {
+        box_el
+    }
 }
 
 fn material_icon<H: UiHost>(

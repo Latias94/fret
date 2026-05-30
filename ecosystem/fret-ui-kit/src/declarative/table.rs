@@ -4658,9 +4658,7 @@ where
             );
 
             for row_key in &state_value.row_pinning.top {
-                let visible = if props.keep_pinned_rows {
-                    entry_by_key.get(row_key).copied()
-                } else if page_keys.contains(row_key) {
+                let visible = if props.keep_pinned_rows || page_keys.contains(row_key) {
                     entry_by_key.get(row_key).copied()
                 } else {
                     None
@@ -4678,9 +4676,7 @@ where
             );
 
             for row_key in &state_value.row_pinning.bottom {
-                let visible = if props.keep_pinned_rows {
-                    entry_by_key.get(row_key).copied()
-                } else if page_keys.contains(row_key) {
+                let visible = if props.keep_pinned_rows || page_keys.contains(row_key) {
                     entry_by_key.get(row_key).copied()
                 } else {
                     None

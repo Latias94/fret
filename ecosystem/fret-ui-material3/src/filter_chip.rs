@@ -41,6 +41,7 @@ use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, enforce_minimum_interactive_size, minimum_interactive_size,
 };
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::optional_part_test_id;
 use crate::tokens::filter_chip as filter_chip_tokens;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -334,7 +335,7 @@ impl FilterChip {
                     focusable,
                     key_activation: Default::default(),
                     a11y: PressableA11y {
-                        role: Some(SemanticsRole::Button),
+                        role: Some(SemanticsRole::Checkbox),
                         label: self.a11y_label.clone().or_else(|| Some(self.label.clone())),
                         test_id: self.test_id.clone(),
                         checked,
@@ -647,7 +648,17 @@ fn chip_content<H: UiHost>(
     text.layout.size.min_width = Some(Length::Px(Px(0.0)));
     text.layout.flex.shrink = 1.0;
 
-    let label_el = cx.text_props(text);
+    let mut label_el = cx.text_props(text);
+    if let Some(test_id) = optional_part_test_id(chip_test_id.as_ref(), "label") {
+        label_el = label_el.test_id(test_id);
+    }
+
+    let leading_icon_test_id = optional_part_test_id(chip_test_id.as_ref(), "leading-icon");
+    let trailing_icon_slot_test_id = optional_part_test_id(chip_test_id.as_ref(), "trailing-icon");
+    let trailing_icon_glyph_test_id =
+        optional_part_test_id(chip_test_id.as_ref(), "trailing-icon.glyph");
+    let trailing_icon_is_actionable =
+        trailing_action.is_some() || on_trailing_icon_activate.is_some();
 
     let padding_left = if leading_icon.is_some() {
         WITH_LEADING_ICON_LEADING_SPACE
@@ -678,14 +689,27 @@ fn chip_content<H: UiHost>(
     cx.flex(props, move |cx| {
         let mut out = Vec::new();
         if let (Some(icon), Some(size)) = (leading_icon, leading_icon_size) {
-            out.push(material_icon(cx, &icon, size, leading_icon_color));
+            let mut icon = material_icon(cx, &icon, size, leading_icon_color);
+            if let Some(test_id) = leading_icon_test_id.clone() {
+                icon = icon.test_id(test_id);
+            }
+            out.push(icon);
             out.push(fixed_space(cx, ICON_LABEL_SPACE));
         }
         out.push(label_el);
         if let (Some(icon), Some(size)) = (trailing_icon, trailing_icon_size) {
             out.push(fixed_space(cx, ICON_LABEL_SPACE));
-            out.push(material_icon(cx, &icon, size, trailing_icon_color));
-            if trailing_action.is_some() || on_trailing_icon_activate.is_some() {
+            let mut icon = material_icon(cx, &icon, size, trailing_icon_color);
+            let icon_test_id = if trailing_icon_is_actionable {
+                trailing_icon_glyph_test_id.clone()
+            } else {
+                trailing_icon_slot_test_id.clone()
+            };
+            if let Some(test_id) = icon_test_id {
+                icon = icon.test_id(test_id);
+            }
+            out.push(icon);
+            if trailing_icon_is_actionable {
                 out.push(trailing_icon_touch_target_overlay(
                     cx,
                     enabled,

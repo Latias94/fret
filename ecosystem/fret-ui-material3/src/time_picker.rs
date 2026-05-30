@@ -11,8 +11,8 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 
 use fret_core::{
-    Axis, Color, Corners, CursorIcon, Edges, KeyCode, MouseButton, Px, SemanticsRole, TextOverflow,
-    TextWrap,
+    Axis, Color, Corners, CursorIcon, Edges, KeyCode, MouseButton, Px, SemanticsInvalid,
+    SemanticsLive, SemanticsRole, TextOverflow, TextWrap, Transform2D,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -22,7 +22,8 @@ use fret_ui::action::{
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, HoverRegionProps, LayoutStyle, Length,
-    MainAlign, Overflow, PointerRegionProps, PressableA11y, PressableProps, TextProps,
+    MainAlign, Overflow, PointerRegionProps, PressableA11y, PressableProps, SemanticsDecoration,
+    TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
@@ -38,9 +39,23 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
+use crate::foundation::modal_motion::material_modal_panel_transform;
+use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::strings::{
+    material_time_picker_cancel_label, material_time_picker_confirm_label,
+    material_time_picker_dismiss_label, material_time_picker_hour_selection_label,
+    material_time_picker_hour_supporting_text, material_time_picker_hour_text_field_label,
+    material_time_picker_hour_value_description, material_time_picker_minute_selection_label,
+    material_time_picker_minute_supporting_text, material_time_picker_minute_text_field_label,
+    material_time_picker_minute_value_description, material_time_picker_period_am_label,
+    material_time_picker_period_pm_label, material_time_picker_period_toggle_label,
+    material_time_picker_title, material_time_picker_toggle_dial_label,
+    material_time_picker_toggle_input_label,
+};
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::part_test_id;
 use crate::icon_button::{IconButton, IconButtonVariant};
-use crate::motion;
+use crate::motion::{self, SpringAnimator, SpringSpec};
 use crate::tokens::time_input as time_input_tokens;
 use crate::tokens::time_picker as time_tokens;
 
@@ -78,19 +93,13 @@ fn cached_minute_dial_label(n: u32) -> Arc<str> {
     }
 }
 
-fn time_picker_hour_field_label() -> Arc<str> {
-    static LABEL: OnceLock<Arc<str>> = OnceLock::new();
-    LABEL.get_or_init(|| Arc::<str>::from("Hour")).clone()
-}
-
-fn time_picker_minute_field_label() -> Arc<str> {
-    static LABEL: OnceLock<Arc<str>> = OnceLock::new();
-    LABEL.get_or_init(|| Arc::<str>::from("Minute")).clone()
-}
-
 fn time_picker_separator_text() -> Arc<str> {
     static SEP: OnceLock<Arc<str>> = OnceLock::new();
     SEP.get_or_init(|| Arc::<str>::from(":")).clone()
+}
+
+fn time_picker_part_test_id(base: &Option<Arc<str>>, part: &str) -> Option<Arc<str>> {
+    base.as_ref().map(|id| part_test_id(id, part))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -113,6 +122,25 @@ enum TimePickerSelection {
     Hour,
     Minute,
 }
+
+fn time_picker_clock_dial_label_test_id(
+    dial_test_id: &Arc<str>,
+    selection: TimePickerSelection,
+    label: u32,
+) -> Arc<str> {
+    let kind = match selection {
+        TimePickerSelection::Hour => "hour",
+        TimePickerSelection::Minute => "minute",
+    };
+    part_test_id(dial_test_id, &format!("{kind}.{label:02}"))
+}
+
+// Compose Material3 places 24h hour labels on two rings:
+// outer 00..11 at 101dp / 256dp, inner 12..23 at 69dp / 256dp.
+const CLOCK_DIAL_OUTER_RADIUS_RATIO: f32 = 101.0 / 256.0;
+const CLOCK_DIAL_INNER_RADIUS_RATIO: f32 = 69.0 / 256.0;
+const CLOCK_DIAL_24H_RING_SPLIT_RATIO: f32 = 74.0 / 256.0;
+const CLOCK_DIAL_RING_LABEL_COUNT: usize = 12;
 
 #[derive(Clone)]
 pub struct DockedTimePicker {
@@ -201,6 +229,7 @@ impl DockedTimePicker {
             container.background = Some(surface.background);
             container.shadow = surface.shadow;
             container.corner_radii = corner_radii;
+            let chrome_test_id = self.test_id.as_ref().map(|id| part_test_id(id, "chrome"));
 
             let content = time_picker_contents(
                 cx,
@@ -216,6 +245,7 @@ impl DockedTimePicker {
                 input_minute.clone(),
                 self.is_24h,
                 None,
+                self.test_id.clone(),
             );
 
             cx.semantics(
@@ -224,7 +254,13 @@ impl DockedTimePicker {
                     test_id: self.test_id.clone(),
                     ..Default::default()
                 },
-                move |cx| vec![cx.container(container, move |_cx| vec![content])],
+                move |cx| {
+                    let mut chrome = cx.container(container, move |_cx| vec![content]);
+                    if let Some(test_id) = chrome_test_id.clone() {
+                        chrome = chrome.test_id(test_id);
+                    }
+                    vec![chrome]
+                },
             )
         })
     }
@@ -498,29 +534,12 @@ impl TimePickerDialog {
                     });
                 let dismiss_handler_for_request = dismiss_handler.clone();
 
-                #[derive(Default)]
-                struct DerivedTestIds {
-                    base: Option<Arc<str>>,
-                    scrim: Option<Arc<str>>,
-                    panel: Option<Arc<str>>,
-                }
-
-                let (scrim_test_id, panel_test_id) =
-                    cx.slot_state(DerivedTestIds::default, |st| {
-                        if st.base.as_deref() != self.test_id.as_deref() {
-                            st.base = self.test_id.clone();
-                            st.scrim = st.base.as_ref().map(|id| {
-                                Arc::from(format!("{}-scrim", id.as_ref()))
-                            });
-                            st.panel = st.base.as_ref().map(|id| {
-                                Arc::from(format!("{}-panel", id.as_ref()))
-                            });
-                        }
-                        (st.scrim.clone(), st.panel.clone())
-                    });
+                let scrim_test_id = self.test_id.as_ref().map(|id| part_test_id(id, "scrim"));
                 let scrim_chrome_test_id = scrim_test_id
                     .as_ref()
-                    .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                    .map(|id| part_test_id(id, "chrome"));
+                let panel_test_id = self.test_id.as_ref().map(|id| part_test_id(id, "panel"));
+                let content_test_id = self.test_id.clone();
 
                 let overlay_root = cx.named("time_picker_overlay_root", |cx| {
                     cx.focus_scope(
@@ -539,7 +558,7 @@ impl TimePickerDialog {
                                         focusable: false,
                                         a11y: PressableA11y {
                                             role: Some(SemanticsRole::Button),
-                                            label: Some(Arc::<str>::from("Dismiss")),
+                                            label: Some(material_time_picker_dismiss_label(&*cx.app)),
                                             test_id: scrim_test_id.clone(),
                                             ..Default::default()
                                         },
@@ -626,6 +645,7 @@ impl TimePickerDialog {
                                     models.input_minute.clone(),
                                     self.is_24h,
                                     panel_test_id.clone(),
+                                    content_test_id.clone(),
                                     on_cancel.clone(),
                                     on_confirm.clone(),
                                 )
@@ -635,8 +655,8 @@ impl TimePickerDialog {
                             let stacked = cx.flex(align, move |_cx| vec![trapped]);
 
                             let opacity = transition.progress;
-                            let scale = 0.95 + 0.05 * transition.progress;
-                            let transform = fret_core::Transform2D::scale_uniform(scale);
+                            let transform =
+                                material_modal_panel_transform(cx.bounds, transition.progress);
                             let panel = fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
                                 cx,
                                 opacity,
@@ -684,6 +704,7 @@ fn time_picker_modal_panel<H: UiHost>(
     input_minute: Model<String>,
     is_24h: bool,
     test_id: Option<Arc<str>>,
+    content_test_id: Option<Arc<str>>,
     on_cancel: OnActivate,
     on_confirm: OnActivate,
 ) -> AnyElement {
@@ -725,6 +746,7 @@ fn time_picker_modal_panel<H: UiHost>(
         input_minute,
         is_24h,
         Some((on_cancel, on_confirm)),
+        content_test_id,
     );
 
     cx.semantics(
@@ -751,6 +773,7 @@ fn time_picker_contents<H: UiHost>(
     input_minute: Model<String>,
     is_24h: bool,
     actions: Option<(OnActivate, OnActivate)>,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let mut props = FlexProps::default();
     props.direction = Axis::Vertical;
@@ -771,7 +794,7 @@ fn time_picker_contents<H: UiHost>(
                     time_tokens::headline_color(theme),
                 )
             };
-            let mut t = TextProps::new(Arc::<str>::from("Select time"));
+            let mut t = TextProps::new(material_time_picker_title(&*cx.app));
             t.style = Some(style);
             t.color = Some(color);
             t.layout.size.width = Length::Fill;
@@ -788,10 +811,11 @@ fn time_picker_contents<H: UiHost>(
             TimePickerDisplayMode::Input => IconId::new("lucide.clock"),
         };
         let toggle_label = match display_mode {
-            TimePickerDisplayMode::Dial => "Switch to input",
-            TimePickerDisplayMode::Input => "Switch to dial",
+            TimePickerDisplayMode::Dial => material_time_picker_toggle_input_label(&*cx.app),
+            TimePickerDisplayMode::Input => material_time_picker_toggle_dial_label(&*cx.app),
         };
-        let toggle_test_id = "time-picker-mode-toggle";
+        let toggle_test_id = time_picker_part_test_id(&test_id, "mode-toggle")
+            .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.mode-toggle"));
         let on_toggle: OnActivate = Arc::new({
             let display_mode_model = display_mode_model.clone();
             let selection_model = selection_model.clone();
@@ -864,6 +888,7 @@ fn time_picker_contents<H: UiHost>(
                     selection_model.clone(),
                     selection,
                     is_24h,
+                    test_id.clone(),
                 );
 
                 let dial = time_picker_clock_dial(
@@ -874,31 +899,11 @@ fn time_picker_contents<H: UiHost>(
                     selection,
                     dial_dragging_model.clone(),
                     is_24h,
-                );
-
-                let period = (!is_24h)
-                    .then(|| time_picker_period_selector(cx, time_now, time_model.clone()));
-
-                let dial_and_period = cx.flex(
-                    FlexProps {
-                        direction: Axis::Horizontal,
-                        justify: MainAlign::Start,
-                        align: CrossAlign::Center,
-                        wrap: false,
-                        gap: Px(12.0).into(),
-                        ..Default::default()
-                    },
-                    move |_cx| {
-                        let mut out = vec![dial];
-                        if let Some(p) = period {
-                            out.push(p);
-                        }
-                        out
-                    },
+                    test_id.clone(),
                 );
 
                 out.push(display);
-                out.push(dial_and_period);
+                out.push(centered_full_width(cx, dial));
             }
             TimePickerDisplayMode::Input => {
                 out.push(time_picker_time_input(
@@ -909,16 +914,64 @@ fn time_picker_contents<H: UiHost>(
                     input_hour.clone(),
                     input_minute.clone(),
                     is_24h,
+                    test_id.clone(),
                 ));
             }
         }
 
         if let Some((on_cancel, on_confirm)) = actions.clone() {
-            out.push(time_picker_actions(cx, on_cancel, on_confirm));
+            out.push(time_picker_actions(
+                cx,
+                test_id.clone(),
+                on_cancel,
+                on_confirm,
+            ));
         }
 
         out
     })
+}
+
+fn centered_full_width<H: UiHost>(cx: &mut ElementContext<'_, H>, child: AnyElement) -> AnyElement {
+    let mut props = FlexProps::default();
+    props.direction = Axis::Horizontal;
+    props.justify = MainAlign::Center;
+    props.align = CrossAlign::Center;
+    props.wrap = false;
+    props.layout.size.width = Length::Fill;
+    cx.flex(props, move |_cx| vec![child])
+}
+
+fn padded_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    padding: Edges,
+    child: AnyElement,
+) -> AnyElement {
+    let mut props = ContainerProps::default();
+    props.padding = padding.into();
+    cx.container(props, move |_cx| vec![child])
+}
+
+fn fixed_centered_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    props: TextProps,
+    width: Px,
+    height: Px,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    let text = cx.text_props(props);
+    let mut center = FlexProps::default();
+    center.direction = Axis::Horizontal;
+    center.justify = MainAlign::Center;
+    center.align = CrossAlign::Center;
+    center.wrap = false;
+    center.layout.size.width = Length::Px(width);
+    center.layout.size.height = Length::Px(height);
+    let mut element = cx.flex(center, move |_cx| vec![text]);
+    if let Some(test_id) = test_id {
+        element = element.test_id(test_id);
+    }
+    element
 }
 
 fn time_picker_display<H: UiHost>(
@@ -928,6 +981,7 @@ fn time_picker_display<H: UiHost>(
     selection_model: Model<TimePickerSelection>,
     selection: TimePickerSelection,
     is_24h: bool,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let (hour, minute) = time_to_display(time_now, is_24h);
     let hour_s = cached_two_digit_0_59(hour.into());
@@ -935,28 +989,38 @@ fn time_picker_display<H: UiHost>(
 
     let mut props = FlexProps::default();
     props.direction = Axis::Horizontal;
-    props.justify = MainAlign::Start;
+    props.justify = MainAlign::Center;
     props.align = CrossAlign::Center;
     props.wrap = false;
-    props.gap = Px(8.0).into();
+    props.gap = Px(0.0).into();
+    props.layout.size.width = Length::Fill;
 
     cx.flex(props, move |cx| {
+        let hour_test_id = time_picker_part_test_id(&test_id, "hour-selector")
+            .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.hour-selector"));
+        let minute_test_id = time_picker_part_test_id(&test_id, "minute-selector")
+            .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.minute-selector"));
+        let separator_test_id = time_picker_part_test_id(&test_id, "separator")
+            .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.separator"));
         let hour_el = time_selector_field(
             cx,
-            time_picker_hour_field_label(),
+            material_time_picker_hour_selection_label(&*cx.app),
             hour_s.clone(),
+            material_time_picker_hour_value_description(&*cx.app, hour.into(), is_24h),
             selection == TimePickerSelection::Hour,
-            "time-picker-hour-selector",
+            hour_test_id,
             time_model.clone(),
             selection_model.clone(),
             TimePickerSelection::Hour,
         );
 
-        let (sep_style, sep_color) = {
+        let (sep_style, sep_color, sep_width, sep_height) = {
             let theme = Theme::global(&*cx.app);
             (
                 time_tokens::time_selector_separator_style(theme),
                 time_tokens::time_selector_separator_color(theme),
+                time_tokens::display_separator_width(theme),
+                time_tokens::period_selector_container_height(theme),
             )
         };
         let mut sep = TextProps::new(time_picker_separator_text());
@@ -964,20 +1028,39 @@ fn time_picker_display<H: UiHost>(
         sep.color = Some(sep_color);
         sep.wrap = TextWrap::None;
         sep.overflow = TextOverflow::Clip;
-        let sep_el = cx.text_props(sep);
+        let sep_el = fixed_centered_text(cx, sep, sep_width, sep_height, Some(separator_test_id));
 
         let minute_el = time_selector_field(
             cx,
-            time_picker_minute_field_label(),
+            material_time_picker_minute_selection_label(&*cx.app),
             minute_s.clone(),
+            material_time_picker_minute_value_description(&*cx.app, minute.into()),
             selection == TimePickerSelection::Minute,
-            "time-picker-minute-selector",
+            minute_test_id,
             time_model.clone(),
             selection_model.clone(),
             TimePickerSelection::Minute,
         );
 
-        vec![hour_el, sep_el, minute_el]
+        let period = (!is_24h).then(|| {
+            let period = time_picker_period_selector(cx, time_now, time_model.clone(), test_id);
+            padded_element(
+                cx,
+                Edges {
+                    top: Px(0.0),
+                    right: Px(0.0),
+                    bottom: Px(0.0),
+                    left: Px(12.0),
+                },
+                period,
+            )
+        });
+
+        let mut out = vec![hour_el, sep_el, minute_el];
+        if let Some(period) = period {
+            out.push(period);
+        }
+        out
     })
 }
 
@@ -989,6 +1072,7 @@ fn time_picker_time_input<H: UiHost>(
     input_hour: Model<String>,
     input_minute: Model<String>,
     is_24h: bool,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     apply_time_input_models(
         cx,
@@ -999,36 +1083,51 @@ fn time_picker_time_input<H: UiHost>(
         is_24h,
     );
 
+    let hour_raw = cx
+        .get_model_cloned(&input_hour, Invalidation::Layout)
+        .unwrap_or_default();
+    let hour_valid = time_input_field_is_valid(TimeInputFieldKind::Hour, &hour_raw, is_24h);
+    let minute_raw = cx
+        .get_model_cloned(&input_minute, Invalidation::Layout)
+        .unwrap_or_default();
+    let minute_valid = time_input_field_is_valid(TimeInputFieldKind::Minute, &minute_raw, is_24h);
+
     let hour_column = time_input_field_column(
         cx,
-        Arc::<str>::from("Hour"),
-        Arc::<str>::from("Hour"),
+        material_time_picker_hour_text_field_label(&*cx.app),
+        material_time_picker_hour_supporting_text(&*cx.app, is_24h, hour_valid),
+        !hour_valid,
         TimeInputFieldKind::Hour,
         time_now,
         time_model.clone(),
         time_input_edit.clone(),
         input_hour,
-        "time-input-hour",
+        time_picker_part_test_id(&test_id, "input.hour")
+            .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.input.hour")),
         is_24h,
     );
     let minute_column = time_input_field_column(
         cx,
-        Arc::<str>::from("Minute"),
-        Arc::<str>::from("Minute"),
+        material_time_picker_minute_text_field_label(&*cx.app),
+        material_time_picker_minute_supporting_text(&*cx.app, minute_valid),
+        !minute_valid,
         TimeInputFieldKind::Minute,
         time_now,
         time_model.clone(),
         time_input_edit.clone(),
         input_minute,
-        "time-input-minute",
+        time_picker_part_test_id(&test_id, "input.minute")
+            .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.input.minute")),
         is_24h,
     );
 
-    let (sep_style, sep_color) = {
+    let (sep_style, sep_color, sep_width, sep_height) = {
         let theme = Theme::global(&*cx.app);
         (
             time_input_tokens::time_input_field_separator_style(theme),
             time_input_tokens::time_input_field_separator_color(theme),
+            time_tokens::display_separator_width(theme),
+            time_input_tokens::period_selector_container_height(theme),
         )
     };
     let mut sep = TextProps::new(Arc::<str>::from(":"));
@@ -1036,16 +1135,37 @@ fn time_picker_time_input<H: UiHost>(
     sep.color = Some(sep_color);
     sep.wrap = TextWrap::None;
     sep.overflow = TextOverflow::Clip;
-    let sep_el = cx.text_props(sep);
+    let sep_el = fixed_centered_text(
+        cx,
+        sep,
+        sep_width,
+        sep_height,
+        Some(
+            time_picker_part_test_id(&test_id, "input.separator")
+                .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.input.separator")),
+        ),
+    );
 
-    let period = (!is_24h).then(|| time_input_period_selector(cx, time_now, time_model.clone()));
+    let period = (!is_24h).then(|| {
+        let period = time_input_period_selector(cx, time_now, time_model.clone(), test_id.clone());
+        padded_element(
+            cx,
+            Edges {
+                top: Px(0.0),
+                right: Px(0.0),
+                bottom: Px(0.0),
+                left: Px(12.0),
+            },
+            period,
+        )
+    });
 
     let mut row = FlexProps::default();
     row.direction = Axis::Horizontal;
     row.justify = MainAlign::Start;
-    row.align = CrossAlign::Center;
+    row.align = CrossAlign::Start;
     row.wrap = false;
-    row.gap = Px(8.0).into();
+    row.gap = Px(0.0).into();
 
     cx.flex(row, move |_cx| {
         let mut out = vec![hour_column, sep_el, minute_column];
@@ -1060,12 +1180,13 @@ fn time_input_field_column<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     a11y_label: Arc<str>,
     supporting_text: Arc<str>,
+    is_error: bool,
     kind: TimeInputFieldKind,
     time_now: Time,
     time_model: Model<Time>,
     time_input_edit: Model<TimeInputEditState>,
     model: Model<String>,
-    test_id: &'static str,
+    test_id: Arc<str>,
     is_24h: bool,
 ) -> AnyElement {
     let field = time_input_field(
@@ -1076,15 +1197,16 @@ fn time_input_field_column<H: UiHost>(
         time_model,
         time_input_edit,
         model,
-        test_id,
+        test_id.clone(),
         is_24h,
+        is_error,
     );
 
     let (supporting_style, supporting_color) = {
         let theme = Theme::global(&*cx.app);
         (
             time_input_tokens::time_input_field_supporting_text_style(theme),
-            time_input_tokens::time_input_field_supporting_text_color(theme),
+            time_input_tokens::time_input_field_supporting_text_color(theme, is_error),
         )
     };
     let mut supporting = TextProps::new(supporting_text);
@@ -1092,7 +1214,12 @@ fn time_input_field_column<H: UiHost>(
     supporting.color = Some(supporting_color);
     supporting.wrap = TextWrap::None;
     supporting.overflow = TextOverflow::Clip;
-    let supporting = cx.text_props(supporting);
+    let supporting = cx.text_props(supporting).a11y(
+        SemanticsDecoration::default()
+            .test_id(part_test_id(&test_id, "supporting-text"))
+            .live(Some(SemanticsLive::Polite))
+            .live_atomic(true),
+    );
 
     let mut col = FlexProps::default();
     col.direction = Axis::Vertical;
@@ -1111,8 +1238,9 @@ fn time_input_field<H: UiHost>(
     time_model: Model<Time>,
     time_input_edit: Model<TimeInputEditState>,
     model: Model<String>,
-    test_id: &'static str,
+    test_id: Arc<str>,
     is_24h: bool,
+    is_error: bool,
 ) -> AnyElement {
     let (width, height, corner_radii, focus_ring) = {
         let theme = Theme::global(&*cx.app);
@@ -1126,7 +1254,7 @@ fn time_input_field<H: UiHost>(
         );
         (width, height, corner_radii, focus_ring)
     };
-    let chrome_test_id = Arc::<str>::from(format!("{test_id}.chrome"));
+    let chrome_test_id = part_test_id(&test_id, "chrome");
 
     let mut hover_layout = LayoutStyle::default();
     hover_layout.size.width = Length::Px(width);
@@ -1243,7 +1371,9 @@ fn time_input_field<H: UiHost>(
             let (label_color, label_style) = {
                 let theme = Theme::global(&*cx.app);
                 (
-                    time_input_tokens::time_input_field_label_color(theme, focused, hovered),
+                    time_input_tokens::time_input_field_label_color(
+                        theme, focused, hovered, is_error,
+                    ),
                     time_input_tokens::time_input_field_label_text_style(theme),
                 )
             };
@@ -1276,7 +1406,8 @@ fn time_input_field<H: UiHost>(
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::TextField),
                     label: Some(a11y_label.clone()),
-                    test_id: Some(Arc::<str>::from(test_id)),
+                    test_id: Some(test_id.clone()),
+                    invalid: is_error.then_some(SemanticsInvalid::True),
                     ..Default::default()
                 },
                 layout: {
@@ -1302,14 +1433,14 @@ fn time_input_field<H: UiHost>(
         container.corner_radii = corner_radii;
         container.background = Some({
             let theme = Theme::global(&*cx.app);
-            time_input_tokens::time_input_field_container_color(theme, focused)
+            time_input_tokens::time_input_field_container_color(theme, focused, is_error)
         });
         if focused {
             let (w, c) = {
                 let theme = Theme::global(&*cx.app);
                 (
                     time_input_tokens::time_input_field_focus_outline_width(theme),
-                    time_input_tokens::time_input_field_focus_outline_color(theme),
+                    time_input_tokens::time_input_field_focus_outline_color(theme, is_error),
                 )
             };
             container.border = Edges::all(w);
@@ -1352,6 +1483,17 @@ fn time_input_field<H: UiHost>(
 enum TimeInputFieldKind {
     Hour,
     Minute,
+}
+
+fn time_input_field_is_valid(kind: TimeInputFieldKind, raw: &str, is_24h: bool) -> bool {
+    let raw = sanitize_time_input_digits(raw);
+    match parse_u8(&raw) {
+        Some(value) => match kind {
+            TimeInputFieldKind::Hour => time_input_hour_value_is_valid(value, is_24h),
+            TimeInputFieldKind::Minute => time_input_minute_value_is_valid(value),
+        },
+        None => true,
+    }
 }
 
 #[derive(Default)]
@@ -1432,8 +1574,9 @@ fn time_selector_field<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     a11y_label: Arc<str>,
     text: Arc<str>,
+    a11y_value: Arc<str>,
     selected: bool,
-    test_id: &'static str,
+    test_id: Arc<str>,
     time_model: Model<Time>,
     selection_model: Model<TimePickerSelection>,
     selection_kind: TimePickerSelection,
@@ -1447,7 +1590,7 @@ fn time_selector_field<H: UiHost>(
             material_focus_ring_for_component(theme, time_tokens::COMPONENT_PREFIX, corner_radii);
         (corner_radii, container_w, container_h, focus_ring)
     };
-    let chrome_test_id = Arc::<str>::from(format!("{test_id}.chrome"));
+    let chrome_test_id = part_test_id(&test_id, "chrome");
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = true;
@@ -1514,9 +1657,10 @@ fn time_selector_field<H: UiHost>(
             focusable: enabled,
             key_activation: Default::default(),
             a11y: PressableA11y {
-                role: Some(SemanticsRole::Button),
+                role: Some(SemanticsRole::RadioButton),
                 label: Some(a11y_label.clone()),
-                test_id: Some(Arc::<str>::from(test_id)),
+                value: Some(a11y_value.clone()),
+                test_id: Some(test_id.clone()),
                 selected,
                 ..Default::default()
             },
@@ -1628,6 +1772,188 @@ fn time_selector_field<H: UiHost>(
     })
 }
 
+#[derive(Debug, Clone, Copy)]
+struct DialLabel {
+    label: u32,
+    value: u32,
+    angle_idx: usize,
+    ring: DialRing,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DialRing {
+    Outer,
+    Inner,
+}
+
+#[derive(Debug, Clone)]
+struct DialFaceSnapshot {
+    selection: TimePickerSelection,
+    labels: Vec<DialLabel>,
+    selected_idx: usize,
+}
+
+impl DialFaceSnapshot {
+    fn new(time_now: Time, selection: TimePickerSelection, is_24h: bool) -> Self {
+        let (labels, selected_idx) = dial_labels(time_now, selection, is_24h);
+        Self {
+            selection,
+            labels,
+            selected_idx,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct TimePickerClockDialMotionRuntime {
+    selection: TimePickerSelection,
+    is_24h: bool,
+    outgoing_face: Option<DialFaceSnapshot>,
+    selector_angle: SpringAnimator,
+    selector_radius: SpringAnimator,
+    face_alpha: SpringAnimator,
+}
+
+impl Default for TimePickerClockDialMotionRuntime {
+    fn default() -> Self {
+        Self {
+            selection: TimePickerSelection::Hour,
+            is_24h: false,
+            outgoing_face: None,
+            selector_angle: SpringAnimator::default(),
+            selector_radius: SpringAnimator::default(),
+            face_alpha: SpringAnimator::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct TimePickerClockDialMotionState {
+    selector_x: f32,
+    selector_y: f32,
+    face_alpha: f32,
+    outgoing_face: Option<DialFaceSnapshot>,
+    wants_frame: bool,
+}
+
+impl TimePickerClockDialMotionRuntime {
+    fn update(
+        &mut self,
+        now_frame: u64,
+        time_now: Time,
+        selection: TimePickerSelection,
+        is_24h: bool,
+        center: f32,
+        outer_radius: f32,
+        handle_size: f32,
+        target_angle: f32,
+        target_radius: f32,
+        spatial: SpringSpec,
+        effects: SpringSpec,
+    ) -> TimePickerClockDialMotionState {
+        let initialized = self.selector_angle.is_initialized();
+        let selection_changed =
+            initialized && (self.selection != selection || self.is_24h != is_24h);
+
+        if !initialized {
+            self.selector_angle.reset(now_frame, target_angle);
+            self.selector_radius.reset(now_frame, target_radius);
+            self.face_alpha.reset(now_frame, 1.0);
+            self.selection = selection;
+            self.is_24h = is_24h;
+        } else if selection_changed {
+            let outgoing = DialFaceSnapshot::new(time_now, self.selection, self.is_24h);
+            let out_label = outgoing.labels[outgoing.selected_idx];
+            let out_angle = dial_label_angle(out_label.angle_idx);
+            let out_radius = dial_label_radius(outer_radius, out_label);
+            let start_frame = now_frame.saturating_sub(1);
+            self.selector_angle.reset(start_frame, out_angle);
+            self.selector_radius.reset(start_frame, out_radius);
+            self.outgoing_face = Some(outgoing);
+            self.selection = selection;
+            self.is_24h = is_24h;
+            self.face_alpha.reset(start_frame, 0.0);
+        }
+
+        let target_angle = nearest_angle_target(self.selector_angle.value(), target_angle);
+        self.selector_angle
+            .set_target(now_frame, target_angle, spatial);
+        self.selector_radius
+            .set_target(now_frame, target_radius, spatial);
+        self.face_alpha.set_target(now_frame, 1.0, effects);
+
+        self.selector_angle.advance(now_frame);
+        self.selector_radius.advance(now_frame);
+        self.face_alpha.advance(now_frame);
+
+        let face_alpha = self.face_alpha.value().clamp(0.0, 1.0);
+        if face_alpha >= 0.995 && !self.face_alpha.is_active() {
+            self.outgoing_face = None;
+        }
+        let (selector_x, selector_y) = dial_origin_from_angle(
+            center,
+            self.selector_radius.value(),
+            handle_size,
+            self.selector_angle.value(),
+        );
+
+        TimePickerClockDialMotionState {
+            selector_x,
+            selector_y,
+            face_alpha,
+            outgoing_face: self.outgoing_face.clone(),
+            wants_frame: self.selector_angle.is_active()
+                || self.selector_radius.is_active()
+                || self.face_alpha.is_active(),
+        }
+    }
+}
+
+fn dial_label_angle(angle_idx: usize) -> f32 {
+    -PI * 0.5 + (angle_idx as f32) * (2.0 * PI / CLOCK_DIAL_RING_LABEL_COUNT as f32)
+}
+
+fn nearest_angle_target(current: f32, target: f32) -> f32 {
+    let mut diff = current - target;
+    while diff > PI {
+        diff -= 2.0 * PI;
+    }
+    while diff <= -PI {
+        diff += 2.0 * PI;
+    }
+    current - diff
+}
+
+fn dial_origin_from_angle(center: f32, radius: f32, handle_size: f32, angle: f32) -> (f32, f32) {
+    (
+        center + radius * angle.cos() - handle_size * 0.5,
+        center + radius * angle.sin() - handle_size * 0.5,
+    )
+}
+
+fn dial_label_radius(outer_radius: f32, label: DialLabel) -> f32 {
+    match label.ring {
+        DialRing::Outer => outer_radius,
+        DialRing::Inner => {
+            outer_radius * (CLOCK_DIAL_INNER_RADIUS_RATIO / CLOCK_DIAL_OUTER_RADIUS_RATIO)
+        }
+    }
+}
+
+fn dial_label_origin(
+    center: f32,
+    outer_radius: f32,
+    handle_size: f32,
+    label: DialLabel,
+) -> (f32, f32) {
+    dial_origin_from_angle(
+        center,
+        dial_label_radius(outer_radius, label),
+        handle_size,
+        dial_label_angle(label.angle_idx),
+    )
+}
+
 fn time_picker_clock_dial<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     time_now: Time,
@@ -1636,6 +1962,7 @@ fn time_picker_clock_dial<H: UiHost>(
     selection: TimePickerSelection,
     dial_dragging_model: Model<bool>,
     is_24h: bool,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let (size, handle_size, background, corner_radii) = {
         let theme = Theme::global(&*cx.app);
@@ -1654,38 +1981,121 @@ fn time_picker_clock_dial<H: UiHost>(
     container.background = Some(background);
     container.corner_radii = corner_radii;
 
-    let (labels, selected_idx) = dial_labels(time_now, selection, is_24h);
+    let current_face = DialFaceSnapshot::new(time_now, selection, is_24h);
     let center = size.0 * 0.5;
-    let radius = center - (handle_size.0 * 0.5) - 8.0;
-    let chrome_test_id = Arc::<str>::from("time-picker-clock-dial.chrome");
+    let outer_radius = size.0 * CLOCK_DIAL_OUTER_RADIUS_RATIO;
+    let target_label = current_face.labels[current_face.selected_idx];
+    let (target_x, target_y) = dial_label_origin(center, outer_radius, handle_size.0, target_label);
+    let target_angle = dial_label_angle(target_label.angle_idx);
+    let target_radius = dial_label_radius(outer_radius, target_label);
+    let (spatial, effects) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultSpatial),
+            sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultEffects),
+        )
+    };
+    let now_frame = cx.frame_id.0;
+    let motion_state = cx.slot_state(TimePickerClockDialMotionRuntime::default, |rt| {
+        rt.update(
+            now_frame,
+            time_now,
+            selection,
+            is_24h,
+            center,
+            outer_radius,
+            handle_size.0,
+            target_angle,
+            target_radius,
+            spatial,
+            effects,
+        )
+    });
+    if motion_state.wants_frame {
+        cx.request_animation_frame();
+    }
+
+    let dial_test_id = time_picker_part_test_id(&test_id, "clock-dial")
+        .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.clock-dial"));
+    let chrome_test_id = part_test_id(&dial_test_id, "chrome");
 
     cx.semantics(
         fret_ui::element::SemanticsProps {
             role: SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("time-picker-clock-dial")),
+            test_id: Some(dial_test_id.clone()),
             ..Default::default()
         },
         move |cx| {
             let mut chrome = cx.container(container, move |cx| {
                 let mut out: Vec<AnyElement> = Vec::new();
-                for (idx, (label, value)) in labels.iter().enumerate() {
-                    let selected = idx == selected_idx;
-                    out.push(dial_label(
-                        cx,
-                        *label,
-                        *value,
-                        idx,
-                        labels.len(),
-                        selected,
-                        selection,
-                        is_24h,
-                        time_model.clone(),
-                        selection_model.clone(),
-                        center,
-                        radius,
-                        handle_size.0,
-                    ));
+
+                out.push(dial_selector_chrome(
+                    cx,
+                    &dial_test_id,
+                    center,
+                    handle_size.0,
+                    motion_state.selector_x,
+                    motion_state.selector_y,
+                    target_x,
+                    target_y,
+                ));
+
+                if let Some(outgoing_face) = motion_state.outgoing_face.clone() {
+                    let outgoing_alpha = (1.0 - motion_state.face_alpha).clamp(0.0, 1.0);
+                    if outgoing_alpha > 0.01 {
+                        out.push(cx.opacity(outgoing_alpha, move |cx| {
+                            outgoing_face
+                                .labels
+                                .iter()
+                                .enumerate()
+                                .map(|(idx, label)| {
+                                    dial_label_visual(
+                                        cx,
+                                        *label,
+                                        idx == outgoing_face.selected_idx,
+                                        outgoing_face.selection,
+                                        center,
+                                        outer_radius,
+                                        handle_size.0,
+                                    )
+                                })
+                                .collect::<Vec<_>>()
+                        }));
+                    }
                 }
+
+                let incoming_face = current_face.clone();
+                let incoming_alpha = motion_state.face_alpha.clamp(0.0, 1.0);
+                let time_model_for_labels = time_model.clone();
+                let selection_model_for_labels = selection_model.clone();
+                out.push(cx.opacity(incoming_alpha, move |cx| {
+                    incoming_face
+                        .labels
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, label)| {
+                            let selected = idx == incoming_face.selected_idx;
+                            let label_test_id = time_picker_clock_dial_label_test_id(
+                                &dial_test_id,
+                                selection,
+                                label.label,
+                            );
+                            dial_label(
+                                cx,
+                                *label,
+                                label_test_id,
+                                selected,
+                                selection,
+                                is_24h,
+                                time_model_for_labels.clone(),
+                                selection_model_for_labels.clone(),
+                                center,
+                                outer_radius,
+                                handle_size.0,
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                }));
 
                 // Pointer-driven selection (click + drag) at the dial level.
                 {
@@ -1710,31 +2120,29 @@ fn time_picker_clock_dial<H: UiHost>(
                             let dx = pos.x.0 - center.x.0;
                             let dy = pos.y.0 - center.y.0;
                             let r2 = dx * dx + dy * dy;
-                            let radius = 0.5 * bounds.size.width.0.min(bounds.size.height.0);
-                            if radius <= 0.0 || r2 <= (radius * 0.25) * (radius * 0.25) {
+                            let dial_size = bounds.size.width.0.min(bounds.size.height.0);
+                            let dial_radius = 0.5 * dial_size;
+                            if dial_radius <= 0.0
+                                || r2 <= (dial_radius * 0.25) * (dial_radius * 0.25)
+                            {
                                 return;
                             }
 
                             let a = dy.atan2(dx);
                             let from_top = (a + PI * 0.5).rem_euclid(2.0 * PI);
 
-                            let time_now = host
-                                .models_mut()
-                                .get_cloned(&time_on_pointer)
-                                .unwrap_or_else(default_time);
                             let selection = host
                                 .models_mut()
                                 .get_cloned(&selection_for_update)
                                 .unwrap_or_default();
 
-                            let (labels, _) = dial_labels(time_now, selection, is_24h);
-                            if labels.is_empty() {
-                                return;
-                            }
-
-                            let step = 2.0 * PI / (labels.len() as f32);
-                            let idx = ((from_top / step + 0.5).floor() as usize) % labels.len();
-                            let value = labels[idx].1;
+                            let value = dial_value_from_pointer(
+                                selection,
+                                is_24h,
+                                from_top,
+                                r2.sqrt(),
+                                dial_size,
+                            );
 
                             let _ = host.models_mut().update(&time_on_pointer, |t: &mut Time| {
                                 *t = match selection {
@@ -1859,24 +2267,169 @@ fn time_picker_clock_dial<H: UiHost>(
     )
 }
 
+fn dial_selector_chrome<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    dial_test_id: &Arc<str>,
+    center: f32,
+    handle_size: f32,
+    current_x: f32,
+    current_y: f32,
+    target_x: f32,
+    target_y: f32,
+) -> AnyElement {
+    let (
+        handle_color,
+        handle_shape,
+        center_color,
+        center_shape,
+        center_size,
+        track_color,
+        track_width,
+    ) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            time_tokens::clock_dial_handle_color(theme),
+            time_tokens::clock_dial_handle_shape(theme),
+            time_tokens::clock_dial_selector_center_color(theme),
+            time_tokens::clock_dial_selector_center_shape(theme),
+            time_tokens::clock_dial_selector_center_size(theme).0,
+            time_tokens::clock_dial_selector_track_color(theme),
+            time_tokens::clock_dial_selector_track_width(theme).0,
+        )
+    };
+
+    let selector_center_x = current_x + handle_size * 0.5;
+    let selector_center_y = current_y + handle_size * 0.5;
+    let dx = selector_center_x - center;
+    let dy = selector_center_y - center;
+    let angle = dy.atan2(dx);
+    let line_length = ((dx * dx + dy * dy).sqrt() - handle_size * 0.5).max(0.0);
+
+    let mut track_props = ContainerProps::default();
+    track_props.layout.position = fret_ui::element::PositionStyle::Absolute;
+    track_props.layout.inset.left = Some(Px(center)).into();
+    track_props.layout.inset.top = Some(Px(center - track_width * 0.5)).into();
+    track_props.layout.size.width = Length::Px(Px(line_length));
+    track_props.layout.size.height = Length::Px(Px(track_width));
+    track_props.layout.overflow = Overflow::Clip;
+    track_props.background = Some(track_color);
+    track_props.corner_radii = Corners::all(Px(track_width * 0.5));
+    let track = cx.visual_transform(
+        Transform2D::rotation_about_radians(
+            angle,
+            fret_core::Point::new(Px(0.0), Px(track_width * 0.5)),
+        ),
+        move |cx| vec![cx.container(track_props, |_cx| Vec::<AnyElement>::new())],
+    );
+
+    let mut center_dot_props = ContainerProps::default();
+    center_dot_props.layout.position = fret_ui::element::PositionStyle::Absolute;
+    center_dot_props.layout.inset.left = Some(Px(center - center_size * 0.5)).into();
+    center_dot_props.layout.inset.top = Some(Px(center - center_size * 0.5)).into();
+    center_dot_props.layout.size.width = Length::Px(Px(center_size));
+    center_dot_props.layout.size.height = Length::Px(Px(center_size));
+    center_dot_props.layout.overflow = Overflow::Clip;
+    center_dot_props.background = Some(center_color);
+    center_dot_props.corner_radii = center_shape;
+    let center_dot = cx.container(center_dot_props, |_cx| Vec::<AnyElement>::new());
+
+    let mut handle_props = ContainerProps::default();
+    handle_props.layout.position = fret_ui::element::PositionStyle::Absolute;
+    handle_props.layout.inset.left = Some(Px(target_x)).into();
+    handle_props.layout.inset.top = Some(Px(target_y)).into();
+    handle_props.layout.size.width = Length::Px(Px(handle_size));
+    handle_props.layout.size.height = Length::Px(Px(handle_size));
+    handle_props.layout.overflow = Overflow::Clip;
+    handle_props.background = Some(handle_color);
+    handle_props.corner_radii = handle_shape;
+    let mut handle = cx.visual_transform(
+        Transform2D::translation(fret_core::Point::new(
+            Px(current_x - target_x),
+            Px(current_y - target_y),
+        )),
+        move |cx| vec![cx.container(handle_props, |_cx| Vec::<AnyElement>::new())],
+    );
+    handle = handle.test_id(part_test_id(dial_test_id, "selector-handle"));
+
+    let mut layer_props = ContainerProps::default();
+    layer_props.layout.position = fret_ui::element::PositionStyle::Absolute;
+    layer_props.layout.inset.left = Some(Px(0.0)).into();
+    layer_props.layout.inset.top = Some(Px(0.0)).into();
+    layer_props.layout.inset.right = Some(Px(0.0)).into();
+    layer_props.layout.inset.bottom = Some(Px(0.0)).into();
+    layer_props.layout.size.width = Length::Fill;
+    layer_props.layout.size.height = Length::Fill;
+    layer_props.layout.overflow = Overflow::Visible;
+    let mut layer = cx.container(layer_props, move |_cx| vec![track, center_dot, handle]);
+    layer = layer.test_id(part_test_id(dial_test_id, "selector"));
+    layer
+}
+
+fn dial_label_visual<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: DialLabel,
+    selected: bool,
+    selection: TimePickerSelection,
+    center: f32,
+    outer_radius: f32,
+    handle_size: f32,
+) -> AnyElement {
+    let (x, y) = dial_label_origin(center, outer_radius, handle_size, label);
+
+    let (label_color, label_style) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            time_tokens::clock_dial_label_text_color(theme, selected),
+            time_tokens::clock_dial_label_text_style(theme),
+        )
+    };
+
+    let mut container = ContainerProps::default();
+    container.layout.position = fret_ui::element::PositionStyle::Absolute;
+    container.layout.inset.left = Some(Px(x)).into();
+    container.layout.inset.top = Some(Px(y)).into();
+    container.layout.size.width = Length::Px(Px(handle_size));
+    container.layout.size.height = Length::Px(Px(handle_size));
+    container.layout.overflow = Overflow::Visible;
+
+    let label_text = if selection == TimePickerSelection::Minute {
+        cached_minute_dial_label(label.label)
+    } else {
+        cached_decimal_0_59(label.label)
+    };
+    let mut tp = TextProps::new(label_text);
+    tp.style = Some(label_style);
+    tp.color = Some(label_color);
+    tp.wrap = TextWrap::None;
+    tp.overflow = TextOverflow::Clip;
+    let label_el = cx.text_props(tp);
+
+    let mut center_flex = FlexProps::default();
+    center_flex.direction = Axis::Horizontal;
+    center_flex.justify = MainAlign::Center;
+    center_flex.align = CrossAlign::Center;
+    center_flex.wrap = false;
+    center_flex.layout.size.width = Length::Fill;
+    center_flex.layout.size.height = Length::Fill;
+    let content = cx.flex(center_flex, move |_cx| vec![label_el]);
+
+    cx.container(container, move |_cx| vec![content])
+}
+
 fn dial_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    label: u32,
-    value: u32,
-    idx: usize,
-    len: usize,
+    label: DialLabel,
+    test_id: Arc<str>,
     selected: bool,
     selection: TimePickerSelection,
     is_24h: bool,
     time_model: Model<Time>,
     selection_model: Model<TimePickerSelection>,
     center: f32,
-    radius: f32,
+    outer_radius: f32,
     handle_size: f32,
 ) -> AnyElement {
-    let angle = -PI * 0.5 + (idx as f32) * (2.0 * PI / (len as f32));
-    let x = center + radius * angle.cos() - handle_size * 0.5;
-    let y = center + radius * angle.sin() - handle_size * 0.5;
+    let (x, y) = dial_label_origin(center, outer_radius, handle_size, label);
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = true;
@@ -1894,11 +2447,11 @@ fn dial_label<H: UiHost>(
                                 let minute = t.minute();
                                 let second = t.second();
                                 if is_24h {
-                                    Time::from_hms(value as u8, minute, second).unwrap_or(*t)
+                                    Time::from_hms(label.value as u8, minute, second).unwrap_or(*t)
                                 } else {
                                     let cur = t.hour();
                                     let is_pm = cur >= 12;
-                                    let base = (value % 12) as u8;
+                                    let base = (label.value % 12) as u8;
                                     let hour24 = if is_pm { (base % 12) + 12 } else { base % 12 };
                                     Time::from_hms(hour24, minute, second).unwrap_or(*t)
                                 }
@@ -1906,7 +2459,8 @@ fn dial_label<H: UiHost>(
                             TimePickerSelection::Minute => {
                                 let hour = t.hour();
                                 let second = t.second();
-                                Time::from_hms(hour, (value.min(59)) as u8, second).unwrap_or(*t)
+                                Time::from_hms(hour, (label.value.min(59)) as u8, second)
+                                    .unwrap_or(*t)
                             }
                         };
                     });
@@ -1928,7 +2482,15 @@ fn dial_label<H: UiHost>(
             key_activation: Default::default(),
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
-                label: Some(cached_decimal_0_59(label)),
+                label: Some(match selection {
+                    TimePickerSelection::Hour => {
+                        material_time_picker_hour_value_description(&*cx.app, label.label, is_24h)
+                    }
+                    TimePickerSelection::Minute => {
+                        material_time_picker_minute_value_description(&*cx.app, label.label)
+                    }
+                }),
+                test_id: Some(test_id.clone()),
                 selected,
                 ..Default::default()
             },
@@ -1955,26 +2517,22 @@ fn dial_label<H: UiHost>(
             cx.pointer_region(props, |cx| {
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
-                let (handle_color, handle_shape, label_color, label_style) = {
+                let (label_color, label_style) = {
                     let theme = Theme::global(&*cx.app);
-                    let handle_color = time_tokens::clock_dial_handle_color(theme);
-                    let handle_shape = time_tokens::clock_dial_handle_shape(theme);
                     let label_color = time_tokens::clock_dial_label_text_color(theme, selected);
                     let label_style = time_tokens::clock_dial_label_text_style(theme);
-                    (handle_color, handle_shape, label_color, label_style)
+                    (label_color, label_style)
                 };
 
                 let mut container = ContainerProps::default();
                 container.layout.size.width = Length::Fill;
                 container.layout.size.height = Length::Fill;
                 container.layout.overflow = Overflow::Clip;
-                container.background = selected.then_some(handle_color);
-                container.corner_radii = handle_shape;
 
                 let label_text = if selection == TimePickerSelection::Minute {
-                    cached_minute_dial_label(label)
+                    cached_minute_dial_label(label.label)
                 } else {
-                    cached_decimal_0_59(label)
+                    cached_decimal_0_59(label.label)
                 };
                 let mut tp = TextProps::new(label_text);
                 tp.style = Some(label_style);
@@ -2022,6 +2580,7 @@ fn time_input_period_selector<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     time_now: Time,
     time_model: Model<Time>,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let (width, height, outline_width, outline_color, corner_radii) = {
         let theme = Theme::global(&*cx.app);
@@ -2052,31 +2611,50 @@ fn time_input_period_selector<H: UiHost>(
     flex.layout.size.width = Length::Fill;
     flex.layout.size.height = Length::Fill;
 
+    let am_test_id = time_picker_part_test_id(&test_id, "input.period.am")
+        .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.input.period.am"));
+    let pm_test_id = time_picker_part_test_id(&test_id, "input.period.pm")
+        .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.input.period.pm"));
+    let period_test_id = time_picker_part_test_id(&test_id, "input.period")
+        .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.input.period"));
+    let am_label = material_time_picker_period_am_label(&*cx.app);
+    let pm_label = material_time_picker_period_pm_label(&*cx.app);
+    let period_label = material_time_picker_period_toggle_label(&*cx.app);
+
     cx.container(container, move |cx| {
         let am = time_input_period_item(
             cx,
-            "AM",
+            am_label.clone(),
             current == Period::Am,
             time_model.clone(),
             Period::Am,
+            am_test_id.clone(),
         );
         let pm = time_input_period_item(
             cx,
-            "PM",
+            pm_label.clone(),
             current == Period::Pm,
             time_model.clone(),
             Period::Pm,
+            pm_test_id.clone(),
         );
         vec![cx.flex(flex, move |_cx| vec![am, pm])]
     })
+    .a11y(
+        SemanticsDecoration::default()
+            .role(SemanticsRole::Group)
+            .label(period_label)
+            .test_id(period_test_id),
+    )
 }
 
 fn time_input_period_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    label: &'static str,
+    label: Arc<str>,
     selected: bool,
     time_model: Model<Time>,
     period: Period,
+    test_id: Arc<str>,
 ) -> AnyElement {
     let corner_radii = Corners::all(Px(0.0));
     let focus_ring = {
@@ -2133,8 +2711,9 @@ fn time_input_period_item<H: UiHost>(
             key_activation: Default::default(),
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
-                label: Some(Arc::<str>::from(label)),
+                label: Some(label.clone()),
                 selected,
+                test_id: Some(test_id),
                 ..Default::default()
             },
             layout: {
@@ -2225,7 +2804,7 @@ fn time_input_period_item<H: UiHost>(
                 chrome.layout.size.height = Length::Fill;
                 chrome.background = background;
 
-                let mut tp = TextProps::new(Arc::<str>::from(label));
+                let mut tp = TextProps::new(label.clone());
                 tp.style = Some(label_style);
                 tp.color = Some(label_color);
                 tp.wrap = TextWrap::None;
@@ -2253,6 +2832,7 @@ fn time_picker_period_selector<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     time_now: Time,
     time_model: Model<Time>,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let (width, height, outline_width, outline_color, corner_radii) = {
         let theme = Theme::global(&*cx.app);
@@ -2283,31 +2863,50 @@ fn time_picker_period_selector<H: UiHost>(
     flex.layout.size.width = Length::Fill;
     flex.layout.size.height = Length::Fill;
 
+    let am_test_id = time_picker_part_test_id(&test_id, "period.am")
+        .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.period.am"));
+    let pm_test_id = time_picker_part_test_id(&test_id, "period.pm")
+        .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.period.pm"));
+    let period_test_id = time_picker_part_test_id(&test_id, "period")
+        .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.period"));
+    let am_label = material_time_picker_period_am_label(&*cx.app);
+    let pm_label = material_time_picker_period_pm_label(&*cx.app);
+    let period_label = material_time_picker_period_toggle_label(&*cx.app);
+
     cx.container(container, move |cx| {
         let am = period_item(
             cx,
-            "AM",
+            am_label.clone(),
             current == Period::Am,
             time_model.clone(),
             Period::Am,
+            am_test_id.clone(),
         );
         let pm = period_item(
             cx,
-            "PM",
+            pm_label.clone(),
             current == Period::Pm,
             time_model.clone(),
             Period::Pm,
+            pm_test_id.clone(),
         );
         vec![cx.flex(flex, move |_cx| vec![am, pm])]
     })
+    .a11y(
+        SemanticsDecoration::default()
+            .role(SemanticsRole::Group)
+            .label(period_label)
+            .test_id(period_test_id),
+    )
 }
 
 fn period_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    label: &'static str,
+    label: Arc<str>,
     selected: bool,
     time_model: Model<Time>,
     period: Period,
+    test_id: Arc<str>,
 ) -> AnyElement {
     let corner_radii = Corners::all(Px(0.0));
     let focus_ring = {
@@ -2364,8 +2963,9 @@ fn period_item<H: UiHost>(
             key_activation: Default::default(),
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
-                label: Some(Arc::<str>::from(label)),
+                label: Some(label.clone()),
                 selected,
+                test_id: Some(test_id),
                 ..Default::default()
             },
             layout: {
@@ -2451,7 +3051,7 @@ fn period_item<H: UiHost>(
                 chrome.layout.size.width = Length::Fill;
                 chrome.layout.size.height = Length::Fill;
 
-                let mut tp = TextProps::new(Arc::<str>::from(label));
+                let mut tp = TextProps::new(label.clone());
                 tp.style = Some(label_style);
                 tp.color = Some(label_color);
                 tp.wrap = TextWrap::None;
@@ -2477,6 +3077,7 @@ fn period_item<H: UiHost>(
 
 fn time_picker_actions<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    test_id: Option<Arc<str>>,
     on_cancel: OnActivate,
     on_confirm: OnActivate,
 ) -> AnyElement {
@@ -2488,15 +3089,19 @@ fn time_picker_actions<H: UiHost>(
     props.gap = Px(8.0).into();
 
     cx.flex(props, move |cx| {
-        let cancel = Button::new("Cancel")
+        let cancel_test_id = time_picker_part_test_id(&test_id, "actions.cancel")
+            .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.actions.cancel"));
+        let confirm_test_id = time_picker_part_test_id(&test_id, "actions.confirm")
+            .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.actions.confirm"));
+        let cancel = Button::new(material_time_picker_cancel_label(&*cx.app))
             .variant(ButtonVariant::Text)
             .on_activate(on_cancel.clone())
-            .test_id("time-picker-cancel")
+            .test_id(cancel_test_id)
             .into_element(cx);
-        let ok = Button::new("OK")
+        let ok = Button::new(material_time_picker_confirm_label(&*cx.app))
             .variant(ButtonVariant::Text)
             .on_activate(on_confirm.clone())
-            .test_id("time-picker-ok")
+            .test_id(confirm_test_id)
             .into_element(cx);
         vec![cancel, ok]
     })
@@ -2581,23 +3186,45 @@ fn apply_time_input_models<H: UiHost>(
         return;
     }
 
-    let next_minute = minute_val.map(|m| m.min(59)).unwrap_or(time_now.minute());
+    let next_minute = minute_val.and_then(|m| time_input_minute_value_is_valid(m).then_some(m));
 
-    let next_hour = if is_24h {
-        hour_val.map(|h| h.min(23)).unwrap_or(time_now.hour())
-    } else {
-        let period = current_period(time_now);
-        let hour12 = hour_val.map(|h| if h == 0 { 12 } else { h.clamp(1, 12) });
-        match hour12 {
-            Some(hour12) => hour12_to_24(hour12, period),
-            None => time_now.hour(),
+    let next_hour = hour_val.and_then(|h| {
+        if !time_input_hour_value_is_valid(h, is_24h) {
+            return None;
         }
-    };
+        if is_24h {
+            Some(h)
+        } else {
+            let period = current_period(time_now);
+            Some(hour12_to_24(h, period))
+        }
+    });
 
-    let next = Time::from_hms(next_hour, next_minute, time_now.second()).unwrap_or(time_now);
+    if next_hour.is_none() && next_minute.is_none() {
+        return;
+    }
+
+    let next = Time::from_hms(
+        next_hour.unwrap_or(time_now.hour()),
+        next_minute.unwrap_or(time_now.minute()),
+        time_now.second(),
+    )
+    .unwrap_or(time_now);
     if next != time_now {
         let _ = cx.app.models_mut().update(&time_model, |t| *t = next);
     }
+}
+
+fn time_input_hour_value_is_valid(value: u8, is_24h: bool) -> bool {
+    if is_24h {
+        value <= 23
+    } else {
+        (1..=12).contains(&value)
+    }
+}
+
+fn time_input_minute_value_is_valid(value: u8) -> bool {
+    value <= 59
 }
 
 fn sanitize_time_input_digits(raw: &str) -> String {
@@ -2656,23 +3283,45 @@ fn dial_labels(
     time_now: Time,
     selection: TimePickerSelection,
     is_24h: bool,
-) -> (Vec<(u32, u32)>, usize) {
+) -> (Vec<DialLabel>, usize) {
     match selection {
         TimePickerSelection::Hour => {
             if is_24h {
                 let hour = time_now.hour() as usize;
-                let labels: Vec<(u32, u32)> = (0..24).map(|h| (h as u32, h as u32)).collect();
+                let mut labels: Vec<DialLabel> = Vec::with_capacity(24);
+                for h in 0..12 {
+                    labels.push(DialLabel {
+                        label: h as u32,
+                        value: h as u32,
+                        angle_idx: h,
+                        ring: DialRing::Outer,
+                    });
+                }
+                for h in 12..24 {
+                    labels.push(DialLabel {
+                        label: h as u32,
+                        value: h as u32,
+                        angle_idx: h - 12,
+                        ring: DialRing::Inner,
+                    });
+                }
                 (labels, hour.min(23))
             } else {
                 let hour = time_now.hour() % 12;
                 let hour = if hour == 0 { 12 } else { hour };
-                let labels: Vec<(u32, u32)> = [12u32, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+                let labels: Vec<DialLabel> = [12u32, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
                     .into_iter()
-                    .map(|h| (h, h))
+                    .enumerate()
+                    .map(|(angle_idx, h)| DialLabel {
+                        label: h,
+                        value: h,
+                        angle_idx,
+                        ring: DialRing::Outer,
+                    })
                     .collect();
                 let idx = labels
                     .iter()
-                    .position(|(l, _)| *l == hour as u32)
+                    .position(|l| l.label == hour as u32)
                     .unwrap_or(0);
                 (labels, idx)
             }
@@ -2681,9 +3330,49 @@ fn dial_labels(
             let minute = time_now.minute();
             let snapped = ((minute as u32 + 2) / 5) * 5;
             let snapped = snapped.min(55);
-            let labels: Vec<(u32, u32)> = (0..12).map(|i| (i * 5, i * 5)).collect();
-            let idx = labels.iter().position(|(l, _)| *l == snapped).unwrap_or(0);
+            let labels: Vec<DialLabel> = (0..12)
+                .map(|i| DialLabel {
+                    label: i * 5,
+                    value: i * 5,
+                    angle_idx: i as usize,
+                    ring: DialRing::Outer,
+                })
+                .collect();
+            let idx = labels.iter().position(|l| l.label == snapped).unwrap_or(0);
             (labels, idx)
+        }
+    }
+}
+
+fn nearest_clock_index(from_top: f32, divisions: usize) -> usize {
+    let step = 2.0 * PI / divisions.max(1) as f32;
+    ((from_top / step + 0.5).floor() as usize) % divisions.max(1)
+}
+
+fn dial_value_from_pointer(
+    selection: TimePickerSelection,
+    is_24h: bool,
+    from_top: f32,
+    distance_from_center: f32,
+    dial_size: f32,
+) -> u32 {
+    match selection {
+        TimePickerSelection::Hour if is_24h => {
+            let base = nearest_clock_index(from_top, CLOCK_DIAL_RING_LABEL_COUNT) as u32;
+            let split = dial_size * CLOCK_DIAL_24H_RING_SPLIT_RATIO;
+            if distance_from_center < split {
+                base + 12
+            } else {
+                base
+            }
+        }
+        TimePickerSelection::Hour => {
+            let idx = nearest_clock_index(from_top, CLOCK_DIAL_RING_LABEL_COUNT);
+            if idx == 0 { 12 } else { idx as u32 }
+        }
+        TimePickerSelection::Minute => {
+            let idx = nearest_clock_index(from_top, CLOCK_DIAL_RING_LABEL_COUNT);
+            (idx as u32) * 5
         }
     }
 }
@@ -2759,6 +3448,7 @@ mod tests {
                     input_hour.clone(),
                     input_minute.clone(),
                     false,
+                    None,
                     None,
                 )
             },
