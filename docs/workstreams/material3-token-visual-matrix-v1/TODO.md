@@ -129,10 +129,15 @@ Task IDs use `M3TVM-*`.
 
 ## M3 - Consolidation And Closeout
 
-- [ ] M3TVM-080 [owner=codex] [deps=M3TVM-040,M3TVM-050,M3TVM-060,M3TVM-070] [scope=ecosystem/fret-ui-material3/src/tokens,ecosystem/fret-ui-material3/tests,docs/workstreams/material3-token-visual-matrix-v1]
+- [x] M3TVM-080 [owner=codex] [deps=M3TVM-040,M3TVM-050,M3TVM-060,M3TVM-070] [scope=ecosystem/fret-ui-material3/src/tokens,ecosystem/fret-ui-material3/tests,docs/workstreams/material3-token-visual-matrix-v1]
   Goal: Delete redundant fallback helpers/tests made obsolete by typed token outcomes and fixtures.
   Validation: diff review plus focused nextest/check/clippy gates.
-  Review: Pending.
+  Review: DONE. Shared `shape` and `typography` helper modules now own repeated metric-backed
+  corner and component-text-style fallback patterns. Covered token modules for field/time/search,
+  navigation/app chrome, and tabs/top-app-bar no longer duplicate those local helper chains, and
+  the inventory now tracks shared token helpers separately from component token rows.
+  Handoff: Start M3TVM-090 by closing the lane or splitting any residual breadth into narrow
+  follow-ons.
 
 - [ ] M3TVM-090 [owner=codex] [deps=M3TVM-080] [scope=docs/workstreams/material3-token-visual-matrix-v1]
   Goal: Close the lane or split residual visual-matrix breadth into narrow follow-ons.

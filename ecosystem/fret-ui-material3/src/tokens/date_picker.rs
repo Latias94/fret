@@ -4,9 +4,10 @@
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
-use fret_ui_kit::typography::{self, TextIntent};
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::tokens::{shape, typography};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(crate) enum DatePickerTokenVariant {
@@ -20,10 +21,6 @@ fn token_key(variant: DatePickerTokenVariant, suffix: &str) -> String {
         DatePickerTokenVariant::Docked => format!("md.comp.date-picker.docked.{suffix}"),
         DatePickerTokenVariant::Modal => format!("md.comp.date-picker.modal.{suffix}"),
     }
-}
-
-fn uniform_corners_from_metric(theme: &Theme, key: &str) -> Option<Corners> {
-    theme.metric_by_key(key).map(Corners::all)
 }
 
 pub(crate) fn container_width(theme: &Theme, variant: DatePickerTokenVariant) -> Px {
@@ -46,9 +43,7 @@ pub(crate) fn container_elevation(theme: &Theme, variant: DatePickerTokenVariant
 
 pub(crate) fn container_shape(theme: &Theme, variant: DatePickerTokenVariant) -> Corners {
     let key = token_key(variant, "container.shape");
-    theme
-        .corners_by_key(&key)
-        .or_else(|| uniform_corners_from_metric(theme, &key))
+    shape::corners_or_metric(theme, &key)
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.large"))
         .unwrap_or(Corners::all(Px(16.0)))
 }
@@ -64,11 +59,12 @@ pub(crate) fn weekdays_label_text_style(
     theme: &Theme,
     variant: DatePickerTokenVariant,
 ) -> TextStyle {
-    let style = theme
-        .text_style_by_key(&token_key(variant, "weekdays.label-text"))
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"))
-        .unwrap_or_default();
-    typography::with_intent(style, TextIntent::Control)
+    typography::text_style(
+        theme,
+        Some(&token_key(variant, "weekdays.label-text")),
+        "md.sys.typescale.body-large",
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn weekdays_label_text_color(theme: &Theme, variant: DatePickerTokenVariant) -> Color {
@@ -85,11 +81,12 @@ pub(crate) fn calendar_horizontal_padding(theme: &Theme, _variant: DatePickerTok
 }
 
 pub(crate) fn header_headline_style(theme: &Theme) -> TextStyle {
-    let style = theme
-        .text_style_by_key("md.comp.date-picker.modal.header.headline")
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.headline-large"))
-        .unwrap_or_default();
-    typography::with_intent(style, TextIntent::Control)
+    typography::text_style(
+        theme,
+        Some("md.comp.date-picker.modal.header.headline"),
+        "md.sys.typescale.headline-large",
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn header_headline_color(theme: &Theme) -> Color {
@@ -113,9 +110,7 @@ pub(crate) fn date_cell_height(theme: &Theme, variant: DatePickerTokenVariant) -
 
 pub(crate) fn date_cell_shape(theme: &Theme, variant: DatePickerTokenVariant) -> Corners {
     let key = token_key(variant, "date.container.shape");
-    theme
-        .corners_by_key(&key)
-        .or_else(|| uniform_corners_from_metric(theme, &key))
+    shape::corners_or_metric(theme, &key)
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
         .unwrap_or(Corners::all(Px(9999.0)))
 }
@@ -134,11 +129,12 @@ pub(crate) fn date_today_outline_color(theme: &Theme, variant: DatePickerTokenVa
 }
 
 pub(crate) fn date_label_text_style(theme: &Theme, variant: DatePickerTokenVariant) -> TextStyle {
-    let style = theme
-        .text_style_by_key(&token_key(variant, "date.label-text"))
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"))
-        .unwrap_or_default();
-    typography::with_intent(style, TextIntent::Control)
+    typography::text_style(
+        theme,
+        Some(&token_key(variant, "date.label-text")),
+        "md.sys.typescale.body-large",
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn date_unselected_label_text_color(

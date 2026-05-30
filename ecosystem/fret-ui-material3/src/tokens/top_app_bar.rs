@@ -4,10 +4,11 @@
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::{Theme, theme::CubicBezier};
-use fret_ui_kit::typography::{self, TextIntent};
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::cubic_bezier_ease;
+use crate::tokens::typography;
 use crate::top_app_bar::TopAppBarVariant;
 
 fn container_height_key(variant: TopAppBarVariant) -> &'static str {
@@ -192,17 +193,17 @@ pub(crate) fn headline_color(theme: &Theme, variant: TopAppBarVariant) -> Color 
 }
 
 pub(crate) fn headline_text_style(theme: &Theme, variant: TopAppBarVariant) -> TextStyle {
-    if let Some(style) = theme.text_style_by_key(headline_text_style_key(variant)) {
-        return typography::with_intent(style, TextIntent::Control);
-    }
-
     let fallback_key = match variant {
         TopAppBarVariant::Small | TopAppBarVariant::SmallCentered => "md.sys.typescale.title-large",
         TopAppBarVariant::Medium => "md.sys.typescale.headline-small",
         TopAppBarVariant::Large => "md.sys.typescale.headline-medium",
     };
-    let style = theme.text_style_by_key(fallback_key).unwrap_or_default();
-    typography::with_intent(style, TextIntent::Control)
+    typography::text_style(
+        theme,
+        Some(headline_text_style_key(variant)),
+        fallback_key,
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn leading_icon_color(theme: &Theme, variant: TopAppBarVariant) -> Color {

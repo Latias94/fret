@@ -3,12 +3,13 @@
 //! This module centralizes token key mapping and fallback chains so navigation drawer outcomes
 //! remain stable and drift-resistant during refactors.
 
-use fret_core::{Color, Corners, FontWeight, Px, TextStyle};
+use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
-use fret_ui_kit::typography::{self, TextIntent};
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::navigation_drawer::NavigationDrawerVariant;
+use crate::tokens::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum NavigationDrawerItemInteraction {
@@ -295,38 +296,31 @@ pub(crate) fn state_layer_color(
         .unwrap_or_else(|| theme.color_token(fallback))
 }
 
-pub(crate) fn label_weight(theme: &Theme, active: bool) -> FontWeight {
-    let weight = if active {
-        theme
-            .number_by_key("md.comp.navigation-drawer.active.label-text.weight")
-            .unwrap_or(700.0)
-    } else {
-        theme
-            .number_by_key("md.comp.navigation-drawer.label-text.weight")
-            .unwrap_or(500.0)
-    };
-    FontWeight(weight.round().clamp(1.0, 1000.0) as u16)
-}
-
 pub(crate) fn label_text_style(theme: &Theme, active: bool) -> TextStyle {
-    let style = theme
-        .text_style_by_key("md.sys.typescale.label-large")
-        .unwrap_or_default();
-    let mut style = typography::with_intent(style, TextIntent::Control);
-    style.weight = label_weight(theme, active);
-    style
+    let weight_key = if active {
+        "md.comp.navigation-drawer.active.label-text.weight"
+    } else {
+        "md.comp.navigation-drawer.label-text.weight"
+    };
+    typography::text_style_with_weight_fallback(
+        theme,
+        None,
+        "md.sys.typescale.label-large",
+        weight_key,
+        if active { 700.0 } else { 500.0 },
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn large_badge_label_text_style(theme: &Theme) -> TextStyle {
-    let style = theme
-        .text_style_by_key("md.sys.typescale.label-small")
-        .unwrap_or_default();
-    let mut style = typography::with_intent(style, TextIntent::Control);
-    let weight = theme
-        .number_by_key("md.comp.navigation-drawer.large-badge-label.weight")
-        .unwrap_or(500.0);
-    style.weight = FontWeight(weight.round().clamp(1.0, 1000.0) as u16);
-    style
+    typography::text_style_with_weight_fallback(
+        theme,
+        None,
+        "md.sys.typescale.label-small",
+        "md.comp.navigation-drawer.large-badge-label.weight",
+        500.0,
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn large_badge_label_color(theme: &Theme) -> Color {

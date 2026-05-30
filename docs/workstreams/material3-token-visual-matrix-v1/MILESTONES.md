@@ -49,6 +49,9 @@ Exit criteria:
 
 ## M4 - Closeout
 
+Status: In progress as of M3TVM-080. Shared token helper consolidation is complete; final closeout
+or residual split remains in M3TVM-090.
+
 Exit criteria:
 
 - Matrix rows are no longer `inventory_seeded` without a follow-on reason.

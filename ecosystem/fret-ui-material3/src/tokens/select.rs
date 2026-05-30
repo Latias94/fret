@@ -6,7 +6,7 @@ use fret_ui::Theme;
 use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::select::SelectVariant;
-use crate::tokens::selectable_menu_item as selectable_item_tokens;
+use crate::tokens::{selectable_menu_item as selectable_item_tokens, shape};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -28,10 +28,6 @@ fn blend_over(base: Color, overlay: Color, opacity: f32) -> Color {
     }
 }
 
-fn uniform_corners_from_metric(theme: &Theme, key: &str) -> Option<Corners> {
-    theme.metric_by_key(key).map(Corners::all)
-}
-
 fn container_height_key(variant: SelectVariant) -> &'static str {
     match variant {
         SelectVariant::Outlined => "md.comp.outlined-select.text-field.container.height",
@@ -47,19 +43,14 @@ pub(crate) fn container_height(theme: &Theme, variant: SelectVariant) -> Px {
 
 fn outlined_container_corner(theme: &Theme) -> Corners {
     let key = "md.comp.outlined-select.text-field.container.shape";
-    theme
-        .corners_by_key(key)
-        .or_else(|| uniform_corners_from_metric(theme, key))
+    shape::corners_or_metric(theme, key)
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
         .unwrap_or_else(|| Corners::all(Px(4.0)))
 }
 
 fn filled_container_corner(theme: &Theme) -> Corners {
     let key = "md.comp.filled-select.text-field.container.shape";
-    if let Some(corners) = theme
-        .corners_by_key(key)
-        .or_else(|| uniform_corners_from_metric(theme, key))
-    {
+    if let Some(corners) = shape::corners_or_metric(theme, key) {
         return corners;
     }
     if let Some(corners) = theme.corners_by_key("md.sys.shape.corner.extra-small.top") {
@@ -883,9 +874,7 @@ pub(crate) fn menu_container_shape(theme: &Theme, variant: SelectVariant) -> Cor
         SelectVariant::Outlined => "md.comp.outlined-select.menu.container.shape",
         SelectVariant::Filled => "md.comp.filled-select.menu.container.shape",
     };
-    theme
-        .corners_by_key(key)
-        .or_else(|| uniform_corners_from_metric(theme, key))
+    shape::corners_or_metric(theme, key)
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
         .unwrap_or_else(|| Corners::all(Px(4.0)))
 }

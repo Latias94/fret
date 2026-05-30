@@ -45,6 +45,8 @@ instead of broad component behavior axes.
 - Generated token source: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`
 - Public injection surface: `ecosystem/fret-ui-material3/src/tokens/v30.rs`
 - Component token modules: `ecosystem/fret-ui-material3/src/tokens/*.rs`
+- Shared token helper modules: `ecosystem/fret-ui-material3/src/tokens/shape.rs` and
+  `ecosystem/fret-ui-material3/src/tokens/typography.rs`
 - Shared fallback helper: `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`
 - Generated inventory report:
   `docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json`

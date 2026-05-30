@@ -9,6 +9,10 @@
     "fret_injection_surface": "ecosystem/fret-ui-material3/src/tokens/v30.rs",
     "generated_snapshot": "ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs"
   },
+  "shared_token_helpers": [
+    "tokens/shape.rs",
+    "tokens/typography.rs"
+  ],
   "source_precedence": {
     "token_inventory": "Material Web v30 generated snapshot, then manual Fret v30 aliases",
     "state_naming": "Compose Material3 interaction/state vocabulary, then Fret pressable state",

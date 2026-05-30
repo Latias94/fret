@@ -4,19 +4,16 @@
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
-use fret_ui_kit::typography::{self, TextIntent};
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::interaction::PressableInteraction;
 use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::tokens::{shape, typography};
 
 pub(crate) const COMPONENT_PREFIX: &str = "md.comp.time-picker";
 
 fn token_key(suffix: &str) -> String {
     format!("{COMPONENT_PREFIX}.{suffix}")
-}
-
-fn uniform_corners_from_metric(theme: &Theme, key: &str) -> Option<Corners> {
-    theme.metric_by_key(key).map(Corners::all)
 }
 
 pub(crate) fn container_color(theme: &Theme) -> Color {
@@ -34,19 +31,18 @@ pub(crate) fn container_elevation(theme: &Theme) -> Px {
 
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
     let key = token_key("container.shape");
-    theme
-        .corners_by_key(&key)
-        .or_else(|| uniform_corners_from_metric(theme, &key))
+    shape::corners_or_metric(theme, &key)
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-large"))
         .unwrap_or(Corners::all(Px(28.0)))
 }
 
 pub(crate) fn headline_style(theme: &Theme) -> TextStyle {
-    let style = theme
-        .text_style_by_key(&token_key("headline"))
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.label-medium"))
-        .unwrap_or_default();
-    typography::with_intent(style, TextIntent::Control)
+    typography::text_style(
+        theme,
+        Some(&token_key("headline")),
+        "md.sys.typescale.label-medium",
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn headline_color(theme: &Theme) -> Color {
@@ -71,19 +67,18 @@ pub(crate) fn clock_dial_background(theme: &Theme) -> Color {
 
 pub(crate) fn clock_dial_shape(theme: &Theme) -> Corners {
     let key = token_key("clock-dial.shape");
-    theme
-        .corners_by_key(&key)
-        .or_else(|| uniform_corners_from_metric(theme, &key))
+    shape::corners_or_metric(theme, &key)
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
         .unwrap_or(Corners::all(Px(9999.0)))
 }
 
 pub(crate) fn clock_dial_label_text_style(theme: &Theme) -> TextStyle {
-    let style = theme
-        .text_style_by_key(&token_key("clock-dial.label-text"))
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"))
-        .unwrap_or_default();
-    typography::with_intent(style, TextIntent::Control)
+    typography::text_style(
+        theme,
+        Some(&token_key("clock-dial.label-text")),
+        "md.sys.typescale.body-large",
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn clock_dial_label_text_color(theme: &Theme, selected: bool) -> Color {
@@ -117,9 +112,7 @@ pub(crate) fn clock_dial_handle_color(theme: &Theme) -> Color {
 
 pub(crate) fn clock_dial_handle_shape(theme: &Theme) -> Corners {
     let key = token_key("clock-dial.selector.handle.container.shape");
-    theme
-        .corners_by_key(&key)
-        .or_else(|| uniform_corners_from_metric(theme, &key))
+    shape::corners_or_metric(theme, &key)
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
         .unwrap_or(Corners::all(Px(9999.0)))
 }
@@ -139,9 +132,7 @@ pub(crate) fn clock_dial_selector_center_color(theme: &Theme) -> Color {
 
 pub(crate) fn clock_dial_selector_center_shape(theme: &Theme) -> Corners {
     let key = token_key("clock-dial.selector.center.container.shape");
-    theme
-        .corners_by_key(&key)
-        .or_else(|| uniform_corners_from_metric(theme, &key))
+    shape::corners_or_metric(theme, &key)
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
         .unwrap_or(Corners::all(Px(9999.0)))
 }
@@ -173,9 +164,7 @@ pub(crate) fn time_selector_container_height(theme: &Theme) -> Px {
 
 pub(crate) fn time_selector_shape(theme: &Theme) -> Corners {
     let key = token_key("time-selector.container.shape");
-    theme
-        .corners_by_key(&key)
-        .or_else(|| uniform_corners_from_metric(theme, &key))
+    shape::corners_or_metric(theme, &key)
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.small"))
         .unwrap_or(Corners::all(Px(8.0)))
 }
@@ -196,19 +185,21 @@ pub(crate) fn time_selector_container_color(theme: &Theme, selected: bool) -> Co
 }
 
 pub(crate) fn time_selector_label_text_style(theme: &Theme) -> TextStyle {
-    let style = theme
-        .text_style_by_key(&token_key("time-selector.label-text"))
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.display-large"))
-        .unwrap_or_default();
-    typography::with_intent(style, TextIntent::Control)
+    typography::text_style(
+        theme,
+        Some(&token_key("time-selector.label-text")),
+        "md.sys.typescale.display-large",
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn time_selector_separator_style(theme: &Theme) -> TextStyle {
-    let style = theme
-        .text_style_by_key(&token_key("time-selector.separator"))
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.display-large"))
-        .unwrap_or_default();
-    typography::with_intent(style, TextIntent::Control)
+    typography::text_style(
+        theme,
+        Some(&token_key("time-selector.separator")),
+        "md.sys.typescale.display-large",
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn time_selector_separator_color(theme: &Theme) -> Color {
@@ -323,9 +314,7 @@ pub(crate) fn period_selector_container_height(theme: &Theme) -> Px {
 
 pub(crate) fn period_selector_shape(theme: &Theme) -> Corners {
     let key = token_key("period-selector.container.shape");
-    theme
-        .corners_by_key(&key)
-        .or_else(|| uniform_corners_from_metric(theme, &key))
+    shape::corners_or_metric(theme, &key)
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.small"))
         .unwrap_or(Corners::all(Px(8.0)))
 }
@@ -351,11 +340,12 @@ pub(crate) fn period_selector_selected_container_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn period_selector_label_text_style(theme: &Theme) -> TextStyle {
-    let style = theme
-        .text_style_by_key(&token_key("period-selector.label-text"))
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.title-medium"))
-        .unwrap_or_default();
-    typography::with_intent(style, TextIntent::Control)
+    typography::text_style(
+        theme,
+        Some(&token_key("period-selector.label-text")),
+        "md.sys.typescale.title-medium",
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn period_selector_label_color(

@@ -1,5 +1,5 @@
 use fret_app::App;
-use fret_core::{Color, Corners, FontWeight, Px, TextStyle};
+use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
 use fret_ui_kit::typography::{self, TextIntent};
 use serde::Deserialize;
@@ -19,6 +19,7 @@ use crate::tokens::{
     navigation_bar, navigation_drawer, navigation_rail, progress_indicator, radio, search_bar,
     search_view, segmented_button, select, sheet_bottom, slider, snackbar, suggestion_chip, switch,
     tabs, text_field, time_input, time_picker, tooltip, top_app_bar,
+    typography as token_typography,
 };
 use crate::top_app_bar::TopAppBarVariant;
 
@@ -5008,13 +5009,8 @@ fn text_style_with_weight(
     weight_key: &str,
     intent: TextIntent,
 ) -> TextStyle {
-    let mut style = match intent {
-        TextIntent::Control => control_text_style(theme, source_key),
-        TextIntent::Content => content_text_style(theme, source_key),
-    };
-    let weight = token_number(theme, weight_key);
-    style.weight = FontWeight(weight.round().clamp(1.0, 1000.0) as u16);
-    style
+    let _ = token_number(theme, weight_key);
+    token_typography::text_style_with_weight(theme, None, source_key, Some(weight_key), intent)
 }
 
 fn text_intent_for_role(role: &str) -> TextIntent {

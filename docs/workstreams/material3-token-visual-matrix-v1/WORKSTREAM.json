@@ -106,6 +106,6 @@
   ],
   "continue_policy": {
     "default_action": "run_next_task",
-    "notes": "M3TVM-040 through M3TVM-070 are complete. Continue with M3TVM-080 fallback/helper consolidation now that all family rows have fixture-backed token outcomes."
+    "notes": "M3TVM-040 through M3TVM-080 are complete. Continue with M3TVM-090 closeout or split residual visual-matrix breadth into narrow follow-ons."
   }
 }

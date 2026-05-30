@@ -8,7 +8,7 @@ use fret_ui::{TextInputStyle, Theme};
 use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::text_field::TextFieldVariant;
-use crate::tokens::selectable_menu_item as selectable_item_tokens;
+use crate::tokens::{selectable_menu_item as selectable_item_tokens, shape};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -30,10 +30,6 @@ fn blend_over(base: Color, overlay: Color, opacity: f32) -> Color {
     }
 }
 
-fn uniform_corners_from_metric(theme: &Theme, key: &str) -> Option<Corners> {
-    theme.metric_by_key(key).map(Corners::all)
-}
-
 pub(crate) fn text_field_container_height(theme: &Theme, variant: TextFieldVariant) -> Px {
     let key = match variant {
         TextFieldVariant::Outlined => "md.comp.outlined-autocomplete.text-field.container.height",
@@ -47,9 +43,7 @@ pub(crate) fn text_field_container_shape(theme: &Theme, variant: TextFieldVarian
         TextFieldVariant::Outlined => "md.comp.outlined-autocomplete.text-field.container.shape",
         TextFieldVariant::Filled => "md.comp.filled-autocomplete.text-field.container.shape",
     };
-    theme
-        .corners_by_key(key)
-        .or_else(|| uniform_corners_from_metric(theme, key))
+    shape::corners_or_metric(theme, key)
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
         .unwrap_or_else(|| Corners::all(Px(4.0)))
 }
@@ -937,9 +931,7 @@ pub(crate) fn menu_container_shape(theme: &Theme, variant: TextFieldVariant) -> 
         TextFieldVariant::Outlined => "md.comp.outlined-autocomplete.menu.container.shape",
         TextFieldVariant::Filled => "md.comp.filled-autocomplete.menu.container.shape",
     };
-    theme
-        .corners_by_key(key)
-        .or_else(|| uniform_corners_from_metric(theme, key))
+    shape::corners_or_metric(theme, key)
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
         .unwrap_or_else(|| Corners::all(Px(4.0)))
 }

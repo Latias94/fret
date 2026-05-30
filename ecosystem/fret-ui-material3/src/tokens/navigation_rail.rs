@@ -3,11 +3,12 @@
 //! This module centralizes token key mapping and fallback chains so navigation rail outcomes
 //! remain stable and drift-resistant during refactors.
 
-use fret_core::{Color, Corners, FontWeight, Px, TextStyle};
+use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
-use fret_ui_kit::typography::{self, TextIntent};
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::tokens::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum NavigationRailItemInteraction {
@@ -172,26 +173,20 @@ pub(crate) fn label_color(
         .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys(fallback))
 }
 
-pub(crate) fn label_weight(theme: &Theme, active: bool) -> FontWeight {
-    let weight = if active {
-        theme
-            .number_by_key("md.comp.navigation-rail.active.label-text.weight")
-            .unwrap_or(700.0)
-    } else {
-        theme
-            .number_by_key("md.comp.navigation-rail.label-text.weight")
-            .unwrap_or(500.0)
-    };
-    FontWeight(weight.round().clamp(1.0, 1000.0) as u16)
-}
-
 pub(crate) fn label_text_style(theme: &Theme, active: bool) -> TextStyle {
-    let style = theme
-        .text_style_by_key("md.sys.typescale.label-medium")
-        .unwrap_or_default();
-    let mut style = typography::with_intent(style, TextIntent::Control);
-    style.weight = label_weight(theme, active);
-    style
+    let weight_key = if active {
+        "md.comp.navigation-rail.active.label-text.weight"
+    } else {
+        "md.comp.navigation-rail.label-text.weight"
+    };
+    typography::text_style_with_weight_fallback(
+        theme,
+        None,
+        "md.sys.typescale.label-medium",
+        weight_key,
+        if active { 700.0 } else { 500.0 },
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn icon_size(theme: &Theme) -> Px {

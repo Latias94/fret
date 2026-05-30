@@ -5,11 +5,13 @@ Last updated: 2026-05-30
 
 ## Current State
 
-M3TVM-010 through M3TVM-070 are complete. The workstream exists, the matrix covers all 39 M3PV2
+M3TVM-010 through M3TVM-080 are complete. The workstream exists, the matrix covers all 39 M3PV2
 components, the generated inventory report maps all 38 component token modules to matrix rows, and
 the fixture-driven token visual harness covers Button, the full field-family packet,
 Checkbox/Radio/Switch/Slider/SegmentedButton/IconButton, the chip family, the navigation/app
-chrome family, and the overlay/surface/data-display family.
+chrome family, and the overlay/surface/data-display family. M3TVM-080 also split shared token
+helpers (`shape`, `typography`) out of the component-module inventory and consolidated repeated
+shape/typography fallback code into those helper surfaces.
 
 ## Decisions
 
@@ -22,9 +24,9 @@ chrome family, and the overlay/surface/data-display family.
 
 ## Next Recommended Action
 
-Start M3TVM-080 and use the now-covered matrix to delete or consolidate redundant fallback helpers
-and stale tests. Keep the scope narrow: remove only helpers made obsolete by typed token outcomes
-or fixture-backed paths, then refresh the inventory and run the narrow Material3 gates.
+Start M3TVM-090. Close the lane if the refreshed matrix/inventory state is sufficient, or split any
+residual breadth into narrow follow-on workstreams. Do not reopen family packet implementation work
+unless the closeout audit finds a source-backed gap.
 
 ## Useful Gates
 

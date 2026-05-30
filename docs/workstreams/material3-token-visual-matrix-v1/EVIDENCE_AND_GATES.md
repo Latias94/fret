@@ -276,3 +276,37 @@ cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D
     - `python tools/check_workstream_catalog.py`: passed with 511 dedicated directories and 47
       standalone markdown files.
     - `git diff --check`: passed.
+- 2026-05-30: M3TVM-080 consolidated fallback/helper surfaces after all family rows were
+  fixture-backed.
+  - Shared helpers:
+    - Added `ecosystem/fret-ui-material3/src/tokens/shape.rs` for metric-backed uniform corner
+      fallback access.
+    - Extended `ecosystem/fret-ui-material3/src/tokens/typography.rs` with shared component
+      text-style and weight fallback helpers.
+  - Result:
+    - Removed duplicated `uniform_corners_from_metric` helpers from Autocomplete, Select,
+      DatePicker, TimeInput, and TimePicker token modules.
+    - Routed covered date/time/search/navigation/tab/top-app-bar typography fallback paths through
+      shared token typography helpers while preserving previous weight fallback values.
+    - Updated the inventory generator to track shared token helpers separately from component token
+      modules. The refreshed report now maps all 38 component token modules to matrix rows with no
+      unmapped component token modules, and records `shape` plus `typography` as shared helpers.
+    - Refreshed inventory counts: component fallback sites dropped from 1177 to 1117; component
+      magic visual constants dropped from 487 to 479.
+  - Fresh verification:
+    - `cargo fmt -p fret-ui-material3`: passed.
+    - `cargo fmt -p fret-ui-material3 -- --check`: passed.
+    - `cargo check -p fret-ui-material3 --lib`: passed.
+    - `cargo check -p fret-ui-material3`: passed.
+    - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`:
+      passed.
+    - `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures`: passed, 1
+      test run.
+    - `cargo nextest run -p fret-ui-material3 --lib tokens::v30`: passed, 6 tests run.
+    - `python -m py_compile tools/parity-discovery/material3_token_inventory.py`: passed.
+    - `python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json`: passed.
+    - `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json | Out-Null`; `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null`; `python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null`; `python -m json.tool ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json | Out-Null`: passed.
+    - `python tools/check_workstream_catalog.py`: passed with 511 dedicated directories and 47
+      standalone markdown files.
+    - `git diff --check`: passed with the existing CRLF/LF warning for
+      `material3_token_visual_matrix_v1.json`.
