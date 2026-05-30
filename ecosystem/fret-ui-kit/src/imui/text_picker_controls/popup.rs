@@ -1,39 +1,14 @@
-use std::sync::Arc;
-
-use fret_runtime::Model;
-use fret_ui::GlobalElementId;
 use fret_ui::UiHost;
 
-use super::super::{PopupMenuOptions, UiWriterImUiFacadeExt};
-use super::keyboard::{
-    InputTextPickerKeyboardPick, InputTextPickerKeyboardState, install_picker_keyboard_handler,
-};
+use super::super::UiWriterImUiFacadeExt;
 
 mod item;
+mod keyboard;
+mod types;
 
 use item::{InputTextPickerPopupItemInput, render_text_picker_popup_item};
-
-pub(super) struct InputTextPickerPopupInput<'a> {
-    pub(super) id: &'a str,
-    pub(super) trigger: Option<GlobalElementId>,
-    pub(super) popup: PopupMenuOptions,
-    pub(super) model: Model<String>,
-    pub(super) popup_open: Model<bool>,
-    pub(super) keyboard_state: Option<Model<InputTextPickerKeyboardState>>,
-    pub(super) visible_candidates: &'a [(usize, Arc<str>)],
-    pub(super) selected_value: String,
-    pub(super) active_source_index: Option<usize>,
-    pub(super) pending_keyboard_pick: Option<InputTextPickerKeyboardPick>,
-    pub(super) item_test_id_base: Option<Arc<str>>,
-    pub(super) install_keyboard_handler: bool,
-    pub(super) keyboard_repeat: bool,
-}
-
-pub(super) struct InputTextPickerPopupResult {
-    pub(super) opened: bool,
-    pub(super) picked_index: Option<usize>,
-    pub(super) picked: Option<Arc<str>>,
-}
+use keyboard::install_popup_keyboard_handler_if_needed;
+pub(super) use types::{InputTextPickerPopupInput, InputTextPickerPopupResult};
 
 pub(super) fn render_text_picker_popup<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -79,28 +54,4 @@ pub(super) fn render_text_picker_popup<H: UiHost, W: UiWriterImUiFacadeExt<H> + 
         picked_index,
         picked,
     }
-}
-
-fn install_popup_keyboard_handler_if_needed<H: UiHost>(
-    ui: &mut super::super::ImUiFacade<'_, '_, H>,
-    input: &InputTextPickerPopupInput<'_>,
-) {
-    if !input.install_keyboard_handler {
-        return;
-    }
-    let Some(keyboard_state) = input.keyboard_state.clone() else {
-        return;
-    };
-
-    let cx = ui.cx_mut();
-    let key_owner = cx.root_id();
-    install_picker_keyboard_handler(
-        cx,
-        key_owner,
-        input.model.clone(),
-        input.popup_open.clone(),
-        keyboard_state,
-        input.visible_candidates.to_vec(),
-        input.keyboard_repeat,
-    );
 }

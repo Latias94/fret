@@ -754,6 +754,8 @@
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/open_policy.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/item.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/keyboard.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/types.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/response.rs",
     "ecosystem/fret-ui-kit/src/imui/drag_drop.rs",
     "ecosystem/fret-ui-kit/src/imui/drag_drop/source.rs",

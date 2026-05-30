@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Text Picker Popup Sub-Owner Evidence - 2026-05-30
+
+Claim verified: IMUI input-text picker popup keyboard installation and popup data shapes split out
+without changing popup mounting, popup-scoped keyboard installation, selectable item rendering,
+picked-result reporting, or completion/history picker behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup.rs` keeps popup mounting, candidate
+  iteration, and picked-result assembly.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/keyboard.rs` owns optional
+  popup-scoped keyboard handler installation.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/types.rs` owns popup input/result data
+  shapes with visibility constrained to `crate::imui::text_picker_controls`.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/item.rs` remains the selectable
+  candidate row and picked-value commit owner.
+- `tools/gate_imui_workstream_source.py` now checks the popup root, keyboard, types, and item owner
+  boundaries.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass (6 passed,
+  180 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test
+  imui_input_text_picker_options_smoke --no-fail-fast`: pass (2 passed).
+
 ## Checkbox Entry/Props Owner-Split Evidence - 2026-05-30
 
 Claim verified: IMUI checkbox entry and props ownership split without changing label identity,
