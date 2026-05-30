@@ -2105,6 +2105,14 @@ Last updated: 2026-05-30
       popup/menubar policy provider nesting and IMUI child mounting. The root `panel.rs` keeps
       open/anchor lifecycle reads, keepalive updates, nav-state installation, panel id storage, and
       `PopupMenuBuilt` assembly.
+- [x] Split IMUI popup-menu panel lifecycle/state out of
+      `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs` into a private state owner
+      without changing open/anchor validation, missing-anchor close cleanup, keepalive refresh,
+      last-panel-size reuse, panel id storage, nav-state installation, or `PopupMenuBuilt`
+      assembly.
+      Result: `popup_overlay/menu/panel/state.rs` owns popup store reads, missing-anchor cleanup,
+      keepalive refresh, desired panel size projection, and panel id writeback. The root
+      `panel.rs` keeps nav-state installation and panel assembly.
 - [x] Split IMUI popup modal layout/chrome construction out of
       `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal.rs` into a private owner module without
       changing modal open/keepalive policy, Escape/outside-press dismissal, barrier behavior,

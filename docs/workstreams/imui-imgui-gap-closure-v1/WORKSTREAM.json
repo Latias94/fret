@@ -690,6 +690,7 @@
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/content.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/layout.rs",
+    "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/state.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/request.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/request/handlers.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/modal.rs",

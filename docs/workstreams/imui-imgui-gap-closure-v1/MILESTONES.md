@@ -1136,6 +1136,12 @@ reads, keepalive updates, nav-state installation, panel id storage, and `PopupMe
 `panel/layout.rs` owns popper placement, menu semantics layout, panel palette/chrome, and column
 props. `panel/content.rs` owns popup/menubar policy provider nesting plus IMUI child mounting.
 
+2026-05-30 popup-menu panel lifecycle/state owner-split result:
+`ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/state.rs` now owns popup store reads,
+open/anchor validation, missing-anchor cleanup, keepalive refresh, last-panel-size desired-size
+projection, and panel id writeback. `panel.rs` keeps nav-state installation, content mounting, and
+`PopupMenuBuilt` assembly.
+
 2026-05-27 checkbox behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/behavior.rs` now owns pressable behavior
 installation, activate/shortcut model toggling, context-menu key handling, transient changed reads,

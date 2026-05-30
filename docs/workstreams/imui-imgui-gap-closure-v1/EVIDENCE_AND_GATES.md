@@ -5941,6 +5941,40 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Popup Menu Panel Lifecycle/State Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI popup-menu panel lifecycle/state moved into a private owner without changing
+open/anchor validation, missing-anchor close cleanup, keepalive refresh, last-panel-size reuse,
+panel id storage, nav-state installation, content mounting, or `PopupMenuBuilt` assembly.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs` keeps nav-state installation,
+  content mounting, panel semantics assembly, first-item extraction, and `PopupMenuBuilt` assembly.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/state.rs` owns popup store reads,
+  open/anchor validation, missing-anchor cleanup, keepalive refresh, desired panel size projection,
+  and panel id writeback.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/layout.rs` still owns popper placement,
+  menu semantics layout, panel palette/chrome, and panel column props.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/content.rs` still owns popup/menubar
+  policy provider nesting and IMUI child mounting.
+- `tools/gate_imui_workstream_source.py` now checks the panel state owner and rejects lifecycle
+  store reads or keepalive writeback from drifting back into `panel.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui popup_hover interaction_menu_tabs --no-fail-fast`: pass
+  (39 passed, 147 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass; validated 510 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+
 ## Checkbox Behavior Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI checkbox pressable behavior moved into a private owner without changing label
