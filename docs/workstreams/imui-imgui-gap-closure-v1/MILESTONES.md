@@ -75,6 +75,12 @@ re-exports theme preset picker text helpers. `primitives/readout/theme_preset.rs
 picker header, row label, row status text props, and fixed-line tests. Compact header sizing, row
 label/status line boxes, re-export paths, and style/theme picker rendering remain unchanged.
 
+2026-05-31 editor input-group tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/input_group.rs` now keeps joined input-group helper
+implementation and test-owner routing. `primitives/input_group/tests.rs` owns value text-role layout
+coverage. Joined frame helpers, segment helpers, axis marker routing, and value text
+shrink/ellipsis policy remain unchanged.
+
 2026-05-31 editor readout tests child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the non-popup readout helper hub and
 child-owner re-exports. `primitives/readout/tests.rs` owns compact readout sizing and editor

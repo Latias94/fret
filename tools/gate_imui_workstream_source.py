@@ -30522,17 +30522,33 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/input_group.rs"),
             required=[
+                "mod tests;",
                 "pub(crate) fn editor_input_value_text",
                 "editor_input_segment_text_props(",
                 "editor_input_value_text_props(",
                 "editor_axis_marker_text_props(",
-                "editor_input_value_text_is_single_line_and_shrinkable",
             ],
             forbidden=[
                 "TextProps {",
                 "TextStyle {",
                 "wrap: TextWrap::None,",
                 "overflow: TextOverflow::Ellipsis,",
+                "use fret_ui_kit::typography;",
+                "editor_input_value_text_is_single_line_and_shrinkable",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/input_group/tests.rs"),
+            required=[
+                "editor_input_value_text_is_single_line_and_shrinkable",
+                "editor_input_value_text(",
+                "EditorDensity::default()",
+                "TextWrap::None",
+                "TextOverflow::Ellipsis",
+            ],
+            forbidden=[
+                "TextProps {",
+                "TextStyle {",
                 "use fret_ui_kit::typography;",
             ],
         ),

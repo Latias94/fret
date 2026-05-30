@@ -97,6 +97,11 @@ Last updated: 2026-05-31
       Result: `primitives/readout.rs` now keeps the shared non-popup readout hub and re-exports the
       theme-preset helpers. `primitives/readout/theme_preset.rs` owns the theme picker header, row
       label, row status text props, and focused fixed-line tests.
+- [x] Split editor input-group value text-role regression into a private test owner without
+      changing joined input frame helpers, segment helpers, axis marker routing, or value text
+      shrink/ellipsis policy.
+      Result: `primitives/input_group.rs` keeps joined input-group helper implementation plus
+      test-owner routing. `primitives/input_group/tests.rs` owns value text-role layout coverage.
 - [x] Split shared editor readout text-role regression tests into a private test owner without
       changing non-popup readout helper names, text-role layout policy, compact readout sizing, or
       popup/theme-preset child owner boundaries.
