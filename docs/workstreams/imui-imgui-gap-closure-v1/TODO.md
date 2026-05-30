@@ -60,6 +60,13 @@ Last updated: 2026-05-31
       `tests/draw_list/commands/meshes.rs` owns triangle mesh coverage,
       `tests/draw_list/commands/media.rs` owns image/SVG overlay coverage, and
       `tests/draw_list/commands/polygons.rs` owns concave fill coverage.
+- [x] Split IMUI debug-draw path helper regression coverage into private sub-owners without
+      changing rect/polyline/polygon/triangle/quad path closure, circle/ngon/ellipse path
+      generation, ellipse defaults/rotation, or native Bezier path command routing.
+      Result: `debug_draw_controls/tests/paths.rs` is now a thin test hub.
+      `tests/paths/linear.rs` owns rect/polyline/polygon/triangle/quad coverage,
+      `tests/paths/round.rs` owns circle/ngon/ellipse coverage, and
+      `tests/paths/beziers.rs` owns quadratic/cubic Bezier command coverage.
 - [x] Split IMUI text-field buffered draft/session handling into a private child owner without
       changing TextField public options, draft-controller support, buffered blur behavior,
       clear-button reset behavior, or API smoke coverage.

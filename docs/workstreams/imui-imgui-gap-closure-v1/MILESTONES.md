@@ -28,6 +28,13 @@ lives in `tests/draw_list/commands/media.rs`, and concave polygon fill coverage 
 `tests/draw_list/commands/polygons.rs`. `ImUiDebugDrawList` command recording behavior and public
 debug-draw authoring APIs remain unchanged.
 
+2026-05-31 debug-draw path helper test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/paths.rs` is now a thin test hub.
+Rect/polyline/polygon/triangle/quad path closure coverage lives in `tests/paths/linear.rs`,
+circle/ngon/ellipse generation and ellipse default/rotation coverage lives in `tests/paths/round.rs`,
+and native quadratic/cubic Bezier command coverage lives in `tests/paths/beziers.rs`. Path helper
+behavior and debug-draw scene output contracts remain unchanged.
+
 2026-05-30 text-field buffered child-owner result:
 `ecosystem/fret-ui-editor/src/controls/text_field.rs` now keeps the public control/options and
 layout orchestration only. `controls/text_field/buffered.rs` owns the draft controller, buffered

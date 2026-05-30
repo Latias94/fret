@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Debug-Draw Path Helper Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI debug-draw path helper regression coverage split into private sub-owners
+without changing rect/polyline/polygon/triangle/quad path closure, circle/ngon/ellipse generation,
+ellipse defaults/rotation, or native Bezier path command routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/paths.rs` is now a thin test hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/paths/linear.rs` owns
+  rect/polyline/polygon/triangle/quad path closure coverage.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/paths/round.rs` owns circle/ngon/ellipse
+  generation plus ellipse defaults/rotation coverage.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/paths/beziers.rs` owns native
+  quadratic/cubic Bezier command coverage.
+- `tools/gate_imui_workstream_source.py` now checks the path helper test hub/sub-owner split and
+  keeps concrete path helper regression tests out of the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the path helper test
+  owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui rect_path_closes_clockwise_edges
+  polyline_path_requires_enough_points_and_closes_when_requested
+  convex_poly_fill_path_requires_three_points_and_closes
+  concave_poly_fill_path_requires_three_points_and_closes
+  triangle_path_closes_and_degenerate_triangles_are_detected quad_path_closes_four_ordered_points
+  circle_path_uses_four_cubic_arcs_and_closes ngon_path_requires_three_segments_and_positive_radius
+  ellipse_path_defaults_segments_and_supports_rotation bezier_paths_use_native_quad_and_cubic_commands
+  --no-fail-fast`: pass (10 passed, 741 skipped).
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass (6 passed).
+- `git diff --check`: pass.
+
 ## IMUI Debug-Draw Draw-List Command Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI debug-draw draw-list command regression coverage split into private
