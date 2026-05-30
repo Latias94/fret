@@ -1223,6 +1223,12 @@ behavior installation, keyboard activation lifecycle marking, clicked transient 
 `ResponseExt` population. `element.rs` keeps canvas composition, fill-layout policy for interactive
 canvases, cache policy, clipping, test-id routing, and debug-draw command painting.
 
+2026-05-30 debug-draw element canvas/pressable owner split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element.rs` now keeps
+interactive/noninteractive element dispatch only. `element/canvas.rs` owns canvas cache policy,
+fill layout, clipping, test-id routing, and command painting. `element/pressable.rs` owns
+pressable props, focus-ring suppression, behavior installation, and interactive canvas embedding.
+
 2026-05-27 table row-group owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` keeps
 `wrap_pinned_table_row_groups(...)` orchestration. `row_groups/split.rs` owns pinned-cell

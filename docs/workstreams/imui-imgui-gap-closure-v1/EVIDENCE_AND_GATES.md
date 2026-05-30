@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Debug Draw Element Canvas/Pressable Owner-Split Evidence - 2026-05-30
+
+Claim verified: IMUI debug-draw element canvas and pressable composition split without changing
+noninteractive canvas output, pressable canvas wrapping, fill-layout policy, cache policy, clipping,
+test-id routing, paint routing, or pressable behavior installation.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element.rs` now keeps
+  interactive/noninteractive element dispatch only.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element/canvas.rs` owns canvas cache policy,
+  fill layout, clipping, test-id routing, and command painting.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element/pressable.rs` owns pressable props,
+  focus-ring suppression, behavior installation, and interactive canvas embedding.
+- `tools/gate_imui_workstream_source.py` now checks the root/canvas/pressable/behavior split.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls::tests::element
+  --no-fail-fast`: pass (2 passed, 688 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass (1 passed).
+
 ## Floating Window Resize Handle Pointer Events Owner-Split Evidence - 2026-05-30
 
 Claim verified: IMUI floating-window resize handle pointer events split without changing pointer

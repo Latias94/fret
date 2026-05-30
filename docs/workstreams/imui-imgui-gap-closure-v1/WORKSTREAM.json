@@ -1071,6 +1071,8 @@
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/round/ngon.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element/behavior.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element/canvas.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element/pressable.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods/arcs.rs",
