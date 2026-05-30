@@ -30537,6 +30537,37 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/numeric_input.rs"),
+            required=[
+                "mod tests;",
+                "pub struct NumericInputOptions",
+                "pub struct NumericInput<T>",
+                "fn editor_numeric_input_text_style",
+                "editor_validation_message_text_props(",
+                "NumericInputSelectionBehavior::ReplaceAllOnFocus",
+            ],
+            forbidden=[
+                "numeric_input_text_style_uses_density_row_height_for_edit_line_box",
+                "numeric_input_from_presentation_adopts_format_parse_and_chrome_affixes",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/numeric_input/tests.rs"),
+            required=[
+                "numeric_input_text_style_uses_density_row_height_for_edit_line_box",
+                "numeric_input_from_presentation_adopts_format_parse_and_chrome_affixes",
+                "NumericInput::from_presentation",
+                "NumericPresentation::<f64>::fixed_decimals(2)",
+                'with_chrome_prefix("$")',
+                'with_chrome_suffix("ms")',
+            ],
+            forbidden=[
+                "editor_validation_message_text_props(",
+                "clear_numeric_error_when_draft_changes",
+                "sync_numeric_text_entry_focus(",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/drag_value.rs"),
             required=[
                 "mod tests;",

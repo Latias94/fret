@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor NumericInput Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor numeric-input text-style and presentation regressions split into a private
+test owner without changing NumericInput public options, default selection behavior, validation
+message routing, density-derived edit line boxes, or NumericPresentation adoption.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps numeric input control
+  orchestration and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/controls/numeric_input/tests.rs` owns edit line-box and
+  presentation coverage.
+- `tools/gate_imui_workstream_source.py` now checks the numeric-input root/test split and keeps
+  migrated regression test names out of the root control file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the numeric-input root
+  and test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  numeric_input_text_style_uses_density_row_height_for_edit_line_box
+  numeric_input_from_presentation_adopts_format_parse_and_chrome_affixes --no-fail-fast`: pass (2
+  passed, 196 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Editor DragValue Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor drag-value presentation regression split into a private test owner without

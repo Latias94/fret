@@ -170,6 +170,11 @@ Last updated: 2026-05-31
       Result: `editor_theme_preset_picker.rs` now keeps preset installation, theme resolution, and
       render dispatch only. `editor_theme_preset_picker/render.rs` owns the listbox semantics,
       header row, preset rows, and color mixing.
+- [x] Split editor numeric-input text-style and presentation regressions into a private test owner
+      without changing NumericInput public options, default selection behavior, validation message
+      routing, density-derived edit line boxes, or NumericPresentation adoption.
+      Result: `controls/numeric_input.rs` keeps numeric input control orchestration plus test-owner
+      routing. `controls/numeric_input/tests.rs` owns edit line-box and presentation coverage.
 - [x] Split editor drag-value presentation regression into a private test owner without changing
       `DragValue::from_presentation`, NumericPresentation adoption, duplicate chrome affix
       suppression, scrub/typing behavior, or drag-value value text-role routing.

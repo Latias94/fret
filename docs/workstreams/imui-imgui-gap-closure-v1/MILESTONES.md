@@ -155,6 +155,12 @@ installation, theme resolution, and render dispatch only. `render.rs` owns listb
 header row, preset rows, and color mixing. Selected preset sync, item test IDs, activation
 behavior, and theme replay semantics remain unchanged.
 
+2026-05-31 editor numeric-input tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps numeric input control
+orchestration and test-owner routing. `controls/numeric_input/tests.rs` owns edit line-box and
+presentation coverage. NumericInput public options, default selection behavior, validation message
+routing, density-derived edit line boxes, and NumericPresentation adoption remain unchanged.
+
 2026-05-31 editor drag-value tests child-owner result:
 `ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps drag-value control orchestration and
 test-owner routing. `controls/drag_value/tests.rs` owns presentation format/parse/chrome-affix
