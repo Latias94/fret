@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 debug-draw rounded rect child-owner result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/rects/rounded.rs` now keeps only
+rounded-rect point append orchestration. `rounded/corners.rs` owns per-corner rounding selection
+and corner arc sampling, while `rounded/geometry.rs` owns rect max-point calculation. Effective
+rounding clamp, fallback square points, corner sample order, and path-builder behavior remain
+unchanged.
+
 2026-05-30 debug-draw filled polygon child-owner result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/polygons.rs` is now
 a private re-export hub. `polygons/multi.rs` owns convex and concave polygon fill painting, while

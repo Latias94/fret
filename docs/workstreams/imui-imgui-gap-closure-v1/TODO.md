@@ -559,6 +559,9 @@ Last updated: 2026-05-30
       Result: `debug_draw_controls/paths/rects.rs` is now a private re-export hub.
       `rects/plain.rs` owns plain closed rect path commands and `rects/rounded.rs` owns
       rounded-rect point generation plus corner arc sampling.
+      2026-05-30 follow-up: `rects/rounded.rs` now keeps rounded-rect point append
+      orchestration only. `rounded/corners.rs` owns per-corner rounding selection and corner arc
+      sampling, while `rounded/geometry.rs` owns rect max-point calculation.
 - [x] Split IMUI debug-draw linear path construction into polyline, polygon fill, and primitive
       private owners without changing open/closed stroke point requirements, polyline command
       ordering, convex/concave fill forwarding, triangle/quad closure, paint-shape call sites, path
