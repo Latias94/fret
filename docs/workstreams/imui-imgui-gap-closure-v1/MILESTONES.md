@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-30 submenu clear reset child-owner result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state/clear/reset.rs` is now a
+private reset module/re-export hub. `reset/active.rs` owns active submenu value/trigger/geometry
+clearing, `reset/pending.rs` owns pending-open value/trigger cleanup, and `reset/runtime.rs` owns
+pointer-grace, close/focus/open timer, focus target, and focus retry reset cleanup. Submenu hover,
+shortcut, sibling-switch, and close semantics remain unchanged.
+
 2026-05-30 begin-menu open-policy child-owner result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy.rs` is now a private
 module/re-export hub. `open_policy/toggle.rs` owns trigger-click menubar/popup toggling,

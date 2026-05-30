@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Submenu Clear Reset Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI submenu clear reset ownership split into active, pending, and runtime child
+owners without changing active submenu value/trigger matching, optional geometry clearing,
+pending-open cleanup, pointer-grace cleanup, close/focus/open timer cleanup, focus target cleanup,
+or focus retry reset.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state/clear/reset.rs` is now a
+  private reset module/re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state/clear/reset/active.rs` owns
+  active submenu value, trigger, and optional geometry clearing.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state/clear/reset/pending.rs` owns
+  pending-open value and trigger cleanup.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state/clear/reset/runtime.rs` owns
+  pointer-grace, close/focus/open timer, focus target, and focus retry reset cleanup.
+- `tools/gate_imui_workstream_source.py` now checks the reset hub/active/pending/runtime split.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass after tightening child function
+  visibility to `submenu_state::clear` so the reset hub can re-export without widening beyond the
+  clear owner.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_family_controls::tests
+  --no-fail-fast`: pass (1 passed, 689 skipped).
+- `cargo nextest run -p fret-imui interaction_menu_tabs::submenu_hover
+  interaction_menu_tabs::submenu_shortcuts --no-fail-fast`: pass (9 passed, 177 skipped).
+
 ## Begin-Menu Open-Policy Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI begin-menu open-policy responsibilities split into trigger-click toggle,

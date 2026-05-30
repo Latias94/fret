@@ -966,6 +966,14 @@ Last updated: 2026-05-30
       reset.
       Result: `submenu_state/clear.rs` keeps the public-in-menu-family clear flow, while
       `submenu_state/clear/reset.rs` owns active, pending, and runtime submenu model resets.
+- [x] Split IMUI submenu reset owner into active, pending, and runtime child owners without
+      changing active submenu value/trigger matching, optional geometry clearing, pending-open
+      cleanup, pointer-grace cleanup, close/focus/open timer cleanup, focus target cleanup, or
+      focus retry reset.
+      Result: `submenu_state/clear/reset.rs` is now a private reset re-export hub.
+      `reset/active.rs` owns active submenu value/trigger/geometry clearing,
+      `reset/pending.rs` owns pending-open value/trigger cleanup, and `reset/runtime.rs` owns
+      pointer-grace/timer/focus retry runtime cleanup.
 - [x] Split IMUI menu-item keyboard behavior into private popup-menu and menubar owners without
       changing popup item nav registration, Arrow/Home/End focus movement, shortcut activation,
       popup-close-on-key activation, lifecycle instant marking, menubar horizontal-arrow
