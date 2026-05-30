@@ -2053,6 +2053,12 @@ Last updated: 2026-05-31
       Result: `text_controls/style.rs` keeps style assembly and public text-style helper routing.
       `style/palette.rs` owns theme color fallback and selection/preedit derivation, while
       `style/chrome.rs` owns input padding, border, radius, and fixed field layout.
+- [x] Split IMUI text-control chrome regression tests into private input and textarea owners
+      without changing input-text fixed-height chrome, textarea fill-width chrome, focus-ring,
+      border, padding, radius, response-id, or element lookup assertions.
+      Result: `text_controls/tests.rs` now keeps `TestWriter`, element lookup helpers, and module
+      routing only. `tests/input_chrome.rs` owns input-text chrome coverage, while
+      `tests/textarea_chrome.rs` owns textarea chrome coverage.
 - [x] Split IMUI disclosure spec construction out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` into a private owner module without
       changing the public collapsing-header/tree-node surface.

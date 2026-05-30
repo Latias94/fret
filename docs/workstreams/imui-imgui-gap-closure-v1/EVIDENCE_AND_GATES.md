@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Text-Control Chrome Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI text-control chrome regression tests split into private input and textarea
+owners without changing input-text fixed-height chrome, textarea fill-width chrome, focus-ring,
+border, padding, radius, response-id, or element lookup assertions.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_controls/tests.rs` is now a thin hub with `TestWriter`,
+  element lookup helpers, and module routing only.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/tests/input_chrome.rs` owns input-text chrome
+  coverage.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/tests/textarea_chrome.rs` owns textarea chrome
+  coverage.
+- `tools/gate_imui_workstream_source.py` now checks the hub and both private test owners and
+  rejects chrome regression bodies from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the text-control test-owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  input_text_model_uses_compact_imui_chrome_without_focus_ring
+  textarea_model_uses_compact_imui_chrome_without_focus_ring --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_textarea_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Selectable Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI selectable regression tests split into private palette and row-text owners
