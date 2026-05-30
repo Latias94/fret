@@ -1106,6 +1106,13 @@ orchestration and re-exports the entry helpers.
 column, and clipped-body props. `floating_window_shell.rs` keeps shell composition, blocker
 mounting, and resize-stack composition.
 
+2026-05-30 floating-window shell props child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_shell/props.rs` is now a private hub.
+`props/frame.rs` owns frame size/background/border/radius props, `props/body.rs` owns shell column
+and clipped-body sizing/overflow/radius props, and `props/title_bar.rs` owns title-bar
+clipping/padding/border/radius props. Shell composition, blocker mounting, resize-stack mounting,
+and public IMUI window APIs remain unchanged.
+
 2026-05-27 menu-item routing mount owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/mount.rs` now owns final menu-item element
 mounting, `ResponseExt::default()` initialization, final `ui.add(...)`, and response return.

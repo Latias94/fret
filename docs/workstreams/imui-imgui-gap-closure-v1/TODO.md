@@ -3692,6 +3692,14 @@ opening the slice.
       Result: `floating_window_shell/props.rs` owns `window_frame_props(...)`,
       `shell_column_props(...)`, `title_bar_container_props(...)`, and `clipped_body_props(...)`.
       `floating_window_shell.rs` now keeps shell composition only.
+- [x] Split IMUI floating-window shell props owner into frame, body, and title-bar child owners
+      without changing frame sizing, shell column fill/auto sizing, clipped body overflow/radius,
+      title-bar clipping/padding/border radii, blocker mounting, resize-stack composition, or
+      public IMUI surface.
+      Result: `floating_window_shell/props.rs` is now a private re-export hub.
+      `props/frame.rs` owns `window_frame_props(...)`, `props/body.rs` owns
+      `shell_column_props(...)` and `clipped_body_props(...)`, and `props/title_bar.rs` owns
+      `title_bar_container_props(...)`.
 - [x] Split the floating-window title-bar `RowProps` / drag-surface `PointerRegionProps` /
       close-button props construction out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs::floating_window_title_bar_row(...)`

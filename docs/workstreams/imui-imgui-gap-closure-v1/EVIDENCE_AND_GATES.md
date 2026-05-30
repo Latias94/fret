@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Floating Window Shell Props Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI floating-window shell props split into frame, body, and title-bar child owners
+without changing frame sizing, shell column fill/auto sizing, clipped body overflow/radius,
+title-bar clipping/padding/border radii, blocker mounting, resize-stack composition, or public IMUI
+surface.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_shell/props.rs` is now a private hub that
+  re-exports shell props owner functions.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_shell/props/frame.rs` owns window frame size,
+  background, border, border color, and radius props.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_shell/props/body.rs` owns shell column sizing and
+  clipped body overflow/radius props.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_shell/props/title_bar.rs` owns title-bar sizing,
+  clipping, padding, background, border, and radius props.
+- `tools/gate_imui_workstream_source.py` now checks the hub/frame/body/title-bar split.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating::window_options::floating_window_resizable_false_hides_resize_handles
+  floating::window_options::floating_window_resizes_when_dragging_corner_handle
+  floating::window_options::floating_window_resizes_from_left_updates_origin_and_width
+  floating::window_options::floating_window_title_bar_double_click_toggles_collapsed
+  floating::input_modes::floating_window_activate_on_click_can_be_disabled_for_resize_handles
+  --no-fail-fast`: pass (5 passed, 181 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke
+  --no-fail-fast`: pass (3 passed).
+
 ## Popup Modal Layout Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI popup-modal layout owner split into palette/geometry and element-props child
