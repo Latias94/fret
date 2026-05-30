@@ -1516,6 +1516,12 @@ submenu-state reconciliation, stale-open cleanup, and popup open/close anchoring
 keeps public begin-submenu orchestration, state reads, popup mounting, and `DisclosureResponse`
 assembly.
 
+2026-05-30 begin-submenu state/popup child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/state.rs` now owns popup-open and
+was-open snapshot reads plus was-open writeback. `submenu/popup.rs` owns popup menu mounting and
+disabled-popup close. `submenu.rs` keeps disabled gating, popup policy lookup, trigger creation,
+open-policy reconciliation, popup delegation, and `DisclosureResponse` assembly.
+
 2026-05-27 table-column primitive option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/collections/table_column/primitives.rs` now owns
 `TableColumnWidth`, `TableColumnResizeOptions`, `TableSortDirection`, `TableColumnPin`, width

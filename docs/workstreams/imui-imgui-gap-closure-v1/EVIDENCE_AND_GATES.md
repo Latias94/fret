@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Begin-Submenu State/Popup Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: IMUI begin-submenu open-state reads/writeback and popup mounting split into child
+owners without changing disabled gating, popup policy lookup, trigger creation, open-policy
+reconciliation, popup open/close semantics, submenu hover/shortcut behavior, or
+`DisclosureResponse` open/toggled reporting.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu.rs` keeps public begin-submenu
+  orchestration, trigger owner dispatch, open-policy owner dispatch, popup delegation, and response
+  assembly.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/state.rs` owns popup-open and
+  was-open snapshot reads plus was-open writeback.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/popup.rs` owns popup menu mounting
+  and disabled-popup close.
+- `tools/gate_imui_workstream_source.py` now checks the submenu root/state/popup split.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::submenu_hover
+  interaction_menu_tabs::submenu_shortcuts --no-fail-fast`: pass (9 passed, 177 skipped).
+
 ## Tab-List Trigger/Element Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI tab-list owner split into trigger collection and list element child owners
