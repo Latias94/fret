@@ -63,6 +63,12 @@ harness, including value-slot marker lookup, wrapping text services, and layout-
 Public row options, label line-box behavior, wrapping value growth, and value-slot overflow
 contracts remain unchanged.
 
+2026-05-31 editor field-status tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/field_status.rs` now keeps badge implementation and palette
+resolution plus test-owner routing. `controls/field_status/tests.rs` owns short-label and luma
+coverage. Compact badge text-role routing, status palette mixing, destructive/loading label policy,
+and badge layout remain unchanged.
+
 2026-05-31 editor chrome tests child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/chrome.rs` now keeps editor chrome/style resolution and
 test-owner routing. `primitives/chrome/tests.rs` owns text-field/text-area chrome policy coverage.

@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Field-Status Tests Child-Owner Split Evidence - 2026-05-31
+
+Claim verified: editor field-status badge palette regressions split into a private test owner
+without changing compact badge text-role routing, short visible labels, status palette mixing,
+destructive/loading label policy, or badge layout.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/field_status.rs` now keeps badge implementation, palette
+  resolution, and a thin `mod tests;` hook.
+- `ecosystem/fret-ui-editor/src/controls/field_status/tests.rs` owns short-label and luma coverage.
+- `tools/gate_imui_workstream_source.py` now checks the field-status root/test split and keeps
+  migrated badge palette regression test names out of the root owner file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the field-status test
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor error_badge_palette_keeps_short_visible_label
+  loading_badge_palette_uses_short_label
+  loading_badge_palette_stays_darker_than_editor_foreground --no-fail-fast`: pass (3 passed,
+  195 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Axis-Drag-Value Model Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor axis-drag-value model regressions split into a private test owner without

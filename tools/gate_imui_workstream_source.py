@@ -30892,6 +30892,9 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/field_status.rs"),
             required=[
+                "mod tests;",
+                "pub enum FieldStatus",
+                "fn status_badge_palette",
                 "use crate::primitives::readout::editor_status_badge_text_props;",
                 "cx.text_props(editor_status_badge_text_props(",
             ],
@@ -30901,7 +30904,21 @@ def main() -> None:
                 "TextStyle {",
                 "wrap: TextWrap::None,",
                 "overflow: TextOverflow::Ellipsis,",
+                "error_badge_palette_keeps_short_visible_label",
+                "loading_badge_palette_uses_short_label",
+                "loading_badge_palette_stays_darker_than_editor_foreground",
             ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/field_status/tests.rs"),
+            required=[
+                "error_badge_palette_keeps_short_visible_label",
+                "loading_badge_palette_uses_short_label",
+                "loading_badge_palette_stays_darker_than_editor_foreground",
+                "status_badge_palette(theme, &FieldStatus::Loading)",
+                "relative_luma",
+            ],
+            forbidden=[],
         ),
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/input_group.rs"),

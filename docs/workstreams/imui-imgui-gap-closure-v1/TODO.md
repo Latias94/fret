@@ -86,6 +86,11 @@ Last updated: 2026-05-31
       wrapping value growth, or layout-query coverage.
       Result: `composites/property_row.rs` keeps implementation only plus `mod tests;`.
       `composites/property_row/tests.rs` owns the wrapping/value-slot regression harness.
+- [x] Split editor field-status badge palette regressions into a private test owner without
+      changing compact badge text-role routing, short visible labels, status palette mixing,
+      destructive/loading label policy, or badge layout.
+      Result: `controls/field_status.rs` keeps badge implementation and palette resolution plus
+      test-owner routing. `controls/field_status/tests.rs` owns label and luma coverage.
 - [x] Split editor chrome text-field/text-area style regressions into a private test owner without
       changing editor token precedence, legacy component fallback behavior, line-height policy, or
       focus ring token routing.
