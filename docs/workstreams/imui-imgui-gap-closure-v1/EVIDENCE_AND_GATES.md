@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Table Control Test Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI table-control regression tests split into private header-text and rendering
+owners without changing header label/sort-indicator text-role coverage, hidden-column header/body
+filtering, table response filtering, or horizontal-scroll wrapping assertions.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/tests.rs` keeps shared table test helpers and
+  module routing only.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/tests/header_text.rs` owns header label and sort
+  indicator text-role coverage.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/tests/rendering.rs` owns hidden-column header/body
+  filtering, response filtering, and horizontal-scroll wrapping coverage.
+- `tools/gate_imui_workstream_source.py` now checks the table test hub/sub-owner split and rejects
+  migrated regression tests from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the table test owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui
+  table_header_label_uses_shared_table_cell_text_role
+  table_sort_indicator_uses_shared_chrome_glyph_text_role
+  hidden_table_columns_do_not_render_header_body_or_response
+  horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Disclosure Control Test Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI disclosure control regression tests split into private entry/tree/visual

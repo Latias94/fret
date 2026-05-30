@@ -1221,6 +1221,12 @@ Last updated: 2026-05-31
       Result: `table_controls/builder/test_ids.rs` owns row/cell test-id derivation. `builder.rs`
       keeps row/cell collection, keyed row scopes, child mounting, and public table-builder
       methods.
+- [x] Split IMUI table-control regression tests into private header-text and rendering owners
+      without changing header label/sort-indicator text-role coverage, hidden-column header/body
+      filtering, table response filtering, or horizontal-scroll wrapping assertions.
+      Result: `table_controls/tests.rs` now keeps the shared table test helpers and module routing
+      only. `tests/header_text.rs` owns header label/sort indicator text-role coverage, while
+      `tests/rendering.rs` owns hidden-column and horizontal-scroll render coverage.
 - [x] Split IMUI selectable popup-menu keyboard navigation into a private owner without changing
       selectable shortcut activation, popup close-on-shortcut, context-menu key handling, inherited
       popup menu item registration, Arrow/Home/End focus movement, or public selectable/menu-item

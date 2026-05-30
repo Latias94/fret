@@ -1546,6 +1546,8 @@
     "ecosystem/fret-ui-kit/src/imui/table_controls/header/cell.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/test_ids.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/tests.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls/tests/header_text.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls/tests/rendering.rs",
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility.rs",
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu.rs",
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu/identity.rs",

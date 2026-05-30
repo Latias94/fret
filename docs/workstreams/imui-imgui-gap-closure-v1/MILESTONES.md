@@ -1230,6 +1230,12 @@ derivation, including explicit row test-id override fallback and default `.row.*
 strings. `builder.rs` keeps public `ImUiTable` / `ImUiTableRow` methods, row/cell collection,
 keyed row scopes, child mounting, and table render handoff.
 
+2026-05-31 table-control test owner split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/tests.rs` now keeps shared table test helpers and
+module routing only. `tests/header_text.rs` owns header label/sort indicator text-role coverage,
+while `tests/rendering.rs` owns hidden-column header/body filtering, response filtering, and
+horizontal-scroll wrapping coverage.
+
 2026-05-28 selectable popup-nav owner-split result:
 `ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard/popup_nav.rs` now owns inherited
 popup menu nav item registration plus Arrow/Up/Home/End focus movement. `keyboard.rs` keeps
