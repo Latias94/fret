@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Input-Text Policy Command Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI input-text policy command resolution split into a private owner without
+changing completion, history, undo/redo shortcut mapping, repeat gating, IME/meta/alt suppression,
+or command dispatch.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/input.rs` now installs the focused
+  key handler and dispatches resolved commands only.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/input/resolve.rs` owns command
+  capture, empty-command checks, and key-to-command resolution.
+- `tools/gate_imui_workstream_source.py` now checks the installer and resolver owners and rejects
+  key mapping policy from drifting back into the installer.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the input-text policy
+  resolver owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass after fixing the resolver import to
+  `fret_ui::action::KeyDownCx`.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_input_text_options_smoke --test
+  imui_textarea_smoke --test imui_adapter_seam_smoke --test imui_response_contract_smoke
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui models_text_commands --no-fail-fast`: pass.
+
 ## IMUI Disclosure Visual Style Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI disclosure visual style split into private padding and palette owners without

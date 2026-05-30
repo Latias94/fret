@@ -43,6 +43,12 @@ remains unchanged.
 `style/padding.rs` owns content padding by disclosure kind, while `style/palette.rs` owns
 `DisclosurePalette` and palette resolution. Public disclosure behavior remains unchanged.
 
+2026-05-31 input-text policy command owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/input.rs` now installs the focused
+key handler and dispatches resolved commands only. `input/resolve.rs` owns completion/history/
+undo/redo command capture, repeat gating, IME/meta/alt suppression, and key-to-command resolution.
+Public input-text command behavior remains unchanged.
+
 2026-05-31 facade-writer text test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` is now a thin test hub.
 `tests/text.rs` owns `ui.text(...)` dense single-line coverage, while `tests/wrapped.rs` owns

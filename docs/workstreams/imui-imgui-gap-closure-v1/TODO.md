@@ -77,6 +77,12 @@ Last updated: 2026-05-31
       Result: `disclosure_controls/visual/style.rs` is now a thin re-export hub.
       `style/padding.rs` owns content padding by disclosure kind, while `style/palette.rs` owns
       `DisclosurePalette` and palette resolution.
+- [x] Split IMUI input-text policy command resolution into a private owner without changing
+      completion, history, undo/redo shortcut mapping, repeat gating, IME/meta/alt suppression, or
+      command dispatch.
+      Result: `text_controls/policy_commands/input.rs` now installs the focused key handler and
+      dispatches resolved commands only. `input/resolve.rs` owns command capture, empty-command
+      checks, and key-to-command resolution.
 - [x] Split IMUI debug-draw path-builder regression coverage into private sub-owners without
       changing path stroke/fill command recording, rectangle/rounded-rectangle sampling, Bezier
       defaults, circular/elliptical arc defaults, or invalid finished-path cleanup.
