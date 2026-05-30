@@ -5,8 +5,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    AppWindowId, Paint, Point, Px, Rect, Scene, SceneOp, SemanticsNode, SemanticsOrientation,
-    SemanticsRole, Size, UiServices,
+    AppWindowId, KeyCode, Paint, Point, Px, Rect, Scene, SceneOp, SemanticsNode,
+    SemanticsOrientation, SemanticsRole, Size, UiServices,
 };
 use fret_icons::ids;
 use fret_runtime::{Model, ModelHost, PlatformCapabilities};
@@ -17,9 +17,10 @@ use fret_ui_material3::{TabItem, Tabs, TabsVariant};
 mod interaction_harness;
 mod support;
 
+use support::events::key_down;
 use support::host::{FakeUiServices, TestHost};
 use support::layout::with_padding;
-use support::theme::apply_material_theme;
+use support::theme::{apply_material_theme, apply_material_theme_rtl};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -76,6 +77,21 @@ fn render_tabs_with_variant(
     scrollable: bool,
     variant: TabsVariant,
 ) {
+    render_tabs_with_variant_and_loop_navigation(
+        ui, app, services, window, selected, scrollable, variant, true,
+    );
+}
+
+fn render_tabs_with_variant_and_loop_navigation(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+    scrollable: bool,
+    variant: TabsVariant,
+    loop_navigation: bool,
+) {
     let root =
         fret_ui::declarative::render_root(ui, app, services, window, bounds(), "root", |cx| {
             let tabs = Tabs::new(selected)
@@ -83,6 +99,7 @@ fn render_tabs_with_variant(
                 .test_id("m3-tabs")
                 .scrollable(scrollable)
                 .variant(variant)
+                .loop_navigation(loop_navigation)
                 .items(vec![
                     TabItem::new("a", "A").test_id("m3-tab-a"),
                     TabItem::new("b", "B").test_id("m3-tab-b"),
@@ -376,6 +393,35 @@ fn tabs_export_tablist_orientation_and_tab_collection_semantics() {
     assert!(disabled.flags.disabled);
     assert_eq!(disabled.pos_in_set, Some(3));
     assert_eq!(disabled.set_size, Some(3));
+}
+
+#[test]
+fn rtl_tabs_arrow_left_moves_to_next_logical_tab_without_wrapping() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+    render_tabs_with_variant_and_loop_navigation(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        selected.clone(),
+        false,
+        TabsVariant::Primary,
+        false,
+    );
+
+    let first = semantics_node(&ui, "m3-tab-a").id;
+    let second = semantics_node(&ui, "m3-tab-b").id;
+    ui.set_focus(Some(first));
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowLeft));
+
+    assert_eq!(
+        ui.focus(),
+        Some(second),
+        "expected RTL ArrowLeft to move forward to the next logical tab"
+    );
+    assert_eq!(app.models().get_cloned(&selected).as_deref(), Some("b"));
 }
 
 #[test]

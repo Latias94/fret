@@ -109,15 +109,18 @@ pub mod context {
 
     pub use crate::foundation::context::{
         MaterialContentColor, MaterialDesignVariant, MaterialDesignVariantOverride,
-        MaterialMotionScheme, MaterialMotionSchemeOverride, MaterialRippleConfiguration,
-        inherited_content_color, inherited_content_color_policy, inherited_design_variant_override,
+        MaterialLayoutDirectionOverride, MaterialMotionScheme, MaterialMotionSchemeOverride,
+        MaterialRippleConfiguration, inherited_content_color, inherited_content_color_policy,
+        inherited_design_variant_override, inherited_layout_direction_override,
         inherited_motion_scheme_override, inherited_ripple_configuration, resolved_design_variant,
-        resolved_motion_scheme, theme_default_design_variant, with_default_material_content_color,
-        with_default_material_design_variant, with_default_material_motion_scheme,
-        with_material_content_color, with_material_content_color_policy,
-        with_material_design_variant, with_material_design_variant_override,
-        with_material_motion_scheme, with_material_motion_scheme_override,
-        with_material_ripple_configuration,
+        resolved_layout_direction, resolved_motion_scheme, theme_default_design_variant,
+        theme_default_layout_direction, with_default_material_content_color,
+        with_default_material_design_variant, with_default_material_layout_direction,
+        with_default_material_motion_scheme, with_material_content_color,
+        with_material_content_color_policy, with_material_design_variant,
+        with_material_design_variant_override, with_material_layout_direction,
+        with_material_layout_direction_override, with_material_motion_scheme,
+        with_material_motion_scheme_override, with_material_ripple_configuration,
     };
 }
 

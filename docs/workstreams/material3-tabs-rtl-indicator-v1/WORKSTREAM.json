@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "slug": "material3-tabs-rtl-indicator-v1",
+  "title": "Material3 Tabs RTL Indicator v1",
+  "status": "closed",
+  "updated": "2026-05-30",
+  "scope_kind": "follow_on",
+  "problem": "Material3 Tabs did not consume layout direction for horizontal keyboard navigation or active-indicator fallback geometry, and the public Material3 context facade did not expose layout direction helpers.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-tabs-rtl-indicator-v1/CLOSEOUT_AUDIT_2026-05-30.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-tabs-rtl-indicator-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-tabs-rtl-indicator-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-tabs-rtl-indicator-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-tabs-rtl-indicator-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-tabs-rtl-indicator-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run focused Material3 Tabs RTL keyboard and indicator fallback checks.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --lib tab_keyboard_direction_maps_arrow_keys_by_layout_direction tab_indicator_fallback_position_mirrors_logical_index_in_rtl",
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test tabs_state rtl_tabs_arrow_left_moves_to_next_logical_tab_without_wrapping",
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test tabs_state"
+    ]
+  },
+  "gates": [
+    {
+      "name": "material3-format",
+      "command": "cargo fmt -p fret-ui-material3"
+    },
+    {
+      "name": "material3-tabs-rtl-unit",
+      "command": "cargo nextest run -p fret-ui-material3 --lib tab_keyboard_direction_maps_arrow_keys_by_layout_direction tab_indicator_fallback_position_mirrors_logical_index_in_rtl"
+    },
+    {
+      "name": "material3-tabs-rtl-integration",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test tabs_state rtl_tabs_arrow_left_moves_to_next_logical_tab_without_wrapping"
+    },
+    {
+      "name": "material3-tabs-state",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test tabs_state"
+    },
+    {
+      "name": "material3-diagnostics-tests-check",
+      "command": "cargo check -p fret-ui-material3 --features diagnostics --tests"
+    },
+    {
+      "name": "material3-diagnostics-tests-clippy",
+      "command": "cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings"
+    },
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-tabs-rtl-indicator-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/TabRow.kt",
+    "ecosystem/fret-ui-material3/src/foundation/context.rs",
+    "ecosystem/fret-ui-material3/src/tabs.rs",
+    "ecosystem/fret-ui-material3/src/lib.rs",
+    "ecosystem/fret-ui-material3/tests/tabs_state.rs",
+    "docs/workstreams/material3-tabs-rtl-indicator-v1/CLOSEOUT_AUDIT_2026-05-30.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane covers component-owned Tabs direction policy and fallback indicator math only. Start separate follow-ons for global Flex RTL layout mirroring, selected-tab auto-scroll, or RTL gallery diagnostics."
+  }
+}

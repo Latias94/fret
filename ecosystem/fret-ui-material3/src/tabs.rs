@@ -8,8 +8,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, KeyCode, Px, Rect, SemanticsOrientation, SemanticsRole, SvgFit,
-    TextOverflow, TextWrap,
+    Axis, Color, Corners, Edges, KeyCode, LayoutDirection, Modifiers, Px, Rect,
+    SemanticsOrientation, SemanticsRole, SvgFit, TextOverflow, TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -21,13 +21,14 @@ use fret_ui::element::{
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
-use fret_ui_kit::declarative::controllable_state;
+use fret_ui_kit::declarative::{ElementContextThemeExt as _, controllable_state};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
 };
 
 use crate::foundation::active_indicator::{ActiveIndicatorRect, material_active_indicator_layer};
 use crate::foundation::arc_str::empty_arc_str;
+use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -307,6 +308,8 @@ impl Tabs {
         let token_kind = variant.token_kind();
 
         cx.scope(|cx| {
+            let default_layout_direction = cx.with_theme(theme_default_layout_direction);
+            let layout_direction = resolved_layout_direction(cx, default_layout_direction);
             let values: Arc<[Arc<str>]> =
                 Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
             let disabled_items: Arc<[bool]> = Arc::from(
@@ -423,24 +426,27 @@ impl Tabs {
                             disabled,
                             token_kind,
                             &style,
+                            layout_direction,
                         );
                         let divider = tab_row_divider(cx, token_kind, divider_test_id.clone());
 
                         let roving = cx.roving_flex(props, move |cx| {
                             let values_for_roving = values.clone();
                             let model_for_roving = model.clone();
+                            let layout_direction_for_roving = layout_direction;
 
-                            cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
+                            cx.roving_on_navigate(Arc::new(move |_host, _cx, it| {
                                 use fret_ui::action::RovingNavigateResult;
+
+                                if it.repeat || it.modifiers != Modifiers::default() {
+                                    return RovingNavigateResult::NotHandled;
+                                }
+                                if it.axis != Axis::Horizontal {
+                                    return RovingNavigateResult::NotHandled;
+                                }
 
                                 let is_disabled = |idx: usize| -> bool {
                                     it.disabled.get(idx).copied().unwrap_or(false)
-                                };
-
-                                let forward = match (it.axis, it.key) {
-                                    (Axis::Horizontal, KeyCode::ArrowRight) => Some(true),
-                                    (Axis::Horizontal, KeyCode::ArrowLeft) => Some(false),
-                                    _ => None,
                                 };
 
                                 if it.key == KeyCode::Home {
@@ -452,7 +458,9 @@ impl Tabs {
                                     return RovingNavigateResult::Handled { target };
                                 }
 
-                                let Some(forward) = forward else {
+                                let Some(forward) =
+                                    navigation_forward_for_key(layout_direction_for_roving, it.key)
+                                else {
                                     return RovingNavigateResult::NotHandled;
                                 };
 
@@ -1010,6 +1018,40 @@ mod tests {
     }
 
     #[test]
+    fn tab_keyboard_direction_maps_arrow_keys_by_layout_direction() {
+        assert_eq!(
+            navigation_forward_for_key(LayoutDirection::Ltr, KeyCode::ArrowRight),
+            Some(true)
+        );
+        assert_eq!(
+            navigation_forward_for_key(LayoutDirection::Ltr, KeyCode::ArrowLeft),
+            Some(false)
+        );
+        assert_eq!(
+            navigation_forward_for_key(LayoutDirection::Rtl, KeyCode::ArrowLeft),
+            Some(true)
+        );
+        assert_eq!(
+            navigation_forward_for_key(LayoutDirection::Rtl, KeyCode::ArrowRight),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn tab_indicator_fallback_position_mirrors_logical_index_in_rtl() {
+        assert_eq!(visual_tab_index(0, 3, LayoutDirection::Ltr), 0);
+        assert_eq!(visual_tab_index(2, 3, LayoutDirection::Ltr), 2);
+        assert_eq!(visual_tab_index(0, 3, LayoutDirection::Rtl), 2);
+        assert_eq!(visual_tab_index(2, 3, LayoutDirection::Rtl), 0);
+
+        assert_eq!(fallback_tab_x(0, 3, 90.0, 52.0, LayoutDirection::Ltr), 52.0);
+        assert_eq!(
+            fallback_tab_x(0, 3, 90.0, 52.0, LayoutDirection::Rtl),
+            232.0
+        );
+    }
+
+    #[test]
     fn primary_tab_labels_can_shrink_within_equal_width_slots() {
         let window = fret_core::AppWindowId::default();
         let mut app = App::new();
@@ -1134,6 +1176,7 @@ fn tab_list_indicator<H: UiHost>(
     disabled: bool,
     token_kind: tabs_tokens::NavigationTabKind,
     style_override: &TabsStyle,
+    layout_direction: LayoutDirection,
 ) -> AnyElement {
     cx.named("tab_indicator", move |cx| {
         let container_bounds = cx.last_bounds_for_element(container_id);
@@ -1188,7 +1231,15 @@ fn tab_list_indicator<H: UiHost>(
                     let idx = selected_idx.unwrap_or(0);
                     let tab_x = container_bounds
                         .map(|bounds| tab_bounds.origin.x.0 - bounds.origin.x.0)
-                        .unwrap_or_else(|| edge_padding + tab_bounds.size.width.0 * (idx as f32));
+                        .unwrap_or_else(|| {
+                            fallback_tab_x(
+                                idx,
+                                tab_count,
+                                tab_bounds.size.width.0,
+                                edge_padding,
+                                layout_direction,
+                            )
+                        });
                     let tab_y = container_bounds
                         .map(|bounds| tab_bounds.origin.y.0 - bounds.origin.y.0)
                         .unwrap_or(0.0);
@@ -1249,7 +1300,13 @@ fn tab_list_indicator<H: UiHost>(
                         |color| color.resolve(theme),
                         || tabs_tokens::active_indicator_color(theme),
                     );
-                    let tab_x = edge_padding + tab_width_px * (idx as f32);
+                    let tab_x = fallback_tab_x(
+                        idx,
+                        tab_count,
+                        tab_width_px,
+                        edge_padding,
+                        layout_direction,
+                    );
                     (
                         tab_x + (tab_width_px - target_width) * 0.5,
                         target_y,
@@ -1288,6 +1345,43 @@ fn tab_list_indicator<H: UiHost>(
             indicator_test_id.clone(),
         )
     })
+}
+
+fn navigation_forward_for_key(layout_direction: LayoutDirection, key: KeyCode) -> Option<bool> {
+    match (layout_direction, key) {
+        (LayoutDirection::Ltr, KeyCode::ArrowRight) => Some(true),
+        (LayoutDirection::Ltr, KeyCode::ArrowLeft) => Some(false),
+        (LayoutDirection::Rtl, KeyCode::ArrowLeft) => Some(true),
+        (LayoutDirection::Rtl, KeyCode::ArrowRight) => Some(false),
+        _ => None,
+    }
+}
+
+fn visual_tab_index(
+    logical_idx: usize,
+    tab_count: usize,
+    layout_direction: LayoutDirection,
+) -> usize {
+    if tab_count == 0 {
+        return 0;
+    }
+
+    let logical_idx = logical_idx.min(tab_count - 1);
+    match layout_direction {
+        LayoutDirection::Ltr => logical_idx,
+        LayoutDirection::Rtl => tab_count - 1 - logical_idx,
+    }
+}
+
+fn fallback_tab_x(
+    logical_idx: usize,
+    tab_count: usize,
+    tab_width_px: f32,
+    edge_padding_px: f32,
+    layout_direction: LayoutDirection,
+) -> f32 {
+    edge_padding_px
+        + tab_width_px * visual_tab_index(logical_idx, tab_count, layout_direction) as f32
 }
 
 fn tab_content_span(label_bounds: Option<Rect>, icon_bounds: Option<Rect>) -> Option<(f32, f32)> {
