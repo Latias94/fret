@@ -9,8 +9,8 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, NodeId, Point, Px, SemanticsRole, SvgFit, TextOverflow,
-    TextStrutStyle, TextStyle, TextWrap, Transform2D,
+    Axis, Color, Corners, Edges, LayoutDirection, NodeId, Point, Px, SemanticsRole, SvgFit,
+    TextOverflow, TextStrutStyle, TextStyle, TextWrap, Transform2D,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -22,13 +22,14 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, Invalidation, TextAreaStyle, Theme, UiHost};
-use fret_ui_kit::declarative::controllable_state;
+use fret_ui_kit::declarative::{ElementContextThemeExt as _, controllable_state};
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetState, WidgetStateProperty, WidgetStates,
     resolve_override_slot_with,
 };
 
+use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
 use crate::foundation::field::{
     material_field_active_indicator_layer, material_field_text_start_inset_x,
 };
@@ -39,6 +40,9 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interactive_size::minimum_interactive_size;
+use crate::foundation::logical_edges::{
+    set_inset_inline_end, set_inset_inline_start, set_margin_inline_end, set_margin_inline_start,
+};
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::test_id::part_test_id;
 use crate::tokens::autocomplete as autocomplete_tokens;
@@ -570,6 +574,8 @@ impl TextField {
                     }
                 }
             };
+            let default_layout_direction = cx.with_theme(theme_default_layout_direction);
+            let layout_direction = resolved_layout_direction(cx, default_layout_direction);
             let height = if multiline {
                 multiline_min_height
                     .map(|min_height| Px(height.0.max(min_height.0)))
@@ -1484,43 +1490,49 @@ impl TextField {
                         children.push(input);
 
                         if let Some(label) = label.as_ref() {
-                            children.push(text_field_label(
-                                cx,
-                                token_namespace,
-                                variant_for_children,
-                                label.clone(),
-                                float_progress,
-                                states,
-                                &style_override,
-                                hovered,
-                                disabled,
-                                error,
-                                focused,
-                                input_id,
-                                input_bg,
-                                outline_width_for_notch,
-                                label_test_id.clone(),
-                                leading_icon_content_size,
-                                label_element_id_out.clone(),
-                            ));
+                            children.push(cx.provide(layout_direction, |cx| {
+                                text_field_label(
+                                    cx,
+                                    token_namespace,
+                                    variant_for_children,
+                                    label.clone(),
+                                    float_progress,
+                                    states,
+                                    &style_override,
+                                    hovered,
+                                    disabled,
+                                    error,
+                                    focused,
+                                    input_id,
+                                    input_bg,
+                                    outline_width_for_notch,
+                                    label_test_id.clone(),
+                                    leading_icon_content_size,
+                                    layout_direction,
+                                    label_element_id_out.clone(),
+                                )
+                            }));
                         }
 
                         if let Some(text) = supporting_text.as_ref() {
-                            children.push(text_field_supporting_text(
-                                cx,
-                                token_namespace,
-                                variant_for_children,
-                                text.clone(),
-                                states,
-                                &style_override,
-                                hovered,
-                                disabled,
-                                error,
-                                focused,
-                                supporting_text_test_id.clone(),
-                                leading_icon_content_size,
-                                supporting_text_element_id_out.clone(),
-                            ));
+                            children.push(cx.provide(layout_direction, |cx| {
+                                text_field_supporting_text(
+                                    cx,
+                                    token_namespace,
+                                    variant_for_children,
+                                    text.clone(),
+                                    states,
+                                    &style_override,
+                                    hovered,
+                                    disabled,
+                                    error,
+                                    focused,
+                                    supporting_text_test_id.clone(),
+                                    leading_icon_content_size,
+                                    layout_direction,
+                                    supporting_text_element_id_out.clone(),
+                                )
+                            }));
                         }
 
                         children
@@ -1548,6 +1560,7 @@ fn text_field_label<H: UiHost>(
     outline_width: Px,
     test_id: Option<Arc<str>>,
     leading_icon_size: Option<Px>,
+    layout_direction: LayoutDirection,
     label_element_id_out: Rc<Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
     let (style, color) = {
@@ -1579,8 +1592,8 @@ fn text_field_label<H: UiHost>(
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.position = fret_ui::element::PositionStyle::Absolute;
     layout.inset.top = Some(y).into();
-    layout.inset.left = Some(x).into();
-    layout.inset.right = Some(Px(16.0)).into();
+    set_inset_inline_start(&mut layout, layout_direction, x);
+    set_inset_inline_end(&mut layout, layout_direction, Px(16.0));
     layout.overflow = Overflow::Visible;
 
     let floated = floating_label::is_floated(progress);
@@ -1650,6 +1663,7 @@ fn text_field_supporting_text<H: UiHost>(
     focused: bool,
     test_id: Option<Arc<str>>,
     leading_icon_size: Option<Px>,
+    layout_direction: LayoutDirection,
     supporting_text_element_id_out: Rc<Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
     let (style, color) = {
@@ -1677,11 +1691,12 @@ fn text_field_supporting_text<H: UiHost>(
     };
 
     let mut layout = fret_ui::element::LayoutStyle::default();
-    layout.margin.left = fret_ui::element::MarginEdge::Px(material_field_text_start_inset_x(
-        Px(16.0),
-        leading_icon_size,
-    ));
-    layout.margin.right = fret_ui::element::MarginEdge::Px(Px(16.0));
+    set_margin_inline_start(
+        &mut layout,
+        layout_direction,
+        material_field_text_start_inset_x(Px(16.0), leading_icon_size),
+    );
+    set_margin_inline_end(&mut layout, layout_direction, Px(16.0));
 
     let mut supporting_text = cx.text_props(TextProps {
         layout,

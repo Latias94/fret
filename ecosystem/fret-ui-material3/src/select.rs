@@ -12,8 +12,8 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, KeyCode, Point, Px, SemanticsRole, Size, SvgFit, TextOverflow,
-    TextWrap,
+    Axis, Color, Corners, Edges, KeyCode, LayoutDirection, Point, Px, SemanticsRole, Size, SvgFit,
+    TextOverflow, TextWrap,
 };
 use fret_icons::{IconId, ids};
 use fret_runtime::Model;
@@ -25,7 +25,7 @@ use fret_ui::element::{
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{Invalidation, Theme, UiHost};
-use fret_ui_kit::declarative::controllable_state;
+use fret_ui_kit::declarative::{ElementContextThemeExt as _, controllable_state};
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -37,6 +37,7 @@ use fret_ui_kit::{
 };
 
 use crate::foundation::arc_str::empty_arc_str;
+use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
 use crate::foundation::field::{
     material_field_active_indicator_layer, material_field_text_start_inset_x,
 };
@@ -45,6 +46,9 @@ use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+};
+use crate::foundation::logical_edges::{
+    set_inset_inline_end, set_inset_inline_start, set_margin_inline_end, set_margin_inline_start,
 };
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
@@ -66,6 +70,7 @@ struct SelectPartTestIds {
     chrome: Arc<str>,
     active_indicator: Arc<str>,
     label: Arc<str>,
+    supporting_text: Arc<str>,
     trailing_icon: Arc<str>,
 }
 
@@ -75,6 +80,7 @@ impl SelectPartTestIds {
             chrome: chrome_part_test_id(base),
             active_indicator: part_test_id(base, "active-indicator"),
             label: part_test_id(base, "label"),
+            supporting_text: part_test_id(base, "supporting-text"),
             trailing_icon: part_test_id(base, "trailing-icon"),
         }
     }
@@ -488,6 +494,8 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
         } = select;
         let style: Arc<SelectStyle> = Arc::new(style);
         let runtime = select_runtime_models(cx);
+        let default_layout_direction = cx.with_theme(theme_default_layout_direction);
+        let layout_direction = resolved_layout_direction(cx, default_layout_direction);
 
         let is_open = cx
             .get_model_copied(&runtime.open, Invalidation::Layout)
@@ -569,6 +577,7 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
             a11y_label.clone(),
             test_id.clone(),
             runtime.open.clone(),
+            layout_direction,
             style.clone(),
         );
         let anchor_id = trigger.anchor_id;
@@ -710,11 +719,15 @@ fn select_trigger_element<H: UiHost>(
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     open_model: Model<bool>,
+    layout_direction: LayoutDirection,
     style: Arc<SelectStyle>,
 ) -> SelectTriggerOutput {
     let part_test_ids = test_id.as_ref().map(SelectPartTestIds::from_base);
     let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
     let label_test_id = part_test_ids.as_ref().map(|ids| ids.label.clone());
+    let supporting_text_test_id = part_test_ids
+        .as_ref()
+        .map(|ids| ids.supporting_text.clone());
     let trailing_icon_test_id = part_test_ids.as_ref().map(|ids| ids.trailing_icon.clone());
     let active_indicator_test_id = part_test_ids
         .as_ref()
@@ -1197,22 +1210,25 @@ fn select_trigger_element<H: UiHost>(
                     children.push(cx.flex(row, move |_cx| vec![left_slot, icon_el]));
 
                     if let Some(label) = label.as_ref() {
-                        children.push(select_trigger_label(
-                            cx,
-                            variant,
-                            states_for_style,
-                            style_override.as_ref(),
-                            label.clone(),
-                            float_progress,
-                            has_leading_icon.then_some(leading_icon_size),
-                            hovered,
-                            !enabled,
-                            error,
-                            focused,
-                            container_bg.unwrap_or(Color::TRANSPARENT),
-                            outline_width_for_notch,
-                            label_test_id.clone(),
-                        ));
+                        children.push(cx.provide(layout_direction, |cx| {
+                            select_trigger_label(
+                                cx,
+                                variant,
+                                states_for_style,
+                                style_override.as_ref(),
+                                label.clone(),
+                                float_progress,
+                                has_leading_icon.then_some(leading_icon_size),
+                                hovered,
+                                !enabled,
+                                error,
+                                focused,
+                                container_bg.unwrap_or(Color::TRANSPARENT),
+                                outline_width_for_notch,
+                                label_test_id.clone(),
+                                layout_direction,
+                            )
+                        }));
                     }
                     if let Some(indicator_el) = indicator_el {
                         children.push(indicator_el);
@@ -1265,18 +1281,22 @@ fn select_trigger_element<H: UiHost>(
         cx.flex(props, move |cx| {
             vec![
                 container,
-                select_supporting_text(
-                    cx,
-                    variant,
-                    supporting_states,
-                    supporting_style_override.as_ref(),
-                    text.clone(),
-                    has_leading_icon.then_some(leading_icon_size),
-                    hovered,
-                    disabled,
-                    error,
-                    focused,
-                ),
+                cx.provide(layout_direction, |cx| {
+                    select_supporting_text(
+                        cx,
+                        variant,
+                        supporting_states,
+                        supporting_style_override.as_ref(),
+                        text.clone(),
+                        has_leading_icon.then_some(leading_icon_size),
+                        hovered,
+                        disabled,
+                        error,
+                        focused,
+                        supporting_text_test_id.clone(),
+                        layout_direction,
+                    )
+                }),
             ]
         })
     } else {
@@ -1383,6 +1403,7 @@ fn select_trigger_label<H: UiHost>(
     input_bg: Color,
     outline_width: Px,
     test_id: Option<Arc<str>>,
+    layout_direction: LayoutDirection,
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
@@ -1405,8 +1426,8 @@ fn select_trigger_label<H: UiHost>(
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.position = fret_ui::element::PositionStyle::Absolute;
     layout.inset.top = Some(y).into();
-    layout.inset.left = Some(x).into();
-    layout.inset.right = Some(Px(16.0)).into();
+    set_inset_inline_start(&mut layout, layout_direction, x);
+    set_inset_inline_end(&mut layout, layout_direction, Px(16.0));
     layout.overflow = Overflow::Visible;
 
     let floated = floating_label::is_floated(progress);
@@ -1459,6 +1480,8 @@ fn select_supporting_text<H: UiHost>(
     disabled: bool,
     error: bool,
     focused: bool,
+    test_id: Option<Arc<str>>,
+    layout_direction: LayoutDirection,
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
@@ -1479,13 +1502,14 @@ fn select_supporting_text<H: UiHost>(
     };
 
     let mut layout = fret_ui::element::LayoutStyle::default();
-    layout.margin.left = fret_ui::element::MarginEdge::Px(material_field_text_start_inset_x(
-        Px(16.0),
-        leading_icon_size,
-    ));
-    layout.margin.right = fret_ui::element::MarginEdge::Px(Px(16.0));
+    set_margin_inline_start(
+        &mut layout,
+        layout_direction,
+        material_field_text_start_inset_x(Px(16.0), leading_icon_size),
+    );
+    set_margin_inline_end(&mut layout, layout_direction, Px(16.0));
 
-    cx.text_props(TextProps {
+    let mut element = cx.text_props(TextProps {
         layout,
         text,
         style,
@@ -1494,7 +1518,11 @@ fn select_supporting_text<H: UiHost>(
         overflow: TextOverflow::Clip,
         align: fret_core::TextAlign::Start,
         ink_overflow: Default::default(),
-    })
+    });
+    if let Some(test_id) = test_id {
+        element = element.test_id(test_id);
+    }
+    element
 }
 
 fn with_opacity(mut color: Color, opacity: f32) -> Color {
