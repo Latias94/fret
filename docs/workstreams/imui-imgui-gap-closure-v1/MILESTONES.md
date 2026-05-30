@@ -52,6 +52,13 @@ Vec3 composition, outcome routing, and linked-scale model/sync logic.
 routing, and link/uniform toggle layout. Public options, Vec3 composition, section text roles,
 link-scale test IDs, row/column selection, and uniform-scale sync remain unchanged.
 
+2026-05-30 editor transform sync child-owner result:
+`ecosystem/fret-ui-editor/src/controls/transform_edit.rs` now keeps TransformEdit public surface
+and Vec3 composition. `controls/transform_edit/sync.rs` owns linked-scale local model creation,
+sync-slot allocation, uniform-scale projection, model writeback, and focused sync tests. Public
+options, link toggle behavior, single-axis uniform projection, multi-axis edit rejection, and
+near-equal threshold policy remain unchanged.
+
 2026-05-30 editor slider chrome child-owner result:
 `ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider state, value flow, pointer/input
 switching, and layout orchestration. `controls/slider/chrome.rs` owns token fallback, color mixing,

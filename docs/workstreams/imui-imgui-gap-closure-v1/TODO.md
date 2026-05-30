@@ -80,6 +80,12 @@ Last updated: 2026-05-30
       Result: `controls/transform_edit.rs` keeps TransformEdit public surface, Vec3 composition,
       outcome routing, and linked-scale model/sync. `controls/transform_edit/sections.rs` owns
       row/column section chrome, badge/heading text-role routing, and link/uniform toggle layout.
+- [x] Split editor transform linked-scale model/slot and uniform-scale synchronization into a
+      private child owner without changing TransformEdit public options, link toggle behavior,
+      single-axis uniform projection, multi-axis edit rejection, or near-equal threshold policy.
+      Result: `controls/transform_edit.rs` keeps TransformEdit public surface and Vec3
+      composition. `controls/transform_edit/sync.rs` owns linked-scale local model creation,
+      sync-slot allocation, uniform-scale projection, model writeback, and focused sync tests.
 - [x] Split editor slider chrome/color resolution into a private child owner without changing
       pointer/typing behavior, value formatting, theme token precedence, hover/pressed/disabled
       color mixing, or slider option/public constructor behavior.

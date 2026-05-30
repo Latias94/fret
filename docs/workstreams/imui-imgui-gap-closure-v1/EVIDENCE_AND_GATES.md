@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-30
 
+## Editor Transform Sync Child-Owner Split Evidence - 2026-05-30
+
+Claim verified: editor transform linked-scale model/slot and uniform-scale synchronization split
+into a private child owner without changing TransformEdit public options, link toggle behavior,
+single-axis uniform projection, multi-axis edit rejection, or near-equal threshold policy.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/transform_edit.rs` now keeps TransformEdit public surface
+  and Vec3 composition.
+- `ecosystem/fret-ui-editor/src/controls/transform_edit/sync.rs` owns linked-scale local model
+  creation, sync-slot allocation, uniform-scale projection, model writeback, and focused sync
+  tests.
+- `tools/gate_imui_workstream_source.py` now checks the transform root/sync split and keeps
+  uniform-scale synchronization bodies out of the root TransformEdit owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the new transform sync
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --lib`: pass.
+- `cargo nextest run -p fret-ui-editor
+  uniform_scale_sync_initializes_to_x_axis_value
+  uniform_scale_sync_projects_single_axis_edits_to_all_axes
+  uniform_scale_sync_ignores_multi_axis_or_near_equal_edits
+  transform_edit_axis_outcome_exposes_read_only_signals
+  transform_edit_from_presentations_adopts_section_format_parse_and_affixes --no-fail-fast`: pass
+  (5 passed, 190 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Editor Transform Section Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: editor transform section chrome and link-toggle layout split into a private child
