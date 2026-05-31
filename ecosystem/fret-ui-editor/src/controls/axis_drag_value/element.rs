@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use fret_core::{KeyCode, Px, SemanticsInvalid};
+use fret_core::{KeyCode, SemanticsInvalid};
 use fret_ui::action::{
     ActionCx, PointerDownCx, PressablePointerDownResult, UiActionHost, UiFocusActionHost,
 };
@@ -9,13 +9,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ChromeRefinement;
 
 use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
-use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::drag_value_core::DragValueScalar;
-use crate::primitives::input_group::{
-    editor_axis_segment, editor_icon_button_segment, editor_input_group_divider,
-    editor_input_group_frame, editor_input_group_inset, editor_input_group_row,
-    editor_input_value_text, editor_text_segment,
-};
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
     NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
@@ -24,7 +18,6 @@ use crate::primitives::numeric_text_entry::{
     sync_numeric_text_entry_focus_handoff,
 };
 use crate::primitives::style::EditorStyle;
-use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use crate::primitives::{DragValueCore, DragValueCoreOptions, constrain_numeric_value};
 
 use super::AxisDragValue;
@@ -34,8 +27,10 @@ use super::model::{
 };
 use super::session::{draft_model, emit_axis_drag_value_outcome, error_model, hidden_layout};
 
+mod scrub;
 mod typing;
 
+use scrub::{AxisDragValueScrubFrameArgs, axis_drag_value_scrub_frame};
 use typing::{AxisDragValueTypingFrameArgs, axis_drag_value_typing_field};
 
 impl<T> AxisDragValue<T>
@@ -198,120 +193,29 @@ where
                             },
                         ));
 
-                        let divider = frame_chrome.border;
-
-                        let mut scrub_frame = editor_input_group_frame(
+                        let scrub_frame = axis_drag_value_scrub_frame(
                             cx,
-                            LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
-                                    min_height: Some(Length::Px(density.row_height)),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            density,
-                            frame_chrome,
-                            EditorFrameState {
-                                enabled: true,
+                            AxisDragValueScrubFrameArgs {
+                                density,
+                                frame_chrome,
                                 hovered: resp.hovered(),
                                 pressed: resp.dragging() || resp.pressed(),
                                 focused: resp.focused() || cx.is_focused_element(scrub_id),
-                                open: false,
-                                semantic: EditorFrameSemanticState::default(),
-                            },
-                            move |cx, visuals| {
-                                let affix_color = {
-                                    let theme = Theme::global(&*cx.app);
-                                    editor_muted_foreground(theme)
-                                };
-                                let mut axis = editor_axis_segment(
-                                    cx,
-                                    density,
-                                    axis_label.clone(),
-                                    axis_tint,
-                                    visuals.bg,
-                                );
-                                if let Some(test_id) = scrub_axis_test_id.as_ref() {
-                                    axis = axis
-                                        .test_id(test_id.clone())
-                                        .a11y_label(axis_label.clone());
-                                }
-                                let sep = editor_input_group_divider(cx, divider);
-                                let value_text_el = editor_input_value_text(
-                                    cx,
-                                    density,
-                                    frame_chrome.text_px,
-                                    value_text_for_scrub.clone(),
-                                    visuals.fg,
-                                    Length::Fill,
-                                );
-                                let mut value = editor_input_group_inset(
-                                    cx,
-                                    frame_chrome.padding,
-                                    value_text_el,
-                                );
-                                if let Some(test_id) = scrub_value_test_id.as_ref() {
-                                    value = value
-                                        .test_id(test_id.clone())
-                                        .a11y_label(value_text_for_scrub.clone());
-                                }
-
-                                let mut segments = vec![axis, sep];
-                                if let Some(prefix) = prefix_for_scrub.clone() {
-                                    let mut segment = editor_text_segment(
-                                        cx,
-                                        density,
-                                        frame_chrome.text_px,
-                                        prefix.clone(),
-                                        affix_color,
-                                        frame_chrome.padding,
-                                    );
-                                    if let Some(test_id) = scrub_prefix_test_id.as_ref() {
-                                        segment =
-                                            segment.test_id(test_id.clone()).a11y_label(prefix);
-                                    }
-                                    segments.push(segment);
-                                    segments.push(editor_input_group_divider(cx, divider));
-                                }
-                                segments.push(value);
-                                if let Some(suffix) = suffix_for_scrub.clone() {
-                                    segments.push(editor_input_group_divider(cx, divider));
-                                    let mut segment = editor_text_segment(
-                                        cx,
-                                        density,
-                                        frame_chrome.text_px,
-                                        suffix.clone(),
-                                        affix_color,
-                                        frame_chrome.padding,
-                                    );
-                                    if let Some(test_id) = scrub_suffix_test_id.as_ref() {
-                                        segment =
-                                            segment.test_id(test_id.clone()).a11y_label(suffix);
-                                    }
-                                    segments.push(segment);
-                                }
-                                if let Some(reset) = reset_action.clone() {
-                                    segments.push(editor_input_group_divider(cx, divider));
-                                    segments.push(editor_icon_button_segment(
-                                        cx,
-                                        density,
-                                        enabled_for_paint,
-                                        reset.a11y_label.clone(),
-                                        reset.icon,
-                                        Some(Px(12.0)),
-                                        scrub_reset_test_id.clone(),
-                                        reset.on_activate.clone(),
-                                    ));
-                                }
-
-                                vec![editor_input_group_row(cx, Px(0.0), segments)]
+                                enabled: enabled_for_paint,
+                                axis_label: axis_label.clone(),
+                                axis_tint,
+                                value_text: value_text_for_scrub.clone(),
+                                prefix: prefix_for_scrub.clone(),
+                                suffix: suffix_for_scrub.clone(),
+                                reset_action: reset_action.clone(),
+                                scrub_test_id: scrub_test_id.clone(),
+                                scrub_axis_test_id: scrub_axis_test_id.clone(),
+                                scrub_value_test_id: scrub_value_test_id.clone(),
+                                scrub_prefix_test_id: scrub_prefix_test_id.clone(),
+                                scrub_suffix_test_id: scrub_suffix_test_id.clone(),
+                                scrub_reset_test_id: scrub_reset_test_id.clone(),
                             },
                         );
-                        if let Some(test_id) = scrub_test_id.as_ref() {
-                            scrub_frame = scrub_frame.test_id(test_id.clone());
-                        }
                         vec![scrub_frame]
                     })
             },

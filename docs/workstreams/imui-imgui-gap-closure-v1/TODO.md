@@ -113,6 +113,13 @@ Last updated: 2026-05-31
       text input props, focus/key handling, and mode transitions. The private
       `controls/axis_drag_value/element/typing.rs` owner contains typing input-group frame
       composition plus axis/prefix/suffix/error/reset segments.
+- [x] Split editor axis-drag-value scrub frame assembly into a private element child owner without
+      changing DragValueCore commit/cancel routing, double-click typing handoff, scrub response
+      state mapping, stable test-id routing, reset affordance, or public AxisDragValue options.
+      Result: `controls/axis_drag_value/element.rs` keeps keyed owner orchestration, DragValueCore
+      wiring, double-click typing transition, and text-entry focus/key policy. The private
+      `controls/axis_drag_value/element/scrub.rs` owner contains scrub input-group frame
+      composition plus axis/value/prefix/suffix/reset segments.
 - [x] Split `imui_editor_proof_demo` proof/readout helpers into a demo-local owner without changing
       render workflow, docking/window glue, collection module ownership, model factories, or public
       IMUI/editor APIs.
@@ -508,6 +515,13 @@ Last updated: 2026-05-31
       text input props, focus/key handling, and mode transitions. The private
       `controls/axis_drag_value/element/typing.rs` owner contains typing input-group frame
       composition plus axis/prefix/suffix/error/reset segments.
+- [x] Split editor axis-drag-value scrub frame assembly into a private element child owner without
+      changing DragValueCore commit/cancel routing, double-click typing handoff, scrub response
+      state mapping, stable test-id routing, reset affordance, or public AxisDragValue options.
+      Result: `controls/axis_drag_value/element.rs` keeps keyed owner orchestration, DragValueCore
+      wiring, double-click typing transition, and text-entry focus/key policy. The private
+      `controls/axis_drag_value/element/scrub.rs` owner contains scrub input-group frame
+      composition plus axis/value/prefix/suffix/reset segments.
 - [x] Reuse shared joined text-input chrome policy for editor axis-drag-value typing without
       changing joined input transparency, borderless chrome, focus-ring suppression, text style,
       typing field routing, scrub mounting, or public AxisDragValue options.

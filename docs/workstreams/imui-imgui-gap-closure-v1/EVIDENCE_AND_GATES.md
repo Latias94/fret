@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## AxisDragValue Scrub Frame Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor axis-drag-value scrub frame assembly moved into a private
+`axis_drag_value/element/scrub.rs` owner without changing DragValueCore commit/cancel routing,
+double-click typing handoff, scrub response state mapping, stable test-id routing, reset affordance,
+or public AxisDragValue options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` keeps keyed owner
+  orchestration, DragValueCore wiring, double-click typing transition, text input props, focus/key
+  handling, and mode transitions.
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element/scrub.rs` owns scrub input-group
+  frame composition plus axis/value/prefix/suffix/reset segments and scrub root test-id decoration.
+- `tools/gate_imui_workstream_source.py` now gates the parent/scrub split so DragValueCore and
+  double-click behavior stay in the keyed owner while scrub frame chrome stays in the child owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new scrub-frame owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor axis_drag_value --no-fail-fast`: pass (5 passed, 217
+  skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass.
+
 ## AxisDragValue Typing Frame Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor axis-drag-value typing frame assembly moved into a private

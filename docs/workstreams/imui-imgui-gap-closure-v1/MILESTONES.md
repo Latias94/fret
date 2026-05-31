@@ -64,6 +64,14 @@ composition plus axis/prefix/suffix/error/reset segments. Scrub mounting, Enter/
 commit/cancel behavior, focus handoff, test-id routing, invalid-state icon, reset affordance, and
 public AxisDragValue options remain unchanged.
 
+2026-05-31 editor AxisDragValue scrub-frame owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps keyed owner
+orchestration, DragValueCore wiring, double-click typing transition, and text-entry focus/key
+policy. The private `controls/axis_drag_value/element/scrub.rs` owner contains scrub input-group
+frame composition plus axis/value/prefix/suffix/reset segments. DragValueCore commit/cancel
+routing, scrub response state mapping, test-id routing, reset affordance, and public AxisDragValue
+options remain unchanged.
+
 2026-05-31 editor proof helper owner-split result:
 `apps/fret-examples/src/imui_editor_proof_demo.rs` now keeps workflow rendering, docking/window
 glue, model factories, and proof orchestration, while
