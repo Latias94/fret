@@ -1,27 +1,8 @@
 use std::sync::Arc;
 
-use super::{NumericInput, editor_numeric_input_text_style};
-use crate::primitives::EditorDensity;
+use super::NumericInput;
 use crate::primitives::NumericPresentation;
 use fret_app::App;
-use fret_core::{Px, TextStyle};
-
-#[test]
-fn numeric_input_text_style_uses_density_row_height_for_edit_line_box() {
-    let style = editor_numeric_input_text_style(
-        TextStyle {
-            size: Px(12.0),
-            line_height: Some(Px(16.0)),
-            ..Default::default()
-        },
-        EditorDensity {
-            row_height: Px(24.0),
-            ..Default::default()
-        },
-    );
-
-    assert_eq!(style.line_height, Some(Px(24.0)));
-}
 
 #[test]
 fn numeric_input_from_presentation_adopts_format_parse_and_chrome_affixes() {

@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor NumericInput Model Session Owner Split Evidence - 2026-05-31
+
+Claim verified: editor numeric-input model/session owners split without changing public
+option/type aliases, default selection behavior, validation message routing, density-derived edit
+line boxes, local draft/error model allocation, or NumericPresentation adoption.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` keeps NumericInput constructors,
+  builders, keyed control orchestration, validation message rendering, and presentation test
+  routing.
+- `ecosystem/fret-ui-editor/src/controls/numeric_input/model.rs` owns `NumericInputOptions`,
+  `NumericInputErrorDisplay`, callback/type aliases, outcome type, and edit-line text-style policy.
+- `ecosystem/fret-ui-editor/src/controls/numeric_input/model/tests.rs` owns density line-box
+  coverage.
+- `ecosystem/fret-ui-editor/src/controls/numeric_input/session.rs` owns draft/error local model
+  allocation.
+- `tools/gate_imui_workstream_source.py` checks the numeric-input root/model/session/test split and
+  rejects model/session helpers from drifting back into the root control file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new numeric-input owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui numeric_input --no-fail-fast`: pass (6
+  passed, 199 skipped) on rerun after an earlier command timeout while waiting on build/package
+  locks.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Editor Slider Options Model Owner Split Evidence - 2026-05-31
 
 Claim verified: editor slider public options split into the model owner without changing option

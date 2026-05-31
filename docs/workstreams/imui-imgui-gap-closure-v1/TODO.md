@@ -482,6 +482,13 @@ Last updated: 2026-05-31
       routing, density-derived edit line boxes, or NumericPresentation adoption.
       Result: `controls/numeric_input.rs` keeps numeric input control orchestration plus test-owner
       routing. `controls/numeric_input/tests.rs` owns edit line-box and presentation coverage.
+- [x] Split editor numeric-input model/session owners without changing public option/type aliases,
+      default selection behavior, validation message routing, density-derived edit line boxes,
+      local draft/error model allocation, or NumericPresentation adoption.
+      Result: `controls/numeric_input.rs` keeps numeric input control orchestration and presentation
+      test routing. `controls/numeric_input/model.rs` owns options/outcomes/type aliases and text
+      style policy, `model/tests.rs` owns line-box coverage, and `session.rs` owns draft/error
+      local models.
 - [x] Split editor drag-value presentation regression into a private test owner without changing
       `DragValue::from_presentation`, NumericPresentation adoption, duplicate chrome affix
       suppression, scrub/typing behavior, or drag-value value text-role routing.

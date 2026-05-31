@@ -26,6 +26,14 @@ owns `SliderOptions`, its default layout/value/readout/typing policy values, mod
 layout projection, and affixed-value helper. Public option field names and defaults remain
 unchanged.
 
+2026-05-31 editor numeric-input model/session owner-split result:
+`ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps NumericInput constructors,
+builder methods, keyed control orchestration, validation message rendering, and presentation test
+routing. `controls/numeric_input/model.rs` owns options, error display, outcome/type aliases, and
+edit-line text-style policy; `model/tests.rs` owns line-box coverage; `session.rs` owns draft/error
+local model allocation. Public option/type alias names and default selection behavior remain
+unchanged.
+
 2026-05-31 menu interaction behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` now owns active-trigger
 installation and keyboard behavior orchestration only. `behavior/activation.rs` owns activate

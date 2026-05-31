@@ -12,14 +12,13 @@ use std::sync::{Arc, Mutex};
 
 use fret_core::{Axis, Edges, KeyCode, Px, SemanticsInvalid, TextStyle};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, UiFocusActionHost};
+use fret_ui::action::ActionCx;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacingLength,
     TextInputProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, Size};
+use fret_ui_kit::ChromeRefinement;
 
 use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
 use crate::primitives::colors::{
@@ -39,84 +38,17 @@ use crate::primitives::{NumericPresentation, style::EditorStyle};
 
 pub use crate::primitives::NumericInputSelectionBehavior;
 
+mod model;
+mod session;
 #[cfg(test)]
 mod tests;
 
-#[derive(Debug, Clone)]
-pub struct NumericInputOptions {
-    pub layout: LayoutStyle,
-    pub size: Size,
-    pub placeholder: Option<Arc<str>>,
-    pub prefix: Option<Arc<str>>,
-    pub suffix: Option<Arc<str>>,
-    /// Explicit identity source for internal state (draft/error models).
-    ///
-    /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
-    /// Use this when a helper function builds multiple numeric inputs from the same callsite and
-    /// you need stable, per-instance state separation.
-    pub id_source: Option<Arc<str>>,
-    pub test_id: Option<Arc<str>>,
-    pub enabled: bool,
-    pub focusable: bool,
-    pub error_display: NumericInputErrorDisplay,
-    pub selection_behavior: NumericInputSelectionBehavior,
-}
-
-impl Default for NumericInputOptions {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Auto,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            size: Size::default(),
-            placeholder: None,
-            prefix: None,
-            suffix: None,
-            id_source: None,
-            test_id: None,
-            enabled: true,
-            focusable: true,
-            error_display: NumericInputErrorDisplay::InlineTextAndIcon,
-            selection_behavior: NumericInputSelectionBehavior::ReplaceAllOnFocus,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NumericInputErrorDisplay {
-    None,
-    InlineText,
-    TrailingIcon,
-    InlineTextAndIcon,
-}
-
-pub type NumericFormatFn<T> = Arc<dyn Fn(T) -> Arc<str> + Send + Sync + 'static>;
-pub type NumericParseFn<T> = Arc<dyn Fn(&str) -> Option<T> + Send + Sync + 'static>;
-pub type NumericValidateFn<T> = Arc<dyn Fn(T) -> Option<Arc<str>> + Send + Sync + 'static>;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NumericInputOutcome {
-    Committed,
-    Canceled,
-}
-
-pub type OnNumericInputOutcome =
-    Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, NumericInputOutcome) + 'static>;
-
-fn editor_numeric_input_text_style(
-    base: TextStyle,
-    density: crate::primitives::EditorDensity,
-) -> TextStyle {
-    typography::as_control_text(TextStyle {
-        line_height: Some(density.row_height),
-        ..base
-    })
-}
+use model::editor_numeric_input_text_style;
+pub use model::{
+    NumericFormatFn, NumericInputErrorDisplay, NumericInputOptions, NumericInputOutcome,
+    NumericParseFn, NumericValidateFn, OnNumericInputOutcome,
+};
+use session::{draft_model, error_model};
 
 #[derive(Clone)]
 pub struct NumericInput<T> {
@@ -555,14 +487,4 @@ where
             },
         )
     }
-}
-
-#[track_caller]
-fn draft_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    cx.local_model(String::new)
-}
-
-#[track_caller]
-fn error_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Option<Arc<str>>> {
-    cx.local_model(|| None::<Arc<str>>)
 }
