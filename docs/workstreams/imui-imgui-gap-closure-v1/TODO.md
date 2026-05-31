@@ -58,6 +58,14 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor Vec2/Vec3/Vec4 keyed element assembly into a private child owner without
+      changing callsite keying, auto row/column layout resolution, axis group ordering, axis reset
+      forwarding, axis outcome routing, test-id derivation, or public VecEdit option/control APIs.
+      Result: `controls/vec_edit.rs` keeps public options, Vec2/Vec3/Vec4 records, constructors,
+      presentation adoption, builder methods, and callsite/id-source keying.
+      `controls/vec_edit/element.rs` owns keyed element assembly, layout-plan consumption, derived
+      axis id/test-id
+      routing, axis group order, and root test-id decoration.
 - [x] Split editor `AxisDragValue` keyed element assembly into a private child owner without
       changing callsite keying, scrub/typing mode transitions, focus handoff, commit/cancel outcome
       routing, reset action wiring, test-id derivation, or public option/outcome APIs.

@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## VecEdit Element Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor Vec2/Vec3/Vec4 keyed element assembly moved into a private
+`vec_edit/element.rs` owner without changing callsite keying, auto row/column layout resolution,
+axis group ordering, axis reset forwarding, axis outcome routing, test-id derivation, or public
+VecEdit option/control APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps public VecEdit options, Vec2/Vec3/
+  Vec4 records, constructors, presentation adoption, builder methods, and callsite/id-source
+  keying.
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/element.rs` owns keyed Vec2/Vec3/Vec4 element
+  assembly, layout-plan consumption, derived axis id/test-id routing, axis group order, and root
+  test-id decoration.
+- `tools/gate_imui_workstream_source.py` now gates the root/element split so layout consumption and
+  axis assembly stay out of the public VecEdit root.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new element-owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor vec_edit --no-fail-fast`: pass (4 passed, 218 skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass.
+
 ## AxisDragValue Element Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor `AxisDragValue` keyed element assembly moved into a private

@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 editor VecEdit element owner-split result:
+`ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps public VecEdit options, Vec2/Vec3/
+Vec4 records, constructors, presentation adoption, builder methods, and callsite/id-source keying
+only. The private `controls/vec_edit/element.rs` owner now contains keyed Vec2/Vec3/Vec4 element
+assembly, layout-plan consumption, derived axis id/test-id routing, axis group order, and root
+test-id decoration. Public VecEdit option/control APIs remain unchanged.
+
 2026-05-31 editor AxisDragValue element owner-split result:
 `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps public control construction,
 presentation adoption, builder methods, and callsite/id-source keying only. The private
