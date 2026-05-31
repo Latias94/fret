@@ -49,10 +49,13 @@ IMUI_DIRECT_TEXT_PROPS_ALLOWED: dict[Path, dict[str, int]] = {}
 
 EDITOR_DIRECT_TEXT_PROPS_ALLOWED = {
     Path("ecosystem/fret-ui-editor/src/primitives/readout.rs"): {
-        "TextProps {": 10,
+        "TextProps {": 6,
     },
     Path("ecosystem/fret-ui-editor/src/primitives/readout/feedback.rs"): {
         "TextProps {": 3,
+    },
+    Path("ecosystem/fret-ui-editor/src/primitives/readout/input.rs"): {
+        "TextProps {": 4,
     },
     Path("ecosystem/fret-ui-editor/src/primitives/readout/property.rs"): {
         "TextProps {": 4,
@@ -32457,18 +32460,16 @@ def main() -> None:
             Path("ecosystem/fret-ui-editor/src/primitives/readout.rs"),
             required=[
                 "mod feedback;",
+                "mod input;",
                 "mod tests;",
                 "mod property;",
                 "mod theme_preset;",
                 "pub(crate) use feedback::{",
+                "pub(crate) use input::{",
                 "pub(crate) use property::{",
                 "pub(crate) use theme_preset::{",
                 "pub(crate) fn editor_section_badge_text_props",
                 "pub(crate) fn editor_section_heading_text_props",
-                "pub(crate) fn editor_inline_control_label_text_props",
-                "pub(crate) fn editor_input_segment_text_props",
-                "pub(crate) fn editor_input_value_text_props",
-                "pub(crate) fn editor_axis_marker_text_props",
                 "pub(crate) fn editor_preview_caption_text_props",
                 "pub(crate) fn editor_empty_state_text_props",
                 "pub(crate) fn editor_tooltip_readout_text_props",
@@ -32511,6 +32512,37 @@ def main() -> None:
                 "pub(crate) fn editor_inspector_panel_title_text_props",
                 "pub(crate) fn editor_property_row_label_text_props",
                 "pub(crate) fn editor_property_row_reset_glyph_text_props",
+                "pub(crate) fn editor_inline_control_label_text_props",
+                "pub(crate) fn editor_input_segment_text_props",
+                "pub(crate) fn editor_input_value_text_props",
+                "pub(crate) fn editor_axis_marker_text_props",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/readout/input.rs"),
+            required=[
+                "pub(crate) fn editor_inline_control_label_text_props",
+                "pub(crate) fn editor_input_segment_text_props",
+                "pub(crate) fn editor_input_value_text_props",
+                "pub(crate) fn editor_axis_marker_text_props",
+                "weight: FontWeight::SEMIBOLD,",
+                "flex: FlexItemStyle {",
+                "min_width: Some(Length::Px(Px(0.0)))",
+                "wrap: TextWrap::None,",
+                "overflow: TextOverflow::Ellipsis",
+                "overflow: TextOverflow::Clip",
+                "align: TextAlign::Start",
+                "align: TextAlign::Center",
+            ],
+            forbidden=[
+                "editor_inline_control_label_text_is_single_line_and_shrinkable",
+                "editor_input_segment_text_keeps_fixed_segment_line_box",
+                "editor_input_value_text_props_are_single_line_and_shrinkable",
+                "editor_axis_marker_text_keeps_fixed_centered_line_box",
+                "pub(crate) fn editor_status_badge_text_props",
+                "pub(crate) fn editor_property_group_header_text_props",
+                "pub(crate) fn editor_popup_list_row_text_props",
+                "pub(crate) fn editor_theme_preset_picker_header_text_props",
             ],
         ),
         SourceCheck(

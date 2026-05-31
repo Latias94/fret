@@ -680,6 +680,12 @@ property helpers. `primitives/readout/property.rs` owns property group header, i
 property-row label, and reset glyph text props. Property chrome layout semantics, re-export paths,
 and readout regression coverage remain unchanged.
 
+2026-05-31 editor readout input child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the shared readout hub and re-exports
+input helpers. `primitives/readout/input.rs` owns inline control label, input segment, input value,
+and axis marker text props. Input/axis layout semantics, re-export paths, and readout regression
+coverage remain unchanged.
+
 2026-05-30 editor vec-edit axis child-owner result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps Vec2/Vec3/Vec4 public control
 orchestration. `controls/vec_edit/axis.rs` owns `VecEditAxis`, `VecEditAxisOutcome`, reset options,

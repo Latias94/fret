@@ -1127,6 +1127,7 @@
     "ecosystem/fret-ui-editor/src/primitives/popup_list.rs",
     "ecosystem/fret-ui-editor/src/primitives/readout.rs",
     "ecosystem/fret-ui-editor/src/primitives/readout/feedback.rs",
+    "ecosystem/fret-ui-editor/src/primitives/readout/input.rs",
     "ecosystem/fret-ui-editor/src/primitives/readout/tests.rs",
     "ecosystem/fret-ui-editor/src/primitives/readout/property.rs",
     "ecosystem/fret-ui-editor/src/primitives/readout/popup_list.rs",

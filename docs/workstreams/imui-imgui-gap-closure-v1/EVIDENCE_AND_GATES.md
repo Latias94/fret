@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Readout Input Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor input/axis readout text props moved into a private `readout/input.rs` owner
+without changing inline control labels, input segment/value text, axis marker layout semantics,
+re-export paths, or readout regression coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/readout.rs` keeps the shared readout hub and re-exports
+  input helpers at the existing module path.
+- `ecosystem/fret-ui-editor/src/primitives/readout/input.rs` owns inline control label, input
+  segment, input value, and axis marker text props.
+- `tools/gate_imui_workstream_source.py` now gates the hub/input split and moves the four direct
+  `TextProps` allowlist entries from `readout.rs` to `readout/input.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new input owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor editor_inline_control_label_text_is_single_line_and_shrinkable
+  editor_input_segment_text_keeps_fixed_segment_line_box
+  editor_input_value_text_props_are_single_line_and_shrinkable
+  editor_axis_marker_text_keeps_fixed_centered_line_box --no-fail-fast`: pass (4 passed, 218
+  skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass (with Git's line-ending warning for `primitives/readout.rs`).
+
 ## Readout Property Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor property readout text props moved into a private `readout/property.rs`
