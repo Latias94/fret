@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Slider Default Text Strategy Owner Split Evidence - 2026-05-31
+
+Claim verified: editor slider default format/parse strategy moved into the model owner without
+changing `Slider::new`, integer/three-decimal display behavior, trimmed f64 parsing,
+NumericPresentation overrides, pointer/typing behavior, public `SliderOptions`, or existing chrome
+and value-math child-owner boundaries.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/slider.rs` delegates `Slider::new` default format/parse
+  construction to `default_slider_format(...)` and `default_slider_parse(...)`.
+- `ecosystem/fret-ui-editor/src/controls/slider/model.rs` owns the default slider text strategy
+  next to `SliderOptions`, hidden layout projection, mode/state, and affixed-value composition.
+- `ecosystem/fret-ui-editor/src/controls/slider/model/tests.rs` owns focused coverage for integer
+  or three-decimal display text, trimmed f64 parsing, and existing affixed-value behavior.
+- `tools/gate_imui_workstream_source.py` checks the slider root/model/test split and rejects the
+  default formatting/parsing bodies from drifting back into `slider.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui slider --no-fail-fast`: pass (14 passed,
+  193 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Editor ColorEdit Affordance Tests Owner Split Evidence - 2026-05-31
 
 Claim verified: editor color-edit eyedropper/tooltip/copy affordance tests split into a private

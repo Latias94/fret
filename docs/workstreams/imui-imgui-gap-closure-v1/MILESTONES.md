@@ -26,6 +26,12 @@ owns `SliderOptions`, its default layout/value/readout/typing policy values, mod
 layout projection, and affixed-value helper. Public option field names and defaults remain
 unchanged.
 
+2026-05-31 editor slider default text strategy owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now delegates `Slider::new` default format/parse
+construction to `controls/slider/model.rs`. `model.rs` owns integer-or-three-decimal display text
+and trimmed f64 parsing defaults, while `model/tests.rs` owns focused coverage for those defaults.
+Presentation overrides, pointer/typing behavior, and public `SliderOptions` remain unchanged.
+
 2026-05-31 editor numeric-input model/session owner-split result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps NumericInput constructors,
 builder methods, keyed control orchestration, validation message rendering, and presentation test

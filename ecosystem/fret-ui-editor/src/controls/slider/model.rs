@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use crate::controls::numeric_input::NumericInputSelectionBehavior;
+use crate::controls::numeric_input::{
+    NumericFormatFn, NumericInputSelectionBehavior, NumericParseFn,
+};
+use crate::primitives::drag_value_core::DragValueScalar;
 use fret_core::{PointerId, Px};
 use fret_ui::GlobalElementId;
 use fret_ui::element::{
@@ -63,6 +66,21 @@ impl Default for SliderOptions {
             a11y_label: None,
         }
     }
+}
+
+pub(super) fn default_slider_format<T: DragValueScalar>() -> NumericFormatFn<T> {
+    Arc::new(|v| {
+        let f = v.to_f64();
+        if (f - f.round()).abs() <= 1e-6 {
+            Arc::from(format!("{}", f.round() as i64))
+        } else {
+            Arc::from(format!("{f:.3}"))
+        }
+    })
+}
+
+pub(super) fn default_slider_parse<T: DragValueScalar>() -> NumericParseFn<T> {
+    Arc::new(|s| s.trim().parse::<f64>().ok().map(T::from_f64))
 }
 
 pub(super) fn compose_affixed_value_text(

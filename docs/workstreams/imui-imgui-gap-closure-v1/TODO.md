@@ -453,6 +453,12 @@ Last updated: 2026-05-31
       Result: `controls/slider.rs` keeps the Slider public constructor/builder surface and control
       orchestration. `controls/slider/model.rs` owns `SliderOptions`, its defaults, mode/state,
       hidden layout projection, and affixed value composition.
+- [x] Split editor slider default format/parse strategy into the model owner without changing
+      `Slider::new`, integer/three-decimal display behavior, trimmed f64 parsing, presentation
+      overrides, pointer/typing behavior, or public `SliderOptions`.
+      Result: `controls/slider.rs` delegates default format/parse construction to
+      `controls/slider/model.rs`; `controls/slider/model/tests.rs` owns the default text strategy
+      coverage alongside affixed-value helper coverage.
 - [x] Split editor enum-select row rendering, selection commit policy, and item test-id
       sanitization into a private child owner without changing trigger composition, overlay
       dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row

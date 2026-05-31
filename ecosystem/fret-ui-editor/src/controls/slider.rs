@@ -46,7 +46,10 @@ mod value_math;
 
 use chrome::{alpha_mul, mix, resolve_slider_chrome};
 pub use model::SliderOptions;
-use model::{SliderMode, SliderState, compose_affixed_value_text, hidden_layout};
+use model::{
+    SliderMode, SliderState, compose_affixed_value_text, default_slider_format,
+    default_slider_parse, hidden_layout,
+};
 use value_math::{quantize_value, t_from_value, value_from_slider_local_x};
 
 #[derive(Clone)]
@@ -65,21 +68,12 @@ where
     T: DragValueScalar + Default,
 {
     pub fn new(model: Model<T>, min: f64, max: f64) -> Self {
-        let format: NumericFormatFn<T> = Arc::new(|v| {
-            let f = v.to_f64();
-            if (f - f.round()).abs() <= 1e-6 {
-                Arc::from(format!("{}", f.round() as i64))
-            } else {
-                Arc::from(format!("{f:.3}"))
-            }
-        });
-        let parse: NumericParseFn<T> = Arc::new(|s| s.trim().parse::<f64>().ok().map(T::from_f64));
         Self {
             model,
             min,
             max,
-            format,
-            parse,
+            format: default_slider_format(),
+            parse: default_slider_parse(),
             validate: None,
             options: SliderOptions::default(),
         }
