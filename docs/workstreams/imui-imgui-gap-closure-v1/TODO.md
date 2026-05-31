@@ -413,6 +413,11 @@ Last updated: 2026-05-31
       Result: `controls/axis_drag_value.rs` now keeps control orchestration only.
       `controls/axis_drag_value/ids.rs` owns scrub/typing/reset test-id derivation, with focused
       coverage in `controls/axis_drag_value/ids/tests.rs`.
+- [x] Reuse shared joined text-input chrome policy for editor axis-drag-value typing without
+      changing joined input transparency, borderless chrome, focus-ring suppression, text style,
+      typing field routing, scrub mounting, or public AxisDragValue options.
+      Result: `controls/axis_drag_value.rs` now delegates joined input chrome normalization to
+      `primitives::chrome::joined_text_input_style(...)` instead of carrying a local duplicate.
 - [x] Split editor slider chrome/color resolution into a private child owner without changing
       pointer/typing behavior, value formatting, theme token precedence, hover/pressed/disabled
       color mixing, or slider option/public constructor behavior.

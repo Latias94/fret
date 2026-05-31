@@ -26,6 +26,13 @@ delegating scrub/typing/reset child test-id derivation to `controls/axis_drag_va
 precedence, and typing reset suffix behavior. Diagnostics naming, control routing, and public
 AxisDragValue options remain unchanged.
 
+2026-05-31 editor axis-drag-value joined input chrome reuse result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now reuses
+`primitives::chrome::joined_text_input_style(...)` for the typing field instead of carrying a local
+duplicate of transparent/borderless joined input chrome policy. Joined input transparency,
+borderless chrome, focus-ring suppression, text style, typing field routing, scrub mounting, and
+public AxisDragValue options remain unchanged.
+
 2026-05-31 editor slider options model owner-split result:
 `ecosystem/fret-ui-editor/src/controls/slider.rs` now re-exports `SliderOptions` from the model
 owner and keeps Slider constructors/builders plus control orchestration. `controls/slider/model.rs`

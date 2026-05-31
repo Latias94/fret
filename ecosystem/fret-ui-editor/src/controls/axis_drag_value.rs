@@ -6,7 +6,7 @@
 use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
-use fret_core::{Color, Edges, KeyCode, Px, SemanticsInvalid};
+use fret_core::{Color, KeyCode, Px, SemanticsInvalid};
 use fret_runtime::Model;
 use fret_ui::action::{
     ActionCx, PointerDownCx, PressablePointerDownResult, UiActionHost, UiFocusActionHost,
@@ -16,7 +16,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ChromeRefinement;
 
 use crate::controls::numeric_input::{NumericFormatFn, NumericParseFn, NumericValidateFn};
-use crate::primitives::chrome::resolve_editor_text_field_style;
+use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
 use crate::primitives::colors::{editor_invalid_border, editor_muted_foreground};
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
@@ -449,24 +449,7 @@ where
         props.test_id = typing_input_test_id.clone();
         props.a11y_invalid = has_error.then_some(SemanticsInvalid::True);
 
-        // Joined field: the frame is drawn by the input group. Keep the inner text input transparent
-        // and borderless to avoid double chrome.
-        let mut joined_chrome = input_chrome;
-        joined_chrome.padding = Edges::all(Px(0.0));
-        joined_chrome.border = Edges::all(Px(0.0));
-        joined_chrome.corner_radii = fret_core::Corners::all(Px(0.0));
-        joined_chrome.background = Color {
-            a: 0.0,
-            ..joined_chrome.background
-        };
-        joined_chrome.border_color = Color {
-            a: 0.0,
-            ..joined_chrome.border_color
-        };
-        joined_chrome.border_color_focused = joined_chrome.border_color;
-        joined_chrome.focus_ring = None;
-
-        props.chrome = joined_chrome;
+        props.chrome = joined_text_input_style(input_chrome);
         props.text_style = text_style.clone();
 
         let input = cx.text_input(props);

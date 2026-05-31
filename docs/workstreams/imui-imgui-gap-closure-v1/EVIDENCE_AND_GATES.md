@@ -3,6 +3,32 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor AxisDragValue Joined Input Chrome Reuse Evidence - 2026-05-31
+
+Claim verified: editor axis-drag-value typing field now reuses the shared joined text-input chrome
+policy without changing joined input transparency, borderless chrome, focus-ring suppression, text
+style, typing field routing, scrub mounting, public AxisDragValue options, or existing
+ids/model/session/test child-owner boundaries.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` delegates typing input chrome
+  normalization to `primitives::chrome::joined_text_input_style(...)`.
+- `tools/gate_imui_workstream_source.py` requires the shared helper and rejects the local
+  `joined_chrome` duplicate body from drifting back into `axis_drag_value.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui axis_drag_value --no-fail-fast`: pass (5
+  passed, 219 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Editor AxisDragValue Ids Owner Split Evidence - 2026-05-31
 
 Claim verified: editor axis-drag-value child test-id derivation moved into a private ids owner
