@@ -5,7 +5,7 @@ use fret_ui::element::{
     VirtualListOptions as RuntimeVirtualListOptions,
 };
 
-use super::VirtualListOptions;
+use super::super::VirtualListOptions;
 
 pub(super) fn runtime_options(
     options: &VirtualListOptions,

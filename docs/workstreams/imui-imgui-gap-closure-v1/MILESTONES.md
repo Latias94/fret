@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 virtual-list element assembly owner-split result:
+`ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs` is now a thin module/re-export hub.
+`virtual_list_controls/element.rs` owns keyed runtime list assembly, default scroll-handle slot
+state, build-focus forwarding, list semantics, and response packaging. Public virtual-list facade
+behavior remains unchanged.
+
 2026-05-31 bullet-text test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/bullet_text_controls/tests.rs` is now a thin test hub.
 `tests/text_role.rs` owns compact paragraph text-role coverage for bullet labels. Public

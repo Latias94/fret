@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Virtual-List Element Assembly Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI virtual-list keyed element assembly split into a private element owner without
+changing facade method names, stable default scroll-handle state, keyed runtime substrate usage,
+build-focus forwarding, row wrapping, list semantics, or public `VirtualListResponse` reporting.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs` is now a thin module/re-export hub for
+  element, range, row, runtime, and tests owners.
+- `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/element.rs` owns the keyed virtual-list
+  assembly, default `VirtualListScrollHandle` slot state, focus child mounting, list-level
+  semantics, and response packaging.
+- `ecosystem/fret-ui-kit/tests/imui_perf_guard_smoke.rs` now points the virtual-list substrate guard
+  at `virtual_list_controls/element.rs` and the floating-layer z-order guard at
+  `floating_surface/layer/z_order.rs`, matching the current owner split.
+- `tools/gate_imui_workstream_source.py` now checks the virtual-list root/element split and rejects
+  keyed assembly details from drifting back into the root module.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new virtual-list element
+  owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_virtual_list_smoke --test imui_perf_guard_smoke --no-fail-fast`: pass (6 passed).
+- `cargo nextest run -p fret-ui-kit --features imui --lib virtual_list_controls::tests --no-fail-fast`: pass on rerun after an earlier command wrapper timeout before a nextest summary (3 passed, 690 skipped).
+
 ## IMUI Floating-Window Resize Commit Mutation Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI floating-window resize commit lifecycle mutation split into a private owner

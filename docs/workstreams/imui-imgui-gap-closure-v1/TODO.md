@@ -44,6 +44,13 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI virtual-list keyed element assembly into a private owner without changing
+      facade method names, default scroll-handle slot state, keyed runtime substrate usage,
+      build-focus forwarding, row wrapping, list semantics, or `VirtualListResponse` reporting.
+      Result: `virtual_list_controls.rs` is now a thin module/re-export hub, while
+      `virtual_list_controls/element.rs` owns keyed list assembly, focus child mounting, list-level
+      semantics, and response packaging. The perf guard now points at the current virtual-list and
+      floating-layer z-order owner files.
 - [x] Split IMUI bullet-text compact paragraph regression coverage into a private text-role owner
       without changing bullet indicator layout, label test-id forwarding, inherited foreground, or
       shared compact paragraph semantics.

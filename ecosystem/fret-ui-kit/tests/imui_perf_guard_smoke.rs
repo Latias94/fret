@@ -28,7 +28,7 @@ fn virtual_list_stress_demo_keeps_keyed_virtualization_path() {
 
 #[test]
 fn floating_layer_z_order_does_not_clone_vec_each_frame() {
-    let source = include_str!("../src/imui/floating_surface/layer.rs");
+    let source = include_str!("../src/imui/floating_surface/layer/z_order.rs");
     assert!(
         source.contains("if !self.dirty"),
         "floating_layer should reuse the z-order snapshot while order is unchanged"
@@ -54,7 +54,7 @@ fn popup_menu_uses_environment_viewport_bounds_for_popper_outer_bounds() {
 
 #[test]
 fn imui_virtual_list_wrapper_reuses_runtime_virtual_list_substrate() {
-    let source = include_str!("../src/imui/virtual_list_controls.rs");
+    let source = include_str!("../src/imui/virtual_list_controls/element.rs");
     assert!(
         source.contains("virtual_list_keyed_with_layout("),
         "imui virtual_list should stay a thin wrapper over the runtime keyed virtual list substrate"

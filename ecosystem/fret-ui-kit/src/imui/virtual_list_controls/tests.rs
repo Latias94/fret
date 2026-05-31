@@ -6,7 +6,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, LayoutStyle, Length, Overflow, VirtualListMeasureMode,
 };
 
-use super::{row_height_for_index, wrap_row};
+use super::row::{row_height_for_index, wrap_row};
 
 fn bounds() -> Rect {
     Rect::new(
