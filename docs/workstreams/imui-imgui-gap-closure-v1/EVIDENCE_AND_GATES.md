@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor DragValue Model/Session Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor `DragValue` mode/state and session helpers moved out of the root control
+into private `drag_value/model.rs` and `drag_value/session.rs` owners without changing keyed
+control orchestration, hidden scrub/input mounting, numeric-input outcome mapping, outcome callback
+emission, or public `DragValue` APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps root public surface, keyed control
+  orchestration, `DragValueCore` wiring, double-click typing handoff, and `NumericInput` routing.
+- `ecosystem/fret-ui-editor/src/controls/drag_value/model.rs` owns `DragValueMode` and
+  `DragValueState`.
+- `ecosystem/fret-ui-editor/src/controls/drag_value/session.rs` owns hidden layout, typed
+  numeric-input outcome mapping, and `OnDragValueOutcome` callback emission.
+- `tools/gate_imui_workstream_source.py` now gates root/model/session boundaries and prevents
+  mode/state/session helpers from drifting back into `drag_value.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new model/session owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor drag_value --no-fail-fast`: pass (10 passed, 212 skipped).
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass.
+
 ## Editor DragValue Scrub Frame Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor `DragValue` scrub frame rendering moved out of the root control into a

@@ -58,6 +58,14 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `DragValue` mode/state and session helpers into private child owners without
+      changing keyed control orchestration, hidden scrub/input mounting, numeric input outcome
+      mapping, or public `DragValue` APIs.
+      Result: `controls/drag_value.rs` keeps control orchestration and root public surface.
+      `controls/drag_value/model.rs` owns `DragValueMode` / `DragValueState`, and
+      `controls/drag_value/session.rs` owns hidden layout, numeric-input outcome mapping, and
+      outcome callback emission. The source gate prevents state/session helpers from drifting back
+      into the root control.
 - [x] Split editor `DragValue` scrub frame rendering into a private child owner without changing
       `DragValueCore` commit/cancel routing, double-click typing handoff, scrub response state
       mapping, stable test-id routing, or public `DragValue` options.

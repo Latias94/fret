@@ -27,40 +27,19 @@ use crate::primitives::{
 use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PressablePointerDownResult, UiActionHost};
-use fret_ui::element::{
-    AnyElement, FlexItemStyle, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle,
-};
+use fret_ui::element::{AnyElement, FlexItemStyle, LayoutStyle, Length, SizeStyle};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 #[cfg(test)]
 mod tests;
 
+mod model;
 mod scrub;
+mod session;
 
+use model::{DragValueMode, DragValueState};
 use scrub::{DragValueScrubFrameArgs, drag_value_scrub_frame};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum DragValueMode {
-    Scrub,
-    Typing,
-}
-
-#[derive(Debug)]
-struct DragValueState {
-    mode: DragValueMode,
-    scrub_id: Option<fret_ui::GlobalElementId>,
-    scrub_revision: u64,
-}
-
-impl Default for DragValueState {
-    fn default() -> Self {
-        Self {
-            mode: DragValueMode::Scrub,
-            scrub_id: None,
-            scrub_revision: 0,
-        }
-    }
-}
+use session::{drag_value_outcome_from_numeric_input, emit_drag_value_outcome, hidden_layout};
 
 #[derive(Debug, Clone)]
 pub struct DragValueOptions {
@@ -389,41 +368,5 @@ where
         // Render both: scrub stays mounted so focus can restore, input stays mounted so focus
         // requests have a stable target.
         cx.container(Default::default(), move |_cx| vec![scrub, input])
-    }
-}
-
-fn hidden_layout(mut layout: LayoutStyle) -> LayoutStyle {
-    layout.size = SizeStyle {
-        width: Length::Px(Px(0.0)),
-        height: Length::Px(Px(0.0)),
-        min_width: Some(Length::Px(Px(0.0))),
-        min_height: Some(Length::Px(Px(0.0))),
-        ..Default::default()
-    };
-    layout.position = PositionStyle::Absolute;
-    layout.inset = InsetStyle {
-        top: Some(Px(0.0)).into(),
-        left: Some(Px(0.0)).into(),
-        ..Default::default()
-    };
-    layout.overflow = Overflow::Clip;
-    layout
-}
-
-fn drag_value_outcome_from_numeric_input(outcome: NumericInputOutcome) -> DragValueOutcome {
-    match outcome {
-        NumericInputOutcome::Committed => DragValueOutcome::Committed,
-        NumericInputOutcome::Canceled => DragValueOutcome::Canceled,
-    }
-}
-
-fn emit_drag_value_outcome(
-    host: &mut dyn UiActionHost,
-    action_cx: ActionCx,
-    on_outcome: Option<&OnDragValueOutcome>,
-    outcome: DragValueOutcome,
-) {
-    if let Some(cb) = on_outcome {
-        cb(host, action_cx, outcome);
     }
 }
