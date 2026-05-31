@@ -11,7 +11,7 @@ use fret_runtime::{ModelHost, PlatformCapabilities};
 use fret_ui::element::{Length, PressableA11y, PressableProps};
 use fret_ui::{UiTree, declarative};
 use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
-use fret_ui_material3::menu::{Menu, MenuEntry, MenuItem};
+use fret_ui_material3::menu::{Menu, MenuEntry, MenuItem, MenuLabel};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 use fret_ui_material3::{DropdownMenu, DropdownMenuAlign};
 
@@ -258,6 +258,7 @@ fn menu_rich_items_expose_material_slots_and_checked_semantics() {
                 .a11y_label("Rich Material menu")
                 .test_id("m3-rich-menu")
                 .entries(vec![
+                    MenuEntry::Label(MenuLabel::new("View").test_id("m3-rich-section-view")),
                     MenuEntry::Item(
                         MenuItem::checkbox(checked, "Show toolbar")
                             .supporting_text("Always visible")
@@ -284,6 +285,15 @@ fn menu_rich_items_expose_material_slots_and_checked_semantics() {
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
     let toolbar = live_test_id_layout_bounds(&ui, &app, window, "m3-rich-toolbar.chrome");
+    let section = live_test_id_layout_bounds(&ui, &app, window, "m3-rich-section-view");
+    assert_px_close(section.size.height.0, 32.0, "menu section label height");
+    assert!(
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-section-view.text")
+            .size
+            .width
+            .0
+            > 0.0
+    );
     assert_px_close(toolbar.size.height.0, 64.0, "two-line menu item height");
     assert!(
         live_test_id_layout_bounds(&ui, &app, window, "m3-rich-toolbar.label")
@@ -333,6 +343,8 @@ fn menu_rich_items_expose_material_slots_and_checked_semantics() {
 
     let toolbar_sem = semantics_node_by_test_id(&ui, "m3-rich-toolbar");
     assert_eq!(toolbar_sem.role, SemanticsRole::MenuItemCheckbox);
+    assert_eq!(toolbar_sem.pos_in_set, Some(1));
+    assert_eq!(toolbar_sem.set_size, Some(3));
     assert_eq!(toolbar_sem.flags.checked, Some(true));
     assert_eq!(
         toolbar_sem.flags.checked_state,
@@ -341,6 +353,8 @@ fn menu_rich_items_expose_material_slots_and_checked_semantics() {
 
     let comfortable_sem = semantics_node_by_test_id(&ui, "m3-rich-comfortable");
     assert_eq!(comfortable_sem.role, SemanticsRole::MenuItemRadio);
+    assert_eq!(comfortable_sem.pos_in_set, Some(2));
+    assert_eq!(comfortable_sem.set_size, Some(3));
     assert_eq!(comfortable_sem.flags.checked, Some(true));
     assert_eq!(
         comfortable_sem.flags.checked_state,
@@ -349,6 +363,8 @@ fn menu_rich_items_expose_material_slots_and_checked_semantics() {
 
     let compact_sem = semantics_node_by_test_id(&ui, "m3-rich-compact");
     assert_eq!(compact_sem.role, SemanticsRole::MenuItemRadio);
+    assert_eq!(compact_sem.pos_in_set, Some(3));
+    assert_eq!(compact_sem.set_size, Some(3));
     assert_eq!(compact_sem.flags.checked, Some(false));
     assert_eq!(
         compact_sem.flags.checked_state,

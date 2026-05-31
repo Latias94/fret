@@ -50,6 +50,7 @@ struct MenuItemLayout {
     horizontal_padding: Px,
     icon_size: Px,
     slot_gap: Px,
+    section_label_height: Px,
 }
 
 impl MenuItemLayout {
@@ -74,9 +75,11 @@ pub struct MenuStyle {
     pub item_supporting_text_color: OverrideSlot<ColorRef>,
     pub item_trailing_text_color: OverrideSlot<ColorRef>,
     pub item_state_layer_color: OverrideSlot<ColorRef>,
+    pub section_label_color: OverrideSlot<ColorRef>,
     pub item_label_text_style: OverrideSlot<TextStyle>,
     pub item_supporting_text_style: OverrideSlot<TextStyle>,
     pub item_trailing_text_style: OverrideSlot<TextStyle>,
+    pub section_label_text_style: OverrideSlot<TextStyle>,
 }
 
 impl MenuStyle {
@@ -139,6 +142,11 @@ impl MenuStyle {
         self
     }
 
+    pub fn section_label_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.section_label_color = Some(color);
+        self
+    }
+
     pub fn item_label_text_style(mut self, style: WidgetStateProperty<Option<TextStyle>>) -> Self {
         self.item_label_text_style = Some(style);
         self
@@ -157,6 +165,14 @@ impl MenuStyle {
         style: WidgetStateProperty<Option<TextStyle>>,
     ) -> Self {
         self.item_trailing_text_style = Some(style);
+        self
+    }
+
+    pub fn section_label_text_style(
+        mut self,
+        style: WidgetStateProperty<Option<TextStyle>>,
+    ) -> Self {
+        self.section_label_text_style = Some(style);
         self
     }
 
@@ -190,6 +206,10 @@ impl MenuStyle {
                 self.item_state_layer_color,
                 other.item_state_layer_color,
             ),
+            section_label_color: merge_override_slot(
+                self.section_label_color,
+                other.section_label_color,
+            ),
             item_label_text_style: merge_override_slot(
                 self.item_label_text_style,
                 other.item_label_text_style,
@@ -202,6 +222,10 @@ impl MenuStyle {
                 self.item_trailing_text_style,
                 other.item_trailing_text_style,
             ),
+            section_label_text_style: merge_override_slot(
+                self.section_label_text_style,
+                other.section_label_text_style,
+            ),
         }
     }
 }
@@ -209,7 +233,35 @@ impl MenuStyle {
 #[derive(Debug, Clone)]
 pub enum MenuEntry {
     Item(MenuItem),
+    Label(MenuLabel),
     Separator,
+}
+
+#[derive(Debug, Clone)]
+pub struct MenuLabel {
+    text: Arc<str>,
+    a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+}
+
+impl MenuLabel {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self {
+            text: text.into(),
+            a11y_label: None,
+            test_id: None,
+        }
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
 }
 
 #[derive(Clone)]
@@ -507,6 +559,7 @@ impl Menu {
                     horizontal_padding: menu_tokens::item_horizontal_padding(theme),
                     icon_size: menu_tokens::item_icon_size(theme),
                     slot_gap: menu_tokens::item_slot_gap(theme),
+                    section_label_height: menu_tokens::section_label_height(theme),
                 };
                 let vertical_padding = menu_tokens::container_vertical_padding(theme);
 
@@ -687,6 +740,14 @@ impl Menu {
                                         MenuEntry::Separator => {
                                             out.push(menu_separator(cx));
                                         }
+                                        MenuEntry::Label(label) => {
+                                            out.push(material_menu_label(
+                                                cx,
+                                                label.clone(),
+                                                item_layout,
+                                                style.clone(),
+                                            ));
+                                        }
                                         MenuEntry::Item(it) => {
                                             let tab_stop = item_idx == 0;
                                             out.push(material_menu_item(
@@ -756,6 +817,72 @@ fn menu_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     props.layout.margin.top = fret_ui::element::MarginEdge::Px(Px(4.0));
     props.layout.margin.bottom = fret_ui::element::MarginEdge::Px(Px(4.0));
     cx.container(props, |_cx| vec![])
+}
+
+fn material_menu_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: MenuLabel,
+    layout: MenuItemLayout,
+    style: Arc<MenuStyle>,
+) -> AnyElement {
+    let text_test_id = optional_part_test_id(label.test_id.as_ref(), "text");
+    let states = WidgetStates::empty();
+    let (label_color, label_style) = {
+        let theme = Theme::global(&*cx.app);
+        let color = resolve_override_slot_with(
+            style.section_label_color.as_ref(),
+            states,
+            |color| color.resolve(theme),
+            || menu_tokens::section_label_color(theme),
+        );
+        let text_style = resolve_override_slot_with(
+            style.section_label_text_style.as_ref(),
+            states,
+            |style| style.clone(),
+            || menu_tokens::section_label_text_style(theme),
+        );
+        (color, text_style)
+    };
+
+    let text = menu_item_label(
+        cx,
+        &label.text,
+        label_style,
+        label_color,
+        text_test_id,
+        true,
+    );
+
+    let mut row = FlexProps::default();
+    row.layout.size.width = Length::Auto;
+    row.layout.size.height = Length::Px(layout.section_label_height);
+    row.layout.size.min_width = Some(Length::Px(layout.min_width));
+    row.layout.size.max_width = Some(Length::Px(layout.max_width));
+    row.layout.overflow = Overflow::Clip;
+    row.direction = Axis::Horizontal;
+    row.justify = MainAlign::Start;
+    row.align = CrossAlign::Center;
+    row.padding = Edges {
+        left: layout.horizontal_padding,
+        right: layout.horizontal_padding,
+        top: Px(0.0),
+        bottom: Px(0.0),
+    }
+    .into();
+
+    let a11y_label = label
+        .a11y_label
+        .clone()
+        .unwrap_or_else(|| label.text.clone());
+    let mut el = cx.flex(row, move |_cx| vec![text]);
+    if let Some(test_id) = label.test_id.clone() {
+        el = el.test_id(test_id);
+    }
+    el.attach_semantics(
+        SemanticsDecoration::default()
+            .role(SemanticsRole::Text)
+            .label(a11y_label),
+    )
 }
 
 fn material_menu_item<H: UiHost>(

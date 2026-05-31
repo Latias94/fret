@@ -18,6 +18,7 @@ pub(crate) const ITEM_HORIZONTAL_PADDING_FALLBACK: Px = Px(12.0);
 pub(crate) const ITEM_TWO_LINE_HEIGHT_FALLBACK: Px = Px(64.0);
 pub(crate) const ITEM_ICON_SIZE_FALLBACK: Px = Px(24.0);
 pub(crate) const ITEM_SLOT_GAP_FALLBACK: Px = Px(12.0);
+pub(crate) const SECTION_LABEL_HEIGHT_FALLBACK: Px = Px(32.0);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum MenuItemInteraction {
@@ -86,6 +87,12 @@ pub(crate) fn item_icon_size(theme: &Theme) -> Px {
         .unwrap_or(ITEM_ICON_SIZE_FALLBACK)
 }
 
+pub(crate) fn section_label_height(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.menu.section-label.container.height")
+        .unwrap_or(SECTION_LABEL_HEIGHT_FALLBACK)
+}
+
 pub(crate) fn item_label_text_style(theme: &Theme) -> TextStyle {
     typography::text_style_with_weight(
         theme,
@@ -112,6 +119,16 @@ pub(crate) fn item_trailing_text_style(theme: &Theme) -> TextStyle {
         Some("md.comp.menu.list-item.trailing-text"),
         "md.sys.typescale.label-large",
         Some("md.comp.menu.list-item.trailing-text.weight"),
+        TextIntent::Control,
+    )
+}
+
+pub(crate) fn section_label_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        Some("md.comp.menu.section-label.label-text"),
+        "md.sys.typescale.label-small",
+        Some("md.comp.menu.section-label.label-text.weight"),
         TextIntent::Control,
     )
 }
@@ -238,6 +255,16 @@ pub(crate) fn item_trailing_text_color(theme: &Theme, enabled: bool) -> Color {
             "md.comp.menu.list-item.shortcut.color",
         ],
         "md.comp.menu.list-item.disabled.trailing-text.opacity",
+    )
+}
+
+pub(crate) fn section_label_color(theme: &Theme) -> Color {
+    MaterialTokenResolver::new(theme).color_comp_chain_or_sys(
+        &[
+            "md.comp.menu.section-label.label-text.color",
+            "md.comp.menu.list-item.supporting-text.color",
+        ],
+        "md.sys.color.on-surface-variant",
     )
 }
 

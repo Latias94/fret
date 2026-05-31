@@ -67,6 +67,10 @@ pub fn render(
         },
         move |_cx| {
             vec![
+                material3::MenuEntry::Label(
+                    material3::MenuLabel::new("Edit")
+                        .test_id("ui-gallery-material3-menu-label-edit"),
+                ),
                 material3::MenuEntry::Item(
                     material3::MenuItem::new("Cut")
                         .leading_icon(ids::ui::SLASH)
@@ -95,6 +99,10 @@ pub fn render(
                         .disabled(true),
                 ),
                 material3::MenuEntry::Separator,
+                material3::MenuEntry::Label(
+                    material3::MenuLabel::new("View")
+                        .test_id("ui-gallery-material3-menu-label-view"),
+                ),
                 material3::MenuEntry::Item(
                     material3::MenuItem::checkbox(show_toolbar_for_entries.clone(), "Show toolbar")
                         .supporting_text("Keep editor tools visible")
@@ -156,6 +164,9 @@ pub fn render(
         .item_trailing_text_color(WidgetStateProperty::new(Some(ColorRef::Color(
             theme.color_token("md.sys.color.on-secondary-container"),
         ))))
+        .section_label_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            theme.color_token("md.sys.color.on-secondary-container"),
+        ))))
         .item_state_layer_color(WidgetStateProperty::new(Some(ColorRef::Color(
             theme.color_token("md.sys.color.on-secondary-container"),
         ))));
@@ -176,6 +187,10 @@ pub fn render(
             },
             move |_cx| {
                 vec![
+                    material3::MenuEntry::Label(
+                        material3::MenuLabel::new("Override")
+                            .test_id("ui-gallery-material3-menu-label-override"),
+                    ),
                     material3::MenuEntry::Item(
                         material3::MenuItem::new("Cut")
                             .test_id("ui-gallery-material3-menu-item-cut-override")

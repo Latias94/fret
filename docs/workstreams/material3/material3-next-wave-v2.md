@@ -31,11 +31,13 @@ Non-goals:
 ### Progress notes (2026-05-31)
 
 - Menu shadcn-level breadth batch landed in `ecosystem/fret-ui-material3`:
-  - API: `MenuItem::{leading_icon,trailing_icon,supporting_text,shortcut,checkbox,radio}`.
+  - API: `MenuLabel` and
+    `MenuItem::{leading_icon,trailing_icon,supporting_text,shortcut,checkbox,radio}`.
   - Semantics: checkbox/radio menu items expose `MenuItemCheckbox` / `MenuItemRadio` with
     `checked` and `checked_state`.
-  - Layout/parts: two-line 64dp menu rows, 24dp icon slots, shortcut text, and stable part
-    selectors (`.label`, `.leading-icon`, `.supporting-text`, `.shortcut`, `.trailing-icon`).
+  - Layout/parts: 32dp section labels, two-line 64dp menu rows, 24dp icon slots, shortcut text,
+    and stable part selectors (`.text`, `.label`, `.leading-icon`, `.supporting-text`,
+    `.shortcut`, `.trailing-icon`).
   - Style: `MenuStyle` now covers label, icon, supporting text, trailing text, state-layer, and
     text-style override slots using ADR 0220 shape.
   - Evidence:
@@ -46,7 +48,7 @@ Non-goals:
       (`material3_menu_and_dropdown_expose_stable_part_test_ids`)
     - `apps/fret-ui-gallery/src/ui/snippets/material3/menu.rs`
 - Remaining Menu residuals:
-  - group/section labels and explicit grouped APIs,
+  - explicit grouped APIs,
   - nested submenu overlay behavior,
   - scroll buttons / max-height behavior for long menus,
   - optional value/callback authoring parity with shadcn's non-model menu helpers.

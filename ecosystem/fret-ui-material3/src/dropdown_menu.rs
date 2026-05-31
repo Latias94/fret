@@ -219,6 +219,7 @@ impl DropdownMenu {
                 let (
                     menu_item_height,
                     menu_item_two_line_height,
+                    menu_section_label_height,
                     menu_item_min_width,
                     menu_item_max_width,
                     menu_vertical_padding,
@@ -230,6 +231,7 @@ impl DropdownMenu {
                     (
                         menu_tokens::list_item_height_for_supporting(theme, false),
                         menu_tokens::list_item_height_for_supporting(theme, true),
+                        menu_tokens::section_label_height(theme),
                         menu_tokens::item_min_width(theme),
                         menu_tokens::item_max_width(theme),
                         menu_tokens::container_vertical_padding(theme),
@@ -251,6 +253,7 @@ impl DropdownMenu {
                     &menu_entries,
                     menu_item_height,
                     menu_item_two_line_height,
+                    menu_section_label_height,
                     divider_height,
                     divider_margin,
                     menu_vertical_padding,
@@ -383,6 +386,7 @@ fn wrap_close_on_select(entries: Vec<MenuEntry>, open: Model<bool>) -> Vec<MenuE
                 }));
                 MenuEntry::Item(item)
             }
+            MenuEntry::Label(label) => MenuEntry::Label(label),
         })
         .collect()
 }
@@ -394,6 +398,7 @@ fn estimated_menu_panel_size(
     entries: &[MenuEntry],
     item_height: Px,
     two_line_item_height: Px,
+    section_label_height: Px,
     divider_height: Px,
     divider_margin_total: Px,
     vertical_padding: Px,
@@ -409,6 +414,7 @@ fn estimated_menu_panel_size(
                 };
                 h += height.0.max(0.0);
             }
+            MenuEntry::Label(_) => h += section_label_height.0.max(0.0),
             MenuEntry::Separator => {
                 h += divider_height.0.max(0.0) + divider_margin_total.0.max(0.0)
             }
@@ -497,6 +503,7 @@ mod tests {
     #[test]
     fn estimated_panel_size_uses_material_menu_intrinsic_bounds_and_padding() {
         let entries = vec![
+            MenuEntry::Label(crate::menu::MenuLabel::new("Actions")),
             MenuEntry::Item(crate::menu::MenuItem::new("Alpha")),
             MenuEntry::Separator,
             MenuEntry::Item(crate::menu::MenuItem::new("Beta")),
@@ -511,12 +518,13 @@ mod tests {
             &entries,
             Px(48.0),
             Px(64.0),
+            Px(32.0),
             Px(1.0),
             Px(8.0),
             Px(8.0),
         );
         assert_eq!(wide.width, Px(280.0));
-        assert_eq!(wide.height, Px(121.0));
+        assert_eq!(wide.height, Px(153.0));
 
         let narrow = estimated_menu_panel_size(
             narrow_anchor,
@@ -525,11 +533,12 @@ mod tests {
             &entries,
             Px(48.0),
             Px(64.0),
+            Px(32.0),
             Px(1.0),
             Px(8.0),
             Px(8.0),
         );
         assert_eq!(narrow.width, Px(112.0));
-        assert_eq!(narrow.height, Px(121.0));
+        assert_eq!(narrow.height, Px(153.0));
     }
 }

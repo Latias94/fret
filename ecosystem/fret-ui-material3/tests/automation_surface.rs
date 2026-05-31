@@ -3551,7 +3551,7 @@ fn material3_time_picker_uses_material_string_registry() {
 #[test]
 fn material3_menu_and_dropdown_expose_stable_part_test_ids() {
     use fret_icons::ids;
-    use fret_ui_material3::menu::{Menu, MenuEntry, MenuItem};
+    use fret_ui_material3::menu::{Menu, MenuEntry, MenuItem, MenuLabel};
     use fret_ui_material3::{Button, ButtonVariant, DropdownMenu};
 
     {
@@ -3576,6 +3576,7 @@ fn material3_menu_and_dropdown_expose_stable_part_test_ids() {
                         .a11y_label("Material menu")
                         .test_id("m3-menu")
                         .entries(vec![
+                            MenuEntry::Label(MenuLabel::new("Actions").test_id("m3-menu-actions")),
                             MenuEntry::Item(
                                 MenuItem::new("Alpha")
                                     .leading_icon(ids::ui::COPY)
@@ -3603,6 +3604,8 @@ fn material3_menu_and_dropdown_expose_stable_part_test_ids() {
         for id in [
             "m3-menu",
             "m3-menu.chrome",
+            "m3-menu-actions",
+            "m3-menu-actions.text",
             "m3-menu-alpha",
             "m3-menu-alpha.chrome",
             "m3-menu-alpha.label",
