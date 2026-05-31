@@ -28,6 +28,7 @@ COLOR_HEX_RE = re.compile(r"Color::from_srgb_hex_rgb\((0x[0-9a-fA-F_]+)\)")
 TOKEN_POLICY_HELPER_MODULES = {
     "chip_common.rs",
     "fab_common.rs",
+    "field_common.rs",
     "shape.rs",
     "slider_common.rs",
     "time_period_common.rs",

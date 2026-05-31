@@ -3,47 +3,17 @@
 //! This module centralizes token key mapping and fallback chains so text field visuals remain
 //! stable and drift-resistant during refactors.
 
-use fret_core::{Color, Corners, Edges, Px};
+use fret_core::{Color, Px};
 use fret_ui::{TextInputStyle, Theme};
 
-use crate::foundation::content::MaterialContentDefaults;
-use crate::foundation::token_resolver::{MaterialTokenResolver, alpha_mul, blend_over};
 use crate::text_field::TextFieldVariant;
+use crate::tokens::field_common::{self, FieldIconRole, FieldState, FieldTokenSet, FieldVariant};
+
+const TEXT_FIELD_TOKENS: FieldTokenSet =
+    FieldTokenSet::new("md.comp.outlined-text-field", "md.comp.filled-text-field");
 
 pub(crate) fn container_height(theme: &Theme, variant: TextFieldVariant) -> Px {
-    match variant {
-        TextFieldVariant::Outlined => theme
-            .metric_by_key("md.comp.outlined-text-field.container.height")
-            .unwrap_or(Px(56.0)),
-        TextFieldVariant::Filled => theme
-            .metric_by_key("md.comp.filled-text-field.container.height")
-            .unwrap_or(Px(56.0)),
-    }
-}
-
-fn outlined_container_corner(theme: &Theme) -> Corners {
-    theme
-        .corners_by_key("md.comp.outlined-text-field.container.shape")
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
-        .unwrap_or_else(|| Corners::all(Px(4.0)))
-}
-
-fn filled_container_corner(theme: &Theme) -> Corners {
-    if let Some(corners) = theme.corners_by_key("md.comp.filled-text-field.container.shape") {
-        return corners;
-    }
-    if let Some(corners) = theme.corners_by_key("md.sys.shape.corner.extra-small.top") {
-        return corners;
-    }
-    let r = theme
-        .metric_by_key("md.sys.shape.corner.extra-small")
-        .unwrap_or(Px(4.0));
-    Corners {
-        top_left: r,
-        top_right: r,
-        bottom_right: Px(0.0),
-        bottom_left: Px(0.0),
-    }
+    field_common::container_height(theme, field_prefix(variant))
 }
 
 pub(crate) fn text_input_style(
@@ -54,13 +24,16 @@ pub(crate) fn text_input_style(
     disabled: bool,
     error: bool,
 ) -> TextInputStyle {
+    let prefix = field_prefix(variant);
+    let state = field_state(hovered, disabled, error, focused);
     match variant {
-        TextFieldVariant::Outlined => {
-            outlined_text_input_style(theme, focused, hovered, disabled, error)
-        }
-        TextFieldVariant::Filled => {
-            filled_text_input_style(theme, focused, hovered, disabled, error)
-        }
+        TextFieldVariant::Outlined => field_common::outlined_text_input_style(theme, prefix, state),
+        TextFieldVariant::Filled => field_common::filled_text_input_style(
+            theme,
+            prefix,
+            state,
+            "md.sys.color.on-surface-variant",
+        ),
     }
 }
 
@@ -72,12 +45,13 @@ pub(crate) fn label_color(
     error: bool,
     focused: bool,
 ) -> Color {
-    match variant {
-        TextFieldVariant::Outlined => {
-            outlined_label_color(theme, hovered, disabled, error, focused)
-        }
-        TextFieldVariant::Filled => filled_label_color(theme, hovered, disabled, error, focused),
-    }
+    field_common::role_color(
+        theme,
+        field_prefix(variant),
+        "label-text",
+        field_state(hovered, disabled, error, focused),
+        "md.sys.color.on-surface-variant",
+    )
 }
 
 pub(crate) fn supporting_text_color(
@@ -88,22 +62,17 @@ pub(crate) fn supporting_text_color(
     error: bool,
     focused: bool,
 ) -> Color {
-    match variant {
-        TextFieldVariant::Outlined => {
-            outlined_supporting_text_color(theme, hovered, disabled, error, focused)
-        }
-        TextFieldVariant::Filled => {
-            filled_supporting_text_color(theme, hovered, disabled, error, focused)
-        }
-    }
+    field_common::role_color(
+        theme,
+        field_prefix(variant),
+        "supporting-text",
+        field_state(hovered, disabled, error, focused),
+        "md.sys.color.on-surface-variant",
+    )
 }
 
 pub(crate) fn leading_icon_size(theme: &Theme, variant: TextFieldVariant) -> Px {
-    let key = match variant {
-        TextFieldVariant::Outlined => "md.comp.outlined-text-field.leading-icon.size",
-        TextFieldVariant::Filled => "md.comp.filled-text-field.leading-icon.size",
-    };
-    theme.metric_by_key(key).unwrap_or(Px(24.0))
+    field_common::icon_size(theme, field_prefix(variant), FieldIconRole::Leading)
 }
 
 pub(crate) fn leading_icon_color(
@@ -114,101 +83,17 @@ pub(crate) fn leading_icon_color(
     error: bool,
     focused: bool,
 ) -> (Color, f32) {
-    let (color_key, opacity_key) = if disabled {
-        (
-            match variant {
-                TextFieldVariant::Outlined => {
-                    "md.comp.outlined-text-field.disabled.leading-icon.color"
-                }
-                TextFieldVariant::Filled => "md.comp.filled-text-field.disabled.leading-icon.color",
-            },
-            Some(match variant {
-                TextFieldVariant::Outlined => {
-                    "md.comp.outlined-text-field.disabled.leading-icon.opacity"
-                }
-                TextFieldVariant::Filled => {
-                    "md.comp.filled-text-field.disabled.leading-icon.opacity"
-                }
-            }),
-        )
-    } else if error && focused {
-        (
-            match variant {
-                TextFieldVariant::Outlined => {
-                    "md.comp.outlined-text-field.error.focus.leading-icon.color"
-                }
-                TextFieldVariant::Filled => {
-                    "md.comp.filled-text-field.error.focus.leading-icon.color"
-                }
-            },
-            None,
-        )
-    } else if error && hovered {
-        (
-            match variant {
-                TextFieldVariant::Outlined => {
-                    "md.comp.outlined-text-field.error.hover.leading-icon.color"
-                }
-                TextFieldVariant::Filled => {
-                    "md.comp.filled-text-field.error.hover.leading-icon.color"
-                }
-            },
-            None,
-        )
-    } else if error {
-        (
-            match variant {
-                TextFieldVariant::Outlined => {
-                    "md.comp.outlined-text-field.error.leading-icon.color"
-                }
-                TextFieldVariant::Filled => "md.comp.filled-text-field.error.leading-icon.color",
-            },
-            None,
-        )
-    } else if focused {
-        (
-            match variant {
-                TextFieldVariant::Outlined => {
-                    "md.comp.outlined-text-field.focus.leading-icon.color"
-                }
-                TextFieldVariant::Filled => "md.comp.filled-text-field.focus.leading-icon.color",
-            },
-            None,
-        )
-    } else if hovered {
-        (
-            match variant {
-                TextFieldVariant::Outlined => {
-                    "md.comp.outlined-text-field.hover.leading-icon.color"
-                }
-                TextFieldVariant::Filled => "md.comp.filled-text-field.hover.leading-icon.color",
-            },
-            None,
-        )
-    } else {
-        (
-            match variant {
-                TextFieldVariant::Outlined => "md.comp.outlined-text-field.leading-icon.color",
-                TextFieldVariant::Filled => "md.comp.filled-text-field.leading-icon.color",
-            },
-            None,
-        )
-    };
-
-    MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
-        color_key,
+    field_common::role_color_with_opacity(
+        theme,
+        field_prefix(variant),
+        "leading-icon",
+        field_state(hovered, disabled, error, focused),
         "md.sys.color.on-surface-variant",
-        opacity_key,
-        1.0,
     )
 }
 
 pub(crate) fn trailing_icon_size(theme: &Theme, variant: TextFieldVariant) -> Px {
-    let key = match variant {
-        TextFieldVariant::Outlined => "md.comp.outlined-text-field.trailing-icon.size",
-        TextFieldVariant::Filled => "md.comp.filled-text-field.trailing-icon.size",
-    };
-    theme.metric_by_key(key).unwrap_or(Px(24.0))
+    field_common::icon_size(theme, field_prefix(variant), FieldIconRole::Trailing)
 }
 
 pub(crate) fn trailing_icon_color(
@@ -219,94 +104,12 @@ pub(crate) fn trailing_icon_color(
     error: bool,
     focused: bool,
 ) -> (Color, f32) {
-    let (color_key, opacity_key) = if disabled {
-        (
-            match variant {
-                TextFieldVariant::Outlined => {
-                    "md.comp.outlined-text-field.disabled.trailing-icon.color"
-                }
-                TextFieldVariant::Filled => {
-                    "md.comp.filled-text-field.disabled.trailing-icon.color"
-                }
-            },
-            Some(match variant {
-                TextFieldVariant::Outlined => {
-                    "md.comp.outlined-text-field.disabled.trailing-icon.opacity"
-                }
-                TextFieldVariant::Filled => {
-                    "md.comp.filled-text-field.disabled.trailing-icon.opacity"
-                }
-            }),
-        )
-    } else if error && focused {
-        (
-            match variant {
-                TextFieldVariant::Outlined => {
-                    "md.comp.outlined-text-field.error.focus.trailing-icon.color"
-                }
-                TextFieldVariant::Filled => {
-                    "md.comp.filled-text-field.error.focus.trailing-icon.color"
-                }
-            },
-            None,
-        )
-    } else if error && hovered {
-        (
-            match variant {
-                TextFieldVariant::Outlined => {
-                    "md.comp.outlined-text-field.error.hover.trailing-icon.color"
-                }
-                TextFieldVariant::Filled => {
-                    "md.comp.filled-text-field.error.hover.trailing-icon.color"
-                }
-            },
-            None,
-        )
-    } else if error {
-        (
-            match variant {
-                TextFieldVariant::Outlined => {
-                    "md.comp.outlined-text-field.error.trailing-icon.color"
-                }
-                TextFieldVariant::Filled => "md.comp.filled-text-field.error.trailing-icon.color",
-            },
-            None,
-        )
-    } else if focused {
-        (
-            match variant {
-                TextFieldVariant::Outlined => {
-                    "md.comp.outlined-text-field.focus.trailing-icon.color"
-                }
-                TextFieldVariant::Filled => "md.comp.filled-text-field.focus.trailing-icon.color",
-            },
-            None,
-        )
-    } else if hovered {
-        (
-            match variant {
-                TextFieldVariant::Outlined => {
-                    "md.comp.outlined-text-field.hover.trailing-icon.color"
-                }
-                TextFieldVariant::Filled => "md.comp.filled-text-field.hover.trailing-icon.color",
-            },
-            None,
-        )
-    } else {
-        (
-            match variant {
-                TextFieldVariant::Outlined => "md.comp.outlined-text-field.trailing-icon.color",
-                TextFieldVariant::Filled => "md.comp.filled-text-field.trailing-icon.color",
-            },
-            None,
-        )
-    };
-
-    MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
-        color_key,
+    field_common::role_color_with_opacity(
+        theme,
+        field_prefix(variant),
+        "trailing-icon",
+        field_state(hovered, disabled, error, focused),
         "md.sys.color.on-surface-variant",
-        opacity_key,
-        1.0,
     )
 }
 
@@ -317,529 +120,33 @@ pub(crate) fn hover_state_layer(
 ) -> Option<(Color, f32)> {
     match variant {
         TextFieldVariant::Outlined => None,
-        TextFieldVariant::Filled => {
-            let (color_key, opacity_key) = if error {
-                (
-                    "md.comp.filled-text-field.error.hover.state-layer.color",
-                    "md.comp.filled-text-field.error.hover.state-layer.opacity",
-                )
-            } else {
-                (
-                    "md.comp.filled-text-field.hover.state-layer.color",
-                    "md.comp.filled-text-field.hover.state-layer.opacity",
-                )
-            };
-
-            let (color, opacity) = MaterialTokenResolver::new(theme)
-                .color_comp_or_sys_with_opacity(
-                    color_key,
-                    "md.sys.color.on-surface",
-                    Some(opacity_key),
-                    0.08,
-                );
-            Some((color, opacity))
-        }
+        TextFieldVariant::Filled => Some(field_common::hover_state_layer(
+            theme,
+            field_prefix(variant),
+            error,
+        )),
     }
 }
 
-fn outlined_text_input_style(
-    theme: &Theme,
-    focused: bool,
-    hovered: bool,
-    disabled: bool,
-    error: bool,
-) -> TextInputStyle {
-    let corner = outlined_container_corner(theme);
-
-    let outline_width = theme
-        .metric_by_key("md.comp.outlined-text-field.outline.width")
-        .unwrap_or(Px(1.0));
-    let hover_width = theme
-        .metric_by_key("md.comp.outlined-text-field.hover.outline.width")
-        .unwrap_or(outline_width);
-    let focus_width = theme
-        .metric_by_key("md.comp.outlined-text-field.focus.outline.width")
-        .unwrap_or(Px(2.0));
-    let disabled_width = theme
-        .metric_by_key("md.comp.outlined-text-field.disabled.outline.width")
-        .unwrap_or(outline_width);
-
-    let mut style = TextInputStyle::default();
-    style.corner_radii = corner;
-    style.focus_ring = None;
-
-    style.padding = Edges {
-        top: Px(18.0),
-        right: Px(16.0),
-        bottom: Px(14.0),
-        left: Px(16.0),
-    };
-
-    let tokens = MaterialTokenResolver::new(theme);
-    let default_bg = tokens.color_sys("md.sys.color.surface");
-    style.background = default_bg;
-
-    let outline_color = outlined_outline_color(theme, hovered, disabled, error, focused);
-    let focused_outline_color = outlined_outline_color(theme, false, disabled, error, true);
-
-    let border_width = if disabled {
-        disabled_width
-    } else if focused {
-        focus_width
-    } else if hovered {
-        hover_width
-    } else {
-        outline_width
-    };
-    style.border = Edges::all(border_width);
-    style.border_color = outline_color;
-    style.border_color_focused = focused_outline_color;
-
-    style.text_color = outlined_input_text_color(theme, hovered, error, focused);
-    style.placeholder_color = MaterialTokenResolver::new(theme).color_comp_or_sys_or(
-        "md.comp.outlined-text-field.input-text.placeholder.color",
-        "md.sys.color.on-surface-variant",
-        style.placeholder_color,
-    );
-    style.selection_color = theme
-        .color_by_key("md.sys.color.primary")
-        .map(|c| alpha_mul(c, 0.35))
-        .unwrap_or(style.selection_color);
-    style.caret_color = outlined_caret_color(theme, disabled, error, focused);
-    style.preedit_color = theme
-        .color_by_key("md.sys.color.primary")
-        .unwrap_or(style.preedit_color);
-    style.preedit_underline_color = style.preedit_color;
-
-    if disabled {
-        let opacity = MaterialTokenResolver::new(theme).number_optional(
-            Some("md.comp.outlined-text-field.disabled.input-text.opacity"),
-            0.38,
-        );
-        style.text_color = alpha_mul(style.text_color, opacity);
-        style.placeholder_color = alpha_mul(style.placeholder_color, opacity);
-
-        let outline_opacity = MaterialTokenResolver::new(theme).number_optional(
-            Some("md.comp.outlined-text-field.disabled.outline.opacity"),
-            0.12,
-        );
-        style.border_color = alpha_mul(style.border_color, outline_opacity);
-        style.border_color_focused = alpha_mul(style.border_color_focused, outline_opacity);
-    }
-
-    style
+fn field_prefix(variant: TextFieldVariant) -> &'static str {
+    TEXT_FIELD_TOKENS.prefix(field_variant(variant))
 }
 
-fn filled_text_input_style(
-    theme: &Theme,
-    focused: bool,
-    hovered: bool,
-    disabled: bool,
-    error: bool,
-) -> TextInputStyle {
-    let corner = filled_container_corner(theme);
-
-    let active_height = theme
-        .metric_by_key("md.comp.filled-text-field.active-indicator.height")
-        .unwrap_or(Px(1.0));
-    let hover_height = theme
-        .metric_by_key("md.comp.filled-text-field.hover.active-indicator.height")
-        .unwrap_or(active_height);
-    let focus_height = theme
-        .metric_by_key("md.comp.filled-text-field.focus.active-indicator.height")
-        .unwrap_or(Px(2.0));
-    let disabled_height = theme
-        .metric_by_key("md.comp.filled-text-field.disabled.active-indicator.height")
-        .unwrap_or(active_height);
-
-    let mut style = TextInputStyle::default();
-    style.corner_radii = corner;
-    style.focus_ring = None;
-
-    style.padding = Edges {
-        top: Px(18.0),
-        right: Px(16.0),
-        bottom: Px(14.0),
-        left: Px(16.0),
-    };
-
-    let tokens = MaterialTokenResolver::new(theme);
-    let mut background = tokens.color_comp_or_sys_chain(
-        "md.comp.filled-text-field.container.color",
-        &[
-            "md.sys.color.surface-container-highest",
-            "md.sys.color.surface",
-        ],
-    );
-
-    if disabled {
-        let (overlay, opacity) = tokens.color_comp_or_sys_with_opacity(
-            "md.comp.filled-text-field.disabled.container.color",
-            "md.sys.color.on-surface",
-            Some("md.comp.filled-text-field.disabled.container.opacity"),
-            0.04,
-        );
-        background = blend_over(background, overlay, opacity);
-    }
-    style.background = background;
-
-    let indicator_color = filled_active_indicator_color(theme, hovered, disabled, error, focused);
-    let focused_indicator_color =
-        filled_active_indicator_color(theme, false, disabled, error, true);
-
-    let bottom = if disabled {
-        disabled_height
-    } else if focused {
-        focus_height
-    } else if hovered {
-        hover_height
-    } else {
-        active_height
-    };
-    style.border = Edges {
-        top: Px(0.0),
-        right: Px(0.0),
-        bottom,
-        left: Px(0.0),
-    };
-    style.border_color = indicator_color;
-    style.border_color_focused = focused_indicator_color;
-
-    style.text_color = filled_input_text_color(theme, hovered, error, focused);
-    style.placeholder_color = MaterialTokenResolver::new(theme).color_comp_or_sys_or(
-        "md.comp.filled-text-field.input-text.placeholder.color",
-        "md.sys.color.on-surface-variant",
-        style.placeholder_color,
-    );
-    style.selection_color = theme
-        .color_by_key("md.sys.color.primary")
-        .map(|c| alpha_mul(c, 0.35))
-        .unwrap_or(style.selection_color);
-    style.caret_color = filled_caret_color(theme, disabled, error, focused);
-    style.preedit_color = theme
-        .color_by_key("md.sys.color.primary")
-        .unwrap_or(style.preedit_color);
-    style.preedit_underline_color = style.preedit_color;
-
-    if disabled {
-        let opacity = MaterialTokenResolver::new(theme).number_optional(
-            Some("md.comp.filled-text-field.disabled.input-text.opacity"),
-            0.38,
-        );
-        style.text_color = alpha_mul(style.text_color, opacity);
-        style.placeholder_color = alpha_mul(style.placeholder_color, opacity);
-    }
-
-    style
-}
-
-fn outlined_caret_color(theme: &Theme, disabled: bool, error: bool, focused: bool) -> Color {
-    let tokens = MaterialTokenResolver::new(theme);
-    let base = if error && focused {
-        tokens.color_comp_or_sys_chain(
-            "md.comp.outlined-text-field.error.focus.caret.color",
-            &["md.sys.color.error", "md.sys.color.on-surface"],
-        )
-    } else {
-        tokens.color_comp_or_sys_chain(
-            "md.comp.outlined-text-field.caret.color",
-            &["md.sys.color.primary", "md.sys.color.on-surface"],
-        )
-    };
-
-    if disabled {
-        alpha_mul(base, 0.38)
-    } else {
-        base
+fn field_variant(variant: TextFieldVariant) -> FieldVariant {
+    match variant {
+        TextFieldVariant::Outlined => FieldVariant::Outlined,
+        TextFieldVariant::Filled => FieldVariant::Filled,
     }
 }
 
-fn filled_caret_color(theme: &Theme, disabled: bool, error: bool, focused: bool) -> Color {
-    let tokens = MaterialTokenResolver::new(theme);
-    let base = if error && focused {
-        tokens.color_comp_or_sys_chain(
-            "md.comp.filled-text-field.error.focus.caret.color",
-            &["md.sys.color.error", "md.sys.color.on-surface"],
-        )
-    } else {
-        tokens.color_comp_or_sys_chain(
-            "md.comp.filled-text-field.caret.color",
-            &["md.sys.color.primary", "md.sys.color.on-surface"],
-        )
-    };
-
-    if disabled {
-        alpha_mul(base, 0.38)
-    } else {
-        base
-    }
-}
-
-fn outlined_input_text_color(theme: &Theme, hovered: bool, error: bool, focused: bool) -> Color {
-    let key = if error && focused {
-        "md.comp.outlined-text-field.error.focus.input-text.color"
-    } else if error && hovered {
-        "md.comp.outlined-text-field.error.hover.input-text.color"
-    } else if error {
-        "md.comp.outlined-text-field.error.input-text.color"
-    } else if focused {
-        "md.comp.outlined-text-field.focus.input-text.color"
-    } else if hovered {
-        "md.comp.outlined-text-field.hover.input-text.color"
-    } else {
-        "md.comp.outlined-text-field.input-text.color"
-    };
-
-    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface")
-}
-
-fn filled_input_text_color(theme: &Theme, hovered: bool, error: bool, focused: bool) -> Color {
-    let key = if error && focused {
-        "md.comp.filled-text-field.error.focus.input-text.color"
-    } else if error && hovered {
-        "md.comp.filled-text-field.error.hover.input-text.color"
-    } else if error {
-        "md.comp.filled-text-field.error.input-text.color"
-    } else if focused {
-        "md.comp.filled-text-field.focus.input-text.color"
-    } else if hovered {
-        "md.comp.filled-text-field.hover.input-text.color"
-    } else {
-        "md.comp.filled-text-field.input-text.color"
-    };
-
-    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface")
-}
-
-fn outlined_outline_color(
-    theme: &Theme,
-    hovered: bool,
-    disabled: bool,
-    error: bool,
-    focused: bool,
-) -> Color {
-    let key = if error && focused {
-        "md.comp.outlined-text-field.error.focus.outline.color"
-    } else if error && hovered {
-        "md.comp.outlined-text-field.error.hover.outline.color"
-    } else if error {
-        "md.comp.outlined-text-field.error.outline.color"
-    } else if focused {
-        "md.comp.outlined-text-field.focus.outline.color"
-    } else if hovered {
-        "md.comp.outlined-text-field.hover.outline.color"
-    } else if disabled {
-        "md.comp.outlined-text-field.disabled.outline.color"
-    } else {
-        "md.comp.outlined-text-field.outline.color"
-    };
-
-    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.outline")
-}
-
-fn filled_active_indicator_color(
-    theme: &Theme,
-    hovered: bool,
-    disabled: bool,
-    error: bool,
-    focused: bool,
-) -> Color {
-    let key = if error && focused {
-        "md.comp.filled-text-field.error.focus.active-indicator.color"
-    } else if error && hovered {
-        "md.comp.filled-text-field.error.hover.active-indicator.color"
-    } else if error {
-        "md.comp.filled-text-field.error.active-indicator.color"
-    } else if focused {
-        "md.comp.filled-text-field.focus.active-indicator.color"
-    } else if hovered {
-        "md.comp.filled-text-field.hover.active-indicator.color"
-    } else if disabled {
-        "md.comp.filled-text-field.disabled.active-indicator.color"
-    } else {
-        "md.comp.filled-text-field.active-indicator.color"
-    };
-
-    let tokens = MaterialTokenResolver::new(theme);
-    let mut c = tokens.color_comp_or_fallback(
-        key,
-        MaterialContentDefaults::on_surface_variant(theme).content_color,
-    );
-
-    if disabled {
-        let opacity = tokens.number_optional(
-            Some("md.comp.filled-text-field.disabled.active-indicator.opacity"),
-            0.38,
-        );
-        c = alpha_mul(c, opacity);
-    }
-
-    c
-}
-
-fn outlined_label_color(
-    theme: &Theme,
-    hovered: bool,
-    disabled: bool,
-    error: bool,
-    focused: bool,
-) -> Color {
-    let key = if error && focused {
-        "md.comp.outlined-text-field.error.focus.label-text.color"
-    } else if error && hovered {
-        "md.comp.outlined-text-field.error.hover.label-text.color"
-    } else if error {
-        "md.comp.outlined-text-field.error.label-text.color"
-    } else if focused {
-        "md.comp.outlined-text-field.focus.label-text.color"
-    } else if hovered {
-        "md.comp.outlined-text-field.hover.label-text.color"
-    } else if disabled {
-        "md.comp.outlined-text-field.disabled.label-text.color"
-    } else {
-        "md.comp.outlined-text-field.label-text.color"
-    };
-
-    let tokens = MaterialTokenResolver::new(theme);
-    let mut c = tokens.color_comp_or_fallback(
-        key,
-        MaterialContentDefaults::on_surface_variant(theme).content_color,
-    );
-
-    if disabled {
-        let opacity = tokens.number_optional(
-            Some("md.comp.outlined-text-field.disabled.label-text.opacity"),
-            0.38,
-        );
-        c = alpha_mul(c, opacity);
-    }
-
-    c
-}
-
-fn filled_label_color(
-    theme: &Theme,
-    hovered: bool,
-    disabled: bool,
-    error: bool,
-    focused: bool,
-) -> Color {
-    let key = if error && focused {
-        "md.comp.filled-text-field.error.focus.label-text.color"
-    } else if error && hovered {
-        "md.comp.filled-text-field.error.hover.label-text.color"
-    } else if error {
-        "md.comp.filled-text-field.error.label-text.color"
-    } else if focused {
-        "md.comp.filled-text-field.focus.label-text.color"
-    } else if hovered {
-        "md.comp.filled-text-field.hover.label-text.color"
-    } else if disabled {
-        "md.comp.filled-text-field.disabled.label-text.color"
-    } else {
-        "md.comp.filled-text-field.label-text.color"
-    };
-
-    let tokens = MaterialTokenResolver::new(theme);
-    let mut c = tokens.color_comp_or_fallback(
-        key,
-        MaterialContentDefaults::on_surface_variant(theme).content_color,
-    );
-
-    if disabled {
-        let opacity = tokens.number_optional(
-            Some("md.comp.filled-text-field.disabled.label-text.opacity"),
-            0.38,
-        );
-        c = alpha_mul(c, opacity);
-    }
-
-    c
-}
-
-fn outlined_supporting_text_color(
-    theme: &Theme,
-    hovered: bool,
-    disabled: bool,
-    error: bool,
-    focused: bool,
-) -> Color {
-    let key = if error && focused {
-        "md.comp.outlined-text-field.error.focus.supporting-text.color"
-    } else if error && hovered {
-        "md.comp.outlined-text-field.error.hover.supporting-text.color"
-    } else if error {
-        "md.comp.outlined-text-field.error.supporting-text.color"
-    } else if focused {
-        "md.comp.outlined-text-field.focus.supporting-text.color"
-    } else if hovered {
-        "md.comp.outlined-text-field.hover.supporting-text.color"
-    } else if disabled {
-        "md.comp.outlined-text-field.disabled.supporting-text.color"
-    } else {
-        "md.comp.outlined-text-field.supporting-text.color"
-    };
-
-    let tokens = MaterialTokenResolver::new(theme);
-    let mut c = tokens.color_comp_or_fallback(
-        key,
-        MaterialContentDefaults::on_surface_variant(theme).content_color,
-    );
-
-    if disabled {
-        let opacity = tokens.number_optional(
-            Some("md.comp.outlined-text-field.disabled.supporting-text.opacity"),
-            0.38,
-        );
-        c = alpha_mul(c, opacity);
-    }
-
-    c
-}
-
-fn filled_supporting_text_color(
-    theme: &Theme,
-    hovered: bool,
-    disabled: bool,
-    error: bool,
-    focused: bool,
-) -> Color {
-    let key = if error && focused {
-        "md.comp.filled-text-field.error.focus.supporting-text.color"
-    } else if error && hovered {
-        "md.comp.filled-text-field.error.hover.supporting-text.color"
-    } else if error {
-        "md.comp.filled-text-field.error.supporting-text.color"
-    } else if focused {
-        "md.comp.filled-text-field.focus.supporting-text.color"
-    } else if hovered {
-        "md.comp.filled-text-field.hover.supporting-text.color"
-    } else if disabled {
-        "md.comp.filled-text-field.disabled.supporting-text.color"
-    } else {
-        "md.comp.filled-text-field.supporting-text.color"
-    };
-
-    let tokens = MaterialTokenResolver::new(theme);
-    let mut c = tokens.color_comp_or_fallback(
-        key,
-        MaterialContentDefaults::on_surface_variant(theme).content_color,
-    );
-
-    if disabled {
-        let opacity = tokens.number_optional(
-            Some("md.comp.filled-text-field.disabled.supporting-text.opacity"),
-            0.38,
-        );
-        c = alpha_mul(c, opacity);
-    }
-
-    c
+fn field_state(hovered: bool, disabled: bool, error: bool, focused: bool) -> FieldState {
+    FieldState::new(hovered, disabled, error, focused)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{outlined_label_color, outlined_supporting_text_color};
+    use super::{label_color, supporting_text_color};
+    use crate::text_field::TextFieldVariant;
     use crate::tokens::v30::{TypographyOptions, theme_config};
     use fret_app::App;
     use fret_ui::{Theme, theme::ThemeConfig};
@@ -879,8 +186,15 @@ mod tests {
 
         let theme = Theme::global(&app);
 
-        let base_label = outlined_label_color(theme, false, false, false, false);
-        let hover_label = outlined_label_color(theme, true, false, false, false);
+        let base_label = label_color(
+            theme,
+            TextFieldVariant::Outlined,
+            false,
+            false,
+            false,
+            false,
+        );
+        let hover_label = label_color(theme, TextFieldVariant::Outlined, true, false, false, false);
         assert_ne!(base_label, hover_label);
         assert_eq!(
             base_label,
@@ -895,8 +209,16 @@ mod tests {
                 .expect("expected patched hover label color"),
         );
 
-        let base_supporting = outlined_supporting_text_color(theme, false, false, false, false);
-        let hover_supporting = outlined_supporting_text_color(theme, true, false, false, false);
+        let base_supporting = supporting_text_color(
+            theme,
+            TextFieldVariant::Outlined,
+            false,
+            false,
+            false,
+            false,
+        );
+        let hover_supporting =
+            supporting_text_color(theme, TextFieldVariant::Outlined, true, false, false, false);
         assert_ne!(base_supporting, hover_supporting);
         assert_eq!(
             base_supporting,
@@ -927,7 +249,7 @@ mod tests {
         Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
 
         let theme = Theme::global(&app);
-        let c = outlined_label_color(theme, true, false, true, false);
+        let c = label_color(theme, TextFieldVariant::Outlined, true, false, true, false);
         assert_eq!(
             c,
             theme
