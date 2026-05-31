@@ -33,6 +33,7 @@ TOKEN_POLICY_HELPER_MODULES = {
     "shape.rs",
     "slider_common.rs",
     "time_period_common.rs",
+    "time_picker_common.rs",
     "typography.rs",
 }
 TOKEN_MODULE_SKIP = {
