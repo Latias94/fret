@@ -3299,7 +3299,14 @@ Last updated: 2026-05-31
       Result: `multi_select/state.rs` owns `ImUiMultiSelectState` storage and read-only accessors,
       while `multi_select/state/selection.rs` owns selected-order normalization, anchor repair,
       crate-local mutation helpers, and `is_selected(...)`. The root `multi_select.rs` keeps model
-      hook, selectable response wiring, click-modifier policy, and response changed reporting.
+      hook, selectable response wiring, and response changed reporting.
+- [x] Split IMUI multi-select click-modifier policy out of
+      `ecosystem/fret-ui-kit/src/imui/multi_select.rs` into a private child owner without changing
+      model hook behavior, selectable response wiring, selection mutation semantics, read-only state
+      storage, or regression test routing.
+      Result: `multi_select.rs` keeps model hooks, selected-state reads, selectable response wiring,
+      and changed-signal propagation. `multi_select/interaction.rs` owns `apply_click(...)` and
+      primary modifier detection.
 - [x] Split IMUI multi-select regression tests into private click-policy and ordered-selection
       owners without changing plain click, primary-modifier toggle, shift range, no-anchor fallback,
       collection-order normalization, deduplication, external-key retention, or anchor repair

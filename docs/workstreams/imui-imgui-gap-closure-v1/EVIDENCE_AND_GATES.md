@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Multi-Select Interaction Owner-Split Evidence - 2026-05-31
+
+Claim verified: IMUI multi-select click-modifier policy moved out of `multi_select.rs` into a
+private `multi_select/interaction.rs` owner without changing model hook behavior, selectable
+response wiring, selection mutation semantics, read-only state storage, or regression test routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/multi_select.rs` now keeps the controllable model hook, selected
+  state read, selectable response wiring, and changed-signal propagation.
+- `ecosystem/fret-ui-kit/src/imui/multi_select/interaction.rs` owns `apply_click(...)` and primary
+  modifier detection for plain, primary-modifier, and shift selection.
+- `ecosystem/fret-ui-kit/src/imui/multi_select/tests.rs` keeps using the existing crate-local
+  `apply_click` path, so click behavior coverage remains unchanged.
+- `tools/gate_imui_workstream_source.py` now gates the root/interaction split and prevents response
+  wiring from drifting into the click-policy owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new interaction owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui plain_click_replaces_selection_and_resets_anchor
+  primary_modifier_click_toggles_membership_in_collection_order
+  shift_click_selects_range_from_anchor_without_moving_anchor
+  shift_click_without_anchor_falls_back_to_single_select --no-fail-fast`: pass (4 passed, 750
+  skipped; rerun with longer timeout after an initial 120s command timeout without failure output).
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Adapter Signal Owner-Split Evidence - 2026-05-31
 
 Claim verified: IMUI adapter seam signal metadata/record/reporter types moved out of

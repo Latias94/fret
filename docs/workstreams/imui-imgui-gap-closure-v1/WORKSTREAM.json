@@ -782,6 +782,7 @@
     "ecosystem/fret-ui-kit/src/imui/layout_sugar/scoped/indent.rs",
     "ecosystem/fret-ui-kit/src/imui/layout_sugar/spacers.rs",
     "ecosystem/fret-ui-kit/src/imui/multi_select.rs",
+    "ecosystem/fret-ui-kit/src/imui/multi_select/interaction.rs",
     "ecosystem/fret-ui-kit/src/imui/multi_select/state.rs",
     "ecosystem/fret-ui-kit/src/imui/multi_select/state/selection.rs",
     "ecosystem/fret-ui-kit/src/imui/multi_select/tests.rs",

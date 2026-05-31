@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 IMUI multi-select interaction owner-split result:
+`ecosystem/fret-ui-kit/src/imui/multi_select.rs` now keeps controllable model hooks, selected-state
+reads, selectable response wiring, and changed-signal propagation. `multi_select/interaction.rs`
+owns `apply_click(...)` and primary modifier detection for plain, primary-modifier, and shift
+selection. Selection mutation semantics, read-only state storage, and regression test routing remain
+unchanged.
+
 2026-05-31 IMUI adapter signal owner-split result:
 `ecosystem/fret-ui-kit/src/imui/adapters.rs` now keeps the public adapter seam hub,
 `AdapterSeamOptions`, and `report_adapter_signal(...)` only. The private
