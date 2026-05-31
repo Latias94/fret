@@ -30,6 +30,7 @@ TOKEN_POLICY_HELPER_MODULES = {
     "fab_common.rs",
     "field_common.rs",
     "list_common.rs",
+    "navigation_common.rs",
     "progress_indicator_common.rs",
     "shape.rs",
     "slider_common.rs",

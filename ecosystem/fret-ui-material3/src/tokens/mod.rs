@@ -28,6 +28,7 @@ pub(crate) mod list_common;
 pub(crate) mod material_web_v30;
 pub(crate) mod menu;
 pub(crate) mod navigation_bar;
+pub(crate) mod navigation_common;
 pub(crate) mod navigation_drawer;
 pub(crate) mod navigation_rail;
 pub(crate) mod progress_indicator;
