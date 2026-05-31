@@ -82,6 +82,11 @@ by handle family only. `handles/edge.rs` owns left/right/top/bottom edge mutatio
 `handles/corner.rs` owns corner mutation. Public floating-window resize handle behavior remains
 unchanged.
 
+2026-05-31 floating-window resize commit mutation owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/commit.rs` now keeps state
+transaction, pixel snap, and output packing. `commit/mutation.rs` owns collapsed/reset/drag
+lifecycle mutation. Public floating-window resize commit behavior remains unchanged.
+
 2026-05-31 facade-writer text test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` is now a thin test hub.
 `tests/text.rs` owns `ui.text(...)` dense single-line coverage, while `tests/wrapped.rs` owns

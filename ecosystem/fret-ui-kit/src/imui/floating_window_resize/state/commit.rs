@@ -2,11 +2,12 @@ use fret_core::{Point, Size};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use super::super::FloatingWindowResizeSnapshot;
-use super::drag_apply::apply_resize_drag;
 use super::initial::initial_float_window_state;
 use super::output::FloatingWindowResizeStateOutput;
+use mutation::{ResizeStateMutationInput, apply_resize_state_mutation};
 use output_pack::{CommittedResizeState, output_from_committed_resize_state};
 
+mod mutation;
 mod output_pack;
 
 pub(super) struct ResizeStateCommitInput<'a> {
@@ -29,24 +30,15 @@ pub(super) fn commit_resize_state<H: UiHost>(
         input.window_id,
         || initial_float_window_state(input.id, input.initial_size),
         |st| {
-            let mut position = input.area_position;
-
-            let resize_cfg = input.resize.unwrap_or_default();
-            let min = resize_cfg.min_size;
-            let max = resize_cfg.max_size;
-
-            if input.collapsed {
-                st.last_resize_position = None;
-            } else if let Some(snapshot) = input.resize_snapshot {
-                if snapshot.dragging {
-                    apply_resize_drag(st, &mut position, snapshot, min, max);
-                } else {
-                    st.last_resize_position = None;
-                }
-            } else {
-                st.last_resize_position = None;
-            }
-
+            let mut position = apply_resize_state_mutation(
+                st,
+                ResizeStateMutationInput {
+                    area_position: input.area_position,
+                    resize: input.resize,
+                    resize_snapshot: input.resize_snapshot,
+                    collapsed: input.collapsed,
+                },
+            );
             st.size = super::super::super::snap_size_to_device_pixels(input.scale_factor, st.size);
             position =
                 super::super::super::snap_point_to_device_pixels(input.scale_factor, position);

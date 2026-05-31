@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Floating-Window Resize Commit Mutation Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI floating-window resize commit lifecycle mutation split into a private owner
+without changing `cx.state_for(...)`, initial state creation, collapsed reset behavior, drag
+application, pixel snapping, or output packing.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/commit.rs` now owns the state
+  transaction, pixel snapping, and output packing only.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/commit/mutation.rs` owns collapsed
+  reset, resize config extraction, drag application, and last-resize-position lifecycle mutation.
+- `tools/gate_imui_workstream_source.py` now checks the commit transaction owner and the private
+  mutation owner and rejects drag mutation from drifting back into `commit.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new commit mutation
+  owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke --test imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui floating::window_options::floating_window_resizes_when_dragging_corner_handle floating::window_options::floating_window_resizes_from_left_updates_origin_and_width --no-fail-fast`: pass.
+
 ## IMUI Floating-Window Resize Handle-Mutation Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI floating-window resize handle mutation split into private edge and corner

@@ -116,6 +116,11 @@ Last updated: 2026-05-31
       Result: `drag_apply/handles.rs` now dispatches by handle family only.
       `handles/edge.rs` owns edge-handle mutation, while `handles/corner.rs` owns corner-handle
       mutation.
+- [x] Split IMUI floating-window resize commit lifecycle mutation into a private owner without
+      changing `cx.state_for(...)`, initial state creation, collapsed reset behavior, drag
+      application, pixel snapping, or output packing.
+      Result: `floating_window_resize/state/commit.rs` now keeps state transaction, pixel snap, and
+      output packing. `commit/mutation.rs` owns collapsed/reset/drag lifecycle mutation.
 - [x] Split IMUI debug-draw path-builder regression coverage into private sub-owners without
       changing path stroke/fill command recording, rectangle/rounded-rectangle sampling, Bezier
       defaults, circular/elliptical arc defaults, or invalid finished-path cleanup.
