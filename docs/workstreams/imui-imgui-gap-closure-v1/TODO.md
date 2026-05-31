@@ -106,6 +106,13 @@ Last updated: 2026-05-31
       presentation adoption, builder methods, and callsite/id-source keying.
       `controls/axis_drag_value/element.rs` owns keyed element assembly, scrub and typing frame
       composition, Enter/Escape handling, focus handoff, reset segments, and error icon chrome.
+- [x] Split editor axis-drag-value typing frame assembly into a private element child owner without
+      changing scrub mounting, key commit/cancel handling, focus handoff, typing test-id routing,
+      invalid-state icon, reset affordance, or public AxisDragValue options.
+      Result: `controls/axis_drag_value/element.rs` keeps keyed owner orchestration, scrub frame,
+      text input props, focus/key handling, and mode transitions. The private
+      `controls/axis_drag_value/element/typing.rs` owner contains typing input-group frame
+      composition plus axis/prefix/suffix/error/reset segments.
 - [x] Split `imui_editor_proof_demo` proof/readout helpers into a demo-local owner without changing
       render workflow, docking/window glue, collection module ownership, model factories, or public
       IMUI/editor APIs.
@@ -494,6 +501,13 @@ Last updated: 2026-05-31
       Result: `controls/axis_drag_value.rs` now keeps control orchestration only.
       `controls/axis_drag_value/ids.rs` owns scrub/typing/reset test-id derivation, with focused
       coverage in `controls/axis_drag_value/ids/tests.rs`.
+- [x] Split editor axis-drag-value typing frame assembly into a private element child owner without
+      changing scrub mounting, key commit/cancel handling, focus handoff, typing test-id routing,
+      invalid-state icon, reset affordance, or public AxisDragValue options.
+      Result: `controls/axis_drag_value/element.rs` keeps keyed owner orchestration, scrub frame,
+      text input props, focus/key handling, and mode transitions. The private
+      `controls/axis_drag_value/element/typing.rs` owner contains typing input-group frame
+      composition plus axis/prefix/suffix/error/reset segments.
 - [x] Reuse shared joined text-input chrome policy for editor axis-drag-value typing without
       changing joined input transparency, borderless chrome, focus-ring suppression, text style,
       typing field routing, scrub mounting, or public AxisDragValue options.

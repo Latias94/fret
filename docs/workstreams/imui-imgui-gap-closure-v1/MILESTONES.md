@@ -56,6 +56,14 @@ presentation adoption, builder methods, and callsite/id-source keying only. The 
 focus handoff, Enter/Escape commit/cancel policy, reset segment wiring, and error icon chrome.
 Public AxisDragValue options/outcome APIs remain unchanged.
 
+2026-05-31 editor AxisDragValue typing-frame owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps keyed owner
+orchestration, scrub frame composition, text input props, focus/key handling, and mode transitions.
+The private `controls/axis_drag_value/element/typing.rs` owner contains typing input-group frame
+composition plus axis/prefix/suffix/error/reset segments. Scrub mounting, Enter/Escape
+commit/cancel behavior, focus handoff, test-id routing, invalid-state icon, reset affordance, and
+public AxisDragValue options remain unchanged.
+
 2026-05-31 editor proof helper owner-split result:
 `apps/fret-examples/src/imui_editor_proof_demo.rs` now keeps workflow rendering, docking/window
 glue, model factories, and proof orchestration, while

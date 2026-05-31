@@ -9,12 +9,11 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ChromeRefinement;
 
 use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
-use crate::primitives::colors::{editor_invalid_border, editor_muted_foreground};
+use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
-    EditorInputGroupFrameOverrides, editor_axis_segment, editor_icon_button_segment,
-    editor_icon_segment, editor_input_group_divider, editor_input_group_frame,
-    editor_input_group_frame_with_overrides, editor_input_group_inset, editor_input_group_row,
+    editor_axis_segment, editor_icon_button_segment, editor_input_group_divider,
+    editor_input_group_frame, editor_input_group_inset, editor_input_group_row,
     editor_input_value_text, editor_text_segment,
 };
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
@@ -34,6 +33,10 @@ use super::model::{
     AxisDragValueMode, AxisDragValueOutcome, AxisDragValueState, axis_drag_value_input_text_style,
 };
 use super::session::{draft_model, emit_axis_drag_value_outcome, error_model, hidden_layout};
+
+mod typing;
+
+use typing::{AxisDragValueTypingFrameArgs, axis_drag_value_typing_field};
 
 impl<T> AxisDragValue<T>
 where
@@ -506,120 +509,29 @@ where
 
         clear_numeric_error_when_draft_changes(cx, is_focused, &draft, &error, &last_draft_text);
 
-        let typing_field = {
-            let divider = frame_chrome.border;
-            let reset_action = self.options.reset.clone();
-            let enabled_for_paint = self.options.enabled;
-            let prefix = prefix.clone();
-            let suffix = suffix.clone();
-            let axis_label = self.axis_label.clone();
-            let axis_tint = self.axis_tint;
-            let error_icon_test_id = typing_error_icon_test_id.clone();
-
-            let mut typing_frame = editor_input_group_frame_with_overrides(
-                cx,
-                input_group_layout,
+        let typing_field = axis_drag_value_typing_field(
+            cx,
+            AxisDragValueTypingFrameArgs {
+                layout: input_group_layout,
                 density,
                 frame_chrome,
-                EditorFrameState {
-                    enabled: true,
-                    hovered: false,
-                    pressed: false,
-                    focused: is_focused,
-                    open: false,
-                    semantic: EditorFrameSemanticState {
-                        typing: true,
-                        invalid: has_error,
-                    },
-                },
-                EditorInputGroupFrameOverrides::none(),
-                move |cx, visuals| {
-                    let affix_color = {
-                        let theme = Theme::global(&*cx.app);
-                        editor_muted_foreground(theme)
-                    };
-                    let mut axis =
-                        editor_axis_segment(cx, density, axis_label.clone(), axis_tint, visuals.bg);
-                    if let Some(test_id) = typing_axis_test_id.as_ref() {
-                        axis = axis.test_id(test_id.clone()).a11y_label(axis_label.clone());
-                    }
-                    let sep = editor_input_group_divider(cx, divider);
-
-                    // Wrap the text input so the group padding applies, without adding its own padding.
-                    let input_wrap = editor_input_group_inset(cx, frame_chrome.padding, input);
-
-                    let mut segments = vec![axis, sep];
-                    if let Some(prefix) = prefix.clone() {
-                        let mut segment = editor_text_segment(
-                            cx,
-                            density,
-                            frame_chrome.text_px,
-                            prefix.clone(),
-                            affix_color,
-                            frame_chrome.padding,
-                        );
-                        if let Some(test_id) = typing_prefix_test_id.as_ref() {
-                            segment = segment.test_id(test_id.clone()).a11y_label(prefix);
-                        }
-                        segments.push(segment);
-                        segments.push(editor_input_group_divider(cx, divider));
-                    }
-                    segments.push(input_wrap);
-                    if let Some(suffix) = suffix.clone() {
-                        segments.push(editor_input_group_divider(cx, divider));
-                        let mut segment = editor_text_segment(
-                            cx,
-                            density,
-                            frame_chrome.text_px,
-                            suffix.clone(),
-                            affix_color,
-                            frame_chrome.padding,
-                        );
-                        if let Some(test_id) = typing_suffix_test_id.as_ref() {
-                            segment = segment.test_id(test_id.clone()).a11y_label(suffix);
-                        }
-                        segments.push(segment);
-                    }
-                    if has_error {
-                        let error_border = {
-                            let theme = Theme::global(&*cx.app);
-                            editor_invalid_border(theme)
-                        };
-                        segments.push(editor_input_group_divider(cx, divider));
-                        let mut icon = editor_icon_segment(
-                            cx,
-                            density,
-                            fret_icons::ids::ui::STATUS_FAILED,
-                            Some(Px(12.0)),
-                            Some(fret_ui_kit::ColorRef::Color(error_border)),
-                        );
-                        if let Some(test_id) = error_icon_test_id.as_ref() {
-                            icon = icon.test_id(test_id.clone());
-                        }
-                        segments.push(icon);
-                    }
-                    if let Some(reset) = reset_action {
-                        segments.push(editor_input_group_divider(cx, divider));
-                        segments.push(editor_icon_button_segment(
-                            cx,
-                            density,
-                            enabled_for_paint,
-                            reset.a11y_label,
-                            reset.icon,
-                            Some(Px(12.0)),
-                            typing_reset_test_id.clone(),
-                            reset.on_activate,
-                        ));
-                    }
-
-                    vec![editor_input_group_row(cx, Px(0.0), segments)]
-                },
-            );
-            if let Some(test_id) = active_typing_test_id.as_ref() {
-                typing_frame = typing_frame.test_id(test_id.clone());
-            }
-            typing_frame
-        };
+                is_focused,
+                has_error,
+                input,
+                axis_label: self.axis_label.clone(),
+                axis_tint: self.axis_tint,
+                prefix: prefix.clone(),
+                suffix: suffix.clone(),
+                reset_action: self.options.reset.clone(),
+                enabled: self.options.enabled,
+                active_typing_test_id,
+                typing_axis_test_id,
+                typing_prefix_test_id,
+                typing_suffix_test_id,
+                typing_error_icon_test_id,
+                typing_reset_test_id,
+            },
+        );
 
         // Render both: scrub stays mounted so focus can restore, typing stays mounted so focus
         // requests have a stable target.

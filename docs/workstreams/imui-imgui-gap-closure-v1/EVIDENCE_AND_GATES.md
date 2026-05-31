@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-31
 
+## AxisDragValue Typing Frame Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor axis-drag-value typing frame assembly moved into a private
+`axis_drag_value/element/typing.rs` owner without changing scrub mounting, key commit/cancel
+handling, focus handoff, typing test-id routing, invalid-state icon, reset affordance, or public
+AxisDragValue options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` keeps keyed owner
+  orchestration, scrub frame composition, text input props, focus/key handling, mode transitions,
+  and outcome emission.
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element/typing.rs` owns typing
+  input-group frame composition plus axis/prefix/suffix/error/reset segments and active typing
+  test-id decoration.
+- `tools/gate_imui_workstream_source.py` now gates the parent/typing split so text input/key
+  policy stays in the keyed owner while typing frame chrome stays in the child owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new typing-frame owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor axis_drag_value --no-fail-fast`: pass (5 passed, 217
+  skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass.
+
 ## ColorEdit Alpha Preview Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor color-edit alpha preview rendering moved into a private

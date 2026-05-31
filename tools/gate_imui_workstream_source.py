@@ -33791,6 +33791,8 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs"),
             required=[
+                "mod typing;",
+                "use typing::{AxisDragValueTypingFrameArgs, axis_drag_value_typing_field};",
                 "impl<T> AxisDragValue<T>",
                 "pub(super) fn into_element_keyed<H: UiHost>",
                 "axis_drag_value_test_ids(",
@@ -33803,7 +33805,8 @@ def main() -> None:
                 "AxisDragValueOutcome::Committed",
                 "AxisDragValueOutcome::Canceled",
                 "editor_input_group_frame(",
-                "editor_input_group_frame_with_overrides(",
+                "axis_drag_value_typing_field(",
+                "AxisDragValueTypingFrameArgs {",
                 "editor_input_value_text(",
             ],
             forbidden=[
@@ -33813,6 +33816,34 @@ def main() -> None:
                 "pub type OnAxisDragValueOutcome",
                 "pub struct AxisDragValue<T>",
                 "axis_drag_value_from_presentation_adopts_format_parse_and_chrome_affixes",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/axis_drag_value/element/typing.rs"),
+            required=[
+                "pub(super) struct AxisDragValueTypingFrameArgs",
+                "pub(super) fn axis_drag_value_typing_field",
+                "editor_input_group_frame_with_overrides(",
+                "EditorInputGroupFrameOverrides::none()",
+                "EditorFrameSemanticState {",
+                "typing: true",
+                "invalid: has_error",
+                "editor_axis_segment(",
+                "editor_icon_segment(",
+                "fret_icons::ids::ui::STATUS_FAILED",
+                "editor_icon_button_segment(",
+                "typing_frame.test_id(test_id.clone())",
+            ],
+            forbidden=[
+                "TextInputProps::new",
+                "DragValueCore::new",
+                "handle_numeric_text_entry_replace_key",
+                "sync_numeric_text_entry_focus_handoff",
+                "KeyCode::Enter | KeyCode::NumpadEnter",
+                "AxisDragValueOutcome::Committed",
+                "AxisDragValueOutcome::Canceled",
+                "pub struct AxisDragValueOptions",
+                "pub struct AxisDragValue<T>",
             ],
         ),
         SourceCheck(
