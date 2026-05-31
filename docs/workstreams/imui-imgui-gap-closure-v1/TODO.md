@@ -58,6 +58,12 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI disclosure visual regression tests into private palette and text-role owners
+      without changing tree-node hover palette assertions, shared list-row text-role assertions,
+      chrome glyph text-role assertions, or shared disclosure test harness helpers.
+      Result: `disclosure_controls/tests/visual.rs` now routes visual regression test modules
+      only. `tests/visual/palette.rs` owns hover palette coverage, while
+      `tests/visual/text_roles.rs` owns row label and disclosure indicator text-role coverage.
 - [x] Split IMUI switch entry rendering into a private owner without changing label identity
       scoping, model reads, `SwitchOptions` a11y/test-id wiring, active-trigger behavior
       installation, field chrome, switch state badge mounting, boolean label mounting, or fill-row

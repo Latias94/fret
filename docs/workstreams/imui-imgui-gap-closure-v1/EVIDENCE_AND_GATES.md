@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Disclosure Visual Tests Owner-Split Evidence - 2026-05-31
+
+Claim verified: IMUI disclosure visual regression tests moved out of the visual test hub into
+private palette and text-role owners without changing tree-node hover palette assertions, shared
+list-row text-role assertions, disclosure indicator text-role assertions, or shared disclosure
+test harness helpers.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/visual.rs` now keeps visual regression
+  module routing only.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/visual/palette.rs` owns tree-node
+  hover palette precedence coverage.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/visual/text_roles.rs` owns row label
+  and disclosure indicator text-role coverage.
+- `tools/gate_imui_workstream_source.py` now gates the visual test hub/palette/text-role split and
+  rejects migrated test bodies from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new visual test owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui disclosure_controls::tests::visual
+  --no-fail-fast`: pass (3 passed, 751 skipped).
+
 ## IMUI Switch Entry Render Owner-Split Evidence - 2026-05-31
 
 Claim verified: IMUI switch entry rendering moved out of `switch/entry.rs` into a private
@@ -3071,8 +3100,9 @@ Evidence:
   mounting coverage.
 - `ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/tree.rs` owns tree-node semantics and
   default-option coverage.
-- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/visual.rs` owns hover palette and
-  tree-row/indicator text-role coverage.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/visual.rs` initially owned hover
+  palette and tree-row/indicator text-role coverage; the 2026-05-31 follow-up moved those bodies
+  into `tests/visual/palette.rs` and `tests/visual/text_roles.rs`.
 - `tools/gate_imui_workstream_source.py` now checks the disclosure test hub/sub-owner split and
   rejects migrated regression tests from drifting back into the hub.
 - `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the disclosure test

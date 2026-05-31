@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 IMUI disclosure visual tests owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/visual.rs` now keeps visual regression
+module routing only. `tests/visual/palette.rs` owns tree-node hover palette coverage, while
+`tests/visual/text_roles.rs` owns row label and disclosure indicator text-role coverage. The
+shared disclosure test harness, palette assertions, text-role assertions, and public disclosure
+behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-05-31 IMUI switch entry render owner-split result:
 `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/entry.rs` now keeps public switch model
 entrypoints and label identity scoping only. `switch/entry/render.rs` owns model reads,

@@ -669,6 +669,8 @@
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/entry.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/tree.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/visual.rs",
+    "ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/visual/palette.rs",
+    "ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/visual/text_roles.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header/children.rs",
