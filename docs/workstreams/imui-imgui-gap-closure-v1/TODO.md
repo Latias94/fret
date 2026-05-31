@@ -1289,6 +1289,13 @@ Last updated: 2026-05-31
       Result: `color_edit/popup/options.rs` keeps picker/alpha option orchestration and re-exports
       the shared button path, while `color_edit/popup/options/button.rs` owns the generic option
       row pressable, palette, centered text, border, and checked-state chrome.
+- [x] Split editor color-edit picker option card rendering into a private child owner without
+      changing Hue Bar/Hue Wheel runtime mutation, option-card sizing, thumbnail reuse, radio a11y,
+      caption text, or popup policy tests.
+      Result: `color_edit/popup/options.rs` keeps popup option composition and alpha option
+      forwarding, while `color_edit/popup/options/picker.rs` owns the picker row, picker card
+      pressables, HSV snapshot conversion, thumbnail insertion, caption text, and picker-model
+      writeback.
 - [x] Split editor color-edit side-preview fill rendering into a private child owner without
       changing current/original preview cells, original restore semantics, checkerboard alpha
       preview behavior, tooltip/swatch preview reuse, or popup policy tests.
