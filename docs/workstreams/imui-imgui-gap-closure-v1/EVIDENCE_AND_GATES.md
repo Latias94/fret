@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Docking Declarative Tab Overflow Owner-Split Evidence - 2026-06-01
+
+Claim verified: docking declarative tab overflow menu and tab-strip scroll/hover policy moved out
+of the large declarative dock-space orchestration owner into a private `declarative/overflow.rs`
+owner without changing overflow menu opening, active-row scroll positioning, menu row click/close
+effects, menu wheel scrolling, tab-strip wheel persistence, hover projection, cursor reporting, or
+public docking APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs` keeps dock-space orchestration, layout/render
+  wiring, input event routing, and public entrypoint functions while importing private overflow
+  owner helpers.
+- `ecosystem/fret-docking/src/dock/declarative/overflow.rs` owns tab overflow menu lookup/opening,
+  menu click handling, menu wheel handling, tab-strip wheel scroll updates, and tab/overflow hover
+  projection.
+- `tools/gate_imui_workstream_source.py` now tracks the declarative/overflow split and rejects tab
+  overflow policy from drifting back into the declarative orchestration owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the overflow owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking --no-fail-fast`: pass (90 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Declarative Tear-Off Owner-Split Evidence - 2026-06-01
 
 Claim verified: docking declarative tear-off and floating-rect policy moved out of the large

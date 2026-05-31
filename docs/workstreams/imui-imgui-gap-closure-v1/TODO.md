@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split docking declarative tab overflow menu and tab-strip scroll/hover policy into a private
+      child owner without changing overflow menu opening, active-row scroll positioning, menu row
+      click/close effects, menu wheel scrolling, tab-strip wheel persistence, hover projection,
+      cursor reporting, or public docking APIs.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, layout/render wiring, input
+      event routing, and public entrypoint functions. `dock/declarative/overflow.rs` owns tab
+      overflow menu lookup/opening, menu click handling, menu wheel handling, tab-strip wheel scroll
+      updates, and tab/overflow hover projection. The source gate prevents tab overflow policy from
+      drifting back into the declarative orchestration owner.
 - [x] Split docking declarative tear-off and floating-rect policy into a private child owner
       without changing panel/tab tear-off eligibility, stable out-of-bounds frame tracking, retry
       clearing, request-float effects, default floating rect sizing, floating bounds clamping, or

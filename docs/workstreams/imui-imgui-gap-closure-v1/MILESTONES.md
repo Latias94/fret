@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 docking declarative tab-overflow owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, layout/render
+wiring, input event routing, and public entrypoint functions while importing private overflow
+owner helpers. The private `dock/declarative/overflow.rs` owner contains tab overflow menu lookup
+and opening, active-row scroll positioning, menu click/close effects, menu wheel scrolling,
+tab-strip wheel persistence, and tab/overflow hover projection. Public docking APIs and managed
+dock-space entrypoints remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split.
+
 2026-06-01 docking declarative tear-off owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, drag/drop event
 routing, layout/render wiring, and public entrypoint functions while importing the private tear-off
