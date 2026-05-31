@@ -200,6 +200,12 @@ Last updated: 2026-05-31
       Result: `controls/text_field/buffered.rs` keeps buffered state, focus/blur planning,
       session sync, commit/cancel helpers, and tests. `controls/text_field/buffered/controller.rs`
       owns `TextFieldDraftController`, its private binding, and controller commit/discard routing.
+- [x] Split editor text-field buffered tests into a private test owner without changing focus/blur
+      planning, draft-controller commit/discard coverage, stable line-box defaults, controller
+      visibility, or buffered runtime helpers.
+      Result: `controls/text_field/buffered.rs` keeps buffered runtime state and session helpers.
+      `controls/text_field/buffered/tests.rs` owns focus/blur plan coverage and draft-controller
+      behavior tests.
 - [x] Split editor text-assist field option/model records into a private child owner without
       changing public option names, default unbuffered input policy, item test-id prefix fallback,
       rendered panel handoff, inline empty-label behavior, or anchored-overlay height policy.

@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor TextField Buffered Tests Owner Split Evidence - 2026-05-31
+
+Claim verified: editor text-field buffered tests split into a private test owner without changing
+focus/blur planning, draft-controller commit/discard coverage, stable line-box defaults,
+controller visibility, or buffered runtime helpers.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs` keeps buffered runtime state,
+  focus/blur/session helpers, commit/cancel helpers, and shortcut policy.
+- `ecosystem/fret-ui-editor/src/controls/text_field/buffered/tests.rs` owns focus/blur plan
+  coverage, stable line-box default coverage, and draft-controller commit/discard/no-op behavior
+  tests.
+- `tools/gate_imui_workstream_source.py` checks the buffered root/test split and rejects the
+  migrated test names from drifting back into the buffered root implementation file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new buffered test owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui text_field --no-fail-fast`: pass (16
+  passed, 189 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Editor TextField Draft Controller Owner Split Evidence - 2026-05-31
 
 Claim verified: editor text-field draft-controller binding split into a private buffered child

@@ -41,6 +41,12 @@ planning, session sync, commit/cancel helpers, shortcut policy, and tests. `cont
 public controller, private binding, commit/discard forwarding, bind/unbind, and Debug output. The
 public text-field re-export path remains unchanged.
 
+2026-05-31 editor text-field buffered tests owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs` now keeps buffered runtime state,
+focus/blur/session helpers, commit/cancel helpers, and shortcut policy only. `buffered/tests.rs`
+owns focus/blur plan coverage, stable line-box default coverage, and draft-controller
+commit/discard/no-op behavior tests.
+
 2026-05-31 menu interaction behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` now owns active-trigger
 installation and keyboard behavior orchestration only. `behavior/activation.rs` owns activate
