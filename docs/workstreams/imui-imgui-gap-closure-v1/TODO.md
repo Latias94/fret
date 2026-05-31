@@ -1208,6 +1208,12 @@ Last updated: 2026-05-31
       Result: `controls/color_edit/tests.rs` keeps color-edit policy/picker/preview test routing
       plus shared HSV assertions. `controls/color_edit/tests/numeric.rs` owns numeric readout,
       parse, and HSV conversion coverage.
+- [x] Split editor color-edit numeric input field handling into a private child owner without
+      changing RGB/HSV field ordering, draft sync, Enter/Escape commit/cancel behavior, parse/format
+      updates, invalid-state a11y, placeholders, error-line rendering, or numeric tests.
+      Result: `color_edit/popup/numeric.rs` keeps numeric section layout, current value projection,
+      chrome/density resolution, and error-line rendering, while `color_edit/popup/numeric/field.rs`
+      owns text-input props, placeholder policy, draft refresh, and key-driven parse/commit/reset.
 - [x] Split editor color-edit picker/preview/alpha tests into a private test owner without
       changing SV/hue-wheel/alpha coordinate mapping, preview alpha visibility, original restore
       component-count rules, shared HSV assertions, or popup policy coverage.

@@ -1,11 +1,11 @@
+mod field;
+
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Edges, KeyCode, Px, SemanticsInvalid, TextStyle};
+use fret_core::{Axis, Color, Edges, Px, TextStyle};
 use fret_runtime::Model;
-use fret_ui::action::ActionCx;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacingLength,
-    TextInputProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
@@ -18,9 +18,9 @@ use crate::primitives::readout::editor_inline_error_text_props;
 
 use super::super::ColorEditPopupNumericInputs;
 use super::super::model::{
-    ColorNumericInputMode, color_numeric_input_modes, color_numeric_text, format_hex,
-    hsv_numeric_text, parse_color_numeric_input, rgb_numeric_text,
+    ColorNumericInputMode, color_numeric_input_modes, hsv_numeric_text, rgb_numeric_text,
 };
+use field::color_numeric_input_field;
 
 pub(super) fn color_numeric_inputs<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -116,107 +116,6 @@ pub(super) fn color_numeric_inputs<H: UiHost>(
     inputs
 }
 
-fn color_numeric_input_field<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    mode: ColorNumericInputMode,
-    model: Model<Color>,
-    hex_draft: Model<String>,
-    draft: Model<String>,
-    error: Model<Option<Arc<str>>>,
-    display_text: Arc<str>,
-    show_alpha: bool,
-    enabled: bool,
-    chrome: fret_ui::TextInputStyle,
-    text_style: TextStyle,
-    has_error: bool,
-    test_id: Option<Arc<str>>,
-) -> AnyElement {
-    let mut props = TextInputProps::new(draft.clone());
-    props.layout = LayoutStyle {
-        size: SizeStyle {
-            width: Length::Fill,
-            height: Length::Auto,
-            min_height: Some(Length::Px(row_height_from_style(&text_style))),
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-    props.enabled = enabled;
-    props.focusable = enabled;
-    props.test_id = test_id;
-    props.placeholder = Some(color_numeric_placeholder(mode, show_alpha));
-    props.a11y_label = Some(mode.a11y_label());
-    props.a11y_invalid = has_error.then_some(SemanticsInvalid::True);
-    props.chrome = chrome;
-    props.text_style = text_style;
-
-    let input = cx.text_input(props);
-    let input_id = input.id;
-    let is_focused = cx.is_focused_element(input_id);
-
-    if !is_focused {
-        let _ = cx
-            .app
-            .models_mut()
-            .update(&draft, |s| *s = display_text.as_ref().to_string());
-    }
-
-    let model_for_key = model;
-    let hex_draft_for_key = hex_draft;
-    let draft_for_key = draft;
-    let error_for_key = error;
-    cx.key_add_on_key_down_capture_for(
-        input_id,
-        Arc::new(move |host, action_cx: ActionCx, down| match down.key {
-            KeyCode::Enter | KeyCode::NumpadEnter => {
-                let text = host
-                    .models_mut()
-                    .read(&draft_for_key, |s| s.clone())
-                    .unwrap_or_default();
-                let current = host
-                    .models_mut()
-                    .get_copied(&model_for_key)
-                    .unwrap_or(Color::TRANSPARENT);
-                if let Some(next) = parse_color_numeric_input(mode, &text, show_alpha, current) {
-                    let _ = host.models_mut().update(&model_for_key, |c| *c = next);
-                    let formatted = format_hex(next, show_alpha);
-                    let numeric = color_numeric_text(next, show_alpha, mode);
-                    let _ = host
-                        .models_mut()
-                        .update(&hex_draft_for_key, |s| *s = formatted.as_ref().to_string());
-                    let _ = host
-                        .models_mut()
-                        .update(&draft_for_key, |s| *s = numeric.as_ref().to_string());
-                    let _ = host.models_mut().update(&error_for_key, |e| *e = None);
-                } else {
-                    let message = mode.invalid_message();
-                    let _ = host
-                        .models_mut()
-                        .update(&error_for_key, |e| *e = Some(message));
-                }
-                host.request_redraw(action_cx.window);
-                true
-            }
-            KeyCode::Escape => {
-                let current = host
-                    .models_mut()
-                    .get_copied(&model_for_key)
-                    .unwrap_or(Color::TRANSPARENT);
-                let numeric = color_numeric_text(current, show_alpha, mode);
-                let _ = host
-                    .models_mut()
-                    .update(&draft_for_key, |s| *s = numeric.as_ref().to_string());
-                let _ = host.models_mut().update(&error_for_key, |e| *e = None);
-                host.request_redraw(action_cx.window);
-                true
-            }
-            _ => false,
-        }),
-    );
-
-    input
-}
-
 fn color_numeric_error_line<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: Arc<str>,
@@ -224,16 +123,4 @@ fn color_numeric_error_line<H: UiHost>(
     row_height: Px,
 ) -> AnyElement {
     cx.text_props(editor_inline_error_text_props(text, color, row_height))
-}
-
-fn row_height_from_style(style: &TextStyle) -> Px {
-    style.line_height.unwrap_or(style.size)
-}
-
-fn color_numeric_placeholder(mode: ColorNumericInputMode, show_alpha: bool) -> Arc<str> {
-    match (mode, show_alpha) {
-        (ColorNumericInputMode::Rgb, true) => Arc::from("RGB 255 255 255 | A 100%"),
-        (ColorNumericInputMode::Rgb, false) => Arc::from("RGB 255 255 255"),
-        (ColorNumericInputMode::Hsv, _) => Arc::from("HSV 0deg | S 100% | V 100%"),
-    }
 }
