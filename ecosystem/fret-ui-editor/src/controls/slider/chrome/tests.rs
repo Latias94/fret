@@ -1,7 +1,11 @@
-use super::{resolve_slider_chrome, resolve_slider_geometry, resolve_slider_paint};
+use super::{
+    resolve_slider_chrome, resolve_slider_geometry, resolve_slider_paint, slider_thumb_props,
+    slider_track_flex_props, slider_track_segment_props,
+};
 use crate::primitives::EditorTokenKeys;
 use fret_app::App;
-use fret_core::{Color, Px};
+use fret_core::{Axis, Color, Corners, Edges, Px};
+use fret_ui::element::{CrossAlign, Length, MainAlign, SpacingLength};
 use fret_ui::{Theme, ThemeConfig};
 
 fn install_slider_colors(app: &mut App) {
@@ -89,6 +93,75 @@ fn slider_geometry_clamps_track_and_keeps_thumb_at_least_track_height() {
     assert_eq!(geometry.thumb_d, Px(8.0));
     assert_eq!(geometry.track_radius, Px(4.0));
     assert_eq!(geometry.thumb_radius, Px(4.0));
+}
+
+#[test]
+fn slider_track_props_encode_fill_track_layout_and_shape() {
+    let app = App::new();
+    let theme = Theme::global(&app);
+    let geometry = resolve_slider_geometry(theme);
+    let bg = Color::from_srgb_hex_rgb(0x35_5a_86);
+
+    let flex = slider_track_flex_props();
+    assert_eq!(flex.layout.size.width, Length::Fill);
+    assert_eq!(flex.layout.size.height, Length::Fill);
+    assert_eq!(flex.layout.flex.grow, 1.0);
+    assert_eq!(flex.layout.flex.basis, Length::Px(Px(0.0)));
+    assert_eq!(flex.direction, Axis::Horizontal);
+    assert_eq!(flex.gap, SpacingLength::Px(Px(0.0)));
+    assert_eq!(flex.justify, MainAlign::Start);
+    assert_eq!(flex.align, CrossAlign::Center);
+    assert!(!flex.wrap);
+
+    let left = slider_track_segment_props(geometry, 0.35, bg, true);
+    assert_eq!(left.layout.size.width, Length::Auto);
+    assert_eq!(left.layout.size.height, Length::Px(geometry.track_h));
+    assert_eq!(left.layout.flex.grow, 0.35);
+    assert_eq!(left.layout.flex.shrink, 1.0);
+    assert_eq!(left.layout.flex.basis, Length::Px(Px(0.0)));
+    assert_eq!(left.background, Some(bg));
+    assert_eq!(
+        left.corner_radii,
+        Corners {
+            top_left: geometry.track_radius,
+            bottom_left: geometry.track_radius,
+            top_right: Px(0.0),
+            bottom_right: Px(0.0),
+        }
+    );
+
+    let right = slider_track_segment_props(geometry, 0.65, bg, false);
+    assert_eq!(right.layout.flex.grow, 0.65);
+    assert_eq!(
+        right.corner_radii,
+        Corners {
+            top_left: Px(0.0),
+            bottom_left: Px(0.0),
+            top_right: geometry.track_radius,
+            bottom_right: geometry.track_radius,
+        }
+    );
+}
+
+#[test]
+fn slider_thumb_props_encode_fixed_diameter_border_and_shape() {
+    let mut app = App::new();
+    install_slider_colors(&mut app);
+
+    let theme = Theme::global(&app);
+    let geometry = resolve_slider_geometry(theme);
+    let paint = resolve_slider_paint(theme, true, true, false, false);
+    let props = slider_thumb_props(geometry, paint);
+
+    assert_eq!(props.layout.size.width, Length::Px(geometry.thumb_d));
+    assert_eq!(props.layout.size.height, Length::Px(geometry.thumb_d));
+    assert_eq!(props.layout.flex.grow, 0.0);
+    assert_eq!(props.layout.flex.shrink, 0.0);
+    assert_eq!(props.layout.flex.basis, Length::Px(geometry.thumb_d));
+    assert_eq!(props.background, Some(paint.thumb_bg));
+    assert_eq!(props.border, Edges::all(Px(1.0)));
+    assert_eq!(props.border_color, Some(paint.thumb_border));
+    assert_eq!(props.corner_radii, Corners::all(geometry.thumb_radius));
 }
 
 #[test]

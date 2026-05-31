@@ -60,6 +60,13 @@ height, thumb-at-least-track clamping, and radius derivation, while `chrome/test
 and clamped geometry behavior. Pointer math, rendering layout, and public `SliderOptions` remain
 unchanged.
 
+2026-05-31 editor slider track/thumb props chrome owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps element composition order and value
+display assembly only for the track row. `controls/slider/chrome.rs` owns track flex props,
+left/right segment container props, and thumb container props, while `chrome/tests.rs` covers track
+layout, segment shape, fixed thumb diameter, border, and radius behavior. Render order, pointer
+math, value display layout, and public `SliderOptions` remain unchanged.
+
 2026-05-31 editor numeric-input model/session owner-split result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps NumericInput constructors,
 builder methods, keyed control orchestration, validation message rendering, and presentation test

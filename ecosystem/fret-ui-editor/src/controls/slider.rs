@@ -27,12 +27,12 @@ use crate::primitives::readout::EditorCompactReadoutStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use crate::primitives::{NumericPresentation, style::EditorStyle};
 use fret_core::text::TextOverflow;
-use fret_core::{Axis, Corners, CursorIcon, Edges, MouseButton, Px, TextAlign};
+use fret_core::{Axis, CursorIcon, Edges, MouseButton, Px, TextAlign};
 use fret_runtime::Model;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, LayoutStyle, Length,
-    MainAlign, Overflow, PressableA11y, PressableProps, SizeStyle, SpacingLength,
+    AnyElement, CrossAlign, FlexItemStyle, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    PressableA11y, PressableProps, SizeStyle, SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
@@ -44,7 +44,10 @@ mod tests;
 mod typing;
 mod value_math;
 
-use chrome::{resolve_slider_geometry, resolve_slider_paint};
+use chrome::{
+    resolve_slider_geometry, resolve_slider_paint, slider_thumb_props, slider_track_flex_props,
+    slider_track_segment_props,
+};
 pub use model::SliderOptions;
 use model::{
     SliderMode, SliderState, compose_affixed_value_text, default_slider_format,
@@ -152,10 +155,7 @@ where
         let frame = style.frame_chrome_small();
 
         let geometry = resolve_slider_geometry(theme);
-        let track_h = geometry.track_h;
         let thumb_d = geometry.thumb_d;
-        let track_radius = geometry.track_radius;
-        let thumb_radius = geometry.thumb_radius;
 
         let (min, max) = if self.min <= self.max {
             (self.min, self.max)
@@ -351,14 +351,12 @@ where
 
                 let paint =
                     resolve_slider_paint(theme, interactive_enabled, enabled, hovered, pressed);
-                let track_bg = paint.track_bg;
-                let fill_bg = paint.fill_bg;
-                let thumb_bg = paint.thumb_bg;
-                let thumb_border = paint.thumb_border;
                 let readout_style = EditorCompactReadoutStyle::resolve(theme, density.row_height);
 
                 let left_grow = t.clamp(0.0, 1.0);
                 let right_grow = (1.0 - left_grow).max(0.0);
+                let track_bg = paint.track_bg;
+                let fill_bg = paint.fill_bg;
 
                 vec![editor_input_group_frame(
                     cx,
@@ -383,104 +381,22 @@ where
                         semantic: EditorFrameSemanticState::default(),
                     },
                     move |cx, frame_visuals| {
-                        let track = cx.flex(
-                            FlexProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
-                                        ..Default::default()
-                                    },
-                                    flex: FlexItemStyle {
-                                        order: 0,
-                                        grow: 1.0,
-                                        shrink: 1.0,
-                                        basis: Length::Px(Px(0.0)),
-                                        align_self: None,
-                                    },
-                                    ..Default::default()
-                                },
-                                direction: Axis::Horizontal,
-                                gap: SpacingLength::Px(Px(0.0)),
-                                padding: Edges::all(Px(0.0)).into(),
-                                justify: MainAlign::Start,
-                                align: CrossAlign::Center,
-                                wrap: false,
-                            },
-                            move |cx| {
-                                let mut seg_layout =
-                                    |grow: f32, bg: fret_core::Color, left: bool| {
-                                        cx.container(
-                                            ContainerProps {
-                                                layout: LayoutStyle {
-                                                    size: SizeStyle {
-                                                        width: Length::Auto,
-                                                        height: Length::Px(track_h),
-                                                        ..Default::default()
-                                                    },
-                                                    flex: FlexItemStyle {
-                                                        order: 0,
-                                                        grow,
-                                                        shrink: 1.0,
-                                                        basis: Length::Px(Px(0.0)),
-                                                        align_self: None,
-                                                    },
-                                                    ..Default::default()
-                                                },
-                                                background: Some(bg),
-                                                corner_radii: if left {
-                                                    Corners {
-                                                        top_left: track_radius,
-                                                        bottom_left: track_radius,
-                                                        top_right: Px(0.0),
-                                                        bottom_right: Px(0.0),
-                                                    }
-                                                } else {
-                                                    Corners {
-                                                        top_left: Px(0.0),
-                                                        bottom_left: Px(0.0),
-                                                        top_right: track_radius,
-                                                        bottom_right: track_radius,
-                                                    }
-                                                },
-                                                ..Default::default()
-                                            },
-                                            |_cx| vec![],
-                                        )
-                                    };
-
-                                let left = seg_layout(left_grow, fill_bg, true);
-                                let right = seg_layout(right_grow, track_bg, false);
-
-                                let thumb = cx.container(
-                                    ContainerProps {
-                                        layout: LayoutStyle {
-                                            size: SizeStyle {
-                                                width: Length::Px(thumb_d),
-                                                height: Length::Px(thumb_d),
-                                                ..Default::default()
-                                            },
-                                            flex: FlexItemStyle {
-                                                order: 0,
-                                                grow: 0.0,
-                                                shrink: 0.0,
-                                                basis: Length::Px(thumb_d),
-                                                align_self: None,
-                                            },
-                                            ..Default::default()
-                                        },
-                                        background: Some(thumb_bg),
-                                        border: Edges::all(Px(1.0)),
-                                        border_color: Some(thumb_border),
-                                        corner_radii: Corners::all(thumb_radius),
-                                        ..Default::default()
-                                    },
+                        let track = cx.flex(slider_track_flex_props(), move |cx| {
+                            let mut seg_layout = |grow: f32, bg: fret_core::Color, left: bool| {
+                                cx.container(
+                                    slider_track_segment_props(geometry, grow, bg, left),
                                     |_cx| vec![],
-                                );
+                                )
+                            };
 
-                                vec![left, thumb, right]
-                            },
-                        );
+                            let left = seg_layout(left_grow, fill_bg, true);
+                            let right = seg_layout(right_grow, track_bg, false);
+
+                            let thumb =
+                                cx.container(slider_thumb_props(geometry, paint), |_cx| vec![]);
+
+                            vec![left, thumb, right]
+                        });
 
                         let value_el = if show_value {
                             let mut value_text_el = cx.text_props(readout_style.text_props(

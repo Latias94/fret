@@ -483,6 +483,12 @@ Last updated: 2026-05-31
       Result: `controls/slider.rs` now asks `controls/slider/chrome.rs` for resolved geometry only.
       `controls/slider/chrome.rs` owns track/thumb metric fallback, clamping, and radius derivation,
       with focused geometry tests in `controls/slider/chrome/tests.rs`.
+- [x] Split editor slider track/thumb chrome props into the chrome owner without changing track
+      flex sizing, segment fill/track grow layout, left/right segment radii, thumb diameter/border,
+      render order, value display segment layout, pointer math, or public `SliderOptions`.
+      Result: `controls/slider.rs` keeps element composition order and value display assembly only.
+      `controls/slider/chrome.rs` owns track flex props, segment container props, and thumb
+      container props, with focused props tests in `controls/slider/chrome/tests.rs`.
 - [x] Split editor enum-select row rendering, selection commit policy, and item test-id
       sanitization into a private child owner without changing trigger composition, overlay
       dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row

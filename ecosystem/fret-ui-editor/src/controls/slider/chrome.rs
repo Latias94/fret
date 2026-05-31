@@ -1,7 +1,11 @@
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::colors::{editor_accent, editor_border, editor_subtle_bg};
-use fret_core::{Color, Px};
+use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_ui::Theme;
+use fret_ui::element::{
+    ContainerProps, CrossAlign, FlexItemStyle, FlexProps, LayoutStyle, Length, MainAlign,
+    SizeStyle, SpacingLength,
+};
 
 #[cfg(test)]
 mod tests;
@@ -49,6 +53,102 @@ pub(super) fn resolve_slider_geometry(theme: &Theme) -> ResolvedSliderGeometry {
         thumb_d,
         track_radius: Px(track_h.0 * 0.5),
         thumb_radius: Px(thumb_d.0 * 0.5),
+    }
+}
+
+pub(super) fn slider_track_flex_props() -> FlexProps {
+    FlexProps {
+        layout: LayoutStyle {
+            size: SizeStyle {
+                width: Length::Fill,
+                height: Length::Fill,
+                ..Default::default()
+            },
+            flex: FlexItemStyle {
+                order: 0,
+                grow: 1.0,
+                shrink: 1.0,
+                basis: Length::Px(Px(0.0)),
+                align_self: None,
+            },
+            ..Default::default()
+        },
+        direction: Axis::Horizontal,
+        gap: SpacingLength::Px(Px(0.0)),
+        padding: Edges::all(Px(0.0)).into(),
+        justify: MainAlign::Start,
+        align: CrossAlign::Center,
+        wrap: false,
+    }
+}
+
+pub(super) fn slider_track_segment_props(
+    geometry: ResolvedSliderGeometry,
+    grow: f32,
+    bg: Color,
+    left: bool,
+) -> ContainerProps {
+    ContainerProps {
+        layout: LayoutStyle {
+            size: SizeStyle {
+                width: Length::Auto,
+                height: Length::Px(geometry.track_h),
+                ..Default::default()
+            },
+            flex: FlexItemStyle {
+                order: 0,
+                grow,
+                shrink: 1.0,
+                basis: Length::Px(Px(0.0)),
+                align_self: None,
+            },
+            ..Default::default()
+        },
+        background: Some(bg),
+        corner_radii: if left {
+            Corners {
+                top_left: geometry.track_radius,
+                bottom_left: geometry.track_radius,
+                top_right: Px(0.0),
+                bottom_right: Px(0.0),
+            }
+        } else {
+            Corners {
+                top_left: Px(0.0),
+                bottom_left: Px(0.0),
+                top_right: geometry.track_radius,
+                bottom_right: geometry.track_radius,
+            }
+        },
+        ..Default::default()
+    }
+}
+
+pub(super) fn slider_thumb_props(
+    geometry: ResolvedSliderGeometry,
+    paint: ResolvedSliderPaint,
+) -> ContainerProps {
+    ContainerProps {
+        layout: LayoutStyle {
+            size: SizeStyle {
+                width: Length::Px(geometry.thumb_d),
+                height: Length::Px(geometry.thumb_d),
+                ..Default::default()
+            },
+            flex: FlexItemStyle {
+                order: 0,
+                grow: 0.0,
+                shrink: 0.0,
+                basis: Length::Px(geometry.thumb_d),
+                align_self: None,
+            },
+            ..Default::default()
+        },
+        background: Some(paint.thumb_bg),
+        border: Edges::all(Px(1.0)),
+        border_color: Some(paint.thumb_border),
+        corner_radii: Corners::all(geometry.thumb_radius),
+        ..Default::default()
     }
 }
 
