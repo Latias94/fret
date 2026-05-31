@@ -265,7 +265,7 @@ def check_direct_text_props_allowlist(
 
 
 def check_property_row_value_slot_overflow(failures: list[str]) -> None:
-    path = Path("ecosystem/fret-ui-editor/src/composites/property_row.rs")
+    path = Path("ecosystem/fret-ui-editor/src/composites/property_row/element.rs")
     source = read_source(path)
     marker = "let value = mark_property_row_value_slot(cx.container("
     starts = [match.start() for match in re.finditer(re.escape(marker), source)]
@@ -33371,24 +33371,29 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/composites/property_row.rs"),
             required=[
+                "mod element;",
                 "mod layout;",
                 "mod options;",
                 "mod reset;",
                 "mod tests;",
+                "use element::property_row_element;",
                 "pub use layout::PropertyRowLayoutVariant;",
                 "pub use options::PropertyRowOptions;",
                 "pub use reset::{OnPropertyRowReset, PropertyRowReset, PropertyRowResetOptions};",
                 "pub(crate) fn property_row_label_text",
                 "editor_property_row_label_text_props(",
+                "property_row_element(cx, options, reset, label, value, actions)",
+            ],
+            forbidden=[
+                "fn into_element_inner",
                 "resolve_property_row_layout(",
                 "resolve_property_row_layout_variant(",
                 "apply_property_row_min_height(",
-                "height: Length::Px(density.row_height),",
-                "max_height: Some(Length::Px(density.row_height)),",
-                "mark_property_row_value_slot(cx.container(",
+                "mark_property_row_value_slot",
                 "reset::property_row_reset_element(",
-            ],
-            forbidden=[
+                "cx.flex(",
+                "ContainerProps",
+                "FlexProps",
                 "pub struct PropertyRowOptions",
                 "impl Default for PropertyRowOptions",
                 "pub label_width: Option<Px>",
@@ -33420,6 +33425,38 @@ def main() -> None:
                 "row_label_slot_keeps_fixed_line_box_when_label_text_wraps_under_narrow_layout",
                 "row_value_slot_keeps_overflow_visible_for_wrapping_value_children",
                 "row_value_slot_grows_to_wrapping_value_text_under_narrow_layout",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/composites/property_row/element.rs"),
+            required=[
+                "pub(crate) const PROPERTY_ROW_VALUE_SLOT",
+                "fn mark_property_row_value_slot",
+                "pub(super) fn property_row_element",
+                "resolve_property_row_layout(",
+                "resolve_property_row_layout_variant(",
+                "apply_property_row_min_height(",
+                "height: Length::Px(density.row_height),",
+                "max_height: Some(Length::Px(density.row_height)),",
+                "mark_property_row_value_slot(cx.container(",
+                "reset::property_row_reset_element(",
+                "PropertyRowLayoutVariant::Row => cx.flex(",
+                "PropertyRowLayoutVariant::Column =>",
+                "row.test_id(test_id.clone())",
+            ],
+            forbidden=[
+                "pub struct PropertyRow {",
+                "impl PropertyRow",
+                "pub(crate) fn property_row_label_text",
+                "editor_property_row_label_text_props(",
+                "pub struct PropertyRowOptions",
+                "impl Default for PropertyRowOptions",
+                "pub type OnPropertyRowReset",
+                "pub struct PropertyRowResetOptions",
+                "impl Default for PropertyRowResetOptions",
+                "pub struct PropertyRowReset {",
+                "impl PropertyRowReset",
+                "pub enum PropertyRowLayoutVariant",
             ],
         ),
         SourceCheck(

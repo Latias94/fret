@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `PropertyRow` row/column element assembly into a private child owner without
+      changing public constructors/builders, explicit id-source keying, label helper behavior,
+      layout resolution, auto row/column switching, value-slot overflow semantics, reset slot
+      wiring, action slot wiring, test-id propagation, or property-row text role behavior.
+      Result: `composites/property_row.rs` now keeps the public composite, label helper,
+      keying/identity wrapper, and public re-exports. `composites/property_row/element.rs` owns
+      row/column flex assembly, layout-query usage, resolved-layout consumption, value-slot marking,
+      reset/action slot mounting, and test-id application. The source gate prevents row/column
+      assembly policy from drifting back into the root composite owner.
 - [x] Split editor `PropertyRow` options/default policy into a private child owner without
       changing public `PropertyRowOptions` import paths, layout defaults, slot width defaults,
       auto-stack identity/test-id fields, row/column assembly, reset slot behavior, value-slot

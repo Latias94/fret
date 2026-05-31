@@ -12,6 +12,16 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor PropertyRow element owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the public composite, label
+helper, keying/identity wrapper, and public re-exports. The private
+`composites/property_row/element.rs` owner contains row/column flex assembly, layout-query usage,
+resolved-layout consumption, value-slot marking, reset/action slot mounting, and test-id
+application. Public constructors/builders, explicit id-source keying, label helper behavior,
+layout resolution, auto row/column switching, value-slot overflow semantics, reset/action slots,
+test-id propagation, and property-row text role behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor PropertyRow options owner-split result:
 `ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the public composite, label
 helper, keyed row entrypoint, row/column child assembly, value-slot marking, and reset-slot wiring
