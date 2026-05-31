@@ -2790,6 +2790,12 @@ Last updated: 2026-05-31
       Result: `selectable_controls/tests.rs` now keeps shared helpers and module routing only.
       `tests/palette.rs` owns palette policy coverage, while `tests/row_text.rs` owns row label
       text-role coverage.
+- [x] Split IMUI selectable visual palette resolution out of the row visual owner without changing
+      selected/hover/pressed/disabled palette fallback order, highlight semantics, row padding,
+      shared list-row text role mounting, inherited foreground, or public selectable behavior.
+      Result: `selectable_controls/visual.rs` keeps row composition and text-role mounting, while
+      `selectable_controls/visual/palette.rs` owns `SelectablePalette` and
+      `resolve_selectable_palette(...)`.
 - [x] Split IMUI child-region resize handle/drag ownership out of
       `ecosystem/fret-ui-kit/src/imui/child_region.rs` into a private owner module without
       changing the public child-region facade or response surface.

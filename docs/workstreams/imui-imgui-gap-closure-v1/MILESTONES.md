@@ -20,6 +20,12 @@ re-export hub, while
 projection, draw-list recording, paint dispatch, public debug-draw summaries, and facade APIs remain
 unchanged.
 
+2026-05-31 selectable visual palette owner-split result:
+`ecosystem/fret-ui-kit/src/imui/selectable_controls/visual.rs` now keeps selectable row composition
+and shared list-row text-role mounting only. `selectable_controls/visual/palette.rs` owns
+`SelectablePalette`, selected/hover/pressed/disabled palette fallback order, and highlighted-row
+palette semantics. Public selectable behavior remains unchanged.
+
 2026-05-31 editor axis-drag-value session owner-split result:
 `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps scrub/typing control
 orchestration and child-owner routing. `controls/axis_drag_value/session.rs` owns hidden layout

@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Selectable Visual Palette Owner-Split Evidence - 2026-05-31
+
+Claim verified: IMUI selectable palette resolution moved behind a private visual child owner
+without changing selected/hover/pressed/disabled fallback order, highlighted-row semantics, row
+padding, shared list-row text-role mounting, inherited foreground, or public selectable behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/visual.rs` keeps selectable row composition
+  and shared list-row text-role mounting.
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/visual/palette.rs` owns
+  `SelectablePalette` and `resolve_selectable_palette(...)`.
+- `tools/gate_imui_workstream_source.py` tracks the new palette owner and rejects palette fallback
+  bodies from drifting back into `visual.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new palette owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui selectable --no-fail-fast`: pass (7 passed,
+  747 skipped).
+- `git diff --check`: pass.
+
 ## Debug-Draw Command Type Hub Owner-Split Evidence - 2026-05-31
 
 Claim verified: IMUI debug-draw command payload enum moved from the type hub into a child owner
