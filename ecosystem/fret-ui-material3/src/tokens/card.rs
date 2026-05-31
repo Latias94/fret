@@ -8,6 +8,9 @@ use fret_ui::Theme;
 
 use crate::card::CardVariant;
 use crate::foundation::interaction::PressableInteraction;
+use crate::foundation::token_resolver::{
+    MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
+};
 
 pub(crate) const FILLED_COMPONENT_PREFIX: &str = "md.comp.filled-card";
 pub(crate) const ELEVATED_COMPONENT_PREFIX: &str = "md.comp.elevated-card";
@@ -40,40 +43,29 @@ pub(crate) fn container_shape(theme: &Theme, variant: CardVariant) -> Corners {
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme, variant: CardVariant) -> Color {
-    theme
-        .color_by_key(&format!(
-            "{}.container.shadow-color",
-            component_prefix(variant)
-        ))
-        .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        &format!("{}.container.shadow-color", component_prefix(variant)),
+        "md.sys.color.shadow",
+    )
 }
 
 pub(crate) fn container_background(theme: &Theme, variant: CardVariant, enabled: bool) -> Color {
+    let tokens = MaterialTokenResolver::new(theme);
     if enabled {
-        theme
-            .color_by_key(&format!("{}.container.color", component_prefix(variant)))
-            .or_else(|| theme.color_by_key("md.sys.color.surface-container-low"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-low"))
+        tokens.color_comp_or_sys(
+            &format!("{}.container.color", component_prefix(variant)),
+            "md.sys.color.surface-container-low",
+        )
     } else {
-        let base = theme
-            .color_by_key(&format!(
-                "{}.disabled.container.color",
-                component_prefix(variant)
-            ))
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
+        let base = tokens.color_comp_or_sys(
+            &format!("{}.disabled.container.color", component_prefix(variant)),
+            "md.sys.color.on-surface",
+        );
 
-        let opacity = theme
-            .number_by_key(&format!(
-                "{}.disabled.container.opacity",
-                component_prefix(variant)
-            ))
-            .unwrap_or(0.12);
+        let opacity_key = format!("{}.disabled.container.opacity", component_prefix(variant));
+        let opacity = tokens.number_optional(Some(opacity_key.as_str()), 0.12);
 
-        let mut c = base;
-        c.a *= opacity.clamp(0.0, 1.0);
-        c
+        alpha_mul(base, opacity)
     }
 }
 
@@ -119,15 +111,14 @@ pub(crate) fn outline(
         .unwrap_or(Px(1.0));
 
     if !enabled {
-        let base = theme
-            .color_by_key(&format!("{prefix}.disabled.outline.color"))
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-        let opacity = theme
-            .number_by_key(&format!("{prefix}.disabled.outline.opacity"))
-            .unwrap_or(0.12);
-        let mut c = base;
-        c.a *= opacity.clamp(0.0, 1.0);
+        let tokens = MaterialTokenResolver::new(theme);
+        let base = tokens.color_comp_or_sys(
+            &format!("{prefix}.disabled.outline.color"),
+            "md.sys.color.on-surface",
+        );
+        let opacity_key = format!("{prefix}.disabled.outline.opacity");
+        let opacity = tokens.number_optional(Some(opacity_key.as_str()), 0.12);
+        let c = alpha_mul(base, opacity);
         return Some(CardOutline { width, color: c });
     }
 
@@ -138,11 +129,12 @@ pub(crate) fn outline(
         None => "outline.color",
     };
 
-    let mut color = theme
-        .color_by_key(&format!("{prefix}.{key}"))
-        .or_else(|| theme.color_by_key(&format!("{prefix}.outline.color")))
-        .or_else(|| theme.color_by_key("md.sys.color.outline"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.outline"));
+    let state_key = format!("{prefix}.{key}");
+    let default_key = format!("{prefix}.outline.color");
+    let mut color = MaterialTokenResolver::new(theme).color_comp_chain_or_sys(
+        &[state_key.as_str(), default_key.as_str()],
+        "md.sys.color.outline",
+    );
     color.a = 1.0;
 
     Some(CardOutline { width, color })
@@ -161,10 +153,8 @@ pub(crate) fn state_layer_color(
         None => "hover.state-layer.color",
     };
 
-    theme
-        .color_by_key(&format!("{prefix}.{key}"))
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(&format!("{prefix}.{key}"), "md.sys.color.on-surface")
 }
 
 pub(crate) fn state_layer_opacity(
@@ -180,19 +170,30 @@ pub(crate) fn state_layer_opacity(
         None => return 0.0,
     };
 
-    theme
-        .number_by_key(&format!("{prefix}.{key}"))
-        .unwrap_or(0.0)
+    let Some(interaction) = material_state_layer_interaction(interaction) else {
+        return 0.0;
+    };
+    MaterialTokenResolver::new(theme)
+        .state_layer_opacity(&format!("{prefix}.{key}"), interaction)
         .clamp(0.0, 1.0)
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme, variant: CardVariant) -> f32 {
-    theme
-        .number_by_key(&format!(
-            "{}.pressed.state-layer.opacity",
-            component_prefix(variant)
-        ))
-        .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme)
+        .state_layer_opacity(
+            &format!("{}.pressed.state-layer.opacity", component_prefix(variant)),
+            MaterialStateLayerInteraction::Pressed,
+        )
         .clamp(0.0, 1.0)
+}
+
+fn material_state_layer_interaction(
+    interaction: Option<PressableInteraction>,
+) -> Option<MaterialStateLayerInteraction> {
+    match interaction {
+        Some(PressableInteraction::Pressed) => Some(MaterialStateLayerInteraction::Pressed),
+        Some(PressableInteraction::Focused) => Some(MaterialStateLayerInteraction::Focused),
+        Some(PressableInteraction::Hovered) => Some(MaterialStateLayerInteraction::Hovered),
+        None => None,
+    }
 }

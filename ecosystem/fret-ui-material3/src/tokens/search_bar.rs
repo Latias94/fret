@@ -36,12 +36,10 @@ pub(crate) fn container_shape(theme: &Theme) -> Corners {
 }
 
 pub(crate) fn container_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-bar.container.color")
-        .or_else(|| theme.color_by_key("md.sys.color.surface-container-high"))
-        .unwrap_or_else(|| {
-            MaterialTokenResolver::new(theme).color_sys("md.sys.color.surface-container-high")
-        })
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.search-bar.container.color",
+        "md.sys.color.surface-container-high",
+    )
 }
 
 pub(crate) fn container_elevation(theme: &Theme) -> Px {
@@ -51,26 +49,24 @@ pub(crate) fn container_elevation(theme: &Theme) -> Px {
 }
 
 pub(crate) fn leading_icon_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-bar.leading-icon.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.search-bar.leading-icon.color",
+        "md.sys.color.on-surface",
+    )
 }
 
 pub(crate) fn trailing_icon_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-bar.trailing-icon.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| {
-            MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface-variant")
-        })
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.search-bar.trailing-icon.color",
+        "md.sys.color.on-surface-variant",
+    )
 }
 
 pub(crate) fn input_text_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-bar.input-text.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.search-bar.input-text.color",
+        "md.sys.color.on-surface",
+    )
 }
 
 pub(crate) fn supporting_text_color(theme: &Theme, hovered: bool, pressed: bool) -> Color {
@@ -82,12 +78,7 @@ pub(crate) fn supporting_text_color(theme: &Theme, hovered: bool, pressed: bool)
         "md.comp.search-bar.supporting-text.color"
     };
 
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| {
-            MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface-variant")
-        })
+    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface-variant")
 }
 
 pub(crate) fn input_text_style(theme: &Theme) -> TextStyle {
@@ -100,29 +91,31 @@ pub(crate) fn input_text_style(theme: &Theme) -> TextStyle {
 }
 
 pub(crate) fn hover_state_layer_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-bar.hover.state-layer.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.search-bar.hover.state-layer.color",
+        "md.sys.color.on-surface",
+    )
 }
 
 pub(crate) fn pressed_state_layer_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-bar.pressed.state-layer.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.search-bar.pressed.state-layer.color",
+        "md.sys.color.on-surface",
+    )
 }
 
 pub(crate) fn hover_state_layer_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key("md.comp.search-bar.hover.state-layer.opacity")
-        .or_else(|| theme.number_by_key("md.sys.state.hover.state-layer-opacity"))
-        .unwrap_or(0.08)
+    MaterialTokenResolver::new(theme).number_comp_or_sys(
+        "md.comp.search-bar.hover.state-layer.opacity",
+        "md.sys.state.hover.state-layer-opacity",
+        0.08,
+    )
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key("md.comp.search-bar.pressed.state-layer.opacity")
-        .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme).number_comp_or_sys(
+        "md.comp.search-bar.pressed.state-layer.opacity",
+        "md.sys.state.pressed.state-layer-opacity",
+        0.1,
+    )
 }

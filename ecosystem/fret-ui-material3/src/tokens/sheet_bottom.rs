@@ -15,15 +15,15 @@ pub(crate) fn docked_container_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn modal_scrim_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.sys.color.scrim")
-        .unwrap_or_else(|| theme.color_token("md.sys.color.scrim"))
+    MaterialTokenResolver::new(theme).color_sys("md.sys.color.scrim")
 }
 
 pub(crate) fn modal_scrim_opacity(theme: &Theme, fallback: f32) -> f32 {
-    theme
-        .number_by_key("md.sys.fret.material.sheet.bottom.docked.modal.scrim.opacity")
-        .unwrap_or(fallback)
+    MaterialTokenResolver::new(theme)
+        .number_optional(
+            Some("md.sys.fret.material.sheet.bottom.docked.modal.scrim.opacity"),
+            fallback,
+        )
         .clamp(0.0, 1.0)
 }
 
@@ -64,9 +64,8 @@ pub(crate) fn docked_drag_handle_height(theme: &Theme) -> Px {
 }
 
 pub(crate) fn docked_drag_handle_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key("md.comp.sheet.bottom.docked.drag-handle.opacity")
-        .unwrap_or(0.4)
+    MaterialTokenResolver::new(theme)
+        .number_optional(Some("md.comp.sheet.bottom.docked.drag-handle.opacity"), 0.4)
 }
 
 pub(crate) fn docked_drag_handle_color(theme: &Theme) -> Color {

@@ -10,12 +10,10 @@ use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::tokens::typography;
 
 pub(crate) fn container_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-view.container.color")
-        .or_else(|| theme.color_by_key("md.sys.color.surface-container-high"))
-        .unwrap_or_else(|| {
-            MaterialTokenResolver::new(theme).color_sys("md.sys.color.surface-container-high")
-        })
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.search-view.container.color",
+        "md.sys.color.surface-container-high",
+    )
 }
 
 pub(crate) fn container_elevation(theme: &Theme) -> Px {
@@ -31,10 +29,8 @@ pub(crate) fn full_screen_header_container_height(theme: &Theme) -> Px {
 }
 
 pub(crate) fn divider_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-view.divider.color")
-        .or_else(|| theme.color_by_key("md.sys.color.outline"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.outline"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys("md.comp.search-view.divider.color", "md.sys.color.outline")
 }
 
 pub(crate) fn docked_container_shape(theme: &Theme) -> Corners {
@@ -46,35 +42,31 @@ pub(crate) fn docked_container_shape(theme: &Theme) -> Corners {
 }
 
 pub(crate) fn header_leading_icon_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-view.header.leading-icon.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.search-view.header.leading-icon.color",
+        "md.sys.color.on-surface",
+    )
 }
 
 pub(crate) fn header_trailing_icon_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-view.header.trailing-icon.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| {
-            MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface-variant")
-        })
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.search-view.header.trailing-icon.color",
+        "md.sys.color.on-surface-variant",
+    )
 }
 
 pub(crate) fn header_input_text_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-view.header.input-text.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.search-view.header.input-text.color",
+        "md.sys.color.on-surface",
+    )
 }
 
 pub(crate) fn header_supporting_text_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-view.header.supporting-text.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| {
-            MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface-variant")
-        })
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.search-view.header.supporting-text.color",
+        "md.sys.color.on-surface-variant",
+    )
 }
 
 pub(crate) fn header_input_text_style(theme: &Theme) -> TextStyle {

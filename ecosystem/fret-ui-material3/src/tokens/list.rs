@@ -8,7 +8,9 @@ use fret_ui::Theme;
 use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::content::MaterialContentDefaults;
-use crate::foundation::token_resolver::alpha_mul;
+use crate::foundation::token_resolver::{
+    MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
+};
 use crate::tokens::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -172,14 +174,16 @@ fn supporting_text_opacity(theme: &Theme, enabled: bool, selected: bool) -> f32 
         return 1.0;
     }
 
-    theme
-        .number_by_key(if selected {
-            "md.comp.list.list-item.selected.disabled.supporting-text.opacity"
-        } else {
-            "md.comp.list.list-item.disabled.supporting-text.opacity"
-        })
-        .or_else(|| theme.number_by_key("md.sys.state.disabled.state-layer-opacity"))
-        .unwrap_or(0.38)
+    MaterialTokenResolver::new(theme)
+        .number_comp_or_sys(
+            if selected {
+                "md.comp.list.list-item.selected.disabled.supporting-text.opacity"
+            } else {
+                "md.comp.list.list-item.disabled.supporting-text.opacity"
+            },
+            "md.sys.state.disabled.state-layer-opacity",
+            0.38,
+        )
         .clamp(0.0, 1.0)
 }
 
@@ -188,14 +192,16 @@ fn overline_text_opacity(theme: &Theme, enabled: bool, selected: bool) -> f32 {
         return 1.0;
     }
 
-    theme
-        .number_by_key(if selected {
-            "md.comp.list.list-item.selected.disabled.overline.opacity"
-        } else {
-            "md.comp.list.list-item.disabled.overline.opacity"
-        })
-        .or_else(|| theme.number_by_key("md.sys.state.disabled.state-layer-opacity"))
-        .unwrap_or(0.38)
+    MaterialTokenResolver::new(theme)
+        .number_comp_or_sys(
+            if selected {
+                "md.comp.list.list-item.selected.disabled.overline.opacity"
+            } else {
+                "md.comp.list.list-item.disabled.overline.opacity"
+            },
+            "md.sys.state.disabled.state-layer-opacity",
+            0.38,
+        )
         .clamp(0.0, 1.0)
 }
 
@@ -204,17 +210,22 @@ fn trailing_supporting_text_opacity(theme: &Theme, enabled: bool, selected: bool
         return 1.0;
     }
 
-    theme
-        .number_by_key(if selected {
-            "md.comp.list.list-item.selected.disabled.trailing-supporting-text.opacity"
-        } else {
-            // Material Web v30 does not define a dedicated non-selected trailing supporting opacity
-            // token; fall back to the sys disabled opacity.
-            "md.sys.state.disabled.state-layer-opacity"
-        })
-        .or_else(|| theme.number_by_key("md.sys.state.disabled.state-layer-opacity"))
-        .unwrap_or(0.38)
-        .clamp(0.0, 1.0)
+    let tokens = MaterialTokenResolver::new(theme);
+    if selected {
+        tokens
+            .number_comp_or_sys(
+                "md.comp.list.list-item.selected.disabled.trailing-supporting-text.opacity",
+                "md.sys.state.disabled.state-layer-opacity",
+                0.38,
+            )
+            .clamp(0.0, 1.0)
+    } else {
+        // Material Web v30 does not define a dedicated non-selected trailing supporting opacity
+        // token; fall back to the sys disabled opacity.
+        tokens
+            .number_sys("md.sys.state.disabled.state-layer-opacity", 0.38)
+            .clamp(0.0, 1.0)
+    }
 }
 
 pub(crate) fn supporting_text_style(theme: &Theme, _selected: bool) -> Option<TextStyle> {
@@ -246,10 +257,8 @@ pub(crate) fn supporting_text_color(theme: &Theme, enabled: bool, selected: bool
         (false, true) => "md.comp.list.list-item.supporting-text.color",
         (false, false) => "md.comp.list.list-item.disabled.supporting-text.color",
     };
-    let mut color = theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
+    let mut color =
+        MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface-variant");
     color = alpha_mul(color, supporting_text_opacity(theme, enabled, selected));
     color
 }
@@ -266,10 +275,8 @@ pub(crate) fn trailing_supporting_text_color(
         // color token; use the enabled color with disabled opacity applied.
         (false, _) => "md.comp.list.list-item.trailing-supporting-text.color",
     };
-    let mut color = theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
+    let mut color =
+        MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface-variant");
     color = alpha_mul(
         color,
         trailing_supporting_text_opacity(theme, enabled, selected),
@@ -284,32 +291,31 @@ pub(crate) fn overline_text_color(theme: &Theme, enabled: bool, selected: bool) 
         (false, true) => "md.comp.list.list-item.overline.color",
         (false, false) => "md.comp.list.list-item.disabled.overline.color",
     };
-    let mut color = theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
+    let mut color =
+        MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface-variant");
     color = alpha_mul(color, overline_text_opacity(theme, enabled, selected));
     color
 }
 
 pub(crate) fn selected_container_background(theme: &Theme, enabled: bool) -> Color {
     if enabled {
-        return theme
-            .color_by_key("md.comp.list.list-item.selected.container.color")
-            .or_else(|| theme.color_by_key("md.sys.color.secondary-container"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.secondary-container"));
+        return MaterialTokenResolver::new(theme).color_comp_or_sys(
+            "md.comp.list.list-item.selected.container.color",
+            "md.sys.color.secondary-container",
+        );
     }
 
-    let mut bg = theme
-        .color_by_key("md.comp.list.list-item.selected.disabled.container.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-    let opacity = theme
-        .number_by_key("md.comp.list.list-item.selected.disabled.container.opacity")
-        .or_else(|| theme.number_by_key("md.sys.state.disabled.state-layer-opacity"))
-        .unwrap_or(0.38);
-    bg.a = (bg.a * opacity).clamp(0.0, 1.0);
-    bg
+    let tokens = MaterialTokenResolver::new(theme);
+    let bg = tokens.color_comp_or_sys(
+        "md.comp.list.list-item.selected.disabled.container.color",
+        "md.sys.color.on-surface",
+    );
+    let opacity = tokens.number_comp_or_sys(
+        "md.comp.list.list-item.selected.disabled.container.opacity",
+        "md.sys.state.disabled.state-layer-opacity",
+        0.38,
+    );
+    alpha_mul(bg, opacity)
 }
 
 pub(crate) fn item_outcomes(
@@ -371,21 +377,13 @@ pub(crate) fn item_outcomes(
         ),
     };
 
-    let mut label = theme
-        .color_by_key(label_key)
-        .unwrap_or(defaults.content_color);
-    let mut icon = theme
-        .color_by_key(icon_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
-    let state_layer = theme
-        .color_by_key(state_layer_key)
-        .unwrap_or(defaults.content_color);
-    let mut opacity = theme.number_by_key(opacity_key).unwrap_or(0.0);
-
-    if interaction == ListItemInteraction::Default {
-        opacity = 0.0;
-    }
+    let tokens = MaterialTokenResolver::new(theme);
+    let mut label = tokens.color_comp_or_fallback(label_key, defaults.content_color);
+    let mut icon = tokens.color_comp_or_sys(icon_key, "md.sys.color.on-surface-variant");
+    let state_layer = tokens.color_comp_or_fallback(state_layer_key, defaults.content_color);
+    let mut opacity = list_state_layer_interaction(interaction)
+        .map(|interaction| tokens.state_layer_opacity(opacity_key, interaction))
+        .unwrap_or(0.0);
 
     if !enabled {
         let (
@@ -409,20 +407,13 @@ pub(crate) fn item_outcomes(
             )
         };
 
-        label = theme
-            .color_by_key(disabled_label_key)
-            .unwrap_or(defaults.content_color);
-        icon = theme
-            .color_by_key(disabled_icon_key)
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
+        label = tokens.color_comp_or_fallback(disabled_label_key, defaults.content_color);
+        icon = tokens.color_comp_or_sys(disabled_icon_key, "md.sys.color.on-surface-variant");
 
-        let label_opacity = theme
-            .number_by_key(disabled_label_opacity_key)
-            .unwrap_or(defaults.disabled_opacity);
-        let icon_opacity = theme
-            .number_by_key(disabled_icon_opacity_key)
-            .unwrap_or(defaults.disabled_opacity);
+        let label_opacity =
+            tokens.number_optional(Some(disabled_label_opacity_key), defaults.disabled_opacity);
+        let icon_opacity =
+            tokens.number_optional(Some(disabled_icon_opacity_key), defaults.disabled_opacity);
         label = alpha_mul(label, label_opacity);
         icon = alpha_mul(icon, icon_opacity);
         opacity = 0.0;
@@ -432,13 +423,25 @@ pub(crate) fn item_outcomes(
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme, selected: bool) -> f32 {
-    theme
-        .number_by_key(if selected {
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        if selected {
             "md.comp.list.list-item.selected.pressed.state-layer.opacity"
         } else {
             "md.comp.list.list-item.pressed.state-layer.opacity"
-        })
-        .unwrap_or(0.1)
+        },
+        MaterialStateLayerInteraction::Pressed,
+    )
+}
+
+fn list_state_layer_interaction(
+    interaction: ListItemInteraction,
+) -> Option<MaterialStateLayerInteraction> {
+    match interaction {
+        ListItemInteraction::Hovered => Some(MaterialStateLayerInteraction::Hovered),
+        ListItemInteraction::Focused => Some(MaterialStateLayerInteraction::Focused),
+        ListItemInteraction::Pressed => Some(MaterialStateLayerInteraction::Pressed),
+        ListItemInteraction::Default => None,
+    }
 }
 
 #[cfg(test)]

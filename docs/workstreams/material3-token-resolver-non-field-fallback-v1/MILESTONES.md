@@ -33,8 +33,20 @@ Status: Complete
 
 ## M4 - Residual Surfaces Closed Or Split
 
+Status: Complete
+
 - Remaining non-field surface/navigation fallback families are migrated or split into a narrower
   follow-on.
+- Surface/navigation/overlay and small residual token modules now use `MaterialTokenResolver` for
+  repeated component-to-system color fallback and state-layer opacity paths.
+- The remaining broad residual set is isolated to selection controls: `checkbox.rs`, `slider.rs`,
+  and `switch.rs`.
+
+## M4.5 - Selection Controls Remaining
+
+Status: Pending
+
+- Checkbox, Slider, and Switch still need a focused choice-control migration and state-test pass.
 
 ## M5 - Lane Verified
 

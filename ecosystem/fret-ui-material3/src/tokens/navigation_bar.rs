@@ -7,7 +7,7 @@ use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
 use fret_ui_kit::typography::TextIntent;
 
-use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::foundation::token_resolver::{MaterialStateLayerInteraction, MaterialTokenResolver};
 use crate::tokens::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -92,21 +92,10 @@ pub(crate) fn pressed_state_layer_opacity(theme: &Theme) -> f32 {
 }
 
 pub(crate) fn state_layer_opacity(theme: &Theme, interaction: NavigationBarItemInteraction) -> f32 {
-    match interaction {
-        NavigationBarItemInteraction::Default => 0.0,
-        NavigationBarItemInteraction::Pressed => theme
-            .number_by_key("md.comp.navigation-bar.pressed.state-layer.opacity")
-            .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-            .unwrap_or(0.1),
-        NavigationBarItemInteraction::Focused => theme
-            .number_by_key("md.comp.navigation-bar.focus.state-layer.opacity")
-            .or_else(|| theme.number_by_key("md.sys.state.focus.state-layer-opacity"))
-            .unwrap_or(0.1),
-        NavigationBarItemInteraction::Hovered => theme
-            .number_by_key("md.comp.navigation-bar.hover.state-layer.opacity")
-            .or_else(|| theme.number_by_key("md.sys.state.hover.state-layer-opacity"))
-            .unwrap_or(0.08),
-    }
+    let Some((key, interaction)) = state_layer_opacity_token(interaction) else {
+        return 0.0;
+    };
+    MaterialTokenResolver::new(theme).state_layer_opacity(key, interaction)
 }
 
 pub(crate) fn state_layer_target_opacity(
@@ -126,10 +115,7 @@ pub(crate) fn state_layer_color(
     interaction: NavigationBarItemInteraction,
 ) -> Color {
     let key = state_layer_color_key(active, interaction);
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface")
 }
 
 pub(crate) fn icon_color(
@@ -142,10 +128,8 @@ pub(crate) fn icon_color(
     } else {
         "md.sys.color.on-surface-variant"
     };
-    theme
-        .color_by_key(icon_color_key(active, interaction))
-        .or_else(|| theme.color_by_key(fallback))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys(fallback))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(icon_color_key(active, interaction), fallback)
 }
 
 pub(crate) fn label_color(
@@ -158,10 +142,8 @@ pub(crate) fn label_color(
     } else {
         "md.sys.color.on-surface-variant"
     };
-    theme
-        .color_by_key(label_color_key(active, interaction))
-        .or_else(|| theme.color_by_key(fallback))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys(fallback))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(label_color_key(active, interaction), fallback)
 }
 
 pub(crate) fn label_text_style(theme: &Theme, active: bool) -> TextStyle {
@@ -215,6 +197,26 @@ fn state_layer_color_key(active: bool, interaction: NavigationBarItemInteraction
         (false, NavigationBarItemInteraction::Pressed) => {
             "md.comp.navigation-bar.inactive.pressed.state-layer.color"
         }
+    }
+}
+
+fn state_layer_opacity_token(
+    interaction: NavigationBarItemInteraction,
+) -> Option<(&'static str, MaterialStateLayerInteraction)> {
+    match interaction {
+        NavigationBarItemInteraction::Default => None,
+        NavigationBarItemInteraction::Pressed => Some((
+            "md.comp.navigation-bar.pressed.state-layer.opacity",
+            MaterialStateLayerInteraction::Pressed,
+        )),
+        NavigationBarItemInteraction::Focused => Some((
+            "md.comp.navigation-bar.focus.state-layer.opacity",
+            MaterialStateLayerInteraction::Focused,
+        )),
+        NavigationBarItemInteraction::Hovered => Some((
+            "md.comp.navigation-bar.hover.state-layer.opacity",
+            MaterialStateLayerInteraction::Hovered,
+        )),
     }
 }
 

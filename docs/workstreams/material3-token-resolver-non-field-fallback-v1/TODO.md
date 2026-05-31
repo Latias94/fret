@@ -37,10 +37,20 @@ Task IDs use `M3NF-*`.
   - Note: IconButton, FAB, SegmentedButton, and Tabs color/opacity fallback chains now use resolver
     primitives; token visual fixture and targeted state gates passed.
 
-- [ ] M3NF-050: Migrate surface/navigation fallback chains or split them.
+- [x] M3NF-050: Migrate surface/navigation fallback chains or split them.
   - Scope: Card, Dialog, Snackbar, List, Tooltip, navigation surfaces, and small residual modules.
   - Expected result: either migrated residual families or a narrower follow-on with evidence.
   - Gate: token visual fixtures plus targeted behavior/state tests for touched families.
+  - Note: Badge, Card, CarouselItem, Dialog, Divider, List, Menu, NavigationBar,
+    NavigationDrawer, NavigationRail, ProgressIndicator, SearchBar, SearchView, BottomSheet,
+    Snackbar, and Tooltip scoped fallback chains now use `MaterialTokenResolver`; broad
+    selection-control residuals are split to M3NF-055.
+
+- [ ] M3NF-055: Migrate selection-control residual fallback chains.
+  - Scope: Checkbox, Slider, Switch.
+  - Expected result: the remaining color fallback residuals move to `MaterialTokenResolver`
+    without regressing choice-control visual/state outcomes.
+  - Gate: token visual fixtures plus `checkbox_state`, `slider_state`, and `switch_state`.
 
 - [ ] M3NF-060: Verify and close.
   - Scope: docs, package gates, catalog, layering, diff hygiene.

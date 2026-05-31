@@ -8,6 +8,7 @@ use fret_ui::Theme;
 use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::content::MaterialContentDefaults;
+use crate::foundation::token_resolver::{MaterialTokenResolver, alpha_mul};
 use crate::tokens::typography;
 
 pub(crate) const ITEM_MIN_WIDTH_FALLBACK: Px = Px(112.0);
@@ -64,10 +65,10 @@ pub(crate) fn item_label_text_style(theme: &Theme) -> TextStyle {
 }
 
 pub(crate) fn container_background(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.menu.container.color")
-        .or_else(|| theme.color_by_key("md.sys.color.surface-container"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.menu.container.color",
+        "md.sys.color.surface-container",
+    )
 }
 
 pub(crate) fn container_elevation(theme: &Theme) -> Px {
@@ -77,10 +78,8 @@ pub(crate) fn container_elevation(theme: &Theme) -> Px {
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.menu.container.shadow-color")
-        .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys("md.comp.menu.container.shadow-color", "md.sys.color.shadow")
 }
 
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
@@ -98,16 +97,15 @@ pub(crate) fn divider_height(theme: &Theme) -> Px {
 }
 
 pub(crate) fn divider_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.menu.divider.color")
-        .or_else(|| theme.color_by_key("md.sys.color.surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-variant"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys("md.comp.menu.divider.color", "md.sys.color.surface-variant")
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key("md.comp.menu.list-item.pressed.state-layer.opacity")
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme).number_optional(
+        Some("md.comp.menu.list-item.pressed.state-layer.opacity"),
+        0.1,
+    )
 }
 
 pub(crate) fn item_outcomes(
@@ -140,19 +138,17 @@ pub(crate) fn item_outcomes(
     };
 
     let defaults = MaterialContentDefaults::on_surface(theme);
-    let mut label = theme
-        .color_by_key(label_key)
-        .unwrap_or(defaults.content_color);
-    let state_layer = theme
-        .color_by_key(state_layer_key)
-        .unwrap_or(defaults.content_color);
-    let mut opacity = theme.number_by_key(opacity_key).unwrap_or(0.0);
+    let tokens = MaterialTokenResolver::new(theme);
+    let mut label = tokens.color_comp_or_fallback(label_key, defaults.content_color);
+    let state_layer = tokens.color_comp_or_fallback(state_layer_key, defaults.content_color);
+    let mut opacity = tokens.number_optional(Some(opacity_key), 0.0);
 
     if !enabled {
-        let label_opacity = theme
-            .number_by_key("md.comp.menu.list-item.disabled.label-text.opacity")
-            .unwrap_or(defaults.disabled_opacity);
-        label.a = (label.a * label_opacity).clamp(0.0, 1.0);
+        let label_opacity = tokens.number_optional(
+            Some("md.comp.menu.list-item.disabled.label-text.opacity"),
+            defaults.disabled_opacity,
+        );
+        label = alpha_mul(label, label_opacity);
         opacity = 0.0;
     }
 

@@ -51,6 +51,10 @@
       "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test button_state"
     },
     {
+      "name": "material3-surface-navigation-state",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test card_state --test carousel_item_state --test dialog_state --test list_state --test menu_state --test navigation_drawer_state --test navigation_state --test progress_indicator_state --test snackbar_state --test tooltip_state --test bottom_sheet_motion --test automation_surface"
+    },
+    {
       "name": "material3-tests-check",
       "command": "cargo check -p fret-ui-material3 --features diagnostics --tests"
     },
@@ -89,12 +93,40 @@
     "ecosystem/fret-ui-material3/src/tokens/fab.rs",
     "ecosystem/fret-ui-material3/src/tokens/segmented_button.rs",
     "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
+    "ecosystem/fret-ui-material3/src/tokens/badge.rs",
+    "ecosystem/fret-ui-material3/src/tokens/card.rs",
+    "ecosystem/fret-ui-material3/src/tokens/carousel_item.rs",
+    "ecosystem/fret-ui-material3/src/tokens/dialog.rs",
+    "ecosystem/fret-ui-material3/src/tokens/divider.rs",
+    "ecosystem/fret-ui-material3/src/tokens/list.rs",
+    "ecosystem/fret-ui-material3/src/tokens/menu.rs",
+    "ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs",
+    "ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs",
+    "ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs",
+    "ecosystem/fret-ui-material3/src/tokens/progress_indicator.rs",
+    "ecosystem/fret-ui-material3/src/tokens/search_bar.rs",
+    "ecosystem/fret-ui-material3/src/tokens/search_view.rs",
+    "ecosystem/fret-ui-material3/src/tokens/sheet_bottom.rs",
+    "ecosystem/fret-ui-material3/src/tokens/snackbar.rs",
+    "ecosystem/fret-ui-material3/src/tokens/tooltip.rs",
     "ecosystem/fret-ui-material3/tests/button_state.rs",
     "ecosystem/fret-ui-material3/tests/chip_state.rs",
     "ecosystem/fret-ui-material3/tests/icon_button_state.rs",
     "ecosystem/fret-ui-material3/tests/fab_state.rs",
     "ecosystem/fret-ui-material3/tests/segmented_button_state.rs",
     "ecosystem/fret-ui-material3/tests/tabs_state.rs",
+    "ecosystem/fret-ui-material3/tests/card_state.rs",
+    "ecosystem/fret-ui-material3/tests/carousel_item_state.rs",
+    "ecosystem/fret-ui-material3/tests/dialog_state.rs",
+    "ecosystem/fret-ui-material3/tests/list_state.rs",
+    "ecosystem/fret-ui-material3/tests/menu_state.rs",
+    "ecosystem/fret-ui-material3/tests/navigation_drawer_state.rs",
+    "ecosystem/fret-ui-material3/tests/navigation_state.rs",
+    "ecosystem/fret-ui-material3/tests/progress_indicator_state.rs",
+    "ecosystem/fret-ui-material3/tests/snackbar_state.rs",
+    "ecosystem/fret-ui-material3/tests/tooltip_state.rs",
+    "ecosystem/fret-ui-material3/tests/bottom_sheet_motion.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
     "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
   ],
   "adr_refs": [
@@ -111,6 +143,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue one non-field component family at a time, starting with Button, and preserve token visual fixture outcomes before widening scope."
+    "notes": "Continue one non-field component family at a time. M3NF-055 should isolate Checkbox, Slider, and Switch selection-control fallback chains and preserve token visual plus targeted state-test outcomes before closing the lane."
   }
 }

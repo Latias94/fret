@@ -7,7 +7,7 @@ use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
 use fret_ui_kit::typography::TextIntent;
 
-use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::foundation::token_resolver::{MaterialStateLayerInteraction, MaterialTokenResolver};
 use crate::navigation_drawer::NavigationDrawerVariant;
 use crate::tokens::typography;
 
@@ -56,10 +56,7 @@ pub(crate) fn container_background(theme: &Theme, variant: NavigationDrawerVaria
         ),
     };
 
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key(fallback))
-        .unwrap_or_else(|| theme.color_token(fallback))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(key, fallback)
 }
 
 pub(crate) fn container_elevation(theme: &Theme, variant: NavigationDrawerVariant) -> Px {
@@ -91,10 +88,10 @@ pub(crate) fn active_indicator_shape(theme: &Theme) -> Corners {
 }
 
 pub(crate) fn active_indicator_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.navigation-drawer.active-indicator.color")
-        .or_else(|| theme.color_by_key("md.sys.color.secondary-container"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.secondary-container"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.navigation-drawer.active-indicator.color",
+        "md.sys.color.secondary-container",
+    )
 }
 
 pub(crate) fn scrim_color(theme: &Theme) -> Color {
@@ -105,16 +102,15 @@ pub(crate) fn scrim_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn scrim_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key("md.comp.navigation-drawer.scrim.opacity")
-        .unwrap_or(0.4)
+    MaterialTokenResolver::new(theme)
+        .number_optional(Some("md.comp.navigation-drawer.scrim.opacity"), 0.4)
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key("md.comp.navigation-drawer.pressed.state-layer.opacity")
-        .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        "md.comp.navigation-drawer.pressed.state-layer.opacity",
+        MaterialStateLayerInteraction::Pressed,
+    )
 }
 
 pub(crate) fn state_layer_target_opacity(
@@ -126,21 +122,10 @@ pub(crate) fn state_layer_target_opacity(
         return 0.0;
     }
 
-    match interaction {
-        NavigationDrawerItemInteraction::Default => 0.0,
-        NavigationDrawerItemInteraction::Pressed => theme
-            .number_by_key("md.comp.navigation-drawer.pressed.state-layer.opacity")
-            .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-            .unwrap_or(0.1),
-        NavigationDrawerItemInteraction::Focused => theme
-            .number_by_key("md.comp.navigation-drawer.focus.state-layer.opacity")
-            .or_else(|| theme.number_by_key("md.sys.state.focus.state-layer-opacity"))
-            .unwrap_or(0.1),
-        NavigationDrawerItemInteraction::Hovered => theme
-            .number_by_key("md.comp.navigation-drawer.hover.state-layer.opacity")
-            .or_else(|| theme.number_by_key("md.sys.state.hover.state-layer-opacity"))
-            .unwrap_or(0.08),
-    }
+    let Some((key, interaction)) = state_layer_opacity_token(interaction) else {
+        return 0.0;
+    };
+    MaterialTokenResolver::new(theme).state_layer_opacity(key, interaction)
 }
 
 fn label_color_key(active: bool, interaction: NavigationDrawerItemInteraction) -> &'static str {
@@ -187,10 +172,8 @@ pub(crate) fn label_color(
     } else {
         "md.sys.color.on-surface-variant"
     };
-    theme
-        .color_by_key(label_color_key(active, interaction))
-        .or_else(|| theme.color_by_key(fallback))
-        .unwrap_or_else(|| theme.color_token(fallback))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(label_color_key(active, interaction), fallback)
 }
 
 fn icon_color_key(active: bool, interaction: NavigationDrawerItemInteraction) -> &'static str {
@@ -237,10 +220,8 @@ pub(crate) fn icon_color(
     } else {
         "md.sys.color.on-surface-variant"
     };
-    theme
-        .color_by_key(icon_color_key(active, interaction))
-        .or_else(|| theme.color_by_key(fallback))
-        .unwrap_or_else(|| theme.color_token(fallback))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(icon_color_key(active, interaction), fallback)
 }
 
 fn state_layer_color_key(
@@ -290,10 +271,28 @@ pub(crate) fn state_layer_color(
     } else {
         "md.sys.color.on-surface"
     };
-    theme
-        .color_by_key(state_layer_color_key(active, interaction))
-        .or_else(|| theme.color_by_key(fallback))
-        .unwrap_or_else(|| theme.color_token(fallback))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(state_layer_color_key(active, interaction), fallback)
+}
+
+fn state_layer_opacity_token(
+    interaction: NavigationDrawerItemInteraction,
+) -> Option<(&'static str, MaterialStateLayerInteraction)> {
+    match interaction {
+        NavigationDrawerItemInteraction::Default => None,
+        NavigationDrawerItemInteraction::Pressed => Some((
+            "md.comp.navigation-drawer.pressed.state-layer.opacity",
+            MaterialStateLayerInteraction::Pressed,
+        )),
+        NavigationDrawerItemInteraction::Focused => Some((
+            "md.comp.navigation-drawer.focus.state-layer.opacity",
+            MaterialStateLayerInteraction::Focused,
+        )),
+        NavigationDrawerItemInteraction::Hovered => Some((
+            "md.comp.navigation-drawer.hover.state-layer.opacity",
+            MaterialStateLayerInteraction::Hovered,
+        )),
+    }
 }
 
 pub(crate) fn label_text_style(theme: &Theme, active: bool) -> TextStyle {

@@ -20,24 +20,19 @@ pub(crate) fn large_size(theme: &Theme) -> Px {
 }
 
 pub(crate) fn dot_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.badge.color")
-        .or_else(|| theme.color_by_key("md.sys.color.error"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.error"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys("md.comp.badge.color", "md.sys.color.error")
 }
 
 pub(crate) fn large_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.badge.large.color")
-        .or_else(|| theme.color_by_key("md.sys.color.error"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.error"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys("md.comp.badge.large.color", "md.sys.color.error")
 }
 
 pub(crate) fn large_label_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.badge.large.label-text.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-error"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-error"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.badge.large.label-text.color",
+        "md.sys.color.on-error",
+    )
 }
 
 pub(crate) fn large_label_text_style(theme: &Theme) -> TextStyle {

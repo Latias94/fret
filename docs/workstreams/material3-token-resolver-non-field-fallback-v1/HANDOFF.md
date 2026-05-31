@@ -19,8 +19,12 @@ use `MaterialTokenResolver` while preserving visual fixture and `chip_state` out
 M3NF-040 is complete: IconButton, FAB, SegmentedButton, and Tabs color/opacity fallback chains now
 use `MaterialTokenResolver` while preserving token visual and targeted state-test outcomes.
 
-The next executable task is M3NF-050: migrate or split the remaining surface/navigation fallback
-chains.
+M3NF-050 is complete: the surface/navigation/overlay residual set now uses
+`MaterialTokenResolver` for repeated component-to-system color fallback and state-layer opacity
+paths while preserving token visual and targeted state-test outcomes.
+
+The next executable task is M3NF-055: migrate the remaining selection-control residuals in
+`checkbox.rs`, `slider.rs`, and `switch.rs`.
 
 ## Guardrails
 
@@ -31,4 +35,4 @@ chains.
 
 ## Suggested Next Gate
 
-`cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes`
+`cargo nextest run -p fret-ui-material3 --features diagnostics --test checkbox_state --test slider_state --test switch_state`

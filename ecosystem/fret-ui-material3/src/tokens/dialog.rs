@@ -8,6 +8,7 @@ use fret_ui::Theme;
 use fret_ui::theme::CubicBezier;
 use fret_ui_kit::typography::TextIntent;
 
+use crate::foundation::token_resolver::{MaterialStateLayerInteraction, MaterialTokenResolver};
 use crate::tokens::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -19,23 +20,20 @@ pub(crate) enum DialogActionInteraction {
 }
 
 pub(crate) fn scrim_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.sys.color.scrim")
-        .unwrap_or_else(|| theme.color_token("md.sys.color.scrim"))
+    MaterialTokenResolver::new(theme).color_sys("md.sys.color.scrim")
 }
 
 pub(crate) fn scrim_opacity(theme: &Theme, fallback: f32) -> f32 {
-    theme
-        .number_by_key("md.sys.fret.material.dialog.scrim.opacity")
-        .unwrap_or(fallback)
+    MaterialTokenResolver::new(theme)
+        .number_optional(Some("md.sys.fret.material.dialog.scrim.opacity"), fallback)
         .clamp(0.0, 1.0)
 }
 
 pub(crate) fn container_background(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.dialog.container.color")
-        .or_else(|| theme.color_by_key("md.sys.color.surface-container-high"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-high"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.dialog.container.color",
+        "md.sys.color.surface-container-high",
+    )
 }
 
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
@@ -53,24 +51,22 @@ pub(crate) fn container_elevation(theme: &Theme) -> Px {
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.dialog.container.shadow-color")
-        .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.dialog.container.shadow-color",
+        "md.sys.color.shadow",
+    )
 }
 
 pub(crate) fn headline_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.dialog.headline.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys("md.comp.dialog.headline.color", "md.sys.color.on-surface")
 }
 
 pub(crate) fn supporting_text_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.dialog.supporting-text.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.dialog.supporting-text.color",
+        "md.sys.color.on-surface-variant",
+    )
 }
 
 pub(crate) fn headline_text_style(theme: &Theme) -> TextStyle {
@@ -175,10 +171,8 @@ fn action_label_color_key(interaction: DialogActionInteraction) -> &'static str 
 }
 
 pub(crate) fn action_label_color(theme: &Theme, interaction: DialogActionInteraction) -> Color {
-    theme
-        .color_by_key(action_label_color_key(interaction))
-        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(action_label_color_key(interaction), "md.sys.color.primary")
 }
 
 fn action_state_layer_color_key(interaction: DialogActionInteraction) -> &'static str {
@@ -195,10 +189,10 @@ pub(crate) fn action_state_layer_color(
     theme: &Theme,
     interaction: DialogActionInteraction,
 ) -> Color {
-    theme
-        .color_by_key(action_state_layer_color_key(interaction))
-        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        action_state_layer_color_key(interaction),
+        "md.sys.color.primary",
+    )
 }
 
 fn action_state_layer_opacity_key(interaction: DialogActionInteraction) -> Option<&'static str> {
@@ -212,15 +206,6 @@ fn action_state_layer_opacity_key(interaction: DialogActionInteraction) -> Optio
     }
 }
 
-fn sys_state_layer_opacity_key(interaction: DialogActionInteraction) -> Option<&'static str> {
-    match interaction {
-        DialogActionInteraction::Pressed => Some("md.sys.state.pressed.state-layer-opacity"),
-        DialogActionInteraction::Hovered => Some("md.sys.state.hover.state-layer-opacity"),
-        DialogActionInteraction::Focused => Some("md.sys.state.focus.state-layer-opacity"),
-        DialogActionInteraction::Default => None,
-    }
-}
-
 pub(crate) fn action_state_layer_target_opacity(
     theme: &Theme,
     interaction: DialogActionInteraction,
@@ -228,22 +213,24 @@ pub(crate) fn action_state_layer_target_opacity(
     let Some(key) = action_state_layer_opacity_key(interaction) else {
         return 0.0;
     };
-    let sys_key = sys_state_layer_opacity_key(interaction)
-        .unwrap_or("md.sys.state.hover.state-layer-opacity");
-    theme
-        .number_by_key(key)
-        .or_else(|| theme.number_by_key(sys_key))
-        .unwrap_or(match interaction {
-            DialogActionInteraction::Pressed => 0.1,
-            DialogActionInteraction::Hovered => 0.08,
-            DialogActionInteraction::Focused => 0.1,
-            DialogActionInteraction::Default => 0.0,
-        })
+    MaterialTokenResolver::new(theme)
+        .state_layer_opacity(key, material_state_layer_interaction(interaction))
 }
 
 pub(crate) fn action_pressed_state_layer_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key("md.comp.dialog.action.pressed.state-layer.opacity")
-        .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        "md.comp.dialog.action.pressed.state-layer.opacity",
+        MaterialStateLayerInteraction::Pressed,
+    )
+}
+
+fn material_state_layer_interaction(
+    interaction: DialogActionInteraction,
+) -> MaterialStateLayerInteraction {
+    match interaction {
+        DialogActionInteraction::Pressed => MaterialStateLayerInteraction::Pressed,
+        DialogActionInteraction::Hovered => MaterialStateLayerInteraction::Hovered,
+        DialogActionInteraction::Focused => MaterialStateLayerInteraction::Focused,
+        DialogActionInteraction::Default => MaterialStateLayerInteraction::Hovered,
+    }
 }

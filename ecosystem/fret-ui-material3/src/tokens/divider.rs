@@ -6,6 +6,8 @@
 use fret_core::{Color, Px};
 use fret_ui::Theme;
 
+use crate::foundation::token_resolver::MaterialTokenResolver;
+
 pub(crate) fn thickness(theme: &Theme) -> Px {
     theme
         .metric_by_key("md.comp.divider.thickness")
@@ -13,8 +15,6 @@ pub(crate) fn thickness(theme: &Theme) -> Px {
 }
 
 pub(crate) fn color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.divider.color")
-        .or_else(|| theme.color_by_key("md.sys.color.outline-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.outline-variant"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys("md.comp.divider.color", "md.sys.color.outline-variant")
 }

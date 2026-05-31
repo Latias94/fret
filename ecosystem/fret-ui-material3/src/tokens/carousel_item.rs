@@ -6,7 +6,9 @@ use fret_core::{Color, Corners, Px};
 use fret_ui::Theme;
 
 use crate::foundation::interaction::PressableInteraction;
-use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::foundation::token_resolver::{
+    MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
+};
 
 pub(crate) const COMPONENT_PREFIX: &str = "md.comp.carousel-item";
 pub(crate) const WITH_OUTLINE_PREFIX: &str = "md.comp.carousel-item.with-outline";
@@ -30,10 +32,10 @@ pub(crate) fn container_shape(theme: &Theme) -> Corners {
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key(&format!("{COMPONENT_PREFIX}.container.shadow-color"))
-        .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.shadow"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        &format!("{COMPONENT_PREFIX}.container.shadow-color"),
+        "md.sys.color.shadow",
+    )
 }
 
 pub(crate) fn container_background(theme: &Theme, disabled: bool) -> Color {
@@ -43,16 +45,13 @@ pub(crate) fn container_background(theme: &Theme, disabled: bool) -> Color {
         format!("{COMPONENT_PREFIX}.container.color")
     };
 
-    theme
-        .color_by_key(&key)
-        .or_else(|| theme.color_by_key("md.sys.color.surface"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.surface"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(&key, "md.sys.color.surface")
 }
 
 pub(crate) fn disabled_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key(&format!("{COMPONENT_PREFIX}.disabled.container.opacity"))
-        .unwrap_or(0.38)
+    let key = format!("{COMPONENT_PREFIX}.disabled.container.opacity");
+    MaterialTokenResolver::new(theme)
+        .number_optional(Some(key.as_str()), 0.38)
         .clamp(0.0, 1.0)
 }
 
@@ -93,13 +92,10 @@ pub(crate) fn state_layer_color(theme: &Theme, interaction: Option<PressableInte
         Some(PressableInteraction::Pressed) => {
             format!("{COMPONENT_PREFIX}.pressed.state-layer.color")
         }
-        None => "md.sys.color.on-surface".to_string(),
+        None => return MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"),
     };
 
-    theme
-        .color_by_key(&key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(&key, "md.sys.color.on-surface")
 }
 
 pub(crate) fn state_layer_opacity(theme: &Theme, interaction: Option<PressableInteraction>) -> f32 {
@@ -113,28 +109,17 @@ pub(crate) fn state_layer_opacity(theme: &Theme, interaction: Option<PressableIn
         PressableInteraction::Pressed => format!("{COMPONENT_PREFIX}.pressed.state-layer.opacity"),
     };
 
-    theme
-        .number_by_key(&key)
-        .or_else(|| match interaction {
-            PressableInteraction::Hovered => {
-                theme.number_by_key("md.sys.state.hover.state-layer-opacity")
-            }
-            PressableInteraction::Focused => {
-                theme.number_by_key("md.sys.state.focus.state-layer-opacity")
-            }
-            PressableInteraction::Pressed => {
-                theme.number_by_key("md.sys.state.pressed.state-layer-opacity")
-            }
-        })
-        .unwrap_or(0.0)
+    MaterialTokenResolver::new(theme)
+        .state_layer_opacity(&key, material_state_layer_interaction(interaction))
         .clamp(0.0, 1.0)
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key(&format!("{COMPONENT_PREFIX}.pressed.state-layer.opacity"))
-        .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme)
+        .state_layer_opacity(
+            &format!("{COMPONENT_PREFIX}.pressed.state-layer.opacity"),
+            MaterialStateLayerInteraction::Pressed,
+        )
         .clamp(0.0, 1.0)
 }
 
@@ -173,18 +158,25 @@ pub(crate) fn outline(
         (key, None)
     };
 
-    let mut color = theme
-        .color_by_key(&color_key)
-        .or_else(|| theme.color_by_key("md.sys.color.outline"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.outline"));
+    let tokens = MaterialTokenResolver::new(theme);
+    let mut color = tokens.color_comp_or_sys(&color_key, "md.sys.color.outline");
 
     if let Some(opacity_key) = opacity_key.as_ref() {
-        let opacity = theme
-            .number_by_key(opacity_key)
-            .unwrap_or(0.12)
+        let opacity = tokens
+            .number_optional(Some(opacity_key.as_str()), 0.12)
             .clamp(0.0, 1.0);
-        color.a *= opacity;
+        color = alpha_mul(color, opacity);
     }
 
     Some(CarouselItemOutline { width, color })
+}
+
+fn material_state_layer_interaction(
+    interaction: PressableInteraction,
+) -> MaterialStateLayerInteraction {
+    match interaction {
+        PressableInteraction::Hovered => MaterialStateLayerInteraction::Hovered,
+        PressableInteraction::Focused => MaterialStateLayerInteraction::Focused,
+        PressableInteraction::Pressed => MaterialStateLayerInteraction::Pressed,
+    }
 }

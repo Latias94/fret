@@ -18,3 +18,15 @@
 {"role":"test","path":"ecosystem/fret-ui-material3/tests/fab_state.rs","why":"M3NF-040 targeted FAB state regression gate."}
 {"role":"test","path":"ecosystem/fret-ui-material3/tests/segmented_button_state.rs","why":"M3NF-040 targeted SegmentedButton state regression gate."}
 {"role":"test","path":"ecosystem/fret-ui-material3/tests/tabs_state.rs","why":"M3NF-040 targeted Tabs state regression gate."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/card.rs","why":"M3NF-050 migrated Card surface fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs","why":"M3NF-050 migrated NavigationBar token fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs","why":"M3NF-050 migrated NavigationRail token fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs","why":"M3NF-050 migrated NavigationDrawer token fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/list.rs","why":"M3NF-050 migrated List text/icon/container/state-layer fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/dialog.rs","why":"M3NF-050 migrated Dialog overlay/action fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/snackbar.rs","why":"M3NF-050 migrated Snackbar overlay/action/icon fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/tooltip.rs","why":"M3NF-050 migrated Tooltip inverse and rich surface fallback chains to MaterialTokenResolver."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/navigation_state.rs","why":"M3NF-050 targeted navigation bar and rail state regression gate."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/navigation_drawer_state.rs","why":"M3NF-050 targeted navigation drawer state regression gate."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/card_state.rs","why":"M3NF-050 targeted card state regression gate."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/snackbar_state.rs","why":"M3NF-050 targeted snackbar motion/state regression gate."}
