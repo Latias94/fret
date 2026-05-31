@@ -9,7 +9,7 @@ mod session;
 use super::super::{InputTextPickerOptions, InputTextPickerResponse, UiWriterImUiFacadeExt};
 use super::open_policy::{TextPickerOpenPolicyInput, apply_text_picker_open_policy};
 use super::popup::{InputTextPickerPopupInput, render_text_picker_popup};
-use super::response::merge_text_picker_pick_response;
+use super::response::finish_text_picker_response;
 
 pub(in crate::imui) fn input_text_picker_model_with_options<
     H: UiHost,
@@ -39,7 +39,7 @@ pub(in crate::imui) fn input_text_picker_model_with_options<
             popup_panel_id: session.popup_snapshot.panel_id,
         },
     );
-    let mut input = input_root.input;
+    let input = input_root.input;
     let enabled = input.enabled();
     let input_focused = input.focused();
 
@@ -79,16 +79,6 @@ pub(in crate::imui) fn input_text_picker_model_with_options<
             keyboard_repeat: options.keyboard_repeat,
         },
     );
-    let opened = popup.opened;
-    let picked_index = popup.picked_index;
-    let picked = popup.picked;
 
-    merge_text_picker_pick_response(ui, model, &mut input, picked.is_some());
-
-    InputTextPickerResponse {
-        input,
-        open: opened,
-        picked_index,
-        picked,
-    }
+    finish_text_picker_response(ui, model, input, popup)
 }

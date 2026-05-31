@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Text-Picker Response Finalization Owner-Split Evidence - 2026-06-01
+
+Claim verified: IMUI input-text picker popup-result finalization moved out of the core
+orchestration owner into `response.rs` without changing popup open reporting, picked index/value
+propagation, picked-change merging, edited/deactivated-after-edit flags, or public
+`InputTextPickerResponse` APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` now keeps session, input-root,
+  open-policy, and popup orchestration.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/response.rs` owns popup-result finalization
+  plus picked-change response merging.
+- `tools/gate_imui_workstream_source.py` now gates the core/response split and rejects response
+  finalization from drifting back into the core owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_input_text_picker_options_smoke
+  --no-fail-fast`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Debug-Draw Paint Clip-Stack Owner-Split Evidence - 2026-06-01
 
 Claim verified: IMUI debug-draw paint clip-stack handling moved out of the root paint dispatcher
@@ -11329,7 +11356,9 @@ Evidence:
   re-export hub for the core picker and completion/history entry wrappers.
 - `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` owns model reads, candidate
   visibility, keyboard snapshot reconciliation, input root mounting, open-policy application,
-  popup rendering, and pick response merging.
+  popup rendering, and initially pick response merging. The 2026-06-01 follow-up moved
+  popup-result finalization and picked-change response merging into
+  `text_picker_controls/response.rs`.
 - `tools/gate_imui_workstream_source.py` now rejects picker orchestration bodies from drifting back
   into `text_picker_controls.rs`.
 
@@ -11358,7 +11387,8 @@ Evidence:
 - `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core/session.rs` owns model/candidate/
   popup/keyboard snapshot preparation and `picker_expanded` derivation.
 - `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` keeps input-root mounting,
-  open-policy application, popup rendering, and pick response merging.
+  open-policy application, and popup rendering; the 2026-06-01 follow-up moved popup-result
+  finalization and picked-change response merging into `text_picker_controls/response.rs`.
 - `tools/gate_imui_workstream_source.py` now rejects session-preparation bodies from drifting back
   into `core.rs` while requiring the private session owner.
 
