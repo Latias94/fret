@@ -37,6 +37,7 @@ DEVTOOLS_GUI_SEMANTICS_SOURCE = "apps/fret-devtools/src/semantics.rs"
 DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
 DEVTOOLS_GUI_WORKFLOW_RUN_SOURCE = "apps/fret-devtools/src/workflow_run.rs"
 DEVTOOLS_GUI_FOLLOWUP_SOURCE = "apps/fret-devtools/src/followup.rs"
+DEVTOOLS_GUI_DEMO_METRICS_DEBUG_SOURCE = "apps/fret-devtools/src/demo_metrics_debug.rs"
 DEVTOOLS_MCP_SOURCE = "apps/fret-devtools-mcp/src/native.rs"
 DEVTOOLS_GATE_PROFILE_SOURCE = "crates/fret-diag/src/devtools_gate_profiles.rs"
 DEVTOOLS_PROTOCOL_SOURCE = "crates/fret-diag-protocol/src/lib.rs"
@@ -478,6 +479,7 @@ def _validate_devtools_gui_first_open_source(
     gate_run_path = cwd / DEVTOOLS_GUI_GATE_RUN_SOURCE
     workflow_run_path = cwd / DEVTOOLS_GUI_WORKFLOW_RUN_SOURCE
     followup_path = cwd / DEVTOOLS_GUI_FOLLOWUP_SOURCE
+    demo_metrics_debug_path = cwd / DEVTOOLS_GUI_DEMO_METRICS_DEBUG_SOURCE
     gate_profile_path = cwd / DEVTOOLS_GATE_PROFILE_SOURCE
     protocol_path = cwd / DEVTOOLS_PROTOCOL_SOURCE
     bootstrap_ws_path = cwd / BOOTSTRAP_DEVTOOLS_WS_SOURCE
@@ -493,6 +495,7 @@ def _validate_devtools_gui_first_open_source(
             gate_run_path=str(gate_run_path),
             workflow_run_path=str(workflow_run_path),
             followup_path=str(followup_path),
+            demo_metrics_debug_path=str(demo_metrics_debug_path),
             gate_profile_path=str(gate_profile_path),
             protocol_path=str(protocol_path),
             bootstrap_ws_path=str(bootstrap_ws_path),
@@ -506,6 +509,7 @@ def _validate_devtools_gui_first_open_source(
         gate_run_source = gate_run_path.read_text(encoding="utf-8")
         workflow_run_source = workflow_run_path.read_text(encoding="utf-8")
         followup_source = followup_path.read_text(encoding="utf-8")
+        demo_metrics_debug_source = demo_metrics_debug_path.read_text(encoding="utf-8")
         gate_profile_source = gate_profile_path.read_text(encoding="utf-8")
         protocol_source = protocol_path.read_text(encoding="utf-8")
         bootstrap_ws_source = bootstrap_ws_path.read_text(encoding="utf-8")
@@ -523,6 +527,8 @@ def _validate_devtools_gui_first_open_source(
             gate_run_source,
             workflow_run_source,
             followup_source,
+            demo_metrics_debug_source,
+            gate_profile_source,
             protocol_source,
             bootstrap_ws_source,
             repro_contract_source,
@@ -590,6 +596,7 @@ def _validate_devtools_gui_first_open_source(
         "devtools_gate_resource_footprint_threshold_command",
         "devtools_gate_script_target_command",
         "devtools_gate_script_target_profile_ids_v1",
+        "mod demo_metrics_debug;",
         "mod gate_run;",
         "mod workflow_run;",
         'let details_tab = app.models_mut().insert(Some(Arc::<str>::from("guide")));',
@@ -621,7 +628,8 @@ def _validate_devtools_gui_first_open_source(
         "action readiness: {} | id={} | category={} | runnable={} | reason={}",
         "fn demo_metrics_debug_action_command_text() -> String",
         "fn demo_metrics_debug_action_metadata_lines() -> Vec<String>",
-        "fn demo_metrics_debug_action_readiness_lines(selected_bundle_count: usize) -> Vec<String>",
+        "fn demo_metrics_debug_action_readiness_lines(",
+        "selected_bundle_count: usize",
         "fn devtools_demo_metrics_debug_lines_with_state(",
         "demo_metrics_debug_selected_bundle_count",
         "select a regression bundle",

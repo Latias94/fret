@@ -2,6 +2,30 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## DevTools Demo/Metrics/Debug action metadata owner split - 2026-05-31
+
+This refresh keeps the Demo/Metrics/Debug route productized while reducing the size and ownership
+load of `apps/fret-devtools/src/native.rs`:
+
+- `apps/fret-devtools/src/demo_metrics_debug.rs` now owns the action metadata table plus command,
+  metadata, and selected-bundle readiness projections.
+- `apps/fret-devtools/src/native.rs` keeps the GUI row, copy command dispatch, stateful
+  selected-bundle count, and guide-panel rendering.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` and
+  `tools/diag_gate_imui_product_chain.py` read the new module as part of their DevTools GUI source
+  checks.
+- `tools/gate_imui_workstream_source.py` source-checks both the private metadata owner and the thin
+  GUI consumer boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `python -m py_compile tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes --no-fail-fast` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+
 ## Maintenance gate refresh - 2026-05-15
 
 DevTools full clippy is now a current maintenance gate for the P2 diagnostics/devtools surface:

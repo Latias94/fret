@@ -127,6 +127,7 @@ DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
 DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
 DEVTOOLS_GUI_SEMANTICS_SOURCE = "apps/fret-devtools/src/semantics.rs"
 DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
+DEVTOOLS_GUI_DEMO_METRICS_DEBUG_SOURCE = "apps/fret-devtools/src/demo_metrics_debug.rs"
 DEVTOOLS_GATE_PROFILE_SOURCE = "crates/fret-diag/src/devtools_gate_profiles.rs"
 DEVTOOLS_PROTOCOL_SOURCE = "crates/fret-diag-protocol/src/lib.rs"
 BOOTSTRAP_DEVTOOLS_WS_SOURCE = (
@@ -492,6 +493,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     ws_path = repo_root / DEVTOOLS_GUI_WS_SOURCE
     semantics_path = repo_root / DEVTOOLS_GUI_SEMANTICS_SOURCE
     gate_run_path = repo_root / DEVTOOLS_GUI_GATE_RUN_SOURCE
+    demo_metrics_debug_path = repo_root / DEVTOOLS_GUI_DEMO_METRICS_DEBUG_SOURCE
     gate_profile_path = repo_root / DEVTOOLS_GATE_PROFILE_SOURCE
     protocol_path = repo_root / DEVTOOLS_PROTOCOL_SOURCE
     bootstrap_ws_path = repo_root / BOOTSTRAP_DEVTOOLS_WS_SOURCE
@@ -503,6 +505,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         ws_source = ws_path.read_text(encoding="utf-8")
         semantics_source = semantics_path.read_text(encoding="utf-8")
         gate_run_source = gate_run_path.read_text(encoding="utf-8")
+        demo_metrics_debug_source = demo_metrics_debug_path.read_text(encoding="utf-8")
         gate_profile_source = gate_profile_path.read_text(encoding="utf-8")
         protocol_source = protocol_path.read_text(encoding="utf-8")
         bootstrap_ws_source = bootstrap_ws_path.read_text(encoding="utf-8")
@@ -516,6 +519,8 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
             ws_source,
             semantics_source,
             gate_run_source,
+            demo_metrics_debug_source,
+            gate_profile_source,
             protocol_source,
             bootstrap_ws_source,
             repro_contract_source,
@@ -576,6 +581,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "devtools_gate_resource_footprint_threshold_command",
         "devtools_gate_script_target_command",
         "devtools_gate_script_target_profile_ids_v1",
+        "mod demo_metrics_debug;",
         "mod followup;",
         "mod gate_run;",
         'const CMD_GATE_RUN_GENERATED: &str = "fret.devtools.gate.run_generated"',
@@ -631,7 +637,8 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "action readiness: {} | id={} | category={} | runnable={} | reason={}",
         "fn demo_metrics_debug_action_command_text() -> String",
         "fn demo_metrics_debug_action_metadata_lines() -> Vec<String>",
-        "fn demo_metrics_debug_action_readiness_lines(selected_bundle_count: usize) -> Vec<String>",
+        "fn demo_metrics_debug_action_readiness_lines(",
+        "selected_bundle_count: usize",
         "fn devtools_demo_metrics_debug_lines_with_state(",
         "demo_metrics_debug_selected_bundle_count",
         "select a regression bundle",
