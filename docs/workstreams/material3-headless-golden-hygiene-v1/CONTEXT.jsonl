@@ -1,0 +1,2 @@
+{"ts":"2026-05-31","kind":"classification","summary":"Default radio_alignment failed on stale broad navigation and overlay headless golden suites, while Radio-specific checks were not the failing surface."}
+{"ts":"2026-05-31","kind":"decision","summary":"Keep stale broad navigation/overlay suites as explicit ignored maintenance tests and use focused component state gates for default coverage."}

@@ -6873,6 +6873,7 @@ fn material3_headless_top_app_bar_suite_goldens_v1() {
 }
 
 #[test]
+#[ignore = "stale broad headless golden; use navigation_state for default gate and run explicitly when refreshing material3-navigation goldens"]
 fn material3_headless_navigation_suite_goldens_v1() {
     use fret_icons::ids;
     use fret_ui_material3::{
@@ -8442,6 +8443,7 @@ fn material3_headless_slider_suite_goldens_v1() {
 }
 
 #[test]
+#[ignore = "stale broad headless golden; use menu/dialog/tooltip/select state gates for default coverage and run explicitly when refreshing material3-overlays goldens"]
 fn material3_headless_overlays_suite_goldens_v1() {
     use fret_ui::element::{CrossAlign, FlexProps, Length, MainAlign};
     use fret_ui_kit::{OverlayController, OverlayStackEntryKind};

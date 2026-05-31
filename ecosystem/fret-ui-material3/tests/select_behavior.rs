@@ -16,7 +16,9 @@ mod support;
 use support::events::{key_down, key_up, pointer_down, pointer_up};
 use support::goldens::{run_overlay_frame, run_overlay_frame_with_scene_scaled};
 use support::host::{FakeUiServices, TestHost};
-use support::theme::{apply_material_theme, apply_material_theme_rtl};
+use support::theme::apply_material_theme;
+#[cfg(feature = "diagnostics")]
+use support::theme::apply_material_theme_rtl;
 
 #[cfg(feature = "diagnostics")]
 fn live_test_id_layout_bounds(
