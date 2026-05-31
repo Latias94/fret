@@ -352,6 +352,14 @@ Last updated: 2026-05-31
       Result: `controls/vec_edit.rs` keeps Vec2/Vec3/Vec4 public control orchestration.
       `controls/vec_edit/axis.rs` owns `VecEditAxis`, `VecEditAxisOutcome`, axis reset options,
       reset action packaging, axis group rendering, and the focused axis-outcome test.
+- [x] Split editor vector auto-layout planning and axis color resolution into a private child owner
+      without changing Vec2/Vec3/Vec4 public constructors, row/column auto-stack thresholds,
+      axis token fallback colors, id-source/test-id derivation, axis group composition, or
+      transform-edit routing.
+      Result: `controls/vec_edit.rs` keeps Vec2/Vec3/Vec4 public control orchestration and axis
+      group composition. `controls/vec_edit/layout.rs` owns axis token colors, auto-stack threshold
+      calculation, Row/Column direction selection, grow policy, and id-source suffix derivation,
+      while `controls/vec_edit/layout/tests.rs` owns the focused layout-policy regressions.
 - [x] Split editor transform section chrome and link-toggle layout into a private child owner
       without changing TransformEdit public options, Vec3Edit composition, section badge/heading
       text roles, link-scale test IDs, row/column layout selection, or uniform-scale sync logic.

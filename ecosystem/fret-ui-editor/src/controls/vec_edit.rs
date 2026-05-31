@@ -8,32 +8,25 @@
 use std::panic::Location;
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Edges, Px};
+use fret_core::{Axis, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacingLength,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, UiHost};
 
 use crate::controls::{NumericFormatFn, NumericParseFn, NumericValidateFn};
-use crate::primitives::EditorTokenKeys;
+use crate::primitives::NumericPresentation;
 use crate::primitives::input_group::derived_test_id;
-use crate::primitives::{NumericPresentation, style::EditorStyle};
 
 mod axis;
+mod layout;
 
 use axis::axis_group;
 pub use axis::{
     AxisReset, AxisResetOptions, OnAxisReset, OnVecEditAxisOutcome, VecEditAxis, VecEditAxisOutcome,
 };
-
-fn axis_color(theme: &Theme, key: &'static str, fallback: Color) -> Color {
-    theme.color_by_key(key).unwrap_or(fallback)
-}
-
-fn derived_id_source(base: Option<&Arc<str>>, suffix: &str) -> Option<Arc<str>> {
-    base.map(|id| Arc::<str>::from(format!("{}.{}", id.as_ref(), suffix)))
-}
+use layout::{derived_id_source, resolve_vec_edit_layout_plan};
 
 #[derive(Debug, Clone)]
 pub struct VecEditOptions {
@@ -181,52 +174,11 @@ where
     }
 
     fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let bounds = cx.layout_query_bounds(cx.root_id(), Invalidation::Layout);
-
-        let (x_color, y_color, auto_below, axis_min_width) = {
-            let theme = Theme::global(&*cx.app);
-            let style = EditorStyle::resolve(theme);
-
-            let x_color = axis_color(
-                theme,
-                EditorTokenKeys::AXIS_X_COLOR,
-                Color::from_srgb_hex_rgb(0xf2_59_59),
-            );
-            let y_color = axis_color(
-                theme,
-                EditorTokenKeys::AXIS_Y_COLOR,
-                Color::from_srgb_hex_rgb(0x59_f2_59),
-            );
-
-            let auto_below = self
-                .options
-                .auto_stack_below
-                .unwrap_or(style.vec_auto_stack_below);
-
-            (x_color, y_color, auto_below, style.vec_axis_min_width)
-        };
-        let auto_below = {
-            let min_total = axis_min_width.0 * 2.0 + (self.options.gap.0 * 1.0);
-            Px(auto_below.0.max(min_total))
-        };
-        let variant = match self.options.variant {
-            VecEditLayoutVariant::Row => VecEditLayoutVariant::Row,
-            VecEditLayoutVariant::Column => VecEditLayoutVariant::Column,
-            VecEditLayoutVariant::Auto => {
-                if bounds.is_some_and(|b| b.size.width.0 > 0.0 && b.size.width.0 < auto_below.0) {
-                    VecEditLayoutVariant::Column
-                } else {
-                    VecEditLayoutVariant::Row
-                }
-            }
-        };
-
-        let grow = variant == VecEditLayoutVariant::Row;
-        let direction = match variant {
-            VecEditLayoutVariant::Row => Axis::Horizontal,
-            VecEditLayoutVariant::Column => Axis::Vertical,
-            VecEditLayoutVariant::Auto => Axis::Horizontal,
-        };
+        let layout = resolve_vec_edit_layout_plan(cx, &self.options, 2);
+        let grow = layout.grow;
+        let direction = layout.direction;
+        let x_color = layout.axis_colors.x;
+        let y_color = layout.axis_colors.y;
         let x_id_source = derived_id_source(self.options.id_source.as_ref(), "x");
         let y_id_source = derived_id_source(self.options.id_source.as_ref(), "y");
         let x_test_id = derived_test_id(self.options.test_id.as_ref(), "x");
@@ -402,63 +354,12 @@ where
     }
 
     fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let bounds = cx.layout_query_bounds(cx.root_id(), Invalidation::Layout);
-
-        let (x_color, y_color, z_color, auto_below, axis_min_width) = {
-            let theme = Theme::global(&*cx.app);
-            let style = EditorStyle::resolve(theme);
-
-            let x_color = axis_color(
-                theme,
-                EditorTokenKeys::AXIS_X_COLOR,
-                Color::from_srgb_hex_rgb(0xf2_59_59),
-            );
-            let y_color = axis_color(
-                theme,
-                EditorTokenKeys::AXIS_Y_COLOR,
-                Color::from_srgb_hex_rgb(0x59_f2_59),
-            );
-            let z_color = axis_color(
-                theme,
-                EditorTokenKeys::AXIS_Z_COLOR,
-                Color::from_srgb_hex_rgb(0x59_8c_f2),
-            );
-
-            let auto_below = self
-                .options
-                .auto_stack_below
-                .unwrap_or(style.vec_auto_stack_below);
-
-            (
-                x_color,
-                y_color,
-                z_color,
-                auto_below,
-                style.vec_axis_min_width,
-            )
-        };
-        let auto_below = {
-            let min_total = axis_min_width.0 * 3.0 + (self.options.gap.0 * 2.0);
-            Px(auto_below.0.max(min_total))
-        };
-        let variant = match self.options.variant {
-            VecEditLayoutVariant::Row => VecEditLayoutVariant::Row,
-            VecEditLayoutVariant::Column => VecEditLayoutVariant::Column,
-            VecEditLayoutVariant::Auto => {
-                if bounds.is_some_and(|b| b.size.width.0 > 0.0 && b.size.width.0 < auto_below.0) {
-                    VecEditLayoutVariant::Column
-                } else {
-                    VecEditLayoutVariant::Row
-                }
-            }
-        };
-
-        let grow = variant == VecEditLayoutVariant::Row;
-        let direction = match variant {
-            VecEditLayoutVariant::Row => Axis::Horizontal,
-            VecEditLayoutVariant::Column => Axis::Vertical,
-            VecEditLayoutVariant::Auto => Axis::Horizontal,
-        };
+        let layout = resolve_vec_edit_layout_plan(cx, &self.options, 3);
+        let grow = layout.grow;
+        let direction = layout.direction;
+        let x_color = layout.axis_colors.x;
+        let y_color = layout.axis_colors.y;
+        let z_color = layout.axis_colors.z;
         let x_id_source = derived_id_source(self.options.id_source.as_ref(), "x");
         let y_id_source = derived_id_source(self.options.id_source.as_ref(), "y");
         let z_id_source = derived_id_source(self.options.id_source.as_ref(), "z");
@@ -666,69 +567,13 @@ where
     }
 
     fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let bounds = cx.layout_query_bounds(cx.root_id(), Invalidation::Layout);
-
-        let (x_color, y_color, z_color, w_color, auto_below, axis_min_width) = {
-            let theme = Theme::global(&*cx.app);
-            let style = EditorStyle::resolve(theme);
-
-            let x_color = axis_color(
-                theme,
-                EditorTokenKeys::AXIS_X_COLOR,
-                Color::from_srgb_hex_rgb(0xf2_59_59),
-            );
-            let y_color = axis_color(
-                theme,
-                EditorTokenKeys::AXIS_Y_COLOR,
-                Color::from_srgb_hex_rgb(0x59_f2_59),
-            );
-            let z_color = axis_color(
-                theme,
-                EditorTokenKeys::AXIS_Z_COLOR,
-                Color::from_srgb_hex_rgb(0x59_8c_f2),
-            );
-            let w_color = axis_color(
-                theme,
-                EditorTokenKeys::AXIS_W_COLOR,
-                Color::from_srgb_hex_rgb(0xcc_cc_cc),
-            );
-
-            let auto_below = self
-                .options
-                .auto_stack_below
-                .unwrap_or(style.vec_auto_stack_below);
-
-            (
-                x_color,
-                y_color,
-                z_color,
-                w_color,
-                auto_below,
-                style.vec_axis_min_width,
-            )
-        };
-        let auto_below = {
-            let min_total = axis_min_width.0 * 4.0 + (self.options.gap.0 * 3.0);
-            Px(auto_below.0.max(min_total))
-        };
-        let variant = match self.options.variant {
-            VecEditLayoutVariant::Row => VecEditLayoutVariant::Row,
-            VecEditLayoutVariant::Column => VecEditLayoutVariant::Column,
-            VecEditLayoutVariant::Auto => {
-                if bounds.is_some_and(|b| b.size.width.0 > 0.0 && b.size.width.0 < auto_below.0) {
-                    VecEditLayoutVariant::Column
-                } else {
-                    VecEditLayoutVariant::Row
-                }
-            }
-        };
-
-        let grow = variant == VecEditLayoutVariant::Row;
-        let direction = match variant {
-            VecEditLayoutVariant::Row => Axis::Horizontal,
-            VecEditLayoutVariant::Column => Axis::Vertical,
-            VecEditLayoutVariant::Auto => Axis::Horizontal,
-        };
+        let layout = resolve_vec_edit_layout_plan(cx, &self.options, 4);
+        let grow = layout.grow;
+        let direction = layout.direction;
+        let x_color = layout.axis_colors.x;
+        let y_color = layout.axis_colors.y;
+        let z_color = layout.axis_colors.z;
+        let w_color = layout.axis_colors.w;
         let x_id_source = derived_id_source(self.options.id_source.as_ref(), "x");
         let y_id_source = derived_id_source(self.options.id_source.as_ref(), "y");
         let z_id_source = derived_id_source(self.options.id_source.as_ref(), "z");

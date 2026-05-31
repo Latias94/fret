@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor VecEdit Layout Owner Split Evidence - 2026-05-31
+
+Claim verified: editor vector auto-layout planning and axis color resolution split into a private
+layout owner without changing Vec2/Vec3/Vec4 public constructors, row/column auto-stack thresholds,
+axis token fallback colors, id-source/test-id derivation, axis group composition, or transform-edit
+routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps Vec2/Vec3/Vec4 public control
+  orchestration and axis group composition.
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/layout.rs` owns axis token color resolution,
+  auto-stack threshold calculation, Row/Column direction selection, grow policy, and id-source
+  suffix derivation.
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/layout/tests.rs` owns focused auto-stack
+  threshold and auto-variant layout regressions.
+- `tools/gate_imui_workstream_source.py` checks the vec-edit root/layout split and rejects axis
+  token lookup, layout-query, and auto-stack details from drifting back into `vec_edit.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new vec-edit layout owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui vec_edit --no-fail-fast`: pass (4 passed,
+  201 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Editor Slider Pointer Projection Owner Split Evidence - 2026-05-31
 
 Claim verified: editor slider pointer-local x projection moved into the value-math owner without

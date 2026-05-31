@@ -394,6 +394,14 @@ reset action packaging, axis group rendering, and the focused axis-outcome test.
 constructors, reset options, outcome accessors, transform-edit routing, identity derivation, and
 row/column auto layout remain unchanged.
 
+2026-05-31 editor vec-edit layout child-owner result:
+`ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps Vec2/Vec3/Vec4 public control
+orchestration and axis group composition. `controls/vec_edit/layout.rs` owns axis token color
+resolution, auto-stack threshold calculation, Row/Column direction selection, grow policy, and
+id-source suffix derivation, while `controls/vec_edit/layout/tests.rs` owns focused layout-policy
+regressions. Public constructors, row/column auto-stack behavior, axis fallback colors, test-id
+derivation, transform-edit routing, and axis group composition remain unchanged.
+
 2026-05-30 editor transform section child-owner result:
 `ecosystem/fret-ui-editor/src/controls/transform_edit.rs` now keeps TransformEdit public surface,
 Vec3 composition, outcome routing, and linked-scale model/sync logic.
