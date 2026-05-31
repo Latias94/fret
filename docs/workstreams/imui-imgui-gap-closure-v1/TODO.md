@@ -58,6 +58,14 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor joined-input frame assembly and pointer pressed-state behavior into a private
+      child owner without changing the existing `crate::primitives::input_group::*` call path, base
+      frame owner routing, segment helpers, text-role helpers, axis segment composition, or
+      crate-visible primitive APIs.
+      Result: `primitives/input_group.rs` keeps segment helpers, text-role helpers, axis segment
+      composition, and re-exports the joined-input owner APIs. `primitives/input_group/joined.rs`
+      owns joined frame composition, leading/input/trailing segment assembly, pointer pressed-state
+      cleanup, pointer down/up/cancel handlers, and frame override handoff.
 - [x] Split editor input-group base frame and frame override policy into a private child owner
       without changing the existing `crate::primitives::input_group::*` call path, joined-input
       composition, segment helpers, text-role helpers, pointer pressed behavior, or crate-visible

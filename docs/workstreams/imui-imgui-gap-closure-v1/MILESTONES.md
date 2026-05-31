@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 editor input-group joined owner-split result:
+`ecosystem/fret-ui-editor/src/primitives/input_group.rs` now keeps segment helpers, text-role
+helpers, axis segment composition, and re-exports joined-input APIs at the existing module path.
+The private `primitives/input_group/joined.rs` owner now contains joined frame composition,
+leading/input/trailing segment assembly, pointer pressed-state cleanup, pointer down/up/cancel
+handlers, and frame override handoff. Crate-visible input-group APIs remain unchanged.
+
 2026-05-31 editor input-group frame owner-split result:
 `ecosystem/fret-ui-editor/src/primitives/input_group.rs` now keeps segment helpers, joined-input
 assembly, pointer-region behavior, axis segment composition, text-role usage, and re-exports the

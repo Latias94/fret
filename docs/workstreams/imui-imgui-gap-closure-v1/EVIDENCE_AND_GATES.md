@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-31
 
+## InputGroup Joined Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor joined-input frame assembly and pointer pressed-state behavior moved into a
+private `input_group/joined.rs` owner without changing the existing
+`crate::primitives::input_group::*` call path, base frame owner routing, segment helpers, text-role
+helpers, axis segment composition, or crate-visible primitive APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/input_group.rs` now keeps segment helpers, text-role
+  helpers, axis segment composition, and re-exports the joined-input owner APIs at the existing
+  module path.
+- `ecosystem/fret-ui-editor/src/primitives/input_group/joined.rs` owns `JoinedInputPointerState`,
+  `EditorJoinedInputContents`, joined input frame composition, leading/input/trailing segment
+  assembly, pointer pressed-state cleanup, pointer down/up/cancel handlers, and frame override
+  handoff.
+- `tools/gate_imui_workstream_source.py` now gates the root/joined split so pointer-region behavior
+  stays out of the larger primitive root while text-role helpers remain in the root owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new joined-owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor input_group --no-fail-fast`: pass (1 passed, 221
+  skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass.
+
 ## InputGroup Frame Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor input-group base frame and frame override policy moved into a private
