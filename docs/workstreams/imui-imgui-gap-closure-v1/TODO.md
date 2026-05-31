@@ -42,6 +42,16 @@ Last updated: 2026-05-31
       `fret-plot/imui` adapter, and style/theme editing as editor-owned preset tooling exposed by
       the canonical workbench.
 
+## Porting Sugar Proof - 2026-05-31
+
+- [x] Promote existing closure-scoped SameLine porting sugar into a first-party cookbook teaching
+      surface without adding broad Dear ImGui cursor, item-width stack, next-item width, or
+      label-suffix parsing APIs.
+      Result: `apps/fret-cookbook/examples/imui_action_basics.rs` now uses
+      `ui.same_line_with_options(...)` plus a stable row `test_id` for the IMUI payload action
+      button row. The source gate freezes the cookbook marker and the updated P3 readiness doc keeps
+      item-width and label-ID helpers candidate-only / explicit.
+
 ## Owner Split Follow-Ups - 2026-05-26
 
 - [x] Split IMUI menu-item behavior activation and response population into private owners without

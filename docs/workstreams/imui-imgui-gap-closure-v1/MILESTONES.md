@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 same-line porting sugar proof result:
+`apps/fret-cookbook/examples/imui_action_basics.rs` now teaches the existing closure-scoped
+`ui.same_line_with_options(...)` helper for the IMUI payload button row, with a stable row
+`test_id` and source-gate coverage. The P3 readiness note now treats SameLine as a narrow proven
+teaching-surface helper while keeping item-width stacks, next-item width defaults, label-suffix
+identity parsing, and broad Dear ImGui mutable cursor sugar out of scope.
+
 2026-05-31 debug-draw command type hub owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs` is now a thin private command-type
 re-export hub, while

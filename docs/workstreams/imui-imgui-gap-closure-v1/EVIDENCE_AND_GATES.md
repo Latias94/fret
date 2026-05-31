@@ -3,6 +3,48 @@
 Status: Active
 Last updated: 2026-05-31
 
+## SameLine Porting Sugar Cookbook Proof Evidence - 2026-05-31
+
+Claim verified: the existing closure-scoped SameLine porting sugar is now promoted into a
+first-party cookbook teaching surface for a dense IMUI payload action row, while broad Dear ImGui
+mutable cursor, item-width stack, next-item width, and label-suffix identity APIs remain out of
+scope.
+
+Evidence:
+
+- `apps/fret-cookbook/examples/imui_action_basics.rs` imports `SameLineOptions`, wraps the IMUI
+  payload action buttons in `ui.same_line_with_options(...)`, and assigns the row a stable
+  `cookbook.imui_action_basics.button.imui.payload.row` test id.
+- `apps/fret-cookbook/src/lib.rs` freezes the cookbook teaching surface so the example keeps using
+  `same_line_with_options` instead of falling back to legacy or non-teaching IMUI APIs.
+- `docs/workstreams/imui-imgui-gap-closure-v1/P3_PORTING_SUGAR_READINESS_2026-05-06.md` records
+  SameLine as a narrow proven helper and keeps item-width / label-ID helpers candidate-only.
+- `tools/gate_imui_workstream_source.py` now source-gates both the P3 readiness wording and the
+  cookbook SameLine proof surface.
+
+Focused gates:
+
+- `cargo fmt -p fret-cookbook`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-cookbook --features cookbook-imui --example imui_action_basics`: pass.
+- `cargo nextest run -p fret-cookbook --lib
+  cookbook_imui_example_keeps_current_facade_teaching_surface --no-fail-fast`: pass (1 passed, 32
+  skipped).
+- `cargo nextest run -p fret-imui
+  porting_sugar_items_same_line_spacing_dummy_and_indent_use_imgui_style_layout_tokens
+  --no-fail-fast`: pass (1 passed, 185 skipped).
+- `git diff --check`: pass.
+- `cargo fmt -p fret-cookbook -- --check`: pass.
+
+Broader gate not recorded as pass:
+
+- `cargo nextest run -p fret-cookbook
+  cookbook_imui_example_keeps_current_facade_teaching_surface --no-fail-fast` was attempted first,
+  but it built all cookbook examples and failed before the target test because `hello_counter`
+  imports `fret::icons::icon` without the `icons` feature. The authoritative focused gate is the
+  `--lib` nextest run above.
+
 ## Editor Style/Theme Picker Density Status Evidence - 2026-05-31
 
 Claim verified: the editor-owned IMUI style/theme preset picker now exposes stable per-preset

@@ -13762,11 +13762,30 @@ def main() -> None:
         SourceCheck(
             Path("docs/workstreams/imui-imgui-gap-closure-v1/P3_PORTING_SUGAR_READINESS_2026-05-06.md"),
             required=[
+                "Status: narrow SameLine proof promoted; broad porting sugar remains candidate-only",
+                "2026-05-31 follow-up",
+                "`ui.same_line(...)` / `ui.same_line_with_options(...)`",
+                "`apps/fret-cookbook/examples/imui_action_basics.rs` now uses",
+                "item-width and label-ID helpers remain candidate-only",
                 "split owner modules under",
                 "`ecosystem/fret-ui-kit/src/imui/facade_writer/`, including `container_wrappers.rs`, now own",
                 "split owner modules.",
             ],
             forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-cookbook/examples/imui_action_basics.rs"),
+            required=[
+                "kit::{ButtonOptions, InputTextOptions, SameLineOptions}",
+                "const TEST_ID_PAYLOAD_ROW: &str = \"cookbook.imui_action_basics.button.imui.payload.row\";",
+                "ui.same_line_with_options(",
+                "SameLineOptions {",
+                "test_id: Some(Arc::from(TEST_ID_PAYLOAD_ROW))",
+                "ui.action_payload_button_with_options(",
+            ],
+            forbidden=[
+                "ui.horizontal(|ui| {",
+            ],
         ),
         SourceCheck(
             Path("docs/workstreams/imui-imgui-gap-closure-v1/P3_PUBLIC_SURFACE_CATALOG_2026-05-06.md"),
