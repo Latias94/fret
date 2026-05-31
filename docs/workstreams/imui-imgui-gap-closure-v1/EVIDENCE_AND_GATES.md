@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-31
 
+## ColorEdit Alpha Preview Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor color-edit alpha preview rendering moved into a private
+`color_edit/popup/picker/alpha/preview.rs` owner without changing horizontal/vertical alpha bars,
+pressable pointer mutation, alpha coordinate mapping, checkerboard/gradient/thumb visuals, or
+color-edit picker tests.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/alpha.rs` now keeps
+  horizontal/vertical bar pressable interaction, model/draft/error mutation, and alpha helper math.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/alpha/preview.rs` owns preview
+  stacks, checkerboard-backed alpha gradients, and horizontal/vertical thumb overlays.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now tracks the preview child owner with
+  `include_str!` assertions instead of expecting gradient helpers in the interaction owner.
+- `tools/gate_imui_workstream_source.py` gates the root/preview split so pointer mutation stays out
+  of the preview owner and rendering helpers stay out of the interaction owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new preview-owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui color_edit --no-fail-fast`: pass (52
+  passed, 173 skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass after applying rustfmt to the updated source-policy
+  assertion.
+- `git diff --check`: pass (with Git's line-ending warning for `color_edit/popup/picker/alpha.rs`).
+
 ## ColorEdit Hue-Wheel Model Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor color-edit hue-wheel model math moved into a private

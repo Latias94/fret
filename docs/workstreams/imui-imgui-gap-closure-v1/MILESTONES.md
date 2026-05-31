@@ -1285,6 +1285,13 @@ and alpha entrypoint re-exports. `picker/alpha.rs` owns horizontal and vertical 
 previews, gradient overlays, thumb overlays, pointer update application, and alpha coordinate/a11y
 helper math.
 
+2026-05-31 color-edit alpha preview child-owner result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/alpha.rs` now keeps horizontal and
+vertical bar pressable interaction, model/draft/error mutation, and alpha helper math.
+`picker/alpha/preview.rs` owns preview stacks, checkerboard-backed alpha gradients, and
+horizontal/vertical thumb overlays. Horizontal/vertical alpha bars, pointer mutation, alpha
+coordinate mapping, checkerboard/gradient/thumb visuals, and picker tests remain unchanged.
+
 2026-05-30 color-edit hue bar owner-split result:
 `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker.rs` keeps color picker composition
 and shared HSV color application. `picker/hue_bar.rs` owns hue bar previews, vertical hue
