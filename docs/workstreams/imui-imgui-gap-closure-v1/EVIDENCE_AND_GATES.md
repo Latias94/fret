@@ -1,7 +1,37 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-31
+Last updated: 2026-06-01
+
+## Editor Color-Edit Hue-Wheel Cursor Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor color-edit hue-wheel cursor painting moved out of the canvas root into a
+private `hue_wheel/cursor.rs` owner without changing hue/SV cursor position, cursor ring strokes,
+canvas keying, ring/triangle paint dispatch, hue-wheel target math, or popup policy tests.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/hue_wheel.rs` now keeps canvas
+  entry, hue-wheel geometry lookup, and ring/triangle/cursor paint dispatch only.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/hue_wheel/cursor.rs` owns hue and
+  SV cursor projection, cursor fill paint, and outer/inner cursor stroke paint.
+- `tools/gate_imui_workstream_source.py` now gates the root/cursor split and rejects cursor paint
+  details from drifting back into the hue-wheel canvas root.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new cursor owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor --lib color_edit --no-fail-fast`: pass (51 passed).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass (2 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
 
 ## IMUI Text-Picker Popup Render Owner-Split Evidence - 2026-06-01
 
