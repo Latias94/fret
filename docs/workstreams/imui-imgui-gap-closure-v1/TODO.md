@@ -58,6 +58,14 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor color-edit main swatch context-menu input policy into a private child owner
+      without changing the public swatch entrypoint, popup activation/reference capture,
+      right-click/Ctrl-click copy menu routing, Shift-F10/ContextMenu keyboard routing, tooltip
+      dismissal, copy menu model updates, drag/drop hooks, preview chrome, or a11y value text.
+      Result: `controls/color_edit/swatch.rs` keeps the main swatch model, popup activation,
+      tooltip/drag/drop/chrome/preview ownership. `controls/color_edit/swatch/context_menu.rs`
+      owns pointer and keyboard copy-menu opening policy. The source gate prevents context-menu
+      input policy from drifting back into the root swatch owner.
 - [x] Split editor color-edit popup swatch slot behavior into a private child owner without
       changing preset/history row entrypoints, row wrapping, stable test-id derivation,
       pressable/a11y chrome, activation color application, drag source/drop target behavior,

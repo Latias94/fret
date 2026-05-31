@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor Color-Edit Main Swatch Context-Menu Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor color-edit main swatch context-menu input policy moved out of the root
+swatch owner into a private `swatch/context_menu.rs` owner without changing the public swatch
+entrypoint, popup activation/reference capture, right-click or macOS Ctrl-click copy menu routing,
+Shift-F10/ContextMenu keyboard routing, tooltip dismissal, copy menu model updates, drag/drop
+hooks, preview chrome, or a11y value text.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/swatch.rs` keeps the root swatch args,
+  popup-open activation/reference capture, tooltip visibility updates, drag/drop hooks, visual
+  state, preview stack, and a11y value text.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/swatch/context_menu.rs` owns right-click /
+  macOS Ctrl-click handling plus Shift-F10 and ContextMenu key handling for copy-menu opening.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now reads the context-menu owner directly
+  and asserts the root swatch stays free of raw context-menu input policy.
+- `tools/gate_imui_workstream_source.py` now tracks the root swatch/context-menu split and rejects
+  context-menu policy from drifting back into the root owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the root swatch and
+  context-menu owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor --lib color_edit --no-fail-fast`: pass (51 passed).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass (2 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+
 ## Editor Color-Edit Popup Swatch Slot Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor color-edit popup swatch slot behavior moved out of the swatch row owner into
