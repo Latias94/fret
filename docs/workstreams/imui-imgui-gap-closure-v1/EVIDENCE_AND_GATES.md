@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Floating Title-Bar Row Owner-Split Evidence - 2026-05-31
+
+Claim verified: IMUI floating-window title-bar row composition moved out of
+`floating_window_title_bar.rs` into a private `floating_window_title_bar/row.rs` owner without
+changing title text-role selection, drag-surface behavior hooks, close-button behavior wiring,
+close-glyph text-role helper, or public floating-window facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs` now keeps the close glyph text-role
+  helper plus private owner routing.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar/row.rs` owns title-bar row composition,
+  title text mounting, drag-surface setup, close-button prop selection, and behavior owner calls.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar/behavior.rs` still owns double-click,
+  Escape, and close-button model mutation behavior.
+- `tools/gate_imui_workstream_source.py` now gates the root/row/behavior split and keeps close
+  glyph text construction out of the row owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new row owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui floating_window_close_glyph_uses_shared_chrome_glyph_text_role --no-fail-fast`: pass (1 passed, 753 skipped).
+- `cargo nextest run -p fret-imui floating::window_options::floating_window_title_bar_double_click_toggles_collapsed --no-fail-fast`: pass (1 passed, 185 skipped).
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Bullet Text Element Owner-Split Evidence - 2026-05-31
 
 Claim verified: IMUI bullet-text element assembly moved out of `bullet_text_controls.rs` into a

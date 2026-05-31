@@ -4767,8 +4767,15 @@ opening the slice.
       without changing the public IMUI surface.
       Result: `floating_window_title_bar/behavior.rs` now owns double-click collapse event
       recording, title-bar Escape close key behavior, close-button activation wiring, and model
-      update/notify calls. `floating_window_title_bar.rs` keeps row composition, title text-role
-      selection, close-button prop selection, and close-glyph text construction.
+      update/notify calls. `floating_window_title_bar.rs` keeps owner routing and close-glyph text
+      construction.
+- [x] Split the floating-window title-bar row composition out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs` into a private row owner without
+      changing title text-role selection, drag-surface behavior hooks, close-button behavior wiring,
+      close-glyph text-role helper, or public floating-window facade behavior.
+      Result: `floating_window_title_bar.rs` now keeps owner routing and close-glyph text
+      construction. `floating_window_title_bar/row.rs` owns row composition, title text mounting,
+      drag-surface setup, close-button prop selection, and behavior owner calls.
 - [x] Split the floating-window content scroll/container layout construction out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_content.rs::floating_window_content_element(...)`
       into private helpers without changing the public IMUI surface.

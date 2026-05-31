@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 IMUI floating title-bar row owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs` now keeps owner routing and close-glyph
+text construction. `floating_window_title_bar/row.rs` owns row composition, title text mounting,
+drag-surface setup, close-button prop selection, and behavior owner calls. Title text-role
+selection, drag-surface behavior hooks, close-button behavior wiring, close-glyph text-role helper,
+and public floating-window facade behavior remain unchanged.
+
 2026-05-31 IMUI bullet-text element owner-split result:
 `ecosystem/fret-ui-kit/src/imui/bullet_text_controls.rs` now keeps the immediate-mode entry point
 only. `bullet_text_controls/element.rs` owns bullet indicator/track layout, label semantics/test
