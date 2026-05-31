@@ -21,11 +21,13 @@ Task IDs use `M3NF-*`.
   - Note: Button color/opacity fallback chains now use resolver primitives; visual fixture and
     `button_state` gates passed.
 
-- [ ] M3NF-030: Migrate chip-family token fallback chains.
+- [x] M3NF-030: Migrate chip-family token fallback chains.
   - Scope: Chip, FilterChip, InputChip, SuggestionChip.
   - Expected result: chip-family color fallback and disabled opacity paths use the resolver
     vocabulary without visual drift.
   - Gate: token visual fixtures plus chip state tests.
+  - Note: Assist, Filter, Input, and Suggestion chip color/disabled fallback chains now use
+    resolver primitives; visual fixture and `chip_state` gates passed.
 
 - [ ] M3NF-040: Migrate icon/action token fallback chains.
   - Scope: IconButton, FAB, SegmentedButton, Tabs.

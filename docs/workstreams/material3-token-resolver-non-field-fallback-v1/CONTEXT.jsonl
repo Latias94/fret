@@ -5,3 +5,8 @@
 {"role":"gates","path":"docs/workstreams/material3-token-resolver-non-field-fallback-v1/EVIDENCE_AND_GATES.md","why":"Fresh validation commands for the lane."}
 {"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/button.rs","why":"M3NF-020 migrated Button token fallback chains to MaterialTokenResolver."}
 {"role":"implementation","path":"ecosystem/fret-ui-material3/src/foundation/token_resolver.rs","why":"M3NF-020 added reusable component-chain and number-chain fallback helpers."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/chip.rs","why":"M3NF-030 migrated AssistChip fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/filter_chip.rs","why":"M3NF-030 migrated FilterChip fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/input_chip.rs","why":"M3NF-030 migrated InputChip fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs","why":"M3NF-030 migrated SuggestionChip fallback chains to MaterialTokenResolver."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/chip_state.rs","why":"M3NF-030 targeted chip behavior and state-layer regression gate."}

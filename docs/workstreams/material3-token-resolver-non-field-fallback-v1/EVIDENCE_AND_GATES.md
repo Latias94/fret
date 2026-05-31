@@ -35,7 +35,12 @@ Last updated: 2026-05-31
 - `docs/workstreams/material3-token-resolver-non-field-fallback-v1/TODO.md`
 - `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`
 - `ecosystem/fret-ui-material3/src/tokens/button.rs`
+- `ecosystem/fret-ui-material3/src/tokens/chip.rs`
+- `ecosystem/fret-ui-material3/src/tokens/filter_chip.rs`
+- `ecosystem/fret-ui-material3/src/tokens/input_chip.rs`
+- `ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs`
 - `ecosystem/fret-ui-material3/tests/button_state.rs`
+- `ecosystem/fret-ui-material3/tests/chip_state.rs`
 - `ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json`
 
 ## M3NF-010 Evidence
@@ -60,3 +65,28 @@ Last updated: 2026-05-31
 - `python tools/check_workstream_catalog.py`: passed; 525 dedicated directories, 47 standalone markdown files.
 - `python tools/check_layering.py`: passed.
 - `git diff --check`: passed.
+
+## M3NF-030 Evidence
+
+- `ecosystem/fret-ui-material3/src/tokens/chip.rs`: migrated AssistChip label/icon/state-layer,
+  elevated container, shadow, and flat outline color/disabled fallback chains to
+  `MaterialTokenResolver`.
+- `ecosystem/fret-ui-material3/src/tokens/filter_chip.rs`: migrated FilterChip selected/elevated
+  containers, shadow, label, state-layer, leading/trailing icons, and outline fallback chains.
+- `ecosystem/fret-ui-material3/src/tokens/input_chip.rs`: migrated InputChip selected container,
+  unselected outline, label, state-layer, leading icon, and trailing icon fallback chains.
+- `ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs`: migrated SuggestionChip elevated
+  container, shadow, label, state-layer, leading icon, and flat outline fallback chains.
+- `rg -n "theme\\.color_by_key|theme\\.color_token|or_else\\(\\|\\| theme" ecosystem/fret-ui-material3/src/tokens/chip.rs ecosystem/fret-ui-material3/src/tokens/filter_chip.rs ecosystem/fret-ui-material3/src/tokens/input_chip.rs ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs`: no matches.
+- `rg -n "theme\\.number_by_key\\(|or_else\\(\\|\\| theme\\.number_by_key" ecosystem/fret-ui-material3/src/tokens/chip.rs ecosystem/fret-ui-material3/src/tokens/filter_chip.rs ecosystem/fret-ui-material3/src/tokens/input_chip.rs ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs`: only label-text weight reads remain.
+- `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes`: 1 passed.
+- `cargo nextest run -p fret-ui-material3 --features diagnostics --test chip_state`: 6 passed.
+- `cargo check -p fret-ui-material3 --features diagnostics --tests`: passed.
+- `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`: passed.
+- `cargo fmt --package fret-ui-material3 --check`: passed.
+- `python -m json.tool docs/workstreams/material3-token-resolver-non-field-fallback-v1/WORKSTREAM.json | Out-Null`: passed.
+- `python tools/check_workstream_catalog.py`: passed; 525 dedicated directories, 47 standalone markdown files.
+- `python tools/check_layering.py`: passed.
+- `git diff --check`: passed.
+- Residual fallback audit no longer lists `chip.rs`, `filter_chip.rs`, `input_chip.rs`, or
+  `suggestion_chip.rs`.

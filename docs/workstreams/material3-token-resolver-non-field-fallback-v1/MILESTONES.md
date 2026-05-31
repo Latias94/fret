@@ -19,6 +19,8 @@ Status: Complete
 
 ## M2 - Chip Family Hardened
 
+Status: Complete
+
 - Chip, FilterChip, InputChip, and SuggestionChip repeated fallback chains are migrated or split
   with evidence.
 

@@ -13,7 +13,10 @@ is selected as the first executable migration slice.
 M3NF-020 is complete: Button token fallback chains now use `MaterialTokenResolver` while preserving
 visual fixture and `button_state` outcomes.
 
-The next executable task is M3NF-030: migrate the chip-family token fallback chains.
+M3NF-030 is complete: Assist, Filter, Input, and Suggestion chip color/disabled fallback chains now
+use `MaterialTokenResolver` while preserving visual fixture and `chip_state` outcomes.
+
+The next executable task is M3NF-040: migrate the icon/action token fallback chains.
 
 ## Guardrails
 

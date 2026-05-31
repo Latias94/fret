@@ -5,6 +5,7 @@ use fret_ui::Theme;
 use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::interaction::PressableInteraction;
+use crate::foundation::token_resolver::{MaterialTokenResolver, alpha_mul};
 
 pub(crate) const COMPONENT_PREFIX: &str = "md.comp.suggestion-chip";
 
@@ -12,6 +13,21 @@ pub(crate) const COMPONENT_PREFIX: &str = "md.comp.suggestion-chip";
 pub(crate) struct ChipOutline {
     pub width: Px,
     pub color: Color,
+}
+
+fn disabled_on_surface_color(
+    theme: &Theme,
+    color_key: &str,
+    opacity_key: &str,
+    fallback_opacity: f32,
+) -> Color {
+    let (base, opacity) = MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
+        color_key,
+        "md.sys.color.on-surface",
+        Some(opacity_key),
+        fallback_opacity,
+    );
+    alpha_mul(base, opacity.clamp(0.0, 1.0))
 }
 
 pub(crate) fn container_height(theme: &Theme) -> Px {
@@ -40,21 +56,17 @@ pub(crate) fn leading_icon_size(theme: &Theme) -> Px {
 
 pub(crate) fn elevated_container_background(theme: &Theme, enabled: bool) -> Color {
     if enabled {
-        theme
-            .color_by_key("md.comp.suggestion-chip.elevated.container.color")
-            .or_else(|| theme.color_by_key("md.sys.color.surface-container-low"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-low"))
+        MaterialTokenResolver::new(theme).color_comp_or_sys(
+            "md.comp.suggestion-chip.elevated.container.color",
+            "md.sys.color.surface-container-low",
+        )
     } else {
-        let base = theme
-            .color_by_key("md.comp.suggestion-chip.elevated.disabled.container.color")
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-        let opacity = theme
-            .number_by_key("md.comp.suggestion-chip.elevated.disabled.container.opacity")
-            .unwrap_or(0.12);
-        let mut c = base;
-        c.a *= opacity.clamp(0.0, 1.0);
-        c
+        disabled_on_surface_color(
+            theme,
+            "md.comp.suggestion-chip.elevated.disabled.container.color",
+            "md.comp.suggestion-chip.elevated.disabled.container.opacity",
+            0.12,
+        )
     }
 }
 
@@ -82,10 +94,10 @@ pub(crate) fn elevated_container_elevation(
 }
 
 pub(crate) fn elevated_container_shadow_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.suggestion-chip.elevated.container.shadow-color")
-        .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.suggestion-chip.elevated.container.shadow-color",
+        "md.sys.color.shadow",
+    )
 }
 
 pub(crate) fn label_color(
@@ -94,16 +106,12 @@ pub(crate) fn label_color(
     interaction: Option<PressableInteraction>,
 ) -> Color {
     if !enabled {
-        let base = theme
-            .color_by_key("md.comp.suggestion-chip.disabled.label-text.color")
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-        let opacity = theme
-            .number_by_key("md.comp.suggestion-chip.disabled.label-text.opacity")
-            .unwrap_or(0.38);
-        let mut c = base;
-        c.a *= opacity.clamp(0.0, 1.0);
-        return c;
+        return disabled_on_surface_color(
+            theme,
+            "md.comp.suggestion-chip.disabled.label-text.color",
+            "md.comp.suggestion-chip.disabled.label-text.opacity",
+            0.38,
+        );
     }
 
     let key = match interaction {
@@ -113,10 +121,10 @@ pub(crate) fn label_color(
         None => "label-text.color",
     };
 
-    theme
-        .color_by_key(&format!("{COMPONENT_PREFIX}.{key}"))
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        &format!("{COMPONENT_PREFIX}.{key}"),
+        "md.sys.color.on-surface-variant",
+    )
 }
 
 pub(crate) fn label_text_style(theme: &Theme) -> TextStyle {
@@ -137,10 +145,10 @@ pub(crate) fn state_layer_color(theme: &Theme, interaction: Option<PressableInte
         None => return Color::TRANSPARENT,
     };
 
-    theme
-        .color_by_key(&format!("{COMPONENT_PREFIX}.{key}"))
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        &format!("{COMPONENT_PREFIX}.{key}"),
+        "md.sys.color.on-surface-variant",
+    )
 }
 
 pub(crate) fn state_layer_opacity(theme: &Theme, interaction: Option<PressableInteraction>) -> f32 {
@@ -151,17 +159,18 @@ pub(crate) fn state_layer_opacity(theme: &Theme, interaction: Option<PressableIn
         None => return 0.0,
     };
 
-    theme
-        .number_by_key(&format!("{COMPONENT_PREFIX}.{key}"))
-        .unwrap_or(0.0)
+    MaterialTokenResolver::new(theme)
+        .number_optional(Some(&format!("{COMPONENT_PREFIX}.{key}")), 0.0)
         .clamp(0.0, 1.0)
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key("md.comp.suggestion-chip.pressed.state-layer.opacity")
-        .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme)
+        .number_comp_or_sys(
+            "md.comp.suggestion-chip.pressed.state-layer.opacity",
+            "md.sys.state.pressed.state-layer-opacity",
+            0.1,
+        )
         .clamp(0.0, 1.0)
 }
 
@@ -171,18 +180,12 @@ pub(crate) fn leading_icon_color(
     interaction: Option<PressableInteraction>,
 ) -> Color {
     if !enabled {
-        let base = theme
-            .color_by_key("md.comp.suggestion-chip.with-leading-icon.disabled.leading-icon.color")
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-        let opacity = theme
-            .number_by_key(
-                "md.comp.suggestion-chip.with-leading-icon.disabled.leading-icon.opacity",
-            )
-            .unwrap_or(0.38);
-        let mut c = base;
-        c.a *= opacity.clamp(0.0, 1.0);
-        return c;
+        return disabled_on_surface_color(
+            theme,
+            "md.comp.suggestion-chip.with-leading-icon.disabled.leading-icon.color",
+            "md.comp.suggestion-chip.with-leading-icon.disabled.leading-icon.opacity",
+            0.38,
+        );
     }
 
     let key = match interaction {
@@ -192,10 +195,8 @@ pub(crate) fn leading_icon_color(
         None => "with-leading-icon.leading-icon.color",
     };
 
-    theme
-        .color_by_key(&format!("{COMPONENT_PREFIX}.{key}"))
-        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(&format!("{COMPONENT_PREFIX}.{key}"), "md.sys.color.primary")
 }
 
 pub(crate) fn flat_outline(
@@ -208,16 +209,15 @@ pub(crate) fn flat_outline(
         .unwrap_or(Px(1.0));
 
     if !enabled {
-        let base = theme
-            .color_by_key("md.comp.suggestion-chip.flat.disabled.outline.color")
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-        let opacity = theme
-            .number_by_key("md.comp.suggestion-chip.flat.disabled.outline.opacity")
-            .unwrap_or(0.12);
-        let mut c = base;
-        c.a *= opacity.clamp(0.0, 1.0);
-        return ChipOutline { width, color: c };
+        return ChipOutline {
+            width,
+            color: disabled_on_surface_color(
+                theme,
+                "md.comp.suggestion-chip.flat.disabled.outline.color",
+                "md.comp.suggestion-chip.flat.disabled.outline.opacity",
+                0.12,
+            ),
+        };
     }
 
     let key = match interaction {
@@ -225,10 +225,10 @@ pub(crate) fn flat_outline(
         None | Some(_) => "flat.outline.color",
     };
 
-    let mut color = theme
-        .color_by_key(&format!("{COMPONENT_PREFIX}.{key}"))
-        .or_else(|| theme.color_by_key("md.sys.color.outline-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.outline-variant"));
+    let mut color = MaterialTokenResolver::new(theme).color_comp_or_sys(
+        &format!("{COMPONENT_PREFIX}.{key}"),
+        "md.sys.color.outline-variant",
+    );
     color.a = 1.0;
 
     ChipOutline { width, color }
