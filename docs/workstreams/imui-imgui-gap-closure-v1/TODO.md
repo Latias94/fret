@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `NumericInput` keyboard commit/cancel policy into a private child owner without
+      changing keyed control identity, draft/error model ownership, focus-entry replacement
+      behavior, Enter commit, Escape cancel, validation/error updates, outcome callbacks,
+      joined-input frame composition, affix rendering, or inline/trailing error presentation.
+      Result: `controls/numeric_input.rs` keeps public control APIs, keyed element assembly, field
+      layout, affix/error rendering, and model/session routing. `controls/numeric_input/keyboard.rs`
+      owns key-down replacement delegation, Enter commit, Escape cancel, validation failure
+      handling, invalid parse errors, last-draft tracking, and outcome emission. The source gate
+      prevents keyboard commit/cancel policy from drifting back into the root control owner.
 - [x] Split editor color-edit tooltip panel rendering into a private child owner without changing
       tooltip open gating, anchored placement, dismissal routing, hover-preview content, color
       tooltip line formatting, preview fill routing, tooltip readout text role, tooltip semantics,

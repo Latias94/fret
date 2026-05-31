@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor NumericInput Keyboard Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `NumericInput` keyboard commit/cancel policy moved out of the root control
+owner into a private `numeric_input/keyboard.rs` owner without changing keyed control identity,
+draft/error model ownership, focus-entry replacement behavior, Enter commit, Escape cancel,
+validation/error updates, outcome callbacks, joined-input frame composition, affix rendering, or
+inline/trailing error presentation.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` keeps public control APIs, keyed element
+  assembly, field layout, affix/error rendering, model/session routing, and delegates key-down
+  handling through `numeric_input_key_down_handler`.
+- `ecosystem/fret-ui-editor/src/controls/numeric_input/keyboard.rs` owns key-down replacement
+  delegation, Enter commit, Escape cancel, validation failure handling, invalid parse errors,
+  last-draft tracking, and outcome emission.
+- `tools/gate_imui_workstream_source.py` now tracks the root/keyboard split and rejects keyboard
+  commit/cancel policy from drifting back into the root control owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the keyboard owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor numeric_input --no-fail-fast`: pass (6 passed).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test
+  imui_surface_policy --no-fail-fast`: pass (3 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+
 ## Editor Color-Edit Tooltip Panel Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor color-edit tooltip panel rendering moved out of the tooltip overlay request
