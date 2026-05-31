@@ -1,0 +1,2 @@
+{"ts":"2026-05-31","kind":"classification","summary":"After headless golden extraction, radio_alignment.rs still held 48 non-Radio interaction regressions."}
+{"ts":"2026-05-31","kind":"decision","summary":"Move non-Radio tests into material3_interaction_regressions.rs and keep radio_alignment.rs limited to the three Radio-owned tests."}

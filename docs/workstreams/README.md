@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 528
+- Dedicated directories: 529
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2253,6 +2253,7 @@ Rule:
 - `docs/workstreams/material3-exposed-dropdown-diagnostics-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 ExposedDropdown filtering popup diagnostics, selector evidence, and recipe/foundation boundary classification; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-icon-toggle-button-expressive-v1/` — first 2026-02-18, latest 2026-02-18, 3 markdown docs
 - `docs/workstreams/material3-icon-button-diagnostics-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 IconButton centered-chrome diagnostics, stale navigation repair, and pressed-scene evidence; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-interaction-regression-harness-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor lane for moving non-Radio Material3 interaction regressions out of `radio_alignment.rs` into a purpose-owned test binary; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-layout-direction-provider-bridge-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for bridging resolved Material3 layout direction into the core `LayoutDirection` provider and proving Tabs RTL physical order; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-field-logical-insets-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for Material3 TextField/Select floating label and supporting text logical inline insets with RTL geometry proof; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-foundation-deepening-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor lane for deepening Material3 context, field-family chrome, and token matrix interfaces; includes `WORKSTREAM.json`)
