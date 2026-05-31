@@ -1755,6 +1755,7 @@
     "ecosystem/fret-docking/src/dock/declarative/interaction.rs",
     "ecosystem/fret-docking/src/dock/declarative/registry.rs",
     "ecosystem/fret-docking/src/dock/declarative/tab_metrics.rs",
+    "ecosystem/fret-docking/src/dock/declarative/tear_off.rs",
     "ecosystem/fret-imui/src/tests/floating/mod.rs",
     "ecosystem/fret-imui/src/tests/popup_hover/mod.rs",
     "ecosystem/fret-imui/src/tests/composition/mod.rs",

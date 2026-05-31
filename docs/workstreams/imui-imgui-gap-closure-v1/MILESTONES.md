@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 docking declarative tear-off owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, drag/drop event
+routing, layout/render wiring, and public entrypoint functions while importing the private tear-off
+owner helpers. The private `dock/declarative/tear_off.rs` owner contains panel/tab tear-off
+eligibility checks, stable out-of-bounds frame tracking, retry clearing, request-float effect
+construction, default floating rect sizing, and floating bounds clamping. Public docking APIs and
+managed dock-space entrypoints remain unchanged, and `tools/gate_imui_workstream_source.py` freezes
+the split.
+
 2026-06-01 docking declarative frame owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, input routing,
 layout/render event wiring, and public entrypoint functions while importing the private frame

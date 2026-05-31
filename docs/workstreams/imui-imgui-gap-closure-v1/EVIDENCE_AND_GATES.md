@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Docking Declarative Tear-Off Owner-Split Evidence - 2026-06-01
+
+Claim verified: docking declarative tear-off and floating-rect policy moved out of the large
+declarative dock-space orchestration owner into a private `declarative/tear_off.rs` owner without
+changing panel/tab tear-off eligibility, stable out-of-bounds frame tracking, retry clearing,
+request-float effects, default floating rect sizing, floating bounds clamping, or public docking
+APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs` keeps dock-space orchestration, drag/drop event
+  routing, layout/render wiring, and public entrypoint functions while importing the private
+  tear-off owner helpers.
+- `ecosystem/fret-docking/src/dock/declarative/tear_off.rs` owns tear-off eligibility checks,
+  out-of-bounds tracking, retry state, request-float effect construction, default floating rect
+  projection, and floating rect bounds clamping.
+- `tools/gate_imui_workstream_source.py` now tracks the declarative/tear-off split and rejects
+  tear-off policy from drifting back into the declarative orchestration owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the tear-off owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking --no-fail-fast`: pass (90 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Declarative Frame Owner-Split Evidence - 2026-06-01
 
 Claim verified: docking declarative frame output aggregation moved out of the large declarative

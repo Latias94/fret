@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split docking declarative tear-off and floating-rect policy into a private child owner
+      without changing panel/tab tear-off eligibility, stable out-of-bounds frame tracking, retry
+      clearing, request-float effects, default floating rect sizing, floating bounds clamping, or
+      public docking APIs.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, drag/drop event routing,
+      layout/render wiring, and public entrypoint functions. `dock/declarative/tear_off.rs` owns
+      tear-off eligibility checks, out-of-bounds tracking, retry state, request-float effect
+      construction, default floating rect projection, and floating bounds clamping. The source gate
+      prevents tear-off policy from drifting back into the declarative orchestration owner.
 - [x] Split docking declarative frame output aggregation into a private child owner without
       changing managed dock-space entrypoints, panel layout, tab/floating paint input reuse, drop
       hint projection, viewport surface input storage, split handle paint input storage, or public
