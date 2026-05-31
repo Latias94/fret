@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Proof Helper Owner-Split Evidence - 2026-05-31
+
+Claim verified: `imui_editor_proof_demo` demo-local proof/readout helpers moved to
+`proof_helpers.rs` without changing the render workflow, docking/window glue, collection module,
+or public IMUI/editor APIs.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo.rs` now keeps the workflow rendering,
+  docking/window glue, model factories, and proof-surface orchestration while importing
+  `proof_helpers::*`.
+- `apps/fret-examples/src/imui_editor_proof_demo/proof_helpers.rs` owns readout/text-role helpers,
+  numeric presentation adapters, outcome labels, drag preview card composition, outliner helper
+  structs/readouts, and theme diagnostic projection.
+- `tools/gate_imui_workstream_source.py` source-checks the split so proof helper bodies stay in
+  the demo-local owner instead of drifting back into the top-level proof route.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new helper-owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-examples`: pass.
+- `cargo check -p fret-demo --bin imui_editor_proof_demo`: pass; existing warnings remain in
+  `fret-plot` and `fret-chart`.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo fmt -p fret-examples -- --check`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
+Broader gate not recorded as pass:
+
+- `cargo nextest run -p fret-demo --bin imui_editor_proof_demo --no-fail-fast` and the narrower
+  `cargo nextest run -p fret-demo --bin imui_editor_proof_demo edit_session_outcome_labels
+  --no-fail-fast` were both attempted, but timed out during the test build/no-run phase before
+  producing test results. The authoritative executable proof for this slice is the focused
+  `cargo check` plus source/format gates above.
+
 ## SameLine Status-Drift Refresh Evidence - 2026-05-31
 
 Claim verified: active workstream status docs no longer describe SameLine as wholly candidate-only

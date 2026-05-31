@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 editor proof helper owner-split result:
+`apps/fret-examples/src/imui_editor_proof_demo.rs` now keeps workflow rendering, docking/window
+glue, model factories, and proof orchestration, while
+`apps/fret-examples/src/imui_editor_proof_demo/proof_helpers.rs` owns demo-local proof text-role
+helpers, numeric presentation adapters, outcome labels, drag preview card composition, outliner
+helper structs/readouts, and theme diagnostic projection. Public IMUI/editor APIs and the
+collection module remain unchanged.
+
 2026-05-31 SameLine status-drift refresh result:
 `P0_CURRENT_SOURCE_AUDIT_2026-05-06.md`, the long-form TODO readiness notes, and historical
 milestone summary now agree that SameLine is a narrow proven teaching-surface helper. Remaining

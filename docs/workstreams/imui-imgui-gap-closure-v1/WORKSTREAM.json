@@ -1380,6 +1380,7 @@
     "apps/fret-examples/tests/imui_editor_collection_zoom_surface.rs",
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/proof_helpers.rs",
     "apps/fret-examples/src/workspace_shell_demo.rs",
     "apps/fret-examples/src/editor_notes_demo.rs",
     "apps/fret-examples/src/docking_demo.rs",

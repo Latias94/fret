@@ -58,6 +58,13 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split `imui_editor_proof_demo` proof/readout helpers into a demo-local owner without changing
+      render workflow, docking/window glue, collection module ownership, model factories, or public
+      IMUI/editor APIs.
+      Result: `apps/fret-examples/src/imui_editor_proof_demo/proof_helpers.rs` owns proof text-role
+      helpers, numeric presentation adapters, outcome labels, drag preview card composition,
+      outliner helper structs/readouts, and theme diagnostic projection. The top-level proof route
+      keeps workflow rendering and imports `proof_helpers::*`.
 - [x] Split IMUI menu-item behavior activation and response population into private owners without
       changing active-trigger installation, popup/menubar keyboard installation, close-on-activate,
       clicked transient delivery, command dispatch source recording, lifecycle edges, or public
