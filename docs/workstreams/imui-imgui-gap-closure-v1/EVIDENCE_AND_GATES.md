@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Floating-Window Resize Handle-Mutation Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI floating-window resize handle mutation split into private edge and corner
+owners without changing left/right/top/bottom edge resizing, corner resizing, clamp usage, or
+origin preservation.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply/handles.rs` now
+  dispatches by handle family only.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply/handles/edge.rs` owns
+  left/right/top/bottom edge-handle mutation.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply/handles/corner.rs` owns
+  top-left/top-right/bottom-left/bottom-right corner-handle mutation.
+- `tools/gate_imui_workstream_source.py` now checks the handle dispatcher plus edge/corner owners
+  and rejects direct size/position mutation from drifting back into `handles.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new edge/corner mutation
+  owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke --test imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui floating::window_options::floating_window_resizes_when_dragging_corner_handle floating::window_options::floating_window_resizes_from_left_updates_origin_and_width --no-fail-fast`: pass.
+
 ## IMUI Floating-Window Resize Drag-Application Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI floating-window resize drag application split into private bounds and

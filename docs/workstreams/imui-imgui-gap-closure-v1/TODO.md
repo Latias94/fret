@@ -110,6 +110,12 @@ Last updated: 2026-05-31
       Result: `floating_window_resize/state/drag_apply.rs` now owns delta calculation and
       `last_resize_position` updates only. `drag_apply/bounds.rs` owns min/max clamps, while
       `drag_apply/handles.rs` owns handle-specific size/position mutation.
+- [x] Split IMUI floating-window resize handle mutation into private edge and corner owners without
+      changing left/right/top/bottom edge resizing, corner resizing, clamp usage, or origin
+      preservation.
+      Result: `drag_apply/handles.rs` now dispatches by handle family only.
+      `handles/edge.rs` owns edge-handle mutation, while `handles/corner.rs` owns corner-handle
+      mutation.
 - [x] Split IMUI debug-draw path-builder regression coverage into private sub-owners without
       changing path stroke/fill command recording, rectangle/rounded-rectangle sampling, Bezier
       defaults, circular/elliptical arc defaults, or invalid finished-path cleanup.

@@ -956,6 +956,8 @@
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply/bounds.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply/handles.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply/handles/corner.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply/handles/edge.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/initial.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/output.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs",
