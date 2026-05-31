@@ -1,0 +1,2 @@
+{"ts":"2026-05-31T00:00:00+08:00","kind":"audit","message":"Audited TextField, Autocomplete, ExposedDropdown, and Select against local Compose Material3 and Base UI references. Editable combobox and non-editable Select trigger policy should remain separate."}
+{"ts":"2026-05-31T00:00:00+08:00","kind":"implementation","message":"Landed shared field icon-slot logical padding plus TextField logical icon insets, and added Select trigger leading-icon automation coverage with RTL proof."}

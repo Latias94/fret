@@ -48,6 +48,7 @@ use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
+use crate::foundation::logical_edges::horizontal_logical_edges;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
@@ -69,6 +70,7 @@ struct SelectPartTestIds {
     active_indicator: Arc<str>,
     label: Arc<str>,
     supporting_text: Arc<str>,
+    leading_icon: Arc<str>,
     trailing_icon: Arc<str>,
 }
 
@@ -79,6 +81,7 @@ impl SelectPartTestIds {
             active_indicator: part_test_id(base, "active-indicator"),
             label: part_test_id(base, "label"),
             supporting_text: part_test_id(base, "supporting-text"),
+            leading_icon: part_test_id(base, "leading-icon"),
             trailing_icon: part_test_id(base, "trailing-icon"),
         }
     }
@@ -735,6 +738,7 @@ fn select_trigger_element<H: UiHost>(
     let supporting_text_test_id = part_test_ids
         .as_ref()
         .map(|ids| ids.supporting_text.clone());
+    let leading_icon_test_id = part_test_ids.as_ref().map(|ids| ids.leading_icon.clone());
     let trailing_icon_test_id = part_test_ids.as_ref().map(|ids| ids.trailing_icon.clone());
     let active_indicator_test_id = part_test_ids
         .as_ref()
@@ -1105,7 +1109,7 @@ fn select_trigger_element<H: UiHost>(
                     props.layout.flex.basis = Length::Px(Px(0.0));
                     props.wrap = TextWrap::None;
                     props.overflow = TextOverflow::Ellipsis;
-                    cx.text_props(props)
+                    cx.text_props(props).with_layout_direction(layout_direction)
                 };
 
                 let icon_el = chevron_down_icon_rotated(
@@ -1128,12 +1132,13 @@ fn select_trigger_element<H: UiHost>(
                 row.direction = Axis::Horizontal;
                 row.justify = MainAlign::SpaceBetween;
                 row.align = CrossAlign::Center;
-                row.padding = Edges {
-                    left: if has_leading_icon { Px(12.0) } else { Px(16.0) },
-                    right: Px(12.0),
-                    top: Px(0.0),
-                    bottom: Px(0.0),
-                }
+                row.padding = horizontal_logical_edges(
+                    layout_direction,
+                    if has_leading_icon { Px(12.0) } else { Px(16.0) },
+                    Px(12.0),
+                    Px(0.0),
+                    Px(0.0),
+                )
                 .into();
 
                 let mut chrome = ContainerProps::default();
@@ -1165,13 +1170,18 @@ fn select_trigger_element<H: UiHost>(
                     let mut children = vec![overlay];
 
                     let leading_icon_el = leading_icon.as_ref().map(|icon| {
-                        select_trigger_icon(
+                        let icon_el = select_trigger_icon(
                             cx,
                             icon,
                             leading_icon_color,
                             leading_icon_opacity,
                             leading_icon_size,
-                        )
+                        );
+                        if let Some(test_id) = leading_icon_test_id.clone() {
+                            icon_el.test_id(test_id)
+                        } else {
+                            icon_el
+                        }
                     });
 
                     let left_slot = cx.container(
@@ -1197,18 +1207,24 @@ fn select_trigger_element<H: UiHost>(
                             left.align = CrossAlign::Center;
                             left.gap = if has_leading_icon { Px(16.0) } else { Px(0.0) }.into();
 
-                            vec![cx.flex(left, move |_cx| {
-                                let mut out = Vec::new();
-                                if let Some(icon) = leading_icon_el {
-                                    out.push(icon);
-                                }
-                                out.push(text_el);
-                                out
-                            })]
+                            vec![
+                                cx.flex(left, move |_cx| {
+                                    let mut out = Vec::new();
+                                    if let Some(icon) = leading_icon_el {
+                                        out.push(icon);
+                                    }
+                                    out.push(text_el);
+                                    out
+                                })
+                                .with_layout_direction(layout_direction),
+                            ]
                         },
                     );
 
-                    children.push(cx.flex(row, move |_cx| vec![left_slot, icon_el]));
+                    children.push(
+                        cx.flex(row, move |_cx| vec![left_slot, icon_el])
+                            .with_layout_direction(layout_direction),
+                    );
 
                     if let Some(label) = label.as_ref() {
                         children.push(cx.provide(layout_direction, |cx| {

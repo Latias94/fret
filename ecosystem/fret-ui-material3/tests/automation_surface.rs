@@ -24,7 +24,7 @@ use support::events::{pointer_down, pointer_move, pointer_up};
 use support::goldens::run_overlay_frame;
 use support::host::{FakeUiServices, TestHost};
 use support::layout::{semantics_node_id_by_test_id, with_padding};
-use support::theme::apply_material_theme;
+use support::theme::{apply_material_theme, apply_material_theme_rtl};
 
 fn live_test_id_exists(
     ui: &UiTree<TestHost>,
@@ -396,6 +396,7 @@ fn material3_select_exposes_stable_part_test_ids() {
                 let select = Select::new(selected_model)
                     .variant(SelectVariant::Filled)
                     .a11y_label("Material select")
+                    .leading_icon(ids::ui::SEARCH)
                     .label("Choice")
                     .placeholder("Pick one")
                     .items(items)
@@ -420,6 +421,7 @@ fn material3_select_exposes_stable_part_test_ids() {
         "m3-select.chrome",
         "m3-select.active-indicator",
         "m3-select.label",
+        "m3-select.leading-icon",
         "m3-select.trailing-icon",
     ] {
         assert!(
@@ -490,6 +492,63 @@ fn material3_select_exposes_stable_part_test_ids() {
         "expected selected Select item chrome width to account for both horizontal insets; listbox_width={}, selected_width={}",
         listbox_bounds.size.width.0,
         selected_bounds.size.width.0
+    );
+}
+
+#[test]
+fn material3_select_rtl_trigger_icons_use_logical_inline_edges() {
+    use fret_icons::ids;
+    use fret_ui_material3::{Select, SelectItem, SelectVariant};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(260.0)),
+    );
+
+    let selected = app.models_mut().insert(Some(Arc::<str>::from("alpha")));
+    let items: Arc<[SelectItem]> = vec![SelectItem::new("alpha", "Alpha")].into();
+    let selected_model = selected.clone();
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let items = items.clone();
+            let selected_model = selected_model.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let select = Select::new(selected_model)
+                    .variant(SelectVariant::Outlined)
+                    .a11y_label("Material select")
+                    .leading_icon(ids::ui::SEARCH)
+                    .items(items)
+                    .test_id("m3-select-rtl")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(32.0), select)]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let leading = live_test_id_layout_bounds(&ui, &app, window, "m3-select-rtl.leading-icon");
+    let trailing = live_test_id_layout_bounds(&ui, &app, window, "m3-select-rtl.trailing-icon");
+
+    assert!(
+        rect_center_x(leading) > rect_center_x(trailing),
+        "expected RTL Select leading icon to sit on the visual right of trailing icon; leading={leading:?}, trailing={trailing:?}"
     );
 }
 

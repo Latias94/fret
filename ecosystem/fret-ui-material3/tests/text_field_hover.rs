@@ -945,6 +945,72 @@ fn text_field_rtl_label_and_supporting_text_use_logical_inline_insets() {
 }
 
 #[test]
+fn text_field_rtl_icon_slots_use_logical_inline_edges() {
+    use fret_icons::ids;
+
+    for (variant, label) in [
+        (fret_ui_material3::TextFieldVariant::Outlined, "outlined"),
+        (fret_ui_material3::TextFieldVariant::Filled, "filled"),
+    ] {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+        let value = app.models_mut().insert(String::new());
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "root",
+            |cx| {
+                let field = fret_ui_material3::TextField::new(value.clone())
+                    .variant(variant)
+                    .label("Email")
+                    .leading_icon(ids::ui::SEARCH)
+                    .trailing_icon(ids::ui::CHEVRON_DOWN)
+                    .test_id("tf")
+                    .into_element(cx);
+
+                let mut fixed = ContainerProps::default();
+                fixed.layout.size.width = Length::Px(Px(240.0));
+                fixed.layout.size.height = Length::Px(Px(56.0));
+                vec![cx.container(fixed, move |_cx| vec![field])]
+            },
+        );
+        ui.set_root(root);
+        layout_and_paint(&mut ui, &mut app, &mut services, bounds);
+
+        let chrome = visual_bounds_by_test_id(&ui, "tf.chrome");
+        let leading = visual_bounds_by_test_id(&ui, "tf.leading-icon");
+        let trailing = visual_bounds_by_test_id(&ui, "tf.trailing-icon");
+
+        let (leading_left, leading_right) = horizontal_gaps(leading, chrome);
+        assert!(
+            leading_right < leading_left - 8.0,
+            "expected {label} RTL leading icon on inline-start/right edge; left={leading_left}, right={leading_right}"
+        );
+
+        let (trailing_left, trailing_right) = horizontal_gaps(trailing, chrome);
+        assert!(
+            trailing_left < trailing_right - 8.0,
+            "expected {label} RTL trailing icon on inline-end/left edge; left={trailing_left}, right={trailing_right}"
+        );
+    }
+}
+
+#[test]
 fn text_field_floating_label_geometry_tracks_idle_focus_and_populated_states() {
     for (variant, label) in [
         (fret_ui_material3::TextFieldVariant::Outlined, "outlined"),

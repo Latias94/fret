@@ -33,7 +33,7 @@ use crate::foundation::context::{resolved_layout_direction, theme_default_layout
 use crate::foundation::field::{
     MaterialFieldFloatingLabelProps, MaterialFieldSupportingTextProps, MaterialFieldVariant,
     material_field_active_indicator_layer, material_field_floating_label,
-    material_field_supporting_text, material_field_text_start_inset_x,
+    material_field_icon_adjusted_padding, material_field_supporting_text,
 };
 use crate::foundation::field_motion::{FieldMotionTargets, field_input_phase, field_motion_frame};
 use crate::foundation::floating_label;
@@ -42,6 +42,7 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interactive_size::minimum_interactive_size;
+use crate::foundation::logical_edges::{set_inset_inline_end, set_inset_inline_start};
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::test_id::part_test_id;
 use crate::tokens::autocomplete as autocomplete_tokens;
@@ -813,22 +814,13 @@ impl TextField {
                                         )
                                     };
                                     leading_icon_content_size = next_leading_icon_content_size;
-                                    if leading_icon_hit_width.0 > 0.0 {
-                                        chrome.padding.left = Px(chrome.padding.left.0.max(
-                                            material_field_text_start_inset_x(
-                                                leading_icon_hit_width,
-                                                next_leading_icon_content_size,
-                                            )
-                                            .0,
-                                        ));
-                                    }
-                                    if trailing_icon_hit_width.0 > 0.0 {
-                                        chrome.padding.right = Px(chrome
-                                            .padding
-                                            .right
-                                            .0
-                                            .max(trailing_icon_hit_width.0));
-                                    }
+                                    chrome.padding = material_field_icon_adjusted_padding(
+                                        chrome.padding,
+                                        layout_direction,
+                                        leading_icon_hit_width,
+                                        next_leading_icon_content_size,
+                                        trailing_icon_hit_width,
+                                    );
 
                                     let expanded_for_float = expanded.unwrap_or(false);
                                     let should_float = focused || expanded_for_float || populated;
@@ -1031,22 +1023,13 @@ impl TextField {
                                         )
                                     };
                                     leading_icon_content_size = next_leading_icon_content_size;
-                                    if leading_icon_hit_width.0 > 0.0 {
-                                        chrome.padding.left = Px(chrome.padding.left.0.max(
-                                            material_field_text_start_inset_x(
-                                                leading_icon_hit_width,
-                                                next_leading_icon_content_size,
-                                            )
-                                            .0,
-                                        ));
-                                    }
-                                    if trailing_icon_hit_width.0 > 0.0 {
-                                        chrome.padding.right = Px(chrome
-                                            .padding
-                                            .right
-                                            .0
-                                            .max(trailing_icon_hit_width.0));
-                                    }
+                                    chrome.padding = material_field_icon_adjusted_padding(
+                                        chrome.padding,
+                                        layout_direction,
+                                        leading_icon_hit_width,
+                                        next_leading_icon_content_size,
+                                        trailing_icon_hit_width,
+                                    );
 
                                     let expanded_for_float = expanded.unwrap_or(false);
                                     let should_float = focused || expanded_for_float || populated;
@@ -1222,8 +1205,8 @@ impl TextField {
                                 let mut layout = fret_ui::element::LayoutStyle::default();
                                 layout.position = fret_ui::element::PositionStyle::Absolute;
                                 layout.inset.top = Some(Px(0.0)).into();
-                                layout.inset.left = Some(Px(0.0)).into();
                                 layout.inset.bottom = Some(Px(0.0)).into();
+                                set_inset_inline_start(&mut layout, layout_direction, Px(0.0));
                                 layout.size.width = Length::Px(hit_width);
                                 layout.size.height = Length::Fill;
 
@@ -1378,8 +1361,8 @@ impl TextField {
                                 let mut layout = fret_ui::element::LayoutStyle::default();
                                 layout.position = fret_ui::element::PositionStyle::Absolute;
                                 layout.inset.top = Some(Px(0.0)).into();
-                                layout.inset.right = Some(Px(0.0)).into();
                                 layout.inset.bottom = Some(Px(0.0)).into();
+                                set_inset_inline_end(&mut layout, layout_direction, Px(0.0));
                                 layout.size.width = Length::Px(hit_width);
                                 layout.size.height = Length::Fill;
 

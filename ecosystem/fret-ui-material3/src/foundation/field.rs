@@ -94,6 +94,39 @@ pub(crate) fn material_field_text_start_inset_x(default: Px, leading_icon_size: 
         .unwrap_or(default)
 }
 
+pub(crate) fn material_field_icon_adjusted_padding(
+    mut padding: Edges,
+    layout_direction: LayoutDirection,
+    leading_hit_width: Px,
+    leading_icon_size: Option<Px>,
+    trailing_hit_width: Px,
+) -> Edges {
+    let leading_padding = (leading_hit_width.0 > 0.0)
+        .then(|| material_field_text_start_inset_x(leading_hit_width, leading_icon_size));
+    let trailing_padding = (trailing_hit_width.0 > 0.0).then_some(trailing_hit_width);
+
+    match layout_direction {
+        LayoutDirection::Ltr => {
+            if let Some(value) = leading_padding {
+                padding.left = Px(padding.left.0.max(value.0));
+            }
+            if let Some(value) = trailing_padding {
+                padding.right = Px(padding.right.0.max(value.0));
+            }
+        }
+        LayoutDirection::Rtl => {
+            if let Some(value) = leading_padding {
+                padding.right = Px(padding.right.0.max(value.0));
+            }
+            if let Some(value) = trailing_padding {
+                padding.left = Px(padding.left.0.max(value.0));
+            }
+        }
+    }
+
+    padding
+}
+
 pub(crate) fn material_field_floating_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     props: MaterialFieldFloatingLabelProps,
@@ -226,4 +259,39 @@ pub(crate) fn material_field_supporting_text<H: UiHost>(
         supporting_text = supporting_text.test_id(test_id);
     }
     supporting_text
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn icon_adjusted_padding_maps_slots_to_logical_sides() {
+        let base = Edges {
+            top: Px(18.0),
+            right: Px(16.0),
+            bottom: Px(14.0),
+            left: Px(16.0),
+        };
+
+        let ltr = material_field_icon_adjusted_padding(
+            base,
+            LayoutDirection::Ltr,
+            Px(48.0),
+            Some(Px(24.0)),
+            Px(48.0),
+        );
+        assert_eq!(ltr.left, Px(52.0));
+        assert_eq!(ltr.right, Px(48.0));
+
+        let rtl = material_field_icon_adjusted_padding(
+            base,
+            LayoutDirection::Rtl,
+            Px(48.0),
+            Some(Px(24.0)),
+            Px(48.0),
+        );
+        assert_eq!(rtl.left, Px(48.0));
+        assert_eq!(rtl.right, Px(52.0));
+    }
 }
