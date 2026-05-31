@@ -114,7 +114,7 @@ wired into the crate and therefore do not represent the current public surface.
 | Menu | `ecosystem/fret-ui-material3/src/menu.rs` | Yes (`MenuStyle`) | Yes | Yes | Container, item width, section-label/item label/icon/supporting/trailing colors, state-layer, and text-style overrides; overlay/roving/dismiss remain policy-only. |
 | Dialog | `ecosystem/fret-ui-material3/src/dialog.rs` | Yes (`DialogStyle`) | Yes | Yes | Minimal scrim + surface + headline/supporting color overrides; focus/motion/dismiss remain policy-only. |
 | Tooltip | `ecosystem/fret-ui-material3/src/tooltip.rs` | No | N/A | No | Often provider-driven; may stay policy-only in v1. |
-| Snackbar | `ecosystem/fret-ui-material3/src/snackbar.rs` | No | N/A | No | Typically a higher-level pattern; likely v2. |
+| Snackbar | `ecosystem/fret-ui-material3/src/snackbar.rs` | Yes (`SnackbarStyle`) | Yes | Yes | Host-level style surface covers container/supporting/action/close colors, shape, padding, and single/two-line heights; rendering is applied through `fret-ui-kit`'s toast-layer skin. |
 
 ## Implementation plan
 

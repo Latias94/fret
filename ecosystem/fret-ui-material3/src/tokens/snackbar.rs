@@ -190,7 +190,9 @@ pub(crate) fn action_button_style(theme: &Theme) -> ToastButtonStyle {
     ToastButtonStyle {
         label_style_key: Some("md.comp.snackbar.action.label-text".to_string()),
         label_color_key: Some("md.comp.snackbar.action.label-text.color".to_string()),
+        label_color: None,
         state_layer_color_key: Some("md.comp.snackbar.action.hover.state-layer.color".to_string()),
+        state_layer_color: None,
         hover_state_layer_opacity_key: Some(
             "md.comp.snackbar.action.hover.state-layer.opacity".to_string(),
         ),
@@ -407,7 +409,9 @@ pub(crate) fn close_icon_button_style(theme: &Theme) -> ToastIconButtonStyle {
 
     ToastIconButtonStyle {
         icon_color_key: Some("md.comp.snackbar.icon.color".to_string()),
+        icon_color: None,
         state_layer_color_key: Some("md.comp.snackbar.icon.hover.state-layer.color".to_string()),
+        state_layer_color: None,
         hover_state_layer_opacity_key: Some(
             "md.comp.snackbar.icon.hover.state-layer.opacity".to_string(),
         ),

@@ -70,6 +70,24 @@ Non-goals:
   - `docs/workstreams/material3/material3-shadcn-level-completeness-v1.md`
     tracks API/parts/semantics/behavior/tokens/motion/gallery status and next priorities.
 
+### Progress notes (2026-06-01)
+
+- Snackbar shadcn-level style/API batch landed across `fret-ui-material3` and `fret-ui-kit`:
+  - API: `SnackbarStyle` plus `SnackbarHost::style(...)` using the ADR 0220 override shape.
+  - Style slots: container background, supporting text color, action label/state-layer color,
+    close icon/state-layer color, container radius/padding, and single/two-line min heights.
+  - Foundation: the shared toast renderer now consumes `ToastLayerStyle` direct colors, text
+    styles, border width/color, and action/cancel/close button styles; shadcn/Sonner defaults keep
+    their old hardcoded path when no style fields are supplied.
+  - Evidence:
+    - `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
+    - `ecosystem/fret-ui-kit/src/window_overlays/tests/toast.rs`
+      (`toast_layer_style_direct_colors_are_painted`)
+    - `ecosystem/fret-ui-material3/src/snackbar.rs`
+    - `ecosystem/fret-ui-material3/tests/snackbar_state.rs`
+      (`snackbar_style_overrides_paint_and_layout_contract`)
+    - `apps/fret-ui-gallery/src/ui/snippets/material3/snackbar.rs`
+
 ### Infrastructure notes (2026-02-06)
 
 Recent Material3 and shadcn alignment work uncovered a few mechanism gaps that were worth fixing

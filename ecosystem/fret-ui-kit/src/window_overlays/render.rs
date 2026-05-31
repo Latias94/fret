@@ -142,6 +142,114 @@ fn sonner_toast_description_style() -> TextStyle {
     )
 }
 
+fn resolve_toast_color_key(theme: &fret_ui::Theme, key: Option<&str>, fallback: Color) -> Color {
+    key.and_then(|key| theme.color_by_key(key))
+        .unwrap_or(fallback)
+}
+
+fn resolve_toast_text_style(
+    theme: &fret_ui::Theme,
+    style: &super::requests::ToastTextStyle,
+    fallback: TextStyle,
+) -> TextStyle {
+    style
+        .style_key
+        .as_deref()
+        .and_then(|key| theme.text_style_by_key(key))
+        .unwrap_or(fallback)
+}
+
+fn resolve_toast_text_color(
+    theme: &fret_ui::Theme,
+    style: &super::requests::ToastTextStyle,
+    fallback: Color,
+) -> Color {
+    style
+        .color
+        .unwrap_or_else(|| resolve_toast_color_key(theme, style.color_key.as_deref(), fallback))
+}
+
+fn resolve_toast_number_key(theme: &fret_ui::Theme, key: Option<&str>, fallback: f32) -> f32 {
+    key.and_then(|key| theme.number_by_key(key))
+        .unwrap_or(fallback)
+}
+
+fn toast_button_state_layer(
+    theme: &fret_ui::Theme,
+    style: &super::requests::ToastButtonStyle,
+    st: fret_ui::element::PressableState,
+    fallback_color: Color,
+) -> Option<Color> {
+    let (key, fallback_opacity) = if st.pressed {
+        (
+            style.pressed_state_layer_opacity_key.as_deref(),
+            style.pressed_state_layer_opacity,
+        )
+    } else if st.focused {
+        (
+            style.focus_state_layer_opacity_key.as_deref(),
+            style.focus_state_layer_opacity,
+        )
+    } else if st.hovered {
+        (
+            style.hover_state_layer_opacity_key.as_deref(),
+            style.hover_state_layer_opacity,
+        )
+    } else {
+        return None;
+    };
+
+    let color = style.state_layer_color.unwrap_or_else(|| {
+        resolve_toast_color_key(
+            theme,
+            style.state_layer_color_key.as_deref(),
+            fallback_color,
+        )
+    });
+    Some(alpha_mul(
+        color,
+        resolve_toast_number_key(theme, key, fallback_opacity),
+    ))
+}
+
+fn toast_icon_button_state_layer(
+    theme: &fret_ui::Theme,
+    style: &super::requests::ToastIconButtonStyle,
+    st: fret_ui::element::PressableState,
+    fallback_color: Color,
+) -> Option<Color> {
+    let (key, fallback_opacity) = if st.pressed {
+        (
+            style.pressed_state_layer_opacity_key.as_deref(),
+            style.pressed_state_layer_opacity,
+        )
+    } else if st.focused {
+        (
+            style.focus_state_layer_opacity_key.as_deref(),
+            style.focus_state_layer_opacity,
+        )
+    } else if st.hovered {
+        (
+            style.hover_state_layer_opacity_key.as_deref(),
+            style.hover_state_layer_opacity,
+        )
+    } else {
+        return None;
+    };
+
+    let color = style.state_layer_color.unwrap_or_else(|| {
+        resolve_toast_color_key(
+            theme,
+            style.state_layer_color_key.as_deref(),
+            fallback_color,
+        )
+    });
+    Some(alpha_mul(
+        color,
+        resolve_toast_number_key(theme, key, fallback_opacity),
+    ))
+}
+
 fn toast_description_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: Arc<str>,
@@ -2357,9 +2465,23 @@ pub fn render<H: UiHost + 'static>(
                 let toast_open_ticks = toast_style.open_ticks;
                 let toast_close_ticks = toast_style.close_ticks;
                 let toast_slide_distance = toast_style.slide_distance;
+                let toast_easing = toast_style.easing;
                 let toast_scale_from = toast_style.scale_from.map(|scale| scale.clamp(0.0, 1.0));
                 let toast_single_line_min_height = toast_style.single_line_min_height;
                 let toast_two_line_min_height = toast_style.two_line_min_height;
+                let toast_palette = toast_style.palette.clone();
+                let toast_background_color = toast_style.background_color;
+                let toast_foreground_color = toast_style.foreground_color;
+                let toast_border_color_key = toast_style.border_color_key.clone();
+                let toast_border_color = toast_style.border_color;
+                let toast_border_width = toast_style.border_width;
+                let toast_description_color_key = toast_style.description_color_key.clone();
+                let toast_description_color = toast_style.description_color;
+                let toast_title_style = toast_style.title.clone();
+                let toast_description_style = toast_style.description.clone();
+                let toast_action_style = toast_style.action.clone();
+                let toast_cancel_style = toast_style.cancel.clone();
+                let toast_close_style = toast_style.close.clone();
 
                 let toaster_state = cx
                     .app
@@ -2591,6 +2713,15 @@ pub fn render<H: UiHost + 'static>(
                                     let close_button_aria_label = close_button_aria_label.clone();
                                     let icons = toast_icons.clone();
                                     let toast_width_for_stack = toast_width;
+                                    let stack_toast_palette = toast_palette.clone();
+                                    let stack_border_color_key = toast_border_color_key.clone();
+                                    let stack_description_color_key =
+                                        toast_description_color_key.clone();
+                                    let stack_title_style = toast_title_style.clone();
+                                    let stack_description_style = toast_description_style.clone();
+                                    let stack_action_style = toast_action_style.clone();
+                                    let stack_cancel_style = toast_cancel_style.clone();
+                                    let stack_close_style = toast_close_style.clone();
                                     stacks.push(cx.stack_props(
                                         fret_ui::element::StackProps {
                                             layout: wrapper_layout,
@@ -2620,7 +2751,7 @@ pub fn render<H: UiHost + 'static>(
                                             let stack_shift_each_delay =
                                                 crate::declarative::toast_motion::shadcn_toast_stack_shift_stagger_opt(cx)
                                                     .unwrap_or(crate::declarative::toast_motion::DEFAULT_SHADCN_TOAST_STACK_SHIFT_STAGGER);
-                                            let stack_shift_bezier = toast_style.easing.unwrap_or_else(|| {
+                                            let stack_shift_bezier = toast_easing.unwrap_or_else(|| {
                                                 crate::declarative::toast_motion::shadcn_toast_stack_shift_ease_bezier(cx)
                                             });
 
@@ -2677,7 +2808,7 @@ pub fn render<H: UiHost + 'static>(
                                                 let (bg, fg, border_color, fg_muted, button_bg): (
                                                     Color,
                                                     Color,
-                                                    Color,
+                                                    Option<Color>,
                                                     Color,
                                                     Color,
                                                 ) = {
@@ -2697,75 +2828,71 @@ pub fn render<H: UiHost + 'static>(
                                                                 )
                                                             });
 
-                                                        let (mut bg, mut fg) = if rich_colors {
-                                                            match toast.variant {
-                                                                ToastVariant::Default => {
-                                                                    (bg_default, fg_default)
-                                                                }
-                                                                ToastVariant::Destructive
-                                                                | ToastVariant::Error => (
-                                                                    theme
-                                                                        .color_by_key("destructive")
-                                                                        .unwrap_or(bg_default),
-                                                                    theme
-                                                                        .color_by_key(
-                                                                            "destructive-foreground",
-                                                                        )
-                                                                        .unwrap_or(fg_default),
-                                                                ),
-                                                                ToastVariant::Success => (
-                                                                    theme
-                                                                        .color_by_key("success")
-                                                                        .unwrap_or(bg_default),
-                                                                    theme
-                                                                        .color_by_key(
-                                                                            "success-foreground",
-                                                                        )
-                                                                        .unwrap_or(fg_default),
-                                                                ),
-                                                                ToastVariant::Info => (
-                                                                    theme
-                                                                        .color_by_key("info")
-                                                                        .unwrap_or(bg_default),
-                                                                    theme
-                                                                        .color_by_key(
-                                                                            "info-foreground",
-                                                                        )
-                                                                        .unwrap_or(fg_default),
-                                                                ),
-                                                                ToastVariant::Warning => (
-                                                                    theme
-                                                                        .color_by_key("warning")
-                                                                        .unwrap_or(bg_default),
-                                                                    theme
-                                                                        .color_by_key(
-                                                                            "warning-foreground",
-                                                                        )
-                                                                        .unwrap_or(fg_default),
-                                                                ),
-                                                                ToastVariant::Loading => {
-                                                                    (bg_default, fg_default)
-                                                                }
-                                                            }
+                                                        let palette = if rich_colors {
+                                                            stack_toast_palette
+                                                                .for_variant(toast.variant)
                                                         } else {
-                                                            (bg_default, fg_default)
+                                                            &stack_toast_palette.default
                                                         };
+                                                        let mut bg = toast_background_color
+                                                            .unwrap_or_else(|| {
+                                                                theme
+                                                                    .color_by_key(&palette.bg)
+                                                                    .unwrap_or(bg_default)
+                                                            });
+                                                        let mut fg = toast_foreground_color
+                                                            .unwrap_or_else(|| {
+                                                                theme
+                                                                    .color_by_key(&palette.fg)
+                                                                    .unwrap_or(fg_default)
+                                                            });
 
                                                         if invert {
                                                             std::mem::swap(&mut bg, &mut fg);
                                                         }
 
-                                                        let border_color = theme
-                                                            .color_by_key("border")
+                                                        let border_color = toast_border_color
+                                                            .or_else(|| {
+                                                                stack_border_color_key
+                                                                    .as_deref()
+                                                                    .and_then(|key| {
+                                                                        theme
+                                                                            .color_by_key(key)
+                                                                            .or_else(|| {
+                                                                                (key == "border").then(|| {
+                                                                                    theme.color_token("border")
+                                                                                })
+                                                                            })
+                                                                    })
+                                                            })
+                                                            .filter(|_| toast_border_width.0 > 0.0);
+                                                        let fg_muted = toast_description_color
+                                                            .or(stack_description_style.color)
+                                                            .or_else(|| {
+                                                                stack_description_style
+                                                                    .color_key
+                                                                    .as_deref()
+                                                                    .and_then(|key| {
+                                                                        theme.color_by_key(key)
+                                                                    })
+                                                            })
+                                                            .or_else(|| {
+                                                                stack_description_color_key
+                                                                    .as_deref()
+                                                                    .and_then(|key| {
+                                                                        theme.color_by_key(key)
+                                                                    })
+                                                            })
                                                             .unwrap_or_else(|| {
-                                                                theme.color_token("border")
-                                                            });
-                                                        let fg_muted = theme
-                                                            .color_by_key("muted-foreground")
-                                                            .unwrap_or_else(|| {
-                                                                theme.color_token(
-                                                                    "muted-foreground",
-                                                                )
+                                                                theme
+                                                                    .color_by_key(
+                                                                        "muted-foreground",
+                                                                    )
+                                                                    .unwrap_or_else(|| {
+                                                                        theme.color_token(
+                                                                            "muted-foreground",
+                                                                        )
+                                                                    })
                                                             });
                                                         let button_bg = theme
                                                             .color_by_key("muted")
@@ -2781,6 +2908,12 @@ pub fn render<H: UiHost + 'static>(
                                                 let button_pad_y = Px(4.0);
                                                 let close_button_icon = icons.close_button.clone();
                                                 let icon_size = toast_icon_size;
+                                                let action_button_style =
+                                                    stack_action_style.clone();
+                                                let cancel_button_style =
+                                                    stack_cancel_style.clone();
+                                                let close_button_style =
+                                                    stack_close_style.clone();
 
                                                 let show_close_button = toast
                                                     .close_button
@@ -2791,6 +2924,8 @@ pub fn render<H: UiHost + 'static>(
                                                     && toast.variant != ToastVariant::Loading)
                                                 .then(|| {
                                                     let close_store = store.clone();
+                                                    let close_button_style =
+                                                        close_button_style.clone();
                                                     cx.pressable(
                                                         fret_ui::element::PressableProps {
                                                             layout: fret_ui::element::LayoutStyle::default(),
@@ -2828,17 +2963,62 @@ pub fn render<H: UiHost + 'static>(
                                                             } else {
                                                                 None
                                                             };
+                                                            let styled =
+                                                                close_button_style.icon_color_key.is_some()
+                                                                    || close_button_style
+                                                                        .icon_color
+                                                                        .is_some()
+                                                                    || close_button_style
+                                                                        .state_layer_color
+                                                                        .is_some();
+                                                            let (bg, icon_color, padding, radius) =
+                                                                if styled {
+                                                                    let theme =
+                                                                        fret_ui::Theme::global(
+                                                                            &*cx.app,
+                                                                        );
+                                                                    let icon_color =
+                                                                        close_button_style
+                                                                            .icon_color
+                                                                            .unwrap_or_else(
+                                                                                || {
+                                                                                    resolve_toast_color_key(
+                                                                                        theme,
+                                                                                        close_button_style.icon_color_key.as_deref(),
+                                                                                        fg,
+                                                                                    )
+                                                                                },
+                                                                            );
+                                                                    (
+                                                                        toast_icon_button_state_layer(
+                                                                            theme,
+                                                                            &close_button_style,
+                                                                            st,
+                                                                            icon_color,
+                                                                        ),
+                                                                        icon_color,
+                                                                        close_button_style
+                                                                            .padding,
+                                                                        close_button_style.radius,
+                                                                    )
+                                                                } else {
+                                                                    (
+                                                                        bg,
+                                                                        fg,
+                                                                        fret_core::Edges {
+                                                                            top: button_pad_y,
+                                                                            right: button_pad_x,
+                                                                            bottom: button_pad_y,
+                                                                            left: button_pad_x,
+                                                                        },
+                                                                        button_radius,
+                                                                    )
+                                                                };
 
                                                             vec![cx.container(
                                                                 fret_ui::element::ContainerProps {
                                                                     layout: fret_ui::element::LayoutStyle::default(),
-                                                                    padding: fret_core::Edges {
-                                                                        top: button_pad_y,
-                                                                        right: button_pad_x,
-                                                                        bottom: button_pad_y,
-                                                                        left: button_pad_x,
-                                                                    }
-                                                                    .into(),
+                                                                    padding: padding.into(),
                                                                     background: bg,
                                                                     background_paint: None,
                                                                     shadow: None,
@@ -2850,7 +3030,7 @@ pub fn render<H: UiHost + 'static>(
                                                                     focus_ring_always_paint: false,
                                                                     focus_border_color: None,
                                                                     focus_within: false,
-                                                                    corner_radii: fret_core::Corners::all(button_radius),
+                                                                    corner_radii: fret_core::Corners::all(radius),
                                                                     snap_to_device_pixels: false,
                                                                 },
                                                                 move |cx| {
@@ -2858,7 +3038,10 @@ pub fn render<H: UiHost + 'static>(
                                                                         close_button_icon.as_ref()
                                                                     {
                                                                         toast_icon_from_override(
-                                                                            cx, fg, icon_size, icon,
+                                                                            cx,
+                                                                            icon_color,
+                                                                            icon_size,
+                                                                            icon,
                                                                         )
                                                                         .into_iter()
                                                                         .collect()
@@ -2868,7 +3051,7 @@ pub fn render<H: UiHost + 'static>(
                                                                                 layout: fret_ui::element::LayoutStyle::default(),
                                                                                 text: "\u{00D7}".into(),
                                                                                 style: None,
-                                                                                color: Some(fg),
+                                                                                color: Some(icon_color),
                                                                                 wrap: fret_core::TextWrap::None,
                                                                                 overflow: fret_core::TextOverflow::Clip,
                                                                                 align: fret_core::TextAlign::Start,
@@ -2888,6 +3071,8 @@ pub fn render<H: UiHost + 'static>(
                                                     .flatten()
                                                     .map(|action| {
                                                         let action_store = store.clone();
+                                                        let action_button_style =
+                                                            action_button_style.clone();
                                                         let cmd = action.command;
                                                         let label = action.label;
                                                         let dismiss_toast = action.dismiss_toast;
@@ -2926,24 +3111,86 @@ pub fn render<H: UiHost + 'static>(
                                                                     ));
                                                                 }
 
-                                                                let button_bg = if st.pressed {
-                                                                    Some(alpha_mul(fg, 0.8))
-                                                                } else if st.hovered {
-                                                                    Some(alpha_mul(fg, 0.9))
+                                                                let styled =
+                                                                    action_button_style
+                                                                        .label_style_key
+                                                                        .is_some()
+                                                                        || action_button_style
+                                                                            .label_color_key
+                                                                            .is_some()
+                                                                        || action_button_style
+                                                                            .label_color
+                                                                            .is_some()
+                                                                        || action_button_style
+                                                                            .state_layer_color
+                                                                            .is_some();
+                                                                let (
+                                                                    button_bg,
+                                                                    label_color,
+                                                                    label_style,
+                                                                    padding,
+                                                                    radius,
+                                                                ) = if styled {
+                                                                    let theme =
+                                                                        fret_ui::Theme::global(
+                                                                            &*cx.app,
+                                                                        );
+                                                                    let label_color =
+                                                                        action_button_style
+                                                                            .label_color
+                                                                            .unwrap_or_else(
+                                                                                || {
+                                                                                    resolve_toast_color_key(
+                                                                                        theme,
+                                                                                        action_button_style.label_color_key.as_deref(),
+                                                                                        fg,
+                                                                                    )
+                                                                                },
+                                                                            );
+                                                                    (
+                                                                        toast_button_state_layer(
+                                                                            theme,
+                                                                            &action_button_style,
+                                                                            st,
+                                                                            label_color,
+                                                                        ),
+                                                                        label_color,
+                                                                        action_button_style
+                                                                            .label_style_key
+                                                                            .as_deref()
+                                                                            .and_then(|key| {
+                                                                                theme.text_style_by_key(key)
+                                                                            }),
+                                                                        action_button_style
+                                                                            .padding,
+                                                                        action_button_style
+                                                                            .radius,
+                                                                    )
                                                                 } else {
-                                                                    Some(fg)
+                                                                    (
+                                                                        if st.pressed {
+                                                                            Some(alpha_mul(fg, 0.8))
+                                                                        } else if st.hovered {
+                                                                            Some(alpha_mul(fg, 0.9))
+                                                                        } else {
+                                                                            Some(fg)
+                                                                        },
+                                                                        bg,
+                                                                        None,
+                                                                        fret_core::Edges {
+                                                                            top: button_pad_y,
+                                                                            right: button_pad_x,
+                                                                            bottom: button_pad_y,
+                                                                            left: button_pad_x,
+                                                                        },
+                                                                        button_radius,
+                                                                    )
                                                                 };
 
                                                                 vec![cx.container(
                                                                     fret_ui::element::ContainerProps {
                                                                         layout: fret_ui::element::LayoutStyle::default(),
-                                                                        padding: fret_core::Edges {
-                                                                            top: button_pad_y,
-                                                                            right: button_pad_x,
-                                                                            bottom: button_pad_y,
-                                                                            left: button_pad_x,
-                                                                        }
-                                                                        .into(),
+                                                                        padding: padding.into(),
                                                                         background: button_bg,
                                                                         background_paint: None,
                                                                         shadow: None,
@@ -2955,15 +3202,15 @@ pub fn render<H: UiHost + 'static>(
                                                                         focus_ring_always_paint: false,
                                                                         focus_border_color: None,
                                                                         focus_within: false,
-                                                                        corner_radii: fret_core::Corners::all(button_radius),
+                                                                        corner_radii: fret_core::Corners::all(radius),
                                                                         snap_to_device_pixels: false,
                                                                     },
                                                                     move |cx| {
                                                                         vec![cx.text_props(fret_ui::element::TextProps {
                                                                             layout: fret_ui::element::LayoutStyle::default(),
                                                                             text: label.clone(),
-                                                                            style: None,
-                                                                            color: Some(bg),
+                                                                            style: label_style.clone(),
+                                                                            color: Some(label_color),
                                                                             wrap: fret_core::TextWrap::None,
                                                                             overflow: fret_core::TextOverflow::Clip,
                                                                             align: fret_core::TextAlign::Start,
@@ -2981,6 +3228,8 @@ pub fn render<H: UiHost + 'static>(
                                                     .flatten()
                                                     .map(|cancel| {
                                                         let cancel_store = store.clone();
+                                                        let cancel_button_style =
+                                                            cancel_button_style.clone();
                                                         let cmd = cancel.command;
                                                         let label = cancel.label;
                                                         cx.pressable(
@@ -3023,17 +3272,80 @@ pub fn render<H: UiHost + 'static>(
                                                                 } else {
                                                                     Some(alpha_mul(button_bg, 0.3))
                                                                 };
-
-                                                                vec![cx.container(
-                                                                    fret_ui::element::ContainerProps {
-                                                                        layout: fret_ui::element::LayoutStyle::default(),
-                                                                        padding: fret_core::Edges {
+                                                                let styled =
+                                                                    cancel_button_style
+                                                                        .label_style_key
+                                                                        .is_some()
+                                                                        || cancel_button_style
+                                                                            .label_color_key
+                                                                            .is_some()
+                                                                        || cancel_button_style
+                                                                            .label_color
+                                                                            .is_some()
+                                                                        || cancel_button_style
+                                                                            .state_layer_color
+                                                                            .is_some();
+                                                                let (
+                                                                    bg,
+                                                                    label_color,
+                                                                    label_style,
+                                                                    padding,
+                                                                    radius,
+                                                                ) = if styled {
+                                                                    let theme =
+                                                                        fret_ui::Theme::global(
+                                                                            &*cx.app,
+                                                                        );
+                                                                    let label_color =
+                                                                        cancel_button_style
+                                                                            .label_color
+                                                                            .unwrap_or_else(
+                                                                                || {
+                                                                                    resolve_toast_color_key(
+                                                                                        theme,
+                                                                                        cancel_button_style.label_color_key.as_deref(),
+                                                                                        fg,
+                                                                                    )
+                                                                                },
+                                                                            );
+                                                                    (
+                                                                        toast_button_state_layer(
+                                                                            theme,
+                                                                            &cancel_button_style,
+                                                                            st,
+                                                                            label_color,
+                                                                        ),
+                                                                        label_color,
+                                                                        cancel_button_style
+                                                                            .label_style_key
+                                                                            .as_deref()
+                                                                            .and_then(|key| {
+                                                                                theme.text_style_by_key(key)
+                                                                            }),
+                                                                        cancel_button_style
+                                                                            .padding,
+                                                                        cancel_button_style
+                                                                            .radius,
+                                                                    )
+                                                                } else {
+                                                                    (
+                                                                        bg,
+                                                                        fg,
+                                                                        None,
+                                                                        fret_core::Edges {
                                                                             top: button_pad_y,
                                                                             right: button_pad_x,
                                                                             bottom: button_pad_y,
                                                                             left: button_pad_x,
-                                                                        }
-                                                                        .into(),
+                                                                        },
+                                                                        button_radius,
+                                                                    )
+                                                                };
+
+                                                                vec![cx.container(
+                                                                    fret_ui::element::ContainerProps {
+                                                                        layout: fret_ui::element::LayoutStyle::default(),
+                                                                        padding: padding.into(),
                                                                         background: bg,
                                                                         background_paint: None,
                                                                         shadow: None,
@@ -3045,15 +3357,15 @@ pub fn render<H: UiHost + 'static>(
                                                                         focus_ring_always_paint: false,
                                                                         focus_border_color: None,
                                                                         focus_within: false,
-                                                                        corner_radii: fret_core::Corners::all(button_radius),
+                                                                        corner_radii: fret_core::Corners::all(radius),
                                                                         snap_to_device_pixels: false,
                                                                     },
                                                                     move |cx| {
                                                                         vec![cx.text_props(fret_ui::element::TextProps {
                                                                             layout: fret_ui::element::LayoutStyle::default(),
                                                                             text: label.clone(),
-                                                                            style: None,
-                                                                            color: Some(fg),
+                                                                            style: label_style.clone(),
+                                                                            color: Some(label_color),
                                                                             wrap: fret_core::TextWrap::None,
                                                                             overflow: fret_core::TextOverflow::Clip,
                                                                             align: fret_core::TextAlign::Start,
@@ -3165,14 +3477,40 @@ pub fn render<H: UiHost + 'static>(
                                                     // - toast box: `font-size: 13px`
                                                     // - title: `font-weight: 500`, `line-height: 1.5`
                                                     // - description: `font-weight: 400`, `line-height: 1.4`
-                                                    let title_style = sonner_toast_title_style();
-                                                    let desc_style = sonner_toast_description_style();
+                                                    let (title_style, title_color, desc_style, desc_color) = {
+                                                        let theme = fret_ui::Theme::global(&*cx.app);
+                                                        (
+                                                            resolve_toast_text_style(
+                                                                theme,
+                                                                &stack_title_style,
+                                                                sonner_toast_title_style(),
+                                                            ),
+                                                            resolve_toast_text_color(
+                                                                theme,
+                                                                &stack_title_style,
+                                                                fg,
+                                                            ),
+                                                            resolve_toast_text_style(
+                                                                theme,
+                                                                &stack_description_style,
+                                                                sonner_toast_description_style(),
+                                                            ),
+                                                            toast_description_color
+                                                                .unwrap_or_else(|| {
+                                                                    resolve_toast_text_color(
+                                                                        theme,
+                                                                        &stack_description_style,
+                                                                        fg_muted,
+                                                                    )
+                                                                }),
+                                                        )
+                                                    };
 
                                                     let title = cx.text_props(fret_ui::element::TextProps {
                                                         layout: fret_ui::element::LayoutStyle::default(),
                                                         text: toast.title.clone(),
                                                         style: Some(title_style),
-                                                        color: Some(fg),
+                                                        color: Some(title_color),
                                                         wrap: fret_core::TextWrap::None,
                                                         overflow: fret_core::TextOverflow::Clip,
                                                         align: fret_core::TextAlign::Start,
@@ -3185,7 +3523,7 @@ pub fn render<H: UiHost + 'static>(
                                                             cx,
                                                             desc,
                                                             &desc_style,
-                                                            fg_muted,
+                                                            desc_color,
                                                         ));
                                                     }
 
@@ -3290,10 +3628,9 @@ pub fn render<H: UiHost + 'static>(
                                                         Px(drag_offset.y.0 + settle_offset.y.0),
                                                     );
 
-                                                    let bezier =
-                                                        toast_style.easing.unwrap_or_else(|| {
-                                                            crate::declarative::toast_motion::shadcn_toast_ease_bezier(cx)
-                                                        });
+                                                    let bezier = toast_easing.unwrap_or_else(|| {
+                                                        crate::declarative::toast_motion::shadcn_toast_ease_bezier(cx)
+                                                    });
                                                     let open_duration = crate::declarative::toast_motion::shadcn_toast_enter_duration_opt(cx);
                                                     let close_duration = crate::declarative::toast_motion::shadcn_toast_exit_duration_opt(cx);
                                                     let presence = match (open_duration, close_duration) {
@@ -3427,8 +3764,8 @@ pub fn render<H: UiHost + 'static>(
                                                                     background: Some(bg),
                                                                     background_paint: None,
                                                                     shadow,
-                                                                    border: fret_core::Edges::all(fret_core::Px(1.0)),
-                                                                    border_color: Some(border_color),
+                                                                    border: fret_core::Edges::all(toast_border_width),
+                                                                    border_color,
                                                                     border_paint: None,
                                                                     border_dash: None,
                                                                     focus_ring: None,

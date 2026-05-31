@@ -1,7 +1,7 @@
 # Material 3 shadcn-level completeness matrix v1
 
 Status: Active
-Last updated: 2026-05-31
+Last updated: 2026-06-01
 
 This matrix tracks `ecosystem/fret-ui-material3` against the completeness bar we use for mature
 `fret-ui-shadcn` recipes. It is not a visual-copying exercise: Material 3 remains spec/token-driven,
@@ -34,7 +34,7 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 | TextField | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Floating-label and token work are mature; keep extending field-family compositions. |
 | Dialog / BottomSheet | Strong | Strong | Strong | Strong | Strong | Partial | Strong | Overlay policy is in ecosystem layers; motion/presence parity remains the main polish area. |
 | Tooltip | Partial | Strong | Strong | Partial | Strong | Partial | Strong | Rich tooltip actions are constrained by non-hit-testable tooltip overlay policy. |
-| Snackbar | Partial | Partial | Strong | Strong | Partial | Partial | Strong | Uses toast-layer infrastructure; public style surface and richer action layout remain v2 work. |
+| Snackbar | Strong | Strong | Strong | Strong | Strong | Strong | Strong | 2026-06-01: gained public `SnackbarStyle`, host `.style(...)`, direct Material style adoption in the shared toast renderer, and style override paint/layout gates. Residuals: richer app-level queue policy examples. |
 | NavigationBar / Rail / Drawer | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Continue polishing adaptive examples and route/content integration. |
 | TopAppBar | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Scroll behavior policy is in Material ecosystem code; nested-scroll consumption remains a future mechanism trigger. |
 | DatePicker / TimePicker | Strong | Strong | Strong | Strong | Strong | Partial | Strong | Main residual is broader composition/demo coverage, not basic API completeness. |
@@ -50,14 +50,20 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
   - `TabPanel`, `.panel/.panels`, active tabpanel semantics, `labelled_by` relation to the selected
     tab, derived tab `controls`, and gallery snippet content panels.
   - Gates: `tabs_state`, tabs automation-surface test, clippy, layering.
+- 2026-06-01 Snackbar style/API hardening:
+  - `SnackbarStyle` now follows ADR 0220 for container/supporting/action/close colors plus
+    container shape, padding, and single/two-line heights.
+  - `fret-ui-kit` toast rendering now consumes direct `ToastLayerStyle` background/foreground,
+    text, border, action, cancel, and close style fields instead of hardcoding the Sonner skin.
+  - Gates: `window_overlays::tests::toast::toast_layer_style_direct_colors_are_painted`,
+    `snackbar_state` including `snackbar_style_overrides_paint_and_layout_contract`.
 
 ## Next Recommended Focus
 
 1. Finish Tabs residuals only if panel presence becomes a real app need:
    `force_mount` content, presence motion, and overflow/scroll affordance polish.
-2. Move to Snackbar style/API breadth:
-   public `SnackbarStyle`/host override story, action/dismiss slot anchors, and multi-line layout
-   gate.
-3. Revisit Tooltip policy:
+2. Revisit Tooltip policy:
    decide whether rich tooltip actions require a popover-like hit-testable surface or should remain
    non-interactive per tooltip semantics.
+3. Start the next component-family audit on SearchBar/SearchView or DatePicker/TimePicker, focusing
+   on where motion/presence evidence is still marked `Partial`.

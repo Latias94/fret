@@ -1,12 +1,15 @@
 use fret_core::{
-    AppWindowId, NodeId, Point, PointerId, Px, Rect, Scene, SceneOp, SemanticsLive, Size,
+    AppWindowId, Color, Edges, NodeId, Paint, Point, PointerId, Px, Rect, Scene, SceneOp,
+    SemanticsLive, Size,
 };
 use fret_runtime::{CommandId, ModelHost, PlatformCapabilities};
 use fret_ui::UiTree;
 use fret_ui::action::UiActionHostAdapter;
-use fret_ui_kit::ToastStore;
+use fret_ui_kit::{ColorRef, ToastStore, WidgetStateProperty};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
-use fret_ui_material3::{Snackbar, SnackbarController, SnackbarDuration, SnackbarHost};
+use fret_ui_material3::{
+    Snackbar, SnackbarController, SnackbarDuration, SnackbarHost, SnackbarStyle,
+};
 
 mod support;
 
@@ -75,6 +78,33 @@ fn scene_has_y_slide_without_scale(scene: &Scene) -> bool {
     })
 }
 
+fn color_close(actual: Color, expected: Color) -> bool {
+    (actual.r - expected.r).abs() <= 0.001
+        && (actual.g - expected.g).abs() <= 0.001
+        && (actual.b - expected.b).abs() <= 0.001
+        && (actual.a - expected.a).abs() <= 0.001
+}
+
+fn scene_has_solid_quad_color(scene: &Scene, expected: Color) -> bool {
+    scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            SceneOp::Quad { background, .. }
+                if matches!(background.paint, Paint::Solid(color) if color_close(color, expected))
+        )
+    })
+}
+
+fn scene_has_solid_text_color(scene: &Scene, expected: Color) -> bool {
+    scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            SceneOp::Text { paint, .. }
+                if matches!(paint.paint, Paint::Solid(color) if color_close(color, expected))
+        )
+    })
+}
+
 fn assert_px_close(actual: f32, expected: f32, context: &str) {
     let delta = (actual - expected).abs();
     assert!(
@@ -120,6 +150,37 @@ fn render_snackbar_frame(
         move |ui, app, services| {
             fret_ui::declarative::render_root(ui, app, services, window, bounds(), "root", |cx| {
                 vec![SnackbarHost::new(store).max_snackbars(1).into_element(cx)]
+            })
+        },
+    )
+}
+
+fn render_snackbar_frame_with_style(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    store: fret_runtime::Model<ToastStore>,
+    style: SnackbarStyle,
+    capture_semantics: bool,
+) -> Scene {
+    run_overlay_frame_with_scene_scaled(
+        ui,
+        app,
+        services,
+        window,
+        bounds(),
+        1.0,
+        capture_semantics,
+        move |ui, app, services| {
+            let style = style.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds(), "root", |cx| {
+                vec![
+                    SnackbarHost::new(store)
+                        .max_snackbars(1)
+                        .style(style)
+                        .into_element(cx),
+                ]
             })
         },
     )
@@ -172,6 +233,71 @@ fn snackbar_uses_material_width_offset_live_region_and_dismiss_label() {
         .find(|node| node.flags.live == Some(SemanticsLive::Polite))
         .expect("expected polite snackbar live region");
     assert_eq!(viewport.label.as_deref(), Some("Alert"));
+}
+
+#[test]
+fn snackbar_style_overrides_paint_and_layout_contract() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    let store = seed_snackbar(&mut app, window);
+
+    let background = Color {
+        r: 0.12,
+        g: 0.18,
+        b: 0.26,
+        a: 1.0,
+    };
+    let text = Color {
+        r: 0.94,
+        g: 0.82,
+        b: 0.42,
+        a: 1.0,
+    };
+    let style = SnackbarStyle::default()
+        .container_background(WidgetStateProperty::new(Some(ColorRef::Color(background))))
+        .supporting_text_color(WidgetStateProperty::new(Some(ColorRef::Color(text))))
+        .container_padding(WidgetStateProperty::new(Some(Edges {
+            left: Px(20.0),
+            right: Px(20.0),
+            top: Px(12.0),
+            bottom: Px(12.0),
+        })))
+        .container_corner_radius(WidgetStateProperty::new(Some(Px(10.0))))
+        .two_line_min_height(WidgetStateProperty::new(Some(Px(96.0))));
+
+    let mut scene = Scene::default();
+    for _ in 0..64 {
+        scene = render_snackbar_frame_with_style(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            store.clone(),
+            style.clone(),
+            true,
+        );
+    }
+
+    assert!(
+        scene_has_solid_quad_color(&scene, background),
+        "expected SnackbarStyle container_background to paint a snackbar quad"
+    );
+    assert!(
+        scene_has_solid_text_color(&scene, text),
+        "expected SnackbarStyle supporting_text_color to paint snackbar text"
+    );
+
+    let snackbar = layout_bounds_by_test_id(&ui, "m3-snackbar");
+    assert!(
+        snackbar.size.height.0 >= 95.0,
+        "two_line_min_height override should affect snackbar layout; bounds={snackbar:?}"
+    );
 }
 
 #[test]

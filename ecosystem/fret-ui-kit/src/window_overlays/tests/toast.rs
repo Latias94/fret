@@ -1,5 +1,32 @@
 use super::*;
 
+fn color_close(actual: fret_core::Color, expected: fret_core::Color) -> bool {
+    (actual.r - expected.r).abs() <= 0.001
+        && (actual.g - expected.g).abs() <= 0.001
+        && (actual.b - expected.b).abs() <= 0.001
+        && (actual.a - expected.a).abs() <= 0.001
+}
+
+fn scene_has_quad_color(scene: &fret_core::Scene, expected: fret_core::Color) -> bool {
+    scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            fret_core::SceneOp::Quad { background, .. }
+                if matches!(background.paint, fret_core::Paint::Solid(color) if color_close(color, expected))
+        )
+    })
+}
+
+fn scene_has_text_color(scene: &fret_core::Scene, expected: fret_core::Color) -> bool {
+    scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            fret_core::SceneOp::Text { paint, .. }
+                if matches!(paint.paint, fret_core::Paint::Solid(color) if color_close(color, expected))
+        )
+    })
+}
+
 #[test]
 fn toast_viewport_focus_command_focuses_active_toast_layer() {
     let window = AppWindowId::default();
@@ -309,6 +336,110 @@ fn toast_action_and_cancel_labels_are_exposed_in_semantics_snapshot() {
     assert!(
         button_labels.contains(&"Cancel"),
         "expected toast cancel button semantics label=Cancel, got {button_labels:?}",
+    );
+}
+
+#[test]
+fn toast_layer_style_direct_colors_are_painted() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(360.0), Px(240.0)),
+    );
+
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_cx| Vec::new(),
+    );
+    ui.set_root(base);
+
+    let background = fret_core::Color {
+        r: 0.18,
+        g: 0.22,
+        b: 0.27,
+        a: 1.0,
+    };
+    let foreground = fret_core::Color {
+        r: 0.90,
+        g: 0.91,
+        b: 0.94,
+        a: 1.0,
+    };
+    let action_color = fret_core::Color {
+        r: 0.32,
+        g: 0.76,
+        b: 0.66,
+        a: 1.0,
+    };
+    let close_color = fret_core::Color {
+        r: 0.98,
+        g: 0.60,
+        b: 0.44,
+        a: 1.0,
+    };
+
+    let store = toast_store(&mut app);
+    let _ = toast_action(
+        &mut UiActionHostAdapter { app: &mut app },
+        store.clone(),
+        window,
+        ToastRequest::new("Saved")
+            .action(ToastAction::new("Undo", "toast.undo"))
+            .test_id("styled-toast"),
+    );
+
+    begin_frame(&mut app, window);
+    request_toast_layer_for_window(
+        &mut app,
+        window,
+        ToastLayerRequest::new(GlobalElementId(0xbeef), store.clone())
+            .position(ToastPosition::BottomCenter)
+            .style({
+                let mut style = ToastLayerStyle::default();
+                style.open_ticks = 0;
+                style.close_ticks = 0;
+                style.slide_distance = Px(0.0);
+                style.background_color = Some(background);
+                style.foreground_color = Some(foreground);
+                style.description_color = Some(foreground);
+                style.action.label_color = Some(action_color);
+                style.close.icon_color = Some(close_color);
+                style.border_width = Px(0.0);
+                style
+            }),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert!(
+        scene_has_quad_color(&scene, background),
+        "expected ToastLayerStyle.background_color to paint the toast container"
+    );
+    assert!(
+        scene_has_text_color(&scene, foreground),
+        "expected ToastLayerStyle.foreground_color to paint toast title text"
+    );
+    assert!(
+        scene_has_text_color(&scene, action_color),
+        "expected ToastLayerStyle.action.label_color to paint action text"
+    );
+    assert!(
+        scene_has_text_color(&scene, close_color),
+        "expected ToastLayerStyle.close.icon_color to paint the close glyph"
     );
 }
 

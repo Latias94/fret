@@ -90,7 +90,7 @@ pub use search_view::{SearchView, SearchViewPresentation};
 pub use segmented_button::{SegmentedButtonItem, SegmentedButtonSet};
 pub use select::{Select, SelectItem, SelectStyle, SelectVariant};
 pub use slider::{RangeSlider, Slider, SliderStyle};
-pub use snackbar::{Snackbar, SnackbarController, SnackbarDuration, SnackbarHost};
+pub use snackbar::{Snackbar, SnackbarController, SnackbarDuration, SnackbarHost, SnackbarStyle};
 pub use suggestion_chip::{SuggestionChip, SuggestionChipStyle, SuggestionChipVariant};
 pub use switch::{Switch, SwitchStyle};
 pub use tabs::{TabItem, TabPanel, Tabs, TabsStyle, TabsVariant};
