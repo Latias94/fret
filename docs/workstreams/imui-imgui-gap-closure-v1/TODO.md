@@ -1104,6 +1104,12 @@ Last updated: 2026-05-31
       `color_edit/popup/picker/hue_wheel.rs` remains the pure canvas owner, and
       `color_edit/popup/picker/hue_wheel_picker.rs` owns pressable drag target tracking and HSV
       update wiring.
+- [x] Split editor color-edit hue-wheel model math into a private child owner without changing
+      hue-wheel public-in-color-edit import paths, target hit-testing, rotated triangle geometry,
+      SV cursor projection, HSV update math, numeric input parsing, or picker tests.
+      Result: `color_edit/model.rs` keeps numeric text/parse helpers, RGB/HSV conversion, SV/hue
+      bar helpers, and root re-exports. `color_edit/model/hue_wheel.rs` owns hue-wheel geometry,
+      target selection, barycentric triangle math, cursor projection, and hue-wheel HSV updates.
 - [x] Split editor color-edit option records and runtime popup defaults into a private owner
       without changing public `ColorEditOptions` / popup option names, default values, runtime
       override semantics, palette/payload/request ownership, or popup policy tests.

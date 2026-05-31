@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-31
 
+## ColorEdit Hue-Wheel Model Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor color-edit hue-wheel model math moved into a private
+`color_edit/model/hue_wheel.rs` owner without changing hue-wheel import paths inside `color_edit`,
+target hit-testing, rotated triangle geometry, SV cursor projection, HSV update math, numeric input
+parsing, or picker tests.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/model.rs` now keeps numeric text/parse helpers,
+  RGB/HSV conversion, SV/hue bar helpers, and root re-exports for hue-wheel model symbols.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/model/hue_wheel.rs` owns hue-wheel geometry,
+  target selection, barycentric triangle math, cursor projection, and hue-wheel HSV updates.
+- `tools/gate_imui_workstream_source.py` now gates the root/hue-wheel split so geometry and
+  triangle hit-test helpers stay out of the broader model root while numeric helpers remain there.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the model root and new
+  hue-wheel owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor color_edit --no-fail-fast`: pass (51 passed, 171 skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass (with Git's line-ending warning for `color_edit/model.rs`).
+
 ## TextField Element Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor `TextField` element assembly moved into a private

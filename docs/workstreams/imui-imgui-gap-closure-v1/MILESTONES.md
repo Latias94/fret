@@ -228,6 +228,14 @@ picker, hue bar, hue wheel, alpha bar, checkerboard, preview alpha visibility, o
 and a11y alpha percent coverage. Picker geometry, preview alpha policy, original-restore component
 rules, and public color-edit behavior remain unchanged.
 
+2026-05-31 editor color-edit hue-wheel model child-owner result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/model.rs` now keeps numeric text/parse helpers,
+RGB/HSV conversion, SV/hue bar helpers, and root re-exports. `color_edit/model/hue_wheel.rs` owns
+hue-wheel geometry, target selection, barycentric triangle math, cursor projection, and hue-wheel
+HSV updates. Hue-wheel import paths inside `color_edit`, target hit-testing, rotated triangle
+geometry, SV cursor projection, HSV update math, numeric input parsing, and picker tests remain
+unchanged.
+
 2026-05-31 editor color-edit popup policy tests owner-split result:
 `ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` now keeps palette/history, drag/drop,
 eyedropper, tooltip/copy payload, and shared HSV assertion coverage.
