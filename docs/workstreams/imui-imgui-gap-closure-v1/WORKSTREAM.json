@@ -764,6 +764,8 @@
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/state.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/state.rs",
     "ecosystem/fret-ui-kit/tests/imui_perf_guard_smoke.rs",
+    "ecosystem/fret-ui-kit/src/imui/adapters.rs",
+    "ecosystem/fret-ui-kit/src/imui/adapters/signal.rs",
     "ecosystem/fret-ui-kit/src/imui/containers.rs",
     "ecosystem/fret-ui-kit/src/imui/containers/children.rs",
     "ecosystem/fret-ui-kit/src/imui/containers/grid.rs",

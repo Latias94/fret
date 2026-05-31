@@ -10,6 +10,7 @@ use fret_ui_kit::imui::UiWriterImUiFacadeExt;
 use fret_ui_kit::imui::adapters::{AdapterSeamOptions, AdapterSignalRecord, report_adapter_signal};
 
 const ADAPTERS_RS: &str = include_str!("../src/imui/adapters.rs");
+const ADAPTER_SIGNAL_RS: &str = include_str!("../src/imui/adapters/signal.rs");
 
 mod local_adapter_scaffold {
     use super::*;
@@ -92,8 +93,7 @@ fn adapter_signal_records_are_read_only_reports() {
 #[test]
 fn adapter_seam_module_stays_contract_only() {
     for marker in [
-        "pub struct AdapterSignalMetadata",
-        "pub struct AdapterSignalRecord",
+        "pub use signal::{AdapterSignalMetadata, AdapterSignalRecord, AdapterSignalReporter};",
         "pub struct AdapterSeamOptions<'a>",
         "pub fn report_adapter_signal(",
     ] {
@@ -103,17 +103,28 @@ fn adapter_seam_module_stays_contract_only() {
         );
     }
 
+    for marker in [
+        "pub struct AdapterSignalMetadata",
+        "pub struct AdapterSignalRecord",
+        "pub type AdapterSignalReporter<'a>",
+    ] {
+        assert!(
+            ADAPTER_SIGNAL_RS.contains(marker),
+            "adapters/signal.rs should keep emitted signal reports explicit"
+        );
+    }
+
     for marker in ["pub fn button_adapter", "pub fn checkbox_model_adapter"] {
         assert!(
-            !ADAPTERS_RS.contains(marker),
-            "adapters.rs should not grow built-in sample wrappers: {marker}"
+            !ADAPTERS_RS.contains(marker) && !ADAPTER_SIGNAL_RS.contains(marker),
+            "adapter seam sources should not grow built-in sample wrappers: {marker}"
         );
     }
 
     for marker in ["fret_imui", "ImUi<"] {
         assert!(
-            !ADAPTERS_RS.contains(marker),
-            "adapters.rs should stay free of concrete frontend coupling: {marker}"
+            !ADAPTERS_RS.contains(marker) && !ADAPTER_SIGNAL_RS.contains(marker),
+            "adapter seam sources should stay free of concrete frontend coupling: {marker}"
         );
     }
 }

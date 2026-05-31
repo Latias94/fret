@@ -349,7 +349,7 @@ def check_table_column_accessors(failures: list[str]) -> None:
 def main() -> None:
     opaque_struct_checks = [
         OpaqueStructCheck(
-            Path("ecosystem/fret-ui-kit/src/imui/adapters.rs"),
+            Path("ecosystem/fret-ui-kit/src/imui/adapters/signal.rs"),
             ["AdapterSignalMetadata", "AdapterSignalRecord"],
         ),
         OpaqueStructCheck(
@@ -32164,6 +32164,29 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/adapters.rs"),
             required=[
+                "mod signal;",
+                "pub use signal::{AdapterSignalMetadata, AdapterSignalRecord, AdapterSignalReporter};",
+                "pub struct AdapterSeamOptions<'a>",
+                "pub fn report_adapter_signal(",
+                "AdapterSignalRecord::new(",
+                "AdapterSignalMetadata::new(response.rect(), options.focus_restore_target)",
+            ],
+            forbidden=[
+                "response.core.",
+                "pub struct AdapterSignalMetadata {\n    rect: Option<Rect>,\n    focus_restore_target: Option<GlobalElementId>,\n}",
+                "pub struct AdapterSignalRecord {\n    identity: Option<GlobalElementId>,\n    response: ResponseExt,\n    metadata: AdapterSignalMetadata,\n}",
+                "pub struct AdapterSignalMetadata {\n    pub rect",
+                "pub struct AdapterSignalRecord {\n    pub identity",
+                "pub struct AdapterSignalRecord {\n    identity: Option<GlobalElementId>,\n    pub response",
+                "pub struct AdapterSignalRecord {\n    identity: Option<GlobalElementId>,\n    response: ResponseExt,\n    pub metadata",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/adapters/signal.rs"),
+            required=[
+                "use fret_core::Rect;",
+                "use fret_ui::GlobalElementId;",
+                "use crate::imui::ResponseExt;",
                 "pub struct AdapterSignalMetadata {\n    rect: Option<Rect>,\n    focus_restore_target: Option<GlobalElementId>,\n}",
                 "pub fn new(rect: Option<Rect>, focus_restore_target: Option<GlobalElementId>) -> Self",
                 "pub fn rect(self) -> Option<Rect>",
@@ -32172,11 +32195,12 @@ def main() -> None:
                 "pub fn identity(self) -> Option<GlobalElementId>",
                 "pub fn response(self) -> ResponseExt",
                 "pub fn metadata(self) -> AdapterSignalMetadata",
-                "AdapterSignalRecord::new(",
-                "AdapterSignalMetadata::new(response.rect(), options.focus_restore_target)",
+                "pub type AdapterSignalReporter<'a> = dyn FnMut(AdapterSignalRecord) + 'a;",
             ],
             forbidden=[
                 "response.core.",
+                "pub struct AdapterSeamOptions<'a>",
+                "pub fn report_adapter_signal(",
                 "pub struct AdapterSignalMetadata {\n    pub rect",
                 "pub struct AdapterSignalRecord {\n    pub identity",
                 "pub struct AdapterSignalRecord {\n    identity: Option<GlobalElementId>,\n    pub response",
@@ -32186,12 +32210,15 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/tests/imui_adapter_seam_smoke.rs"),
             required=[
+                "const ADAPTERS_RS: &str = include_str!(\"../src/imui/adapters.rs\");",
+                "const ADAPTER_SIGNAL_RS: &str = include_str!(\"../src/imui/adapters/signal.rs\");",
                 "AdapterSignalRecord::new(",
                 "AdapterSignalMetadata::new(None, None)",
                 "record.identity()",
                 "record.response().clicked()",
                 "record.metadata().rect()",
                 "record.metadata().focus_restore_target()",
+                "ADAPTER_SIGNAL_RS.contains(marker)",
             ],
             forbidden=[
                 "record.identity,",

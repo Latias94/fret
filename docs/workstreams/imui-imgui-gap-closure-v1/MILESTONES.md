@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 IMUI adapter signal owner-split result:
+`ecosystem/fret-ui-kit/src/imui/adapters.rs` now keeps the public adapter seam hub,
+`AdapterSeamOptions`, and `report_adapter_signal(...)` only. The private
+`adapters/signal.rs` owner contains `AdapterSignalMetadata`, `AdapterSignalRecord`, and
+`AdapterSignalReporter`. Public `imui::adapters::*` paths, emitted signal accessors, reporter
+callback shape, seam options, and signal reporting behavior remain unchanged.
+
 2026-05-31 IMUI open response owner-split result:
 `ecosystem/fret-ui-kit/src/imui/response/widgets/open.rs` is now a thin hub that re-exports open
 response child owners. `response/widgets/open/disclosure.rs` owns `DisclosureResponse` and its

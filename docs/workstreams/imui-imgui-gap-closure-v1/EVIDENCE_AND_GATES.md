@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Adapter Signal Owner-Split Evidence - 2026-05-31
+
+Claim verified: IMUI adapter seam signal metadata/record/reporter types moved out of
+`adapters.rs` into a private `adapters/signal.rs` owner without changing public
+`imui::adapters::*` re-export paths, adapter signal accessors, reporter callback shape, seam
+options, or `report_adapter_signal(...)` behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/adapters.rs` now keeps the public seam hub, `AdapterSeamOptions`,
+  and `report_adapter_signal(...)` only.
+- `ecosystem/fret-ui-kit/src/imui/adapters/signal.rs` owns `AdapterSignalMetadata`,
+  `AdapterSignalRecord`, and `AdapterSignalReporter`.
+- `ecosystem/fret-ui-kit/tests/imui_adapter_seam_smoke.rs` now checks both the public seam hub and
+  signal owner source files while keeping emitted adapter records read-only.
+- `tools/gate_imui_workstream_source.py` now gates the hub/signal split and keeps emitted signal
+  structs opaque in the child owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the adapter seam owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test
+  imui_external_adapter_example --no-fail-fast`: pass (3 passed, 0 skipped; external adapter test
+  binary compiled with no test functions).
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Open Response Owner-Split Evidence - 2026-05-31
 
 Claim verified: IMUI disclosure/combo open response structs moved out of

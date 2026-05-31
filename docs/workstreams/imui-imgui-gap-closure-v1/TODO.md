@@ -141,6 +141,12 @@ Last updated: 2026-05-31
       Result: `checkbox/entry.rs` now owns public checkbox model entrypoints and label identity
       scoping only. `checkbox/entry/render.rs` owns model reads, pressable props, behavior
       installation, field chrome, indicator/label mounting, and response return.
+- [x] Split IMUI adapter seam signal records into a private child owner without changing public
+      `imui::adapters::*` paths, emitted signal accessors, reporter callback shape, seam options,
+      or `report_adapter_signal(...)` behavior.
+      Result: `adapters.rs` keeps the public seam hub, `AdapterSeamOptions`, and
+      `report_adapter_signal(...)`. `adapters/signal.rs` owns `AdapterSignalMetadata`,
+      `AdapterSignalRecord`, and `AdapterSignalReporter`.
 - [x] Split IMUI tooltip runtime model creation and trigger gate installation into a private owner
       without changing trigger-id validation, provider option defaults, layout projection,
       hover/focus interaction updates, overlay request submission, or public tooltip facade
