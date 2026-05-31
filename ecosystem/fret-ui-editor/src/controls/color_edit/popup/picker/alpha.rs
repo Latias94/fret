@@ -2,19 +2,18 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, MouseButton, Px};
 use fret_runtime::Model;
-use fret_ui::action::{
-    ActionCx, PressablePointerDownResult, PressablePointerUpResult, UiPointerActionHost,
-};
+use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PressableA11y, PressableProps,
     SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use super::super::super::model::format_hex;
 use super::{HSV_PICKER_SIZE, picker_border_and_ring};
 
+mod interaction;
 mod preview;
+use interaction::{apply_alpha_bar_position, apply_vertical_alpha_bar_position};
 use preview::{alpha_bar_preview_stack, vertical_alpha_bar_preview_stack};
 
 pub(super) fn vertical_alpha_bar<H: UiHost>(
@@ -233,56 +232,6 @@ pub(in crate::controls::color_edit::popup) fn alpha_bar<H: UiHost>(
         bar = bar.test_id(test_id);
     }
     bar.a11y_value(value)
-}
-
-fn apply_alpha_bar_position(
-    host: &mut dyn UiPointerActionHost,
-    action_cx: ActionCx,
-    model: &Model<Color>,
-    draft: &Model<String>,
-    error: &Model<Option<Arc<str>>>,
-    x: f32,
-) {
-    let width = host.bounds().size.width.0;
-    let alpha = alpha_from_local_x(x, width);
-    let mut next = host
-        .models_mut()
-        .get_copied(model)
-        .unwrap_or(Color::TRANSPARENT);
-    next.a = alpha;
-    let formatted = format_hex(next, true);
-
-    let _ = host.models_mut().update(model, |c| *c = next);
-    let _ = host
-        .models_mut()
-        .update(draft, |s| *s = formatted.as_ref().to_string());
-    let _ = host.models_mut().update(error, |e| *e = None);
-    host.request_redraw(action_cx.window);
-}
-
-fn apply_vertical_alpha_bar_position(
-    host: &mut dyn UiPointerActionHost,
-    action_cx: ActionCx,
-    model: &Model<Color>,
-    draft: &Model<String>,
-    error: &Model<Option<Arc<str>>>,
-    y: f32,
-) {
-    let height = host.bounds().size.height.0;
-    let alpha = alpha_from_local_y(y, height);
-    let mut next = host
-        .models_mut()
-        .get_copied(model)
-        .unwrap_or(Color::TRANSPARENT);
-    next.a = alpha;
-    let formatted = format_hex(next, true);
-
-    let _ = host.models_mut().update(model, |c| *c = next);
-    let _ = host
-        .models_mut()
-        .update(draft, |s| *s = formatted.as_ref().to_string());
-    let _ = host.models_mut().update(error, |e| *e = None);
-    host.request_redraw(action_cx.window);
 }
 
 pub(in crate::controls::color_edit) fn alpha_from_local_x(x: f32, width: f32) -> f32 {

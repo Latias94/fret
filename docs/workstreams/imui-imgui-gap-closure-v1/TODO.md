@@ -1277,6 +1277,13 @@ Last updated: 2026-06-01
       Result: `color_edit/popup/picker/alpha.rs` keeps horizontal/vertical bar pressable
       interaction, model/draft/error mutation, and alpha helper math. `alpha/preview.rs` owns
       preview stacks, checkerboard-backed alpha gradients, and horizontal/vertical thumb overlays.
+- [x] Split editor color-edit alpha bar position mutation into a private child owner without
+      changing horizontal/vertical alpha bar entrypoints, pointer capture/release behavior, alpha
+      coordinate mapping, draft/error updates, preview stacks, or popup policy tests.
+      Result: `color_edit/popup/picker/alpha.rs` keeps horizontal/vertical bar entrypoints,
+      pressable wiring, a11y values, preview stack calls, and public alpha coordinate helpers,
+      while `color_edit/popup/picker/alpha/interaction.rs` owns alpha value application plus
+      model/draft/error mutation.
 - [x] Split editor color-edit hue bar previews and interaction into a private owner without
       changing HSV hue-bar picker entrypoints, option thumbnails, hue coordinate mapping, shared
       HSV color application, or color-edit popup policy tests.
