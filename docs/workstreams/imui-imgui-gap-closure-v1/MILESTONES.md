@@ -32,6 +32,14 @@ indicator re-export routing only. `boolean_controls/visual/indicators.rs` owns c
 radio ring/dot, and switch state badge chrome. Public checkbox, radio, and switch behavior remains
 unchanged.
 
+2026-05-31 editor style/theme picker density status result:
+`ecosystem/fret-ui-editor/src/theme.rs` now exposes `EditorThemePresetV1::picker_status_label()` as
+stable picker metadata, and `controls/editor_theme_preset_picker/render.rs` renders compact
+`24px`/`22px` density status labels in each preset row. This improves the Dear ImGui-style
+style/theme picker affordance while keeping editor policy in `fret-ui-editor` and leaving
+`GetStyle`, `PushStyleVar`, global style stacks, and `fret-ui-kit::imui` theme-editor policy out of
+scope.
+
 2026-05-31 selectable pressable/a11y props owner-split result:
 `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` now keeps label identity, option state
 reads, behavior wiring, and row visual assembly. `selectable_controls/props.rs` owns fill-width

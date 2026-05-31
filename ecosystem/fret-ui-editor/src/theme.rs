@@ -61,6 +61,13 @@ impl EditorThemePresetV1 {
         }
     }
 
+    pub const fn picker_status_label(self) -> &'static str {
+        match self {
+            Self::Default => "24px",
+            Self::ImguiLikeDense => "22px",
+        }
+    }
+
     pub fn from_key(key: &str) -> Option<Self> {
         let normalized = key.trim().to_ascii_lowercase().replace('-', "_");
         EDITOR_THEME_PRESETS_V1
@@ -188,6 +195,11 @@ mod tests {
         assert_eq!(
             EditorThemePresetV1::ImguiLikeDense.label(),
             "ImGui-like dense"
+        );
+        assert_eq!(EditorThemePresetV1::Default.picker_status_label(), "24px");
+        assert_eq!(
+            EditorThemePresetV1::ImguiLikeDense.picker_status_label(),
+            "22px"
         );
         assert_eq!(
             EditorThemePresetV1::from_key("imgui_like_dense"),

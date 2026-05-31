@@ -50,6 +50,15 @@ fn editor_theme_preset_picker_stamps_listbox_options_and_selected_state() {
 }
 
 #[test]
+fn editor_theme_preset_picker_rows_show_density_status_labels() {
+    assert_eq!(EditorThemePresetV1::Default.picker_status_label(), "24px");
+    assert_eq!(
+        EditorThemePresetV1::ImguiLikeDense.picker_status_label(),
+        "22px"
+    );
+}
+
+#[test]
 fn editor_theme_preset_picker_click_updates_model_and_replays_reversible_preset() {
     let window = AppWindowId::default();
     let bounds = test_bounds();

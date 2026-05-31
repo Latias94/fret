@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Style/Theme Picker Density Status Evidence - 2026-05-31
+
+Claim verified: the editor-owned IMUI style/theme preset picker now exposes stable per-preset
+density status labels and renders them in the picker row status slot without adding Dear ImGui
+`GetStyle`, `PushStyleVar`, a global mutable style stack, or `fret-ui-kit::imui` theme-editor
+policy.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/theme.rs` owns
+  `EditorThemePresetV1::picker_status_label()` metadata for the existing `Default` and
+  `ImguiLikeDense` presets.
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render.rs` renders the preset
+  status labels in the row status text slot and accents selected-row status text.
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/tests.rs` covers the stable
+  density status labels.
+- `tools/gate_imui_workstream_source.py` keeps the style/theme picker proof bounded to
+  `fret-ui-editor` and rejects runtime/kit style-stack drift.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui editor_theme_preset --no-fail-fast`:
+  pass (7 passed, 218 skipped).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+
 ## Selectable Pressable Props Owner-Split Evidence - 2026-05-31
 
 Claim verified: IMUI selectable pressable/a11y props moved behind a private selectable child owner

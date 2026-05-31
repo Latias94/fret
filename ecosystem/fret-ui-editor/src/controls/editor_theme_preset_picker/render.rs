@@ -235,7 +235,8 @@ fn preset_row<H: UiHost>(
                 mix_color(muted_fg, subtle_bg, 0.35)
             };
             let border_color = if selected { accent } else { border };
-            let check_text = if selected { "On" } else { "" };
+            let status_text = preset.picker_status_label();
+            let status_color = if selected { accent } else { muted_fg };
 
             vec![cx.container(
                 ContainerProps {
@@ -280,8 +281,8 @@ fn preset_row<H: UiHost>(
                                     text_px,
                                 )),
                                 cx.text_props(editor_theme_preset_picker_row_status_text_props(
-                                    Arc::from(check_text),
-                                    muted_fg,
+                                    Arc::from(status_text),
+                                    status_color,
                                     row_height,
                                     text_px,
                                 )),
