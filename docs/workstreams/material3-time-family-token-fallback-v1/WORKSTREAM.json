@@ -1,0 +1,51 @@
+{
+  "id": "material3-time-family-token-fallback-v1",
+  "title": "Material3 Time Family Token Fallback v1",
+  "status": "closed",
+  "created": "2026-05-31",
+  "updated": "2026-05-31",
+  "owner": "codex",
+  "scope": [
+    "ecosystem/fret-ui-material3/src/tokens",
+    "ecosystem/fret-ui-material3/tests",
+    "tools/parity-discovery/material3_token_inventory.py",
+    "docs/workstreams/material3-time-family-token-fallback-v1",
+    "docs/workstreams/material3-time-family-token-fallback-v1/CLOSEOUT_AUDIT_2026-05-31.md"
+  ],
+  "architecture_refs": [
+    "docs/architecture.md",
+    "docs/repo-structure.md",
+    "docs/workstreams/material3-token-fallback-hardening-v2/CLOSEOUT_AUDIT_2026-05-31.md"
+  ],
+  "capability_tags": [
+    "material3",
+    "tokens",
+    "time-picker",
+    "time-input"
+  ],
+  "lane_slug": "material3",
+  "context_manifest": "docs/workstreams/material3-time-family-token-fallback-v1/CONTEXT.jsonl",
+  "goals": [
+    "Reduce repeated Material3 time-family period selector token fallback logic without changing component APIs.",
+    "Keep shared Material token fallback policy inside ecosystem/fret-ui-material3.",
+    "Regenerate inventory evidence for the hardened slice."
+  ],
+  "non_goals": [
+    "Full elimination of all Material3 fallback sites.",
+    "Core mechanism changes.",
+    "Public TimePicker or TimeInput API changes."
+  ],
+  "validation": [
+    "cargo fmt --package fret-ui-material3 --check",
+    "cargo nextest run -p fret-ui-material3 --features diagnostics --lib tokens::time_period_common",
+    "cargo nextest run -p fret-ui-material3 --features diagnostics --test material3_time_picker_interactions",
+    "cargo nextest run -p fret-ui-material3 --features diagnostics --test material3_headless_goldens material3_headless_time_picker_suite_goldens_v1",
+    "cargo check -p fret-ui-material3 --features diagnostics --tests",
+    "cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings",
+    "python -m json.tool docs/workstreams/material3-time-family-token-fallback-v1/WORKSTREAM.json | Out-Null",
+    "python -m json.tool docs/workstreams/material3-time-family-token-fallback-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null",
+    "python tools/check_workstream_catalog.py",
+    "python tools/check_layering.py",
+    "git diff --check"
+  ]
+}

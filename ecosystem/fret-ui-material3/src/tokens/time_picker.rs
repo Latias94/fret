@@ -8,7 +8,7 @@ use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::interaction::PressableInteraction;
 use crate::foundation::token_resolver::MaterialTokenResolver;
-use crate::tokens::{shape, typography};
+use crate::tokens::{shape, time_period_common, typography};
 
 pub(crate) const COMPONENT_PREFIX: &str = "md.comp.time-picker";
 
@@ -299,51 +299,40 @@ pub(crate) fn time_selector_state_layer_opacity(
 }
 
 pub(crate) fn period_selector_container_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key(&token_key("period-selector.vertical.container.width"))
-        .unwrap_or(Px(52.0))
+    time_period_common::container_width(
+        theme,
+        COMPONENT_PREFIX,
+        "period-selector.vertical.container.width",
+    )
 }
 
 pub(crate) fn period_selector_container_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key(&token_key("period-selector.vertical.container.height"))
-        .unwrap_or(Px(80.0))
+    time_period_common::container_height(
+        theme,
+        COMPONENT_PREFIX,
+        "period-selector.vertical.container.height",
+        Px(80.0),
+    )
 }
 
 pub(crate) fn period_selector_shape(theme: &Theme) -> Corners {
-    let key = token_key("period-selector.container.shape");
-    shape::corners_or_metric(theme, &key)
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.small"))
-        .unwrap_or(Corners::all(Px(8.0)))
+    time_period_common::container_shape(theme, COMPONENT_PREFIX)
 }
 
 pub(crate) fn period_selector_outline_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key(&token_key("period-selector.outline.width"))
-        .unwrap_or(Px(1.0))
+    time_period_common::outline_width(theme, COMPONENT_PREFIX)
 }
 
 pub(crate) fn period_selector_outline_color(theme: &Theme) -> Color {
-    MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &token_key("period-selector.outline.color"),
-        "md.sys.color.outline",
-    )
+    time_period_common::outline_color(theme, COMPONENT_PREFIX)
 }
 
 pub(crate) fn period_selector_selected_container_color(theme: &Theme) -> Color {
-    MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &token_key("period-selector.selected.container.color"),
-        "md.sys.color.tertiary-container",
-    )
+    time_period_common::selected_container_color(theme, COMPONENT_PREFIX)
 }
 
 pub(crate) fn period_selector_label_text_style(theme: &Theme) -> TextStyle {
-    typography::text_style(
-        theme,
-        Some(&token_key("period-selector.label-text")),
-        "md.sys.typescale.title-medium",
-        TextIntent::Control,
-    )
+    time_period_common::label_text_style(theme, COMPONENT_PREFIX)
 }
 
 pub(crate) fn period_selector_label_color(
@@ -351,36 +340,7 @@ pub(crate) fn period_selector_label_color(
     selected: bool,
     interaction: Option<PressableInteraction>,
 ) -> Color {
-    let suffix = match (selected, interaction) {
-        (true, Some(PressableInteraction::Focused)) => {
-            "period-selector.selected.focus.label-text.color"
-        }
-        (true, Some(PressableInteraction::Hovered)) => {
-            "period-selector.selected.hover.label-text.color"
-        }
-        (true, Some(PressableInteraction::Pressed)) => {
-            "period-selector.selected.pressed.label-text.color"
-        }
-        (true, None) => "period-selector.selected.label-text.color",
-        (false, Some(PressableInteraction::Focused)) => {
-            "period-selector.unselected.focus.label-text.color"
-        }
-        (false, Some(PressableInteraction::Hovered)) => {
-            "period-selector.unselected.hover.label-text.color"
-        }
-        (false, Some(PressableInteraction::Pressed)) => {
-            "period-selector.unselected.pressed.label-text.color"
-        }
-        (false, None) => "period-selector.unselected.label-text.color",
-    };
-    MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &token_key(suffix),
-        if selected {
-            "md.sys.color.on-tertiary-container"
-        } else {
-            "md.sys.color.on-surface-variant"
-        },
-    )
+    time_period_common::label_color(theme, COMPONENT_PREFIX, selected, interaction)
 }
 
 pub(crate) fn period_selector_state_layer_color(
@@ -388,51 +348,12 @@ pub(crate) fn period_selector_state_layer_color(
     selected: bool,
     interaction: PressableInteraction,
 ) -> Color {
-    let suffix = match (selected, interaction) {
-        (true, PressableInteraction::Focused) => "period-selector.selected.focus.state-layer.color",
-        (true, PressableInteraction::Hovered) => "period-selector.selected.hover.state-layer.color",
-        (true, PressableInteraction::Pressed) => {
-            "period-selector.selected.pressed.state-layer.color"
-        }
-        (false, PressableInteraction::Focused) => {
-            "period-selector.unselected.focus.state-layer.color"
-        }
-        (false, PressableInteraction::Hovered) => {
-            "period-selector.unselected.hover.state-layer.color"
-        }
-        (false, PressableInteraction::Pressed) => {
-            "period-selector.unselected.pressed.state-layer.color"
-        }
-    };
-    MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &token_key(suffix),
-        if selected {
-            "md.sys.color.on-tertiary-container"
-        } else {
-            "md.sys.color.on-surface-variant"
-        },
-    )
+    time_period_common::state_layer_color(theme, COMPONENT_PREFIX, selected, interaction)
 }
 
 pub(crate) fn period_selector_state_layer_opacity(
     theme: &Theme,
     interaction: PressableInteraction,
 ) -> f32 {
-    let (suffix, fallback) = match interaction {
-        PressableInteraction::Focused => (
-            "period-selector.focus.state-layer.opacity",
-            "md.sys.state.focus.state-layer-opacity",
-        ),
-        PressableInteraction::Hovered => (
-            "period-selector.hover.state-layer.opacity",
-            "md.sys.state.hover.state-layer-opacity",
-        ),
-        PressableInteraction::Pressed => (
-            "period-selector.pressed.state-layer.opacity",
-            "md.sys.state.pressed.state-layer-opacity",
-        ),
-    };
-    MaterialTokenResolver::new(theme)
-        .number_comp_or_sys(&token_key(suffix), fallback, 0.0)
-        .clamp(0.0, 1.0)
+    time_period_common::state_layer_opacity(theme, COMPONENT_PREFIX, interaction)
 }

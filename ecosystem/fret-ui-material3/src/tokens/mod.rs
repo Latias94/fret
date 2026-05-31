@@ -43,6 +43,7 @@ pub(crate) mod switch;
 pub(crate) mod tabs;
 pub(crate) mod text_field;
 pub(crate) mod time_input;
+pub(crate) mod time_period_common;
 pub(crate) mod time_picker;
 pub(crate) mod tooltip;
 pub(crate) mod top_app_bar;
