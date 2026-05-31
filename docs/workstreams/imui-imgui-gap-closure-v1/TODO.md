@@ -458,6 +458,12 @@ Last updated: 2026-05-31
       Result: `primitives/readout.rs` keeps the shared readout hub and re-exports feedback helpers.
       `primitives/readout/feedback.rs` owns status badge, inline error, and validation message text
       props.
+- [x] Split editor property readout text props into a private child owner without changing property
+      group headers, inspector titles, property-row labels/reset glyph layout semantics,
+      re-export paths, or readout regression coverage.
+      Result: `primitives/readout.rs` keeps the shared readout hub and re-exports property helpers.
+      `primitives/readout/property.rs` owns property group header, inspector title, property-row
+      label, and reset glyph text props.
 - [x] Split editor vector axis/reset/outcome policy and axis group rendering into a private child
       owner without changing Vec2/Vec3/Vec4 public constructors, reset options, axis outcome
       accessors, transform-edit outcome routing, id-source/test-id derivation, or row/column auto

@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Readout Property Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor property readout text props moved into a private `readout/property.rs`
+owner without changing property group headers, inspector titles, property-row labels/reset glyph
+layout semantics, re-export paths, or readout regression coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/readout.rs` keeps the shared readout hub and re-exports
+  property helpers at the existing module path.
+- `ecosystem/fret-ui-editor/src/primitives/readout/property.rs` owns property group header,
+  inspector title, property-row label, and reset glyph text props.
+- `tools/gate_imui_workstream_source.py` now gates the hub/property split and moves the four direct
+  `TextProps` allowlist entries from `readout.rs` to `readout/property.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new property owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor editor_property_group_header_text_is_single_line_and_shrinkable
+  editor_inspector_panel_title_text_is_single_line_and_shrinkable
+  editor_property_row_label_text_is_single_line_and_shrinkable
+  editor_property_row_reset_glyph_text_keeps_fixed_button_line_box --no-fail-fast`: pass (4 passed,
+  218 skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass (with Git's line-ending warning for `primitives/readout.rs`).
+
 ## Readout Feedback Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor feedback readout text props moved into a private

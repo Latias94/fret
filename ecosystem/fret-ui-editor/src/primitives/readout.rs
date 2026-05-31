@@ -15,6 +15,7 @@ use super::colors::editor_muted_foreground;
 use super::style::EditorStyle;
 mod feedback;
 mod popup_list;
+mod property;
 mod theme_preset;
 
 pub(crate) use feedback::{
@@ -24,6 +25,10 @@ pub(crate) use feedback::{
 pub(crate) use popup_list::{
     editor_popup_empty_text_props, editor_popup_list_centered_row_text_props,
     editor_popup_list_option_caption_text_props, editor_popup_list_row_text_props,
+};
+pub(crate) use property::{
+    editor_inspector_panel_title_text_props, editor_property_group_header_text_props,
+    editor_property_row_label_text_props, editor_property_row_reset_glyph_text_props,
 };
 pub(crate) use theme_preset::{
     editor_theme_preset_picker_header_text_props, editor_theme_preset_picker_row_label_text_props,
@@ -129,102 +134,6 @@ pub(crate) fn editor_section_heading_text_props(text: Arc<str>, color: Color) ->
             size: Px(11.0),
             weight: FontWeight::SEMIBOLD,
             line_height: Some(Px(14.0)),
-            ..Default::default()
-        })),
-        color: Some(color),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Ellipsis,
-        align: TextAlign::Start,
-        ink_overflow: Default::default(),
-    }
-}
-
-pub(crate) fn editor_property_group_header_text_props(
-    text: Arc<str>,
-    color: Color,
-    header_height: Px,
-) -> TextProps {
-    TextProps {
-        layout: LayoutStyle {
-            size: SizeStyle {
-                width: Length::Fill,
-                height: Length::Auto,
-                min_width: Some(Length::Px(Px(0.0))),
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        text,
-        style: Some(typography::as_control_text(TextStyle {
-            size: Px(12.0),
-            weight: FontWeight::SEMIBOLD,
-            line_height: Some(header_height),
-            ..Default::default()
-        })),
-        color: Some(color),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Ellipsis,
-        align: TextAlign::Start,
-        ink_overflow: Default::default(),
-    }
-}
-
-pub(crate) fn editor_inspector_panel_title_text_props(
-    text: Arc<str>,
-    color: Color,
-    line_height: Px,
-) -> TextProps {
-    TextProps {
-        layout: LayoutStyle {
-            size: SizeStyle {
-                width: Length::Fill,
-                height: Length::Auto,
-                min_width: Some(Length::Px(Px(0.0))),
-                ..Default::default()
-            },
-            flex: FlexItemStyle {
-                order: 0,
-                grow: 1.0,
-                shrink: 1.0,
-                basis: Length::Px(Px(0.0)),
-                align_self: None,
-            },
-            ..Default::default()
-        },
-        text,
-        style: Some(typography::as_control_text(TextStyle {
-            size: Px(12.0),
-            weight: FontWeight::SEMIBOLD,
-            line_height: Some(line_height),
-            ..Default::default()
-        })),
-        color: Some(color),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Ellipsis,
-        align: TextAlign::Start,
-        ink_overflow: Default::default(),
-    }
-}
-
-pub(crate) fn editor_property_row_label_text_props(
-    text: Arc<str>,
-    color: Color,
-    row_height: Px,
-) -> TextProps {
-    TextProps {
-        layout: LayoutStyle {
-            size: SizeStyle {
-                width: Length::Fill,
-                height: Length::Auto,
-                min_width: Some(Length::Px(Px(0.0))),
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        text,
-        style: Some(typography::as_control_text(TextStyle {
-            size: Px(11.0),
-            line_height: Some(row_height),
             ..Default::default()
         })),
         color: Some(color),
@@ -342,36 +251,6 @@ pub(crate) fn editor_axis_marker_text_props(
             size: SizeStyle {
                 width: Length::Fill,
                 height: Length::Fill,
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        text,
-        style: Some(typography::as_control_text(TextStyle {
-            size: Px(11.0),
-            weight: FontWeight::SEMIBOLD,
-            line_height: Some(line_height),
-            ..Default::default()
-        })),
-        color: Some(color),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
-        align: TextAlign::Center,
-        ink_overflow: Default::default(),
-    }
-}
-
-pub(crate) fn editor_property_row_reset_glyph_text_props(
-    text: Arc<str>,
-    color: Color,
-    line_height: Px,
-) -> TextProps {
-    TextProps {
-        layout: LayoutStyle {
-            size: SizeStyle {
-                width: Length::Fill,
-                height: Length::Fill,
-                min_width: Some(Length::Px(Px(0.0))),
                 ..Default::default()
             },
             ..Default::default()
