@@ -1,10 +1,12 @@
-//! Material 3 tabs (primary and secondary navigation) (MVP).
+//! Material 3 tabs (primary and secondary navigation).
 //!
 //! Outcome-oriented implementation:
 //! - Token-driven sizing/colors via `md.comp.*-navigation-tab.*` (subset).
 //! - Roving focus + automatic activation (selection follows focus).
 //! - State layer + bounded ripple aligned to the tab bounds.
+//! - Optional active tabpanel surface for app-style tabbed views.
 
+use std::cell::Cell;
 use std::sync::Arc;
 
 use fret_core::{
@@ -22,7 +24,7 @@ use fret_ui::element::{
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::{ElementContextThemeExt as _, controllable_state};
-use fret_ui_kit::primitives::direction as direction_prim;
+use fret_ui_kit::primitives::{direction as direction_prim, tabs as tabs_prim};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
 };
@@ -136,6 +138,40 @@ impl TabItem {
     }
 }
 
+/// Declarative content for a Material tab value.
+///
+/// `Tabs` remains useful as a navigation-only tab row when no panels are provided. Add panels when
+/// the component should own the active `TabPanel` semantics and automation anchor, matching the
+/// complete app-tabs shape used by mature recipe layers.
+#[derive(Debug)]
+pub struct TabPanel {
+    value: Arc<str>,
+    children: Vec<AnyElement>,
+    a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+}
+
+impl TabPanel {
+    pub fn new(value: impl Into<Arc<str>>, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            value: value.into(),
+            children: children.into_iter().collect(),
+            a11y_label: None,
+            test_id: None,
+        }
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct TabsStyle {
     pub container_background: OverrideSlot<ColorRef>,
@@ -201,15 +237,17 @@ impl TabsVariant {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Tabs {
     model: Model<Arc<str>>,
     items: Vec<TabItem>,
+    panels: Vec<TabPanel>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     disabled: bool,
     loop_navigation: bool,
     scrollable: bool,
+    content_fill_remaining: bool,
     variant: TabsVariant,
     style: TabsStyle,
 }
@@ -219,11 +257,13 @@ impl Tabs {
         Self {
             model,
             items: Vec::new(),
+            panels: Vec::new(),
             a11y_label: None,
             test_id: None,
             disabled: false,
             loop_navigation: true,
             scrollable: false,
+            content_fill_remaining: true,
             variant: TabsVariant::Primary,
             style: TabsStyle::default(),
         }
@@ -255,6 +295,16 @@ impl Tabs {
         self
     }
 
+    pub fn panel(mut self, panel: TabPanel) -> Self {
+        self.panels.push(panel);
+        self
+    }
+
+    pub fn panels(mut self, panels: impl IntoIterator<Item = TabPanel>) -> Self {
+        self.panels.extend(panels);
+        self
+    }
+
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
         self
@@ -280,6 +330,11 @@ impl Tabs {
         self
     }
 
+    pub fn content_fill_remaining(mut self, fill: bool) -> Self {
+        self.content_fill_remaining = fill;
+        self
+    }
+
     pub fn variant(mut self, variant: TabsVariant) -> Self {
         self.variant = variant;
         self
@@ -300,11 +355,13 @@ impl Tabs {
         let Tabs {
             model,
             items,
+            panels,
             a11y_label,
             test_id,
             disabled,
             loop_navigation,
             scrollable,
+            content_fill_remaining,
             variant,
             style,
         } = self;
@@ -331,6 +388,12 @@ impl Tabs {
                     let selected_idx = items
                         .iter()
                         .position(|it| it.value.as_ref() == selected_value.as_ref());
+                    let selected_label = selected_idx
+                        .and_then(|idx| items.get(idx))
+                        .map(|it| it.label.clone());
+                    let active_panel = panels
+                        .into_iter()
+                        .find(|panel| panel.value.as_ref() == selected_value.as_ref());
                     let has_stacked_tabs = items.iter().any(TabItem::uses_stacked_icon);
 
                     let tab_stop = items
@@ -357,6 +420,10 @@ impl Tabs {
                         .as_ref()
                         .map(|ids| ids.active_indicator.clone());
                     let divider_test_id = part_test_ids.as_ref().map(|ids| ids.divider.clone());
+                    let active_panel_test_id = active_panel
+                        .as_ref()
+                        .and_then(|panel| panel.test_id.clone())
+                        .or_else(|| test_id.as_ref().map(|id| part_test_id(id, "panel")));
 
                     let container_states = if disabled {
                         WidgetStates::DISABLED
@@ -403,7 +470,10 @@ impl Tabs {
                         disabled: disabled_items.clone(),
                     };
 
-                    cx.semantics(sem, move |cx| {
+                    let selected_tab_element: Cell<Option<u64>> = Cell::new(None);
+                    let selected_tab_element = &selected_tab_element;
+
+                    let tab_list = cx.semantics(sem, move |cx| {
                         vec![cx.container(
                             ContainerProps {
                                 background: Some(container_bg),
@@ -549,6 +619,7 @@ impl Tabs {
                                                 container_height,
                                                 selected_idx.is_some_and(|t| t == idx),
                                                 &style,
+                                                Some(selected_tab_element),
                                             )
                                         })
                                         .collect::<Vec<_>>()
@@ -570,7 +641,31 @@ impl Tabs {
                                 vec![divider, indicator, tabs]
                             },
                         )]
-                    })
+                    });
+
+                    let Some(active_panel) = active_panel else {
+                        return tab_list;
+                    };
+
+                    let panel = material_tab_panel(
+                        cx,
+                        active_panel,
+                        selected_label,
+                        selected_tab_element.get(),
+                        active_panel_test_id,
+                        content_fill_remaining,
+                    );
+
+                    let mut root = FlexProps::default();
+                    root.layout.size.width = Length::Fill;
+                    root.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                    root.direction = Axis::Vertical;
+                    root.justify = MainAlign::Start;
+                    root.align = CrossAlign::Stretch;
+                    root.gap = Px(0.0).into();
+                    root.padding = Edges::all(Px(0.0)).into();
+
+                    cx.flex(root, move |_cx| vec![tab_list, panel])
                 },
             )
         })
@@ -591,6 +686,7 @@ fn material_tab<H: UiHost>(
     height: Px,
     selected: bool,
     style_override: &TabsStyle,
+    selected_tab_element: Option<&Cell<Option<u64>>>,
 ) -> AnyElement {
     let value = item.value.clone();
     let label = item.label.clone();
@@ -600,6 +696,9 @@ fn material_tab<H: UiHost>(
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !disabled_group && !item.disabled;
+        if selected && let Some(selected_tab_element) = selected_tab_element {
+            selected_tab_element.set(Some(pressable_id.0));
+        }
 
         cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
             rt.tabs.ensure_len(set_size);
@@ -852,6 +951,42 @@ fn material_tab<H: UiHost>(
 
         (pressable_props, vec![pointer_region])
     })
+}
+
+fn material_tab_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    panel: TabPanel,
+    selected_label: Option<Arc<str>>,
+    labelled_by_element: Option<u64>,
+    test_id: Option<Arc<str>>,
+    content_fill_remaining: bool,
+) -> AnyElement {
+    let TabPanel {
+        children,
+        a11y_label,
+        ..
+    } = panel;
+    let label = a11y_label.or(selected_label);
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.min_width = Some(Length::Px(Px(0.0)));
+    layout.flex.grow = if content_fill_remaining { 1.0 } else { 0.0 };
+    layout.flex.shrink = 1.0;
+
+    let mut panel = tabs_prim::tab_panel_with_gate(
+        cx,
+        true,
+        false,
+        layout,
+        label,
+        labelled_by_element,
+        move |_cx| children,
+    )
+    .expect("active Material tab panel should render a subtree");
+    if let Some(test_id) = test_id {
+        panel = panel.test_id(test_id);
+    }
+    panel
 }
 
 fn tab_content<H: UiHost>(

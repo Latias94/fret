@@ -52,6 +52,23 @@ Non-goals:
   - nested submenu overlay behavior,
   - scroll buttons / max-height behavior for long menus,
   - optional value/callback authoring parity with shadcn's non-model menu helpers.
+- Tabs shadcn-level app-tabs batch landed in `ecosystem/fret-ui-material3`:
+  - API: `TabPanel` plus `Tabs::{panel,panels,content_fill_remaining}`. Existing navigation-only
+    `Tabs` usage remains valid when no panels are supplied.
+  - Semantics: the active content renders as `SemanticsRole::TabPanel`, inherits the selected tab
+    label by default, and uses the selected tab element as `labelled_by`; the runtime derives the
+    reverse tab `controls` edge.
+  - Parts: explicit panel `test_id` is supported; when omitted, root `test_id` derives the active
+    panel selector as `.panel`.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/tests/tabs_state.rs`
+      (`tabs_render_active_tab_panel_semantics_and_relations`)
+    - `ecosystem/fret-ui-material3/tests/automation_surface.rs`
+      (`material3_tabs_exposes_stable_part_test_ids`)
+    - `apps/fret-ui-gallery/src/ui/snippets/material3/tabs.rs`
+- Completeness matrix:
+  - `docs/workstreams/material3/material3-shadcn-level-completeness-v1.md`
+    tracks API/parts/semantics/behavior/tokens/motion/gallery status and next priorities.
 
 ### Infrastructure notes (2026-02-06)
 

@@ -1120,7 +1120,7 @@ fn material3_surface_data_display_expose_stable_part_test_ids() {
 
 #[test]
 fn material3_tabs_exposes_stable_part_test_ids() {
-    use fret_ui_material3::{TabItem, Tabs};
+    use fret_ui_material3::{TabItem, TabPanel, Tabs};
 
     let mut app = TestHost::default();
     app.set_global(PlatformCapabilities::default());
@@ -1147,6 +1147,12 @@ fn material3_tabs_exposes_stable_part_test_ids() {
                         TabItem::new("overview", "Overview").test_id("m3-tab-overview"),
                         TabItem::new("settings", "Settings").test_id("m3-tab-settings"),
                     ])
+                    .panels(vec![
+                        TabPanel::new("overview", [cx.text("Overview panel")])
+                            .test_id("m3-tab-panel-overview"),
+                        TabPanel::new("settings", [cx.text("Settings panel")])
+                            .test_id("m3-tab-panel-settings"),
+                    ])
                     .into_element(cx);
                 vec![with_padding(cx, Px(32.0), tabs)]
             })
@@ -1162,6 +1168,7 @@ fn material3_tabs_exposes_stable_part_test_ids() {
         "m3-tabs.chrome",
         "m3-tabs.active-indicator",
         "m3-tabs.divider",
+        "m3-tab-panel-overview",
         "m3-tab-overview",
         "m3-tab-overview.chrome",
         "m3-tab-overview.label",

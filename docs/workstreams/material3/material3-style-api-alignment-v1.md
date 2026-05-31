@@ -109,7 +109,7 @@ wired into the crate and therefore do not represent the current public surface.
 | Checkbox | `ecosystem/fret-ui-material3/src/checkbox.rs` | Yes (`CheckboxStyle`) | Yes | Yes | Exposes container/outline/icon/state-layer color overrides; maps `checked` to `WidgetStates::SELECTED`. |
 | Switch | `ecosystem/fret-ui-material3/src/switch.rs` | Yes (`SwitchStyle`) | Yes | Yes | Exposes track/handle/outline/state-layer color overrides; maps `selected` to `WidgetStates::SELECTED`. |
 | Radio | `ecosystem/fret-ui-material3/src/radio.rs` | Yes (`RadioStyle`) | Yes | Yes | Exposes icon + state-layer color overrides; maps `checked` to `WidgetStates::SELECTED`. |
-| Tabs | `ecosystem/fret-ui-material3/src/tabs.rs` | Yes (`TabsStyle`) | Yes | Yes | Overrides: container/label/state-layer/active-indicator colors; maps active tab to `WidgetStates::SELECTED`. |
+| Tabs | `ecosystem/fret-ui-material3/src/tabs.rs` | Yes (`TabsStyle`) | Yes | Yes | Overrides: container/label/state-layer/active-indicator colors; maps active tab to `WidgetStates::SELECTED`; active `TabPanel` is API/semantics surface, not a style slot. |
 | TextField | `ecosystem/fret-ui-material3/src/text_field.rs` | Yes (`TextFieldStyle`) | Yes | Yes | Keeps `error` as a bespoke boolean; style overrides apply to the existing token-derived defaults. |
 | Menu | `ecosystem/fret-ui-material3/src/menu.rs` | Yes (`MenuStyle`) | Yes | Yes | Container, item width, section-label/item label/icon/supporting/trailing colors, state-layer, and text-style overrides; overlay/roving/dismiss remain policy-only. |
 | Dialog | `ecosystem/fret-ui-material3/src/dialog.rs` | Yes (`DialogStyle`) | Yes | Yes | Minimal scrim + surface + headline/supporting color overrides; focus/motion/dismiss remain policy-only. |
@@ -284,6 +284,8 @@ Policy-only in v1 (not exposed as slots):
 
 - Sizing and density: padding, minimum touch target enforcement.
 - Layout: scrollable behavior, spacing/insets, indicator geometry.
+- Semantics/layout API: `TabPanel` ownership, panel `test_id`, and tab-panel label relations are
+  public authoring surface but not `TabsStyle` slots.
 - Interaction: roving focus mechanics, ripple/state-layer behavior and motion timings.
 
 #### TextField slot boundary (v1)

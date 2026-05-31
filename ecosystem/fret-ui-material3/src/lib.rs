@@ -93,7 +93,7 @@ pub use slider::{RangeSlider, Slider, SliderStyle};
 pub use snackbar::{Snackbar, SnackbarController, SnackbarDuration, SnackbarHost};
 pub use suggestion_chip::{SuggestionChip, SuggestionChipStyle, SuggestionChipVariant};
 pub use switch::{Switch, SwitchStyle};
-pub use tabs::{TabItem, Tabs, TabsStyle, TabsVariant};
+pub use tabs::{TabItem, TabPanel, Tabs, TabsStyle, TabsVariant};
 pub use text_field::{TextField, TextFieldStyle, TextFieldVariant};
 pub use time_picker::{
     DockedTimePicker, TimePickerDialog, TimePickerDisplayMode, TimePickerVariant,

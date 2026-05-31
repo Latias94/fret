@@ -12,7 +12,7 @@ use fret_icons::ids;
 use fret_runtime::{Model, ModelHost, PlatformCapabilities};
 use fret_ui::UiTree;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
-use fret_ui_material3::{TabItem, Tabs, TabsVariant};
+use fret_ui_material3::{TabItem, TabPanel, Tabs, TabsVariant};
 
 mod support;
 
@@ -105,6 +105,37 @@ fn render_tabs_with_variant_and_loop_navigation(
                     TabItem::new("disabled", "Disabled")
                         .disabled(true)
                         .test_id("m3-tab-disabled"),
+                ])
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), tabs)]
+        });
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(app, services, bounds(), 1.0);
+}
+
+fn render_tabs_with_panels(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+) {
+    let root =
+        fret_ui::declarative::render_root(ui, app, services, window, bounds(), "root", |cx| {
+            let tabs = Tabs::new(selected)
+                .a11y_label("Material tabs")
+                .test_id("m3-tabs")
+                .items(vec![
+                    TabItem::new("a", "A").test_id("m3-tab-a"),
+                    TabItem::new("b", "B").test_id("m3-tab-b"),
+                    TabItem::new("disabled", "Disabled")
+                        .disabled(true)
+                        .test_id("m3-tab-disabled"),
+                ])
+                .panels(vec![
+                    TabPanel::new("a", [cx.text("A panel")]).test_id("m3-tab-panel-a"),
+                    TabPanel::new("b", [cx.text("B panel")]).test_id("m3-tab-panel-b"),
                 ])
                 .into_element(cx);
             vec![with_padding(cx, Px(32.0), tabs)]
@@ -392,6 +423,45 @@ fn tabs_export_tablist_orientation_and_tab_collection_semantics() {
     assert!(disabled.flags.disabled);
     assert_eq!(disabled.pos_in_set, Some(3));
     assert_eq!(disabled.set_size, Some(3));
+}
+
+#[test]
+fn tabs_render_active_tab_panel_semantics_and_relations() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    render_tabs_with_panels(&mut ui, &mut app, &mut services, window, selected.clone());
+
+    let a = semantics_node(&ui, "m3-tab-a");
+    let panel = semantics_node(&ui, "m3-tab-panel-a");
+    assert_eq!(panel.role, SemanticsRole::TabPanel);
+    assert_eq!(panel.label.as_deref(), Some("A"));
+    assert!(
+        panel.labelled_by.contains(&a.id),
+        "active Material tabpanel should be labelled by the selected tab"
+    );
+    assert!(
+        a.controls.contains(&panel.id),
+        "selected Material tab should expose the derived controls edge to the active tabpanel"
+    );
+    assert!(
+        ui.semantics_snapshot()
+            .expect("semantics snapshot")
+            .nodes
+            .iter()
+            .all(|node| node.test_id.as_deref() != Some("m3-tab-panel-b")),
+        "inactive non-force-mounted Material tabpanel should not be present"
+    );
+
+    app.models_mut()
+        .update(&selected, |value| *value = Arc::<str>::from("b"))
+        .expect("selected model should update");
+    render_tabs_with_panels(&mut ui, &mut app, &mut services, window, selected);
+
+    let b = semantics_node(&ui, "m3-tab-b");
+    let panel = semantics_node(&ui, "m3-tab-panel-b");
+    assert_eq!(panel.role, SemanticsRole::TabPanel);
+    assert_eq!(panel.label.as_deref(), Some("B"));
+    assert!(panel.labelled_by.contains(&b.id));
+    assert!(b.controls.contains(&panel.id));
 }
 
 #[test]
