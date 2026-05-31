@@ -3,6 +3,32 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Runtime Boundary Source-Gate Refresh Evidence - 2026-05-31
+
+Claim verified: `fret-imui` remains a thin, policy-light authoring facade over
+`fret-authoring` and `fret-ui`, while generic IMUI policy stays in `fret-ui-kit::imui`, editor
+controls stay in `fret-ui-editor`, and docking/multi-window behavior stays in `fret-docking` plus
+runner/backend owners.
+
+Evidence:
+
+- `ecosystem/fret-imui/Cargo.toml` runtime `[dependencies]` still contain only
+  `fret-authoring` and `fret-ui`; `fret-ui-kit` remains dev-only for focused conformance tests.
+- `ecosystem/fret-imui/src/lib.rs` still exports the small authoring facade and state-query/state-
+  selector extension modules only.
+- `tools/gate_imui_workstream_source.py` now gates the `fret-imui/src/lib.rs` facade shape and
+  rejects kit/editor/docking/workspace/plot/shadcn/winit/wgpu imports from the runtime facade.
+
+Focused gates:
+
+- `python tools/audit_crate.py --crate fret-imui`: pass; direct runtime dependencies were
+  `fret-authoring` and `fret-ui`, with no external dependencies.
+- `python tools/check_layering.py`: pass.
+- `python tools/gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Virtual-List Output Owner-Split Evidence - 2026-05-31
 
 Claim verified: IMUI virtual-list list semantics decoration and `VirtualListResponse` packaging

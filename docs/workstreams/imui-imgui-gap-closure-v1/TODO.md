@@ -58,6 +58,13 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Refresh the `fret-imui` runtime boundary gate so the thin authoring facade cannot drift into
+      kit/editor/docking policy ownership without changing public IMUI facade APIs.
+      Result: `tools/gate_imui_workstream_source.py` now checks `ecosystem/fret-imui/src/lib.rs`
+      for the policy-light authoring facade shape and rejects `fret_ui_kit`, `fret_ui_editor`,
+      `fret_docking`, workspace, plot, shadcn, winit, or wgpu imports from the runtime facade.
+      Fresh audit evidence still reports direct runtime dependencies only on `fret-authoring` and
+      `fret-ui`.
 - [x] Split editor input-group segment/text/axis helper implementation into a private child owner
       without changing the existing `crate::primitives::input_group::*` call path, frame owner
       routing, joined-input owner routing, text-role semantics, icon-button chrome, axis marker

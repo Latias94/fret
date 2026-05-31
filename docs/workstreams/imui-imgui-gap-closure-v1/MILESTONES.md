@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 IMUI runtime boundary source-gate refresh:
+`fret-imui` remains a thin policy-light authoring facade over `fret-authoring` and `fret-ui`.
+`tools/gate_imui_workstream_source.py` now also freezes the public `ecosystem/fret-imui/src/lib.rs`
+shape and rejects kit/editor/docking/workspace/plot/shadcn/winit/wgpu imports from the runtime
+facade. Generic IMUI policy stays in `fret-ui-kit::imui`, editor controls stay in
+`fret-ui-editor`, and docking/multi-window policy stays in `fret-docking` plus runner/backend
+owners.
+
 2026-05-31 IMUI virtual-list output owner-split result:
 `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/element.rs` keeps keyed runtime list
 assembly, default scroll-handle slot state, focus child mounting, row wrapping, rendered-range
