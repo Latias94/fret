@@ -1,11 +1,11 @@
 # Material3 Token Resolver Non-Field Fallback v1 Handoff
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-31
 
 ## Current State
 
-This lane is open as a narrow follow-on from `material3-token-resolver-fallback-v1`.
+This lane is closed as a narrow follow-on from `material3-token-resolver-fallback-v1`.
 
 M3NF-010 is complete: the workstream exists, the residual fallback surface is documented, and Button
 is selected as the first executable migration slice.
@@ -26,7 +26,11 @@ paths while preserving token visual and targeted state-test outcomes.
 M3NF-055 is complete: Checkbox, Slider, and Switch residual color fallback chains now use
 `MaterialTokenResolver` while preserving token visual and targeted choice-control state outcomes.
 
-The next executable task is M3NF-060: verify package/workstream gates and close the lane.
+M3NF-060 is complete: final package/workstream gates passed, the residual color fallback audit has
+no matches, and the closeout audit is recorded.
+
+There are no executable tasks left in this lane. If future work wants to govern non-color direct
+token lookups, start a narrower follow-on instead of reopening this scope.
 
 ## Guardrails
 
@@ -37,4 +41,5 @@ The next executable task is M3NF-060: verify package/workstream gates and close 
 
 ## Suggested Next Gate
 
-`python tools/check_workstream_catalog.py`
+No gate is required for this closed lane. For a new follow-on, begin with the residual audit pattern
+recorded in `EVIDENCE_AND_GATES.md`.

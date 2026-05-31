@@ -1,6 +1,6 @@
 # Material3 Token Resolver Non-Field Fallback v1 Evidence And Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-31
 
 ## Repro Surface
@@ -22,6 +22,8 @@ Last updated: 2026-05-31
   - `cargo nextest run -p fret-ui-material3 --features diagnostics --test card_state --test carousel_item_state --test dialog_state --test list_state --test menu_state --test navigation_drawer_state --test navigation_state --test progress_indicator_state --test snackbar_state --test tooltip_state --test bottom_sheet_motion --test automation_surface`
 - Selection-control slice:
   - `cargo nextest run -p fret-ui-material3 --features diagnostics --test checkbox_state --test slider_state --test switch_state --test automation_surface`
+- Closeout targeted state suite:
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test button_state --test chip_state --test icon_button_state --test fab_state --test segmented_button_state --test tabs_state --test card_state --test carousel_item_state --test dialog_state --test list_state --test menu_state --test navigation_drawer_state --test navigation_state --test progress_indicator_state --test snackbar_state --test tooltip_state --test bottom_sheet_motion --test checkbox_state --test slider_state --test switch_state --test automation_surface`
 - Package checks:
   - `cargo check -p fret-ui-material3 --features diagnostics --tests`
   - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
@@ -88,6 +90,7 @@ Last updated: 2026-05-31
 - `ecosystem/fret-ui-material3/tests/slider_state.rs`
 - `ecosystem/fret-ui-material3/tests/switch_state.rs`
 - `ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json`
+- `docs/workstreams/material3-token-resolver-non-field-fallback-v1/CLOSEOUT_AUDIT_2026-05-31.md`
 
 ## M3NF-010 Evidence
 
@@ -214,3 +217,24 @@ Last updated: 2026-05-31
 - `python tools/check_workstream_catalog.py`: passed; 525 dedicated directories, 47 standalone markdown files.
 - `python tools/check_layering.py`: passed.
 - `git diff --check`: passed.
+
+## M3NF-060 Evidence
+
+- `cargo fmt --package fret-ui-material3 --check`: passed.
+- `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes`:
+  1 passed, 165 skipped.
+- `cargo nextest run -p fret-ui-material3 --features diagnostics --test button_state --test chip_state --test icon_button_state --test fab_state --test segmented_button_state --test tabs_state --test card_state --test carousel_item_state --test dialog_state --test list_state --test menu_state --test navigation_drawer_state --test navigation_state --test progress_indicator_state --test snackbar_state --test tooltip_state --test bottom_sheet_motion --test checkbox_state --test slider_state --test switch_state --test automation_surface`:
+  102 passed, 0 skipped.
+- `cargo check -p fret-ui-material3 --features diagnostics --tests`: passed.
+- `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`:
+  passed.
+- `rg --count-matches "or_else\\(\\|\\| theme\\.color_by_key|unwrap_or_else\\(\\|\\| theme\\.color_token|theme\\.color_by_key\\(" ecosystem/fret-ui-material3/src/tokens -g "*.rs" -g "!v30.rs" -g "!material_web_v30.rs"`:
+  no matches.
+- `python -m json.tool docs/workstreams/material3-token-resolver-non-field-fallback-v1/WORKSTREAM.json | Out-Null`:
+  passed.
+- `python tools/check_workstream_catalog.py`: passed; 525 dedicated directories, 47 standalone
+  markdown files.
+- `python tools/check_layering.py`: passed.
+- `git diff --check`: passed.
+- `docs/workstreams/material3-token-resolver-non-field-fallback-v1/CLOSEOUT_AUDIT_2026-05-31.md`:
+  closeout audit added.

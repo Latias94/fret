@@ -36,3 +36,5 @@
 {"role":"test","path":"ecosystem/fret-ui-material3/tests/checkbox_state.rs","why":"M3NF-055 targeted Checkbox state regression gate."}
 {"role":"test","path":"ecosystem/fret-ui-material3/tests/slider_state.rs","why":"M3NF-055 targeted Slider state regression gate."}
 {"role":"test","path":"ecosystem/fret-ui-material3/tests/switch_state.rs","why":"M3NF-055 targeted Switch state regression gate."}
+{"role":"closeout","path":"docs/workstreams/material3-token-resolver-non-field-fallback-v1/CLOSEOUT_AUDIT_2026-05-31.md","why":"M3NF-060 recorded final gates, residual audit status, and follow-on boundaries before closing the lane."}
+{"role":"evidence","path":"docs/workstreams/material3-token-resolver-non-field-fallback-v1/EVIDENCE_AND_GATES.md","why":"M3NF-060 recorded the final 2026-05-31 verification commands and results."}

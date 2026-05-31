@@ -1,6 +1,6 @@
 # Material3 Token Resolver Non-Field Fallback v1 TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-31
 
 Task IDs use `M3NF-*`.
@@ -55,10 +55,13 @@ Task IDs use `M3NF-*`.
     `MaterialTokenResolver`; the residual color fallback audit has no matches. Slider retains one
     direct label-text weight read, matching the typography-weight pattern used by chip modules.
 
-- [ ] M3NF-060: Verify and close.
+- [x] M3NF-060: Verify and close.
   - Scope: docs, package gates, catalog, layering, diff hygiene.
   - Expected result: lane closes or splits any remaining non-field fallback work.
   - Gate: all commands in `EVIDENCE_AND_GATES.md`.
+  - Note: Final closeout gates passed on 2026-05-31. The residual color fallback audit has no
+    matches; remaining non-color direct token reads are documented as follow-on scope rather than
+    reopening this lane.
 
 ## Notes
 

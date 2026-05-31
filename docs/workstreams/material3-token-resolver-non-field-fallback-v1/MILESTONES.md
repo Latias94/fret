@@ -1,6 +1,6 @@
 # Material3 Token Resolver Non-Field Fallback v1 Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-31
 
 ## M0 - Lane Opened
@@ -52,5 +52,9 @@ Status: Complete
 
 ## M5 - Lane Verified
 
+Status: Complete
+
 - Formatting, token fixtures, targeted component tests, check/clippy, catalog, layering, and diff
   hygiene pass.
+- The residual color fallback audit has no matches across non-generated Material3 token modules.
+- Non-color direct token lookup governance is explicitly split to future work if needed.
