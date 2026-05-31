@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use fret_core::{
     Axis, Color, Corners, Edges, KeyCode, PointerType, Px, Rect, SemanticsLive, Size, TextOverflow,
-    TextWrap,
+    TextStyle, TextWrap,
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, Elements, FlexProps, HoverRegionProps, LayoutStyle,
@@ -17,7 +17,6 @@ use fret_ui::element::{
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::OverlayPresence;
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::primitives::dismissable_layer as dismissable_layer_prim;
@@ -25,6 +24,10 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::tooltip as tooltip_prim;
 use fret_ui_kit::tooltip_provider;
+use fret_ui_kit::{
+    ColorRef, OverlayPresence, OverrideSlot, WidgetStateProperty, WidgetStates,
+    merge_override_slot, resolve_override_slot_with,
+};
 
 use crate::foundation::context::material_layout_direction_in_scope;
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
@@ -42,6 +45,44 @@ fn with_optional_test_id(mut element: AnyElement, test_id: Option<Arc<str>>) -> 
         element = element.test_id(test_id);
     }
     element
+}
+
+fn tooltip_color_override(
+    theme: &Theme,
+    slot: &OverrideSlot<ColorRef>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> Color,
+) -> Color {
+    resolve_override_slot_with(
+        slot.as_ref(),
+        states,
+        |color| color.resolve(theme),
+        fallback,
+    )
+}
+
+fn tooltip_metric_override(
+    slot: &OverrideSlot<Px>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> Px,
+) -> Px {
+    resolve_override_slot_with(slot.as_ref(), states, |value| *value, fallback)
+}
+
+fn tooltip_edges_override(
+    slot: &OverrideSlot<Edges>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> Edges,
+) -> Edges {
+    resolve_override_slot_with(slot.as_ref(), states, |value| *value, fallback)
+}
+
+fn tooltip_text_style_override(
+    slot: &OverrideSlot<TextStyle>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> TextStyle,
+) -> TextStyle {
+    resolve_override_slot_with(slot.as_ref(), states, |style| style.clone(), fallback)
 }
 
 fn tooltip_content_root<H: UiHost>(
@@ -205,6 +246,225 @@ impl TooltipProvider {
             .disable_hoverable_content(self.disable_hoverable_content),
             |cx| f(cx).into_iter().collect::<Elements>(),
         )
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct TooltipStyle {
+    pub plain_container_background: OverrideSlot<ColorRef>,
+    pub plain_supporting_text_color: OverrideSlot<ColorRef>,
+    pub plain_supporting_text_style: OverrideSlot<TextStyle>,
+    pub plain_container_corner_radius: OverrideSlot<Px>,
+    pub plain_container_padding: OverrideSlot<Edges>,
+    pub plain_container_max_width: OverrideSlot<Px>,
+    pub rich_container_background: OverrideSlot<ColorRef>,
+    pub rich_container_elevation: OverrideSlot<Px>,
+    pub rich_container_shadow_color: OverrideSlot<ColorRef>,
+    pub rich_title_color: OverrideSlot<ColorRef>,
+    pub rich_supporting_text_color: OverrideSlot<ColorRef>,
+    pub rich_title_text_style: OverrideSlot<TextStyle>,
+    pub rich_supporting_text_style: OverrideSlot<TextStyle>,
+    pub rich_container_corner_radius: OverrideSlot<Px>,
+    pub rich_container_padding: OverrideSlot<Edges>,
+    pub rich_container_max_width: OverrideSlot<Px>,
+    pub rich_text_gap: OverrideSlot<Px>,
+    pub container_min_width: OverrideSlot<Px>,
+    pub container_min_height: OverrideSlot<Px>,
+}
+
+impl TooltipStyle {
+    pub fn plain_container_background(
+        mut self,
+        color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.plain_container_background = Some(color);
+        self
+    }
+
+    pub fn plain_supporting_text_color(
+        mut self,
+        color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.plain_supporting_text_color = Some(color);
+        self
+    }
+
+    pub fn plain_supporting_text_style(
+        mut self,
+        style: WidgetStateProperty<Option<TextStyle>>,
+    ) -> Self {
+        self.plain_supporting_text_style = Some(style);
+        self
+    }
+
+    pub fn plain_container_corner_radius(
+        mut self,
+        radius: WidgetStateProperty<Option<Px>>,
+    ) -> Self {
+        self.plain_container_corner_radius = Some(radius);
+        self
+    }
+
+    pub fn plain_container_padding(mut self, padding: WidgetStateProperty<Option<Edges>>) -> Self {
+        self.plain_container_padding = Some(padding);
+        self
+    }
+
+    pub fn plain_container_max_width(mut self, width: WidgetStateProperty<Option<Px>>) -> Self {
+        self.plain_container_max_width = Some(width);
+        self
+    }
+
+    pub fn rich_container_background(
+        mut self,
+        color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.rich_container_background = Some(color);
+        self
+    }
+
+    pub fn rich_container_elevation(mut self, elevation: WidgetStateProperty<Option<Px>>) -> Self {
+        self.rich_container_elevation = Some(elevation);
+        self
+    }
+
+    pub fn rich_container_shadow_color(
+        mut self,
+        color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.rich_container_shadow_color = Some(color);
+        self
+    }
+
+    pub fn rich_title_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.rich_title_color = Some(color);
+        self
+    }
+
+    pub fn rich_supporting_text_color(
+        mut self,
+        color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.rich_supporting_text_color = Some(color);
+        self
+    }
+
+    pub fn rich_title_text_style(mut self, style: WidgetStateProperty<Option<TextStyle>>) -> Self {
+        self.rich_title_text_style = Some(style);
+        self
+    }
+
+    pub fn rich_supporting_text_style(
+        mut self,
+        style: WidgetStateProperty<Option<TextStyle>>,
+    ) -> Self {
+        self.rich_supporting_text_style = Some(style);
+        self
+    }
+
+    pub fn rich_container_corner_radius(mut self, radius: WidgetStateProperty<Option<Px>>) -> Self {
+        self.rich_container_corner_radius = Some(radius);
+        self
+    }
+
+    pub fn rich_container_padding(mut self, padding: WidgetStateProperty<Option<Edges>>) -> Self {
+        self.rich_container_padding = Some(padding);
+        self
+    }
+
+    pub fn rich_container_max_width(mut self, width: WidgetStateProperty<Option<Px>>) -> Self {
+        self.rich_container_max_width = Some(width);
+        self
+    }
+
+    pub fn rich_text_gap(mut self, gap: WidgetStateProperty<Option<Px>>) -> Self {
+        self.rich_text_gap = Some(gap);
+        self
+    }
+
+    pub fn container_min_width(mut self, width: WidgetStateProperty<Option<Px>>) -> Self {
+        self.container_min_width = Some(width);
+        self
+    }
+
+    pub fn container_min_height(mut self, height: WidgetStateProperty<Option<Px>>) -> Self {
+        self.container_min_height = Some(height);
+        self
+    }
+
+    pub fn merged(self, other: Self) -> Self {
+        Self {
+            plain_container_background: merge_override_slot(
+                self.plain_container_background,
+                other.plain_container_background,
+            ),
+            plain_supporting_text_color: merge_override_slot(
+                self.plain_supporting_text_color,
+                other.plain_supporting_text_color,
+            ),
+            plain_supporting_text_style: merge_override_slot(
+                self.plain_supporting_text_style,
+                other.plain_supporting_text_style,
+            ),
+            plain_container_corner_radius: merge_override_slot(
+                self.plain_container_corner_radius,
+                other.plain_container_corner_radius,
+            ),
+            plain_container_padding: merge_override_slot(
+                self.plain_container_padding,
+                other.plain_container_padding,
+            ),
+            plain_container_max_width: merge_override_slot(
+                self.plain_container_max_width,
+                other.plain_container_max_width,
+            ),
+            rich_container_background: merge_override_slot(
+                self.rich_container_background,
+                other.rich_container_background,
+            ),
+            rich_container_elevation: merge_override_slot(
+                self.rich_container_elevation,
+                other.rich_container_elevation,
+            ),
+            rich_container_shadow_color: merge_override_slot(
+                self.rich_container_shadow_color,
+                other.rich_container_shadow_color,
+            ),
+            rich_title_color: merge_override_slot(self.rich_title_color, other.rich_title_color),
+            rich_supporting_text_color: merge_override_slot(
+                self.rich_supporting_text_color,
+                other.rich_supporting_text_color,
+            ),
+            rich_title_text_style: merge_override_slot(
+                self.rich_title_text_style,
+                other.rich_title_text_style,
+            ),
+            rich_supporting_text_style: merge_override_slot(
+                self.rich_supporting_text_style,
+                other.rich_supporting_text_style,
+            ),
+            rich_container_corner_radius: merge_override_slot(
+                self.rich_container_corner_radius,
+                other.rich_container_corner_radius,
+            ),
+            rich_container_padding: merge_override_slot(
+                self.rich_container_padding,
+                other.rich_container_padding,
+            ),
+            rich_container_max_width: merge_override_slot(
+                self.rich_container_max_width,
+                other.rich_container_max_width,
+            ),
+            rich_text_gap: merge_override_slot(self.rich_text_gap, other.rich_text_gap),
+            container_min_width: merge_override_slot(
+                self.container_min_width,
+                other.container_min_width,
+            ),
+            container_min_height: merge_override_slot(
+                self.container_min_height,
+                other.container_min_height,
+            ),
+        }
     }
 }
 
@@ -633,6 +893,7 @@ fn tooltip_policy_root<H: UiHost>(
 pub struct PlainTooltip {
     trigger: AnyElement,
     content: PlainTooltipContent,
+    style: TooltipStyle,
     align: TooltipAlign,
     side: TooltipSide,
     side_offset: Px,
@@ -649,6 +910,7 @@ impl std::fmt::Debug for PlainTooltip {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PlainTooltip")
             .field("trigger_id", &self.trigger.id)
+            .field("style", &self.style)
             .field("align", &self.align)
             .field("side", &self.side)
             .field("side_offset", &self.side_offset)
@@ -677,6 +939,7 @@ impl PlainTooltip {
         Self {
             trigger,
             content: PlainTooltipContent::Text(text.into()),
+            style: TooltipStyle::default(),
             align: TooltipAlign::default(),
             side: TooltipSide::default(),
             side_offset: Px(4.0),
@@ -692,6 +955,11 @@ impl PlainTooltip {
 
     pub fn content_element(mut self, content: AnyElement) -> Self {
         self.content = PlainTooltipContent::Element(content);
+        self
+    }
+
+    pub fn style(mut self, style: TooltipStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -758,6 +1026,7 @@ impl PlainTooltip {
         let disable_hoverable_content_override = self.disable_hoverable_content_override;
         let test_id = self.test_id;
         let chrome_test_id = tooltip_part_id(&test_id, "chrome");
+        let style = self.style;
 
         let base_trigger = self.trigger;
         let content_spec = self.content;
@@ -776,10 +1045,20 @@ impl PlainTooltip {
             text_fg,
         ) = {
             let theme = Theme::global(&*cx.app);
+            let states = WidgetStates::empty();
 
-            let container_bg = tooltip_tokens::plain_container_background(theme);
-            let text_fg = tooltip_tokens::plain_supporting_text_color(theme);
-            let radius = tooltip_tokens::plain_container_shape_radius(theme);
+            let container_bg =
+                tooltip_color_override(theme, &style.plain_container_background, states, || {
+                    tooltip_tokens::plain_container_background(theme)
+                });
+            let text_fg =
+                tooltip_color_override(theme, &style.plain_supporting_text_color, states, || {
+                    tooltip_tokens::plain_supporting_text_color(theme)
+                });
+            let radius =
+                tooltip_metric_override(&style.plain_container_corner_radius, states, || {
+                    tooltip_tokens::plain_container_shape_radius(theme)
+                });
             let corner_radii = Corners::all(radius);
             // Material Web v30 plain tooltip tokens do not include elevation; keep it flat by default.
             let elevation = Px(0.0);
@@ -792,11 +1071,26 @@ impl PlainTooltip {
                 corner_radii,
             );
 
-            let supporting_text_style = tooltip_tokens::plain_supporting_text_style(theme);
-            let content_max_width = tooltip_tokens::plain_container_max_width(theme);
-            let content_min_width = tooltip_tokens::container_min_width(theme);
-            let content_min_height = tooltip_tokens::container_min_height(theme);
-            let container_padding = tooltip_tokens::plain_container_padding(theme);
+            let supporting_text_style =
+                tooltip_text_style_override(&style.plain_supporting_text_style, states, || {
+                    tooltip_tokens::plain_supporting_text_style(theme)
+                });
+            let content_max_width =
+                tooltip_metric_override(&style.plain_container_max_width, states, || {
+                    tooltip_tokens::plain_container_max_width(theme)
+                });
+            let content_min_width =
+                tooltip_metric_override(&style.container_min_width, states, || {
+                    tooltip_tokens::container_min_width(theme)
+                });
+            let content_min_height =
+                tooltip_metric_override(&style.container_min_height, states, || {
+                    tooltip_tokens::container_min_height(theme)
+                });
+            let container_padding =
+                tooltip_edges_override(&style.plain_container_padding, states, || {
+                    tooltip_tokens::plain_container_padding(theme)
+                });
 
             (
                 surface.background,
@@ -884,6 +1178,7 @@ enum RichTooltipContent {
 pub struct RichTooltip {
     trigger: AnyElement,
     content: RichTooltipContent,
+    style: TooltipStyle,
     align: TooltipAlign,
     side: TooltipSide,
     side_offset: Px,
@@ -900,6 +1195,7 @@ impl std::fmt::Debug for RichTooltip {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RichTooltip")
             .field("trigger_id", &self.trigger.id)
+            .field("style", &self.style)
             .field("align", &self.align)
             .field("side", &self.side)
             .field("side_offset", &self.side_offset)
@@ -931,6 +1227,7 @@ impl RichTooltip {
                 title: None,
                 supporting_text: supporting_text.into(),
             },
+            style: TooltipStyle::default(),
             align: TooltipAlign::default(),
             side: TooltipSide::default(),
             side_offset: Px(4.0),
@@ -953,6 +1250,11 @@ impl RichTooltip {
 
     pub fn content_element(mut self, content: AnyElement) -> Self {
         self.content = RichTooltipContent::Element(content);
+        self
+    }
+
+    pub fn style(mut self, style: TooltipStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -1021,6 +1323,7 @@ impl RichTooltip {
         let chrome_test_id = tooltip_part_id(&test_id, "chrome");
         let title_test_id = tooltip_part_id(&test_id, "title");
         let supporting_text_test_id = tooltip_part_id(&test_id, "supporting-text");
+        let style = self.style;
 
         let base_trigger = self.trigger;
         let content_spec = self.content;
@@ -1046,14 +1349,32 @@ impl RichTooltip {
             text_gap,
         ) = {
             let theme = Theme::global(&*cx.app);
+            let states = WidgetStates::empty();
 
-            let container_bg = tooltip_tokens::rich_container_background(theme);
-            let subhead_fg = tooltip_tokens::rich_subhead_color(theme);
-            let supporting_fg = tooltip_tokens::rich_supporting_text_color(theme);
-            let radius = tooltip_tokens::rich_container_shape_radius(theme);
+            let container_bg =
+                tooltip_color_override(theme, &style.rich_container_background, states, || {
+                    tooltip_tokens::rich_container_background(theme)
+                });
+            let subhead_fg = tooltip_color_override(theme, &style.rich_title_color, states, || {
+                tooltip_tokens::rich_subhead_color(theme)
+            });
+            let supporting_fg =
+                tooltip_color_override(theme, &style.rich_supporting_text_color, states, || {
+                    tooltip_tokens::rich_supporting_text_color(theme)
+                });
+            let radius =
+                tooltip_metric_override(&style.rich_container_corner_radius, states, || {
+                    tooltip_tokens::rich_container_shape_radius(theme)
+                });
             let corner_radii = Corners::all(radius);
-            let elevation = tooltip_tokens::rich_container_elevation(theme);
-            let shadow_color = tooltip_tokens::rich_container_shadow_color(theme);
+            let elevation =
+                tooltip_metric_override(&style.rich_container_elevation, states, || {
+                    tooltip_tokens::rich_container_elevation(theme)
+                });
+            let shadow_color =
+                tooltip_color_override(theme, &style.rich_container_shadow_color, states, || {
+                    tooltip_tokens::rich_container_shadow_color(theme)
+                });
             let surface = material_surface_style(
                 theme,
                 container_bg,
@@ -1062,14 +1383,34 @@ impl RichTooltip {
                 corner_radii,
             );
 
-            let subhead_style = tooltip_tokens::rich_subhead_text_style(theme);
-            let supporting_style = tooltip_tokens::rich_supporting_text_style(theme);
+            let subhead_style =
+                tooltip_text_style_override(&style.rich_title_text_style, states, || {
+                    tooltip_tokens::rich_subhead_text_style(theme)
+                });
+            let supporting_style =
+                tooltip_text_style_override(&style.rich_supporting_text_style, states, || {
+                    tooltip_tokens::rich_supporting_text_style(theme)
+                });
 
-            let content_max_width = tooltip_tokens::rich_container_max_width(theme);
-            let content_min_width = tooltip_tokens::container_min_width(theme);
-            let content_min_height = tooltip_tokens::container_min_height(theme);
-            let container_padding = tooltip_tokens::rich_container_padding(theme, has_title);
-            let text_gap = tooltip_tokens::rich_text_gap(theme);
+            let content_max_width =
+                tooltip_metric_override(&style.rich_container_max_width, states, || {
+                    tooltip_tokens::rich_container_max_width(theme)
+                });
+            let content_min_width =
+                tooltip_metric_override(&style.container_min_width, states, || {
+                    tooltip_tokens::container_min_width(theme)
+                });
+            let content_min_height =
+                tooltip_metric_override(&style.container_min_height, states, || {
+                    tooltip_tokens::container_min_height(theme)
+                });
+            let container_padding =
+                tooltip_edges_override(&style.rich_container_padding, states, || {
+                    tooltip_tokens::rich_container_padding(theme, has_title)
+                });
+            let text_gap = tooltip_metric_override(&style.rich_text_gap, states, || {
+                tooltip_tokens::rich_text_gap(theme)
+            });
 
             (
                 surface.background,

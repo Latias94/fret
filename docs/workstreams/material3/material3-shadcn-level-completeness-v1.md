@@ -33,7 +33,7 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 | Select / ExposedDropdown / Autocomplete | Strong | Strong | Strong | Strong | Strong | Partial | Strong | Field-family overlay behavior is mature; keep improving active-descendant/AT and motion evidence. |
 | TextField | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Floating-label and token work are mature; keep extending field-family compositions. |
 | Dialog / BottomSheet | Strong | Strong | Strong | Strong | Strong | Partial | Strong | Overlay policy is in ecosystem layers; motion/presence parity remains the main polish area. |
-| Tooltip | Partial | Strong | Strong | Partial | Strong | Partial | Strong | Rich tooltip actions are constrained by non-hit-testable tooltip overlay policy. |
+| Tooltip | Partial | Strong | Strong | Partial | Strong | Partial | Strong | `TooltipStyle` now covers plain/rich visual slots; rich tooltip actions are still constrained by non-hit-testable tooltip overlay policy. |
 | Snackbar | Strong | Strong | Strong | Strong | Strong | Strong | Strong | 2026-06-01: gained public `SnackbarStyle`, host `.style(...)`, direct Material style adoption in the shared toast renderer, and style override paint/layout gates. Residuals: richer app-level queue policy examples. |
 | NavigationBar / Rail / Drawer | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Continue polishing adaptive examples and route/content integration. |
 | TopAppBar | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Scroll behavior policy is in Material ecosystem code; nested-scroll consumption remains a future mechanism trigger. |
@@ -57,13 +57,20 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     text, border, action, cancel, and close style fields instead of hardcoding the Sonner skin.
   - Gates: `window_overlays::tests::toast::toast_layer_style_direct_colors_are_painted`,
     `snackbar_state` including `snackbar_style_overrides_paint_and_layout_contract`.
+- 2026-06-01 Tooltip visual style/API hardening:
+  - `TooltipStyle` follows ADR 0220 for plain/rich surface colors, text colors/text styles, shape,
+    padding, max width, min size, rich elevation/shadow, and rich text gap.
+  - Gallery examples now include styled plain and rich tooltip variants.
+  - Gates: `tooltip_state` including
+    `plain_tooltip_style_overrides_paint_and_layout_contract` and
+    `rich_tooltip_style_overrides_paint_parts_and_layout_contract`.
 
 ## Next Recommended Focus
 
 1. Finish Tabs residuals only if panel presence becomes a real app need:
    `force_mount` content, presence motion, and overflow/scroll affordance polish.
 2. Revisit Tooltip policy:
-   decide whether rich tooltip actions require a popover-like hit-testable surface or should remain
-   non-interactive per tooltip semantics.
+   decide whether rich tooltip actions require a popover-like hit-testable surface, a new
+   hit-testable rich-tooltip overlay kind, or should remain non-interactive per tooltip semantics.
 3. Start the next component-family audit on SearchBar/SearchView or DatePicker/TimePicker, focusing
    on where motion/presence evidence is still marked `Partial`.

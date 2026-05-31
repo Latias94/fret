@@ -661,9 +661,11 @@ These files are primarily *shared policy primitives*, not one-off component layo
 - [x] Range slider (MVP: two-thumb range selection, token-driven styling, pointer drag + keyboard step)
   - Evidence: `ecosystem/fret-ui-material3/src/slider.rs` (`RangeSlider`),
     `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_slider_suite_goldens_v1`, cases: `range_dragging`/`range_focus_thumb_switch`; per-thumb focus semantics via test ids `range-slider-30-70.start` + `range-slider-30-70.end`).
-- [x] Tooltip (MVP: plain tooltip, delay group + hover intent + safe-hover corridor, token-driven styling)
-  - Evidence: `ecosystem/fret-ui-material3/src/tooltip.rs` (`PlainTooltip`, `TooltipProvider`),
+- [x] Tooltip (MVP: plain/rich tooltip, delay group + hover intent + safe-hover corridor, token-driven styling, public `TooltipStyle`)
+  - Evidence: `ecosystem/fret-ui-material3/src/tooltip.rs` (`PlainTooltip`, `RichTooltip`, `TooltipProvider`, `TooltipStyle`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_plain_tooltip_*`),
+    `ecosystem/fret-ui-material3/tests/tooltip_state.rs`
+    (`plain_tooltip_style_overrides_paint_and_layout_contract`, `rich_tooltip_style_overrides_paint_parts_and_layout_contract`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_tooltip`),
     `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_TOOLTIP`).
 - [x] Snackbar (MVP: toast-layer skin using `md.comp.snackbar.*` tokens, action + dismiss icon)

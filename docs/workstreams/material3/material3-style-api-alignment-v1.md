@@ -113,7 +113,7 @@ wired into the crate and therefore do not represent the current public surface.
 | TextField | `ecosystem/fret-ui-material3/src/text_field.rs` | Yes (`TextFieldStyle`) | Yes | Yes | Keeps `error` as a bespoke boolean; style overrides apply to the existing token-derived defaults. |
 | Menu | `ecosystem/fret-ui-material3/src/menu.rs` | Yes (`MenuStyle`) | Yes | Yes | Container, item width, section-label/item label/icon/supporting/trailing colors, state-layer, and text-style overrides; overlay/roving/dismiss remain policy-only. |
 | Dialog | `ecosystem/fret-ui-material3/src/dialog.rs` | Yes (`DialogStyle`) | Yes | Yes | Minimal scrim + surface + headline/supporting color overrides; focus/motion/dismiss remain policy-only. |
-| Tooltip | `ecosystem/fret-ui-material3/src/tooltip.rs` | No | N/A | No | Often provider-driven; may stay policy-only in v1. |
+| Tooltip | `ecosystem/fret-ui-material3/src/tooltip.rs` | Yes (`TooltipStyle`) | Yes | Yes | Plain/rich visual slots are public; rich tooltip actions remain blocked by non-hit-testable tooltip overlay policy. |
 | Snackbar | `ecosystem/fret-ui-material3/src/snackbar.rs` | Yes (`SnackbarStyle`) | Yes | Yes | Host-level style surface covers container/supporting/action/close colors, shape, padding, and single/two-line heights; rendering is applied through `fret-ui-kit`'s toast-layer skin. |
 
 ## Implementation plan
@@ -161,7 +161,7 @@ Suggested initial slot sets:
   - [x] Button / IconButton
   - [x] Checkbox / Switch / Radio / Tabs / TextField
   - [x] Menu / Dialog (minimal style surface in v1)
-  - [x] Tooltip (policy-only in v1)
+  - [x] Tooltip (visual slots public; overlay/action policy remains mechanism-follow-up territory)
   - [x] Confirm how `WidgetState::Open` / `Selected` are used (e.g. menus/selects/tabs).
 
 Widget state conventions (v1):
@@ -343,7 +343,26 @@ Policy-only in v1 (not exposed as slots):
 - Layout: panel padding / max width / action layout and spacing.
 - Motion: durations/easing and transform choreography.
 
-Tooltip remains policy-only in v1 (customize via theme tokens or higher-level components).
+Public override surface (`TooltipStyle` in `ecosystem/fret-ui-material3/src/tooltip.rs`):
+
+- `plain_container_background` / `plain_supporting_text_color` / `plain_supporting_text_style` -
+  plain tooltip surface and supporting text.
+- `plain_container_corner_radius` / `plain_container_padding` / `plain_container_max_width` -
+  plain tooltip shape and sizing.
+- `rich_container_background` / `rich_container_elevation` / `rich_container_shadow_color` -
+  rich tooltip surface.
+- `rich_title_color` / `rich_supporting_text_color` / `rich_title_text_style` /
+  `rich_supporting_text_style` - rich tooltip text roles.
+- `rich_container_corner_radius` / `rich_container_padding` / `rich_container_max_width` /
+  `rich_text_gap` - rich tooltip shape and layout.
+- `container_min_width` / `container_min_height` - shared tooltip minimum sizing.
+
+Policy-only in v1 (not exposed as slots):
+
+- Overlay mechanics: placement, safe-hover corridor, delay group, dismissal policy, and motion.
+- Interactive rich-tooltip actions: Fret's tooltip overlay layer is deliberately pointer-transparent
+  (`layer.hit_testable=false`), so action rows require a separate overlay mechanism decision rather
+  than a Material-only style API change.
 
 ### M3SA-200 — Implement `*Style` surfaces per component (incremental)
 

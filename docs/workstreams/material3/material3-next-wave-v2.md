@@ -563,6 +563,19 @@ before continuing component surface work:
     - `ecosystem/fret-ui-material3/src/tooltip.rs` (`RichTooltip`)
     - `ecosystem/fret-ui-material3/src/tokens/tooltip.rs` (rich tooltip token mapping)
 
+- [x] Tooltip visual style API.
+  - Notes:
+    - `TooltipStyle` follows ADR 0220 and covers plain/rich surface color, text colors/text styles,
+      shape, padding, max width, min size, rich elevation/shadow, and rich text gap.
+    - This closes the visual customization gap without changing the pointer-transparent tooltip
+      overlay contract; rich actions remain a mechanism follow-up.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/tooltip.rs` (`TooltipStyle`, `.style(...)`)
+    - `ecosystem/fret-ui-material3/tests/tooltip_state.rs`
+      (`plain_tooltip_style_overrides_paint_and_layout_contract`,
+      `rich_tooltip_style_overrides_paint_parts_and_layout_contract`)
+    - `apps/fret-ui-gallery/src/ui/snippets/material3/tooltip.rs`
+
 ## Mechanism follow-ups (only if required)
 
 - [x] Semantics role coverage: add `SemanticsRole::Toolbar` (and validate with a concrete consumer).
