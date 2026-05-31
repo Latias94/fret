@@ -16,8 +16,11 @@ use crate::DockManager;
 use crate::dock::{DockPanelDragPayload, DockTabsDragPayload};
 use crate::invalidation::DockInvalidationService;
 
+mod in_window;
 mod tear_off;
 
+use in_window::default_in_window_float_rect;
+pub use in_window::recenter_in_window_floatings;
 pub(crate) use tear_off::is_dock_floating_os_window;
 use tear_off::{
     DockFloatingOsWindowRegistry, DockTearOffCompletion, DockTearOffKind, DockTearOffMachine,
@@ -36,85 +39,6 @@ pub fn request_dock_invalidation<H: UiHost>(
     windows: impl IntoIterator<Item = AppWindowId>,
 ) {
     invalidate_windows(app, windows);
-}
-
-/// Recenter in-window floating containers back into the visible bounds of a window.
-///
-/// This is intended as a "recovery" affordance for editor-grade layouts where floatings can end up
-/// fully off-screen (or stacked) due to persisted state, DPI changes, or window resizes.
-pub fn recenter_in_window_floatings<H: UiHost>(app: &mut H, window: AppWindowId) {
-    let bounds = app
-        .global::<fret_core::WindowMetricsService>()
-        .and_then(|svc| svc.inner_bounds(window))
-        .unwrap_or_else(|| {
-            fret_core::Rect::new(
-                fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
-                fret_core::Size::new(fret_core::Px(960.0), fret_core::Px(720.0)),
-            )
-        });
-
-    app.with_global_mut(DockManager::default, |dock, _app| {
-        let floatings = dock.graph.floating_windows_mut(window);
-        for (ix, floating) in floatings.iter_mut().enumerate() {
-            let size = floating.rect.size;
-            let dx = (ix as f32) * 16.0;
-            let dy = (ix as f32) * 16.0;
-            let origin = fret_core::Point::new(
-                fret_core::Px(bounds.origin.x.0 + (bounds.size.width.0 - size.width.0) * 0.5 + dx),
-                fret_core::Px(
-                    bounds.origin.y.0 + (bounds.size.height.0 - size.height.0) * 0.5 + dy,
-                ),
-            );
-            floating.rect = clamp_rect_to_bounds(fret_core::Rect::new(origin, size), bounds);
-        }
-    });
-
-    request_dock_invalidation(app, [window]);
-}
-
-fn clamp_rect_to_bounds(rect: fret_core::Rect, bounds: fret_core::Rect) -> fret_core::Rect {
-    let mut out = rect;
-    if bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0 {
-        let min_x = bounds.origin.x.0;
-        let min_y = bounds.origin.y.0;
-        let max_x = bounds.origin.x.0 + (bounds.size.width.0 - out.size.width.0).max(0.0);
-        let max_y = bounds.origin.y.0 + (bounds.size.height.0 - out.size.height.0).max(0.0);
-        out.origin.x = fret_core::Px(out.origin.x.0.clamp(min_x, max_x.max(min_x)));
-        out.origin.y = fret_core::Px(out.origin.y.0.clamp(min_y, max_y.max(min_y)));
-    }
-    out
-}
-
-fn default_in_window_float_rect<H: UiHost>(
-    app: &H,
-    target_window: AppWindowId,
-    anchor: Option<fret_core::WindowAnchor>,
-) -> fret_core::Rect {
-    let bounds = app
-        .global::<fret_core::WindowMetricsService>()
-        .and_then(|svc| svc.inner_bounds(target_window))
-        .unwrap_or_else(|| {
-            fret_core::Rect::new(
-                fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
-                fret_core::Size::new(fret_core::Px(960.0), fret_core::Px(720.0)),
-            )
-        });
-
-    let size = fret_core::Size::new(fret_core::Px(480.0), fret_core::Px(360.0));
-
-    let origin = if let Some(anchor) = anchor {
-        fret_core::Point::new(
-            fret_core::Px(anchor.position.x.0 - size.width.0 * 0.25),
-            fret_core::Px(anchor.position.y.0 - size.height.0 * 0.25),
-        )
-    } else {
-        fret_core::Point::new(
-            fret_core::Px(bounds.size.width.0 * 0.5 - size.width.0 * 0.5),
-            fret_core::Px(bounds.size.height.0 * 0.5 - size.height.0 * 0.5),
-        )
-    };
-
-    clamp_rect_to_bounds(fret_core::Rect::new(origin, size), bounds)
 }
 
 /// Handle a docking transaction emitted by the UI layer.

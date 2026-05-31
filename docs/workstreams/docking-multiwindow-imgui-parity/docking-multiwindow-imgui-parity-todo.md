@@ -394,6 +394,13 @@ Each TODO is labeled:
         OS-window registry plus pending tear-off correlation/cancellation state.
       - Focused compile, fallback regression, source gate, JSON shape, and diff checks passed
         locally without recording Wayland compositor acceptance.
+    - [x] 2026-05-31 docking runtime in-window fallback owner split keeps recovery/fallback
+      geometry out of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M24_DOCKING_RUNTIME_IN_WINDOW_OWNER_SPLIT_2026-05-31.md`
+      - `ecosystem/fret-docking/src/runtime/in_window.rs` owns default in-window float placement,
+        visible-bounds fallback, rectangle clamping, and `recenter_in_window_floatings(...)`.
+      - Focused fallback regressions, editor proof demo compile, source gate, JSON shape, and diff
+        checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
@@ -417,7 +424,8 @@ Each TODO is labeled:
 
 - [x] DW-P1-ux-002 Recovery: provide a “recenter floatings” helper for off-screen/overlapped floatings.
   - Evidence anchors:
-    - Helper: `ecosystem/fret-docking/src/runtime.rs` (`recenter_in_window_floatings`)
+    - Public re-export: `ecosystem/fret-docking/src/runtime.rs` (`recenter_in_window_floatings`)
+    - Helper owner: `ecosystem/fret-docking/src/runtime/in_window.rs` (`recenter_in_window_floatings`)
   - Acceptance:
     - If floatings are off-screen or stacked, calling the helper brings them back into view.
 
