@@ -6,12 +6,13 @@ use fret_runtime::{ModelHost, PlatformCapabilities};
 use fret_ui::{Theme, UiTree};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 
-mod interaction_harness;
 mod support;
 
-use interaction_harness::{QuadGeomSig, SceneSig, scene_quad_geometry_signature, scene_signature};
 use support::events::{pointer_down, pointer_up};
 use support::host::{FakeUiServices, TestHost};
+use support::interaction_harness::{
+    QuadGeomSig, SceneSig, scene_quad_geometry_signature, scene_signature,
+};
 use support::layout::{find_first_bounds_with_size, paint_alpha, with_padding};
 use support::theme::apply_material_theme;
 #[test]

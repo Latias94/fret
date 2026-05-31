@@ -9,15 +9,16 @@ use fret_ui::UiTree;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 
-mod interaction_harness;
 mod support;
 
-use interaction_harness::{QuadGeomSig, SceneSig, scene_quad_geometry_signature, scene_signature};
 use support::events::{
     key_down, key_up, pointer_down, pointer_move, pointer_move_touch, pointer_up,
 };
 use support::goldens::run_overlay_frame;
 use support::host::{FakeUiServices, TestHost};
+use support::interaction_harness::{
+    QuadGeomSig, SceneSig, scene_quad_geometry_signature, scene_signature,
+};
 use support::layout::with_padding;
 use support::theme::apply_material_theme;
 

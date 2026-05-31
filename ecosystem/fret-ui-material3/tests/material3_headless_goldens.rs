@@ -8,7 +8,6 @@ use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::{Theme, UiTree};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 
-mod interaction_harness;
 mod support;
 
 use support::events::{key_down, key_up, pointer_down, pointer_move, pointer_up};

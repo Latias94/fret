@@ -12,7 +12,6 @@ use fret_ui::element::{AnyElement, ContainerProps, Length};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 use fret_ui_material3::{CarouselItem, CarouselItemVariant};
 
-mod interaction_harness;
 mod support;
 
 use support::events::pointer_move;

@@ -14,7 +14,6 @@ use fret_ui_material3::menu::{Menu, MenuEntry, MenuItem};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 use fret_ui_material3::{DropdownMenu, DropdownMenuAlign};
 
-mod interaction_harness;
 mod support;
 
 use support::events::{key_down, key_up, pointer_down, pointer_move};

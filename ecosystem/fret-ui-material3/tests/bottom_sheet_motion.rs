@@ -7,7 +7,6 @@ use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 use fret_ui_material3::{Button, ButtonVariant, ModalBottomSheet};
 
-mod interaction_harness;
 mod support;
 
 use support::goldens::run_overlay_frame_with_scene_scaled;

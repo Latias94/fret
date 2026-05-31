@@ -12,11 +12,10 @@ use fret_ui::element::FlexProps;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 use fret_ui_material3::{CircularProgressIndicator, LinearProgressIndicator};
 
-mod interaction_harness;
 mod support;
 
-use interaction_harness::scene_quad_geometry_signature;
 use support::host::{FakeUiServices, TestHost};
+use support::interaction_harness::scene_quad_geometry_signature;
 use support::layout::with_padding;
 use support::theme::apply_material_theme;
 

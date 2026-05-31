@@ -8,7 +8,6 @@ use fret_ui::UiTree;
 use fret_ui_material3::SearchBar;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 
-mod interaction_harness;
 mod support;
 
 use support::host::{FakeUiServices, TestHost};

@@ -1,0 +1,6 @@
+{"role":"architecture","path":"docs/architecture.md","reason":"Overall Fret mechanism/policy layering context."}
+{"role":"adr","path":"docs/adr/0066-fret-ui-runtime-contract-surface.md","reason":"Keeps shared mechanism and policy boundaries explicit."}
+{"role":"workstream","path":"docs/workstreams/material3-text-input-mechanism-test-ownership-v1/WORKSTREAM.json","reason":"Previous interaction residual cleanup that exposed the next test-harness ownership issue."}
+{"role":"design","path":"docs/workstreams/material3-test-harness-support-ownership-v1/DESIGN.md","reason":"Current lane intent, boundary decision, and non-goals."}
+{"role":"tasks","path":"docs/workstreams/material3-test-harness-support-ownership-v1/TODO.md","reason":"Closed task ledger for the harness support ownership cleanup."}
+{"role":"gates","path":"docs/workstreams/material3-test-harness-support-ownership-v1/EVIDENCE_AND_GATES.md","reason":"Verification commands and evidence anchors."}

@@ -6,12 +6,11 @@ use fret_ui::UiTree;
 use fret_ui_material3::SearchBar;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 
-mod interaction_harness;
 mod support;
 
-use interaction_harness::{QuadSig, RectSig, scene_quad_signature};
 use support::events::{pointer_down, pointer_move};
 use support::host::{FakeUiServices, TestHost};
+use support::interaction_harness::{QuadSig, RectSig, scene_quad_signature};
 use support::layout::{semantics_node_id_by_test_id, with_padding};
 use support::theme::apply_material_theme;
 

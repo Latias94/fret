@@ -15,7 +15,6 @@ use fret_ui_material3::{
     ModalNavigationDrawer, NavigationDrawer, NavigationDrawerItem, NavigationDrawerVariant,
 };
 
-mod interaction_harness;
 mod support;
 
 use support::events::{pointer_down, pointer_move};

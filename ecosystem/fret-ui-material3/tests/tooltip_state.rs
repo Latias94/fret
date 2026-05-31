@@ -11,7 +11,6 @@ use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 use fret_ui_material3::{Button, ButtonVariant, PlainTooltip, RichTooltip, TooltipProvider};
 
-mod interaction_harness;
 mod support;
 
 use support::events::pointer_move;

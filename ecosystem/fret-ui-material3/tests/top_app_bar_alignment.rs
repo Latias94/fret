@@ -7,7 +7,6 @@ use fret_ui::scroll::ScrollHandle;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 use fret_ui_material3::{TopAppBar, TopAppBarAction, TopAppBarScrollBehavior, TopAppBarVariant};
 
-mod interaction_harness;
 mod support;
 
 use support::host::{FakeUiServices, TestHost};

@@ -22,8 +22,8 @@ use fret_ui_material3::tokens::v30::{
     ColorSchemeOptions, DynamicVariant, SchemeMode, TypographyOptions, theme_config_with_colors,
 };
 
-mod interaction_harness;
-use interaction_harness::{EdgesSig, QuadSig, RectSig, scene_quad_signature};
+mod support;
+use support::interaction_harness::{EdgesSig, QuadSig, RectSig, scene_quad_signature};
 
 #[derive(Default)]
 struct TestHost {

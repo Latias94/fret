@@ -10,7 +10,6 @@ use fret_ui::UiTree;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 
-mod interaction_harness;
 mod support;
 
 use support::events::{key_down, key_up, pointer_down, pointer_up};

@@ -14,7 +14,6 @@ use fret_ui::UiTree;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 use fret_ui_material3::{TabItem, Tabs, TabsVariant};
 
-mod interaction_harness;
 mod support;
 
 use support::events::key_down;

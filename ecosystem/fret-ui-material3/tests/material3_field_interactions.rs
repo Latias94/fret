@@ -7,7 +7,6 @@ use fret_runtime::{ModelHost, PlatformCapabilities};
 use fret_ui::UiTree;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 
-mod interaction_harness;
 mod support;
 
 use support::events::{key_down, key_up, pointer_down, pointer_up};
