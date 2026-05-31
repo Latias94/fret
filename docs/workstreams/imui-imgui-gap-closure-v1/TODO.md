@@ -1302,6 +1302,12 @@ Last updated: 2026-05-31
       `color_edit/popup/picker/hue_wheel.rs` remains the pure canvas owner, and
       `color_edit/popup/picker/hue_wheel_picker.rs` owns pressable drag target tracking and HSV
       update wiring.
+- [x] Split editor color-edit hue-wheel canvas path helpers into a private child owner without
+      changing ring paint, triangle paint, cursor paint, canvas keying, gradient stops, hue-wheel
+      target math, or popup policy tests.
+      Result: `color_edit/popup/picker/hue_wheel.rs` keeps canvas entry and paint orchestration,
+      while `color_edit/popup/picker/hue_wheel/path.rs` owns circle/triangle path construction,
+      absolute point projection, triangle grid barycentric steps, and triangle local projection.
 - [x] Split editor color-edit hue-wheel model math into a private child owner without changing
       hue-wheel public-in-color-edit import paths, target hit-testing, rotated triangle geometry,
       SV cursor projection, HSV update math, numeric input parsing, or picker tests.

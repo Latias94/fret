@@ -40684,6 +40684,8 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/hue_wheel.rs"),
             required=[
+                "mod path;",
+                "use path::{",
                 "pub(in crate::controls::color_edit::popup) fn hue_wheel_canvas<H: UiHost>",
                 "fn paint_hue_wheel_canvas(",
                 "fn paint_hue_wheel_ring(",
@@ -40691,20 +40693,40 @@ def main() -> None:
                 "fn paint_hue_wheel_triangle_cell(",
                 "fn paint_hue_wheel_cursors(",
                 "fn paint_cursor_circle(",
+                "Paint::SweepGradient(SweepGradient",
+            ],
+            forbidden=[
                 "fn triangle_grid_barycentric(",
                 "fn point_from_triangle_barycentric(",
                 "fn absolute_point(",
                 "fn triangle_path(",
                 "fn circle_path(",
-                "Paint::SweepGradient(SweepGradient",
                 "const HUE_WHEEL_TRIANGLE_STEPS: usize = 12;",
-            ],
-            forbidden=[
                 "Model<Color>",
                 "PressableProps",
                 "MouseButton",
                 "UiPointerActionHost",
                 "apply_hue_wheel_position",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/hue_wheel/path.rs"),
+            required=[
+                "pub(super) const HUE_WHEEL_TRIANGLE_STEPS: usize = 12;",
+                "pub(super) fn triangle_grid_barycentric(",
+                "pub(super) fn point_from_triangle_barycentric(",
+                "pub(super) fn absolute_point(",
+                "pub(super) fn triangle_path(",
+                "pub(super) fn circle_path(",
+                "PathCommand::CubicTo",
+                "HueWheelTriangle",
+            ],
+            forbidden=[
+                "CanvasPainter",
+                "Paint::SweepGradient",
+                "DrawOrder",
+                "ColorSpace",
+                "paint_hue_wheel",
             ],
         ),
         SourceCheck(
