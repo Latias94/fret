@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor TextField Draft Controller Owner Split Evidence - 2026-05-31
+
+Claim verified: editor text-field draft-controller binding split into a private buffered child
+owner without changing TextField public re-export path, controller commit/discard behavior,
+buffered session commit/cancel helpers, submit-command dispatch, or buffered unit tests.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs` now re-exports
+  `TextFieldDraftController` from `buffered/controller.rs` and keeps buffered state, focus/blur
+  planning, session sync, commit/cancel helpers, shortcut policy, and tests.
+- `ecosystem/fret-ui-editor/src/controls/text_field/buffered/controller.rs` owns the public draft
+  controller, private binding, commit/discard forwarding, bind/unbind, and Debug output.
+- `tools/gate_imui_workstream_source.py` checks the buffered root/controller split and rejects
+  controller binding details from drifting back into the buffered root file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new controller owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass after tightening controller
+  bind/unbind visibility to `pub(in crate::controls::text_field)`.
+- `cargo nextest run -p fret-ui-editor --features imui text_field --no-fail-fast`: pass (16
+  passed, 189 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Editor NumericInput Model Session Owner Split Evidence - 2026-05-31
 
 Claim verified: editor numeric-input model/session owners split without changing public

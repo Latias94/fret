@@ -194,6 +194,12 @@ Last updated: 2026-05-31
       Result: `controls/text_field.rs` now keeps the public control/options and layout orchestration
       only. `controls/text_field/buffered.rs` owns the draft controller, buffered state, session
       planning, commit/cancel helpers, clear-button session reset, and the buffered unit tests.
+- [x] Split editor text-field draft-controller binding into a private buffered child owner without
+      changing TextField public re-export path, controller commit/discard behavior, buffered
+      session commit/cancel helpers, submit-command dispatch, or buffered unit tests.
+      Result: `controls/text_field/buffered.rs` keeps buffered state, focus/blur planning,
+      session sync, commit/cancel helpers, and tests. `controls/text_field/buffered/controller.rs`
+      owns `TextFieldDraftController`, its private binding, and controller commit/discard routing.
 - [x] Split editor text-assist field option/model records into a private child owner without
       changing public option names, default unbuffered input policy, item test-id prefix fallback,
       rendered panel handoff, inline empty-label behavior, or anchored-overlay height policy.

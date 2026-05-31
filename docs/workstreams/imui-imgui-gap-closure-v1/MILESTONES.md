@@ -34,6 +34,13 @@ edit-line text-style policy; `model/tests.rs` owns line-box coverage; `session.r
 local model allocation. Public option/type alias names and default selection behavior remain
 unchanged.
 
+2026-05-31 editor text-field draft-controller owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs` now re-exports
+`TextFieldDraftController` from `buffered/controller.rs` and keeps buffered state, focus/blur
+planning, session sync, commit/cancel helpers, shortcut policy, and tests. `controller.rs` owns the
+public controller, private binding, commit/discard forwarding, bind/unbind, and Debug output. The
+public text-field re-export path remains unchanged.
+
 2026-05-31 menu interaction behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` now owns active-trigger
 installation and keyboard behavior orchestration only. `behavior/activation.rs` owns activate

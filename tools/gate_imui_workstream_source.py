@@ -39797,9 +39797,8 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs"),
             required=[
-                "pub struct TextFieldDraftController",
-                "pub(super) fn bind(",
-                "pub(super) fn unbind(",
+                "mod controller;",
+                "pub use controller::TextFieldDraftController;",
                 "pub(super) struct BufferedTextFieldState",
                 "pub(super) enum BufferedTextFieldPendingBlurPlan",
                 "pub(super) struct BufferedTextFieldFocusPlan",
@@ -39820,9 +39819,32 @@ def main() -> None:
                 "draft_controller_commit_uses_bound_buffered_session",
             ],
             forbidden=[
+                "pub struct TextFieldDraftController",
+                "struct BufferedTextFieldDraftBinding",
+                "impl TextFieldDraftController",
                 "mod buffered;",
                 "pub use buffered::TextFieldDraftController;",
                 "pub draft_controller: Option<TextFieldDraftController>",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/text_field/buffered/controller.rs"),
+            required=[
+                "pub struct TextFieldDraftController",
+                "struct BufferedTextFieldDraftBinding",
+                "pub fn commit(&self",
+                "pub fn discard(&self",
+                "pub(in crate::controls::text_field) fn bind(",
+                "pub(in crate::controls::text_field) fn unbind(",
+                "commit_buffered_text_field_from_controller",
+                "cancel_buffered_text_field_from_controller",
+                "f.debug_struct(\"TextFieldDraftController\")",
+            ],
+            forbidden=[
+                "pub(super) struct BufferedTextFieldState",
+                "pub(super) fn sync_buffered_text_field_session",
+                "pub(super) fn install_buffered_text_field_blur_handler",
+                "pub(super) fn is_multiline_buffered_commit_shortcut",
             ],
         ),
         SourceCheck(
