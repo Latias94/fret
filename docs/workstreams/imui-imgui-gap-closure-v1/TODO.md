@@ -1284,6 +1284,12 @@ Last updated: 2026-06-01
       pressable wiring, a11y values, preview stack calls, and public alpha coordinate helpers,
       while `color_edit/popup/picker/alpha/interaction.rs` owns alpha value application plus
       model/draft/error mutation.
+- [x] Split editor color-edit alpha bar entry rendering into a private child owner without
+      changing horizontal/vertical alpha bar import paths, pressable pointer lifecycle, focused
+      border/ring chrome, preview stack routing, alpha a11y value text, or popup policy tests.
+      Result: `color_edit/popup/picker/alpha.rs` is now a module hub plus public alpha coordinate
+      helper owner. `color_edit/popup/picker/alpha/bar.rs` owns horizontal/vertical alpha bar
+      pressable entry rendering and chrome assembly.
 - [x] Split editor color-edit hue bar previews and interaction into a private owner without
       changing HSV hue-bar picker entrypoints, option thumbnails, hue coordinate mapping, shared
       HSV color application, or color-edit popup policy tests.

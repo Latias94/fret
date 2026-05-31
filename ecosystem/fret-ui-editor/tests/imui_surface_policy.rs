@@ -33,6 +33,8 @@ const COLOR_EDIT_POPUP_OPTIONS_THUMBNAIL_RS: &str =
 const COLOR_EDIT_POPUP_PICKER_RS: &str = include_str!("../src/controls/color_edit/popup/picker.rs");
 const COLOR_EDIT_POPUP_PICKER_ALPHA_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/alpha.rs");
+const COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS: &str =
+    include_str!("../src/controls/color_edit/popup/picker/alpha/bar.rs");
 const COLOR_EDIT_POPUP_PICKER_ALPHA_PREVIEW_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/alpha/preview.rs");
 const COLOR_EDIT_POPUP_PICKER_HUE_BAR_RS: &str =
@@ -139,9 +141,15 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(
         COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_RS.contains("fn vertical_hue_gradient_overlay<")
     );
+    assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_RS.contains("mod bar;"));
+    assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_RS.contains("mod interaction;"));
     assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_RS.contains("mod preview;"));
-    assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_RS.contains("use preview::{"));
-    assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_RS.contains("fn vertical_alpha_bar<"));
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_ALPHA_RS
+            .contains("pub(in crate::controls::color_edit::popup) use bar::alpha_bar;")
+    );
+    assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_RS.contains("pub(super) use bar::vertical_alpha_bar;"));
+    assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS.contains("fn vertical_alpha_bar<"));
     assert!(
         COLOR_EDIT_POPUP_PICKER_ALPHA_PREVIEW_RS.contains("fn vertical_alpha_gradient_overlay<")
     );
@@ -158,7 +166,7 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_MODEL_RS.contains("fn parse_color_numeric_input("));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn rgb_to_hsv("));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn hsv_to_rgb("));
-    assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_RS.contains("fn alpha_bar<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS.contains("fn alpha_bar<"));
     assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_PREVIEW_RS.contains("fn alpha_gradient_overlay<"));
     assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_RS.contains("fn alpha_from_local_x("));
     assert!(COLOR_EDIT_OPTIONS_RS.contains("pub struct ColorEditPopupOptions"));
