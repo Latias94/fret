@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor Color-Edit Popup Swatch Slot Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor color-edit popup swatch slot behavior moved out of the swatch row owner into
+a private `popup/swatches/slot.rs` owner without changing preset/history row entrypoints, row
+wrapping, stable test-id derivation, pressable/a11y chrome, activation color application, drag
+source/drop target behavior, palette drop callback routing, or alpha-preserving formatted value
+text.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/swatches.rs` keeps preset/history row
+  ownership, wrapping layout, current RGB selection projection, and derived test-id routing.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/swatches/slot.rs` owns individual swatch
+  pressable chrome, activate handling, drag source/drop target hooks, delivered palette-slot
+  callback dispatch, preview fill, and a11y value text.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now reads the slot owner directly and
+  asserts the row owner stays free of delivered-drop callback behavior.
+- `tools/gate_imui_workstream_source.py` now tracks the swatch row/slot split and rejects slot
+  behavior from drifting back into the row owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the swatches root and slot
+  owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor --lib color_edit --no-fail-fast`: pass (51 passed).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass (2 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+
 ## Editor Color-Edit Popup Body Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor color-edit popup body assembly moved out of the overlay request root into a

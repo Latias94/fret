@@ -58,6 +58,14 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor color-edit popup swatch slot behavior into a private child owner without
+      changing preset/history row entrypoints, row wrapping, stable test-id derivation,
+      pressable/a11y chrome, activation color application, drag source/drop target behavior,
+      palette drop callback routing, or alpha-preserving formatted value text.
+      Result: `controls/color_edit/popup/swatches.rs` keeps preset/history row ownership and
+      derived test-id routing. `controls/color_edit/popup/swatches/slot.rs` owns the individual
+      swatch pressable, drag/drop hooks, callback dispatch, preview fill, and a11y value. The
+      source gate prevents slot behavior from drifting back into the row owner.
 - [x] Split editor color-edit popup body assembly into a private child owner without changing
       overlay request placement, close-focus behavior, popup open model, picker/runtime option
       semantics, side preview composition, numeric rows, eyedropper action, swatch/history rows,
