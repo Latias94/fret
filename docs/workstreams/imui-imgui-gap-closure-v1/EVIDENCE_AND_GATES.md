@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor DragValueCore Scrub-State Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `DragValueCore` scrub session state moved out of the public drag-to-edit
+primitive owner into a private `primitives/drag_value_core/state.rs` owner without changing public
+constructors/builders, response accessor shape, pointer down/move/up routing, Escape cancel
+behavior, live value callbacks, commit/cancel callbacks, modifier multipliers, or numeric
+constraints.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs` keeps the public drag-to-edit
+  primitive entrypoint, pressable/key handler wiring, a11y/layout options, and response
+  construction.
+- `ecosystem/fret-ui-editor/src/primitives/drag_value_core/state.rs` owns scrub session storage,
+  commit/cancel state mutation, move action classification, and scrub multiplier resolution.
+- `tools/gate_imui_workstream_source.py` now tracks the DragValueCore scrub-state split and rejects
+  scrub state records/helpers from drifting back into the public primitive owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the scrub-state owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor drag_state_commit_requires_a_live_value_change
+  drag_state_commit_remembers_any_live_edit_in_the_session
+  drag_state_cancel_clears_live_edit_tracking
+  drag_value_core_response_exposes_read_only_signals --no-fail-fast`: pass (4 passed, 218 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Declarative Frame Drop-Hints Owner-Split Evidence - 2026-06-01
 
 Claim verified: docking declarative drop-hint projection moved out of the large declarative

@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `DragValueCore` scrub session state into a private child owner without changing
+      public `DragValueCore` constructors/builders, response accessor shape, pointer
+      down/move/up routing, Escape cancel behavior, live value callbacks, commit/cancel callbacks,
+      modifier multipliers, or numeric constraints.
+      Result: `primitives/drag_value_core.rs` keeps the public drag-to-edit primitive entrypoint,
+      pressable/key handler wiring, a11y/layout options, and response construction.
+      `primitives/drag_value_core/state.rs` owns scrub session storage, commit/cancel state
+      mutation, move action classification, and scrub multiplier resolution. The source gate
+      prevents scrub state from drifting back into the public primitive owner.
 - [x] Move docking declarative drop-hint projection back into the private frame owner without
       changing hover storage, drop-hint root/leaf tab projection, frame output construction, drop
       hint painting, or public docking APIs.

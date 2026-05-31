@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor DragValueCore scrub-state owner-split result:
+`ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs` now keeps the public drag-to-edit
+primitive entrypoint, pressable/key handler wiring, a11y/layout options, and response construction.
+The private `primitives/drag_value_core/state.rs` owner contains scrub session storage,
+commit/cancel state mutation, move action classification, and scrub multiplier resolution. Public
+`DragValueCore` APIs, response accessors, pointer routing, Escape cancel behavior, live callbacks,
+commit/cancel callbacks, modifier multipliers, and numeric constraints remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 docking declarative frame drop-hints owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` no longer owns the drop-hint helper that only
 serves frame aggregation. The private `dock/declarative/frame.rs` owner now contains both
