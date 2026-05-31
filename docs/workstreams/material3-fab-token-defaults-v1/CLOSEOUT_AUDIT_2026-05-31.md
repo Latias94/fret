@@ -66,6 +66,5 @@ Helper counts:
 ## Residual Follow-Ons
 
 - `slider`, `autocomplete`, and `list` still carry high fallback density in the current inventory.
-- A future inventory-tooling lane should rename the "shared token helper" bucket to a more accurate
-  "token helper module" bucket now that it includes both shared family helpers and component default
-  helper modules.
+- Closed follow-on: `docs/workstreams/material3-token-inventory-helper-taxonomy-v1/` adds the
+  clearer `token_helper_modules` inventory fields while preserving legacy aliases.

@@ -25,7 +25,7 @@ CONST_NUMBER_RE = re.compile(
 )
 COLOR_HEX_RE = re.compile(r"Color::from_srgb_hex_rgb\((0x[0-9a-fA-F_]+)\)")
 
-SHARED_TOKEN_HELPER_MODULES = {
+TOKEN_POLICY_HELPER_MODULES = {
     "chip_common.rs",
     "fab_common.rs",
     "shape.rs",
@@ -38,7 +38,7 @@ TOKEN_MODULE_SKIP = {
     "v30.rs",
     "visual_fixture_model.rs",
     "visual_fixtures.rs",
-}.union(SHARED_TOKEN_HELPER_MODULES)
+}.union(TOKEN_POLICY_HELPER_MODULES)
 FALLBACK_MARKERS = {
     "component_to_system_color": "color_comp_or_sys(",
     "component_to_system_number": "number_comp_or_sys(",
@@ -275,9 +275,9 @@ def scan_component_modules(
     return modules, aggregate_fallback_counts, all_fallback_samples, all_magic_constants
 
 
-def scan_shared_token_helper_modules(tokens_dir: Path) -> list[dict[str, Any]]:
+def scan_token_helper_modules(tokens_dir: Path) -> list[dict[str, Any]]:
     modules: list[dict[str, Any]] = []
-    for name in sorted(SHARED_TOKEN_HELPER_MODULES):
+    for name in sorted(TOKEN_POLICY_HELPER_MODULES):
         path = tokens_dir / name
         if not path.exists():
             continue
@@ -349,10 +349,11 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
     component_modules, fallback_counts, fallback_samples, magic_constants = scan_component_modules(
         tokens_dir, matrix_module_map
     )
-    shared_helper_modules = scan_shared_token_helper_modules(tokens_dir)
+    token_helper_modules = scan_token_helper_modules(tokens_dir)
     foundation = scan_foundation([foundation_dir, interaction_dir])
     actual_modules = {module["module"] for module in component_modules}
     matrix_modules = set(matrix_module_map)
+    token_helper_module_names = [module["module"] for module in token_helper_modules]
 
     report = {
         "schema_version": 1,
@@ -375,8 +376,10 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
             "matrix_component_count": len(matrix_components),
             "component_token_module_count": len(component_modules),
             "matrix_token_module_count": len(matrix_modules),
-            "shared_token_helper_module_count": len(shared_helper_modules),
-            "shared_token_helper_modules": [module["module"] for module in shared_helper_modules],
+            "token_helper_module_count": len(token_helper_modules),
+            "token_helper_modules": token_helper_module_names,
+            "shared_token_helper_module_count": len(token_helper_modules),
+            "shared_token_helper_modules": token_helper_module_names,
             "unmapped_component_token_modules": sorted(actual_modules - matrix_modules),
             "matrix_modules_without_file": sorted(matrix_modules - actual_modules),
             "material_web_generated_key_count": len(material_web_keys),
@@ -400,13 +403,14 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
             "component_family_counts": count_by([component_family(key) for key in material_web_keys]),
         },
         "v30_injection_surface": injection_surface,
-        "shared_token_helper_modules": shared_helper_modules,
+        "token_helper_modules": token_helper_modules,
+        "shared_token_helper_modules": token_helper_modules,
         "component_token_modules": component_modules,
         "foundation_and_interaction": foundation,
         "fallback_sample_index": bounded_samples(all_sorted_samples(fallback_samples), 40),
         "magic_visual_constant_sample_index": bounded_samples(all_sorted_samples(magic_constants), 40),
         "findings": derive_findings(
-            component_modules, foundation, injection_surface, shared_helper_modules
+            component_modules, foundation, injection_surface, token_helper_modules
         ),
     }
     return report
@@ -420,7 +424,7 @@ def derive_findings(
     component_modules: list[dict[str, Any]],
     foundation: dict[str, Any],
     injection_surface: dict[str, Any],
-    shared_helper_modules: list[dict[str, Any]],
+    token_helper_modules: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     heavy_fallback_modules = [
         module
@@ -429,9 +433,10 @@ def derive_findings(
     ]
     unmapped_modules = [module for module in component_modules if not module["matrix_components"]]
     matrix_mapping_finding = {
-        "finding": "Shared token helper modules are tracked separately from component token rows; unmapped component modules still require matrix/schema updates.",
+        "finding": "Token helper modules are tracked separately from component token rows; unmapped component modules still require matrix/schema updates.",
         "evidence": {
-            "shared_helper_modules": [module["module"] for module in shared_helper_modules],
+            "token_helper_modules": [module["module"] for module in token_helper_modules],
+            "shared_helper_modules": [module["module"] for module in token_helper_modules],
             "unmapped_component_token_modules": [module["module"] for module in unmapped_modules],
         },
     }

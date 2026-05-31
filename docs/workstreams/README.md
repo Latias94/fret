@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 538
+- Dedicated directories: 539
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2266,6 +2266,7 @@ Rule:
 - `docs/workstreams/material3-non-color-token-governance-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor follow-on for Material3 typography weight, opacity, motion easing, and time picker/input non-color token ownership; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-token-resolver-fallback-v1/` — first n/a, latest n/a, 5 markdown docs (closed fearless-refactor lane for deepening Material3 token resolver fallback, alpha, and blend policy; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-token-resolver-non-field-fallback-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor follow-on for non-field Material3 token fallback chains; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-token-inventory-helper-taxonomy-v1/` — first n/a, latest n/a, 7 markdown docs (closed fearless-refactor lane for renaming Material3 token inventory helper taxonomy while preserving JSON aliases; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-token-fallback-hardening-v2/` — first n/a, latest n/a, 7 markdown docs (closed fearless-refactor lane for reducing duplicated Material3 chip-family token fallback logic; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-logical-edge-layout-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for Material3 logical inline edge helpers plus FilterChip/InputChip RTL padding and trailing-action inset proof; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-select-popup-rtl-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for Material3 Select popup logical start alignment and listbox option RTL visual-slot proof; includes `WORKSTREAM.json`)
