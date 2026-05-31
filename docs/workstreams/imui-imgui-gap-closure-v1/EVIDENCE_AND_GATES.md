@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Slider Model Owner Split Evidence - 2026-05-31
+
+Claim verified: editor slider mode/state, hidden layout projection, and affixed-value helper logic
+split into a private model owner without changing pointer/typing behavior, focus restore, hidden
+slide/input mounting, duplicate chrome affix suppression, or public slider options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/slider.rs` keeps the slider public surface, control
+  orchestration, pointer/input behavior, and child-owner routing.
+- `ecosystem/fret-ui-editor/src/controls/slider/model.rs` owns `SliderMode`, `SliderState`, hidden
+  layout projection, and affixed value composition.
+- `ecosystem/fret-ui-editor/src/controls/slider/model/tests.rs` owns affixed-value helper coverage.
+- `tools/gate_imui_workstream_source.py` checks the slider root/model/test split and rejects
+  state/helper/test logic from drifting back into the root control file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new slider model owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui slider --no-fail-fast`: pass (10 passed,
+  191 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Canonical Workbench Discovery Refresh Evidence - 2026-05-31
 
 Claim verified: the canonical IMUI editor workbench route and Demo/Metrics/Debug discovery chain
@@ -2293,18 +2325,19 @@ Focused gates:
   pass.
 - `python tools\gate_imui_workstream_source.py`: pass.
 
-## Editor Slider Tests Child-Owner Split Evidence - 2026-05-31
+## Editor Slider Presentation Tests Child-Owner Split Evidence - 2026-05-31
 
-Claim verified: editor slider affixed-value and presentation regression tests split into a private
-test owner without changing slider public constructors, NumericPresentation adoption, duplicate
-chrome affix suppression, or slider chrome/value-math child-owner boundaries.
+Claim verified: editor slider presentation regression tests split into a private test owner without
+changing slider public constructors, NumericPresentation adoption, duplicate chrome affix
+suppression, or slider chrome/value-math child-owner boundaries.
 
 Evidence:
 
 - `ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider control orchestration,
   chrome/value-math child-owner routing, and a thin `mod tests;` hook.
-- `ecosystem/fret-ui-editor/src/controls/slider/tests.rs` owns affixed-value composition and
-  presentation adoption tests.
+- `ecosystem/fret-ui-editor/src/controls/slider/tests.rs` owns presentation adoption coverage.
+  A later follow-up moved affixed-value helper coverage to
+  `ecosystem/fret-ui-editor/src/controls/slider/model/tests.rs`.
 - `tools/gate_imui_workstream_source.py` now checks the slider root/test split and keeps migrated
   regression test names out of the root slider control file.
 - `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now tracks the slider test owner.

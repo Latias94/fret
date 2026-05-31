@@ -403,11 +403,18 @@ Last updated: 2026-05-31
       or slider control routing.
       Result: `controls/slider/value_math.rs` keeps value-domain math implementation plus
       test-owner routing. `controls/slider/value_math/tests.rs` owns value-math coverage.
-- [x] Split editor slider affixed-value and presentation regression tests into a private test owner
-      without changing slider public constructors, NumericPresentation adoption, duplicate chrome
-      affix suppression, or slider chrome/value-math child owner boundaries.
+- [x] Split editor slider presentation regression tests into a private test owner without changing
+      slider public constructors, NumericPresentation adoption, duplicate chrome affix suppression,
+      or slider chrome/value-math child owner boundaries.
       Result: `controls/slider.rs` keeps the slider control orchestration plus child-owner routing.
-      `controls/slider/tests.rs` owns affixed-value composition and presentation adoption tests.
+      `controls/slider/tests.rs` owns presentation adoption coverage.
+- [x] Split editor slider mode/state, hidden layout, and affixed-value helper into a private model
+      owner without changing pointer/typing behavior, focus restore, hidden slide/input mounting,
+      duplicate chrome affix suppression, or public slider options.
+      Result: `controls/slider.rs` keeps the slider public surface, control orchestration,
+      pointer/input behavior, and child-owner routing. `controls/slider/model.rs` owns
+      `SliderMode`, `SliderState`, hidden layout projection, and affixed value composition, while
+      `controls/slider/model/tests.rs` owns affixed-value helper coverage.
 - [x] Split editor enum-select row rendering, selection commit policy, and item test-id
       sanitization into a private child owner without changing trigger composition, overlay
       dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row

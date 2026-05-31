@@ -453,11 +453,19 @@ implementation and test-owner routing. `controls/slider/value_math/tests.rs` own
 coverage. Quantization, normalized progress, thumb-radius pointer projection, degenerate track
 fallback, and slider control routing remain unchanged.
 
-2026-05-31 editor slider tests child-owner result:
+2026-05-31 editor slider presentation tests child-owner result:
 `ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider control orchestration and
-child-owner routing. `controls/slider/tests.rs` owns affixed-value composition and presentation
-adoption tests. Slider public constructors, NumericPresentation adoption, duplicate chrome affix
-suppression, and slider chrome/value-math child-owner boundaries remain unchanged.
+child-owner routing. `controls/slider/tests.rs` owns presentation adoption coverage. Slider public
+constructors, NumericPresentation adoption, duplicate chrome affix suppression, and slider
+chrome/value-math child-owner boundaries remain unchanged.
+
+2026-05-31 editor slider model child-owner result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps the slider public surface, control
+orchestration, pointer/input behavior, and child-owner routing. `controls/slider/model.rs` owns
+`SliderMode`, `SliderState`, hidden layout projection, and affixed value composition, while
+`controls/slider/model/tests.rs` owns affixed-value helper coverage. Pointer/typing behavior, focus
+restore, hidden slide/input mounting, duplicate chrome affix suppression, and public slider options
+remain unchanged.
 
 2026-05-30 editor enum-select row child-owner result:
 `ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps public control/options, trigger

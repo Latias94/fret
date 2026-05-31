@@ -29,87 +29,24 @@ use crate::primitives::readout::EditorCompactReadoutStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use crate::primitives::{NumericPresentation, style::EditorStyle};
 use fret_core::text::TextOverflow;
-use fret_core::{Axis, Corners, CursorIcon, Edges, MouseButton, PointerId, Px, TextAlign};
+use fret_core::{Axis, Corners, CursorIcon, Edges, MouseButton, Px, TextAlign};
 use fret_runtime::Model;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, InsetStyle, LayoutStyle,
-    Length, MainAlign, Overflow, PositionStyle, PressableA11y, PressableProps, SizeStyle,
-    SpacingLength,
+    AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, LayoutStyle, Length,
+    MainAlign, Overflow, PressableA11y, PressableProps, SizeStyle, SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 mod chrome;
+mod model;
 #[cfg(test)]
 mod tests;
 mod value_math;
 
 use chrome::{alpha_mul, mix, resolve_slider_chrome};
+use model::{SliderMode, SliderState, compose_affixed_value_text, hidden_layout};
 use value_math::{quantize_value, t_from_value, value_from_x};
-
-fn compose_affixed_value_text(
-    value: &Arc<str>,
-    prefix: Option<&Arc<str>>,
-    suffix: Option<&Arc<str>>,
-) -> Arc<str> {
-    match (prefix, suffix) {
-        (None, None) => value.clone(),
-        _ => {
-            let mut out = String::new();
-            if let Some(prefix) = prefix {
-                out.push_str(prefix);
-            }
-            out.push_str(value);
-            if let Some(suffix) = suffix {
-                out.push_str(suffix);
-            }
-            Arc::from(out)
-        }
-    }
-}
-
-fn hidden_layout(mut layout: LayoutStyle) -> LayoutStyle {
-    layout.size = SizeStyle {
-        width: Length::Px(Px(0.0)),
-        height: Length::Px(Px(0.0)),
-        min_width: Some(Length::Px(Px(0.0))),
-        min_height: Some(Length::Px(Px(0.0))),
-        ..Default::default()
-    };
-    layout.position = PositionStyle::Absolute;
-    layout.inset = InsetStyle {
-        top: Some(Px(0.0)).into(),
-        left: Some(Px(0.0)).into(),
-        ..Default::default()
-    };
-    layout.overflow = Overflow::Clip;
-    layout
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum SliderMode {
-    Slide,
-    Typing,
-}
-
-#[derive(Debug)]
-struct SliderState {
-    mode: SliderMode,
-    slider_id: Option<fret_ui::GlobalElementId>,
-    dragging: bool,
-    pointer_id: Option<PointerId>,
-}
-
-impl Default for SliderState {
-    fn default() -> Self {
-        Self {
-            mode: SliderMode::Slide,
-            slider_id: None,
-            dragging: false,
-            pointer_id: None,
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct SliderOptions {

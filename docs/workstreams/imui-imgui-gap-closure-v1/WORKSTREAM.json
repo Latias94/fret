@@ -1172,6 +1172,8 @@
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value/model/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/slider.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/tests.rs",
+    "ecosystem/fret-ui-editor/src/controls/slider/model.rs",
+    "ecosystem/fret-ui-editor/src/controls/slider/model/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/chrome.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/chrome/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/value_math.rs",
