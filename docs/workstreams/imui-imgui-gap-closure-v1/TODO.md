@@ -1309,6 +1309,12 @@ Last updated: 2026-06-01
       focused border/ring chrome, and preview stack routing, while
       `color_edit/popup/picker/hue_bar/interaction.rs` owns local y to hue mutation and shared HSV
       apply dispatch.
+- [x] Split editor color-edit hue-bar entry rendering into a private child owner without changing
+      hue-bar import paths, pressable pointer lifecycle, focused border/ring chrome, preview stack
+      routing, hue a11y value text, or popup policy tests.
+      Result: `color_edit/popup/picker/hue_bar.rs` is now a module hub and re-export owner.
+      `color_edit/popup/picker/hue_bar/bar.rs` owns hue-bar pressable entry rendering and chrome
+      assembly.
 - [x] Split editor color-edit saturation/value picker previews and interaction into a private
       owner without changing HSV hue-bar picker composition, option thumbnails, SV coordinate
       mapping, shared HSV color application, or color-edit popup policy tests.
