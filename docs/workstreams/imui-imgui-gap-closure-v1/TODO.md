@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split docking declarative geometry and hit-test policy into a private child owner without
+      changing tab close/content hit results, empty tab-bar drag targeting, layout snapshot bounds,
+      split-handle cursor/min-size behavior, viewport hit projection, or public docking APIs.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, drag/drop event routing,
+      layout/render wiring, and public entrypoint functions. `dock/declarative/geometry.rs` owns
+      declarative tab hit tests, layout snapshot lookup, split-handle hit/min-size geometry,
+      split-handle cursor mapping, pixels-per-point lookup, and active viewport hit-test projection.
+      The source gate prevents geometry/hit-test policy from drifting back into the declarative
+      orchestration owner.
 - [x] Split docking declarative tab overflow menu and tab-strip scroll/hover policy into a private
       child owner without changing overflow menu opening, active-row scroll positioning, menu row
       click/close effects, menu wheel scrolling, tab-strip wheel persistence, hover projection,

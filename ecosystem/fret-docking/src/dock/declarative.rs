@@ -15,7 +15,6 @@ use super::drop_resolve::{
     dock_drop_target_diagnostics, resolve_dock_drop_intent_panel, resolve_dock_drop_intent_tabs,
     resolve_dock_drop_target,
 };
-use super::hit_test::{hit_test_split_handle, hit_test_tab};
 use super::host_frame::{
     DockSpaceLayoutSnapshot, begin_cross_window_dock_drag, panel_root_placements_for_snapshot,
 };
@@ -30,18 +29,18 @@ use super::paint::{
     tab_chrome_paint_inputs, tab_detail_paint_inputs, viewport_surface_paint_inputs,
 };
 use super::services::{DockFocusRequestService, DockPanelContentService, DockingPolicyService};
-use super::tab_overflow::{TabOverflowMenuState, tab_overflow_button_rect};
+use super::tab_overflow::TabOverflowMenuState;
 use super::types::{
-    DividerDragState, DockDragGhostSnapshot, DockDropHints, DockDropTarget, DockPanelDragPayload,
+    DockDragGhostSnapshot, DockDropHints, DockDropTarget, DockPanelDragPayload,
     DockTabsDragPayload, HoverTarget,
 };
 use super::viewport::{
-    ViewportCaptureState, ViewportHit, hit_test_active_viewport_panel, viewport_input_from_hit,
-    viewport_input_from_hit_clamped,
+    ViewportCaptureState, viewport_input_from_hit, viewport_input_from_hit_clamped,
 };
 use fret_runtime::Effect;
 
 mod frame;
+mod geometry;
 mod interaction;
 mod overflow;
 mod registry;
@@ -49,6 +48,12 @@ mod tab_metrics;
 mod tear_off;
 
 use frame::DockSpaceElementFrame;
+use geometry::{
+    declarative_hit_test_active_viewport_panel, declarative_hit_test_tab_bar_empty_space,
+    declarative_hit_test_tab_close, declarative_hit_test_tab_content,
+    declarative_layout_snapshot_for_bounds, declarative_pixels_per_point,
+    declarative_split_handle_cursor, declarative_split_handle_hit_for_position,
+};
 use interaction::{
     DeclarativeDividerDrag, DeclarativeDockInteractionService, DeclarativeFloatingDrag,
     DeclarativeFloatingHover, DeclarativePendingDockDrag, DeclarativePendingDockTabsDrag,
@@ -68,7 +73,7 @@ use registry::{
 };
 use tab_metrics::{
     declarative_apply_tab_bar_drag_auto_scroll, declarative_sync_tab_scroll_for_window,
-    declarative_tab_bar_geometry, declarative_tab_detail_titles, declarative_tab_scroll_for_frame,
+    declarative_tab_detail_titles, declarative_tab_scroll_for_frame,
     declarative_tab_widths_for_layout, declarative_tab_widths_from_prepared_titles,
     prepare_declarative_tab_detail_paint, prepare_declarative_tab_title,
 };
@@ -151,363 +156,6 @@ fn sync_declarative_viewport_layouts<H: UiHost>(
     app.with_global_mut_untracked(DockManager::default, |dock, _app| {
         dock.sync_viewport_layouts_for_window(window, viewport_layouts);
     });
-}
-
-fn declarative_hit_test_tab_close<H: UiHost>(
-    app: &H,
-    window: AppWindowId,
-    bounds: Rect,
-    theme: fret_ui::ThemeSnapshot,
-    position: fret_core::Point,
-) -> Option<(fret_core::DockNodeId, usize, PanelKey)> {
-    let dock = app.global::<DockManager>()?;
-    let settings = app
-        .global::<fret_runtime::DockingInteractionSettings>()
-        .copied()
-        .unwrap_or_default();
-    let (_chrome, dock_bounds) = dock_space_regions(bounds);
-    let snapshot = DockSpaceLayoutSnapshot::build(
-        dock,
-        window,
-        dock_bounds,
-        settings.split_handle_gap,
-        settings.split_handle_hit_thickness,
-        &HashMap::new(),
-    )?;
-    let tab_widths =
-        declarative_tab_widths_for_layout(app, window, theme.clone(), &snapshot.layout_all);
-    let tab_scroll = declarative_tab_scroll_for_frame(
-        app,
-        window,
-        theme.clone(),
-        &snapshot.layout_all,
-        &tab_widths,
-        false,
-    );
-    hit_test_tab(
-        &dock.graph,
-        &snapshot.layout_all,
-        &tab_scroll,
-        &tab_widths,
-        theme,
-        position,
-    )
-    .and_then(|(tabs, index, panel, close)| close.then_some((tabs, index, panel)))
-}
-
-fn declarative_hit_test_tab_content<H: UiHost>(
-    app: &H,
-    window: AppWindowId,
-    bounds: Rect,
-    theme: fret_ui::ThemeSnapshot,
-    position: fret_core::Point,
-) -> Option<(fret_core::DockNodeId, usize, PanelKey, fret_core::Point)> {
-    let dock = app.global::<DockManager>()?;
-    let settings = app
-        .global::<fret_runtime::DockingInteractionSettings>()
-        .copied()
-        .unwrap_or_default();
-    let (_chrome, dock_bounds) = dock_space_regions(bounds);
-    let snapshot = DockSpaceLayoutSnapshot::build(
-        dock,
-        window,
-        dock_bounds,
-        settings.split_handle_gap,
-        settings.split_handle_hit_thickness,
-        &HashMap::new(),
-    )?;
-    let tab_widths =
-        declarative_tab_widths_for_layout(app, window, theme.clone(), &snapshot.layout_all);
-    let tab_scroll = declarative_tab_scroll_for_frame(
-        app,
-        window,
-        theme.clone(),
-        &snapshot.layout_all,
-        &tab_widths,
-        false,
-    );
-    let (tabs, index, panel, close) = hit_test_tab(
-        &dock.graph,
-        &snapshot.layout_all,
-        &tab_scroll,
-        &tab_widths,
-        theme.clone(),
-        position,
-    )?;
-    if close {
-        return None;
-    }
-    let tabs_rect = snapshot.layout_all.get(&tabs).copied()?;
-    let (tab_bar, _content) = super::layout::split_tab_bar(tabs_rect);
-    let tab_count = match dock.graph.node(tabs) {
-        Some(fret_core::DockNode::Tabs { tabs, .. }) => tabs.len(),
-        _ => 0,
-    };
-    let (geom, _overflow) =
-        declarative_tab_bar_geometry(theme, &tab_widths, tabs, tab_bar, tab_count);
-    let scroll = tab_scroll.get(&tabs).copied().unwrap_or(fret_core::Px(0.0));
-    let tab_rect = geom.tab_rect(index, scroll);
-    let grab_offset = fret_core::Point::new(
-        fret_core::Px((position.x.0 - tab_rect.origin.x.0).max(0.0)),
-        fret_core::Px((position.y.0 - tab_rect.origin.y.0).max(0.0)),
-    );
-    Some((tabs, index, panel, grab_offset))
-}
-
-fn declarative_hit_test_tab_bar_empty_space<H: UiHost>(
-    app: &H,
-    window: AppWindowId,
-    bounds: Rect,
-    theme: fret_ui::ThemeSnapshot,
-    position: fret_core::Point,
-) -> Option<(fret_core::DockNodeId, fret_core::Point)> {
-    let dock = app.global::<DockManager>()?;
-    let snapshot = declarative_layout_snapshot_for_bounds(app, window, bounds)?;
-    let tab_widths =
-        declarative_tab_widths_for_layout(app, window, theme.clone(), &snapshot.layout_all);
-    let tab_scroll = declarative_tab_scroll_for_frame(
-        app,
-        window,
-        theme.clone(),
-        &snapshot.layout_all,
-        &tab_widths,
-        false,
-    );
-    if hit_test_tab(
-        &dock.graph,
-        &snapshot.layout_all,
-        &tab_scroll,
-        &tab_widths,
-        theme.clone(),
-        position,
-    )
-    .is_some()
-    {
-        return None;
-    }
-
-    let mut best: Option<(fret_core::DockNodeId, Rect, f32)> = None;
-    for (&node, &rect) in &snapshot.layout_all {
-        let Some(fret_core::DockNode::Tabs { tabs, .. }) = dock.graph.node(node) else {
-            continue;
-        };
-        if tabs.is_empty() || !rect.contains(position) {
-            continue;
-        }
-        let (tab_bar, _content) = super::layout::split_tab_bar(rect);
-        if !tab_bar.contains(position)
-            || tab_overflow_button_rect(theme.clone(), tab_bar).contains(position)
-        {
-            continue;
-        }
-        let area = rect.size.width.0 * rect.size.height.0;
-        match best {
-            None => best = Some((node, tab_bar, area)),
-            Some((_node, _tab_bar, best_area)) if area < best_area => {
-                best = Some((node, tab_bar, area));
-            }
-            _ => {}
-        }
-    }
-
-    best.map(|(tabs, tab_bar, _area)| {
-        let grab_offset = fret_core::Point::new(
-            fret_core::Px((position.x.0 - tab_bar.origin.x.0).max(0.0)),
-            fret_core::Px((position.y.0 - tab_bar.origin.y.0).max(0.0)),
-        );
-        (tabs, grab_offset)
-    })
-}
-
-fn declarative_layout_snapshot_for_bounds<H: UiHost>(
-    app: &H,
-    window: AppWindowId,
-    bounds: Rect,
-) -> Option<DockSpaceLayoutSnapshot> {
-    let dock = app.global::<DockManager>()?;
-    let settings = app
-        .global::<fret_runtime::DockingInteractionSettings>()
-        .copied()
-        .unwrap_or_default();
-    let (_chrome, dock_bounds) = dock_space_regions(bounds);
-    DockSpaceLayoutSnapshot::build(
-        dock,
-        window,
-        dock_bounds,
-        settings.split_handle_gap,
-        settings.split_handle_hit_thickness,
-        &HashMap::new(),
-    )
-}
-
-fn declarative_panel_min_content_size(
-    docking_policy: Option<&dyn super::DockingPolicy>,
-    dock: &DockManager,
-    panel: &PanelKey,
-) -> Option<Size> {
-    let info = dock.panel(panel);
-    if let Some(policy) = docking_policy
-        && let Some(size) = policy.panel_min_content_size(panel, info)
-    {
-        return Some(size);
-    }
-
-    info.is_some_and(|panel| panel.viewport.is_some())
-        .then(super::default_viewport_min_content_size)
-}
-
-fn declarative_node_min_size(
-    docking_policy: Option<&dyn super::DockingPolicy>,
-    dock: &DockManager,
-    node: fret_core::DockNodeId,
-    split_handle_gap: fret_core::Px,
-) -> Size {
-    let Some(node) = dock.graph.node(node) else {
-        return Size::new(fret_core::Px(0.0), fret_core::Px(0.0));
-    };
-
-    match node {
-        fret_core::DockNode::Tabs { tabs, .. } => {
-            let mut min_w: f32 = 0.0;
-            let mut min_h: f32 = 0.0;
-            for panel in tabs {
-                let Some(size) = declarative_panel_min_content_size(docking_policy, dock, panel)
-                else {
-                    continue;
-                };
-                min_w = min_w.max(size.width.0);
-                min_h = min_h.max(size.height.0);
-            }
-            min_h = min_h.max(0.0) + super::consts::DOCK_TAB_H.0.max(0.0);
-            Size::new(fret_core::Px(min_w.max(0.0)), fret_core::Px(min_h.max(0.0)))
-        }
-        fret_core::DockNode::Floating { child } => {
-            declarative_node_min_size(docking_policy, dock, *child, split_handle_gap)
-        }
-        fret_core::DockNode::Split { axis, children, .. } => {
-            if children.is_empty() {
-                return Size::new(fret_core::Px(0.0), fret_core::Px(0.0));
-            }
-
-            match axis {
-                fret_core::Axis::Horizontal => {
-                    let mut sum_w: f32 = 0.0;
-                    let mut min_h: f32 = 0.0;
-                    for child in children {
-                        let size = declarative_node_min_size(
-                            docking_policy,
-                            dock,
-                            *child,
-                            split_handle_gap,
-                        );
-                        sum_w += size.width.0.max(0.0);
-                        min_h = min_h.max(size.height.0.max(0.0));
-                    }
-                    sum_w += split_handle_gap.0.max(0.0) * children.len().saturating_sub(1) as f32;
-                    Size::new(fret_core::Px(sum_w.max(0.0)), fret_core::Px(min_h.max(0.0)))
-                }
-                fret_core::Axis::Vertical => {
-                    let mut sum_h: f32 = 0.0;
-                    let mut min_w: f32 = 0.0;
-                    for child in children {
-                        let size = declarative_node_min_size(
-                            docking_policy,
-                            dock,
-                            *child,
-                            split_handle_gap,
-                        );
-                        sum_h += size.height.0.max(0.0);
-                        min_w = min_w.max(size.width.0.max(0.0));
-                    }
-                    sum_h += split_handle_gap.0.max(0.0) * children.len().saturating_sub(1) as f32;
-                    Size::new(fret_core::Px(min_w.max(0.0)), fret_core::Px(sum_h.max(0.0)))
-                }
-            }
-        }
-    }
-}
-
-fn declarative_split_child_min_px(
-    docking_policy: Option<&dyn super::DockingPolicy>,
-    dock: &DockManager,
-    split: fret_core::DockNodeId,
-    axis: fret_core::Axis,
-    split_handle_gap: fret_core::Px,
-) -> Vec<fret_core::Px> {
-    let Some(fret_core::DockNode::Split { children, .. }) = dock.graph.node(split) else {
-        return Vec::new();
-    };
-
-    children
-        .iter()
-        .map(|child| {
-            let size = declarative_node_min_size(docking_policy, dock, *child, split_handle_gap);
-            let min = match axis {
-                fret_core::Axis::Horizontal => size.width.0,
-                fret_core::Axis::Vertical => size.height.0,
-            };
-            fret_core::Px(if min.is_finite() { min.max(0.0) } else { 0.0 })
-        })
-        .collect()
-}
-
-fn declarative_split_handle_hit_for_position<H: UiHost>(
-    app: &H,
-    snapshot: &DockSpaceLayoutSnapshot,
-    position: fret_core::Point,
-) -> Option<(DividerDragState, Vec<fret_core::Px>)> {
-    let dock = app.global::<DockManager>()?;
-    let policy = app
-        .global::<DockingPolicyService>()
-        .and_then(|service| service.policy());
-    let handle = hit_test_split_handle(
-        &dock.graph,
-        &snapshot.layout_all,
-        snapshot.split_handle_gap,
-        snapshot.split_handle_hit_thickness,
-        position,
-        |split, axis, _children| {
-            declarative_split_child_min_px(
-                policy.as_deref(),
-                dock,
-                split,
-                axis,
-                snapshot.split_handle_gap,
-            )
-        },
-    )?;
-    let min_px = declarative_split_child_min_px(
-        policy.as_deref(),
-        dock,
-        handle.split,
-        handle.axis,
-        snapshot.split_handle_gap,
-    );
-    Some((handle, min_px))
-}
-
-fn declarative_split_handle_cursor(axis: fret_core::Axis) -> fret_core::CursorIcon {
-    match axis {
-        fret_core::Axis::Horizontal => fret_core::CursorIcon::ColResize,
-        fret_core::Axis::Vertical => fret_core::CursorIcon::RowResize,
-    }
-}
-
-fn declarative_pixels_per_point<H: UiHost>(app: &H, window: AppWindowId) -> f32 {
-    app.global::<fret_core::WindowMetricsService>()
-        .and_then(|svc| svc.scale_factor(window))
-        .unwrap_or(1.0)
-}
-
-fn declarative_hit_test_active_viewport_panel<H: UiHost>(
-    app: &H,
-    window: AppWindowId,
-    bounds: Rect,
-    position: fret_core::Point,
-) -> Option<ViewportHit> {
-    let dock = app.global::<DockManager>()?;
-    let snapshot = declarative_layout_snapshot_for_bounds(app, window, bounds)?;
-    hit_test_active_viewport_panel(&dock.graph, &dock.panels, &snapshot.layout_all, position)
 }
 
 fn declarative_tab_hover_for_window<H: UiHost>(

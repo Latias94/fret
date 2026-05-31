@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 docking declarative geometry owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, drag/drop event
+routing, layout/render wiring, and public entrypoint functions while importing private geometry
+owner helpers. The private `dock/declarative/geometry.rs` owner contains declarative tab hit tests,
+layout snapshot lookup, split-handle hit/min-size geometry, split-handle cursor mapping,
+pixels-per-point lookup, and active viewport hit-test projection. Public docking APIs and managed
+dock-space entrypoints remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split.
+
 2026-06-01 docking declarative tab-overflow owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, layout/render
 wiring, input event routing, and public entrypoint functions while importing private overflow

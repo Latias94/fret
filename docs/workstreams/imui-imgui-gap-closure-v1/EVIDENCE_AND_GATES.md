@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Docking Declarative Geometry Owner-Split Evidence - 2026-06-01
+
+Claim verified: docking declarative tab hit testing, layout snapshot lookup, split-handle geometry,
+minimum-size projection, scale-factor lookup, and active viewport hit testing moved out of the large
+declarative dock-space orchestration owner into a private `declarative/geometry.rs` owner without
+changing tab close/content hit results, empty tab-bar drag targeting, snapshot bounds, split-handle
+cursor/min-size behavior, viewport hit projection, or public docking APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs` keeps dock-space orchestration, drag/drop event
+  routing, layout/render wiring, and public entrypoint functions while importing private geometry
+  owner helpers.
+- `ecosystem/fret-docking/src/dock/declarative/geometry.rs` owns declarative tab hit tests, layout
+  snapshot lookup, split-handle hit/min-size geometry, split-handle cursor mapping, pixels-per-point
+  lookup, and active viewport hit-test projection.
+- `tools/gate_imui_workstream_source.py` now tracks the declarative/geometry split and rejects
+  geometry/hit-test policy from drifting back into the declarative orchestration owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the geometry owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking --no-fail-fast`: pass (90 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Declarative Tab Overflow Owner-Split Evidence - 2026-06-01
 
 Claim verified: docking declarative tab overflow menu and tab-strip scroll/hover policy moved out
