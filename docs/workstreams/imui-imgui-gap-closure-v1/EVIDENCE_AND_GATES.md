@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor InspectorPanel Element Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `InspectorPanel` header/search/content/root element assembly moved out of
+the root composite owner into a private `composites/inspector_panel/element.rs` owner without
+changing public constructors/builders, `InspectorPanelCx` accessor shape, query trimming/lowercase
+matching, title text-role behavior, search assist fallback, header/content/root test-id
+propagation, panel chrome token fallback, or `into_element_in(...)` routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/inspector_panel.rs` keeps public options/cx/control
+  records, builder methods, and `into_element_in(...)` routing.
+- `ecosystem/fret-ui-editor/src/composites/inspector_panel/element.rs` owns scoped panel assembly,
+  theme/chrome resolution, header/title/toolbar layout, search/search-assist element selection,
+  content mounting, and root panel chrome.
+- `tools/gate_imui_workstream_source.py` now tracks the InspectorPanel element split and rejects
+  element assembly and search fallback policy from drifting back into the root composite owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the element owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor
+  inspector_panel_title_stays_single_line_when_header_is_narrow
+  editor_inspector_panel_title_text_is_single_line_and_shrinkable --no-fail-fast`: pass (2
+  passed, 220 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor PropertyRow Element Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `PropertyRow` row/column element assembly moved out of the root composite

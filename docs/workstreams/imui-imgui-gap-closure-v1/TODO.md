@@ -58,6 +58,17 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `InspectorPanel` header/search/content/root element assembly into a private
+      child owner without changing public constructors/builders, `InspectorPanelCx` accessor
+      shape, query trimming/lowercase matching, title text-role behavior, search assist fallback,
+      header/content/root test-id propagation, panel chrome token fallback, or
+      `into_element_in(...)` routing.
+      Result: `composites/inspector_panel.rs` now keeps public options/cx/control records,
+      builder methods, and `into_element_in(...)` routing. `composites/inspector_panel/element.rs`
+      owns scoped panel assembly, theme/chrome resolution, header/title/toolbar layout,
+      search/search-assist element selection, content mounting, and root panel chrome. The source
+      gate prevents element assembly and search fallback policy from drifting back into the root
+      composite owner.
 - [x] Split editor `PropertyRow` row/column element assembly into a private child owner without
       changing public constructors/builders, explicit id-source keying, label helper behavior,
       layout resolution, auto row/column switching, value-slot overflow semantics, reset slot
