@@ -1283,6 +1283,13 @@ Last updated: 2026-05-31
       Result: `color_edit/popup/options.rs` keeps picker/alpha option row orchestration and
       activation policy, while `color_edit/popup/options/thumbnail.rs` owns the thumbnail clip
       frames plus hue-bar, SV-grid, and hue-wheel preview composition.
+- [x] Split editor color-edit side-preview fill rendering into a private child owner without
+      changing current/original preview cells, original restore semantics, checkerboard alpha
+      preview behavior, tooltip/swatch preview reuse, or popup policy tests.
+      Result: `color_edit/popup/preview.rs` keeps side-preview cell/caption orchestration and
+      original restore policy, while `color_edit/popup/preview/fill.rs` owns
+      `color_preview_stack(...)`, checkerboard/fill layout helpers, alpha preview fill variants,
+      and pure preview color helpers.
 - [x] Split editor color-edit option records and runtime popup defaults into a private owner
       without changing public `ColorEditOptions` / popup option names, default values, runtime
       override semantics, palette/payload/request ownership, or popup policy tests.
