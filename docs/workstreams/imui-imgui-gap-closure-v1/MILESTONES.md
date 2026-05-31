@@ -585,6 +585,13 @@ and preview implementation. `composites/gradient_editor/tests.rs` owns empty-sta
 coverage. Gradient stop composition, preview canvas behavior, empty-state copy, and editor readout
 text-role routing remain unchanged.
 
+2026-05-31 editor gradient preview child-owner result:
+`ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps public composition and stop
+rows. `composites/gradient_editor/preview.rs` owns preview drag state, pressable pointer handlers,
+gradient fill construction, and stop marker painting. Public gradient editor builders, stop
+sorting, preview drag mutation, marker painting, empty-state copy, and IMUI adapter routing remain
+unchanged.
+
 2026-05-30 editor readout popup-list child-owner result:
 `ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the non-popup editor readout
 helpers only. `primitives/readout/popup_list.rs` owns the popup-list row, centered-row,

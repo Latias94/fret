@@ -1134,6 +1134,7 @@
     "ecosystem/fret-ui-editor/src/composites/inspector_panel.rs",
     "ecosystem/fret-ui-editor/src/composites/inspector_panel/tests.rs",
     "ecosystem/fret-ui-editor/src/composites/gradient_editor.rs",
+    "ecosystem/fret-ui-editor/src/composites/gradient_editor/preview.rs",
     "ecosystem/fret-ui-editor/src/composites/gradient_editor/tests.rs",
     "ecosystem/fret-ui-editor/src/composites/property_group.rs",
     "ecosystem/fret-ui-editor/src/composites/property_grid.rs",

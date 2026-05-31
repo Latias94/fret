@@ -392,6 +392,12 @@ Last updated: 2026-05-31
       readout text-role routing.
       Result: `composites/gradient_editor.rs` keeps gradient editor composition and preview
       implementation. `composites/gradient_editor/tests.rs` owns empty-state text-role coverage.
+- [x] Split editor gradient preview canvas into a private child owner without changing public
+      gradient editor builders, stop sorting, preview drag mutation, marker painting, empty-state
+      copy, or IMUI adapter routing.
+      Result: `composites/gradient_editor.rs` keeps public composition and stop rows.
+      `composites/gradient_editor/preview.rs` owns preview drag state, pressable pointer handlers,
+      gradient fill construction, and stop marker painting.
 - [x] Split the shared editor popup-list readout helpers into a private child owner without
       changing popup row geometry, alignment, empty-state copy, or popup-list text-role coverage.
       Result: `primitives/readout.rs` now keeps the non-popup editor readout helpers only.

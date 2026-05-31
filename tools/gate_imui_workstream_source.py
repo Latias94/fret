@@ -32572,18 +32572,37 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/composites/gradient_editor.rs"),
             required=[
+                "mod preview;",
                 "mod tests;",
+                "use preview::{GradientPreviewState, PreviewStop, gradient_preview_canvas};",
                 "use crate::primitives::readout::editor_empty_state_text_props;",
                 "fn gradient_editor_empty_state_text",
                 "editor_empty_state_text_props(",
                 "gradient_editor_empty_state_text(cx, \"No stops\")",
             ],
             forbidden=[
+                "fn gradient_preview_canvas",
+                "struct GradientPreviewState",
+                "struct PreviewStop",
                 "rows.push(cx.text(\"No stops\"));",
                 "TextProps {",
                 "TextStyle {",
                 "gradient_editor_empty_state_text_is_single_line_and_shrinkable",
             ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/composites/gradient_editor/preview.rs"),
+            required=[
+                "pub(super) struct PreviewStop",
+                "pub(super) struct GradientPreviewState",
+                "pub(super) fn gradient_preview_canvas",
+                "label: Some(Arc::from(\"Gradient preview\"))",
+                "PressablePointerDownResult::Continue",
+                "host.models_mut().update(model, |v| *v = t)",
+                "Paint::LinearGradient(gradient)",
+                "corner_radii: Corners::all(Px(6.0))",
+            ],
+            forbidden=[],
         ),
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/composites/gradient_editor/tests.rs"),

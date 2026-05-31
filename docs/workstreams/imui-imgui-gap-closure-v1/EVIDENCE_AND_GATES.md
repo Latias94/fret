@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-31
 
+## GradientEditor Preview Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor gradient preview canvas implementation moved into a private
+`gradient_editor/preview.rs` owner without changing public gradient editor builders, stop sorting,
+preview drag mutation, marker painting, empty-state copy, or IMUI adapter routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps public builder/composition
+  logic, stop-row assembly, and empty-state text-role routing.
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor/preview.rs` owns preview drag state,
+  pressable pointer handlers, gradient fill construction, and stop marker painting.
+- `tools/gate_imui_workstream_source.py` now gates the root/preview split so preview canvas
+  behavior stays in the child owner while the empty-state text-role helper remains in the root/test
+  split.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new preview-owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor gradient_editor --no-fail-fast`: pass (1 passed, 221
+  skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass.
+
 ## InputGroup Segments Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor input-group segment/text/axis helper implementation moved into a private
