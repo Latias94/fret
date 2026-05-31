@@ -49,7 +49,10 @@ IMUI_DIRECT_TEXT_PROPS_ALLOWED: dict[Path, dict[str, int]] = {}
 
 EDITOR_DIRECT_TEXT_PROPS_ALLOWED = {
     Path("ecosystem/fret-ui-editor/src/primitives/readout.rs"): {
-        "TextProps {": 17,
+        "TextProps {": 14,
+    },
+    Path("ecosystem/fret-ui-editor/src/primitives/readout/feedback.rs"): {
+        "TextProps {": 3,
     },
     Path("ecosystem/fret-ui-editor/src/primitives/readout/popup_list.rs"): {
         "TextProps {": 2,
@@ -32450,11 +32453,11 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/readout.rs"),
             required=[
+                "mod feedback;",
                 "mod tests;",
                 "mod theme_preset;",
+                "pub(crate) use feedback::{",
                 "pub(crate) use theme_preset::{",
-                "pub(crate) fn editor_status_badge_text_props",
-                "pub(crate) fn editor_inline_error_text_props",
                 "pub(crate) fn editor_section_badge_text_props",
                 "pub(crate) fn editor_section_heading_text_props",
                 "pub(crate) fn editor_property_group_header_text_props",
@@ -32468,7 +32471,6 @@ def main() -> None:
                 "pub(crate) fn editor_preview_caption_text_props",
                 "pub(crate) fn editor_empty_state_text_props",
                 "pub(crate) fn editor_tooltip_readout_text_props",
-                "weight: FontWeight::MEDIUM,",
                 "weight: FontWeight::SEMIBOLD,",
                 "min_width: Some(Length::Px(Px(0.0))),",
                 "wrap: TextWrap::None,",
@@ -32501,6 +32503,34 @@ def main() -> None:
                 "editor_preview_caption_text_is_single_line_and_shrinkable",
                 "editor_empty_state_text_is_single_line_and_shrinkable",
                 "editor_tooltip_readout_text_is_single_line_and_shrinkable",
+                "pub(crate) fn editor_status_badge_text_props",
+                "pub(crate) fn editor_inline_error_text_props",
+                "pub(crate) fn editor_validation_message_text_props",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/readout/feedback.rs"),
+            required=[
+                "pub(crate) fn editor_status_badge_text_props",
+                "pub(crate) fn editor_inline_error_text_props",
+                "pub(crate) fn editor_validation_message_text_props",
+                "weight: FontWeight::MEDIUM,",
+                "min_width: Some(Length::Px(Px(0.0)))",
+                "wrap: TextWrap::None,",
+                "wrap: TextWrap::Word,",
+                "overflow: TextOverflow::Ellipsis",
+                "overflow: TextOverflow::Clip",
+                "align: TextAlign::Center",
+                "align: TextAlign::Start",
+            ],
+            forbidden=[
+                "compact_readout_text_px_keeps_floor_for_small_base_sizes",
+                "editor_status_badge_text_uses_compact_single_line_readout_role",
+                "editor_inline_error_text_is_single_line_and_shrinkable",
+                "editor_validation_message_text_wraps_and_shrinks",
+                "pub(crate) fn editor_section_badge_text_props",
+                "pub(crate) fn editor_popup_list_row_text_props",
+                "pub(crate) fn editor_theme_preset_picker_header_text_props",
             ],
         ),
         SourceCheck(

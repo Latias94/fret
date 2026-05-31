@@ -668,6 +668,12 @@ child-owner re-exports. `primitives/readout/tests.rs` owns compact readout sizin
 text-role regression tests. Non-popup helper names, text-role layout policy, compact readout
 sizing, and popup/theme-preset child-owner boundaries remain unchanged.
 
+2026-05-31 editor readout feedback child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the shared readout hub and re-exports
+feedback helpers. `primitives/readout/feedback.rs` owns status badge, inline error, and validation
+message text props. Status badge, inline error, validation message layout semantics, re-export
+paths, and readout regression coverage remain unchanged.
+
 2026-05-30 editor vec-edit axis child-owner result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps Vec2/Vec3/Vec4 public control
 orchestration. `controls/vec_edit/axis.rs` owns `VecEditAxis`, `VecEditAxisOutcome`, reset options,

@@ -452,6 +452,12 @@ Last updated: 2026-05-31
       Result: `primitives/readout.rs` keeps the non-popup readout helper hub plus child-owner
       re-exports. `primitives/readout/tests.rs` owns the compact readout and editor text-role
       regression tests.
+- [x] Split editor feedback readout text props into a private child owner without changing status
+      badge, inline error, validation message layout semantics, re-export paths, or readout
+      regression coverage.
+      Result: `primitives/readout.rs` keeps the shared readout hub and re-exports feedback helpers.
+      `primitives/readout/feedback.rs` owns status badge, inline error, and validation message text
+      props.
 - [x] Split editor vector axis/reset/outcome policy and axis group rendering into a private child
       owner without changing Vec2/Vec3/Vec4 public constructors, reset options, axis outcome
       accessors, transform-edit outcome routing, id-source/test-id derivation, or row/column auto

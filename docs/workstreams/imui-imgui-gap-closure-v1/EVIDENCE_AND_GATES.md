@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Readout Feedback Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor feedback readout text props moved into a private
+`readout/feedback.rs` owner without changing status badge, inline error, validation message layout
+semantics, re-export paths, or readout regression coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/readout.rs` keeps the shared readout hub and re-exports
+  feedback helpers at the existing module path.
+- `ecosystem/fret-ui-editor/src/primitives/readout/feedback.rs` owns status badge, inline error,
+  and validation message text props.
+- `tools/gate_imui_workstream_source.py` now gates the hub/feedback split and moves the three
+  direct `TextProps` allowlist entries from `readout.rs` to `readout/feedback.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new feedback owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor editor_status_badge_text_uses_compact_single_line_readout_role
+  editor_inline_error_text_is_single_line_and_shrinkable
+  editor_validation_message_text_wraps_and_shrinks --no-fail-fast`: pass (3 passed, 219 skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass (with Git's line-ending warning for `primitives/readout.rs`).
+
 ## Slider Frame Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor slider frame/track/value element assembly moved into a private
