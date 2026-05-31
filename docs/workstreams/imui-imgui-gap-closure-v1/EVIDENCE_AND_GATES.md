@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Readout Section Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor section badge/heading readout text props moved into a private
+`readout/section.rs` owner without changing transform section badge/heading layout semantics,
+re-export paths, or readout regression coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/readout.rs` keeps the shared readout hub and re-exports
+  section helpers at the existing module path.
+- `ecosystem/fret-ui-editor/src/primitives/readout/section.rs` owns section badge and section
+  heading text props.
+- `tools/gate_imui_workstream_source.py` now gates the hub/section split and moves the two direct
+  `TextProps` allowlist entries from `readout.rs` to `readout/section.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new section owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor editor_section_badge_text_is_single_line_centered_badge_label
+  editor_section_heading_text_is_single_line_and_shrinkable --no-fail-fast`: pass (2 passed, 220
+  skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass.
+
 ## Readout Input Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor input/axis readout text props moved into a private `readout/input.rs` owner

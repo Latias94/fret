@@ -49,7 +49,7 @@ IMUI_DIRECT_TEXT_PROPS_ALLOWED: dict[Path, dict[str, int]] = {}
 
 EDITOR_DIRECT_TEXT_PROPS_ALLOWED = {
     Path("ecosystem/fret-ui-editor/src/primitives/readout.rs"): {
-        "TextProps {": 6,
+        "TextProps {": 4,
     },
     Path("ecosystem/fret-ui-editor/src/primitives/readout/feedback.rs"): {
         "TextProps {": 3,
@@ -59,6 +59,9 @@ EDITOR_DIRECT_TEXT_PROPS_ALLOWED = {
     },
     Path("ecosystem/fret-ui-editor/src/primitives/readout/property.rs"): {
         "TextProps {": 4,
+    },
+    Path("ecosystem/fret-ui-editor/src/primitives/readout/section.rs"): {
+        "TextProps {": 2,
     },
     Path("ecosystem/fret-ui-editor/src/primitives/readout/popup_list.rs"): {
         "TextProps {": 2,
@@ -32463,22 +32466,19 @@ def main() -> None:
                 "mod input;",
                 "mod tests;",
                 "mod property;",
+                "mod section;",
                 "mod theme_preset;",
                 "pub(crate) use feedback::{",
                 "pub(crate) use input::{",
                 "pub(crate) use property::{",
+                "pub(crate) use section::{",
                 "pub(crate) use theme_preset::{",
-                "pub(crate) fn editor_section_badge_text_props",
-                "pub(crate) fn editor_section_heading_text_props",
                 "pub(crate) fn editor_preview_caption_text_props",
                 "pub(crate) fn editor_empty_state_text_props",
                 "pub(crate) fn editor_tooltip_readout_text_props",
-                "weight: FontWeight::SEMIBOLD,",
                 "min_width: Some(Length::Px(Px(0.0))),",
                 "wrap: TextWrap::None,",
                 "overflow: TextOverflow::Ellipsis,",
-                "overflow: TextOverflow::Clip,",
-                "align: TextAlign::Center,",
             ],
             forbidden=[
                 "pub(crate) fn editor_theme_preset_picker_header_text_props",
@@ -32516,6 +32516,32 @@ def main() -> None:
                 "pub(crate) fn editor_input_segment_text_props",
                 "pub(crate) fn editor_input_value_text_props",
                 "pub(crate) fn editor_axis_marker_text_props",
+                "pub(crate) fn editor_section_badge_text_props",
+                "pub(crate) fn editor_section_heading_text_props",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/readout/section.rs"),
+            required=[
+                "pub(crate) fn editor_section_badge_text_props",
+                "pub(crate) fn editor_section_heading_text_props",
+                "weight: FontWeight::SEMIBOLD,",
+                "height: Length::Fill,",
+                "min_width: Some(Length::Px(Px(0.0)))",
+                "wrap: TextWrap::None,",
+                "overflow: TextOverflow::Ellipsis",
+                "overflow: TextOverflow::Clip",
+                "align: TextAlign::Start",
+                "align: TextAlign::Center",
+            ],
+            forbidden=[
+                "editor_section_badge_text_is_single_line_centered_badge_label",
+                "editor_section_heading_text_is_single_line_and_shrinkable",
+                "pub(crate) fn editor_status_badge_text_props",
+                "pub(crate) fn editor_inline_control_label_text_props",
+                "pub(crate) fn editor_property_group_header_text_props",
+                "pub(crate) fn editor_popup_list_row_text_props",
+                "pub(crate) fn editor_theme_preset_picker_header_text_props",
             ],
         ),
         SourceCheck(

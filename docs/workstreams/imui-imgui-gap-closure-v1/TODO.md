@@ -470,6 +470,10 @@ Last updated: 2026-05-31
       Result: `primitives/readout.rs` keeps the shared readout hub and re-exports input helpers.
       `primitives/readout/input.rs` owns inline control label, input segment, input value, and axis
       marker text props.
+- [x] Split editor section readout text props into a private child owner without changing transform
+      section badge/heading layout semantics, re-export paths, or readout regression coverage.
+      Result: `primitives/readout.rs` keeps the shared readout hub and re-exports section helpers.
+      `primitives/readout/section.rs` owns section badge and section heading text props.
 - [x] Split editor vector axis/reset/outcome policy and axis group rendering into a private child
       owner without changing Vec2/Vec3/Vec4 public constructors, reset options, axis outcome
       accessors, transform-edit outcome routing, id-source/test-id derivation, or row/column auto
