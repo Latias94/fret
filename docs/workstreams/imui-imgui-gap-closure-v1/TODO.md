@@ -58,6 +58,13 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Move docking declarative drop-hint projection back into the private frame owner without
+      changing hover storage, drop-hint root/leaf tab projection, frame output construction, drop
+      hint painting, or public docking APIs.
+      Result: `dock/declarative.rs` no longer owns the drop-hint helper that only serves frame
+      aggregation. `dock/declarative/frame.rs` now owns both `DockSpaceElementFrame` construction
+      and its `DockDropHints` projection. The source gate prevents the helper from drifting back
+      into the declarative orchestration owner.
 - [x] Split docking declarative internal drag/drop resolve and drag-start policy into a private
       child owner without changing hover/drop target resolution, tab-bar auto-scroll during drag,
       tear-off handoff, drop intent application, drag diagnostics publication, drag inversion

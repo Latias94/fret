@@ -72,7 +72,7 @@ impl DockSpaceElementFrame {
             paint_panel_bounds: snapshot.paint_panel_bounds.clone(),
             panel_last_sizes,
             layout_all: snapshot.layout_all.clone(),
-            drop_hints: super::drop_hints_from_hover(hover.as_ref()),
+            drop_hints: drop_hints_from_hover(hover.as_ref()),
             hover,
             tab_chrome_inputs,
             tab_detail_inputs,
@@ -92,4 +92,14 @@ impl DockSpaceElementFrame {
             split_handle_hit_thickness: snapshot.split_handle_hit_thickness,
         }
     }
+}
+
+fn drop_hints_from_hover(hover: Option<&DockDropTarget>) -> Option<DockDropHints> {
+    let Some(DockDropTarget::Dock(target)) = hover else {
+        return None;
+    };
+    Some(DockDropHints {
+        root: target.root,
+        leaf_tabs: target.leaf_tabs,
+    })
 }

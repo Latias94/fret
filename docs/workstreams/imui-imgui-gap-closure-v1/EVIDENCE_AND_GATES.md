@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Docking Declarative Frame Drop-Hints Owner-Split Evidence - 2026-06-01
+
+Claim verified: docking declarative drop-hint projection moved out of the large declarative
+dock-space orchestration owner and back into the private `declarative/frame.rs` owner without
+changing hover storage, drop-hint root/leaf tab projection, frame output construction, drop hint
+painting, or public docking APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs` no longer owns the drop-hint helper that only
+  serves frame aggregation.
+- `ecosystem/fret-docking/src/dock/declarative/frame.rs` owns both `DockSpaceElementFrame`
+  construction and `DockDropHints` projection from hover state.
+- `tools/gate_imui_workstream_source.py` now rejects `drop_hints_from_hover` and `DockDropHints`
+  from drifting back into the declarative orchestration owner while checking the frame owner
+  directly.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` already tracks the frame owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking --no-fail-fast`: pass (90 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Declarative Drag Resolve Owner-Split Evidence - 2026-06-01
 
 Claim verified: docking declarative internal drag/drop hover and drop resolution moved out of the

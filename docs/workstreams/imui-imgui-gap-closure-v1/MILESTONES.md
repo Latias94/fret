@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 docking declarative frame drop-hints owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` no longer owns the drop-hint helper that only
+serves frame aggregation. The private `dock/declarative/frame.rs` owner now contains both
+`DockSpaceElementFrame` construction and `DockDropHints` projection from hover state. Public docking
+APIs, frame output construction, and drop-hint painting remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the helper boundary.
+
 2026-06-01 docking declarative drag-resolve owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, event routing,
 paint ordering, and public entrypoint functions while importing private drag-resolve owner helpers.

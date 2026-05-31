@@ -22,7 +22,7 @@ use super::paint::{
 };
 use super::services::{DockFocusRequestService, DockPanelContentService};
 use super::tab_overflow::TabOverflowMenuState;
-use super::types::{DockDropHints, DockDropTarget};
+use super::types::DockDropTarget;
 use super::viewport::{
     ViewportCaptureState, viewport_input_from_hit, viewport_input_from_hit_clamped,
 };
@@ -192,16 +192,6 @@ fn apply_declarative_tab_interaction_paint_state(
     {
         input.tab_overflow_menu = Some(menu);
     }
-}
-
-fn drop_hints_from_hover(hover: Option<&super::types::DockDropTarget>) -> Option<DockDropHints> {
-    let Some(super::types::DockDropTarget::Dock(target)) = hover else {
-        return None;
-    };
-    Some(DockDropHints {
-        root: target.root,
-        leaf_tabs: target.leaf_tabs,
-    })
 }
 
 /// Build a declarative dock-space host from explicit panel roots.
