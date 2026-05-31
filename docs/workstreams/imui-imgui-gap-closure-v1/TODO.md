@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor color-edit numeric model text and parse helpers into a private child owner
+      without changing numeric mode ordering, RGB/HSV readout formatting, RGB/HSV parser
+      semantics, alpha preservation, HSV conversion routing, hex parsing, HSV geometry helpers, or
+      public model imports.
+      Result: `controls/color_edit/model.rs` keeps hex parsing/formatting, HSV conversion,
+      sanitize/local-coordinate helpers, and hue-wheel re-exports.
+      `controls/color_edit/model/numeric.rs` owns numeric mode records, mode selection, readout
+      formatting, and numeric input parsing. The source gate prevents numeric parser/readout policy
+      from drifting back into the root model owner.
 - [x] Split editor color-edit popup option policy types into a private child owner without changing
       public `ColorEditOptions` defaults, popup picker/numeric/side-preview enum paths, popup
       runtime override semantics, `ColorEditPopupRuntimeOptions` crate-visible path, tooltip/copy

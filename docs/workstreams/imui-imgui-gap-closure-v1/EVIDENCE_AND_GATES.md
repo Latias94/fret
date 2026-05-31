@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor Color-Edit Numeric Model Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor color-edit numeric mode/readout/parser policy moved out of the root model
+owner into a private `model/numeric.rs` owner without changing numeric mode ordering, RGB/HSV
+readout formatting, RGB/HSV parser semantics, alpha preservation, HSV conversion routing, hex
+parsing, HSV geometry helpers, or public model imports.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/model.rs` keeps hex parsing/formatting, HSV
+  conversion, sanitize/local-coordinate helpers, and hue-wheel owner re-exports while forwarding
+  numeric APIs through the same model module path.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/model/numeric.rs` owns
+  `ColorNumericInputMode`, numeric mode selection, RGB/HSV readout formatting, and numeric input
+  parsing.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now reads the numeric model owner
+  directly while preserving assertions that the root model keeps RGB/HSV conversion helpers.
+- `tools/gate_imui_workstream_source.py` now tracks the root model/numeric split and rejects
+  numeric parser/readout policy from drifting back into the root model owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the numeric model owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor --lib color_edit --no-fail-fast`: pass (51 passed).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass (2 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+
 ## Editor Color-Edit Popup Options Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor color-edit popup option policy types moved out of the root options owner into
