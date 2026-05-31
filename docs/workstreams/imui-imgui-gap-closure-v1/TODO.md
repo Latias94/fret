@@ -275,6 +275,12 @@ Last updated: 2026-05-31
       Result: `controls/text_field/buffered.rs` keeps buffered runtime state and session helpers.
       `controls/text_field/buffered/tests.rs` owns focus/blur plan coverage and draft-controller
       behavior tests.
+- [x] Split editor text-field element assembly into a private child owner without changing public
+      TextField builders, option names/defaults, buffered draft behavior, clear-button reset
+      behavior, multiline shortcuts, password mode, assistive semantics, or IMUI adapter routing.
+      Result: `controls/text_field.rs` keeps the public control/options and draft-controller
+      re-export. `controls/text_field/element.rs` owns keyed element construction, input/textarea
+      assembly, buffered session wiring, clear affordance wiring, and focus-selection handoff.
 - [x] Split editor text-assist field option/model records into a private child owner without
       changing public option names, default unbuffered input policy, item test-id prefix fallback,
       rendered panel handoff, inline empty-label behavior, or anchored-overlay height policy.

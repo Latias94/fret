@@ -207,6 +207,14 @@ focus/blur/session helpers, commit/cancel helpers, and shortcut policy only. `bu
 owns focus/blur plan coverage, stable line-box default coverage, and draft-controller
 commit/discard/no-op behavior tests.
 
+2026-05-31 editor text-field element child-owner result:
+`ecosystem/fret-ui-editor/src/controls/text_field.rs` now keeps the public control/options and
+draft-controller re-export. `controls/text_field/element.rs` owns keyed element construction,
+input/textarea assembly, buffered session wiring, clear affordance wiring, and focus-selection
+handoff. Public TextField builders, option names/defaults, buffered draft behavior, clear-button
+reset behavior, multiline shortcuts, password mode, assistive semantics, and IMUI adapter routing
+remain unchanged.
+
 2026-05-31 editor color-edit numeric tests owner-split result:
 `ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` now keeps color-edit policy, picker,
 preview, drag/drop, copy, tooltip, and shared HSV assertion coverage. `color_edit/tests/numeric.rs`

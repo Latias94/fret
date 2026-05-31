@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## TextField Element Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor `TextField` element assembly moved into a private
+`text_field/element.rs` owner without changing public TextField builders, option names/defaults,
+buffered draft behavior, clear-button reset behavior, multiline shortcuts, password mode,
+assistive semantics, or IMUI adapter routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_field.rs` now keeps the public control/options,
+  draft-controller re-export, and option default surface.
+- `ecosystem/fret-ui-editor/src/controls/text_field/element.rs` owns keyed element construction,
+  text input/text area assembly, buffered session wiring, clear affordance wiring, and
+  focus-selection handoff.
+- `tools/gate_imui_workstream_source.py` now gates the root/element split so buffered element
+  behavior stays out of the public surface owner while the buffered runtime remains in its existing
+  child owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new element-owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor text_field --no-fail-fast`: pass (16 passed, 206
+  skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass.
+
 ## GradientEditor Preview Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor gradient preview canvas implementation moved into a private

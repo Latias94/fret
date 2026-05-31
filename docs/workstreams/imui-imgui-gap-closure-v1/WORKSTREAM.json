@@ -1146,6 +1146,7 @@
     "ecosystem/fret-ui-editor/src/controls/field_status.rs",
     "ecosystem/fret-ui-editor/src/controls/field_status/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field.rs",
+    "ecosystem/fret-ui-editor/src/controls/text_field/element.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/buffered/controller.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/buffered/tests.rs",
