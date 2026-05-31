@@ -1683,6 +1683,7 @@
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility/tests/state.rs",
     "ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/virtual_list_controls/element.rs",
+    "ecosystem/fret-ui-kit/src/imui/virtual_list_controls/element/output.rs",
     "ecosystem/fret-ui-kit/src/imui/virtual_list_controls/range.rs",
     "ecosystem/fret-ui-kit/src/imui/virtual_list_controls/row.rs",
     "ecosystem/fret-ui-kit/src/imui/virtual_list_controls/runtime.rs",

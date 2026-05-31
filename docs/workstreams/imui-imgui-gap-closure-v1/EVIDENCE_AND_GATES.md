@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Virtual-List Output Owner-Split Evidence - 2026-05-31
+
+Claim verified: IMUI virtual-list list semantics decoration and `VirtualListResponse` packaging
+moved out of `virtual_list_controls/element.rs` into a private
+`virtual_list_controls/element/output.rs` owner without changing facade method names, default
+scroll-handle slot state, keyed runtime substrate usage, build-focus forwarding, row wrapping, list
+semantics, rendered range reporting, or public `VirtualListResponse` behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/element.rs` keeps keyed runtime list
+  assembly, default scroll-handle slot state, focus child mounting, row wrapping, rendered-range
+  tracking, and runtime option consumption.
+- `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/element/output.rs` owns list-level
+  semantics decoration and `VirtualListResponse` packaging.
+- `tools/gate_imui_workstream_source.py` gates the element/output split and keeps list semantics
+  decoration out of the keyed runtime owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new output owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_virtual_list_smoke --test imui_perf_guard_smoke --no-fail-fast`: pass (6 passed, 0 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --lib virtual_list_controls::tests --no-fail-fast`: pass (3 passed, 690 skipped).
+- `cargo nextest run -p fret-imui virtual_list --no-fail-fast`: pass (2 passed, 184 skipped).
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Floating Title-Bar Row Owner-Split Evidence - 2026-05-31
 
 Claim verified: IMUI floating-window title-bar row composition moved out of

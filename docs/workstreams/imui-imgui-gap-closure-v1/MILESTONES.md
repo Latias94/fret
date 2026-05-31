@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 IMUI virtual-list output owner-split result:
+`ecosystem/fret-ui-kit/src/imui/virtual_list_controls/element.rs` keeps keyed runtime list
+assembly, default scroll-handle slot state, focus child mounting, row wrapping, rendered-range
+tracking, and runtime option consumption. `virtual_list_controls/element/output.rs` owns list-level
+semantics decoration and `VirtualListResponse` packaging. Facade method names, keyed substrate
+usage, list semantics, row behavior, and response reporting remain unchanged.
+
 2026-05-31 IMUI floating title-bar row owner-split result:
 `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs` now keeps owner routing and close-glyph
 text construction. `floating_window_title_bar/row.rs` owns row composition, title text mounting,

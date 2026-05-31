@@ -159,9 +159,15 @@ Last updated: 2026-05-31
       facade method names, default scroll-handle slot state, keyed runtime substrate usage,
       build-focus forwarding, row wrapping, list semantics, or `VirtualListResponse` reporting.
       Result: `virtual_list_controls.rs` is now a thin module/re-export hub, while
-      `virtual_list_controls/element.rs` owns keyed list assembly, focus child mounting, list-level
-      semantics, and response packaging. The perf guard now points at the current virtual-list and
-      floating-layer z-order owner files.
+      `virtual_list_controls/element.rs` owns keyed list assembly, default scroll-handle slot
+      state, focus child mounting, and row wrapping. The perf guard now points at the current
+      virtual-list and floating-layer z-order owner files.
+- [x] Split IMUI virtual-list element output decoration into a private owner without changing
+      facade method names, default scroll-handle slot state, keyed runtime substrate usage,
+      build-focus forwarding, row wrapping, list semantics, or `VirtualListResponse` reporting.
+      Result: `virtual_list_controls/element.rs` keeps keyed runtime assembly and row mounting,
+      while `virtual_list_controls/element/output.rs` owns list-level semantics decoration and
+      `VirtualListResponse` packaging.
 - [x] Split IMUI bullet-text compact paragraph regression coverage into a private text-role owner
       without changing bullet indicator layout, label test-id forwarding, inherited foreground, or
       shared compact paragraph semantics.

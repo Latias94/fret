@@ -1,8 +1,7 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
-use fret_core::SemanticsRole;
-use fret_ui::element::{AnyElement, SemanticsProps};
+use fret_ui::element::AnyElement;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
@@ -11,6 +10,8 @@ use super::super::{ImUiFacade, VirtualListOptions, VirtualListResponse};
 use super::range::VirtualListRenderedRangeTracker;
 use super::row::{pack_row_children, row_height_for_index, row_test_id, wrap_row};
 use super::runtime::{list_layout, resolved_measure_mode, runtime_options};
+
+mod output;
 
 pub(in crate::imui) fn virtual_list_element<H: UiHost, K, R>(
     cx: &mut ElementContext<'_, H>,
@@ -65,21 +66,11 @@ where
             },
         );
 
-        let list = if let Some(test_id) = options.test_id {
-            let mut semantics = SemanticsProps::default();
-            semantics.role = SemanticsRole::List;
-            semantics.test_id = Some(test_id);
-            cx.semantics(semantics, move |_cx| vec![list])
-        } else {
-            list
-        };
+        let list = output::decorate_list_semantics(cx, list, options.test_id.clone());
 
         (
             list,
-            VirtualListResponse {
-                handle,
-                rendered_range: rendered_range_out.range(),
-            },
+            output::virtual_list_response(handle, rendered_range_out.range()),
         )
     })
 }
