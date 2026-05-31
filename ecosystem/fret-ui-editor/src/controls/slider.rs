@@ -14,29 +14,21 @@ use crate::controls::numeric_input::{
     NumericInputOutcome, NumericParseFn, NumericValidateFn,
 };
 use crate::primitives::drag_value_core::DragValueScalar;
-use crate::primitives::input_group::{
-    derived_test_id, editor_input_group_divider, editor_input_group_frame,
-    editor_input_group_segment,
-};
+use crate::primitives::input_group::derived_test_id;
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
     NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
     sync_numeric_text_entry_focus_handoff,
 };
-use crate::primitives::readout::EditorCompactReadoutStyle;
-use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use crate::primitives::{NumericPresentation, style::EditorStyle};
-use fret_core::text::TextOverflow;
-use fret_core::{Axis, CursorIcon, Edges, MouseButton, Px, TextAlign};
+use fret_core::{CursorIcon, MouseButton};
 use fret_runtime::Model;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
-use fret_ui::element::{
-    AnyElement, CrossAlign, FlexItemStyle, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableA11y, PressableProps, SizeStyle, SpacingLength,
-};
+use fret_ui::element::{AnyElement, Length, PressableA11y, PressableProps};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 mod chrome;
+mod frame;
 mod model;
 mod pointer;
 #[cfg(test)]
@@ -44,10 +36,8 @@ mod tests;
 mod typing;
 mod value_math;
 
-use chrome::{
-    resolve_slider_geometry, resolve_slider_paint, slider_thumb_props, slider_track_flex_props,
-    slider_track_segment_props,
-};
+use chrome::{resolve_slider_geometry, resolve_slider_paint};
+use frame::{SliderFrameArgs, slider_frame};
 pub use model::SliderOptions;
 use model::{
     SliderMode, SliderState, compose_affixed_value_text, default_slider_format,
@@ -351,144 +341,23 @@ where
 
                 let paint =
                     resolve_slider_paint(theme, interactive_enabled, enabled, hovered, pressed);
-                let readout_style = EditorCompactReadoutStyle::resolve(theme, density.row_height);
 
-                let left_grow = t.clamp(0.0, 1.0);
-                let right_grow = (1.0 - left_grow).max(0.0);
-                let track_bg = paint.track_bg;
-                let fill_bg = paint.fill_bg;
-
-                vec![editor_input_group_frame(
+                vec![slider_frame(
                     cx,
-                    LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            min_height: Some(Length::Px(density.row_height)),
-                            ..Default::default()
-                        },
-                        overflow: Overflow::Clip,
-                        ..Default::default()
-                    },
-                    density,
-                    frame,
-                    EditorFrameState {
-                        enabled: interactive_enabled,
+                    SliderFrameArgs {
+                        density,
+                        frame_chrome: frame,
+                        geometry,
+                        paint,
+                        t,
+                        interactive_enabled,
                         hovered,
                         pressed,
                         focused,
-                        open: false,
-                        semantic: EditorFrameSemanticState::default(),
-                    },
-                    move |cx, frame_visuals| {
-                        let track = cx.flex(slider_track_flex_props(), move |cx| {
-                            let mut seg_layout = |grow: f32, bg: fret_core::Color, left: bool| {
-                                cx.container(
-                                    slider_track_segment_props(geometry, grow, bg, left),
-                                    |_cx| vec![],
-                                )
-                            };
-
-                            let left = seg_layout(left_grow, fill_bg, true);
-                            let right = seg_layout(right_grow, track_bg, false);
-
-                            let thumb =
-                                cx.container(slider_thumb_props(geometry, paint), |_cx| vec![]);
-
-                            vec![left, thumb, right]
-                        });
-
-                        let value_el = if show_value {
-                            let mut value_text_el = cx.text_props(readout_style.text_props(
-                                value_display_text.clone(),
-                                LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                TextAlign::End,
-                                TextOverflow::Clip,
-                            ));
-                            if let Some(test_id) = value_display_test_id.as_ref() {
-                                value_text_el = value_text_el
-                                    .test_id(test_id.clone())
-                                    .a11y_label(value_display_text.clone());
-                            }
-
-                            let value_seg = editor_input_group_segment(
-                                cx,
-                                LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Px(value_width),
-                                        height: Length::Fill,
-                                        ..Default::default()
-                                    },
-                                    flex: FlexItemStyle {
-                                        order: 0,
-                                        grow: 0.0,
-                                        shrink: 0.0,
-                                        basis: Length::Px(value_width),
-                                        align_self: None,
-                                    },
-                                    ..Default::default()
-                                },
-                                frame.padding,
-                                value_text_el,
-                            );
-                            Some(value_seg)
-                        } else {
-                            None
-                        };
-
-                        let track_seg = editor_input_group_segment(
-                            cx,
-                            LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
-                                    ..Default::default()
-                                },
-                                flex: FlexItemStyle {
-                                    order: 0,
-                                    grow: 1.0,
-                                    shrink: 1.0,
-                                    basis: Length::Px(Px(0.0)),
-                                    align_self: None,
-                                },
-                                ..Default::default()
-                            },
-                            frame.padding,
-                            track,
-                        );
-
-                        let mut children = vec![track_seg];
-                        if let Some(value_el) = value_el {
-                            children.push(editor_input_group_divider(cx, frame_visuals.border));
-                            children.push(value_el);
-                        }
-
-                        vec![cx.flex(
-                            FlexProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                direction: Axis::Horizontal,
-                                gap: SpacingLength::Px(Px(0.0)),
-                                padding: Edges::all(Px(0.0)).into(),
-                                justify: MainAlign::Start,
-                                align: CrossAlign::Center,
-                                wrap: false,
-                            },
-                            move |_cx| children,
-                        )]
+                        show_value,
+                        value_width,
+                        value_display_text: value_display_text.clone(),
+                        value_display_test_id: value_display_test_id.clone(),
                     },
                 )]
             },

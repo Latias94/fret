@@ -202,6 +202,14 @@ left/right segment container props, and thumb container props, while `chrome/tes
 layout, segment shape, fixed thumb diameter, border, and radius behavior. Render order, pointer
 math, value display layout, and public `SliderOptions` remain unchanged.
 
+2026-05-31 editor slider frame owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps public Slider orchestration, keyed
+state, pointer handlers, value math, resolved paint/geometry handoff, and NumericInput typing mode.
+The private `controls/slider/frame.rs` owner contains input-group frame assembly, track/thumb
+children, optional value display segment, readout styling, and value display test-id decoration.
+Pointer event wiring, typing handoff, track/thumb render order, and public `SliderOptions` remain
+unchanged.
+
 2026-05-31 editor numeric-input model/session owner-split result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps NumericInput constructors,
 builder methods, keyed control orchestration, validation message rendering, and presentation test

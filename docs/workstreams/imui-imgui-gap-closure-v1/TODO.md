@@ -609,6 +609,12 @@ Last updated: 2026-05-31
       Result: `controls/slider.rs` keeps element composition order and value display assembly only.
       `controls/slider/chrome.rs` owns track flex props, segment container props, and thumb
       container props, with focused props tests in `controls/slider/chrome/tests.rs`.
+- [x] Split editor slider frame/track/value element assembly into a private frame owner without
+      changing pointer event wiring, typing handoff, resolved paint/geometry policy, value display
+      text/readout behavior, track/thumb render order, or public `SliderOptions`.
+      Result: `controls/slider.rs` keeps public Slider orchestration, state, pointer handlers,
+      value math, and NumericInput typing mode. `controls/slider/frame.rs` owns the input-group
+      frame, track/thumb children, optional value display segment, and readout test-id decoration.
 - [x] Split editor enum-select row rendering, selection commit policy, and item test-id
       sanitization into a private child owner without changing trigger composition, overlay
       dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row
