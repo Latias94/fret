@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Docking Declarative Floating Owner-Split Evidence - 2026-06-01
+
+Claim verified: docking declarative floating chrome hover/close/title-bar policy moved out of the
+large declarative dock-space orchestration owner into a private `declarative/floating.rs` owner
+without changing floating hover lookup, floating chrome paint input projection, close/title-bar hit
+tests, title-bar drag target resolution, dock-preview policy checks, or public docking APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs` keeps dock-space orchestration, drag/drop event
+  routing, layout/render wiring, and public entrypoint functions while importing private floating
+  owner helpers.
+- `ecosystem/fret-docking/src/dock/declarative/floating.rs` owns floating hover lookup, floating
+  hover paint-state projection, floating chrome paint inputs, close/title-bar hit tests, leaf-tabs
+  selection for title-bar drags, and floating title-bar drag target resolution.
+- `tools/gate_imui_workstream_source.py` now tracks the declarative/floating split and rejects
+  floating chrome/title-bar policy from drifting back into the declarative orchestration owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the floating owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking --no-fail-fast`: pass (90 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Declarative Geometry Owner-Split Evidence - 2026-06-01
 
 Claim verified: docking declarative tab hit testing, layout snapshot lookup, split-handle geometry,

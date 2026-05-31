@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 docking declarative floating owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, drag/drop event
+routing, layout/render wiring, and public entrypoint functions while importing private floating
+owner helpers. The private `dock/declarative/floating.rs` owner contains floating hover lookup,
+floating hover paint-state projection, floating chrome paint inputs, close/title-bar hit tests,
+leaf-tabs selection for title-bar drags, and floating title-bar drag target resolution. Public
+docking APIs and managed dock-space entrypoints remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 docking declarative geometry owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, drag/drop event
 routing, layout/render wiring, and public entrypoint functions while importing private geometry

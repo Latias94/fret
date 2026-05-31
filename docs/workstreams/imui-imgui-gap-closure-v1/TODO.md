@@ -58,6 +58,16 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split docking declarative floating chrome and title-bar policy into a private child owner
+      without changing floating hover lookup, floating chrome paint input projection, close/title-bar
+      hit tests, title-bar drag target resolution, dock-preview policy checks, or public docking
+      APIs.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, drag/drop event routing,
+      layout/render wiring, and public entrypoint functions. `dock/declarative/floating.rs` owns
+      floating hover lookup, floating hover paint-state projection, floating chrome paint inputs,
+      close/title-bar hit tests, leaf-tabs selection for title-bar drags, and floating title-bar
+      drag target resolution. The source gate prevents floating chrome/title-bar policy from
+      drifting back into the declarative orchestration owner.
 - [x] Split docking declarative geometry and hit-test policy into a private child owner without
       changing tab close/content hit results, empty tab-bar drag targeting, layout snapshot bounds,
       split-handle cursor/min-size behavior, viewport hit projection, or public docking APIs.
