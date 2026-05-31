@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor Color-Edit Popup Side Preview Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor color-edit popup side-preview cell and restore behavior moved out of the
+preview hub into a private `popup/preview/side.rs` owner without changing current/original preview
+composition, original restore alpha rules, side-preview swatch sizing, preview caption text roles,
+alpha-preview fill routing, public popup preview imports, or color-edit tests.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview.rs` is now a thin fill/side hub
+  that re-exports fill helpers and side-preview test/runtime anchors through the existing preview
+  module path.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview/side.rs` owns
+  `color_side_preview`, current/original preview cells, original restore action wiring,
+  side-preview sizing constants, preview caption text-role usage, and restore color semantics.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now reads the side-preview owner
+  directly while preserving assertions that the fill owner keeps alpha-preview fill behavior.
+- `tools/gate_imui_workstream_source.py` now tracks the preview hub/side split and rejects
+  side-preview behavior from drifting back into the root preview hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the side-preview owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor --lib color_edit --no-fail-fast`: pass (51 passed).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass (2 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+
 ## Editor Color-Edit Numeric Model Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor color-edit numeric mode/readout/parser policy moved out of the root model

@@ -66,6 +66,8 @@ const COLOR_EDIT_POPUP_PREVIEW_RS: &str =
     include_str!("../src/controls/color_edit/popup/preview.rs");
 const COLOR_EDIT_POPUP_PREVIEW_FILL_RS: &str =
     include_str!("../src/controls/color_edit/popup/preview/fill.rs");
+const COLOR_EDIT_POPUP_PREVIEW_SIDE_RS: &str =
+    include_str!("../src/controls/color_edit/popup/preview/side.rs");
 const COLOR_EDIT_POPUP_SWATCHES_RS: &str =
     include_str!("../src/controls/color_edit/popup/swatches.rs");
 const COLOR_EDIT_POPUP_SWATCHES_SLOT_RS: &str =
@@ -156,6 +158,8 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("take_delivered_color_drop("));
     assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("ColorEditPaletteSlotDrop::new("));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("use fill::{"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("mod side;"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("use side::{"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("fn color_preview_stack<"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("fn checkerboard_grid<"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("mod hue_wheel;"));
@@ -297,10 +301,10 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("PressablePointerUpResult::SkipActivate"));
     assert!(COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("fn color_drag_threshold_exceeded("));
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("ColorEditAlphaPreview::Half"));
-    assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn color_side_preview<"));
-    assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("SIDE_PREVIEW_SWATCH_WIDTH"));
-    assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("SIDE_PREVIEW_SWATCH_HEIGHT"));
-    assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn restore_reference_color("));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("fn color_side_preview<"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("SIDE_PREVIEW_SWATCH_WIDTH"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("SIDE_PREVIEW_SWATCH_HEIGHT"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("fn restore_reference_color("));
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("fn preview_color_for_alpha_visibility("));
     assert!(COLOR_EDIT_POPUP_BODY_RS.contains("struct ColorPopupBodyArgs"));
     assert!(COLOR_EDIT_POPUP_BODY_RS.contains("fn color_popup_body<"));

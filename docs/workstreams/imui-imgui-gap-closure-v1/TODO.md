@@ -58,6 +58,14 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor color-edit popup side-preview cell and restore behavior into a private child
+      owner without changing current/original preview composition, original restore alpha rules,
+      side-preview swatch sizing, preview caption text roles, alpha-preview fill routing, public
+      popup preview imports, or color-edit tests.
+      Result: `controls/color_edit/popup/preview.rs` is now a thin fill/side hub.
+      `controls/color_edit/popup/preview/side.rs` owns side-preview current/original cell assembly,
+      original restore action wiring, side-preview sizing constants, and restore color semantics.
+      The source gate prevents side-preview behavior from drifting back into the preview hub.
 - [x] Split editor color-edit numeric model text and parse helpers into a private child owner
       without changing numeric mode ordering, RGB/HSV readout formatting, RGB/HSV parser
       semantics, alpha preservation, HSV conversion routing, hex parsing, HSV geometry helpers, or
