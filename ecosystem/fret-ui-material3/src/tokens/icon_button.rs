@@ -8,7 +8,9 @@
 use fret_core::{Color, Px};
 use fret_ui::Theme;
 
-use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::foundation::token_resolver::{
+    MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
+};
 use crate::icon_button::IconButtonSize;
 use crate::icon_button::IconButtonVariant;
 use crate::motion::SpringSpec;
@@ -40,23 +42,20 @@ pub(crate) fn icon_color(
     interaction: Option<IconButtonInteraction>,
 ) -> Color {
     let base_key = icon_color_key(variant, toggle, selected, interaction);
-    let mut color = if enabled {
-        theme.color_by_key(base_key)
+    let tokens = MaterialTokenResolver::new(theme);
+    if enabled {
+        tokens.color_comp_or_sys_chain(
+            base_key,
+            &["md.sys.color.on-surface-variant", "md.sys.color.on-surface"],
+        )
     } else {
-        theme.color_by_key(disabled_icon_color_key(variant))
+        let color = tokens.color_comp_or_sys_chain(
+            disabled_icon_color_key(variant),
+            &["md.sys.color.on-surface-variant", "md.sys.color.on-surface"],
+        );
+        let opacity = tokens.number_optional(Some(disabled_icon_opacity_key(variant)), 0.38);
+        alpha_mul(color, opacity)
     }
-    .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-    .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-    .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-
-    if !enabled {
-        let opacity = theme
-            .number_by_key(disabled_icon_opacity_key(variant))
-            .unwrap_or(0.38);
-        color.a *= opacity;
-    }
-
-    color
 }
 
 pub(crate) fn state_layer_color(
@@ -73,14 +72,16 @@ pub(crate) fn state_layer_color(
         selected,
         Some(IconButtonInteraction::Pressed),
     );
-    let mut color = theme
-        .color_by_key(pressed_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| icon_color(theme, variant, toggle, selected, enabled, None));
+    let tokens = MaterialTokenResolver::new(theme);
+    let mut color = tokens.color_comp_or_sys_or(
+        pressed_key,
+        "md.sys.color.on-surface-variant",
+        icon_color(theme, variant, toggle, selected, enabled, None),
+    );
 
     if let Some(interaction) = interaction {
         let key = state_layer_color_key(variant, toggle, selected, Some(interaction));
-        color = theme.color_by_key(key).unwrap_or(color);
+        color = tokens.color_comp_or_fallback(key, color);
     }
 
     color
@@ -108,31 +109,10 @@ pub(crate) fn state_layer_opacity(
     selected: bool,
     interaction: IconButtonInteraction,
 ) -> f32 {
-    let fallback = match interaction {
-        IconButtonInteraction::Pressed => 0.1,
-        IconButtonInteraction::Focused => 0.1,
-        IconButtonInteraction::Hovered => 0.08,
-    };
-
-    theme
-        .number_by_key(state_layer_opacity_key(
-            variant,
-            toggle,
-            selected,
-            interaction,
-        ))
-        .or_else(|| match interaction {
-            IconButtonInteraction::Pressed => {
-                theme.number_by_key("md.sys.state.pressed.state-layer-opacity")
-            }
-            IconButtonInteraction::Focused => {
-                theme.number_by_key("md.sys.state.focus.state-layer-opacity")
-            }
-            IconButtonInteraction::Hovered => {
-                theme.number_by_key("md.sys.state.hover.state-layer-opacity")
-            }
-        })
-        .unwrap_or(fallback)
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        state_layer_opacity_key(variant, toggle, selected, interaction),
+        material_state_layer_interaction(interaction),
+    )
 }
 
 pub(crate) fn container_background(
@@ -147,68 +127,83 @@ pub(crate) fn container_background(
         IconButtonVariant::Standard => None,
         IconButtonVariant::Filled => {
             if enabled {
-                theme.color_by_key(container_color_key_filled(toggle, selected))
+                MaterialTokenResolver::new(theme)
+                    .color_comp_chain(&[container_color_key_filled(toggle, selected)])
             } else {
-                let mut c = theme
-                    .color_by_key("md.comp.icon-button.filled.disabled.container.color")
-                    .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-                    .unwrap_or(icon_fallback);
-                let opacity = theme
-                    .number_by_key("md.comp.icon-button.filled.disabled.container.opacity")
-                    .unwrap_or(0.1);
-                c.a *= opacity;
-                Some(c)
+                Some(disabled_container_color(
+                    theme,
+                    "md.comp.icon-button.filled.disabled.container.color",
+                    "md.comp.icon-button.filled.disabled.container.opacity",
+                    icon_fallback,
+                ))
             }
         }
         IconButtonVariant::Tonal => {
             if enabled {
-                theme.color_by_key(container_color_key_tonal(toggle, selected))
+                MaterialTokenResolver::new(theme)
+                    .color_comp_chain(&[container_color_key_tonal(toggle, selected)])
             } else {
-                let mut c = theme
-                    .color_by_key("md.comp.icon-button.tonal.disabled.container.color")
-                    .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-                    .unwrap_or(icon_fallback);
-                let opacity = theme
-                    .number_by_key("md.comp.icon-button.tonal.disabled.container.opacity")
-                    .unwrap_or(0.1);
-                c.a *= opacity;
-                Some(c)
+                Some(disabled_container_color(
+                    theme,
+                    "md.comp.icon-button.tonal.disabled.container.color",
+                    "md.comp.icon-button.tonal.disabled.container.opacity",
+                    icon_fallback,
+                ))
             }
         }
         IconButtonVariant::Outlined => {
             if !toggle || !selected {
                 None
             } else if enabled {
-                theme.color_by_key("md.comp.icon-button.outlined.selected.container.color")
+                MaterialTokenResolver::new(theme)
+                    .color_comp_chain(&["md.comp.icon-button.outlined.selected.container.color"])
             } else {
-                let mut c = theme
-                    .color_by_key("md.comp.icon-button.outlined.selected.disabled.container.color")
-                    .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-                    .unwrap_or(icon_fallback);
-                let opacity = theme
-                    .number_by_key(
-                        "md.comp.icon-button.outlined.selected.disabled.container.opacity",
-                    )
-                    .unwrap_or(0.1);
-                c.a *= opacity;
-                Some(c)
+                Some(disabled_container_color(
+                    theme,
+                    "md.comp.icon-button.outlined.selected.disabled.container.color",
+                    "md.comp.icon-button.outlined.selected.disabled.container.opacity",
+                    icon_fallback,
+                ))
             }
         }
     }
 }
 
 pub(crate) fn outlined_outline_color(theme: &Theme, enabled: bool) -> Color {
-    let mut color = if !enabled {
-        theme.color_by_key("md.comp.icon-button.outlined.disabled.outline.color")
+    let comp_key = if !enabled {
+        "md.comp.icon-button.outlined.disabled.outline.color"
     } else {
-        theme.color_by_key("md.comp.icon-button.outlined.outline.color")
-    }
-    .or_else(|| theme.color_by_key("md.sys.color.outline-variant"))
-    .or_else(|| theme.color_by_key("md.sys.color.outline"))
-    .unwrap_or_else(|| theme.color_token("md.sys.color.outline"));
+        "md.comp.icon-button.outlined.outline.color"
+    };
+    let mut color = MaterialTokenResolver::new(theme).color_comp_or_sys_chain(
+        comp_key,
+        &["md.sys.color.outline-variant", "md.sys.color.outline"],
+    );
 
     color.a = 1.0;
     color
+}
+
+fn disabled_container_color(
+    theme: &Theme,
+    color_key: &'static str,
+    opacity_key: &'static str,
+    fallback: Color,
+) -> Color {
+    let tokens = MaterialTokenResolver::new(theme);
+    let color = tokens.color_comp_or_sys_or(color_key, "md.sys.color.on-surface", fallback);
+    let opacity = tokens.number_optional(Some(opacity_key), 0.1);
+    alpha_mul(color, opacity)
+}
+
+fn material_state_layer_interaction(
+    interaction: IconButtonInteraction,
+) -> MaterialStateLayerInteraction {
+    match interaction {
+        IconButtonInteraction::Hovered => MaterialStateLayerInteraction::Hovered,
+        IconButtonInteraction::Focused => MaterialStateLayerInteraction::Focused,
+        IconButtonInteraction::Pressed => MaterialStateLayerInteraction::Pressed,
+    }
 }
 
 pub(crate) fn container_shape_radius(theme: &Theme) -> f32 {

@@ -16,7 +16,11 @@ visual fixture and `button_state` outcomes.
 M3NF-030 is complete: Assist, Filter, Input, and Suggestion chip color/disabled fallback chains now
 use `MaterialTokenResolver` while preserving visual fixture and `chip_state` outcomes.
 
-The next executable task is M3NF-040: migrate the icon/action token fallback chains.
+M3NF-040 is complete: IconButton, FAB, SegmentedButton, and Tabs color/opacity fallback chains now
+use `MaterialTokenResolver` while preserving token visual and targeted state-test outcomes.
+
+The next executable task is M3NF-050: migrate or split the remaining surface/navigation fallback
+chains.
 
 ## Guardrails
 

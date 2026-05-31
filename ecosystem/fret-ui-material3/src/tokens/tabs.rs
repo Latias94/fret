@@ -7,6 +7,7 @@ use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
 use fret_ui_kit::typography::TextIntent;
 
+use crate::foundation::token_resolver::{MaterialStateLayerInteraction, MaterialTokenResolver};
 use crate::tokens::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -43,10 +44,8 @@ pub(crate) fn stacked_container_height_for(theme: &Theme, kind: NavigationTabKin
 }
 
 pub(crate) fn container_background_for(theme: &Theme, kind: NavigationTabKind) -> Color {
-    theme
-        .color_by_key(container_color_key(kind))
-        .or_else(|| theme.color_by_key("md.sys.color.surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.surface"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(container_color_key(kind), "md.sys.color.surface")
 }
 
 pub(crate) fn active_indicator_height(theme: &Theme) -> Px {
@@ -69,11 +68,10 @@ pub(crate) fn divider_height_for(theme: &Theme, kind: NavigationTabKind) -> Px {
 }
 
 pub(crate) fn divider_color_for(theme: &Theme, kind: NavigationTabKind) -> Color {
-    theme
-        .color_by_key(divider_color_key(kind))
-        .or_else(|| theme.color_by_key("md.comp.divider.color"))
-        .or_else(|| theme.color_by_key("md.sys.color.outline-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.outline-variant"))
+    MaterialTokenResolver::new(theme).color_comp_chain_or_sys(
+        &[divider_color_key(kind), "md.comp.divider.color"],
+        "md.sys.color.outline-variant",
+    )
 }
 
 pub(crate) fn horizontal_text_padding() -> fret_core::Edges {
@@ -106,10 +104,10 @@ pub(crate) fn scrollable_min_tab_width_for(theme: &Theme, kind: NavigationTabKin
 }
 
 pub(crate) fn active_indicator_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.primary-navigation-tab.active-indicator.color")
-        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.primary-navigation-tab.active-indicator.color",
+        "md.sys.color.primary",
+    )
 }
 
 pub(crate) fn icon_size_for(theme: &Theme, kind: NavigationTabKind) -> Px {
@@ -122,28 +120,10 @@ pub(crate) fn icon_color_for(
     active: bool,
     interaction: TabInteraction,
 ) -> Color {
-    theme
-        .color_by_key(icon_color_key(kind, active, interaction))
-        .or_else(|| match (kind, active) {
-            (NavigationTabKind::Primary, true) => theme.color_by_key("md.sys.color.primary"),
-            (NavigationTabKind::Primary, false) => {
-                theme.color_by_key("md.sys.color.on-surface-variant")
-            }
-            (NavigationTabKind::Secondary, true) => theme.color_by_key("md.sys.color.on-surface"),
-            (NavigationTabKind::Secondary, false) => {
-                theme.color_by_key("md.sys.color.on-surface-variant")
-            }
-        })
-        .unwrap_or_else(|| match (kind, active) {
-            (NavigationTabKind::Primary, true) => theme.color_token("md.sys.color.primary"),
-            (NavigationTabKind::Primary, false) => {
-                theme.color_token("md.sys.color.on-surface-variant")
-            }
-            (NavigationTabKind::Secondary, true) => theme.color_token("md.sys.color.on-surface"),
-            (NavigationTabKind::Secondary, false) => {
-                theme.color_token("md.sys.color.on-surface-variant")
-            }
-        })
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        icon_color_key(kind, active, interaction),
+        content_color_sys_key(kind, active),
+    )
 }
 
 pub(crate) fn active_indicator_shape_for(theme: &Theme, kind: NavigationTabKind) -> Corners {
@@ -171,28 +151,10 @@ pub(crate) fn label_color_for(
     active: bool,
     interaction: TabInteraction,
 ) -> Color {
-    theme
-        .color_by_key(label_color_key(kind, active, interaction))
-        .or_else(|| match (kind, active) {
-            (NavigationTabKind::Primary, true) => theme.color_by_key("md.sys.color.primary"),
-            (NavigationTabKind::Primary, false) => {
-                theme.color_by_key("md.sys.color.on-surface-variant")
-            }
-            (NavigationTabKind::Secondary, true) => theme.color_by_key("md.sys.color.on-surface"),
-            (NavigationTabKind::Secondary, false) => {
-                theme.color_by_key("md.sys.color.on-surface-variant")
-            }
-        })
-        .unwrap_or_else(|| match (kind, active) {
-            (NavigationTabKind::Primary, true) => theme.color_token("md.sys.color.primary"),
-            (NavigationTabKind::Primary, false) => {
-                theme.color_token("md.sys.color.on-surface-variant")
-            }
-            (NavigationTabKind::Secondary, true) => theme.color_token("md.sys.color.on-surface"),
-            (NavigationTabKind::Secondary, false) => {
-                theme.color_token("md.sys.color.on-surface-variant")
-            }
-        })
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        label_color_key(kind, active, interaction),
+        content_color_sys_key(kind, active),
+    )
 }
 
 pub(crate) fn label_text_style_for(theme: &Theme, kind: NavigationTabKind) -> TextStyle {
@@ -212,16 +174,10 @@ pub(crate) fn state_layer_color_for(
     active: bool,
     interaction: TabInteraction,
 ) -> Color {
-    theme
-        .color_by_key(state_layer_color_key(kind, active, interaction))
-        .or_else(|| match kind {
-            NavigationTabKind::Primary if active => theme.color_by_key("md.sys.color.primary"),
-            _ => theme.color_by_key("md.sys.color.on-surface"),
-        })
-        .unwrap_or_else(|| match kind {
-            NavigationTabKind::Primary if active => theme.color_token("md.sys.color.primary"),
-            _ => theme.color_token("md.sys.color.on-surface"),
-        })
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        state_layer_color_key(kind, active, interaction),
+        state_layer_color_sys_key(kind, active),
+    )
 }
 
 pub(crate) fn state_layer_opacity_for(
@@ -232,30 +188,12 @@ pub(crate) fn state_layer_opacity_for(
 ) -> f32 {
     match interaction {
         TabInteraction::Default => 0.0,
-        TabInteraction::Pressed => theme
-            .number_by_key(state_layer_opacity_key(
-                kind,
-                active,
-                TabInteraction::Pressed,
-            ))
-            .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-            .unwrap_or(0.1),
-        TabInteraction::Focused => theme
-            .number_by_key(state_layer_opacity_key(
-                kind,
-                active,
-                TabInteraction::Focused,
-            ))
-            .or_else(|| theme.number_by_key("md.sys.state.focus.state-layer-opacity"))
-            .unwrap_or(0.1),
-        TabInteraction::Hovered => theme
-            .number_by_key(state_layer_opacity_key(
-                kind,
-                active,
-                TabInteraction::Hovered,
-            ))
-            .or_else(|| theme.number_by_key("md.sys.state.hover.state-layer-opacity"))
-            .unwrap_or(0.08),
+        TabInteraction::Pressed | TabInteraction::Focused | TabInteraction::Hovered => {
+            MaterialTokenResolver::new(theme).state_layer_opacity(
+                state_layer_opacity_key(kind, active, interaction),
+                material_state_layer_interaction(interaction),
+            )
+        }
     }
 }
 
@@ -271,6 +209,31 @@ fn container_height_key(kind: NavigationTabKind) -> &'static str {
     match kind {
         NavigationTabKind::Primary => "md.comp.primary-navigation-tab.container.height",
         NavigationTabKind::Secondary => "md.comp.secondary-navigation-tab.container.height",
+    }
+}
+
+fn content_color_sys_key(kind: NavigationTabKind, active: bool) -> &'static str {
+    match (kind, active) {
+        (NavigationTabKind::Primary, true) => "md.sys.color.primary",
+        (NavigationTabKind::Primary, false) => "md.sys.color.on-surface-variant",
+        (NavigationTabKind::Secondary, true) => "md.sys.color.on-surface",
+        (NavigationTabKind::Secondary, false) => "md.sys.color.on-surface-variant",
+    }
+}
+
+fn state_layer_color_sys_key(kind: NavigationTabKind, active: bool) -> &'static str {
+    match (kind, active) {
+        (NavigationTabKind::Primary, true) => "md.sys.color.primary",
+        _ => "md.sys.color.on-surface",
+    }
+}
+
+fn material_state_layer_interaction(interaction: TabInteraction) -> MaterialStateLayerInteraction {
+    match interaction {
+        TabInteraction::Hovered => MaterialStateLayerInteraction::Hovered,
+        TabInteraction::Focused => MaterialStateLayerInteraction::Focused,
+        TabInteraction::Pressed => MaterialStateLayerInteraction::Pressed,
+        TabInteraction::Default => MaterialStateLayerInteraction::Hovered,
     }
 }
 

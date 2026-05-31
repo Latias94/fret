@@ -8,7 +8,7 @@ use fret_ui::Theme;
 use fret_ui_kit::typography::TextIntent;
 
 use crate::fab::{FabSize, FabVariant};
-use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::foundation::token_resolver::{MaterialTokenResolver, alpha_mul};
 use crate::tokens::typography;
 
 pub(crate) const DISABLED_CONTAINER_OPACITY: f32 = 0.12;
@@ -162,13 +162,20 @@ pub(crate) fn container_background(
         return c;
     }
 
-    theme
-        .color_by_key(&format!("{prefix}.lowered.container.color"))
-        .filter(|_| lowered)
-        .or_else(|| theme.color_by_key(&format!("{prefix}.container.color")))
-        .or_else(|| theme.color_by_key("md.sys.color.surface-container-high"))
-        .or_else(|| theme.color_by_key("md.sys.color.surface-container"))
-        .unwrap_or_else(|| tokens.color_sys("md.sys.color.surface-container"))
+    let mut comp_keys = Vec::new();
+    if lowered {
+        comp_keys.push(format!("{prefix}.lowered.container.color"));
+    }
+    comp_keys.push(format!("{prefix}.container.color"));
+    let comp_refs = comp_keys.iter().map(String::as_str).collect::<Vec<_>>();
+
+    tokens.color_comp_chain_or_sys_chain(
+        &comp_refs,
+        &[
+            "md.sys.color.surface-container-high",
+            "md.sys.color.surface-container",
+        ],
+    )
 }
 
 pub(crate) fn container_elevation(
@@ -234,10 +241,10 @@ pub(crate) fn container_shadow_color(theme: &Theme, extended: bool, variant: Fab
     } else {
         variant_prefix(variant)
     };
-    theme
-        .color_by_key(&format!("{prefix}.container.shadow-color"))
-        .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| tokens.color_sys("md.sys.color.shadow"))
+    tokens.color_comp_or_sys(
+        &format!("{prefix}.container.shadow-color"),
+        "md.sys.color.shadow",
+    )
 }
 
 pub(crate) fn icon_color(
@@ -254,25 +261,13 @@ pub(crate) fn icon_color(
         variant_prefix(variant)
     };
 
-    let default = theme.color_by_key(&format!("{prefix}.icon.color"));
-    let mut color = match interaction {
-        Some(FabInteraction::Hovered) => theme
-            .color_by_key(&format!("{prefix}.hovered.icon.color"))
-            .or_else(|| theme.color_by_key(&format!("{prefix}.hover.icon.color"))),
-        Some(FabInteraction::Focused) => theme
-            .color_by_key(&format!("{prefix}.focused.icon.color"))
-            .or_else(|| theme.color_by_key(&format!("{prefix}.focus.icon.color"))),
-        Some(FabInteraction::Pressed) => {
-            theme.color_by_key(&format!("{prefix}.pressed.icon.color"))
-        }
-        None => default,
-    }
-    .or(default)
-    .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-    .unwrap_or_else(|| tokens.color_sys("md.sys.color.on-surface"));
+    let mut comp_keys = interaction_token_keys(prefix, interaction, "icon.color");
+    comp_keys.push(format!("{prefix}.icon.color"));
+    let comp_refs = comp_keys.iter().map(String::as_str).collect::<Vec<_>>();
+    let mut color = tokens.color_comp_chain_or_sys(&comp_refs, "md.sys.color.on-surface");
 
     if !enabled {
-        color.a *= DISABLED_CONTENT_OPACITY;
+        color = alpha_mul(color, DISABLED_CONTENT_OPACITY);
     }
 
     color
@@ -286,26 +281,13 @@ pub(crate) fn label_color(
 ) -> Color {
     let tokens = MaterialTokenResolver::new(theme);
     let prefix = extended_variant_prefix(variant);
-    let default = theme.color_by_key(&format!("{prefix}.label-text.color"));
-
-    let mut color = match interaction {
-        Some(FabInteraction::Hovered) => theme
-            .color_by_key(&format!("{prefix}.hovered.label-text.color"))
-            .or_else(|| theme.color_by_key(&format!("{prefix}.hover.label-text.color"))),
-        Some(FabInteraction::Focused) => theme
-            .color_by_key(&format!("{prefix}.focused.label-text.color"))
-            .or_else(|| theme.color_by_key(&format!("{prefix}.focus.label-text.color"))),
-        Some(FabInteraction::Pressed) => {
-            theme.color_by_key(&format!("{prefix}.pressed.label-text.color"))
-        }
-        None => default,
-    }
-    .or(default)
-    .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-    .unwrap_or_else(|| tokens.color_sys("md.sys.color.on-surface"));
+    let mut comp_keys = interaction_token_keys(prefix, interaction, "label-text.color");
+    comp_keys.push(format!("{prefix}.label-text.color"));
+    let comp_refs = comp_keys.iter().map(String::as_str).collect::<Vec<_>>();
+    let mut color = tokens.color_comp_chain_or_sys(&comp_refs, "md.sys.color.on-surface");
 
     if !enabled {
-        color.a *= DISABLED_CONTENT_OPACITY;
+        color = alpha_mul(color, DISABLED_CONTENT_OPACITY);
     }
 
     color
@@ -345,32 +327,14 @@ pub(crate) fn state_layer_color(
         variant_prefix(variant)
     };
 
-    let mut color = theme
-        .color_by_key(&format!("{prefix}.pressed.state-layer.color"))
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| tokens.color_sys("md.sys.color.on-surface"));
+    let color = tokens.color_comp_or_sys(
+        &format!("{prefix}.pressed.state-layer.color"),
+        "md.sys.color.on-surface",
+    );
 
-    let keys = match interaction {
-        FabInteraction::Hovered => [
-            format!("{prefix}.hovered.state-layer.color"),
-            format!("{prefix}.hover.state-layer.color"),
-        ],
-        FabInteraction::Focused => [
-            format!("{prefix}.focused.state-layer.color"),
-            format!("{prefix}.focus.state-layer.color"),
-        ],
-        FabInteraction::Pressed => [format!("{prefix}.pressed.state-layer.color"), String::new()],
-    };
-
-    if let Some(found) = theme.color_by_key(&keys[0]).or_else(|| {
-        (!keys[1].is_empty())
-            .then(|| theme.color_by_key(&keys[1]))
-            .flatten()
-    }) {
-        color = found;
-    }
-
-    color
+    let comp_keys = interaction_token_keys(prefix, Some(interaction), "state-layer.color");
+    let comp_refs = comp_keys.iter().map(String::as_str).collect::<Vec<_>>();
+    tokens.color_comp_chain_or_fallback(&comp_refs, color)
 }
 
 pub(crate) fn state_layer_opacity(
@@ -406,21 +370,18 @@ pub(crate) fn state_layer_opacity(
         ),
     };
 
-    theme
-        .number_by_key(&key_a)
-        .or_else(|| {
-            (!key_b.is_empty())
-                .then(|| theme.number_by_key(&key_b))
-                .flatten()
-        })
-        .or_else(|| theme.number_by_key(sys_key))
-        .unwrap_or(fallback)
+    let comp_keys = if key_b.is_empty() {
+        vec![key_a]
+    } else {
+        vec![key_a, key_b]
+    };
+    let comp_refs = comp_keys.iter().map(String::as_str).collect::<Vec<_>>();
+
+    MaterialTokenResolver::new(theme).number_comp_chain_or_sys(&comp_refs, sys_key, fallback)
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key("md.sys.state.pressed.state-layer-opacity")
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme).number_sys("md.sys.state.pressed.state-layer-opacity", 0.1)
 }
 
 pub(crate) fn pressed_state_layer_opacity_for_variant(
@@ -434,9 +395,29 @@ pub(crate) fn pressed_state_layer_opacity_for_variant(
         variant_prefix(variant)
     };
 
-    theme
-        .number_by_key(&format!("{prefix}.pressed.state-layer.opacity"))
-        .unwrap_or_else(|| pressed_state_layer_opacity(theme))
+    MaterialTokenResolver::new(theme).number_optional(
+        Some(&format!("{prefix}.pressed.state-layer.opacity")),
+        pressed_state_layer_opacity(theme),
+    )
+}
+
+fn interaction_token_keys(
+    prefix: &str,
+    interaction: Option<FabInteraction>,
+    suffix: &str,
+) -> Vec<String> {
+    match interaction {
+        Some(FabInteraction::Hovered) => vec![
+            format!("{prefix}.hovered.{suffix}"),
+            format!("{prefix}.hover.{suffix}"),
+        ],
+        Some(FabInteraction::Focused) => vec![
+            format!("{prefix}.focused.{suffix}"),
+            format!("{prefix}.focus.{suffix}"),
+        ],
+        Some(FabInteraction::Pressed) => vec![format!("{prefix}.pressed.{suffix}")],
+        None => Vec::new(),
+    }
 }
 
 fn size_prefix(size: FabSize) -> &'static str {

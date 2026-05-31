@@ -29,11 +29,13 @@ Task IDs use `M3NF-*`.
   - Note: Assist, Filter, Input, and Suggestion chip color/disabled fallback chains now use
     resolver primitives; visual fixture and `chip_state` gates passed.
 
-- [ ] M3NF-040: Migrate icon/action token fallback chains.
+- [x] M3NF-040: Migrate icon/action token fallback chains.
   - Scope: IconButton, FAB, SegmentedButton, Tabs.
   - Expected result: action/control token modules use shared fallback vocabulary for repeated color
     fallback paths while retaining state/variant key selection.
   - Gate: token visual fixtures plus targeted state tests.
+  - Note: IconButton, FAB, SegmentedButton, and Tabs color/opacity fallback chains now use resolver
+    primitives; token visual fixture and targeted state gates passed.
 
 - [ ] M3NF-050: Migrate surface/navigation fallback chains or split them.
   - Scope: Card, Dialog, Snackbar, List, Tooltip, navigation surfaces, and small residual modules.

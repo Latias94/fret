@@ -26,6 +26,8 @@ Status: Complete
 
 ## M3 - Action Components Hardened
 
+Status: Complete
+
 - IconButton, FAB, SegmentedButton, and Tabs use shared fallback vocabulary where repeated paths
   justify it.
 

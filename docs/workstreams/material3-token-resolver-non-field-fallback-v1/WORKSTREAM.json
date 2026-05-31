@@ -85,8 +85,16 @@
     "ecosystem/fret-ui-material3/src/tokens/filter_chip.rs",
     "ecosystem/fret-ui-material3/src/tokens/input_chip.rs",
     "ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs",
+    "ecosystem/fret-ui-material3/src/tokens/icon_button.rs",
+    "ecosystem/fret-ui-material3/src/tokens/fab.rs",
+    "ecosystem/fret-ui-material3/src/tokens/segmented_button.rs",
+    "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
     "ecosystem/fret-ui-material3/tests/button_state.rs",
     "ecosystem/fret-ui-material3/tests/chip_state.rs",
+    "ecosystem/fret-ui-material3/tests/icon_button_state.rs",
+    "ecosystem/fret-ui-material3/tests/fab_state.rs",
+    "ecosystem/fret-ui-material3/tests/segmented_button_state.rs",
+    "ecosystem/fret-ui-material3/tests/tabs_state.rs",
     "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
   ],
   "adr_refs": [

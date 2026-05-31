@@ -124,6 +124,21 @@ impl<'a> MaterialTokenResolver<'a> {
             .unwrap_or_else(|| self.color_sys(sys_key))
     }
 
+    pub fn color_comp_chain_or_sys_chain(&self, comp_keys: &[&str], sys_keys: &[&str]) -> Color {
+        debug_assert_comp_keys(comp_keys);
+        debug_assert!(!sys_keys.is_empty(), "expected at least one md.sys.* key");
+        debug_assert!(
+            sys_keys.iter().all(|key| key.starts_with("md.sys.")),
+            "expected md.sys.* fallback keys, got: {sys_keys:?}"
+        );
+
+        let fallback_sys_key = sys_keys.last().copied().unwrap_or("md.sys.color.surface");
+
+        self.color_comp_chain(comp_keys)
+            .or_else(|| sys_keys.iter().find_map(|key| self.theme.color_by_key(key)))
+            .unwrap_or_else(|| fallback_color_for_sys(fallback_sys_key))
+    }
+
     pub fn color_comp_chain_or_sys_or(
         &self,
         comp_keys: &[&str],
@@ -200,6 +215,24 @@ impl<'a> MaterialTokenResolver<'a> {
         );
         keys.iter()
             .find_map(|key| self.theme.number_by_key(key))
+            .unwrap_or(fallback)
+    }
+
+    pub fn number_comp_chain_or_sys(
+        &self,
+        comp_keys: &[&str],
+        sys_key: &str,
+        fallback: f32,
+    ) -> f32 {
+        debug_assert_comp_keys(comp_keys);
+        debug_assert!(
+            sys_key.starts_with("md.sys."),
+            "expected md.sys.* key, got: {sys_key}"
+        );
+        comp_keys
+            .iter()
+            .find_map(|key| self.theme.number_by_key(key))
+            .or_else(|| self.theme.number_by_key(sys_key))
             .unwrap_or(fallback)
     }
 

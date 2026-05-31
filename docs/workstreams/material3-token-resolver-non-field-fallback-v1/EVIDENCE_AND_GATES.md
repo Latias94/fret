@@ -39,8 +39,16 @@ Last updated: 2026-05-31
 - `ecosystem/fret-ui-material3/src/tokens/filter_chip.rs`
 - `ecosystem/fret-ui-material3/src/tokens/input_chip.rs`
 - `ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs`
+- `ecosystem/fret-ui-material3/src/tokens/icon_button.rs`
+- `ecosystem/fret-ui-material3/src/tokens/fab.rs`
+- `ecosystem/fret-ui-material3/src/tokens/segmented_button.rs`
+- `ecosystem/fret-ui-material3/src/tokens/tabs.rs`
 - `ecosystem/fret-ui-material3/tests/button_state.rs`
 - `ecosystem/fret-ui-material3/tests/chip_state.rs`
+- `ecosystem/fret-ui-material3/tests/icon_button_state.rs`
+- `ecosystem/fret-ui-material3/tests/fab_state.rs`
+- `ecosystem/fret-ui-material3/tests/segmented_button_state.rs`
+- `ecosystem/fret-ui-material3/tests/tabs_state.rs`
 - `ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json`
 
 ## M3NF-010 Evidence
@@ -90,3 +98,28 @@ Last updated: 2026-05-31
 - `git diff --check`: passed.
 - Residual fallback audit no longer lists `chip.rs`, `filter_chip.rs`, `input_chip.rs`, or
   `suggestion_chip.rs`.
+
+## M3NF-040 Evidence
+
+- `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`: added reusable component-chain to
+  sys-chain color lookup and component-chain to sys numeric lookup helpers.
+- `ecosystem/fret-ui-material3/src/tokens/icon_button.rs`: migrated icon, state-layer,
+  container, disabled, and outline fallback chains to `MaterialTokenResolver`.
+- `ecosystem/fret-ui-material3/src/tokens/fab.rs`: migrated FAB container, shadow, icon, label,
+  state-layer color, and state-layer opacity fallback chains.
+- `ecosystem/fret-ui-material3/src/tokens/segmented_button.rs`: migrated selected container,
+  outline, label, icon, state-layer color, and state-layer opacity fallback chains.
+- `ecosystem/fret-ui-material3/src/tokens/tabs.rs`: migrated tab container, divider, active
+  indicator, icon, label, state-layer color, and state-layer opacity fallback chains.
+- `rg -n "theme\\.color_by_key|theme\\.color_token|theme\\.number_by_key\\(|or_else\\(\\|\\| theme\\.number_by_key" ecosystem/fret-ui-material3/src/tokens/icon_button.rs ecosystem/fret-ui-material3/src/tokens/fab.rs ecosystem/fret-ui-material3/src/tokens/segmented_button.rs ecosystem/fret-ui-material3/src/tokens/tabs.rs`: no matches.
+- Residual fallback audit no longer lists `icon_button.rs`, `fab.rs`, `segmented_button.rs`, or
+  `tabs.rs`.
+- `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes`: 1 passed.
+- `cargo nextest run -p fret-ui-material3 --features diagnostics --test icon_button_state --test fab_state --test segmented_button_state --test tabs_state`: 21 passed.
+- `cargo check -p fret-ui-material3 --features diagnostics --tests`: passed.
+- `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`: passed.
+- `cargo fmt --package fret-ui-material3 --check`: passed.
+- `python -m json.tool docs/workstreams/material3-token-resolver-non-field-fallback-v1/WORKSTREAM.json | Out-Null`: passed.
+- `python tools/check_workstream_catalog.py`: passed; 525 dedicated directories, 47 standalone markdown files.
+- `python tools/check_layering.py`: passed.
+- `git diff --check`: passed.

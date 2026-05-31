@@ -10,3 +10,11 @@
 {"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/input_chip.rs","why":"M3NF-030 migrated InputChip fallback chains to MaterialTokenResolver."}
 {"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs","why":"M3NF-030 migrated SuggestionChip fallback chains to MaterialTokenResolver."}
 {"role":"test","path":"ecosystem/fret-ui-material3/tests/chip_state.rs","why":"M3NF-030 targeted chip behavior and state-layer regression gate."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/icon_button.rs","why":"M3NF-040 migrated IconButton fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/fab.rs","why":"M3NF-040 migrated FAB fallback chains and proved chain resolver helpers."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/segmented_button.rs","why":"M3NF-040 migrated SegmentedButton fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/tabs.rs","why":"M3NF-040 migrated Tabs fallback chains to MaterialTokenResolver."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/icon_button_state.rs","why":"M3NF-040 targeted IconButton state regression gate."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/fab_state.rs","why":"M3NF-040 targeted FAB state regression gate."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/segmented_button_state.rs","why":"M3NF-040 targeted SegmentedButton state regression gate."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/tabs_state.rs","why":"M3NF-040 targeted Tabs state regression gate."}
