@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Debug-Draw Paint Clip-Stack Owner-Split Evidence - 2026-06-01
+
+Claim verified: IMUI debug-draw paint clip-stack handling moved out of the root paint dispatcher
+into a private `paint/clip.rs` owner without changing command order, empty clip elision, unmatched
+pop elision, final clip cleanup, media dispatch, shape dispatch, or public debug-draw drawing APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint.rs` now keeps command iteration plus
+  media/shape dispatch.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/clip.rs` owns clip push/pop scene-op
+  emission, empty clip elision, unmatched pop elision, open-depth tracking, and final clip-stack
+  cleanup.
+- `tools/gate_imui_workstream_source.py` now gates the root/clip split and rejects clip scene-op
+  writes from drifting back into the root paint dispatcher.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new clip owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke
+  --no-fail-fast`: pass (1 passed).
+
 ## IMUI Disclosure Visual Tests Owner-Split Evidence - 2026-05-31
 
 Claim verified: IMUI disclosure visual regression tests moved out of the visual test hub into
@@ -13831,8 +13858,9 @@ clip behavior, SVG paint behavior, or debug-draw public authoring APIs.
 
 Evidence:
 
-- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint.rs` keeps clip-stack balancing and
-  command-class dispatch to media vs shape painters.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint.rs` initially kept clip-stack
+  balancing plus command-class dispatch to media vs shape painters; the 2026-06-01 follow-up moved
+  clip-stack handling into `paint/clip.rs`.
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` owns image, image-region,
   image-quad, rounded-image, rounded-image-region, SVG image, and SVG mask-icon painting.
 - `tools/gate_imui_workstream_source.py` now requires the media owner and rejects image/SVG paint

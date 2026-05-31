@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 IMUI debug-draw paint clip-stack owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint.rs` now keeps command iteration plus
+media/shape dispatch only. `paint/clip.rs` owns clip push/pop scene-op emission, empty clip elision,
+unmatched pop elision, open-depth tracking, and final clip-stack cleanup. Debug-draw command order,
+media dispatch, shape dispatch, and public drawing APIs remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-05-31 IMUI disclosure visual tests owner-split result:
 `ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/visual.rs` now keeps visual regression
 module routing only. `tests/visual/palette.rs` owns tree-node hover palette coverage, while
@@ -2755,8 +2762,9 @@ point-count/empty accessors. The public `ImUiDebugDrawPath` API remains unchange
 
 2026-05-27 debug-draw paint media owner split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` delegates media paint behavior
-to private raster, rounded, and SVG owners. Root `paint.rs` keeps clip-stack balancing and
-command-class dispatch to media vs shape painters.
+to private raster, rounded, and SVG owners. Root `paint.rs` initially kept clip-stack balancing and
+command-class dispatch to media vs shape painters; the 2026-06-01 follow-up moved clip-stack
+handling into `paint/clip.rs`.
 Debug-draw scene output and public authoring APIs remain unchanged.
 
 2026-05-30 debug-draw media dispatch owner split result:

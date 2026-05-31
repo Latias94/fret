@@ -58,6 +58,13 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw paint clip-stack balancing into a private paint owner without changing
+      command order, empty clip elision, unmatched pop elision, final clip cleanup, media dispatch,
+      shape dispatch, or public debug-draw drawing APIs.
+      Result: `debug_draw_controls/paint.rs` keeps command iteration and media/shape dispatch.
+      `debug_draw_controls/paint/clip.rs` owns clip push/pop command handling and end-of-pass clip
+      stack cleanup. The source gate prevents clip scene-op writes from drifting back into the
+      paint dispatcher.
 - [x] Split IMUI disclosure visual regression tests into private palette and text-role owners
       without changing tree-node hover palette assertions, shared list-row text-role assertions,
       chrome glyph text-role assertions, or shared disclosure test harness helpers.
@@ -3579,7 +3586,8 @@ Readiness order for the next locally testable review slices:
    2026-05-27 debug-draw paint media owner split: `debug_draw_controls/paint/media.rs` kept
    media command routing while `paint/media/raster.rs`, `paint/media/rounded.rs`, and
    `paint/media/svg.rs` took image, rounded-image, SVG image, and SVG mask-icon paint behavior.
-   Root `paint.rs` keeps clip-stack balancing and media/shape command dispatch.
+   Root `paint.rs` initially kept clip-stack balancing and media/shape command dispatch; the
+   2026-06-01 follow-up moved clip-stack handling into `paint/clip.rs`.
    2026-05-14 editor drag-value follow-up: `DragValueCoreResponse` now keeps drag/hover/press/focus
    storage private and no longer exposes external default construction. `DragValueCore` still owns
    response construction, while editor controls read visual state through `dragging()`, `hovered()`,

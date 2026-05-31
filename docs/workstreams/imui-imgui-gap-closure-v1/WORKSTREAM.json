@@ -1329,6 +1329,7 @@
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/sampling/beziers.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/sampling/segments.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/clip.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/dispatch.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/dispatch/non_media.rs",
