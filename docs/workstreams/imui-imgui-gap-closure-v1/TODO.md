@@ -1277,6 +1277,12 @@ Last updated: 2026-05-31
       Result: `color_edit/model.rs` keeps numeric text/parse helpers, RGB/HSV conversion, SV/hue
       bar helpers, and root re-exports. `color_edit/model/hue_wheel.rs` owns hue-wheel geometry,
       target selection, barycentric triangle math, cursor projection, and hue-wheel HSV updates.
+- [x] Split editor color-edit picker-option thumbnail rendering into a private child owner without
+      changing picker option card sizing, HSV hue-bar/wheel previews, alpha option toggling,
+      popup runtime option mutation, or popup policy tests.
+      Result: `color_edit/popup/options.rs` keeps picker/alpha option row orchestration and
+      activation policy, while `color_edit/popup/options/thumbnail.rs` owns the thumbnail clip
+      frames plus hue-bar, SV-grid, and hue-wheel preview composition.
 - [x] Split editor color-edit option records and runtime popup defaults into a private owner
       without changing public `ColorEditOptions` / popup option names, default values, runtime
       override semantics, palette/payload/request ownership, or popup policy tests.

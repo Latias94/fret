@@ -1194,6 +1194,7 @@
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/copy.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/numeric.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/options.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/options/thumbnail.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/alpha.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/alpha/preview.rs",
