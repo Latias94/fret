@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Docking Declarative Drag Resolve Owner-Split Evidence - 2026-06-01
+
+Claim verified: docking declarative internal drag/drop hover and drop resolution moved out of the
+large declarative dock-space orchestration owner into a private `declarative/drag_resolve.rs` owner
+without changing hover/drop target resolution, tab-bar auto-scroll during drag, tear-off handoff,
+drop intent application, drag diagnostics publication, drag inversion payload flags, policy allow
+checks, or public docking APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs` keeps dock-space orchestration, event routing,
+  paint ordering, and public entrypoint functions while importing private drag-resolve owner
+  helpers.
+- `ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` owns internal drag hover
+  resolution, drop resolution, drop-intent effect projection, tab-bar auto-scroll during drag,
+  tear-off handoff, drag diagnostics publication, drag inversion payload flags, panel/tabs drag
+  allow checks, and cross-window drag session payload startup.
+- `tools/gate_imui_workstream_source.py` now tracks the declarative/drag-resolve split and rejects
+  drag/drop resolve policy from drifting back into the declarative orchestration owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the drag-resolve owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking --no-fail-fast`: pass (90 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Declarative Drag Preview Owner-Split Evidence - 2026-06-01
 
 Claim verified: docking declarative drag ghost lookup/title preparation and tab insert preview

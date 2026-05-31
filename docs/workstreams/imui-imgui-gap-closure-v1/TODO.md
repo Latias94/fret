@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split docking declarative internal drag/drop resolve and drag-start policy into a private
+      child owner without changing hover/drop target resolution, tab-bar auto-scroll during drag,
+      tear-off handoff, drop intent application, drag diagnostics publication, drag inversion
+      payload flags, policy allow checks, or public docking APIs.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, event routing, paint ordering,
+      and public entrypoint functions. `dock/declarative/drag_resolve.rs` owns internal drag hover
+      resolution, drop resolution, drop-intent effect projection, drag diagnostics publication,
+      panel/tabs drag allow checks, and cross-window drag session payload startup. The source gate
+      prevents drag/drop resolve policy from drifting back into the declarative orchestration owner.
 - [x] Split docking declarative drag ghost and tab insert preview preparation into a private child
       owner without changing drag ghost lookup, drag source tab fallback, ghost title fallback,
       prepared ghost title text, center-zone insert preview titles, or public docking APIs.

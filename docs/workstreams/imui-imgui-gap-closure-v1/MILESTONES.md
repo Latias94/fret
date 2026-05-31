@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 docking declarative drag-resolve owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, event routing,
+paint ordering, and public entrypoint functions while importing private drag-resolve owner helpers.
+The private `dock/declarative/drag_resolve.rs` owner contains internal drag hover/drop resolution,
+drop-intent effect projection, tab-bar auto-scroll during drag, tear-off handoff, drag diagnostics
+publication, drag inversion payload flags, panel/tabs drag allow checks, and cross-window drag
+session payload startup. Public docking APIs, drag/drop behavior, and diagnostics payloads remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 docking declarative drag-preview owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, paint ordering,
 drop-overlay dispatch, and public entrypoint functions while importing private drag-preview owner
