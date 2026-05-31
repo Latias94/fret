@@ -55,6 +55,11 @@ keying, striping, and row wrapping only. `body_rows/cells.rs` owns hidden-column
 fallback empty-cell creation, default/explicit test-id precedence, and prepared-cell wrapping.
 Public table rendering behavior remains unchanged.
 
+2026-05-31 table body wrapper owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/body.rs` is now a thin hub.
+`body/row.rs` owns row wrapping and grouped row chrome, while `body/cell.rs` owns cell wrapping
+and semantics decoration. Public table body wrapper behavior remains unchanged.
+
 2026-05-31 facade-writer text test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` is now a thin test hub.
 `tests/text.rs` owns `ui.text(...)` dense single-line coverage, while `tests/wrapped.rs` owns

@@ -88,6 +88,11 @@ Last updated: 2026-05-31
       prepared-cell wrapping, row striping/background, or horizontal scroll wrapping.
       Result: `table_controls/render/body_rows.rs` now keeps row iteration, keying, striping, and
       row wrapping only. `body_rows/cells.rs` owns per-row cell preparation and test-id resolution.
+- [x] Split IMUI table body wrapper rendering into private row and cell owners without changing
+      wrapper semantics, row striping/background, pinned/grouped row layout, cell padding/layout,
+      or cell test-id/heading semantics.
+      Result: `table_controls/body.rs` is now a thin hub. `body/row.rs` owns row wrapping and
+      grouped row chrome, while `body/cell.rs` owns cell wrapping and semantics decoration.
 - [x] Split IMUI debug-draw path-builder regression coverage into private sub-owners without
       changing path stroke/fill command recording, rectangle/rounded-rectangle sampling, Bezier
       defaults, circular/elliptical arc defaults, or invalid finished-path cleanup.

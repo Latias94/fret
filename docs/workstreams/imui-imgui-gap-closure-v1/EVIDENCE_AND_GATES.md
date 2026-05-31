@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Table Body Wrapper Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI table body wrapper rendering split into private row and cell owners without
+changing wrapper semantics, row striping/background, pinned/grouped row layout, cell padding/
+layout, or cell test-id/heading semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/body.rs` is now a thin hub with shared types and
+  re-exports only.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/body/row.rs` owns row wrapping and grouped row
+  chrome.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/body/cell.rs` owns cell wrapping and semantics
+  decoration.
+- `tools/gate_imui_workstream_source.py` now checks the body hub plus both private owners and
+  rejects wrapper logic from drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new body wrapper owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass after updating the row/cell owner checks to
+  the `pub(in super::super)` visibility used by the re-exported private owners.
+- `cargo nextest run -p fret-ui-kit --features imui --lib hidden_table_columns_do_not_render_header_body_or_response horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Table Body-Row Cell Preparation Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI table body-row cell preparation split into a private owner without changing

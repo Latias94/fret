@@ -1572,6 +1572,8 @@
     "ecosystem/fret-ui-kit/src/imui/table_controls/builder/row_methods.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/builder/test_ids.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/body.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls/body/cell.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls/body/row.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/cell.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/header.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/header_row.rs",
