@@ -1,10 +1,12 @@
 use std::collections::{HashMap, HashSet};
 
-use fret_core::{AppWindowId, DockNodeId, PanelKey, PointerId, WindowAnchor};
+use fret_core::{AppWindowId, DockNode, DockNodeId, DockOp, PanelKey, PointerId, WindowAnchor};
 use fret_runtime::{
     CreateWindowKind, CreateWindowRequest, Effect, PlatformCapabilities, TickId, UiHost,
     WindowRequest, WindowRole,
 };
+
+use crate::DockManager;
 
 #[derive(Debug, Clone, Copy)]
 pub(super) enum DockTearOffCompletion {
@@ -98,7 +100,7 @@ impl DockTearOffMachine {
     // Use a TTL so a later tear-off attempt can recover.
     const PENDING_TTL_TICKS: u64 = 600;
 
-    pub(super) fn prune_expired(&mut self, now: TickId) {
+    fn prune_expired(&mut self, now: TickId) {
         self.pending_by_panel.retain(|_, pending| {
             let age = now.0.saturating_sub(pending.requested_at.0);
             age <= Self::PENDING_TTL_TICKS
@@ -132,9 +134,36 @@ impl DockTearOffMachine {
         }
     }
 
-    pub(super) fn cancel_for_panel(&mut self, panel: &PanelKey) {
+    fn cancel_for_panel(&mut self, panel: &PanelKey) {
         if let Some(pending) = self.pending_by_panel.get_mut(panel) {
             pending.canceled = true;
+        }
+    }
+
+    pub(super) fn prune_and_cancel_for_op(&mut self, now: TickId, dock: &DockManager, op: &DockOp) {
+        self.prune_expired(now);
+        match op {
+            DockOp::ClosePanel { panel, .. }
+            | DockOp::MovePanel { panel, .. }
+            | DockOp::MovePanelToEmptyDockSpace { panel, .. }
+            | DockOp::FloatPanelToWindow { panel, .. }
+            | DockOp::FloatPanelInWindow { panel, .. } => {
+                self.cancel_for_panel(panel);
+            }
+            DockOp::MoveTabs { source_tabs, .. }
+            | DockOp::MoveTabsToEmptyDockSpace { source_tabs, .. }
+            | DockOp::FloatTabsInWindow { source_tabs, .. } => {
+                self.cancel_for_tabs_node(dock, *source_tabs);
+            }
+            _ => {}
+        }
+    }
+
+    fn cancel_for_tabs_node(&mut self, dock: &DockManager, source_tabs: DockNodeId) {
+        if let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(source_tabs) {
+            for panel in tabs {
+                self.cancel_for_panel(panel);
+            }
         }
     }
 

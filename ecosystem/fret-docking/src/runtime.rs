@@ -159,28 +159,8 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
             let mut windows_to_auto_close: Vec<AppWindowId> = Vec::new();
             let handled = app.with_global_mut(DockManager::default, |dock, app| {
                 let now = app.tick_id();
-                app.with_global_mut(DockTearOffMachine::default, |machine, _app| match &op {
-                    DockOp::ClosePanel { panel, .. }
-                    | DockOp::MovePanel { panel, .. }
-                    | DockOp::MovePanelToEmptyDockSpace { panel, .. }
-                    | DockOp::FloatPanelToWindow { panel, .. }
-                    | DockOp::FloatPanelInWindow { panel, .. } => {
-                        machine.prune_expired(now);
-                        machine.cancel_for_panel(panel);
-                    }
-                    DockOp::MoveTabs { source_tabs, .. }
-                    | DockOp::MoveTabsToEmptyDockSpace { source_tabs, .. }
-                    | DockOp::FloatTabsInWindow { source_tabs, .. } => {
-                        machine.prune_expired(now);
-                        if let Some(fret_core::DockNode::Tabs { tabs, .. }) =
-                            dock.graph.node(*source_tabs)
-                        {
-                            for panel in tabs {
-                                machine.cancel_for_panel(panel);
-                            }
-                        }
-                    }
-                    _ => machine.prune_expired(now),
+                app.with_global_mut(DockTearOffMachine::default, |machine, _app| {
+                    machine.prune_and_cancel_for_op(now, dock, &op);
                 });
 
                 let changed = dock.graph.apply_op(&op);

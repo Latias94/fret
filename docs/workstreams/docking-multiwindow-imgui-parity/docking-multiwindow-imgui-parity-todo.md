@@ -408,6 +408,14 @@ Each TODO is labeled:
         `WindowRequest::Create(CreateWindowKind::DockFloating { .. })` request construction.
       - Focused fallback regressions, source gate, JSON shape, catalog, and diff checks passed
         locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-01 docking runtime tear-off cancellation owner split keeps pending-window
+      cancellation policy out of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M26_DOCKING_RUNTIME_TEAR_OFF_CANCELLATION_OWNER_SPLIT_2026-06-01.md`
+      - `ecosystem/fret-docking/src/runtime/tear_off.rs` owns
+        `prune_and_cancel_for_op(...)`, single-panel cancellation, tabs-node cancellation, and
+        TTL pruning before graph mutation.
+      - Focused cancellation regressions, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
