@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Floating-Window Resize Drag-Application Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI floating-window resize drag application split into private bounds and
+handle-mutation owners without changing min/max clamping, last-position delta calculation,
+left/top origin preservation, corner resizing, or drag lifecycle updates.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply.rs` now owns drag delta
+  calculation and `last_resize_position` updates only.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply/bounds.rs` owns min/max
+  width and height clamps.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply/handles.rs` owns
+  handle-specific size and position mutation for all eight resize handles.
+- `tools/gate_imui_workstream_source.py` now checks the drag-apply hub plus bounds and
+  handle-mutation owners and rejects direct handle mutation from drifting back into
+  `drag_apply.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new drag-apply owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke --test imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui floating::window_options::floating_window_resizes_when_dragging_corner_handle floating::window_options::floating_window_resizes_from_left_updates_origin_and_width --no-fail-fast`: pass.
+
 ## IMUI Table Row-Group Composition Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI table row-group composition split into private pinned and unpinned owners

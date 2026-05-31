@@ -954,6 +954,8 @@
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/commit.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/commit/output_pack.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply/bounds.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply/handles.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/initial.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/output.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs",

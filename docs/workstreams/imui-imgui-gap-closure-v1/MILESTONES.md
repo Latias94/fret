@@ -70,6 +70,12 @@ and column test-id suffix preparation. Public table rendering behavior remains u
 `row_groups/unpinned.rs` owns the no-pinned fill/scroll path, while `row_groups/pinned.rs` owns
 left/center/right pinned group assembly. Public table row-group behavior remains unchanged.
 
+2026-05-31 floating-window resize drag-application owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply.rs` now owns delta
+calculation and `last_resize_position` updates only. `drag_apply/bounds.rs` owns min/max clamps,
+while `drag_apply/handles.rs` owns handle-specific size/position mutation. Public floating-window
+resize drag behavior remains unchanged.
+
 2026-05-31 facade-writer text test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` is now a thin test hub.
 `tests/text.rs` owns `ui.text(...)` dense single-line coverage, while `tests/wrapped.rs` owns

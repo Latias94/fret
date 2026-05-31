@@ -104,6 +104,12 @@ Last updated: 2026-05-31
       wrapping, or row outer-group packing.
       Result: `row_groups.rs` now dispatches only. `row_groups/unpinned.rs` owns the no-pinned
       fill/scroll path, while `row_groups/pinned.rs` owns split group assembly.
+- [x] Split IMUI floating-window resize drag application into private bounds and handle-mutation
+      owners without changing min/max clamping, last-position delta calculation, left/top origin
+      preservation, corner resizing, or drag lifecycle updates.
+      Result: `floating_window_resize/state/drag_apply.rs` now owns delta calculation and
+      `last_resize_position` updates only. `drag_apply/bounds.rs` owns min/max clamps, while
+      `drag_apply/handles.rs` owns handle-specific size/position mutation.
 - [x] Split IMUI debug-draw path-builder regression coverage into private sub-owners without
       changing path stroke/fill command recording, rectangle/rounded-rectangle sampling, Bezier
       defaults, circular/elliptical arc defaults, or invalid finished-path cleanup.
