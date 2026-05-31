@@ -58,6 +58,15 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split window overlay toast render helpers into a private child owner without changing toast
+      layer request synthesis, viewport pause/focus behavior, action/cancel/close test IDs,
+      Sonner-style typography, icon override routing, stack-shift animation, or toast dismissal
+      behavior.
+      Result: `window_overlays/render.rs` keeps the overlay render orchestration and toast layer
+      assembly. `window_overlays/render/toast_render.rs` owns toast viewport pause state, part
+      test-id derivation, icon override/glyph helpers, Sonner title/description text helpers,
+      alpha blending, and stack-shift state/output calculation. The source gate prevents those
+      helpers from drifting back into the large overlay render owner.
 - [x] Split editor `DragValue` mode/state and session helpers into private child owners without
       changing keyed control orchestration, hidden scrub/input mounting, numeric input outcome
       mapping, or public `DragValue` APIs.

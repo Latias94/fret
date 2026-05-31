@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Window Overlay Toast Render Helper Owner-Split Evidence - 2026-05-31
+
+Claim verified: window overlay toast render helpers moved out of the large overlay render owner
+into a private `render/toast_render.rs` child module without changing toast layer request
+synthesis, viewport pause/focus behavior, action/cancel/close test IDs, Sonner-style typography,
+icon override routing, stack-shift animation, or toast dismissal behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/window_overlays/render.rs` now keeps overlay render orchestration,
+  toast layer assembly, request/cache synthesis, layer ordering, and dismissal/focus integration.
+- `ecosystem/fret-ui-kit/src/window_overlays/render/toast_render.rs` owns toast viewport pause
+  state, part test-id derivation, icon override/glyph helpers, Sonner title/description text
+  helpers, alpha blending, and stack-shift state/output calculation.
+- `tools/gate_imui_workstream_source.py` now gates the root/helper split and prevents those toast
+  helper structs/functions from drifting back into `window_overlays/render.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the overlay render root,
+  toast helper owner, and focused toast regression file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib toast_description_scopes_inherited_text_style_without_leaf_overrides --no-fail-fast`:
+  pass (1 passed, 692 skipped).
+- `cargo nextest run -p fret-ui-kit --features imui --lib toast --no-fail-fast`: pass (32 passed,
+  661 skipped).
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor DragValue Model/Session Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor `DragValue` mode/state and session helpers moved out of the root control

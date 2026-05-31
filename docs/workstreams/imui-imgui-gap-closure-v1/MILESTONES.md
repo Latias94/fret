@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 window overlay toast render helper owner-split result:
+`ecosystem/fret-ui-kit/src/window_overlays/render.rs` now keeps overlay render orchestration and
+toast layer assembly. `window_overlays/render/toast_render.rs` owns toast viewport pause state,
+part test-id derivation, icon override/glyph helpers, Sonner title/description text helpers, alpha
+blending, and stack-shift state/output calculation. Toast layer request synthesis, viewport
+pause/focus behavior, action/cancel/close test IDs, icon routing, stack animation, and dismissal
+behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-05-31 editor DragValue model/session owner-split result:
 `ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps root public surface and control
 orchestration. `controls/drag_value/model.rs` owns `DragValueMode` and `DragValueState`.
