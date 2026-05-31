@@ -1,6 +1,6 @@
 # Material3 Token Resolver Fallback v1 TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-31
 
 Task IDs use `M3TRF-*`.
@@ -40,11 +40,13 @@ Task IDs use `M3TRF-*`.
     TextField, Select, and Autocomplete token modules now retain state/key selection while resolver
     handles migrated color/opacity fallback mechanics.
 
-- [ ] M3TRF-050: Verify and close or split remaining fallback hardening.
+- [x] M3TRF-050: Verify and close or split remaining fallback hardening.
   - Scope: docs, package gates, catalog, layering, diff hygiene.
   - Expected result: lane closes or splits a smaller follow-on for any remaining broad token
     fallback families.
   - Gate: all commands in `EVIDENCE_AND_GATES.md`.
+  - Note: closeout verifies this lane's target scope and records remaining raw color fallback
+    families in non-field components as a future follow-on, not additional M3TRF scope.
 
 ## Notes
 

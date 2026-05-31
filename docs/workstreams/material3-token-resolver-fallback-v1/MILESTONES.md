@@ -1,6 +1,6 @@
 # Material3 Token Resolver Fallback v1 Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-31
 
 ## M0 - Lane Opened
@@ -33,6 +33,8 @@ Status: Complete
 - Field-family gates remain green.
 
 ## M4 - Lane Verified
+
+Status: Complete
 
 - Formatting, token fixtures, check/clippy, catalog, layering, and diff hygiene pass.
 - Closeout records residual fallback families or follow-ons.

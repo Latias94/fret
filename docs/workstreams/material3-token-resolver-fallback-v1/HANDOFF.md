@@ -1,11 +1,11 @@
 # Material3 Token Resolver Fallback v1 Handoff
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-31
 
 ## Current State
 
-This lane is open as a narrow follow-on from `material3-foundation-deepening-v1`.
+This lane is closed as a narrow follow-on from `material3-foundation-deepening-v1`.
 
 M3TRF-020 is implemented: pure color composition helpers (`alpha_mul`, `blend_over`) now live in
 `foundation::token_resolver`, and local copies were removed from component token modules.
@@ -18,8 +18,9 @@ M3TRF-040 is implemented: TextField, Select, and Autocomplete token modules now 
 `MaterialTokenResolver` helpers for migrated component-to-system color fallback, multi-system
 fallback chains, optional opacity lookup, and explicit fallback-color lookup.
 
-The next executable task is M3TRF-050: verify the full lane, decide whether remaining token
-fallback families need a split follow-on, and close or hand off the workstream.
+M3TRF-050 is implemented: fresh closeout gates passed, the lane is closed, and remaining raw color
+fallback families in non-field token modules are recorded as a future follow-on instead of being
+folded into this lane.
 
 ## Guardrails
 
@@ -27,8 +28,19 @@ fallback families need a split follow-on, and close or hand off the workstream.
 - Keep generated v30 token injection unchanged unless a later task explicitly scopes it.
 - Preserve token visual fixture outcomes before widening to fallback-chain helpers.
 
-## Suggested First Gate
+## Verified Gates
 
-For M3TRF-050, start with:
+- `cargo fmt --package fret-ui-material3 --check`
+- `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes`
+- `cargo check -p fret-ui-material3 --features diagnostics --tests`
+- `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+- `python -m json.tool docs/workstreams/material3-token-resolver-fallback-v1/WORKSTREAM.json | Out-Null`
+- `python tools/check_workstream_catalog.py`
+- `python tools/check_layering.py`
+- `git diff --check`
 
-`cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes`
+## Follow-On
+
+Open a narrower non-field component token fallback lane if continuing resolver hardening. The first
+candidate scope is Button/Chip/IconButton/FAB/Tabs and related surface/navigation token modules that
+still have raw component-to-system color fallback chains.

@@ -1,6 +1,6 @@
 # Material3 Token Resolver Fallback v1 Evidence And Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-31
 
 ## Repro Surface
@@ -41,6 +41,7 @@ Last updated: 2026-05-31
 - `ecosystem/fret-ui-material3/src/tokens/visual_fixtures.rs`
 - `ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json`
 - `docs/workstreams/material3-token-resolver-fallback-v1/TODO.md`
+- `docs/workstreams/material3-token-resolver-fallback-v1/CLOSEOUT_AUDIT_2026-05-31.md`
 
 ## M3TRF-020 Evidence
 
@@ -74,3 +75,23 @@ Last updated: 2026-05-31
   passed.
 - `cargo nextest run -p fret-ui-material3 --features diagnostics --test text_field_hover --test select_behavior --test autocomplete_motion`:
   28 passed.
+
+## M3TRF-050 Evidence
+
+- `rg -n "fn alpha_mul|fn blend_over" ecosystem/fret-ui-material3/src/tokens ecosystem/fret-ui-material3/src/foundation/token_resolver.rs -g "*.rs" -g "!v30.rs" -g "!material_web_v30.rs"`:
+  only `foundation/token_resolver.rs` defines the helpers.
+- `rg -n "or_else\\(\\|\\| theme\\.color_by_key|unwrap_or_else\\(\\|\\| theme\\.color_token|theme\\.color_by_key\\(" ecosystem/fret-ui-material3/src/tokens/autocomplete.rs ecosystem/fret-ui-material3/src/tokens/text_field.rs ecosystem/fret-ui-material3/src/tokens/select.rs`:
+  no matches.
+- `cargo fmt --package fret-ui-material3 --check`: passed.
+- `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes`:
+  1 passed.
+- `cargo nextest run -p fret-ui-material3 --features diagnostics --test text_field_hover --test select_behavior --test autocomplete_motion`:
+  28 passed.
+- `cargo check -p fret-ui-material3 --features diagnostics --tests`: passed.
+- `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`:
+  passed.
+- `python -m json.tool docs/workstreams/material3-token-resolver-fallback-v1/WORKSTREAM.json | Out-Null`:
+  passed.
+- `python tools/check_workstream_catalog.py`: passed.
+- `python tools/check_layering.py`: passed.
+- `git diff --check`: passed.

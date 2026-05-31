@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "material3-token-resolver-fallback-v1",
   "title": "Material3 Token Resolver Fallback v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-31",
   "scope_kind": "fearless_refactor",
   "follow_on_of": "material3-foundation-deepening-v1",
@@ -27,6 +27,10 @@
     {
       "role": "handoff",
       "path": "docs/workstreams/material3-token-resolver-fallback-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-token-resolver-fallback-v1/CLOSEOUT_AUDIT_2026-05-31.md"
     }
   ],
   "context_manifest": "docs/workstreams/material3-token-resolver-fallback-v1/CONTEXT.jsonl",
@@ -75,6 +79,7 @@
     "docs/workstreams/material3-token-resolver-fallback-v1/DESIGN.md",
     "docs/workstreams/material3-token-resolver-fallback-v1/TODO.md",
     "docs/workstreams/material3-token-resolver-fallback-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-token-resolver-fallback-v1/CLOSEOUT_AUDIT_2026-05-31.md",
     "ecosystem/fret-ui-material3/src/foundation/token_resolver.rs",
     "ecosystem/fret-ui-material3/src/tokens/text_field.rs",
     "ecosystem/fret-ui-material3/src/tokens/select.rs",
@@ -97,7 +102,7 @@
     "fearless-refactor"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue until duplicated Material3 fallback helpers are either centralized in the resolver or explicitly split into narrower follow-ons."
+    "default_action": "closed",
+    "notes": "Alpha/blend, migrated state-layer, and field-family fallback mechanics are centralized behind MaterialTokenResolver. Continue residual non-field token fallback cleanup in a narrower material3-token-resolver-non-field-fallback-v1 follow-on instead of reopening this lane."
   }
 }

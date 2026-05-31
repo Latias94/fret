@@ -1,7 +1,12 @@
 # Material3 Token Resolver Fallback v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-31
+
+Status note (2026-05-31): this lane closed after centralizing Material3 alpha/blend helpers,
+state-layer opacity fallback, and field-family color/opacity fallback mechanics in
+`MaterialTokenResolver`. Remaining non-field component token fallback families are intentionally
+split into a future follow-on instead of widening this lane.
 
 ## Problem
 
