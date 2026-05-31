@@ -1,0 +1,7 @@
+{"role":"architecture","path":"docs/architecture.md","reason":"Overall Fret mechanism/policy layering context."}
+{"role":"adr","path":"docs/adr/0066-fret-ui-runtime-contract-surface.md","reason":"Keeps interaction policy outside the core mechanism crate."}
+{"role":"adr","path":"docs/adr/0226-material3-state-layer-and-ripple-primitives.md","reason":"State-layer and ripple interaction regressions remain relevant to moved choice/action tests."}
+{"role":"workstream","path":"docs/workstreams/material3-interaction-regression-harness-split-v1/WORKSTREAM.json","reason":"Parent split that created the intermediate interaction-regression binary."}
+{"role":"design","path":"docs/workstreams/material3-interaction-regression-family-split-v1/DESIGN.md","reason":"Current lane intent, boundaries, and residual ownership."}
+{"role":"tasks","path":"docs/workstreams/material3-interaction-regression-family-split-v1/TODO.md","reason":"Closed task ledger for the first family split."}
+{"role":"gates","path":"docs/workstreams/material3-interaction-regression-family-split-v1/EVIDENCE_AND_GATES.md","reason":"Verification commands and evidence anchors."}
