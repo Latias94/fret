@@ -32695,9 +32695,8 @@ def main() -> None:
             Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs"),
             required=[
                 "mod numeric;",
+                "mod picker;",
                 "color_presets_are_unique_and_hex_formattable",
-                "sv_picker_position_preserves_hue_and_clamps_sv",
-                "alpha_bar_position_maps_local_x_to_clamped_alpha",
                 "fn assert_hsv_close(",
             ],
             forbidden=[
@@ -32705,6 +32704,10 @@ def main() -> None:
                 "rgb_hex_parse_preserves_alpha_when_alpha_is_not_explicit",
                 "numeric_input_rejects_out_of_range_or_incomplete_values",
                 "hsv_conversion_roundtrips_color_presets",
+                "sv_picker_position_preserves_hue_and_clamps_sv",
+                "hue_wheel_ring_maps_screen_angle_to_hue",
+                "popup_preview_hides_alpha_when_alpha_editing_is_not_visible",
+                "alpha_bar_position_maps_local_x_to_clamped_alpha",
             ],
         ),
         SourceCheck(
@@ -32724,6 +32727,27 @@ def main() -> None:
             forbidden=[
                 "sv_picker_position_preserves_hue_and_clamps_sv",
                 "alpha_bar_position_maps_local_x_to_clamped_alpha",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests/picker.rs"),
+            required=[
+                "use super::*;",
+                "sv_picker_position_preserves_hue_and_clamps_sv",
+                "vertical_hue_bar_position_maps_local_y_to_clamped_hue",
+                "hue_wheel_ring_maps_screen_angle_to_hue",
+                "hue_wheel_triangle_maps_imgui_barycentric_sv",
+                "hue_wheel_triangle_rotates_with_hue",
+                "hue_wheel_target_rejects_outside_or_empty_geometry",
+                "hsv_color_edits_preserve_current_alpha",
+                "alpha_checkerboard_colors_are_stable_and_alternating",
+                "popup_preview_hides_alpha_when_alpha_editing_is_not_visible",
+                "alpha_bar_position_maps_local_x_to_clamped_alpha",
+                "alpha_percent_text_rounds_for_a11y_value",
+            ],
+            forbidden=[
+                "popup_numeric_input_modes_are_explicit_and_ordered",
+                "numeric_input_rejects_out_of_range_or_incomplete_values",
             ],
         ),
         SourceCheck(

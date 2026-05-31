@@ -53,6 +53,13 @@ preview, drag/drop, copy, tooltip, and shared HSV assertion coverage. `color_edi
 owns popup numeric mode ordering, RGB/HSV readout formatting, hex/numeric parsing, alpha
 preservation, and HSV conversion roundtrip coverage.
 
+2026-05-31 editor color-edit picker tests owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` now keeps color-edit policy/defaults,
+drag/drop, copy, tooltip, and shared HSV assertion coverage. `color_edit/tests/picker.rs` owns SV
+picker, hue bar, hue wheel, alpha bar, checkerboard, preview alpha visibility, original restore,
+and a11y alpha percent coverage. Picker geometry, preview alpha policy, original-restore component
+rules, and public color-edit behavior remain unchanged.
+
 2026-05-31 menu interaction behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` now owns active-trigger
 installation and keyboard behavior orchestration only. `behavior/activation.rs` owns activate

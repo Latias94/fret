@@ -913,6 +913,13 @@ Last updated: 2026-05-31
       Result: `controls/color_edit/tests.rs` keeps color-edit policy/picker/preview test routing
       plus shared HSV assertions. `controls/color_edit/tests/numeric.rs` owns numeric readout,
       parse, and HSV conversion coverage.
+- [x] Split editor color-edit picker/preview/alpha tests into a private test owner without
+      changing SV/hue-wheel/alpha coordinate mapping, preview alpha visibility, original restore
+      component-count rules, shared HSV assertions, or popup policy coverage.
+      Result: `controls/color_edit/tests.rs` keeps color-edit policy/defaults, drag/drop, copy,
+      tooltip, and shared HSV assertion coverage. `controls/color_edit/tests/picker.rs` owns SV
+      picker, hue bar, hue wheel, alpha bar, checkerboard, preview alpha visibility, original
+      restore, and a11y alpha percent coverage.
 - [x] Split editor color-edit alpha bar previews and interaction into a private owner without
       changing horizontal/vertical alpha bars, alpha coordinate mapping, popup picker composition,
       color-edit helper tests, or color-edit popup policy tests.
