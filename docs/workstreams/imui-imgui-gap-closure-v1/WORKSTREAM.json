@@ -1186,6 +1186,8 @@
     "ecosystem/fret-ui-editor/src/controls/slider/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/model.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/model/tests.rs",
+    "ecosystem/fret-ui-editor/src/controls/slider/pointer.rs",
+    "ecosystem/fret-ui-editor/src/controls/slider/pointer/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/chrome.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/chrome/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/typing.rs",

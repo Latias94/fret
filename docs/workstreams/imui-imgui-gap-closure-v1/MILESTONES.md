@@ -39,6 +39,13 @@ adapter construction, while `typing/tests.rs` covers clamp/step quantization, un
 validation, and custom-validator delegation. Focus restore, NumericInput typing mode, and public
 `SliderOptions` remain unchanged.
 
+2026-05-31 editor slider pointer state owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps pointer event wiring and rendering.
+`controls/slider/pointer.rs` owns slide/typing mode resets, drag pointer begin/clear/finish, and
+matching-pointer policy, while `pointer/tests.rs` covers the state transitions. Double-click typing
+entry, missed-pointer-up cleanup, matching-pointer release, NumericInput commit/cancel reset, and
+public `SliderOptions` remain unchanged.
+
 2026-05-31 editor numeric-input model/session owner-split result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps NumericInput constructors,
 builder methods, keyed control orchestration, validation message rendering, and presentation test

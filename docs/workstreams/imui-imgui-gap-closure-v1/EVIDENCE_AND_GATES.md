@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Slider Pointer State Owner Split Evidence - 2026-05-31
+
+Claim verified: editor slider pointer/typing state transitions moved into a private owner without
+changing double-click typing entry, drag pointer capture, missed-pointer-up cleanup,
+matching-pointer release, NumericInput commit/cancel reset, public `SliderOptions`, or existing
+chrome/model/typing/value-math child-owner boundaries.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/slider.rs` keeps pointer event wiring and rendering while
+  delegating mode/drag/pointer-id state mutations to the pointer owner.
+- `ecosystem/fret-ui-editor/src/controls/slider/pointer.rs` owns slide/typing mode resets, drag
+  pointer begin/clear/finish, and active pointer matching policy.
+- `ecosystem/fret-ui-editor/src/controls/slider/pointer/tests.rs` covers typing entry clearing drag
+  state, slide reset, matching pointer checks, matching-pointer release, and explicit drag clear.
+- `tools/gate_imui_workstream_source.py` checks the slider root/pointer/test split and rejects the
+  state mutation bodies from drifting back into `slider.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new slider pointer owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui slider --no-fail-fast`: pass (22 passed,
+  193 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Editor Slider Typing Adapter Owner Split Evidence - 2026-05-31
 
 Claim verified: editor slider typing parse/validate adapters moved into a private owner without

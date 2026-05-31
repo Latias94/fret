@@ -465,6 +465,12 @@ Last updated: 2026-05-31
       Result: `controls/slider.rs` keeps NumericInput composition and typing mode lifecycle.
       `controls/slider/typing.rs` owns parse quantization and validate range/custom delegation,
       with focused tests in `controls/slider/typing/tests.rs`.
+- [x] Split editor slider pointer/typing state transitions into a private owner without changing
+      double-click typing entry, drag pointer capture, missed-pointer-up cleanup, matching-pointer
+      release, NumericInput commit/cancel reset, or public `SliderOptions`.
+      Result: `controls/slider.rs` keeps pointer event wiring and rendering.
+      `controls/slider/pointer.rs` owns slide/typing mode resets plus drag pointer
+      begin/clear/finish/match policy, with focused tests in `controls/slider/pointer/tests.rs`.
 - [x] Split editor enum-select row rendering, selection commit policy, and item test-id
       sanitization into a private child owner without changing trigger composition, overlay
       dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row

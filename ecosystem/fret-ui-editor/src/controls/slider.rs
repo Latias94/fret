@@ -40,6 +40,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 mod chrome;
 mod model;
+mod pointer;
 #[cfg(test)]
 mod tests;
 mod typing;
@@ -50,6 +51,10 @@ pub use model::SliderOptions;
 use model::{
     SliderMode, SliderState, compose_affixed_value_text, default_slider_format,
     default_slider_parse, hidden_layout,
+};
+use pointer::{
+    begin_slider_drag, clear_slider_drag, enter_slider_typing, finish_slider_drag,
+    is_slider_drag_pointer, reset_slider_interaction,
 };
 use typing::{slider_typing_parse, slider_typing_validate};
 use value_math::{quantize_value, t_from_value, value_from_slider_local_x};
@@ -199,9 +204,7 @@ where
         let enabled = self.options.enabled;
         if !enabled && typing {
             let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
-            st.mode = SliderMode::Slide;
-            st.dragging = false;
-            st.pointer_id = None;
+            reset_slider_interaction(&mut st);
         }
 
         let mut slider_layout = self.options.layout;
@@ -268,9 +271,7 @@ where
                     }
                     if allow_typing && down.button == MouseButton::Left && down.click_count >= 2 {
                         let mut st = state_for_down.lock().unwrap_or_else(|e| e.into_inner());
-                        st.mode = SliderMode::Typing;
-                        st.dragging = false;
-                        st.pointer_id = None;
+                        enter_slider_typing(&mut st);
                         {
                             let mut handoff = focus_handoff_for_down
                                 .lock()
@@ -306,8 +307,7 @@ where
                     host.set_cursor_icon(CursorIcon::ColResize);
 
                     let mut st = state_for_down.lock().unwrap_or_else(|e| e.into_inner());
-                    st.dragging = true;
-                    st.pointer_id = Some(down.pointer_id);
+                    begin_slider_drag(&mut st, down.pointer_id);
 
                     PressablePointerDownResult::Continue
                 }));
@@ -316,14 +316,13 @@ where
                 let model_for_move = model_for_change.clone();
                 cx.pressable_add_on_pointer_move(Arc::new(move |host, action_cx, mv| {
                     let mut st_lock = state_for_move.lock().unwrap_or_else(|e| e.into_inner());
-                    if !st_lock.dragging || st_lock.pointer_id != Some(mv.pointer_id) {
+                    if !is_slider_drag_pointer(&st_lock, mv.pointer_id) {
                         return false;
                     }
 
                     // Best-effort cleanup when the pointer-up event is missed.
                     if !mv.buttons.left {
-                        st_lock.dragging = false;
-                        st_lock.pointer_id = None;
+                        clear_slider_drag(&mut st_lock);
                         return false;
                     }
 
@@ -350,10 +349,7 @@ where
                 let state_for_up = state_for_slider.clone();
                 cx.pressable_add_on_pointer_up(Arc::new(move |_host, _action_cx, up| {
                     let mut st = state_for_up.lock().unwrap_or_else(|e| e.into_inner());
-                    if st.pointer_id == Some(up.pointer_id) {
-                        st.dragging = false;
-                        st.pointer_id = None;
-                    }
+                    finish_slider_drag(&mut st, up.pointer_id);
                     PressablePointerUpResult::Continue
                 }));
 
@@ -644,9 +640,7 @@ where
                     NumericInputOutcome::Committed | NumericInputOutcome::Canceled
                 ) {
                     let mut st = state_for_input.lock().unwrap_or_else(|e| e.into_inner());
-                    st.mode = SliderMode::Slide;
-                    st.dragging = false;
-                    st.pointer_id = None;
+                    reset_slider_interaction(&mut st);
                     if let Some(slider_id) = st.slider_id {
                         host.request_focus(slider_id);
                     }
