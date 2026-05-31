@@ -158,6 +158,13 @@ Each TODO is labeled:
         capability posture, in-window fallback behavior, IMUI source guard, catalog, and diff
         checks passed locally.
       - This remains non-acceptance evidence; manual Wayland compositor acceptance is still open.
+    - [x] 2026-05-31 local Wayland guard refresh reran the same local source/policy/capability/
+      fallback proof surface without recording acceptance:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M22_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-31.md`
+      - Source guards, `--reuse-built` policy-skip matrix, Wayland campaign validation, Linux
+        capability posture, in-window fallback behavior, IMUI source guard, catalog, JSON shape,
+        and diff checks passed locally.
+      - This remains non-acceptance evidence; manual Wayland compositor acceptance is still open.
 
 ## P0 — Editor-grade “hand feel” (multi-monitor / DPI)
 
@@ -375,6 +382,11 @@ Each TODO is labeled:
       - The local proof reran source guards, `--reuse-built` policy-skip matrix, campaign
         validation, Linux capability posture, and fallback behavior, but still did not run on a
         qualifying Linux Wayland compositor.
+    - [x] 2026-05-31 local Wayland guard refresh keeps the acceptance boundary current:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M22_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-31.md`
+      - The local proof reran source guards, `--reuse-built` policy-skip matrix, campaign
+        validation, Linux capability posture, fallback behavior, IMUI source guard, catalog, JSON
+        shape, and diff checks, but still did not run on a qualifying Linux Wayland compositor.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

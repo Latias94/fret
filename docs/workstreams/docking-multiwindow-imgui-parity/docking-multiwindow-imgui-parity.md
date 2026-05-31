@@ -33,7 +33,7 @@ Platform note:
   (proves every non-qualifying Wayland campaign admission predicate stops at `skipped_policy`
   before script execution)
 - Latest local Wayland guard refresh:
-  `docs/workstreams/docking-multiwindow-imgui-parity/M21_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-30.md`
+  `docs/workstreams/docking-multiwindow-imgui-parity/M22_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-31.md`
   (reruns local source, policy-skip, campaign validate, capability posture, and fallback gates
   while preserving the Wayland acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
@@ -268,7 +268,7 @@ Current policy (Wayland):
 - Latest acceptance-open source guard:
   `docs/workstreams/docking-multiwindow-imgui-parity/M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md`.
 - Latest local Wayland guard refresh:
-  `docs/workstreams/docking-multiwindow-imgui-parity/M21_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-30.md`.
+  `docs/workstreams/docking-multiwindow-imgui-parity/M22_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-31.md`.
 
 ## Capabilities (contract) — windowing quality signals (v1)
 
