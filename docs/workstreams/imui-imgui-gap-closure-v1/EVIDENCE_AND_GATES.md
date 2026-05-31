@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor Color-Edit Popup Options Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor color-edit popup option policy types moved out of the root options owner into
+a private `options/popup.rs` owner without changing public `ColorEditOptions` defaults, popup
+picker/numeric/side-preview enum paths, popup runtime override semantics,
+`ColorEditPopupRuntimeOptions` crate-visible path, tooltip/copy options, palette/history ownership,
+or public `ColorEdit` option imports.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/options.rs` keeps alpha preview, drag/drop,
+  tooltip/copy, root `ColorEditOptions`, defaults, debug projection, palette/history callbacks, and
+  re-exports the popup policy types through the existing options module.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/options/popup.rs` owns picker, numeric-input,
+  side-preview, popup default policy, runtime default projection, runtime override application, and
+  runtime default synchronization.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now reads the popup options owner
+  directly while preserving assertions that root `ColorEditOptions` still exposes the same policy
+  fields.
+- `tools/gate_imui_workstream_source.py` now tracks the root options/popup-options split and
+  rejects popup policy declarations from drifting back into the root options owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the popup options owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor --lib color_edit --no-fail-fast`: pass (51 passed).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass (2 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+
 ## Editor Color-Edit Main Swatch Context-Menu Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor color-edit main swatch context-menu input policy moved out of the root

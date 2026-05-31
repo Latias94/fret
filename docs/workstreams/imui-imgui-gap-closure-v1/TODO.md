@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor color-edit popup option policy types into a private child owner without changing
+      public `ColorEditOptions` defaults, popup picker/numeric/side-preview enum paths, popup
+      runtime override semantics, `ColorEditPopupRuntimeOptions` crate-visible path, tooltip/copy
+      options, palette/history ownership, or public `ColorEdit` option imports.
+      Result: `controls/color_edit/options.rs` keeps alpha preview, drag/drop, tooltip/copy, and
+      root `ColorEditOptions` ownership while re-exporting popup policy types.
+      `controls/color_edit/options/popup.rs` owns picker/numeric/side-preview/popup defaults and
+      runtime override synchronization. The source gate prevents popup policy from drifting back
+      into the root options owner.
 - [x] Split editor color-edit main swatch context-menu input policy into a private child owner
       without changing the public swatch entrypoint, popup activation/reference capture,
       right-click/Ctrl-click copy menu routing, Shift-F10/ContextMenu keyboard routing, tooltip
