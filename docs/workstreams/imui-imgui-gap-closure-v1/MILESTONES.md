@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 docking declarative interaction-state owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
+entrypoint, panel registry, layout/render/input orchestration, and public docking APIs. The private
+`dock/declarative/interaction.rs` owner contains declarative pressed close, floating/divider/panel
+drag, viewport capture, tab-overflow menu, tab scroll/width, tab-hover, and floating-hover state
+records plus the `DeclarativeDockInteractionService` helpers. Managed dock-space behavior and
+cross-window docking call paths remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split.
+
 2026-06-01 IMUI text-picker popup render owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` now keeps
 session/input/open-policy orchestration only. `text_picker_controls/core/popup.rs` owns popup

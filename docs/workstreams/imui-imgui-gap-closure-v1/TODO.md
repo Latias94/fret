@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split docking declarative interaction state into a private child owner without changing
+      managed dock-space element entrypoints, panel registry APIs, tab/floating hover state,
+      pressed close tracking, floating/divider/panel drag state, viewport capture state,
+      tab-overflow menu state, tab scroll/width persistence, or cross-window docking call paths.
+      Result: `dock/declarative.rs` keeps the managed-surface entrypoint, panel registry,
+      layout/render/input orchestration, and public docking APIs. `dock/declarative/interaction.rs`
+      owns declarative pressed/drag/hover records plus `DeclarativeDockInteractionService` state
+      mutation/query helpers. The source gate prevents interaction state records from drifting
+      back into the declarative orchestration owner.
 - [x] Split editor `NumericInput` keyed element and render assembly into a private child owner
       without changing public constructors/builders, callsite/id-source keying, draft/error model
       routing, focus target capture, selection replacement behavior, joined-input frame chrome,

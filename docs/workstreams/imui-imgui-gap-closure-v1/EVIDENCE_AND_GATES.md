@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Docking Declarative Interaction State Owner-Split Evidence - 2026-06-01
+
+Claim verified: docking declarative pressed/drag/hover interaction state moved out of the large
+declarative dock-space orchestration owner into a private `declarative/interaction.rs` owner
+without changing managed dock-space element entrypoints, panel registry APIs, tab/floating hover
+state, pressed close tracking, floating/divider/panel drag state, viewport capture state,
+tab-overflow menu state, tab scroll/width persistence, or cross-window docking call paths.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs` keeps the managed-surface entrypoint, panel
+  registry, layout/render/input orchestration, and public docking APIs.
+- `ecosystem/fret-docking/src/dock/declarative/interaction.rs` owns the declarative pressed,
+  pending-drag, active-drag, viewport-capture, tab-overflow, tab-scroll, tab-width, tab-hover, and
+  floating-hover service records/helpers.
+- `tools/gate_imui_workstream_source.py` now tracks the declarative/interaction split and rejects
+  interaction-state records from drifting back into the declarative orchestration owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks both the declarative
+  orchestration file and the interaction owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking --no-fail-fast`: pass (90 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor NumericInput Element Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `NumericInput` keyed element and render assembly moved out of the public
