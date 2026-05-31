@@ -101,11 +101,24 @@ fn tooltip_content_root<H: UiHost>(
     )
 }
 
-fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: Color) -> AnyElement {
+fn apply_tooltip_inherited_fg(element: AnyElement, fg: Color) -> AnyElement {
+    apply_tooltip_inherited_defaults(element, fg, None)
+}
+
+fn apply_tooltip_inherited_defaults(
+    mut element: AnyElement,
+    fg: Color,
+    text_style: Option<&TextStyle>,
+) -> AnyElement {
     match &mut element.kind {
         ElementKind::Text(props) => {
             if props.color.is_none() {
                 props.color = Some(fg);
+            }
+            if props.style.is_none()
+                && let Some(text_style) = text_style
+            {
+                props.style = Some(text_style.clone());
             }
         }
         ElementKind::SvgIcon(SvgIconProps { color, .. }) => {
@@ -129,7 +142,7 @@ fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: Color) -> AnyElement 
     element.children = element
         .children
         .into_iter()
-        .map(|child| apply_tooltip_inherited_fg(child, fg))
+        .map(|child| apply_tooltip_inherited_defaults(child, fg, text_style))
         .collect();
     element
 }
@@ -262,12 +275,16 @@ pub struct TooltipStyle {
     pub rich_container_shadow_color: OverrideSlot<ColorRef>,
     pub rich_title_color: OverrideSlot<ColorRef>,
     pub rich_supporting_text_color: OverrideSlot<ColorRef>,
+    pub rich_action_label_color: OverrideSlot<ColorRef>,
     pub rich_title_text_style: OverrideSlot<TextStyle>,
     pub rich_supporting_text_style: OverrideSlot<TextStyle>,
+    pub rich_action_label_text_style: OverrideSlot<TextStyle>,
     pub rich_container_corner_radius: OverrideSlot<Px>,
     pub rich_container_padding: OverrideSlot<Edges>,
     pub rich_container_max_width: OverrideSlot<Px>,
     pub rich_text_gap: OverrideSlot<Px>,
+    pub rich_action_min_height: OverrideSlot<Px>,
+    pub rich_action_bottom_padding: OverrideSlot<Px>,
     pub container_min_width: OverrideSlot<Px>,
     pub container_min_height: OverrideSlot<Px>,
 }
@@ -349,6 +366,11 @@ impl TooltipStyle {
         self
     }
 
+    pub fn rich_action_label_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.rich_action_label_color = Some(color);
+        self
+    }
+
     pub fn rich_title_text_style(mut self, style: WidgetStateProperty<Option<TextStyle>>) -> Self {
         self.rich_title_text_style = Some(style);
         self
@@ -359,6 +381,14 @@ impl TooltipStyle {
         style: WidgetStateProperty<Option<TextStyle>>,
     ) -> Self {
         self.rich_supporting_text_style = Some(style);
+        self
+    }
+
+    pub fn rich_action_label_text_style(
+        mut self,
+        style: WidgetStateProperty<Option<TextStyle>>,
+    ) -> Self {
+        self.rich_action_label_text_style = Some(style);
         self
     }
 
@@ -379,6 +409,16 @@ impl TooltipStyle {
 
     pub fn rich_text_gap(mut self, gap: WidgetStateProperty<Option<Px>>) -> Self {
         self.rich_text_gap = Some(gap);
+        self
+    }
+
+    pub fn rich_action_min_height(mut self, height: WidgetStateProperty<Option<Px>>) -> Self {
+        self.rich_action_min_height = Some(height);
+        self
+    }
+
+    pub fn rich_action_bottom_padding(mut self, padding: WidgetStateProperty<Option<Px>>) -> Self {
+        self.rich_action_bottom_padding = Some(padding);
         self
     }
 
@@ -435,6 +475,10 @@ impl TooltipStyle {
                 self.rich_supporting_text_color,
                 other.rich_supporting_text_color,
             ),
+            rich_action_label_color: merge_override_slot(
+                self.rich_action_label_color,
+                other.rich_action_label_color,
+            ),
             rich_title_text_style: merge_override_slot(
                 self.rich_title_text_style,
                 other.rich_title_text_style,
@@ -442,6 +486,10 @@ impl TooltipStyle {
             rich_supporting_text_style: merge_override_slot(
                 self.rich_supporting_text_style,
                 other.rich_supporting_text_style,
+            ),
+            rich_action_label_text_style: merge_override_slot(
+                self.rich_action_label_text_style,
+                other.rich_action_label_text_style,
             ),
             rich_container_corner_radius: merge_override_slot(
                 self.rich_container_corner_radius,
@@ -456,6 +504,14 @@ impl TooltipStyle {
                 other.rich_container_max_width,
             ),
             rich_text_gap: merge_override_slot(self.rich_text_gap, other.rich_text_gap),
+            rich_action_min_height: merge_override_slot(
+                self.rich_action_min_height,
+                other.rich_action_min_height,
+            ),
+            rich_action_bottom_padding: merge_override_slot(
+                self.rich_action_bottom_padding,
+                other.rich_action_bottom_padding,
+            ),
             container_min_width: merge_override_slot(
                 self.container_min_width,
                 other.container_min_width,
@@ -513,6 +569,7 @@ fn tooltip_policy_root<H: UiHost>(
     side_offset: Px,
     window_margin: Px,
     hide_when_detached: bool,
+    content_hit_testable: bool,
     open_delay_frames_override: Option<u32>,
     close_delay_frames_override: Option<u32>,
     disable_hoverable_content_override: Option<bool>,
@@ -870,6 +927,7 @@ fn tooltip_policy_root<H: UiHost>(
 
         let mut request =
             tooltip_prim::tooltip_request(tooltip_id, open, overlay_presence, overlay_children);
+        request = request.tooltip_content_hit_testable(content_hit_testable);
         request.trigger = Some(trigger_id);
         request.dismissible_on_dismiss_request = Some(dismissable_layer_prim::handler({
             let close_requested = event_models.close_requested.clone();
@@ -1154,6 +1212,7 @@ impl PlainTooltip {
             side_offset,
             window_margin,
             hide_when_detached,
+            false,
             open_delay_frames_override,
             close_delay_frames_override,
             disable_hoverable_content_override,
@@ -1169,15 +1228,16 @@ enum RichTooltipContent {
     Element(AnyElement),
 }
 
-/// Material 3 Rich Tooltip (MVP).
+/// Material 3 Rich Tooltip.
 ///
 /// Notes:
-/// - Rich tooltips remain click-through because `OverlayKind::Tooltip` is not hit-testable in Fret.
-/// - Action rows are therefore out-of-scope until we have a concrete consumer that requires an
-///   interactive outcome (mechanism follow-up candidate).
+/// - Descriptive rich tooltips stay click-through by default.
+/// - Adding an action slot opts the tooltip overlay into hit-testing so the action can receive
+///   pointer input without changing the plain tooltip policy.
 pub struct RichTooltip {
     trigger: AnyElement,
     content: RichTooltipContent,
+    action: Option<AnyElement>,
     style: TooltipStyle,
     align: TooltipAlign,
     side: TooltipSide,
@@ -1195,6 +1255,7 @@ impl std::fmt::Debug for RichTooltip {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RichTooltip")
             .field("trigger_id", &self.trigger.id)
+            .field("has_action", &self.action.is_some())
             .field("style", &self.style)
             .field("align", &self.align)
             .field("side", &self.side)
@@ -1227,6 +1288,7 @@ impl RichTooltip {
                 title: None,
                 supporting_text: supporting_text.into(),
             },
+            action: None,
             style: TooltipStyle::default(),
             align: TooltipAlign::default(),
             side: TooltipSide::default(),
@@ -1250,6 +1312,11 @@ impl RichTooltip {
 
     pub fn content_element(mut self, content: AnyElement) -> Self {
         self.content = RichTooltipContent::Element(content);
+        self
+    }
+
+    pub fn action_element(mut self, action: AnyElement) -> Self {
+        self.action = Some(action);
         self
     }
 
@@ -1323,30 +1390,37 @@ impl RichTooltip {
         let chrome_test_id = tooltip_part_id(&test_id, "chrome");
         let title_test_id = tooltip_part_id(&test_id, "title");
         let supporting_text_test_id = tooltip_part_id(&test_id, "supporting-text");
+        let action_test_id = tooltip_part_id(&test_id, "action");
         let style = self.style;
 
         let base_trigger = self.trigger;
         let content_spec = self.content;
+        let action_spec = self.action;
         let trigger_id = base_trigger.id;
         let anchor_id = anchor_override.unwrap_or(trigger_id);
         let has_title = matches!(
             &content_spec,
             RichTooltipContent::Text { title: Some(_), .. }
         );
+        let has_action = action_spec.is_some();
 
         let (
             container_bg,
             shadow,
             subhead_fg,
             supporting_fg,
+            action_fg,
             corner_radii,
             subhead_style,
             supporting_style,
+            action_style,
             content_max_width,
             content_min_width,
             content_min_height,
             container_padding,
             text_gap,
+            action_min_height,
+            action_bottom_padding,
         ) = {
             let theme = Theme::global(&*cx.app);
             let states = WidgetStates::empty();
@@ -1361,6 +1435,10 @@ impl RichTooltip {
             let supporting_fg =
                 tooltip_color_override(theme, &style.rich_supporting_text_color, states, || {
                     tooltip_tokens::rich_supporting_text_color(theme)
+                });
+            let action_fg =
+                tooltip_color_override(theme, &style.rich_action_label_color, states, || {
+                    tooltip_tokens::rich_action_label_color(theme)
                 });
             let radius =
                 tooltip_metric_override(&style.rich_container_corner_radius, states, || {
@@ -1391,6 +1469,10 @@ impl RichTooltip {
                 tooltip_text_style_override(&style.rich_supporting_text_style, states, || {
                     tooltip_tokens::rich_supporting_text_style(theme)
                 });
+            let action_style =
+                tooltip_text_style_override(&style.rich_action_label_text_style, states, || {
+                    tooltip_tokens::rich_action_label_text_style(theme)
+                });
 
             let content_max_width =
                 tooltip_metric_override(&style.rich_container_max_width, states, || {
@@ -1411,25 +1493,37 @@ impl RichTooltip {
             let text_gap = tooltip_metric_override(&style.rich_text_gap, states, || {
                 tooltip_tokens::rich_text_gap(theme)
             });
+            let action_min_height =
+                tooltip_metric_override(&style.rich_action_min_height, states, || {
+                    tooltip_tokens::rich_action_min_height(theme)
+                });
+            let action_bottom_padding =
+                tooltip_metric_override(&style.rich_action_bottom_padding, states, || {
+                    tooltip_tokens::rich_action_bottom_padding(theme)
+                });
 
             (
                 surface.background,
                 surface.shadow,
                 subhead_fg,
                 supporting_fg,
+                action_fg,
                 corner_radii,
                 subhead_style,
                 supporting_style,
+                action_style,
                 content_max_width,
                 content_min_width,
                 content_min_height,
                 container_padding,
                 text_gap,
+                action_min_height,
+                action_bottom_padding,
             )
         };
 
         let content = cx.named("content", move |cx| {
-            let child = match content_spec {
+            let body = match content_spec {
                 RichTooltipContent::Text {
                     title,
                     supporting_text,
@@ -1473,6 +1567,35 @@ impl RichTooltip {
                 RichTooltipContent::Element(el) => apply_tooltip_inherited_fg(el, supporting_fg),
             };
 
+            let child = if let Some(action) = action_spec {
+                let action =
+                    apply_tooltip_inherited_defaults(action, action_fg, Some(&action_style));
+                let mut props = FlexProps::default();
+                props.direction = Axis::Vertical;
+                props.gap = text_gap.into();
+                cx.flex(props, move |cx| {
+                    let mut action_layout = LayoutStyle::default();
+                    action_layout.size.min_height = Some(Length::Px(action_min_height));
+                    let action = cx.container(
+                        ContainerProps {
+                            layout: action_layout,
+                            padding: Edges {
+                                left: Px(0.0),
+                                right: Px(0.0),
+                                top: Px(0.0),
+                                bottom: action_bottom_padding,
+                            }
+                            .into(),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![action],
+                    );
+                    vec![body, with_optional_test_id(action, action_test_id.clone())]
+                })
+            } else {
+                body
+            };
+
             let mut layout = LayoutStyle::default();
             layout.size.max_width = Some(Length::Px(content_max_width));
             layout.size.min_width = Some(Length::Px(content_min_width));
@@ -1508,6 +1631,7 @@ impl RichTooltip {
             side_offset,
             window_margin,
             hide_when_detached,
+            has_action,
             open_delay_frames_override,
             close_delay_frames_override,
             disable_hoverable_content_override,

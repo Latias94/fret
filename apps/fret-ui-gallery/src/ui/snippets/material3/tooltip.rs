@@ -96,6 +96,12 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             "Rich tooltip supporting text (body medium).",
         )
         .title("Rich tooltip title")
+        .action_element(
+            material3::Button::new("Learn more")
+                .variant(material3::ButtonVariant::Text)
+                .test_id("ui-gallery-material3-rich-tooltip-action")
+                .into_element(cx),
+        )
         .side(material3::TooltipSide::Top)
         .into_element(cx);
 

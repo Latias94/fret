@@ -587,21 +587,26 @@ before continuing component surface work:
     - `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_tooltip_text_styles`)
     - `ecosystem/fret-ui-material3/src/tooltip.rs` (uses `md.comp.plain-tooltip.supporting-text`)
 
-- [x] Rich tooltip (non-interactive) MVP surface.
+- [x] Rich tooltip action surface.
   - Notes:
-    - In Fret, `OverlayKind::Tooltip` is click-through (`layer.hit_testable=false`), so rich
-      tooltip actions are out-of-scope until we have a concrete consumer that requires an
-      interactive outcome (mechanism follow-up candidate).
+    - Descriptive tooltips remain click-through by default.
+    - `RichTooltip::action_element(...)` opts the tooltip content layer into hit-testing so action
+      controls can receive pointer input, matching Compose Material3's `action` slot without
+      pushing Material policy into `crates/*`.
   - Evidence:
     - `ecosystem/fret-ui-material3/src/tooltip.rs` (`RichTooltip`)
+    - `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`tooltip_content_hit_testable`)
     - `ecosystem/fret-ui-material3/src/tokens/tooltip.rs` (rich tooltip token mapping)
+    - `ecosystem/fret-ui-material3/tests/tooltip_state.rs`
+      (`rich_tooltip_action_slot_is_hit_testable_and_stable`)
 
 - [x] Tooltip visual style API.
   - Notes:
     - `TooltipStyle` follows ADR 0220 and covers plain/rich surface color, text colors/text styles,
-      shape, padding, max width, min size, rich elevation/shadow, and rich text gap.
-    - This closes the visual customization gap without changing the pointer-transparent tooltip
-      overlay contract; rich actions remain a mechanism follow-up.
+      shape, padding, max width, min size, rich elevation/shadow, rich text gap, and rich action
+      label/row slots.
+    - Plain/descriptive tooltip click-through remains the default; rich action content uses the
+      explicit hit-test opt-in above.
   - Evidence:
     - `ecosystem/fret-ui-material3/src/tooltip.rs` (`TooltipStyle`, `.style(...)`)
     - `ecosystem/fret-ui-material3/tests/tooltip_state.rs`

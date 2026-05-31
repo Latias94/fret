@@ -311,6 +311,7 @@ pub(super) fn apply_tooltip_layer<H: UiHost>(
     layer: UiLayerId,
     present: bool,
     interactive: bool,
+    content_hit_testable: bool,
 ) {
     apply_overlay_layer_state(
         ui,
@@ -318,6 +319,7 @@ pub(super) fn apply_tooltip_layer<H: UiHost>(
         OverlayLayerKind::Tooltip,
         OverlayLayerState::tooltip(present, interactive),
     );
+    ui.set_layer_hit_testable(layer, present && interactive && content_hit_testable);
 }
 
 #[derive(Debug, Clone, Copy)]

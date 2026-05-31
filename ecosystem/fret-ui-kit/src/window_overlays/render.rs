@@ -1205,6 +1205,7 @@ pub fn render<H: UiHost + 'static>(
                         id: req.id,
                         root_name: req.root_name.clone(),
                         interactive: req.interactive,
+                        content_hit_testable: req.content_hit_testable,
                         trigger: req.trigger,
                         open: req.open.clone(),
                         present: true,
@@ -2162,6 +2163,7 @@ pub fn render<H: UiHost + 'static>(
 
         let open_now = app.models().get_copied(&req.open).unwrap_or(false);
         let interactive = req.interactive && open_now;
+        let content_hit_testable = req.content_hit_testable;
         let on_dismiss_request = req.on_dismiss_request.clone();
         let on_pointer_move = req.on_pointer_move.clone();
         let children = req.children;
@@ -2208,7 +2210,7 @@ pub fn render<H: UiHost + 'static>(
                         root,
                         fret_ui::OverlayRootOptions {
                             blocks_underlay_input: false,
-                            hit_testable: false,
+                            hit_testable: content_hit_testable,
                         },
                     ),
                     root_name: req.root_name.clone(),
@@ -2224,7 +2226,7 @@ pub fn render<H: UiHost + 'static>(
                 !capture_conflicts_with_layer(arbitration, entry.layer) || !req.interactive;
             let interactive = interactive && present;
 
-            apply_tooltip_layer(ui, entry.layer, present, interactive);
+            apply_tooltip_layer(ui, entry.layer, present, interactive, content_hit_testable);
 
             let wants_outside_press_observer = req.on_dismiss_request.is_some();
             let wants_pointer_move_events = req.on_pointer_move.is_some();
@@ -2265,7 +2267,7 @@ pub fn render<H: UiHost + 'static>(
         });
 
     for layer in to_hide_tooltips {
-        apply_tooltip_layer(ui, layer, false, false);
+        apply_tooltip_layer(ui, layer, false, false, false);
     }
 
     for req in toast_requests {

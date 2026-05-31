@@ -33,7 +33,7 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 | Select / ExposedDropdown / Autocomplete | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Motion gates cover Select, Autocomplete, and ExposedDropdown chevron + overlay open/close fade/scale. |
 | TextField | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Floating-label and token work are mature; keep extending field-family compositions. |
 | Dialog / BottomSheet | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Dialog gates cover open/close fade + rise/scale; BottomSheet gates cover open/close sheet-height slide without panel fade. |
-| Tooltip | Partial | Strong | Strong | Partial | Strong | Partial | Strong | `TooltipStyle` now covers plain/rich visual slots; rich tooltip actions are still constrained by non-hit-testable tooltip overlay policy. |
+| Tooltip | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Rich tooltips now expose an action slot that opts into hit-testable tooltip content while plain/descriptive tooltips remain click-through by default. |
 | Snackbar | Strong | Strong | Strong | Strong | Strong | Strong | Strong | 2026-06-01: gained public `SnackbarStyle`, host `.style(...)`, direct Material style adoption in the shared toast renderer, and style override paint/layout gates. Residuals: richer app-level queue policy examples. |
 | NavigationBar / Rail / Drawer | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Continue polishing adaptive examples and route/content integration. |
 | TopAppBar | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Scroll behavior policy is in Material ecosystem code; nested-scroll consumption remains a future mechanism trigger. |
@@ -57,13 +57,18 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     text, border, action, cancel, and close style fields instead of hardcoding the Sonner skin.
   - Gates: `window_overlays::tests::toast::toast_layer_style_direct_colors_are_painted`,
     `snackbar_state` including `snackbar_style_overrides_paint_and_layout_contract`.
-- 2026-06-01 Tooltip visual style/API hardening:
+- 2026-06-01 Tooltip visual style/API and rich-action hardening:
   - `TooltipStyle` follows ADR 0220 for plain/rich surface colors, text colors/text styles, shape,
-    padding, max width, min size, rich elevation/shadow, and rich text gap.
-  - Gallery examples now include styled plain and rich tooltip variants.
+    padding, max width, min size, rich elevation/shadow, rich text gap, and rich action label/row
+    slots.
+  - `RichTooltip::action_element(...)` now exposes the Material rich tooltip action slot and uses a
+    `fret-ui-kit` tooltip hit-test opt-in so the action can receive pointer input without changing
+    the plain tooltip click-through default.
+  - Gallery examples now include styled plain/rich variants and an action-bearing rich tooltip.
   - Gates: `tooltip_state` including
     `plain_tooltip_style_overrides_paint_and_layout_contract` and
-    `rich_tooltip_style_overrides_paint_parts_and_layout_contract`.
+    `rich_tooltip_style_overrides_paint_parts_and_layout_contract`, plus
+    `rich_tooltip_action_slot_is_hit_testable_and_stable`.
 - 2026-06-01 Search style/API and motion evidence calibration:
   - `SearchBarStyle` now covers search field surface, shape, sizing, row padding/gap, input text,
     icon colors, and state-layer color.
@@ -94,8 +99,7 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 
 1. Finish Tabs residuals only if panel presence becomes a real app need:
    `force_mount` content, presence motion, and overflow/scroll affordance polish.
-2. Revisit Tooltip policy:
-   decide whether rich tooltip actions require a popover-like hit-testable surface, a new
-   hit-testable rich-tooltip overlay kind, or should remain non-interactive per tooltip semantics.
-3. Start the next component-family audit on Tooltip rich-action policy, or broaden gallery coverage
-   for the now-Strong families.
+2. Broaden gallery/diag coverage for now-Strong families, especially docs-path examples that prove
+   field, overlay, and navigation components together.
+3. Start a second-pass polish lane for cross-component compositions: Search + Menu, field overlays
+   inside Dialog/BottomSheet, and navigation surfaces with routed panel content.

@@ -459,6 +459,7 @@ fn cached_tooltip_request_is_synthesized_for_short_ttl_when_open_without_rerende
             id: GlobalElementId(0x4),
             root_name: tooltip_root_name(GlobalElementId(0x4)),
             interactive: true,
+            content_hit_testable: false,
             trigger: Some(trigger),
             open: open.clone(),
             present: true,

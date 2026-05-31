@@ -147,6 +147,33 @@ pub(crate) fn rich_supporting_text_style(theme: &Theme) -> TextStyle {
     )
 }
 
+pub(crate) fn rich_action_label_color(theme: &Theme) -> Color {
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.rich-tooltip.action.label-text.color",
+        "md.sys.color.primary",
+    )
+}
+
+pub(crate) fn rich_action_label_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        Some("md.comp.rich-tooltip.action.label-text"),
+        "md.sys.typescale.label-large",
+        Some("md.comp.rich-tooltip.action.label-text.weight"),
+        TextIntent::Control,
+    )
+}
+
+pub(crate) fn rich_action_min_height(theme: &Theme) -> Px {
+    let _ = theme;
+    Px(36.0)
+}
+
+pub(crate) fn rich_action_bottom_padding(theme: &Theme) -> Px {
+    let _ = theme;
+    Px(8.0)
+}
+
 pub(crate) fn shadow_color(theme: &Theme) -> Color {
     MaterialTokenResolver::new(theme).color_sys("md.sys.color.shadow")
 }

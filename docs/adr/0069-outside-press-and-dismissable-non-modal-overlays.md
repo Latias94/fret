@@ -269,7 +269,7 @@ The current shadcn-aligned defaults in this repo:
 | `Popover` | Non-modal | `false` | Yes | No (click-through) | No | Outside press closes; underlay click can focus/activate |
 | `Combobox` | Non-modal | `false` | Yes | No (click-through) | No | Popover + Command recipe; outside press closes; underlay click can focus/activate |
 | `HoverCard` | Hover overlay | `false` | No | No | No | Driven by hover intent; click-through (no outside-press dismissal) |
-| `Tooltip` | Tooltip overlay | `false` | No | No | No | Pointer-move observed; click-through |
+| `Tooltip` | Tooltip overlay | `false` | Optional | No | No | Pointer-move observed; click-through by default; rich/action tooltip content can opt into hit-testing without consuming outside pointer-down |
 | `DropdownMenu` | Non-modal menu | `false` | Yes | Yes (non-click-through) | Yes (Radix `modal=true`) | Outside press closes without activating underlay; underlay pointer is inert while open |
 | `ContextMenu` | Non-modal menu | `false` | Yes | Yes (non-click-through) | Yes (Radix `modal=true`) | Same as dropdown menu; open model is component-owned |
 | `Menubar` | Non-modal menu | `false` | Yes | No (click-through) | No (Radix `modal=false`) | Outside press closes and allows underlay activation |

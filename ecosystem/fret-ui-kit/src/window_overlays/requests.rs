@@ -565,6 +565,11 @@ pub struct TooltipRequest {
     /// When `false`, the tooltip may remain mounted for close transitions but must not observe
     /// outside-press or pointer-move events.
     pub interactive: bool,
+    /// Whether the tooltip content layer should participate in normal hit-testing while open.
+    ///
+    /// This is separate from observer routing so descriptive tooltips can remain click-through
+    /// while rich/action tooltips can receive pointer input.
+    pub content_hit_testable: bool,
     pub trigger: Option<GlobalElementId>,
     pub open: Model<bool>,
     pub present: bool,
@@ -579,6 +584,7 @@ pub(super) struct CachedTooltipDecl {
     pub id: GlobalElementId,
     pub root_name: String,
     pub interactive: bool,
+    pub content_hit_testable: bool,
     pub trigger: Option<GlobalElementId>,
     pub open: Model<bool>,
     pub on_dismiss_request: Option<OnDismissRequest>,
@@ -592,6 +598,7 @@ impl CachedTooltipDecl {
             id: req.id,
             root_name: req.root_name.clone(),
             interactive: req.interactive,
+            content_hit_testable: req.content_hit_testable,
             trigger: req.trigger,
             open: req.open.clone(),
             on_dismiss_request: req.on_dismiss_request.clone(),
@@ -621,6 +628,7 @@ impl std::fmt::Debug for TooltipRequest {
             .field("id", &self.id)
             .field("root_name", &self.root_name)
             .field("interactive", &self.interactive)
+            .field("content_hit_testable", &self.content_hit_testable)
             .field("trigger", &self.trigger)
             .field("open", &"<model>")
             .field("present", &self.present)

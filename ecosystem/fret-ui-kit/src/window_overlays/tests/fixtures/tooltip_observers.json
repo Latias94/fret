@@ -28,6 +28,17 @@
     "has_pointer_move": true,
     "expect_wants_pointer_down_outside_events": false,
     "expect_wants_pointer_move_events": false
+  },
+  {
+    "name": "interactive_hit_testable_content",
+    "open": true,
+    "interactive": true,
+    "content_hit_testable": true,
+    "trigger": true,
+    "has_dismiss_request": true,
+    "has_pointer_move": true,
+    "expect_wants_pointer_down_outside_events": true,
+    "expect_wants_pointer_move_events": true,
+    "expect_hit_testable": true
   }
 ]
-

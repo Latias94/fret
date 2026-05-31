@@ -4,7 +4,7 @@ use fret_core::{
     AppWindowId, Color, Edges, NodeId, Paint, Point, PointerId, Px, Rect, Scene, SceneOp,
     SemanticsLive, SemanticsNode, SemanticsRole, Size, UiServices,
 };
-use fret_runtime::PlatformCapabilities;
+use fret_runtime::{ModelHost, PlatformCapabilities};
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length};
 use fret_ui::{ElementContext, UiHost, UiTree};
 use fret_ui_kit::{ColorRef, OverlayController, OverlayStackEntryKind, WidgetStateProperty};
@@ -15,7 +15,7 @@ use fret_ui_material3::{
 
 mod support;
 
-use support::events::pointer_move;
+use support::events::{pointer_down, pointer_move, pointer_up};
 use support::goldens::run_overlay_frame_with_scene_scaled;
 use support::host::{FakeUiServices, TestHost};
 use support::layout::{semantics_node_id_by_test_id, with_padding};
@@ -358,6 +358,133 @@ fn rich_tooltip_matches_material_layout_and_a11y() {
         chrome.size
     );
     assert_material_tooltip_semantics(&ui, "m3-rich-tooltip-trigger", "m3-rich-tooltip");
+}
+
+#[test]
+fn rich_tooltip_action_slot_is_hit_testable_and_stable() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let action_activated = app.models_mut().insert(false);
+    let action_activated_for_render = action_activated.clone();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(760.0), Px(460.0)),
+    );
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let action_activated = action_activated_for_render.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                TooltipProvider::new()
+                    .delay_duration_frames(0)
+                    .skip_delay_duration_frames(0)
+                    .with_elements(cx, |cx| {
+                        let trigger = Button::new("Rich action")
+                            .variant(ButtonVariant::Outlined)
+                            .test_id("m3-rich-action-tooltip-trigger")
+                            .into_element(cx);
+                        let action = Button::new("Learn more")
+                            .variant(ButtonVariant::Text)
+                            .on_activate(fret_ui_kit::on_activate_request_redraw({
+                                let action_activated = action_activated.clone();
+                                move |host| {
+                                    let _ = host
+                                        .models_mut()
+                                        .update(&action_activated, |activated| *activated = true);
+                                }
+                            }))
+                            .test_id("m3-rich-action-button")
+                            .into_element(cx);
+                        let tooltip = RichTooltip::new(trigger, "Rich tooltip with an action.")
+                            .title("Rich action")
+                            .action_element(action)
+                            .open_delay_frames(Some(0))
+                            .close_delay_frames(Some(0))
+                            .test_id("m3-rich-action-tooltip")
+                            .into_element(cx);
+                        vec![with_padding(cx, Px(48.0), tooltip)]
+                    })
+            })
+        };
+
+    run_overlay_frame_with_scene_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    let hover_at = center_for_test_id(&ui, "m3-rich-action-tooltip-trigger");
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_move(PointerId(1), hover_at),
+    );
+
+    let _ = run_until_tooltip_visible(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+    assert!(
+        stack
+            .stack
+            .iter()
+            .any(|entry| entry.kind == OverlayStackEntryKind::Tooltip && entry.hit_testable),
+        "rich tooltip with action should opt the tooltip layer into hit-testing"
+    );
+
+    let action_slot =
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-action-tooltip.action");
+    assert!(
+        action_slot.size.height.0 >= 35.5,
+        "expected rich tooltip action slot to reserve Material action height"
+    );
+
+    let click_at = center_for_test_id(&ui, "m3-rich-action-button");
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), click_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+
+    run_overlay_frame_with_scene_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        false,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    assert_eq!(
+        app.models().get_copied(&action_activated),
+        Some(true),
+        "expected rich tooltip action button to receive pointer activation"
+    );
+    assert_material_tooltip_semantics(
+        &ui,
+        "m3-rich-action-tooltip-trigger",
+        "m3-rich-action-tooltip",
+    );
 }
 
 #[test]

@@ -6,11 +6,15 @@ struct TooltipObserverFixture {
     name: String,
     open: bool,
     interactive: bool,
+    #[serde(default)]
+    content_hit_testable: bool,
     trigger: bool,
     has_dismiss_request: bool,
     has_pointer_move: bool,
     expect_wants_pointer_down_outside_events: bool,
     expect_wants_pointer_move_events: bool,
+    #[serde(default)]
+    expect_hit_testable: bool,
 }
 
 fn run_tooltip_observer_fixture(name: &str) {
@@ -58,6 +62,7 @@ fn run_tooltip_observer_fixture(name: &str) {
             id: tooltip_id,
             root_name: tooltip_root_name(tooltip_id),
             interactive: fx.interactive,
+            content_hit_testable: fx.content_hit_testable,
             trigger: fx.trigger.then_some(trigger),
             open,
             present: true,
@@ -87,7 +92,11 @@ fn run_tooltip_observer_fixture(name: &str) {
 
     assert!(info.visible, "case={}", fx.name);
     assert!(!info.blocks_underlay_input, "case={}", fx.name);
-    assert!(!info.hit_testable, "case={}", fx.name);
+    assert_eq!(
+        info.hit_testable, fx.expect_hit_testable,
+        "case={}",
+        fx.name
+    );
     assert_eq!(
         info.pointer_occlusion,
         fret_ui::tree::PointerOcclusion::None,
@@ -119,4 +128,9 @@ fn tooltip_does_not_request_observers_by_default() {
 #[test]
 fn tooltip_does_not_request_observers_while_closing() {
     run_tooltip_observer_fixture("closing_handlers_do_not_install_observers");
+}
+
+#[test]
+fn tooltip_can_opt_into_hit_testable_content() {
+    run_tooltip_observer_fixture("interactive_hit_testable_content");
 }

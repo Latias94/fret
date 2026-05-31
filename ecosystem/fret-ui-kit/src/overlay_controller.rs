@@ -91,6 +91,11 @@ pub struct OverlayRequest {
     /// When true, pointer events outside the overlay subtree should not reach underlay widgets
     /// while the overlay is open (Radix `disableOutsidePointerEvents` outcome).
     pub disable_outside_pointer_events: bool,
+    /// For tooltip overlays, opt the content layer into hit-testing while open.
+    ///
+    /// Plain descriptive tooltips stay pointer-transparent by default. Rich tooltip recipes with
+    /// focusable/action content can set this without changing the shared tooltip observer policy.
+    pub tooltip_content_hit_testable: bool,
     /// Whether this overlay should close when the OS window loses focus.
     pub close_on_window_focus_lost: bool,
     /// Whether this overlay should close when the OS window is resized (or scale factor changes).
@@ -121,6 +126,10 @@ impl std::fmt::Debug for OverlayRequest {
             .field(
                 "disable_outside_pointer_events",
                 &self.disable_outside_pointer_events,
+            )
+            .field(
+                "tooltip_content_hit_testable",
+                &self.tooltip_content_hit_testable,
             )
             .field("open", &self.open)
             .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
@@ -157,6 +166,7 @@ impl OverlayRequest {
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
             disable_outside_pointer_events: false,
+            tooltip_content_hit_testable: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: Some(open),
@@ -203,6 +213,7 @@ impl OverlayRequest {
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
             disable_outside_pointer_events: false,
+            tooltip_content_hit_testable: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: Some(open),
@@ -231,6 +242,7 @@ impl OverlayRequest {
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
             disable_outside_pointer_events: false,
+            tooltip_content_hit_testable: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: Some(open),
@@ -260,6 +272,7 @@ impl OverlayRequest {
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
             disable_outside_pointer_events: false,
+            tooltip_content_hit_testable: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: Some(open),
@@ -283,6 +296,7 @@ impl OverlayRequest {
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
             disable_outside_pointer_events: false,
+            tooltip_content_hit_testable: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: None,
@@ -522,6 +536,11 @@ impl OverlayRequest {
         self.disable_outside_pointer_events = disable;
         self
     }
+
+    pub fn tooltip_content_hit_testable(mut self, hit_testable: bool) -> Self {
+        self.tooltip_content_hit_testable = hit_testable;
+        self
+    }
 }
 
 /// A small, stable facade over `window_overlays` to keep overlay policy wiring out of shadcn code.
@@ -692,6 +711,7 @@ impl OverlayController {
                     id: request.id,
                     root_name,
                     interactive: request.presence.interactive,
+                    content_hit_testable: request.tooltip_content_hit_testable,
                     trigger: request.trigger,
                     open,
                     present: request.presence.present,

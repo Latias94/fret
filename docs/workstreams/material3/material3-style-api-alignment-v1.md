@@ -115,7 +115,7 @@ wired into the crate and therefore do not represent the current public surface.
 | SearchView | `ecosystem/fret-ui-material3/src/search_view.rs` | Yes (`SearchViewStyle`) | Yes | Yes | Overlay container/divider/body/header slots plus `SearchBarStyle` header forwarding; motion/dismiss remain policy-owned. |
 | Menu | `ecosystem/fret-ui-material3/src/menu.rs` | Yes (`MenuStyle`) | Yes | Yes | Container, item width, section-label/item label/icon/supporting/trailing colors, state-layer, and text-style overrides; overlay/roving/dismiss remain policy-only. |
 | Dialog | `ecosystem/fret-ui-material3/src/dialog.rs` | Yes (`DialogStyle`) | Yes | Yes | Minimal scrim + surface + headline/supporting color overrides; focus/motion/dismiss remain policy-only. |
-| Tooltip | `ecosystem/fret-ui-material3/src/tooltip.rs` | Yes (`TooltipStyle`) | Yes | Yes | Plain/rich visual slots are public; rich tooltip actions remain blocked by non-hit-testable tooltip overlay policy. |
+| Tooltip | `ecosystem/fret-ui-material3/src/tooltip.rs` | Yes (`TooltipStyle`) | Yes | Yes | Plain/rich/action visual slots are public; `RichTooltip::action_element(...)` opts into hit-testable tooltip content while descriptive tooltips remain click-through. |
 | Snackbar | `ecosystem/fret-ui-material3/src/snackbar.rs` | Yes (`SnackbarStyle`) | Yes | Yes | Host-level style surface covers container/supporting/action/close colors, shape, padding, and single/two-line heights; rendering is applied through `fret-ui-kit`'s toast-layer skin. |
 
 ## Implementation plan
@@ -382,16 +382,18 @@ Public override surface (`TooltipStyle` in `ecosystem/fret-ui-material3/src/tool
   rich tooltip surface.
 - `rich_title_color` / `rich_supporting_text_color` / `rich_title_text_style` /
   `rich_supporting_text_style` - rich tooltip text roles.
+- `rich_action_label_color` / `rich_action_label_text_style` - rich tooltip action text role.
 - `rich_container_corner_radius` / `rich_container_padding` / `rich_container_max_width` /
   `rich_text_gap` - rich tooltip shape and layout.
+- `rich_action_min_height` / `rich_action_bottom_padding` - rich tooltip action row layout.
 - `container_min_width` / `container_min_height` - shared tooltip minimum sizing.
 
 Policy-only in v1 (not exposed as slots):
 
 - Overlay mechanics: placement, safe-hover corridor, delay group, dismissal policy, and motion.
-- Interactive rich-tooltip actions: Fret's tooltip overlay layer is deliberately pointer-transparent
-  (`layer.hit_testable=false`), so action rows require a separate overlay mechanism decision rather
-  than a Material-only style API change.
+- Hit-testing remains an explicit policy decision: descriptive tooltips keep
+  `tooltip_content_hit_testable=false`, while rich action tooltips opt in through
+  `RichTooltip::action_element(...)`.
 
 ### M3SA-200 — Implement `*Style` surfaces per component (incremental)
 

@@ -3958,6 +3958,12 @@ fn material3_tooltip_and_snackbar_expose_stable_part_test_ids() {
                                 .into_element(cx);
                             let rich_tooltip = RichTooltip::new(rich_trigger, "Rich supporting")
                                 .title("Rich title")
+                                .action_element(
+                                    Button::new("Action")
+                                        .variant(ButtonVariant::Text)
+                                        .test_id("m3-rich-tooltip-action-button")
+                                        .into_element(cx),
+                                )
                                 .open_delay_frames(Some(0))
                                 .close_delay_frames(Some(0))
                                 .test_id("m3-rich-tooltip")
@@ -4067,6 +4073,8 @@ fn material3_tooltip_and_snackbar_expose_stable_part_test_ids() {
             "m3-rich-tooltip.chrome",
             "m3-rich-tooltip.title",
             "m3-rich-tooltip.supporting-text",
+            "m3-rich-tooltip.action",
+            "m3-rich-tooltip-action-button",
         ] {
             assert!(
                 live_test_id_exists(&ui, &app, window, id),
