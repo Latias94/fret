@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Input-Group Icon Segment Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor input-group icon/clear-button segment rendering moved out of the general
+`segments.rs` owner into a private `segments/icon.rs` owner without changing existing
+`crate::primitives::input_group::*` helper names, input-group segment call paths, value text
+semantics, or axis segment behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/input_group/segments.rs` now keeps segment layout,
+  divider, text, value, derived-test-id, axis marker, and color-mixing helpers, plus re-exports the
+  existing icon/clear-button helper names.
+- `ecosystem/fret-ui-editor/src/primitives/input_group/segments/icon.rs` owns icon-button chrome,
+  clear-button routing, multiline clear-button inset layout, and static icon slot rendering.
+- `tools/gate_imui_workstream_source.py` now gates the root/icon split and prevents icon chrome
+  from drifting back into the general segment owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new icon segment owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor input_group --no-fail-fast`: pass (1 passed, 221 skipped).
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass.
+
 ## Editor Theme Tests Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor theme preset/replay regressions moved out of the runtime

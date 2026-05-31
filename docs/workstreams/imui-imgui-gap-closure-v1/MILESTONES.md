@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 editor input-group icon segment owner-split result:
+`ecosystem/fret-ui-editor/src/primitives/input_group/segments.rs` now keeps segment layout, text,
+value, axis, and derived-test-id helpers plus re-exports the icon segment helper names.
+`input_group/segments/icon.rs` owns icon-button chrome, clear-button routing, multiline clear-button
+inset layout, and static icon slot rendering. Existing `crate::primitives::input_group::*` helper
+paths remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-05-31 editor theme tests owner-split result:
 `ecosystem/fret-ui-editor/src/theme.rs` now keeps public editor theme preset metadata, preset
 install/replay helpers, and host theme sync helpers only, plus a `#[cfg(test)] mod tests;` route.

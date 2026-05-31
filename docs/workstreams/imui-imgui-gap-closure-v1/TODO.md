@@ -58,6 +58,14 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor input-group icon/clear-button segment rendering into a private child owner
+      without changing the existing `crate::primitives::input_group::*` helper names or segment
+      call paths.
+      Result: `primitives/input_group/segments.rs` now keeps segment layout, text, value, axis, and
+      derived-test-id helpers plus re-exports the icon segment helpers. `segments/icon.rs` owns
+      icon-button chrome, clear-button routing, multiline clear-button inset layout, and static icon
+      slot rendering. The source gate prevents icon chrome from drifting back into the general
+      segment owner.
 - [x] Split editor theme preset/replay regressions into a private `theme/tests.rs` owner without
       changing public editor theme preset APIs, installed-preset replay semantics, or host theme
       sync behavior.
