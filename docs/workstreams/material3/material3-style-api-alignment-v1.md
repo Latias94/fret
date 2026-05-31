@@ -111,6 +111,8 @@ wired into the crate and therefore do not represent the current public surface.
 | Radio | `ecosystem/fret-ui-material3/src/radio.rs` | Yes (`RadioStyle`) | Yes | Yes | Exposes icon + state-layer color overrides; maps `checked` to `WidgetStates::SELECTED`. |
 | Tabs | `ecosystem/fret-ui-material3/src/tabs.rs` | Yes (`TabsStyle`) | Yes | Yes | Overrides: container/label/state-layer/active-indicator colors; maps active tab to `WidgetStates::SELECTED`; active `TabPanel` is API/semantics surface, not a style slot. |
 | TextField | `ecosystem/fret-ui-material3/src/text_field.rs` | Yes (`TextFieldStyle`) | Yes | Yes | Keeps `error` as a bespoke boolean; style overrides apply to the existing token-derived defaults. |
+| SearchBar | `ecosystem/fret-ui-material3/src/search_bar.rs` | Yes (`SearchBarStyle`) | Yes | Yes | Search surface, input, icon, state-layer, sizing, shape, and padding slots; maps hover/press/open/disabled into `WidgetStates`. |
+| SearchView | `ecosystem/fret-ui-material3/src/search_view.rs` | Yes (`SearchViewStyle`) | Yes | Yes | Overlay container/divider/body/header slots plus `SearchBarStyle` header forwarding; motion/dismiss remain policy-owned. |
 | Menu | `ecosystem/fret-ui-material3/src/menu.rs` | Yes (`MenuStyle`) | Yes | Yes | Container, item width, section-label/item label/icon/supporting/trailing colors, state-layer, and text-style overrides; overlay/roving/dismiss remain policy-only. |
 | Dialog | `ecosystem/fret-ui-material3/src/dialog.rs` | Yes (`DialogStyle`) | Yes | Yes | Minimal scrim + surface + headline/supporting color overrides; focus/motion/dismiss remain policy-only. |
 | Tooltip | `ecosystem/fret-ui-material3/src/tooltip.rs` | Yes (`TooltipStyle`) | Yes | Yes | Plain/rich visual slots are public; rich tooltip actions remain blocked by non-hit-testable tooltip overlay policy. |
@@ -160,6 +162,7 @@ Suggested initial slot sets:
   - [x] Select (slot boundary documented below).
   - [x] Button / IconButton
   - [x] Checkbox / Switch / Radio / Tabs / TextField
+  - [x] SearchBar / SearchView
   - [x] Menu / Dialog (minimal style surface in v1)
   - [x] Tooltip (visual slots public; overlay/action policy remains mechanism-follow-up territory)
   - [x] Confirm how `WidgetState::Open` / `Selected` are used (e.g. menus/selects/tabs).
@@ -307,6 +310,32 @@ Policy-only in v1 (not exposed as slots):
 - Shape/elevation: focus-ring thickness policy.
 - Interaction: hover/focus/press state-layer behavior and motion timings.
 - Error styling: kept as component-level boolean (see M3SA-400).
+
+#### Search slot boundary (v1)
+
+Public override surface (`SearchBarStyle` in `ecosystem/fret-ui-material3/src/search_bar.rs`):
+
+- `container_background` / `container_elevation` / `container_corner_radii` - search field
+  surface.
+- `container_height` / `container_min_width` / `container_max_width` - search field sizing.
+- `content_padding` / `content_gap` - icon/input row layout.
+- `input_text_color` / `supporting_text_color` / `input_text_style` - query and placeholder text.
+- `leading_icon_color` / `trailing_icon_color` - icon slots.
+- `state_layer_color` - hover/press state layer color (stateful).
+
+Public override surface (`SearchViewStyle` in `ecosystem/fret-ui-material3/src/search_view.rs`):
+
+- `header_style` - forwards a `SearchBarStyle` into the docked/full-screen header field.
+- `container_background` / `container_elevation` / `docked_container_corner_radii` - overlay
+  surface.
+- `divider_color` - docked/full-screen divider.
+- `full_screen_header_container_height` - full-screen header slot height.
+- `body_padding` - results/suggestions content inset.
+
+Policy-only in v1 (not exposed as slots):
+
+- Opening policy, focus handoff, outside/Escape dismissal, overlay placement, and search motion.
+- Result-list semantics and selection policy; consumers provide the content subtree.
 
 #### Menu / Dialog / Tooltip slot boundary (v1)
 

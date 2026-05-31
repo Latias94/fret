@@ -372,6 +372,10 @@ before continuing component surface work:
     - `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`
     - `ecosystem/fret-ui-material3/src/tokens/v30.rs`
     - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_search_bar_suite_goldens_v1`)
+    - `ecosystem/fret-ui-material3/tests/search_bar_motion.rs`
+      (`search_bar_hover_state_layer_animates_between_idle_and_hovered`,
+      `search_bar_press_ripple_expands_on_fixed_frames`,
+      `search_bar_style_overrides_paint_and_layout_contract`)
     - `goldens/material3-headless/v1/material3-search-bar.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
   - References:
     - Material Web tokens: `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-search-bar.scss`
@@ -389,7 +393,24 @@ before continuing component surface work:
     - `ecosystem/fret-ui-material3/src/search_view.rs`
     - `ecosystem/fret-ui-material3/src/tokens/search_view.rs`
     - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_search_view_suite_goldens_v1`)
+    - `ecosystem/fret-ui-material3/tests/search_view_behavior.rs`
+      (`search_view_docked_overlay_fades_and_expands_on_open_close_frames`,
+      `search_view_full_screen_overlay_expands_from_input_geometry`,
+      `search_view_style_overrides_docked_overlay_paint_contract`,
+      `search_view_style_overrides_full_screen_header_layout_contract`)
     - `goldens/material3-headless/v1/material3-search-view.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
+
+- [x] Search visual style API.
+  - Notes:
+    - `SearchBarStyle` follows ADR 0220 for surface, input, icon, state-layer, sizing, shape, and
+      row padding/gap slots.
+    - `SearchViewStyle` adds overlay container/divider/body/header slots and forwards
+      `SearchBarStyle` into the docked/full-screen header search field.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/search_bar.rs` (`SearchBarStyle`, `.style(...)`)
+    - `ecosystem/fret-ui-material3/src/search_view.rs` (`SearchViewStyle`, `.style(...)`)
+    - `ecosystem/fret-ui-material3/tests/search_bar_motion.rs`
+    - `ecosystem/fret-ui-material3/tests/search_view_behavior.rs`
 
 - [x] Carousel item (MVP) surface.
   - Goal: add a low-coupling `CarouselItem` primitive aligned with Material Web v30

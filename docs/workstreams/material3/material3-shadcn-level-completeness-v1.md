@@ -38,7 +38,7 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 | NavigationBar / Rail / Drawer | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Continue polishing adaptive examples and route/content integration. |
 | TopAppBar | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Scroll behavior policy is in Material ecosystem code; nested-scroll consumption remains a future mechanism trigger. |
 | DatePicker / TimePicker | Strong | Strong | Strong | Strong | Strong | Partial | Strong | Main residual is broader composition/demo coverage, not basic API completeness. |
-| SearchBar / SearchView | Strong | Strong | Strong | Strong | Strong | Partial | Strong | Keep validating overlay/content relation and mobile/fullscreen behavior. |
+| SearchBar / SearchView | Strong | Strong | Strong | Strong | Strong | Strong | Strong | `SearchBarStyle`/`SearchViewStyle` now cover visual slots; motion gates cover hover/ripple, docked fade/height, and full-screen geometry expand/collapse. |
 
 ## Current Batches
 
@@ -64,6 +64,13 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
   - Gates: `tooltip_state` including
     `plain_tooltip_style_overrides_paint_and_layout_contract` and
     `rich_tooltip_style_overrides_paint_parts_and_layout_contract`.
+- 2026-06-01 Search style/API and motion evidence calibration:
+  - `SearchBarStyle` now covers search field surface, shape, sizing, row padding/gap, input text,
+    icon colors, and state-layer color.
+  - `SearchViewStyle` now covers overlay container/divider/body/header slots and forwards
+    `SearchBarStyle` to docked/full-screen search headers.
+  - Gates: `search_bar_motion` and `search_view_behavior`, including style paint/layout tests plus
+    existing hover/ripple and docked/full-screen motion tests.
 
 ## Next Recommended Focus
 
@@ -72,5 +79,5 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 2. Revisit Tooltip policy:
    decide whether rich tooltip actions require a popover-like hit-testable surface, a new
    hit-testable rich-tooltip overlay kind, or should remain non-interactive per tooltip semantics.
-3. Start the next component-family audit on SearchBar/SearchView or DatePicker/TimePicker, focusing
-   on where motion/presence evidence is still marked `Partial`.
+3. Start the next component-family audit on DatePicker/TimePicker, focusing on where
+   motion/presence evidence is still marked `Partial`.

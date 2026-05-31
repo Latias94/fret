@@ -6,7 +6,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, Px, SemanticsRole, SvgFit};
+use fret_core::{Color, Corners, Edges, Px, SemanticsRole, SvgFit, TextStyle};
 use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
 use fret_runtime::Model;
 use fret_ui::action::{PointerDownCx, PressablePointerDownResult, UiPointerActionHost};
@@ -16,6 +16,10 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, SvgSource, Theme, UiHost};
+use fret_ui_kit::{
+    ColorRef, OverrideSlot, WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot,
+    resolve_override_slot_with,
+};
 
 use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
@@ -29,6 +33,66 @@ use crate::foundation::strings::{
 use crate::foundation::test_id::part_test_id;
 use crate::tokens::search_bar as search_bar_tokens;
 use crate::tokens::search_view as search_view_tokens;
+
+fn search_bar_color_override(
+    theme: &Theme,
+    slot: &OverrideSlot<ColorRef>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> Color,
+) -> Color {
+    resolve_override_slot_with(
+        slot.as_ref(),
+        states,
+        |color| color.resolve(theme),
+        fallback,
+    )
+}
+
+fn search_bar_metric_override(
+    slot: &OverrideSlot<Px>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> Px,
+) -> Px {
+    resolve_override_slot_with(slot.as_ref(), states, |value| *value, fallback)
+}
+
+fn search_bar_edges_override(
+    slot: &OverrideSlot<Edges>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> Edges,
+) -> Edges {
+    resolve_override_slot_with(slot.as_ref(), states, |value| *value, fallback)
+}
+
+fn search_bar_corners_override(
+    slot: &OverrideSlot<Corners>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> Corners,
+) -> Corners {
+    resolve_override_slot_with(slot.as_ref(), states, |value| *value, fallback)
+}
+
+fn search_bar_text_style_override(
+    slot: &OverrideSlot<TextStyle>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> TextStyle,
+) -> TextStyle {
+    resolve_override_slot_with(slot.as_ref(), states, |style| style.clone(), fallback)
+}
+
+fn search_bar_widget_states(
+    enabled: bool,
+    hovered: bool,
+    pressed: bool,
+    expanded: bool,
+) -> WidgetStates {
+    let mut states = WidgetStates::empty();
+    states.set(WidgetState::Disabled, !enabled);
+    states.set(WidgetState::Hovered, enabled && hovered);
+    states.set(WidgetState::Active, enabled && pressed);
+    states.set(WidgetState::Open, enabled && expanded);
+    states
+}
 
 #[derive(Debug, Clone)]
 struct SearchBarPartTestIds {
@@ -54,9 +118,143 @@ pub(crate) enum SearchBarHeaderTokens {
     SearchView,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct SearchBarStyle {
+    pub container_background: OverrideSlot<ColorRef>,
+    pub container_elevation: OverrideSlot<Px>,
+    pub container_corner_radii: OverrideSlot<Corners>,
+    pub container_height: OverrideSlot<Px>,
+    pub container_min_width: OverrideSlot<Px>,
+    pub container_max_width: OverrideSlot<Px>,
+    pub content_padding: OverrideSlot<Edges>,
+    pub content_gap: OverrideSlot<Px>,
+    pub input_text_color: OverrideSlot<ColorRef>,
+    pub supporting_text_color: OverrideSlot<ColorRef>,
+    pub input_text_style: OverrideSlot<TextStyle>,
+    pub leading_icon_color: OverrideSlot<ColorRef>,
+    pub trailing_icon_color: OverrideSlot<ColorRef>,
+    pub state_layer_color: OverrideSlot<ColorRef>,
+}
+
+impl SearchBarStyle {
+    pub fn container_background(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.container_background = Some(color);
+        self
+    }
+
+    pub fn container_elevation(mut self, elevation: WidgetStateProperty<Option<Px>>) -> Self {
+        self.container_elevation = Some(elevation);
+        self
+    }
+
+    pub fn container_corner_radii(mut self, corners: WidgetStateProperty<Option<Corners>>) -> Self {
+        self.container_corner_radii = Some(corners);
+        self
+    }
+
+    pub fn container_height(mut self, height: WidgetStateProperty<Option<Px>>) -> Self {
+        self.container_height = Some(height);
+        self
+    }
+
+    pub fn container_min_width(mut self, width: WidgetStateProperty<Option<Px>>) -> Self {
+        self.container_min_width = Some(width);
+        self
+    }
+
+    pub fn container_max_width(mut self, width: WidgetStateProperty<Option<Px>>) -> Self {
+        self.container_max_width = Some(width);
+        self
+    }
+
+    pub fn content_padding(mut self, padding: WidgetStateProperty<Option<Edges>>) -> Self {
+        self.content_padding = Some(padding);
+        self
+    }
+
+    pub fn content_gap(mut self, gap: WidgetStateProperty<Option<Px>>) -> Self {
+        self.content_gap = Some(gap);
+        self
+    }
+
+    pub fn input_text_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.input_text_color = Some(color);
+        self
+    }
+
+    pub fn supporting_text_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.supporting_text_color = Some(color);
+        self
+    }
+
+    pub fn input_text_style(mut self, style: WidgetStateProperty<Option<TextStyle>>) -> Self {
+        self.input_text_style = Some(style);
+        self
+    }
+
+    pub fn leading_icon_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.leading_icon_color = Some(color);
+        self
+    }
+
+    pub fn trailing_icon_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.trailing_icon_color = Some(color);
+        self
+    }
+
+    pub fn state_layer_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.state_layer_color = Some(color);
+        self
+    }
+
+    pub fn merged(self, other: Self) -> Self {
+        Self {
+            container_background: merge_override_slot(
+                self.container_background,
+                other.container_background,
+            ),
+            container_elevation: merge_override_slot(
+                self.container_elevation,
+                other.container_elevation,
+            ),
+            container_corner_radii: merge_override_slot(
+                self.container_corner_radii,
+                other.container_corner_radii,
+            ),
+            container_height: merge_override_slot(self.container_height, other.container_height),
+            container_min_width: merge_override_slot(
+                self.container_min_width,
+                other.container_min_width,
+            ),
+            container_max_width: merge_override_slot(
+                self.container_max_width,
+                other.container_max_width,
+            ),
+            content_padding: merge_override_slot(self.content_padding, other.content_padding),
+            content_gap: merge_override_slot(self.content_gap, other.content_gap),
+            input_text_color: merge_override_slot(self.input_text_color, other.input_text_color),
+            supporting_text_color: merge_override_slot(
+                self.supporting_text_color,
+                other.supporting_text_color,
+            ),
+            input_text_style: merge_override_slot(self.input_text_style, other.input_text_style),
+            leading_icon_color: merge_override_slot(
+                self.leading_icon_color,
+                other.leading_icon_color,
+            ),
+            trailing_icon_color: merge_override_slot(
+                self.trailing_icon_color,
+                other.trailing_icon_color,
+            ),
+            state_layer_color: merge_override_slot(self.state_layer_color, other.state_layer_color),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct SearchBar {
     model: Model<String>,
+    style: SearchBarStyle,
     placeholder: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     disabled: bool,
@@ -73,6 +271,7 @@ impl SearchBar {
     pub fn new(model: Model<String>) -> Self {
         Self {
             model,
+            style: SearchBarStyle::default(),
             placeholder: None,
             a11y_label: None,
             disabled: false,
@@ -93,6 +292,11 @@ impl SearchBar {
 
     pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
         self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn style(mut self, style: SearchBarStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -194,13 +398,29 @@ impl SearchBar {
                     shadow,
                     container_color,
                     focus_ring,
+                    content_padding,
+                    content_gap,
                 ) = {
                     let theme = Theme::global(&*cx.app);
+                    let states = search_bar_widget_states(enabled, hovered, pressed, expanded);
 
-                    let container_height = search_bar_tokens::container_height(theme);
-                    let container_min_width = search_bar_tokens::container_min_width(theme);
-                    let container_max_width = search_bar_tokens::container_max_width(theme);
-                    let corner_radii = search_bar_tokens::container_shape(theme);
+                    let container_height =
+                        search_bar_metric_override(&self.style.container_height, states, || {
+                            search_bar_tokens::container_height(theme)
+                        });
+                    let container_min_width =
+                        search_bar_metric_override(&self.style.container_min_width, states, || {
+                            search_bar_tokens::container_min_width(theme)
+                        });
+                    let container_max_width =
+                        search_bar_metric_override(&self.style.container_max_width, states, || {
+                            search_bar_tokens::container_max_width(theme)
+                        });
+                    let corner_radii = search_bar_corners_override(
+                        &self.style.container_corner_radii,
+                        states,
+                        || search_bar_tokens::container_shape(theme),
+                    );
 
                     let state_layer_target = if pressed {
                         search_bar_tokens::pressed_state_layer_opacity(theme)
@@ -210,25 +430,42 @@ impl SearchBar {
                         0.0
                     };
 
-                    let state_layer_color = if pressed {
-                        search_bar_tokens::pressed_state_layer_color(theme)
-                    } else {
-                        search_bar_tokens::hover_state_layer_color(theme)
-                    };
+                    let state_layer_color = search_bar_color_override(
+                        theme,
+                        &self.style.state_layer_color,
+                        states,
+                        || {
+                            if pressed {
+                                search_bar_tokens::pressed_state_layer_color(theme)
+                            } else {
+                                search_bar_tokens::hover_state_layer_color(theme)
+                            }
+                        },
+                    );
 
                     let ripple_base_opacity = search_bar_tokens::pressed_state_layer_opacity(theme);
                     let indication_config = material_pressable_indication_config(theme, None);
 
-                    let input_text_style = match self.header_tokens {
-                        SearchBarHeaderTokens::SearchView => {
-                            search_view_tokens::header_input_text_style(theme)
-                        }
-                        SearchBarHeaderTokens::SearchBar => {
-                            search_bar_tokens::input_text_style(theme)
-                        }
-                    };
-                    let input_chrome =
-                        search_bar_text_input_chrome(theme, self.header_tokens, hovered, pressed);
+                    let input_text_style = search_bar_text_style_override(
+                        &self.style.input_text_style,
+                        states,
+                        || match self.header_tokens {
+                            SearchBarHeaderTokens::SearchView => {
+                                search_view_tokens::header_input_text_style(theme)
+                            }
+                            SearchBarHeaderTokens::SearchBar => {
+                                search_bar_tokens::input_text_style(theme)
+                            }
+                        },
+                    );
+                    let input_chrome = search_bar_text_input_chrome(
+                        theme,
+                        self.header_tokens,
+                        hovered,
+                        pressed,
+                        &self.style,
+                        states,
+                    );
 
                     let (leading_color, trailing_color) = match self.header_tokens {
                         SearchBarHeaderTokens::SearchView => (
@@ -240,16 +477,45 @@ impl SearchBar {
                             search_bar_tokens::trailing_icon_color(theme),
                         ),
                     };
+                    let leading_color = search_bar_color_override(
+                        theme,
+                        &self.style.leading_icon_color,
+                        states,
+                        || leading_color,
+                    );
+                    let trailing_color = search_bar_color_override(
+                        theme,
+                        &self.style.trailing_icon_color,
+                        states,
+                        || trailing_color,
+                    );
 
-                    let elevation = search_bar_tokens::container_elevation(theme);
+                    let elevation =
+                        search_bar_metric_override(&self.style.container_elevation, states, || {
+                            search_bar_tokens::container_elevation(theme)
+                        });
                     let shadow =
                         shadow_for_elevation_with_color(theme, elevation, None, corner_radii);
-                    let container_color = search_bar_tokens::container_color(theme);
+                    let container_color = search_bar_color_override(
+                        theme,
+                        &self.style.container_background,
+                        states,
+                        || search_bar_tokens::container_color(theme),
+                    );
                     let focus_ring = material_focus_ring_for_component(
                         theme,
                         "md.comp.search-bar",
                         corner_radii,
                     );
+                    let content_padding =
+                        search_bar_edges_override(&self.style.content_padding, states, || Edges {
+                            left: Px(16.0),
+                            right: Px(16.0),
+                            top: Px(0.0),
+                            bottom: Px(0.0),
+                        });
+                    let content_gap =
+                        search_bar_metric_override(&self.style.content_gap, states, || Px(12.0));
 
                     (
                         container_height,
@@ -267,6 +533,8 @@ impl SearchBar {
                         shadow,
                         container_color,
                         focus_ring,
+                        content_padding,
+                        content_gap,
                     )
                 };
                 let overlay = material_ink_layer_for_pressable_with_last_down(
@@ -381,7 +649,7 @@ impl SearchBar {
                         row.layout.size.height = Length::Fill;
                         row.justify = MainAlign::Start;
                         row.align = CrossAlign::Center;
-                        row.gap = Px(12.0).into();
+                        row.gap = content_gap.into();
 
                         let leading_icon = self.leading_icon;
                         let trailing_icon = self.trailing_icon;
@@ -414,13 +682,7 @@ impl SearchBar {
                         content_container.layout.size.width = Length::Fill;
                         content_container.layout.size.height = Length::Fill;
                         content_container.layout.overflow = Overflow::Visible;
-                        content_container.padding = Edges {
-                            left: Px(16.0),
-                            right: Px(16.0),
-                            top: Px(0.0),
-                            bottom: Px(0.0),
-                        }
-                        .into();
+                        content_container.padding = content_padding.into();
                         let content_layer =
                             cx.container(content_container, move |_cx| vec![content]);
 
@@ -477,6 +739,8 @@ fn search_bar_text_input_chrome(
     header_tokens: SearchBarHeaderTokens,
     hovered: bool,
     pressed: bool,
+    style_override: &SearchBarStyle,
+    states: WidgetStates,
 ) -> fret_ui::TextInputStyle {
     fn alpha_mul(mut c: Color, mul: f32) -> Color {
         c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -502,18 +766,26 @@ fn search_bar_text_input_chrome(
         a: 0.0,
     };
 
-    style.text_color = match header_tokens {
-        SearchBarHeaderTokens::SearchView => search_view_tokens::header_input_text_color(theme),
-        SearchBarHeaderTokens::SearchBar => search_bar_tokens::input_text_color(theme),
-    };
-    style.placeholder_color = match header_tokens {
-        SearchBarHeaderTokens::SearchView => {
-            search_view_tokens::header_supporting_text_color(theme)
-        }
-        SearchBarHeaderTokens::SearchBar => {
-            search_bar_tokens::supporting_text_color(theme, hovered, pressed)
-        }
-    };
+    style.text_color =
+        search_bar_color_override(theme, &style_override.input_text_color, states, || {
+            match header_tokens {
+                SearchBarHeaderTokens::SearchView => {
+                    search_view_tokens::header_input_text_color(theme)
+                }
+                SearchBarHeaderTokens::SearchBar => search_bar_tokens::input_text_color(theme),
+            }
+        });
+    style.placeholder_color =
+        search_bar_color_override(theme, &style_override.supporting_text_color, states, || {
+            match header_tokens {
+                SearchBarHeaderTokens::SearchView => {
+                    search_view_tokens::header_supporting_text_color(theme)
+                }
+                SearchBarHeaderTokens::SearchBar => {
+                    search_bar_tokens::supporting_text_color(theme, hovered, pressed)
+                }
+            }
+        });
 
     style.selection_color = theme
         .color_by_key("md.sys.color.primary")
