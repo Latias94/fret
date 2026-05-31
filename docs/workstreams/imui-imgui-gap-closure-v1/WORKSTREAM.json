@@ -1235,6 +1235,7 @@
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/tooltip.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/tooltip/panel.rs",
     "ecosystem/fret-ui-editor/src/controls/numeric_input.rs",
+    "ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs",
     "ecosystem/fret-ui-editor/src/controls/numeric_input/keyboard.rs",
     "ecosystem/fret-ui-editor/src/controls/numeric_input/model.rs",
     "ecosystem/fret-ui-editor/src/controls/numeric_input/model/tests.rs",

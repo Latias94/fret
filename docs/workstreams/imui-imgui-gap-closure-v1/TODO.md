@@ -58,6 +58,16 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `NumericInput` keyed element and render assembly into a private child owner
+      without changing public constructors/builders, callsite/id-source keying, draft/error model
+      routing, focus target capture, selection replacement behavior, joined-input frame chrome,
+      prefix/suffix affixes, trailing error icon, inline error text, keyboard handler binding, or
+      outcome behavior.
+      Result: `controls/numeric_input.rs` keeps public APIs, options adoption, focus-target
+      plumbing, and keyed identity routing. `controls/numeric_input/element.rs` owns keyed element
+      field assembly, text-input props, affix/error segment rendering, inline error rendering, and
+      keyboard handler installation. The source gate prevents render/field assembly policy from
+      drifting back into the public control owner.
 - [x] Split editor `NumericInput` keyboard commit/cancel policy into a private child owner without
       changing keyed control identity, draft/error model ownership, focus-entry replacement
       behavior, Enter commit, Escape cancel, validation/error updates, outcome callbacks,

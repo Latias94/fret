@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor NumericInput Element Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `NumericInput` keyed element and render assembly moved out of the public
+control owner into a private `numeric_input/element.rs` owner without changing public
+constructors/builders, callsite/id-source keying, draft/error model routing, focus target capture,
+selection replacement behavior, joined-input frame chrome, prefix/suffix affixes, trailing error
+icon, inline error text, keyboard handler binding, or outcome behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` keeps public APIs, presentation option
+  adoption, focus-target plumbing, and keyed identity routing through the existing public control
+  type.
+- `ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` owns keyed element field
+  assembly, text-input props, affix/error segment rendering, inline error rendering, focus sync,
+  and keyboard handler installation.
+- `tools/gate_imui_workstream_source.py` now tracks the public control/element split and rejects
+  render/field assembly policy from drifting back into the public control owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the element owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor numeric_input --no-fail-fast`: pass (6 passed).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test
+  imui_surface_policy --no-fail-fast`: pass (3 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+
 ## Editor NumericInput Keyboard Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `NumericInput` keyboard commit/cancel policy moved out of the root control
