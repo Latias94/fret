@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Docking Declarative Drag Preview Owner-Split Evidence - 2026-06-01
+
+Claim verified: docking declarative drag ghost lookup/title preparation and tab insert preview
+title metadata moved out of the large declarative dock-space orchestration owner into a private
+`declarative/drag_preview.rs` owner without changing drag ghost lookup, drag source tab fallback,
+ghost title fallback, prepared ghost title text, center-zone insert preview titles, or public
+docking APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs` keeps dock-space orchestration, paint ordering,
+  drop-overlay dispatch, and public entrypoint functions while importing private drag-preview owner
+  helpers.
+- `ecosystem/fret-docking/src/dock/declarative/drag_preview.rs` owns drag ghost snapshot lookup,
+  drag source tab lookup, ghost title fallback, drag ghost paint preparation, and tab insert preview
+  title metadata.
+- `tools/gate_imui_workstream_source.py` now tracks the declarative/drag-preview split and rejects
+  drag preview policy from drifting back into the declarative orchestration owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the drag-preview owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking --no-fail-fast`: pass (90 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Declarative Floating Owner-Split Evidence - 2026-06-01
 
 Claim verified: docking declarative floating chrome hover/close/title-bar policy moved out of the

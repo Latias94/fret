@@ -1751,6 +1751,7 @@
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls/item_methods.rs",
     "ecosystem/fret-docking/src/dock/declarative.rs",
+    "ecosystem/fret-docking/src/dock/declarative/drag_preview.rs",
     "ecosystem/fret-docking/src/dock/declarative/frame.rs",
     "ecosystem/fret-docking/src/dock/declarative/floating.rs",
     "ecosystem/fret-docking/src/dock/declarative/geometry.rs",

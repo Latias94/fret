@@ -58,6 +58,14 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split docking declarative drag ghost and tab insert preview preparation into a private child
+      owner without changing drag ghost lookup, drag source tab fallback, ghost title fallback,
+      prepared ghost title text, center-zone insert preview titles, or public docking APIs.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, paint ordering, drop-overlay
+      dispatch, and public entrypoint functions. `dock/declarative/drag_preview.rs` owns drag ghost
+      snapshot lookup, drag source tab lookup, ghost title fallback, drag ghost paint preparation,
+      and tab insert preview title metadata. The source gate prevents drag preview policy from
+      drifting back into the declarative orchestration owner.
 - [x] Split docking declarative floating chrome and title-bar policy into a private child owner
       without changing floating hover lookup, floating chrome paint input projection, close/title-bar
       hit tests, title-bar drag target resolution, dock-preview policy checks, or public docking

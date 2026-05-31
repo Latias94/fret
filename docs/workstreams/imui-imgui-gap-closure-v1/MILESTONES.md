@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-31
+Last updated: 2026-06-01
 
 ## M6 - Continuing IMUI Owner-Split Pressure
 
@@ -11,6 +11,14 @@ Exit criteria:
 - Keep public IMUI facade method names, options, responses, and behavior stable.
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
+
+2026-06-01 docking declarative drag-preview owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, paint ordering,
+drop-overlay dispatch, and public entrypoint functions while importing private drag-preview owner
+helpers. The private `dock/declarative/drag_preview.rs` owner contains drag ghost snapshot lookup,
+drag source tab lookup, ghost title fallback, drag ghost paint preparation, and center-zone tab
+insert preview title metadata. Public docking APIs, drag ghost rendering order, and tab insert
+preview painting remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
 2026-06-01 docking declarative floating owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, drag/drop event

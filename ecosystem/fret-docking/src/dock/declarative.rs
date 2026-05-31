@@ -6,8 +6,8 @@ use fret_ui::element::{AnyElement, ManagedSurfaceProps};
 use fret_ui::{ElementContext, UiHost};
 
 use super::diagnostics::{
-    DockingDiagnosticsExtras, diagnostics_env_enabled, dock_drag_ghost_snapshot_for_window,
-    publish_docking_diagnostics_snapshot, should_publish_docking_diagnostics,
+    DockingDiagnosticsExtras, diagnostics_env_enabled, publish_docking_diagnostics_snapshot,
+    should_publish_docking_diagnostics,
 };
 use super::drop_resolve::{
     DockPanelDropDrag, DockTabsDropDrag, apply_dock_drop_intent,
@@ -21,23 +21,22 @@ use super::host_frame::{
 use super::layout::{dock_space_regions, hidden_bounds};
 use super::manager::DockManager;
 use super::paint::{
-    DockDragGhostPaint, TabChromePaintInput, TabDetailPaintInput,
-    complex_drop_overlay_paint_inputs, paint_basic_drop_overlay, paint_complex_drop_overlay_inputs,
-    paint_drag_payload_ghost, paint_drop_hints, paint_floating_chrome_inputs,
-    paint_split_handle_inputs, paint_tab_chrome_inputs, paint_tab_detail_inputs,
-    paint_tab_insert_preview_title, paint_viewport_surface_inputs, split_handle_paint_inputs,
-    tab_chrome_paint_inputs, tab_detail_paint_inputs, viewport_surface_paint_inputs,
+    TabChromePaintInput, TabDetailPaintInput, complex_drop_overlay_paint_inputs,
+    paint_basic_drop_overlay, paint_complex_drop_overlay_inputs, paint_drag_payload_ghost,
+    paint_drop_hints, paint_floating_chrome_inputs, paint_split_handle_inputs,
+    paint_tab_chrome_inputs, paint_tab_detail_inputs, paint_tab_insert_preview_title,
+    paint_viewport_surface_inputs, split_handle_paint_inputs, tab_chrome_paint_inputs,
+    tab_detail_paint_inputs, viewport_surface_paint_inputs,
 };
 use super::services::{DockFocusRequestService, DockPanelContentService, DockingPolicyService};
 use super::tab_overflow::TabOverflowMenuState;
-use super::types::{
-    DockDragGhostSnapshot, DockDropHints, DockDropTarget, DockPanelDragPayload, DockTabsDragPayload,
-};
+use super::types::{DockDropHints, DockDropTarget, DockPanelDragPayload, DockTabsDragPayload};
 use super::viewport::{
     ViewportCaptureState, viewport_input_from_hit, viewport_input_from_hit_clamped,
 };
 use fret_runtime::Effect;
 
+mod drag_preview;
 mod floating;
 mod frame;
 mod geometry;
@@ -47,6 +46,10 @@ mod registry;
 mod tab_metrics;
 mod tear_off;
 
+use drag_preview::{
+    declarative_tab_insert_preview_title, dock_drag_ghost_for_window, drag_ghost_title,
+    prepare_declarative_drag_ghost,
+};
 use floating::{
     apply_declarative_floating_hover_paint_state, declarative_floating_hover_for_window,
     declarative_hit_test_floating_close, declarative_hit_test_floating_title_bar,
@@ -105,39 +108,6 @@ fn dock_dragging_affects_window<H: UiHost>(app: &H, window: AppWindowId) -> bool
             && (drag.source_window == window || drag.current_window == window)
             && drag.dragging
     })
-}
-
-fn dock_drag_ghost_for_window<H: UiHost>(
-    app: &H,
-    window: AppWindowId,
-) -> Option<DockDragGhostSnapshot> {
-    let pointer_id = app.find_drag_pointer_id(|drag| {
-        (drag.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
-            || drag.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
-            && drag.current_window == window
-    })?;
-    app.drag(pointer_id)
-        .and_then(|drag| dock_drag_ghost_snapshot_for_window(drag, window))
-}
-
-fn dock_drag_source_tabs_for_window<H: UiHost>(
-    app: &H,
-    window: AppWindowId,
-) -> Option<fret_core::DockNodeId> {
-    let pointer_id = app.find_drag_pointer_id(|drag| {
-        (drag.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
-            || drag.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
-            && (drag.source_window == window || drag.current_window == window)
-    })?;
-    let drag = app.drag(pointer_id)?;
-    if let Some(payload) = drag.payload::<DockTabsDragPayload>() {
-        return Some(payload.source_tabs);
-    }
-    let payload = drag.payload::<DockPanelDragPayload>()?;
-    app.global::<DockManager>()?
-        .graph
-        .find_panel_in_window(drag.source_window, &payload.panel)
-        .map(|(tabs, _active)| tabs)
 }
 
 fn publish_declarative_docking_diagnostics<H: UiHost>(app: &mut H, window: AppWindowId) {
@@ -774,54 +744,6 @@ fn apply_declarative_tab_interaction_paint_state(
     {
         input.tab_overflow_menu = Some(menu);
     }
-}
-
-fn drag_ghost_title<H: UiHost>(app: &H, ghost: &DockDragGhostSnapshot) -> String {
-    app.global::<DockManager>()
-        .and_then(|dock| dock.panel(&ghost.panel).map(|panel| panel.title.as_str()))
-        .filter(|title| !title.is_empty())
-        .unwrap_or(ghost.panel.kind.0.as_str())
-        .to_string()
-}
-
-fn prepare_declarative_drag_ghost(
-    services: &mut dyn fret_core::UiServices,
-    ghost: &DockDragGhostSnapshot,
-    title: &str,
-    scale_factor: f32,
-) -> DockDragGhostPaint {
-    DockDragGhostPaint {
-        position: ghost.position,
-        grab_offset: ghost.grab_offset,
-        title: prepare_declarative_tab_title(services, title, scale_factor),
-    }
-}
-
-fn declarative_tab_insert_preview_title<H: UiHost>(
-    app: &H,
-    window: AppWindowId,
-    frame: &DockSpaceElementFrame,
-) -> Option<(String, Option<fret_core::DockNodeId>, usize)> {
-    let Some(DockDropTarget::Dock(target)) = frame.hover.as_ref() else {
-        return None;
-    };
-    if target.zone != fret_core::DropZone::Center {
-        return None;
-    }
-    let ghost = frame.dock_drag_ghost.as_ref()?;
-    let drag_source_tabs = dock_drag_source_tabs_for_window(app, window);
-    let dock = app.global::<DockManager>()?;
-    let title = dock
-        .panel(&ghost.panel)
-        .map(|panel| panel.title.as_str())
-        .filter(|title| !title.is_empty())
-        .unwrap_or(ghost.panel.kind.0.as_str())
-        .to_string();
-    let tab_count = match dock.graph.node(target.tabs) {
-        Some(fret_core::DockNode::Tabs { tabs, .. }) => tabs.len(),
-        _ => 0,
-    };
-    Some((title, drag_source_tabs, tab_count))
 }
 
 fn drop_hints_from_hover(hover: Option<&super::types::DockDropTarget>) -> Option<DockDropHints> {
