@@ -401,6 +401,13 @@ Each TODO is labeled:
         visible-bounds fallback, rectangle clamping, and `recenter_in_window_floatings(...)`.
       - Focused fallback regressions, editor proof demo compile, source gate, JSON shape, and diff
         checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-01 docking runtime tear-off create-request owner split keeps DockFloating
+      OS-window request construction out of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M25_DOCKING_RUNTIME_TEAR_OFF_CREATE_REQUEST_OWNER_SPLIT_2026-06-01.md`
+      - `ecosystem/fret-docking/src/runtime/tear_off.rs` owns the capability predicate and
+        `WindowRequest::Create(CreateWindowKind::DockFloating { .. })` request construction.
+      - Focused fallback regressions, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
@@ -449,7 +456,7 @@ Each TODO is labeled:
   - Evidence anchors:
     - Portable request surface: `crates/fret-runtime/src/effect.rs` (`WindowStyleRequest`, `WindowRole`, `TaskbarVisibility`, `ActivationPolicy`)
     - Re-exports: `crates/fret-runtime/src/lib.rs`, `crates/fret-app/src/lib.rs`
-    - Docking create request wiring: `ecosystem/fret-docking/src/runtime.rs` (`WindowRequest::Create` for `DockFloating`)
+    - Docking create request wiring: `ecosystem/fret-docking/src/runtime/tear_off.rs` (`WindowRequest::Create` for `DockFloating`)
     - Runner application (Windows focus/taskbar): `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` (`create_os_window`)
     - Runner follow style patches: `crates/fret-launch/src/runner/desktop/runner/docking.rs` (`update_dock_tearoff_follow`, `stop_dock_tearoff_follow`)
     - Desktop runner runtime patch handling: `crates/fret-launch/src/runner/desktop/runner/effects.rs` (`WindowRequest::SetStyle`)

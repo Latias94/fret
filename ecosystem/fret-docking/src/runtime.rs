@@ -24,6 +24,7 @@ pub use in_window::recenter_in_window_floatings;
 pub(crate) use tear_off::is_dock_floating_os_window;
 use tear_off::{
     DockFloatingOsWindowRegistry, DockTearOffCompletion, DockTearOffKind, DockTearOffMachine,
+    dock_tear_off_supported, push_dock_floating_window_create,
 };
 
 fn invalidate_windows<H: UiHost>(app: &mut H, windows: impl IntoIterator<Item = AppWindowId>) {
@@ -55,25 +56,7 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 return false;
             }
 
-            if let Some(caps) = app.global::<PlatformCapabilities>() {
-                let tear_off_supported = caps.ui.multi_window
-                    && caps.ui.window_tear_off
-                    && caps.ui.window_hover_detection
-                        != fret_runtime::WindowHoverDetectionQuality::None;
-                if !tear_off_supported {
-                    let target_window = anchor.map(|a| a.window).unwrap_or(source_window);
-                    let rect = default_in_window_float_rect(app, target_window, anchor);
-                    return handle_dock_op(
-                        app,
-                        DockOp::FloatPanelInWindow {
-                            source_window,
-                            panel,
-                            target_window,
-                            rect,
-                        },
-                    );
-                }
-            } else {
+            if !dock_tear_off_supported(app.global::<PlatformCapabilities>()) {
                 let target_window = anchor.map(|a| a.window).unwrap_or(source_window);
                 let rect = default_in_window_float_rect(app, target_window, anchor);
                 return handle_dock_op(
@@ -111,21 +94,7 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 return true;
             }
 
-            app.push_effect(Effect::Window(WindowRequest::Create(CreateWindowRequest {
-                kind: CreateWindowKind::DockFloating {
-                    source_window,
-                    panel,
-                },
-                anchor,
-                role: fret_runtime::WindowRole::Auxiliary,
-                style: {
-                    let caps = app
-                        .global::<PlatformCapabilities>()
-                        .cloned()
-                        .unwrap_or_default();
-                    fret_window_style_profiles::tool_window_profile_v1(&caps).style
-                },
-            })));
+            push_dock_floating_window_create(app, source_window, panel, anchor);
             true
         }
         DockOp::RequestFloatTabsToNewWindow {
@@ -138,25 +107,7 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 return false;
             }
 
-            if let Some(caps) = app.global::<PlatformCapabilities>() {
-                let tear_off_supported = caps.ui.multi_window
-                    && caps.ui.window_tear_off
-                    && caps.ui.window_hover_detection
-                        != fret_runtime::WindowHoverDetectionQuality::None;
-                if !tear_off_supported {
-                    let target_window = anchor.map(|a| a.window).unwrap_or(source_window);
-                    let rect = default_in_window_float_rect(app, target_window, anchor);
-                    return handle_dock_op(
-                        app,
-                        DockOp::FloatTabsInWindow {
-                            source_window,
-                            source_tabs,
-                            target_window,
-                            rect,
-                        },
-                    );
-                }
-            } else {
+            if !dock_tear_off_supported(app.global::<PlatformCapabilities>()) {
                 let target_window = anchor.map(|a| a.window).unwrap_or(source_window);
                 let rect = default_in_window_float_rect(app, target_window, anchor);
                 return handle_dock_op(
@@ -195,21 +146,7 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 return true;
             }
 
-            app.push_effect(Effect::Window(WindowRequest::Create(CreateWindowRequest {
-                kind: CreateWindowKind::DockFloating {
-                    source_window,
-                    panel,
-                },
-                anchor,
-                role: fret_runtime::WindowRole::Auxiliary,
-                style: {
-                    let caps = app
-                        .global::<PlatformCapabilities>()
-                        .cloned()
-                        .unwrap_or_default();
-                    fret_window_style_profiles::tool_window_profile_v1(&caps).style
-                },
-            })));
+            push_dock_floating_window_create(app, source_window, panel, anchor);
             true
         }
         op => {

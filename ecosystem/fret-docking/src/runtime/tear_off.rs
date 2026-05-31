@@ -1,7 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
-use fret_core::{AppWindowId, DockNodeId, PanelKey, PointerId};
-use fret_runtime::{CreateWindowKind, CreateWindowRequest, TickId, UiHost};
+use fret_core::{AppWindowId, DockNodeId, PanelKey, PointerId, WindowAnchor};
+use fret_runtime::{
+    CreateWindowKind, CreateWindowRequest, Effect, PlatformCapabilities, TickId, UiHost,
+    WindowRequest, WindowRole,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub(super) enum DockTearOffCompletion {
@@ -35,6 +38,35 @@ impl DockFloatingOsWindowRegistry {
 pub(crate) fn is_dock_floating_os_window<H: UiHost>(app: &H, window: AppWindowId) -> bool {
     app.global::<DockFloatingOsWindowRegistry>()
         .is_some_and(|reg| reg.contains(window))
+}
+
+pub(super) fn dock_tear_off_supported(caps: Option<&PlatformCapabilities>) -> bool {
+    caps.is_some_and(|caps| {
+        caps.ui.multi_window
+            && caps.ui.window_tear_off
+            && caps.ui.window_hover_detection != fret_runtime::WindowHoverDetectionQuality::None
+    })
+}
+
+pub(super) fn push_dock_floating_window_create<H: UiHost>(
+    app: &mut H,
+    source_window: AppWindowId,
+    panel: PanelKey,
+    anchor: Option<WindowAnchor>,
+) {
+    let caps = app
+        .global::<PlatformCapabilities>()
+        .cloned()
+        .unwrap_or_default();
+    app.push_effect(Effect::Window(WindowRequest::Create(CreateWindowRequest {
+        kind: CreateWindowKind::DockFloating {
+            source_window,
+            panel,
+        },
+        anchor,
+        role: WindowRole::Auxiliary,
+        style: fret_window_style_profiles::tool_window_profile_v1(&caps).style,
+    })));
 }
 
 #[derive(Debug, Clone)]

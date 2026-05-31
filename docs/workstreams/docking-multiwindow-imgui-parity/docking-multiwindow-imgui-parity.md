@@ -44,6 +44,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M24_DOCKING_RUNTIME_IN_WINDOW_OWNER_SPLIT_2026-05-31.md`
   (moves in-window fallback and recovery geometry into a private runtime child owner without
   changing public recovery hook paths or the Wayland acceptance boundary)
+- Latest docking runtime create-request owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M25_DOCKING_RUNTIME_TEAR_OFF_CREATE_REQUEST_OWNER_SPLIT_2026-06-01.md`
+  (moves DockFloating OS-window create request construction into the private tear-off owner without
+  changing in-window fallback behavior or the Wayland acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
@@ -191,7 +195,8 @@ Rationale:
 Non-normative summary of the current layering:
 
 - Docking UI emits `DockOp` transactions (including `RequestFloatPanelToNewWindow`).
-- Docking runtime translates create requests into `WindowRequest::Create(CreateWindowKind::DockFloating { .. })`.
+- Docking runtime routes tear-off ops; the private tear-off owner translates supported requests into
+  `WindowRequest::Create(CreateWindowKind::DockFloating { .. })`.
 - Runner owns OS window lifecycle and cross-window internal-drag routing via screen-space cursor tracking.
 - UI runtime enforces overlay/docking arbitration (Escape cancel, overlay suppression, etc.).
 
