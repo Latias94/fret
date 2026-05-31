@@ -1153,6 +1153,7 @@
     "ecosystem/fret-ui-editor/src/controls/color_edit/state.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/swatch.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/tests/drag_drop.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/tests/numeric.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/tests/picker.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/tests/popup_policy.rs",

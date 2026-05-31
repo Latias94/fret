@@ -67,6 +67,13 @@ eyedropper, tooltip/copy payload, and shared HSV assertion coverage.
 modes, tooltip/copy defaults, visible-content swatch policy, and runtime override sync coverage.
 Popup policy and public color-edit behavior remain unchanged.
 
+2026-05-31 editor color-edit drag/drop tests owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` now keeps palette/history, eyedropper,
+tooltip/copy payload, and shared HSV assertion coverage. `color_edit/tests/drag_drop.rs` owns
+palette slot drop defaults/events and color drag/drop payload shape/application coverage. Palette
+slot metadata, RGB-only palette slot semantics, local payload defaults, and COL3F/COL4F alpha rules
+remain unchanged.
+
 2026-05-31 menu interaction behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` now owns active-trigger
 installation and keyboard behavior orchestration only. `behavior/activation.rs` owns activate

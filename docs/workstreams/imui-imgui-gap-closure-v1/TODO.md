@@ -927,6 +927,12 @@ Last updated: 2026-05-31
       tooltip/copy payload, and shared HSV assertion coverage.
       `controls/color_edit/tests/popup_policy.rs` owns popup default, side-preview, alpha-preview,
       tooltip/copy default, visible-content, and runtime override policy coverage.
+- [x] Split editor color-edit drag/drop tests into a private test owner without changing
+      app-owned palette slot drop defaults, slot metadata preservation, RGB-only palette slot
+      semantics, local payload defaults, COL3F/COL4F alpha rules, or shared HSV assertions.
+      Result: `controls/color_edit/tests.rs` keeps palette/history, eyedropper, tooltip/copy
+      payload, and shared HSV assertion coverage. `controls/color_edit/tests/drag_drop.rs` owns
+      palette slot drop defaults/events and color drag/drop payload shape/application coverage.
 - [x] Split editor color-edit alpha bar previews and interaction into a private owner without
       changing horizontal/vertical alpha bars, alpha coordinate mapping, popup picker composition,
       color-edit helper tests, or color-edit popup policy tests.
