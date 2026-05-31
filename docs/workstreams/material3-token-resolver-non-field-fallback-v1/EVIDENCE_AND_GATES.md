@@ -20,6 +20,8 @@ Last updated: 2026-05-31
   - `cargo nextest run -p fret-ui-material3 --features diagnostics --test button_state`
 - Surface/navigation slice:
   - `cargo nextest run -p fret-ui-material3 --features diagnostics --test card_state --test carousel_item_state --test dialog_state --test list_state --test menu_state --test navigation_drawer_state --test navigation_state --test progress_indicator_state --test snackbar_state --test tooltip_state --test bottom_sheet_motion --test automation_surface`
+- Selection-control slice:
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test checkbox_state --test slider_state --test switch_state --test automation_surface`
 - Package checks:
   - `cargo check -p fret-ui-material3 --features diagnostics --tests`
   - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
@@ -61,6 +63,9 @@ Last updated: 2026-05-31
 - `ecosystem/fret-ui-material3/src/tokens/sheet_bottom.rs`
 - `ecosystem/fret-ui-material3/src/tokens/snackbar.rs`
 - `ecosystem/fret-ui-material3/src/tokens/tooltip.rs`
+- `ecosystem/fret-ui-material3/src/tokens/checkbox.rs`
+- `ecosystem/fret-ui-material3/src/tokens/slider.rs`
+- `ecosystem/fret-ui-material3/src/tokens/switch.rs`
 - `ecosystem/fret-ui-material3/tests/button_state.rs`
 - `ecosystem/fret-ui-material3/tests/chip_state.rs`
 - `ecosystem/fret-ui-material3/tests/icon_button_state.rs`
@@ -79,6 +84,9 @@ Last updated: 2026-05-31
 - `ecosystem/fret-ui-material3/tests/tooltip_state.rs`
 - `ecosystem/fret-ui-material3/tests/bottom_sheet_motion.rs`
 - `ecosystem/fret-ui-material3/tests/automation_surface.rs`
+- `ecosystem/fret-ui-material3/tests/checkbox_state.rs`
+- `ecosystem/fret-ui-material3/tests/slider_state.rs`
+- `ecosystem/fret-ui-material3/tests/switch_state.rs`
 - `ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json`
 
 ## M3NF-010 Evidence
@@ -96,38 +104,6 @@ Last updated: 2026-05-31
 - `rg -n "theme\\.color_by_key|theme\\.number_by_key|theme\\.color_token|or_else\\(\\|\\| theme" ecosystem/fret-ui-material3/src/tokens/button.rs`: no matches.
 - `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes`: 1 passed.
 - `cargo nextest run -p fret-ui-material3 --features diagnostics --test button_state`: 3 passed.
-- `cargo check -p fret-ui-material3 --features diagnostics --tests`: passed.
-- `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`: passed.
-- `cargo fmt --package fret-ui-material3 --check`: passed.
-- `python -m json.tool docs/workstreams/material3-token-resolver-non-field-fallback-v1/WORKSTREAM.json | Out-Null`: passed.
-- `python tools/check_workstream_catalog.py`: passed; 525 dedicated directories, 47 standalone markdown files.
-- `python tools/check_layering.py`: passed.
-- `git diff --check`: passed.
-
-## M3NF-050 Evidence
-
-- `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`: added missing sys fallback colors
-  needed by the residual surface/navigation and overlay families (`primary-container`,
-  `tertiary`, `surface-variant`, inverse colors, `on-error`, and `scrim`).
-- `ecosystem/fret-ui-material3/src/tokens/badge.rs`, `divider.rs`, `progress_indicator.rs`,
-  `search_bar.rs`, `search_view.rs`, `sheet_bottom.rs`, and `tooltip.rs`: migrated small residual
-  component/system color fallback and optional opacity lookups to `MaterialTokenResolver`.
-- `ecosystem/fret-ui-material3/src/tokens/card.rs` and `carousel_item.rs`: migrated surface
-  container, shadow, outline, disabled opacity, and state-layer fallback paths while retaining
-  variant/state key selection.
-- `ecosystem/fret-ui-material3/src/tokens/dialog.rs`, `menu.rs`, and `snackbar.rs`: migrated overlay
-  container, text/icon, state-layer color, and state-layer opacity fallback paths.
-- `ecosystem/fret-ui-material3/src/tokens/list.rs`: migrated list text/icon, selected container,
-  disabled opacity, and state-layer fallback paths.
-- `ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs`,
-  `ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs`, and
-  `ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs`: migrated navigation container,
-  indicator, label/icon, state-layer color, and state-layer opacity fallback paths.
-- `rg -n "theme\\.color_by_key|theme\\.color_token|theme\\.number_by_key\\(|or_else\\(\\|\\| theme\\.number_by_key|or_else\\(\\|\\| theme\\.color" ecosystem/fret-ui-material3/src/tokens/badge.rs ecosystem/fret-ui-material3/src/tokens/card.rs ecosystem/fret-ui-material3/src/tokens/carousel_item.rs ecosystem/fret-ui-material3/src/tokens/dialog.rs ecosystem/fret-ui-material3/src/tokens/divider.rs ecosystem/fret-ui-material3/src/tokens/list.rs ecosystem/fret-ui-material3/src/tokens/menu.rs ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs ecosystem/fret-ui-material3/src/tokens/progress_indicator.rs ecosystem/fret-ui-material3/src/tokens/search_bar.rs ecosystem/fret-ui-material3/src/tokens/search_view.rs ecosystem/fret-ui-material3/src/tokens/sheet_bottom.rs ecosystem/fret-ui-material3/src/tokens/snackbar.rs ecosystem/fret-ui-material3/src/tokens/tooltip.rs`: no matches.
-- Residual fallback audit now only lists `checkbox.rs`, `slider.rs`, and `switch.rs`; these are
-  split to M3NF-055 as a focused selection-control slice.
-- `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes`: 1 passed.
-- `cargo nextest run -p fret-ui-material3 --features diagnostics --test card_state --test carousel_item_state --test dialog_state --test list_state --test menu_state --test navigation_drawer_state --test navigation_state --test progress_indicator_state --test snackbar_state --test tooltip_state --test bottom_sheet_motion --test automation_surface`: 62 passed.
 - `cargo check -p fret-ui-material3 --features diagnostics --tests`: passed.
 - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`: passed.
 - `cargo fmt --package fret-ui-material3 --check`: passed.
@@ -178,6 +154,59 @@ Last updated: 2026-05-31
   `tabs.rs`.
 - `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes`: 1 passed.
 - `cargo nextest run -p fret-ui-material3 --features diagnostics --test icon_button_state --test fab_state --test segmented_button_state --test tabs_state`: 21 passed.
+- `cargo check -p fret-ui-material3 --features diagnostics --tests`: passed.
+- `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`: passed.
+- `cargo fmt --package fret-ui-material3 --check`: passed.
+- `python -m json.tool docs/workstreams/material3-token-resolver-non-field-fallback-v1/WORKSTREAM.json | Out-Null`: passed.
+- `python tools/check_workstream_catalog.py`: passed; 525 dedicated directories, 47 standalone markdown files.
+- `python tools/check_layering.py`: passed.
+- `git diff --check`: passed.
+
+## M3NF-050 Evidence
+
+- `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`: added missing sys fallback colors
+  needed by the residual surface/navigation and overlay families (`primary-container`,
+  `tertiary`, `surface-variant`, inverse colors, `on-error`, and `scrim`).
+- `ecosystem/fret-ui-material3/src/tokens/badge.rs`, `divider.rs`, `progress_indicator.rs`,
+  `search_bar.rs`, `search_view.rs`, `sheet_bottom.rs`, and `tooltip.rs`: migrated small residual
+  component/system color fallback and optional opacity lookups to `MaterialTokenResolver`.
+- `ecosystem/fret-ui-material3/src/tokens/card.rs` and `carousel_item.rs`: migrated surface
+  container, shadow, outline, disabled opacity, and state-layer fallback paths while retaining
+  variant/state key selection.
+- `ecosystem/fret-ui-material3/src/tokens/dialog.rs`, `menu.rs`, and `snackbar.rs`: migrated overlay
+  container, text/icon, state-layer color, and state-layer opacity fallback paths.
+- `ecosystem/fret-ui-material3/src/tokens/list.rs`: migrated list text/icon, selected container,
+  disabled opacity, and state-layer fallback paths.
+- `ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs`,
+  `ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs`, and
+  `ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs`: migrated navigation container,
+  indicator, label/icon, state-layer color, and state-layer opacity fallback paths.
+- `rg -n "theme\\.color_by_key|theme\\.color_token|theme\\.number_by_key\\(|or_else\\(\\|\\| theme\\.number_by_key|or_else\\(\\|\\| theme\\.color" ecosystem/fret-ui-material3/src/tokens/badge.rs ecosystem/fret-ui-material3/src/tokens/card.rs ecosystem/fret-ui-material3/src/tokens/carousel_item.rs ecosystem/fret-ui-material3/src/tokens/dialog.rs ecosystem/fret-ui-material3/src/tokens/divider.rs ecosystem/fret-ui-material3/src/tokens/list.rs ecosystem/fret-ui-material3/src/tokens/menu.rs ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs ecosystem/fret-ui-material3/src/tokens/progress_indicator.rs ecosystem/fret-ui-material3/src/tokens/search_bar.rs ecosystem/fret-ui-material3/src/tokens/search_view.rs ecosystem/fret-ui-material3/src/tokens/sheet_bottom.rs ecosystem/fret-ui-material3/src/tokens/snackbar.rs ecosystem/fret-ui-material3/src/tokens/tooltip.rs`: no matches.
+- Residual fallback audit now only lists `checkbox.rs`, `slider.rs`, and `switch.rs`; these are
+  split to M3NF-055 as a focused selection-control slice.
+- `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes`: 1 passed.
+- `cargo nextest run -p fret-ui-material3 --features diagnostics --test card_state --test carousel_item_state --test dialog_state --test list_state --test menu_state --test navigation_drawer_state --test navigation_state --test progress_indicator_state --test snackbar_state --test tooltip_state --test bottom_sheet_motion --test automation_surface`: 62 passed.
+- `cargo check -p fret-ui-material3 --features diagnostics --tests`: passed.
+- `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`: passed.
+- `cargo fmt --package fret-ui-material3 --check`: passed.
+- `python -m json.tool docs/workstreams/material3-token-resolver-non-field-fallback-v1/WORKSTREAM.json | Out-Null`: passed.
+- `python tools/check_workstream_catalog.py`: passed; 525 dedicated directories, 47 standalone markdown files.
+- `python tools/check_layering.py`: passed.
+- `git diff --check`: passed.
+
+## M3NF-055 Evidence
+
+- `ecosystem/fret-ui-material3/src/tokens/checkbox.rs`: migrated selected/unselected container,
+  outline, icon, disabled color, and disabled opacity fallback paths to `MaterialTokenResolver`.
+- `ecosystem/fret-ui-material3/src/tokens/slider.rs`: migrated value indicator, tick mark, stop
+  indicator, active/inactive track, handle, and disabled opacity fallback paths to
+  `MaterialTokenResolver`.
+- `ecosystem/fret-ui-material3/src/tokens/switch.rs`: migrated disabled icon, track, handle, and
+  outline fallback paths to `MaterialTokenResolver`.
+- `rg --count-matches "or_else\\(\\|\\| theme\\.color_by_key|unwrap_or_else\\(\\|\\| theme\\.color_token|theme\\.color_by_key\\(" ecosystem/fret-ui-material3/src/tokens -g "*.rs" -g "!v30.rs" -g "!material_web_v30.rs"`: no matches.
+- `rg -n "theme\\.number_by_key\\(|or_else\\(\\|\\| theme\\.number_by_key" ecosystem/fret-ui-material3/src/tokens/checkbox.rs ecosystem/fret-ui-material3/src/tokens/slider.rs ecosystem/fret-ui-material3/src/tokens/switch.rs`: only Slider label-text weight read remains.
+- `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes`: 1 passed.
+- `cargo nextest run -p fret-ui-material3 --features diagnostics --test checkbox_state --test slider_state --test switch_state --test automation_surface`: 36 passed.
 - `cargo check -p fret-ui-material3 --features diagnostics --tests`: passed.
 - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`: passed.
 - `cargo fmt --package fret-ui-material3 --check`: passed.

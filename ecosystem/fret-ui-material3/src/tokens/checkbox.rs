@@ -208,18 +208,24 @@ pub(crate) fn chrome(
     enabled: bool,
     interaction: CheckboxInteraction,
 ) -> CheckboxChrome {
-    if selected {
-        let mut container = theme
-            .color_by_key(selected_container_color_key(interaction))
-            .or_else(|| theme.color_by_key("md.comp.checkbox.selected.container.color"))
-            .or_else(|| theme.color_by_key("md.sys.color.primary"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.primary"));
+    let tokens = MaterialTokenResolver::new(theme);
 
-        let mut icon_color = theme
-            .color_by_key(selected_icon_color_key(interaction))
-            .or_else(|| theme.color_by_key("md.comp.checkbox.selected.icon.color"))
-            .or_else(|| theme.color_by_key("md.sys.color.on-primary"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-primary"));
+    if selected {
+        let mut container = tokens.color_comp_chain_or_sys(
+            &[
+                selected_container_color_key(interaction),
+                "md.comp.checkbox.selected.container.color",
+            ],
+            "md.sys.color.primary",
+        );
+
+        let mut icon_color = tokens.color_comp_chain_or_sys(
+            &[
+                selected_icon_color_key(interaction),
+                "md.comp.checkbox.selected.icon.color",
+            ],
+            "md.sys.color.on-primary",
+        );
 
         let outline_width = if enabled {
             theme
@@ -233,23 +239,27 @@ pub(crate) fn chrome(
         };
 
         if !enabled {
-            let opacity = theme
-                .number_by_key("md.comp.checkbox.selected.disabled.container.opacity")
-                .unwrap_or_else(|| disabled_opacity(theme));
-            let disabled_container = theme
-                .color_by_key("md.comp.checkbox.selected.disabled.container.color")
-                .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-                .unwrap_or(container);
+            let opacity = tokens.number_optional(
+                Some("md.comp.checkbox.selected.disabled.container.opacity"),
+                disabled_opacity(theme),
+            );
+            let disabled_container = tokens.color_comp_or_sys_or(
+                "md.comp.checkbox.selected.disabled.container.color",
+                "md.sys.color.on-surface",
+                container,
+            );
             container = alpha_mul(disabled_container, opacity);
 
-            icon_color = theme
-                .color_by_key("md.comp.checkbox.selected.disabled.icon.color")
-                .or_else(|| theme.color_by_key("md.sys.color.surface"))
-                .unwrap_or(icon_color);
+            icon_color = tokens.color_comp_or_sys_or(
+                "md.comp.checkbox.selected.disabled.icon.color",
+                "md.sys.color.surface",
+                icon_color,
+            );
 
-            let icon_opacity = theme
-                .number_by_key("md.comp.checkbox.disabled.selected.icon.opacity")
-                .unwrap_or_else(|| disabled_opacity(theme));
+            let icon_opacity = tokens.number_optional(
+                Some("md.comp.checkbox.disabled.selected.icon.opacity"),
+                disabled_opacity(theme),
+            );
             icon_color = alpha_mul(icon_color, icon_opacity);
         }
 
@@ -272,23 +282,26 @@ pub(crate) fn chrome(
         };
 
         let outline_color = if enabled {
-            theme
-                .color_by_key(unselected_outline_color_key(interaction))
-                .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+            Some(tokens.color_comp_or_sys(
+                unselected_outline_color_key(interaction),
+                "md.sys.color.on-surface-variant",
+            ))
         } else {
-            let base = theme
-                .color_by_key("md.comp.checkbox.unselected.disabled.outline.color")
-                .or_else(|| theme.color_by_key("md.sys.color.on-surface"));
-            let opacity = theme
-                .number_by_key("md.comp.checkbox.unselected.disabled.container.opacity")
-                .unwrap_or_else(|| disabled_opacity(theme));
-            base.map(|c| alpha_mul(c, opacity))
+            let base = tokens.color_comp_or_sys(
+                "md.comp.checkbox.unselected.disabled.outline.color",
+                "md.sys.color.on-surface",
+            );
+            let opacity = tokens.number_optional(
+                Some("md.comp.checkbox.unselected.disabled.container.opacity"),
+                disabled_opacity(theme),
+            );
+            Some(alpha_mul(base, opacity))
         };
 
-        let icon_color = theme
-            .color_by_key("md.comp.checkbox.selected.icon.color")
-            .or_else(|| theme.color_by_key("md.sys.color.on-primary"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-primary"));
+        let icon_color = tokens.color_comp_or_sys(
+            "md.comp.checkbox.selected.icon.color",
+            "md.sys.color.on-primary",
+        );
 
         CheckboxChrome {
             container_bg: None,

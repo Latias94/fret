@@ -30,3 +30,9 @@
 {"role":"test","path":"ecosystem/fret-ui-material3/tests/navigation_drawer_state.rs","why":"M3NF-050 targeted navigation drawer state regression gate."}
 {"role":"test","path":"ecosystem/fret-ui-material3/tests/card_state.rs","why":"M3NF-050 targeted card state regression gate."}
 {"role":"test","path":"ecosystem/fret-ui-material3/tests/snackbar_state.rs","why":"M3NF-050 targeted snackbar motion/state regression gate."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/checkbox.rs","why":"M3NF-055 migrated Checkbox selection-control fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/slider.rs","why":"M3NF-055 migrated Slider selection-control fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/switch.rs","why":"M3NF-055 migrated Switch selection-control fallback chains to MaterialTokenResolver."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/checkbox_state.rs","why":"M3NF-055 targeted Checkbox state regression gate."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/slider_state.rs","why":"M3NF-055 targeted Slider state regression gate."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/switch_state.rs","why":"M3NF-055 targeted Switch state regression gate."}

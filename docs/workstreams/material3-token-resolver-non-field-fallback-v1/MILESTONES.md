@@ -44,9 +44,11 @@ Status: Complete
 
 ## M4.5 - Selection Controls Remaining
 
-Status: Pending
+Status: Complete
 
-- Checkbox, Slider, and Switch still need a focused choice-control migration and state-test pass.
+- Checkbox, Slider, and Switch completed a focused choice-control migration and state-test pass.
+- Checkbox, Slider, and Switch residual color fallback chains now use `MaterialTokenResolver`; the
+  remaining direct Slider number read is a label-text weight override, not a color fallback chain.
 
 ## M5 - Lane Verified
 

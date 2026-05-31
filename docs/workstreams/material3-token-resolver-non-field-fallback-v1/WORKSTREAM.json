@@ -55,6 +55,10 @@
       "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test card_state --test carousel_item_state --test dialog_state --test list_state --test menu_state --test navigation_drawer_state --test navigation_state --test progress_indicator_state --test snackbar_state --test tooltip_state --test bottom_sheet_motion --test automation_surface"
     },
     {
+      "name": "material3-selection-control-state",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test checkbox_state --test slider_state --test switch_state --test automation_surface"
+    },
+    {
       "name": "material3-tests-check",
       "command": "cargo check -p fret-ui-material3 --features diagnostics --tests"
     },
@@ -109,6 +113,9 @@
     "ecosystem/fret-ui-material3/src/tokens/sheet_bottom.rs",
     "ecosystem/fret-ui-material3/src/tokens/snackbar.rs",
     "ecosystem/fret-ui-material3/src/tokens/tooltip.rs",
+    "ecosystem/fret-ui-material3/src/tokens/checkbox.rs",
+    "ecosystem/fret-ui-material3/src/tokens/slider.rs",
+    "ecosystem/fret-ui-material3/src/tokens/switch.rs",
     "ecosystem/fret-ui-material3/tests/button_state.rs",
     "ecosystem/fret-ui-material3/tests/chip_state.rs",
     "ecosystem/fret-ui-material3/tests/icon_button_state.rs",
@@ -127,6 +134,9 @@
     "ecosystem/fret-ui-material3/tests/tooltip_state.rs",
     "ecosystem/fret-ui-material3/tests/bottom_sheet_motion.rs",
     "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "ecosystem/fret-ui-material3/tests/checkbox_state.rs",
+    "ecosystem/fret-ui-material3/tests/slider_state.rs",
+    "ecosystem/fret-ui-material3/tests/switch_state.rs",
     "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
   ],
   "adr_refs": [
@@ -143,6 +153,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue one non-field component family at a time. M3NF-055 should isolate Checkbox, Slider, and Switch selection-control fallback chains and preserve token visual plus targeted state-test outcomes before closing the lane."
+    "notes": "M3NF-055 completed the remaining selection-control color fallback migration. Continue with M3NF-060 closeout: verify package/workstream gates, write closeout evidence, and close or split any non-color direct token lookup follow-ons."
   }
 }

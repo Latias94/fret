@@ -40,12 +40,11 @@ pub(crate) fn icon_color(
     enabled: bool,
     interaction: SwitchInteraction,
 ) -> Color {
+    let tokens = MaterialTokenResolver::new(theme);
     if !enabled {
-        let base = MaterialTokenResolver::new(theme)
-            .color_comp_or_sys(disabled_icon_color_key(selected), "md.sys.color.on-surface");
-        let opacity = theme
-            .number_by_key(disabled_icon_opacity_key(selected))
-            .unwrap_or(0.38);
+        let base =
+            tokens.color_comp_or_sys(disabled_icon_color_key(selected), "md.sys.color.on-surface");
+        let opacity = tokens.number_optional(Some(disabled_icon_opacity_key(selected)), 0.38);
         return alpha_mul(base, opacity);
     }
 
@@ -54,8 +53,7 @@ pub(crate) fn icon_color(
     } else {
         "md.sys.color.on-surface-variant"
     };
-    MaterialTokenResolver::new(theme)
-        .color_comp_or_sys(icon_color_key(selected, interaction), sys_key)
+    tokens.color_comp_or_sys(icon_color_key(selected, interaction), sys_key)
 }
 
 fn shape_or_full(theme: &Theme, key: &str) -> Corners {
@@ -161,44 +159,57 @@ pub(crate) fn chrome(
 }
 
 fn disabled_chrome(theme: &Theme, selected: bool) -> SwitchChrome {
+    let tokens = MaterialTokenResolver::new(theme);
     let track_base = if selected {
-        theme.color_by_key("md.comp.switch.disabled.selected.track.color")
+        tokens.color_comp_or_sys(
+            "md.comp.switch.disabled.selected.track.color",
+            "md.sys.color.on-surface",
+        )
     } else {
-        theme.color_by_key("md.comp.switch.disabled.unselected.track.color")
-    }
-    .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"));
+        tokens.color_comp_or_sys(
+            "md.comp.switch.disabled.unselected.track.color",
+            "md.sys.color.on-surface",
+        )
+    };
 
-    let track_opacity = theme
-        .number_by_key("md.comp.switch.disabled.track.opacity")
-        .unwrap_or(0.12);
+    let track_opacity = tokens.number_optional(Some("md.comp.switch.disabled.track.opacity"), 0.12);
     let track_color = alpha_mul(track_base, track_opacity);
 
     let handle_base = if selected {
-        theme
-            .color_by_key("md.comp.switch.disabled.selected.handle.color")
-            .or_else(|| theme.color_by_key("md.sys.color.surface"))
+        tokens.color_comp_or_sys(
+            "md.comp.switch.disabled.selected.handle.color",
+            "md.sys.color.surface",
+        )
     } else {
-        theme
-            .color_by_key("md.comp.switch.disabled.unselected.handle.color")
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-    }
-    .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"));
+        tokens.color_comp_or_sys(
+            "md.comp.switch.disabled.unselected.handle.color",
+            "md.sys.color.on-surface",
+        )
+    };
 
     let handle_opacity = if selected {
-        theme.number_by_key("md.comp.switch.disabled.selected.handle.opacity")
+        tokens.number_optional(
+            Some("md.comp.switch.disabled.selected.handle.opacity"),
+            0.38,
+        )
     } else {
-        theme.number_by_key("md.comp.switch.disabled.unselected.handle.opacity")
-    }
-    .unwrap_or(0.38);
+        tokens.number_optional(
+            Some("md.comp.switch.disabled.unselected.handle.opacity"),
+            0.38,
+        )
+    };
     let handle_color = alpha_mul(handle_base, handle_opacity);
 
     let outline_color = if selected {
         None
     } else {
-        theme
-            .color_by_key("md.comp.switch.disabled.unselected.track.outline.color")
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .map(|c| alpha_mul(c, handle_opacity))
+        Some(alpha_mul(
+            tokens.color_comp_or_sys(
+                "md.comp.switch.disabled.unselected.track.outline.color",
+                "md.sys.color.on-surface",
+            ),
+            handle_opacity,
+        ))
     };
 
     SwitchChrome {

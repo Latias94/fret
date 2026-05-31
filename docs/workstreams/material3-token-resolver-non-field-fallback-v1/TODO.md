@@ -46,11 +46,14 @@ Task IDs use `M3NF-*`.
     Snackbar, and Tooltip scoped fallback chains now use `MaterialTokenResolver`; broad
     selection-control residuals are split to M3NF-055.
 
-- [ ] M3NF-055: Migrate selection-control residual fallback chains.
+- [x] M3NF-055: Migrate selection-control residual fallback chains.
   - Scope: Checkbox, Slider, Switch.
   - Expected result: the remaining color fallback residuals move to `MaterialTokenResolver`
     without regressing choice-control visual/state outcomes.
   - Gate: token visual fixtures plus `checkbox_state`, `slider_state`, and `switch_state`.
+  - Note: Checkbox, Slider, and Switch color/disabled opacity fallback chains now use
+    `MaterialTokenResolver`; the residual color fallback audit has no matches. Slider retains one
+    direct label-text weight read, matching the typography-weight pattern used by chip modules.
 
 - [ ] M3NF-060: Verify and close.
   - Scope: docs, package gates, catalog, layering, diff hygiene.

@@ -23,8 +23,10 @@ M3NF-050 is complete: the surface/navigation/overlay residual set now uses
 `MaterialTokenResolver` for repeated component-to-system color fallback and state-layer opacity
 paths while preserving token visual and targeted state-test outcomes.
 
-The next executable task is M3NF-055: migrate the remaining selection-control residuals in
-`checkbox.rs`, `slider.rs`, and `switch.rs`.
+M3NF-055 is complete: Checkbox, Slider, and Switch residual color fallback chains now use
+`MaterialTokenResolver` while preserving token visual and targeted choice-control state outcomes.
+
+The next executable task is M3NF-060: verify package/workstream gates and close the lane.
 
 ## Guardrails
 
@@ -35,4 +37,4 @@ The next executable task is M3NF-055: migrate the remaining selection-control re
 
 ## Suggested Next Gate
 
-`cargo nextest run -p fret-ui-material3 --features diagnostics --test checkbox_state --test slider_state --test switch_state`
+`python tools/check_workstream_catalog.py`
