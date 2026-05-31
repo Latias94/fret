@@ -14,8 +14,12 @@ M3TRF-030 is implemented: `MaterialTokenResolver` now owns Material state-layer 
 fallbacks and disabled state-layer opacity fallback, and Checkbox/Radio/Switch/Slider use it for
 their migrated state-layer color/opacity paths.
 
-The next executable task is M3TRF-040: migrate the heaviest field-family fallback modules
-(TextField, Select, Autocomplete) onto the shared resolver vocabulary without visual drift.
+M3TRF-040 is implemented: TextField, Select, and Autocomplete token modules now use shared
+`MaterialTokenResolver` helpers for migrated component-to-system color fallback, multi-system
+fallback chains, optional opacity lookup, and explicit fallback-color lookup.
+
+The next executable task is M3TRF-050: verify the full lane, decide whether remaining token
+fallback families need a split follow-on, and close or hand off the workstream.
 
 ## Guardrails
 
@@ -25,6 +29,6 @@ The next executable task is M3TRF-040: migrate the heaviest field-family fallbac
 
 ## Suggested First Gate
 
-For M3TRF-040, start with:
+For M3TRF-050, start with:
 
 `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes`

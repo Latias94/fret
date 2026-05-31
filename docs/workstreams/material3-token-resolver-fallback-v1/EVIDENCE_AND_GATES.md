@@ -61,3 +61,16 @@ Last updated: 2026-05-31
 - `cargo check -p fret-ui-material3 --features diagnostics --tests`: passed.
 - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`:
   passed.
+
+## M3TRF-040 Evidence
+
+- `rg -n "or_else\\(\\|\\| theme\\.color_by_key|unwrap_or_else\\(\\|\\| theme\\.color_token|theme\\.color_by_key\\(" ecosystem/fret-ui-material3/src/tokens/autocomplete.rs ecosystem/fret-ui-material3/src/tokens/text_field.rs ecosystem/fret-ui-material3/src/tokens/select.rs`:
+  no matches; migrated field-family color fallback paths use `MaterialTokenResolver`.
+- `cargo fmt --package fret-ui-material3 --check`: passed.
+- `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes foundation::token_resolver::tests text_field::tests`:
+  6 passed.
+- `cargo check -p fret-ui-material3 --features diagnostics --tests`: passed.
+- `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`:
+  passed.
+- `cargo nextest run -p fret-ui-material3 --features diagnostics --test text_field_hover --test select_behavior --test autocomplete_motion`:
+  28 passed.

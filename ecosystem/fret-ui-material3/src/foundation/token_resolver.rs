@@ -80,6 +80,48 @@ impl<'a> MaterialTokenResolver<'a> {
             .unwrap_or_else(|| fallback_color_for_sys(sys_key))
     }
 
+    pub fn color_comp_or_sys_chain(&self, comp_key: &str, sys_keys: &[&str]) -> Color {
+        debug_assert!(
+            comp_key.starts_with("md.comp."),
+            "expected md.comp.* key, got: {comp_key}"
+        );
+        debug_assert!(!sys_keys.is_empty(), "expected at least one md.sys.* key");
+        debug_assert!(
+            sys_keys.iter().all(|key| key.starts_with("md.sys.")),
+            "expected md.sys.* fallback keys, got: {sys_keys:?}"
+        );
+
+        let fallback_sys_key = sys_keys.last().copied().unwrap_or("md.sys.color.surface");
+
+        self.theme
+            .color_by_key(comp_key)
+            .or_else(|| sys_keys.iter().find_map(|key| self.theme.color_by_key(key)))
+            .unwrap_or_else(|| fallback_color_for_sys(fallback_sys_key))
+    }
+
+    pub fn color_comp_or_fallback(&self, comp_key: &str, fallback: Color) -> Color {
+        debug_assert!(
+            comp_key.starts_with("md.comp."),
+            "expected md.comp.* key, got: {comp_key}"
+        );
+        self.theme.color_by_key(comp_key).unwrap_or(fallback)
+    }
+
+    pub fn color_comp_or_sys_or(&self, comp_key: &str, sys_key: &str, fallback: Color) -> Color {
+        debug_assert!(
+            comp_key.starts_with("md.comp."),
+            "expected md.comp.* key, got: {comp_key}"
+        );
+        debug_assert!(
+            sys_key.starts_with("md.sys."),
+            "expected md.sys.* key, got: {sys_key}"
+        );
+        self.theme
+            .color_by_key(comp_key)
+            .or_else(|| self.theme.color_by_key(sys_key))
+            .unwrap_or(fallback)
+    }
+
     pub fn number_sys(&self, sys_key: &str, fallback: f32) -> f32 {
         debug_assert!(
             sys_key.starts_with("md.sys."),
@@ -101,6 +143,28 @@ impl<'a> MaterialTokenResolver<'a> {
             .number_by_key(comp_key)
             .or_else(|| self.theme.number_by_key(sys_key))
             .unwrap_or(fallback)
+    }
+
+    pub fn number_optional(&self, key: Option<&str>, fallback: f32) -> f32 {
+        debug_assert!(
+            key.is_none_or(|key| key.starts_with("md.")),
+            "expected md.* number token key, got: {key:?}"
+        );
+        key.and_then(|key| self.theme.number_by_key(key))
+            .unwrap_or(fallback)
+    }
+
+    pub fn color_comp_or_sys_with_opacity(
+        &self,
+        comp_key: &str,
+        sys_key: &str,
+        opacity_key: Option<&str>,
+        fallback_opacity: f32,
+    ) -> (Color, f32) {
+        (
+            self.color_comp_or_sys(comp_key, sys_key),
+            self.number_optional(opacity_key, fallback_opacity),
+        )
     }
 
     pub fn state_layer_opacity(
@@ -126,11 +190,15 @@ fn fallback_color_for_sys(sys_key: &str) -> Color {
         "md.sys.color.on-primary" => Color::from_srgb_hex_rgb(0xff_ff_ff),
         "md.sys.color.surface" => Color::from_srgb_hex_rgb(0x1c_1c_1f),
         "md.sys.color.surface-container" => Color::from_srgb_hex_rgb(0x29_29_2b),
+        "md.sys.color.surface-container-low" => Color::from_srgb_hex_rgb(0x21_21_24),
+        "md.sys.color.surface-container-high" => Color::from_srgb_hex_rgb(0x2e_2e_31),
         "md.sys.color.surface-container-highest" => Color::from_srgb_hex_rgb(0x33_33_36),
         "md.sys.color.on-surface" => Color::from_srgb_hex_rgb(0xff_ff_ff),
         "md.sys.color.on-surface-variant" => Color::from_srgb_hex_rgb(0xbf_bf_c7),
         "md.sys.color.outline" => Color::from_srgb_hex_rgb(0x8c_8c_94),
         "md.sys.color.outline-variant" => Color::from_srgb_hex_rgb(0x59_59_61),
+        "md.sys.color.error" => Color::from_srgb_hex_rgb(0xff_b4_ab),
+        "md.sys.color.shadow" => Color::from_srgb_hex_rgb(0x00_00_00),
         _ => Color::from_srgb_hex_rgb(0xff_00_ff),
     }
 }

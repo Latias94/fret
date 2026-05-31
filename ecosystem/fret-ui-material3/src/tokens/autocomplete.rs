@@ -7,7 +7,7 @@ use fret_core::{Color, Corners, Edges, Px, TextStyle};
 use fret_ui::{TextInputStyle, Theme};
 use fret_ui_kit::typography::{self, TextIntent};
 
-use crate::foundation::token_resolver::{alpha_mul, blend_over};
+use crate::foundation::token_resolver::{MaterialTokenResolver, alpha_mul, blend_over};
 use crate::text_field::TextFieldVariant;
 use crate::tokens::{selectable_menu_item as selectable_item_tokens, shape};
 
@@ -164,14 +164,12 @@ pub(crate) fn leading_icon_color(
         )
     };
 
-    let color = theme
-        .color_by_key(color_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
-    let opacity = opacity_key
-        .and_then(|k| theme.number_by_key(k))
-        .unwrap_or(1.0);
-    (color, opacity)
+    MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
+        color_key,
+        "md.sys.color.on-surface-variant",
+        opacity_key,
+        1.0,
+    )
 }
 
 pub(crate) fn trailing_icon_color(
@@ -275,14 +273,12 @@ pub(crate) fn trailing_icon_color(
         )
     };
 
-    let color = theme
-        .color_by_key(color_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
-    let opacity = opacity_key
-        .and_then(|k| theme.number_by_key(k))
-        .unwrap_or(1.0);
-    (color, opacity)
+    MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
+        color_key,
+        "md.sys.color.on-surface-variant",
+        opacity_key,
+        1.0,
+    )
 }
 
 pub(crate) fn hover_state_layer(
@@ -309,11 +305,12 @@ pub(crate) fn hover_state_layer(
         ),
     };
 
-    let color = theme
-        .color_by_key(color_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-    let opacity = theme.number_by_key(opacity_key).unwrap_or(0.08);
+    let (color, opacity) = MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
+        color_key,
+        "md.sys.color.on-surface",
+        Some(opacity_key),
+        0.08,
+    );
     Some((color, opacity))
 }
 
@@ -418,13 +415,12 @@ pub(crate) fn label_color(
         )
     };
 
-    let color = theme
-        .color_by_key(color_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
-    let opacity = opacity_key
-        .and_then(|k| theme.number_by_key(k))
-        .unwrap_or(1.0);
+    let (color, opacity) = MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
+        color_key,
+        "md.sys.color.on-surface-variant",
+        opacity_key,
+        1.0,
+    );
     alpha_mul(color, opacity)
 }
 
@@ -529,13 +525,12 @@ pub(crate) fn supporting_text_color(
         )
     };
 
-    let color = theme
-        .color_by_key(color_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
-    let opacity = opacity_key
-        .and_then(|k| theme.number_by_key(k))
-        .unwrap_or(1.0);
+    let (color, opacity) = MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
+        color_key,
+        "md.sys.color.on-surface-variant",
+        opacity_key,
+        1.0,
+    );
     alpha_mul(color, opacity)
 }
 
@@ -571,10 +566,10 @@ fn outlined_text_input_style(
         left: Px(16.0),
     };
 
-    style.background = theme
-        .color_by_key("md.comp.outlined-autocomplete.text-field.container.color")
-        .or_else(|| theme.color_by_key("md.sys.color.surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.surface"));
+    style.background = MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.outlined-autocomplete.text-field.container.color",
+        "md.sys.color.surface",
+    );
 
     let (border_width, border_color, border_color_focused) = outlined_outline(
         theme,
@@ -606,15 +601,17 @@ fn outlined_text_input_style(
     style.preedit_underline_color = style.preedit_color;
 
     if disabled {
-        let opacity = theme
-            .number_by_key("md.comp.outlined-autocomplete.text-field.disabled.input-text.opacity")
-            .unwrap_or(0.38);
+        let opacity = MaterialTokenResolver::new(theme).number_optional(
+            Some("md.comp.outlined-autocomplete.text-field.disabled.input-text.opacity"),
+            0.38,
+        );
         style.text_color = alpha_mul(style.text_color, opacity);
         style.placeholder_color = alpha_mul(style.placeholder_color, opacity);
 
-        let outline_opacity = theme
-            .number_by_key("md.comp.outlined-autocomplete.text-field.disabled.outline.opacity")
-            .unwrap_or(0.12);
+        let outline_opacity = MaterialTokenResolver::new(theme).number_optional(
+            Some("md.comp.outlined-autocomplete.text-field.disabled.outline.opacity"),
+            0.12,
+        );
         style.border_color = alpha_mul(style.border_color, outline_opacity);
         style.border_color_focused = alpha_mul(style.border_color_focused, outline_opacity);
     }
@@ -663,14 +660,9 @@ fn outlined_outline(
         "md.comp.outlined-autocomplete.text-field.focus.outline.color"
     };
 
-    let border_color = theme
-        .color_by_key(color_key)
-        .or_else(|| theme.color_by_key("md.sys.color.outline"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.outline"));
-    let border_color_focused = theme
-        .color_by_key(focused_color_key)
-        .or_else(|| theme.color_by_key("md.sys.color.outline"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.outline"));
+    let tokens = MaterialTokenResolver::new(theme);
+    let border_color = tokens.color_comp_or_sys(color_key, "md.sys.color.outline");
+    let border_color_focused = tokens.color_comp_or_sys(focused_color_key, "md.sys.color.outline");
     (border_width, border_color, border_color_focused)
 }
 
@@ -690,10 +682,7 @@ fn outlined_input_text_color(
     } else {
         "md.comp.outlined-autocomplete.text-field.input-text.color"
     };
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface")
 }
 
 fn outlined_caret_color(theme: &Theme, _disabled: bool, error: bool, focused: bool) -> Color {
@@ -702,10 +691,7 @@ fn outlined_caret_color(theme: &Theme, _disabled: bool, error: bool, focused: bo
     } else {
         "md.comp.outlined-autocomplete.text-field.caret.color"
     };
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.primary")
 }
 
 fn filled_text_input_style(
@@ -740,20 +726,22 @@ fn filled_text_input_style(
         left: Px(16.0),
     };
 
-    let mut background = theme
-        .color_by_key("md.comp.filled-autocomplete.text-field.container.color")
-        .or_else(|| theme.color_by_key("md.sys.color.surface-container-highest"))
-        .or_else(|| theme.color_by_key("md.sys.color.surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.surface"));
+    let tokens = MaterialTokenResolver::new(theme);
+    let mut background = tokens.color_comp_or_sys_chain(
+        "md.comp.filled-autocomplete.text-field.container.color",
+        &[
+            "md.sys.color.surface-container-highest",
+            "md.sys.color.surface",
+        ],
+    );
 
     if disabled {
-        let overlay = theme
-            .color_by_key("md.comp.filled-autocomplete.text-field.disabled.container.color")
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-        let opacity = theme
-            .number_by_key("md.comp.filled-autocomplete.text-field.disabled.container.opacity")
-            .unwrap_or(0.04);
+        let (overlay, opacity) = tokens.color_comp_or_sys_with_opacity(
+            "md.comp.filled-autocomplete.text-field.disabled.container.color",
+            "md.sys.color.on-surface",
+            Some("md.comp.filled-autocomplete.text-field.disabled.container.opacity"),
+            0.04,
+        );
         background = blend_over(background, overlay, opacity);
     }
     style.background = background;
@@ -795,9 +783,10 @@ fn filled_text_input_style(
     style.preedit_underline_color = style.preedit_color;
 
     if disabled {
-        let opacity = theme
-            .number_by_key("md.comp.filled-autocomplete.text-field.disabled.input-text.opacity")
-            .unwrap_or(0.38);
+        let opacity = MaterialTokenResolver::new(theme).number_optional(
+            Some("md.comp.filled-autocomplete.text-field.disabled.input-text.opacity"),
+            0.38,
+        );
         style.text_color = alpha_mul(style.text_color, opacity);
         style.placeholder_color = alpha_mul(style.placeholder_color, opacity);
     }
@@ -827,17 +816,14 @@ fn filled_active_indicator_color(
     } else {
         "md.comp.filled-autocomplete.text-field.active-indicator.color"
     };
-    let mut color = theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
+    let tokens = MaterialTokenResolver::new(theme);
+    let mut color = tokens.color_comp_or_sys(key, "md.sys.color.on-surface");
 
     if disabled {
-        let opacity = theme
-            .number_by_key(
-                "md.comp.filled-autocomplete.text-field.disabled.active-indicator.opacity",
-            )
-            .unwrap_or(0.38);
+        let opacity = tokens.number_optional(
+            Some("md.comp.filled-autocomplete.text-field.disabled.active-indicator.opacity"),
+            0.38,
+        );
         color = alpha_mul(color, opacity);
     }
     color
@@ -859,10 +845,7 @@ fn filled_input_text_color(
     } else {
         "md.comp.filled-autocomplete.text-field.input-text.color"
     };
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface")
 }
 
 fn filled_caret_color(theme: &Theme, _disabled: bool, error: bool, focused: bool) -> Color {
@@ -871,10 +854,7 @@ fn filled_caret_color(theme: &Theme, _disabled: bool, error: bool, focused: bool
     } else {
         "md.comp.filled-autocomplete.text-field.caret.color"
     };
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.primary")
 }
 
 pub(crate) fn menu_container_background(theme: &Theme, variant: TextFieldVariant) -> Color {
@@ -882,10 +862,7 @@ pub(crate) fn menu_container_background(theme: &Theme, variant: TextFieldVariant
         TextFieldVariant::Outlined => "md.comp.outlined-autocomplete.menu.container.color",
         TextFieldVariant::Filled => "md.comp.filled-autocomplete.menu.container.color",
     };
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.surface-container"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.surface-container")
 }
 
 pub(crate) fn menu_container_elevation(theme: &Theme, variant: TextFieldVariant) -> Px {
@@ -901,10 +878,7 @@ pub(crate) fn menu_container_shadow_color(theme: &Theme, variant: TextFieldVaria
         TextFieldVariant::Outlined => "md.comp.outlined-autocomplete.menu.container.shadow-color",
         TextFieldVariant::Filled => "md.comp.filled-autocomplete.menu.container.shadow-color",
     };
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.shadow")
 }
 
 pub(crate) fn menu_container_shape(theme: &Theme, variant: TextFieldVariant) -> Corners {
@@ -984,10 +958,7 @@ pub(crate) fn menu_list_item_label_text_color(
         }
         TextFieldVariant::Filled => "md.comp.filled-autocomplete.menu.list-item.label-text.color",
     };
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface")
 }
 
 pub(crate) fn menu_list_item_selected_container_color(
@@ -1002,8 +973,6 @@ pub(crate) fn menu_list_item_selected_container_color(
             "md.comp.filled-autocomplete.menu.list-item.selected.container.color"
         }
     };
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.surface-container-highest"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-highest"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(key, "md.sys.color.surface-container-highest")
 }

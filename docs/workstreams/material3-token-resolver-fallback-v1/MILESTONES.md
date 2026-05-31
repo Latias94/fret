@@ -26,6 +26,8 @@ Status: Complete
 
 ## M3 - Field Family Fallbacks Hardened
 
+Status: Complete
+
 - TextField, Select, and Autocomplete token modules use the shared fallback vocabulary for the
   highest-value repeated paths.
 - Field-family gates remain green.

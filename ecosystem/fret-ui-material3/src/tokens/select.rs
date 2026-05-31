@@ -5,7 +5,7 @@ use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
 use fret_ui_kit::typography::{self, TextIntent};
 
-use crate::foundation::token_resolver::{alpha_mul, blend_over};
+use crate::foundation::token_resolver::{MaterialTokenResolver, alpha_mul, blend_over};
 use crate::select::SelectVariant;
 use crate::tokens::{selectable_menu_item as selectable_item_tokens, shape};
 
@@ -60,19 +60,16 @@ pub(crate) fn container_background(theme: &Theme, variant: SelectVariant, disabl
         SelectVariant::Outlined => "md.comp.outlined-select.text-field.container.color",
         SelectVariant::Filled => "md.comp.filled-select.text-field.container.color",
     };
-    let color = theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.surface-container-highest"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-highest"));
+    let tokens = MaterialTokenResolver::new(theme);
+    let color = tokens.color_comp_or_sys(key, "md.sys.color.surface-container-highest");
 
     if disabled && variant == SelectVariant::Filled {
-        let overlay = theme
-            .color_by_key("md.comp.filled-select.text-field.disabled.container.color")
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-        let opacity = theme
-            .number_by_key("md.comp.filled-select.text-field.disabled.container.opacity")
-            .unwrap_or(0.04);
+        let (overlay, opacity) = tokens.color_comp_or_sys_with_opacity(
+            "md.comp.filled-select.text-field.disabled.container.color",
+            "md.sys.color.on-surface",
+            Some("md.comp.filled-select.text-field.disabled.container.opacity"),
+            0.04,
+        );
         return blend_over(color, overlay, opacity);
     }
 
@@ -103,11 +100,12 @@ pub(crate) fn hover_state_layer(
         ),
     };
 
-    let color = theme
-        .color_by_key(color_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-    let opacity = theme.number_by_key(opacity_key).unwrap_or(0.08);
+    let (color, opacity) = MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
+        color_key,
+        "md.sys.color.on-surface",
+        Some(opacity_key),
+        0.08,
+    );
     (color, opacity)
 }
 
@@ -168,13 +166,12 @@ pub(crate) fn outline(
     };
 
     let width = theme.metric_by_key(width_key).unwrap_or(Px(1.0));
-    let color = theme
-        .color_by_key(color_key)
-        .or_else(|| theme.color_by_key("md.sys.color.outline"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.outline"));
-    let opacity = opacity_key
-        .and_then(|k| theme.number_by_key(k))
-        .unwrap_or(1.0);
+    let (color, opacity) = MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
+        color_key,
+        "md.sys.color.outline",
+        opacity_key,
+        1.0,
+    );
     Some((width, color, opacity))
 }
 
@@ -235,13 +232,12 @@ pub(crate) fn active_indicator(
     };
 
     let height = theme.metric_by_key(height_key).unwrap_or(Px(1.0));
-    let color = theme
-        .color_by_key(color_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
-    let opacity = opacity_key
-        .and_then(|k| theme.number_by_key(k))
-        .unwrap_or(1.0);
+    let (color, opacity) = MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
+        color_key,
+        "md.sys.color.on-surface-variant",
+        opacity_key,
+        1.0,
+    );
     Some((height, color, opacity))
 }
 
@@ -346,14 +342,12 @@ pub(crate) fn input_text_color(
         )
     };
 
-    let color = theme
-        .color_by_key(color_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-    let opacity = opacity_key
-        .and_then(|k| theme.number_by_key(k))
-        .unwrap_or(1.0);
-    (color, opacity)
+    MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
+        color_key,
+        "md.sys.color.on-surface",
+        opacity_key,
+        1.0,
+    )
 }
 
 pub(crate) fn leading_icon_size(theme: &Theme, variant: SelectVariant) -> Px {
@@ -461,14 +455,12 @@ pub(crate) fn leading_icon_color(
         )
     };
 
-    let color = theme
-        .color_by_key(color_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
-    let opacity = opacity_key
-        .and_then(|k| theme.number_by_key(k))
-        .unwrap_or(1.0);
-    (color, opacity)
+    MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
+        color_key,
+        "md.sys.color.on-surface-variant",
+        opacity_key,
+        1.0,
+    )
 }
 
 pub(crate) fn trailing_icon_size(theme: &Theme, variant: SelectVariant) -> Px {
@@ -576,14 +568,12 @@ pub(crate) fn trailing_icon_color(
         )
     };
 
-    let color = theme
-        .color_by_key(color_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
-    let opacity = opacity_key
-        .and_then(|k| theme.number_by_key(k))
-        .unwrap_or(1.0);
-    (color, opacity)
+    MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
+        color_key,
+        "md.sys.color.on-surface-variant",
+        opacity_key,
+        1.0,
+    )
 }
 
 pub(crate) fn placeholder_color(
@@ -592,9 +582,7 @@ pub(crate) fn placeholder_color(
     disabled: bool,
     _error: bool,
 ) -> Color {
-    let base = theme
-        .color_by_key("md.sys.color.on-surface-variant")
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
+    let base = MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface-variant");
 
     if !disabled {
         return base;
@@ -605,7 +593,10 @@ pub(crate) fn placeholder_color(
         SelectVariant::Filled => "md.comp.filled-select.text-field.disabled.input-text.opacity",
     };
 
-    alpha_mul(base, theme.number_by_key(opacity_key).unwrap_or(0.38))
+    alpha_mul(
+        base,
+        MaterialTokenResolver::new(theme).number_optional(Some(opacity_key), 0.38),
+    )
 }
 
 pub(crate) fn label_color(
@@ -699,14 +690,12 @@ pub(crate) fn label_color(
         )
     };
 
-    let color = theme
-        .color_by_key(color_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
-
-    let opacity = opacity_key
-        .and_then(|k| theme.number_by_key(k))
-        .unwrap_or(1.0);
+    let (color, opacity) = MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
+        color_key,
+        "md.sys.color.on-surface-variant",
+        opacity_key,
+        1.0,
+    );
     alpha_mul(color, opacity)
 }
 
@@ -809,14 +798,12 @@ pub(crate) fn supporting_text_color(
         )
     };
 
-    let color = theme
-        .color_by_key(color_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
-
-    let opacity = opacity_key
-        .and_then(|k| theme.number_by_key(k))
-        .unwrap_or(1.0);
+    let (color, opacity) = MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
+        color_key,
+        "md.sys.color.on-surface-variant",
+        opacity_key,
+        1.0,
+    );
     alpha_mul(color, opacity)
 }
 
@@ -825,10 +812,7 @@ pub(crate) fn menu_container_background(theme: &Theme, variant: SelectVariant) -
         SelectVariant::Outlined => "md.comp.outlined-select.menu.container.color",
         SelectVariant::Filled => "md.comp.filled-select.menu.container.color",
     };
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.surface-container"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.surface-container")
 }
 
 pub(crate) fn menu_container_elevation(theme: &Theme, variant: SelectVariant) -> Px {
@@ -844,10 +828,7 @@ pub(crate) fn menu_container_shadow_color(theme: &Theme, variant: SelectVariant)
         SelectVariant::Outlined => "md.comp.outlined-select.menu.container.shadow-color",
         SelectVariant::Filled => "md.comp.filled-select.menu.container.shadow-color",
     };
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.shadow")
 }
 
 pub(crate) fn menu_container_shape(theme: &Theme, variant: SelectVariant) -> Corners {
@@ -930,10 +911,7 @@ pub(crate) fn menu_list_item_label_text_color(
         SelectVariant::Outlined => "md.comp.outlined-select.menu.list-item.label-text.color",
         SelectVariant::Filled => "md.comp.filled-select.menu.list-item.label-text.color",
     };
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface")
 }
 
 pub(crate) fn menu_list_item_leading_icon_size(theme: &Theme, variant: SelectVariant) -> Px {
@@ -968,10 +946,7 @@ pub(crate) fn menu_list_item_leading_icon_color(
             "md.comp.filled-select.menu.list-item.with-leading-icon.leading-icon.color"
         }
     };
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface-variant")
 }
 
 pub(crate) fn menu_list_item_trailing_icon_size(theme: &Theme, variant: SelectVariant) -> Px {
@@ -1006,10 +981,7 @@ pub(crate) fn menu_list_item_trailing_icon_color(
             "md.comp.filled-select.menu.list-item.with-trailing-icon.trailing-icon.color"
         }
     };
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface-variant")
 }
 
 pub(crate) fn menu_list_item_selected_container_color(
@@ -1022,8 +994,6 @@ pub(crate) fn menu_list_item_selected_container_color(
         }
         SelectVariant::Filled => "md.comp.filled-select.menu.list-item.selected.container.color",
     };
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.surface-container-highest"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-highest"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(key, "md.sys.color.surface-container-highest")
 }

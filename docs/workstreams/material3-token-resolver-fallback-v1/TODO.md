@@ -31,10 +31,14 @@ Task IDs use `M3TRF-*`.
     keep only component role/state key selection for migrated state-layer color/opacity paths.
     Field-family migration is intentionally left to M3TRF-040.
 
-- [ ] M3TRF-040: Migrate the heaviest field-family fallback modules.
+- [x] M3TRF-040: Migrate the heaviest field-family fallback modules.
   - Scope: TextField, Select, Autocomplete token modules.
   - Expected result: field-family token fallbacks use shared resolver helpers without visual drift.
   - Gate: token visual fixtures plus TextField/Select RTL and field-family tests.
+  - Note: `MaterialTokenResolver` now owns field-family component-to-system color fallback,
+    multi-system fallback chains, optional opacity lookup, and explicit fallback-color lookup.
+    TextField, Select, and Autocomplete token modules now retain state/key selection while resolver
+    handles migrated color/opacity fallback mechanics.
 
 - [ ] M3TRF-050: Verify and close or split remaining fallback hardening.
   - Scope: docs, package gates, catalog, layering, diff hygiene.
