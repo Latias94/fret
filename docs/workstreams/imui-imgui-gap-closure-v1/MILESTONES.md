@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 tooltip runtime model owner-split result:
+`ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` now keeps trigger-id validation,
+provider defaults, layout/interaction/request orchestration, and response return only.
+`runtime/models.rs` owns local open/panel models, Radix trigger event models, last-pointer
+tracking, dismiss handler installation, and pointer-move open gate installation. Public tooltip
+facade behavior remains unchanged.
+
 2026-05-31 virtual-list element assembly owner-split result:
 `ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs` is now a thin module/re-export hub.
 `virtual_list_controls/element.rs` owns keyed runtime list assembly, default scroll-handle slot

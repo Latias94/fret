@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Tooltip Runtime Model Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI tooltip runtime model creation and trigger gate installation split into a
+private owner without changing trigger-id validation, provider option defaults, layout projection,
+hover/focus interaction updates, overlay request submission, or public tooltip facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` now keeps trigger-id validation,
+  provider default resolution, layout/interaction/request orchestration, and response return only.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime/models.rs` owns local open/panel models,
+  Radix trigger event models, last-pointer tracking, default trigger dismiss handlers, and the
+  pointer-move open gate.
+- `tools/gate_imui_workstream_source.py` now checks the tooltip runtime/model split and rejects
+  trigger model setup from drifting back into `runtime.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new tooltip runtime
+  models owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_tooltip_smoke --no-fail-fast`: pass on rerun after earlier parallel nextest commands timed out waiting on build locks (1 passed).
+- `cargo nextest run -p fret-ui-kit --features imui --lib tooltip_overlay --no-fail-fast`: pass on rerun after earlier parallel nextest commands timed out waiting on build locks (3 passed, 690 skipped).
+- `cargo nextest run -p fret-imui popup_hover::hover_flags::hovered_for_tooltip_requires_stationary_and_delay_short_even_when_disabled --no-fail-fast`: pass on rerun after earlier parallel nextest commands timed out waiting on build locks (1 passed, 185 skipped).
+
 ## IMUI Virtual-List Element Assembly Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI virtual-list keyed element assembly split into a private element owner without

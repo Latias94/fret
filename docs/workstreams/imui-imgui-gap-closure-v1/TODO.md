@@ -44,6 +44,14 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI tooltip runtime model creation and trigger gate installation into a private owner
+      without changing trigger-id validation, provider option defaults, layout projection,
+      hover/focus interaction updates, overlay request submission, or public tooltip facade
+      behavior.
+      Result: `tooltip_overlay/runtime.rs` now keeps trigger-id validation, provider defaults,
+      layout/interaction/request orchestration, and response return only. `runtime/models.rs` owns
+      local open/panel models, Radix trigger event models, last-pointer tracking, dismiss handler
+      installation, and pointer-move open gate installation.
 - [x] Split IMUI virtual-list keyed element assembly into a private owner without changing
       facade method names, default scroll-handle slot state, keyed runtime substrate usage,
       build-focus forwarding, row wrapping, list semantics, or `VirtualListResponse` reporting.

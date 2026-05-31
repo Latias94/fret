@@ -1,17 +1,17 @@
-use fret_core::Px;
-use fret_ui::{GlobalElementId, UiHost};
+use fret_ui::UiHost;
 
 use crate::imui::{ImUiFacade, ResponseExt, TooltipOptions, UiWriterImUiFacadeExt};
 use crate::primitives::tooltip as radix_tooltip;
 
 use super::request::{TooltipOverlayRequestModels, request_tooltip_overlay};
-use super::trigger::install_pointer_move_open_gate_for;
 
 mod interaction;
 mod layout;
+mod models;
 
 use interaction::update_tooltip_runtime_interaction;
 use layout::resolve_tooltip_runtime_layout;
+use models::prepare_tooltip_runtime_models;
 
 pub(in crate::imui) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -28,31 +28,20 @@ pub(in crate::imui) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
         let overlay_key = format!("fret-ui-kit.imui.tooltip.overlay.{id}");
         cx.named(overlay_key.as_str(), |cx| {
             let tooltip_id = cx.root_id();
-            let open_model = cx.local_model_keyed("open", || false);
-            let panel_id = cx.local_model_keyed("panel_id", || None::<GlobalElementId>);
-            let event_models = radix_tooltip::tooltip_trigger_event_models(cx);
-            let last_pointer = radix_tooltip::tooltip_last_pointer_model(cx);
-
-            radix_tooltip::tooltip_install_default_trigger_dismiss_handlers(
-                cx,
-                trigger_id,
-                event_models.clone(),
-            );
-            install_pointer_move_open_gate_for(
-                cx,
-                trigger_id,
-                event_models.clone(),
-                Px(5.0),
-                last_pointer.clone(),
-            );
+            let models = prepare_tooltip_runtime_models(cx, trigger_id);
 
             let provider_cfg = radix_tooltip::current_config(cx);
             let disable_hoverable_content = options
                 .disable_hoverable_content
                 .unwrap_or(provider_cfg.disable_hoverable_content);
 
-            let tooltip_layout =
-                resolve_tooltip_runtime_layout(cx, trigger_id, trigger.rect(), &panel_id, &options);
+            let tooltip_layout = resolve_tooltip_runtime_layout(
+                cx,
+                trigger_id,
+                trigger.rect(),
+                &models.panel_id,
+                &options,
+            );
 
             let open = update_tooltip_runtime_interaction(
                 cx,
@@ -60,9 +49,9 @@ pub(in crate::imui) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
                 trigger.focused(),
                 tooltip_layout.anchor_bounds,
                 tooltip_layout.floating_bounds,
-                &open_model,
-                &event_models,
-                last_pointer.clone(),
+                &models.open,
+                &models.event_models,
+                models.last_pointer.clone(),
                 &options,
                 disable_hoverable_content,
             );
@@ -79,10 +68,10 @@ pub(in crate::imui) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
                 disable_hoverable_content,
                 &options,
                 TooltipOverlayRequestModels {
-                    open: open_model,
-                    panel_id,
-                    event_models,
-                    last_pointer,
+                    open: models.open,
+                    panel_id: models.panel_id,
+                    event_models: models.event_models,
+                    last_pointer: models.last_pointer,
                 },
                 f,
             );
