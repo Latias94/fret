@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split docking declarative tab metrics and scroll policy into a private child owner without
+      changing tab title/glyph text preparation, measured/fallback tab width routing, overflow
+      geometry, active-tab visibility clamping, tab-strip wheel scroll persistence, drag
+      auto-scroll insert-index updates, tab detail paint preparation, or public dock-space APIs.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, hit testing, input routing,
+      paint input assembly, and public entrypoints. `dock/declarative/tab_metrics.rs` owns tab
+      text measurement, tab width projection, tab-bar geometry, scroll clamp/sync, and drag
+      auto-scroll helpers. The source gate prevents tab metric/scroll policy from drifting back
+      into the declarative orchestration owner.
 - [x] Split docking declarative interaction state into a private child owner without changing
       managed dock-space element entrypoints, panel registry APIs, tab/floating hover state,
       pressed close tracking, floating/divider/panel drag state, viewport capture state,

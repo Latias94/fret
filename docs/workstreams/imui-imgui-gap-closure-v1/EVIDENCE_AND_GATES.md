@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Docking Declarative Tab Metrics Owner-Split Evidence - 2026-06-01
+
+Claim verified: docking declarative tab metrics and scroll policy moved out of the large
+declarative dock-space orchestration owner into a private `declarative/tab_metrics.rs` owner
+without changing tab title/glyph text preparation, measured/fallback tab width routing, overflow
+geometry, active-tab visibility clamping, tab-strip wheel scroll persistence, drag auto-scroll
+insert-index updates, tab detail paint preparation, or public dock-space APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs` keeps dock-space orchestration, hit testing,
+  input routing, paint input assembly, and public entrypoints.
+- `ecosystem/fret-docking/src/dock/declarative/tab_metrics.rs` owns tab text measurement,
+  tab width projection, tab-bar geometry, scroll clamp/sync, and drag auto-scroll helpers.
+- `tools/gate_imui_workstream_source.py` now tracks the declarative/tab-metrics split and rejects
+  tab metric/scroll policy from drifting back into the declarative orchestration owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the tab metrics owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking --no-fail-fast`: pass (90 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Declarative Interaction State Owner-Split Evidence - 2026-06-01
 
 Claim verified: docking declarative pressed/drag/hover interaction state moved out of the large

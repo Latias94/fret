@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 docking declarative tab-metrics owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, hit testing,
+input routing, paint input assembly, and public entrypoints. The private
+`dock/declarative/tab_metrics.rs` owner contains tab title/glyph text preparation, measured and
+fallback tab width projection, tab-bar geometry, active-tab visibility clamping, persisted tab
+scroll sync, tab detail paint preparation, and drag auto-scroll insert-index updates. Public
+dock-space APIs and tab/overflow behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 docking declarative interaction-state owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, panel registry, layout/render/input orchestration, and public docking APIs. The private
