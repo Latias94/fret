@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor Color-Edit SV Bar Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor color-edit SV picker entry rendering moved out of the SV picker root into a
+private `sv/bar.rs` owner without changing SV picker import paths, pressable pointer lifecycle,
+focused border/ring chrome, preview stack routing, a11y value text, or popup policy tests.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/sv.rs` is now a module hub and
+  re-export owner for the SV picker entrypoint and preview stack.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/sv/bar.rs` owns SV picker
+  pressable entry rendering, pointer capture/release wiring, focused border/ring chrome, preview
+  stack routing, and a11y value text.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now reads the SV bar owner directly while
+  preserving parent picker import paths.
+- `tools/gate_imui_workstream_source.py` now gates the SV root/bar/interaction/preview split and
+  rejects bar rendering details from drifting back into the SV picker root.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new SV bar owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor --lib color_edit --no-fail-fast`: pass (51 passed).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass (2 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Color-Edit SV Interaction Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor color-edit SV picker position mutation moved out of the SV picker root into

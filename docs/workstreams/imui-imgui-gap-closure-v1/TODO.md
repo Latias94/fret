@@ -1321,6 +1321,12 @@ Last updated: 2026-06-01
       focused border/ring chrome, and preview stack routing, while
       `color_edit/popup/picker/sv/interaction.rs` owns local x/y to HSV mutation and shared HSV
       apply dispatch.
+- [x] Split editor color-edit SV picker entry rendering into a private child owner without
+      changing SV picker import paths, pressable pointer lifecycle, focused border/ring chrome,
+      preview stack routing, a11y value text, or popup policy tests.
+      Result: `color_edit/popup/picker/sv.rs` is now a module hub and re-export owner.
+      `color_edit/popup/picker/sv/bar.rs` owns SV picker pressable entry rendering and chrome
+      assembly.
 - [x] Split editor color-edit hue-wheel picker interaction into a private owner without changing
       hue-wheel picker composition, pure canvas painting ownership, hue-wheel target math, shared
       HSV color application, or color-edit popup policy tests.

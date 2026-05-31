@@ -47,6 +47,8 @@ const COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/hue_wheel_picker.rs");
 const COLOR_EDIT_POPUP_PICKER_SV_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/sv.rs");
+const COLOR_EDIT_POPUP_PICKER_SV_BAR_RS: &str =
+    include_str!("../src/controls/color_edit/popup/picker/sv/bar.rs");
 const COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/sv/preview.rs");
 const COLOR_EDIT_POPUP_PREVIEW_RS: &str =
@@ -127,11 +129,14 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("pub(super) use sv::sv_picker_preview_stack;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("pub(super) use hue_wheel::hue_wheel_canvas;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_picker<"));
-    assert!(COLOR_EDIT_POPUP_PICKER_SV_RS.contains("fn sv_picker<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_SV_RS.contains("mod bar;"));
+    assert!(COLOR_EDIT_POPUP_PICKER_SV_RS.contains("mod interaction;"));
     assert!(COLOR_EDIT_POPUP_PICKER_SV_RS.contains("mod preview;"));
+    assert!(COLOR_EDIT_POPUP_PICKER_SV_RS.contains("pub(super) use bar::sv_picker;"));
     assert!(COLOR_EDIT_POPUP_PICKER_SV_RS.contains(
         "pub(in crate::controls::color_edit::popup) use preview::sv_picker_preview_stack;"
     ));
+    assert!(COLOR_EDIT_POPUP_PICKER_SV_BAR_RS.contains("fn sv_picker<"));
     assert!(COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_RS.contains("fn sv_picker_grid<"));
     assert!(COLOR_EDIT_POPUP_PICKER_HUE_BAR_RS.contains("fn hue_bar<"));
     assert!(COLOR_EDIT_POPUP_PICKER_HUE_BAR_RS.contains("mod preview;"));

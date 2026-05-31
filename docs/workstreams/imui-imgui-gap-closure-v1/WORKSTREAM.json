@@ -1215,6 +1215,7 @@
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/hue_wheel/triangle.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/hue_wheel_picker.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/sv.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/sv/bar.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/sv/interaction.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/sv/preview.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview.rs",
