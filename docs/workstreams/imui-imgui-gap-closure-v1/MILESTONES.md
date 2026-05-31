@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 editor TransformEdit element owner-split result:
+`ecosystem/fret-ui-editor/src/controls/transform_edit.rs` now keeps public options,
+section/outcome records, constructors, presentation adoption, builder methods, and callsite/
+id-source keying only. The private `controls/transform_edit/element.rs` owner now contains keyed
+element assembly, per-section presentation projection, linked-scale model/sync orchestration,
+section row/column composition, derived id/test-id routing, and root test-id decoration. Public
+TransformEdit option/control APIs remain unchanged.
+
 2026-05-31 editor VecEdit element owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps public VecEdit options, Vec2/Vec3/
 Vec4 records, constructors, presentation adoption, builder methods, and callsite/id-source keying

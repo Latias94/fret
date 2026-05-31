@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## TransformEdit Element Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor `TransformEdit` keyed element assembly moved into a private
+`transform_edit/element.rs` owner without changing callsite keying, section layout variants,
+Vec3Edit composition, linked-scale model/sync behavior, link-toggle test-id derivation, axis
+outcome routing, or public TransformEdit option/control APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/transform_edit.rs` now keeps public transform options,
+  section/outcome records, constructors, presentation adoption, builder methods, and callsite/
+  id-source keying.
+- `ecosystem/fret-ui-editor/src/controls/transform_edit/element.rs` owns keyed element assembly,
+  per-section presentation projection, linked-scale model/sync orchestration, section row/column
+  composition, derived id/test-id routing, and root test-id decoration.
+- `tools/gate_imui_workstream_source.py` now gates the root/element split so Vec3 composition and
+  linked-scale runtime wiring stay out of the public TransformEdit root.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new element-owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor transform_edit --no-fail-fast`: pass (5 passed, 217
+  skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass.
+
 ## VecEdit Element Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor Vec2/Vec3/Vec4 keyed element assembly moved into a private
