@@ -107,6 +107,44 @@ impl<'a> MaterialTokenResolver<'a> {
         self.theme.color_by_key(comp_key).unwrap_or(fallback)
     }
 
+    pub fn color_comp_chain(&self, comp_keys: &[&str]) -> Option<Color> {
+        debug_assert_comp_keys(comp_keys);
+        comp_keys
+            .iter()
+            .find_map(|key| self.theme.color_by_key(key))
+    }
+
+    pub fn color_comp_chain_or_sys(&self, comp_keys: &[&str], sys_key: &str) -> Color {
+        debug_assert_comp_keys(comp_keys);
+        debug_assert!(
+            sys_key.starts_with("md.sys."),
+            "expected md.sys.* key, got: {sys_key}"
+        );
+        self.color_comp_chain(comp_keys)
+            .unwrap_or_else(|| self.color_sys(sys_key))
+    }
+
+    pub fn color_comp_chain_or_sys_or(
+        &self,
+        comp_keys: &[&str],
+        sys_key: &str,
+        fallback: Color,
+    ) -> Color {
+        debug_assert_comp_keys(comp_keys);
+        debug_assert!(
+            sys_key.starts_with("md.sys."),
+            "expected md.sys.* key, got: {sys_key}"
+        );
+        self.color_comp_chain(comp_keys)
+            .or_else(|| self.theme.color_by_key(sys_key))
+            .unwrap_or(fallback)
+    }
+
+    pub fn color_comp_chain_or_fallback(&self, comp_keys: &[&str], fallback: Color) -> Color {
+        debug_assert_comp_keys(comp_keys);
+        self.color_comp_chain(comp_keys).unwrap_or(fallback)
+    }
+
     pub fn color_comp_or_sys_or(&self, comp_key: &str, sys_key: &str, fallback: Color) -> Color {
         debug_assert!(
             comp_key.starts_with("md.comp."),
@@ -154,6 +192,17 @@ impl<'a> MaterialTokenResolver<'a> {
             .unwrap_or(fallback)
     }
 
+    pub fn number_chain(&self, keys: &[&str], fallback: f32) -> f32 {
+        debug_assert!(!keys.is_empty(), "expected at least one md.* key");
+        debug_assert!(
+            keys.iter().all(|key| key.starts_with("md.")),
+            "expected md.* number token keys, got: {keys:?}"
+        );
+        keys.iter()
+            .find_map(|key| self.theme.number_by_key(key))
+            .unwrap_or(fallback)
+    }
+
     pub fn color_comp_or_sys_with_opacity(
         &self,
         comp_key: &str,
@@ -184,10 +233,20 @@ impl<'a> MaterialTokenResolver<'a> {
     }
 }
 
+fn debug_assert_comp_keys(comp_keys: &[&str]) {
+    debug_assert!(!comp_keys.is_empty(), "expected at least one md.comp.* key");
+    debug_assert!(
+        comp_keys.iter().all(|key| key.starts_with("md.comp.")),
+        "expected md.comp.* keys, got: {comp_keys:?}"
+    );
+}
+
 fn fallback_color_for_sys(sys_key: &str) -> Color {
     match sys_key {
         "md.sys.color.primary" => Color::from_srgb_hex_rgb(0x67_50_a4),
         "md.sys.color.on-primary" => Color::from_srgb_hex_rgb(0xff_ff_ff),
+        "md.sys.color.secondary-container" => Color::from_srgb_hex_rgb(0x4a_44_5f),
+        "md.sys.color.on-secondary-container" => Color::from_srgb_hex_rgb(0xe8_de_ff),
         "md.sys.color.surface" => Color::from_srgb_hex_rgb(0x1c_1c_1f),
         "md.sys.color.surface-container" => Color::from_srgb_hex_rgb(0x29_29_2b),
         "md.sys.color.surface-container-low" => Color::from_srgb_hex_rgb(0x21_21_24),

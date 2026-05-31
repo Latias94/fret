@@ -1,0 +1,7 @@
+{"role":"follow_on","path":"docs/workstreams/material3-token-resolver-fallback-v1/CLOSEOUT_AUDIT_2026-05-31.md","why":"Defines the residual non-field fallback surface and the reason this lane exists."}
+{"role":"adr","path":"docs/adr/0032-style-tokens-and-theme-resolution.md","why":"Token resolution and theme fallback contract context."}
+{"role":"adr","path":"docs/adr/0066-fret-ui-runtime-contract-surface.md","why":"Confirms Material component fallback policy stays outside fret-ui runtime contracts."}
+{"role":"adr","path":"docs/adr/0226-material3-state-layer-and-ripple-primitives.md","why":"State-layer and ripple primitive context for action/control components."}
+{"role":"gates","path":"docs/workstreams/material3-token-resolver-non-field-fallback-v1/EVIDENCE_AND_GATES.md","why":"Fresh validation commands for the lane."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/button.rs","why":"M3NF-020 migrated Button token fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/foundation/token_resolver.rs","why":"M3NF-020 added reusable component-chain and number-chain fallback helpers."}

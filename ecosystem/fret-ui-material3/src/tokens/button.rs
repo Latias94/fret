@@ -7,6 +7,9 @@ use fret_core::{Color, Px};
 use fret_ui::Theme;
 
 use crate::button::ButtonVariant;
+use crate::foundation::token_resolver::{
+    MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ButtonInteraction {
@@ -16,28 +19,28 @@ pub(crate) enum ButtonInteraction {
 }
 
 pub(crate) fn label_color(theme: &Theme, variant: ButtonVariant, enabled: bool) -> Color {
+    let tokens = MaterialTokenResolver::new(theme);
+
     if enabled {
-        theme
-            .color_by_key(label_color_key(variant))
-            .or_else(|| match variant {
-                ButtonVariant::Filled => theme.color_by_key("md.sys.color.on-primary"),
-                ButtonVariant::Tonal => theme.color_by_key("md.sys.color.on-secondary-container"),
-                ButtonVariant::Elevated | ButtonVariant::Text => {
-                    theme.color_by_key("md.sys.color.primary")
-                }
-                ButtonVariant::Outlined => theme.color_by_key("md.sys.color.on-surface-variant"),
-            })
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
+        tokens.color_comp_or_sys_chain(label_color_key(variant), label_sys_keys(variant))
     } else {
-        let base = theme
-            .color_by_key(disabled_label_color_key(variant))
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-        let opacity = disabled_label_opacity(theme, variant);
-        let mut c = base;
-        c.a *= opacity;
-        c
+        let base =
+            tokens.color_comp_or_sys(disabled_label_color_key(variant), "md.sys.color.on-surface");
+        alpha_mul(base, disabled_label_opacity(theme, variant))
+    }
+}
+
+fn label_sys_keys(variant: ButtonVariant) -> &'static [&'static str] {
+    match variant {
+        ButtonVariant::Filled => &["md.sys.color.on-primary", "md.sys.color.on-surface"],
+        ButtonVariant::Tonal => &[
+            "md.sys.color.on-secondary-container",
+            "md.sys.color.on-surface",
+        ],
+        ButtonVariant::Elevated | ButtonVariant::Text => {
+            &["md.sys.color.primary", "md.sys.color.on-surface"]
+        }
+        ButtonVariant::Outlined => &["md.sys.color.on-surface-variant", "md.sys.color.on-surface"],
     }
 }
 
@@ -47,59 +50,18 @@ pub(crate) fn container_background(
     enabled: bool,
     label_fallback: Color,
 ) -> Option<Color> {
-    match variant {
-        ButtonVariant::Text | ButtonVariant::Outlined => None,
-        ButtonVariant::Filled => {
-            if enabled {
-                Some(
-                    theme
-                        .color_by_key("md.comp.button.filled.container.color")
-                        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-                        .unwrap_or_else(|| theme.color_token("md.sys.color.primary")),
-                )
-            } else {
-                Some(disabled_container_color(
-                    theme,
-                    variant,
-                    "md.comp.button.filled.disabled.container.color",
-                    label_fallback,
-                ))
-            }
-        }
-        ButtonVariant::Tonal => {
-            if enabled {
-                Some(
-                    theme
-                        .color_by_key("md.comp.button.tonal.container.color")
-                        .or_else(|| theme.color_by_key("md.sys.color.secondary-container"))
-                        .unwrap_or_else(|| theme.color_token("md.sys.color.secondary-container")),
-                )
-            } else {
-                Some(disabled_container_color(
-                    theme,
-                    variant,
-                    "md.comp.button.tonal.disabled.container.color",
-                    label_fallback,
-                ))
-            }
-        }
-        ButtonVariant::Elevated => {
-            if enabled {
-                Some(
-                    theme
-                        .color_by_key("md.comp.button.elevated.container.color")
-                        .or_else(|| theme.color_by_key("md.sys.color.surface-container-low"))
-                        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-low")),
-                )
-            } else {
-                Some(disabled_container_color(
-                    theme,
-                    variant,
-                    "md.comp.button.elevated.disabled.container.color",
-                    label_fallback,
-                ))
-            }
-        }
+    let (container_key, sys_key) = enabled_container_color_keys(variant)?;
+    let tokens = MaterialTokenResolver::new(theme);
+
+    if enabled {
+        Some(tokens.color_comp_or_sys(container_key, sys_key))
+    } else {
+        Some(disabled_container_color(
+            theme,
+            variant,
+            disabled_container_color_key(variant),
+            label_fallback,
+        ))
     }
 }
 
@@ -115,11 +77,13 @@ pub(crate) fn container_elevation(
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme, variant: ButtonVariant) -> Color {
-    theme
-        .color_by_key(container_shadow_color_key(variant))
-        .or_else(|| theme.color_by_key("md.comp.button.container.shadow-color"))
-        .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
+    MaterialTokenResolver::new(theme).color_comp_chain_or_sys(
+        &[
+            container_shadow_color_key(variant),
+            "md.comp.button.container.shadow-color",
+        ],
+        "md.sys.color.shadow",
+    )
 }
 
 pub(crate) fn state_layer_color(
@@ -132,9 +96,8 @@ pub(crate) fn state_layer_color(
         return label_fallback;
     };
 
-    theme
-        .color_by_key(state_layer_color_key(variant, interaction))
-        .unwrap_or(label_fallback)
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_fallback(state_layer_color_key(variant, interaction), label_fallback)
 }
 
 pub(crate) fn icon_color(
@@ -144,30 +107,33 @@ pub(crate) fn icon_color(
     label_fallback: Color,
     interaction: Option<ButtonInteraction>,
 ) -> Color {
+    let tokens = MaterialTokenResolver::new(theme);
+
     if !enabled {
-        let base = theme
-            .color_by_key(disabled_icon_color_key(variant))
-            .or_else(|| theme.color_by_key("md.comp.button.disabled.icon.color"))
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or(label_fallback);
-        let opacity = disabled_icon_opacity(theme, variant);
-        let mut c = base;
-        c.a *= opacity;
-        return c;
+        let base = tokens.color_comp_chain_or_sys_or(
+            &[
+                disabled_icon_color_key(variant),
+                "md.comp.button.disabled.icon.color",
+            ],
+            "md.sys.color.on-surface",
+            label_fallback,
+        );
+        return alpha_mul(base, disabled_icon_opacity(theme, variant));
     }
 
     if let Some(interaction) = interaction
-        && let Some(c) = theme
-            .color_by_key(interaction_icon_color_key(variant, interaction))
-            .or_else(|| theme.color_by_key(interaction_icon_color_key_any(interaction)))
+        && let Some(c) = tokens.color_comp_chain(&[
+            interaction_icon_color_key(variant, interaction),
+            interaction_icon_color_key_any(interaction),
+        ])
     {
         return c;
     }
 
-    theme
-        .color_by_key(icon_color_key(variant))
-        .or_else(|| theme.color_by_key("md.comp.button.icon.color"))
-        .unwrap_or(label_fallback)
+    tokens.color_comp_chain_or_fallback(
+        &[icon_color_key(variant), "md.comp.button.icon.color"],
+        label_fallback,
+    )
 }
 
 pub(crate) fn state_layer_opacity(
@@ -175,16 +141,10 @@ pub(crate) fn state_layer_opacity(
     variant: ButtonVariant,
     interaction: ButtonInteraction,
 ) -> f32 {
-    let (sys_key, fallback) = match interaction {
-        ButtonInteraction::Pressed => ("md.sys.state.pressed.state-layer-opacity", 0.1),
-        ButtonInteraction::Focused => ("md.sys.state.focus.state-layer-opacity", 0.1),
-        ButtonInteraction::Hovered => ("md.sys.state.hover.state-layer-opacity", 0.08),
-    };
-
-    theme
-        .number_by_key(state_layer_opacity_key(variant, interaction))
-        .or_else(|| theme.number_by_key(sys_key))
-        .unwrap_or(fallback)
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        state_layer_opacity_key(variant, interaction),
+        material_state_layer_interaction(interaction),
+    )
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme, variant: ButtonVariant) -> f32 {
@@ -192,22 +152,23 @@ pub(crate) fn pressed_state_layer_opacity(theme: &Theme, variant: ButtonVariant)
 }
 
 fn disabled_label_opacity(theme: &Theme, variant: ButtonVariant) -> f32 {
-    theme
-        .number_by_key(disabled_label_opacity_key(variant))
-        .unwrap_or(0.38)
+    MaterialTokenResolver::new(theme)
+        .number_optional(Some(disabled_label_opacity_key(variant)), 0.38)
 }
 
 fn disabled_icon_opacity(theme: &Theme, variant: ButtonVariant) -> f32 {
-    theme
-        .number_by_key(disabled_icon_opacity_key(variant))
-        .or_else(|| theme.number_by_key("md.comp.button.disabled.icon.opacity"))
-        .unwrap_or(0.38)
+    MaterialTokenResolver::new(theme).number_chain(
+        &[
+            disabled_icon_opacity_key(variant),
+            "md.comp.button.disabled.icon.opacity",
+        ],
+        0.38,
+    )
 }
 
 fn disabled_container_opacity(theme: &Theme, variant: ButtonVariant) -> f32 {
-    theme
-        .number_by_key(disabled_container_opacity_key(variant))
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme)
+        .number_optional(Some(disabled_container_opacity_key(variant)), 0.1)
 }
 
 fn disabled_container_color(
@@ -216,12 +177,50 @@ fn disabled_container_color(
     token_key: &'static str,
     fallback: Color,
 ) -> Color {
-    let mut c = theme
-        .color_by_key(token_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or(fallback);
-    c.a *= disabled_container_opacity(theme, variant);
-    c
+    let base = MaterialTokenResolver::new(theme).color_comp_or_sys_or(
+        token_key,
+        "md.sys.color.on-surface",
+        fallback,
+    );
+    alpha_mul(base, disabled_container_opacity(theme, variant))
+}
+
+fn material_state_layer_interaction(
+    interaction: ButtonInteraction,
+) -> MaterialStateLayerInteraction {
+    match interaction {
+        ButtonInteraction::Hovered => MaterialStateLayerInteraction::Hovered,
+        ButtonInteraction::Focused => MaterialStateLayerInteraction::Focused,
+        ButtonInteraction::Pressed => MaterialStateLayerInteraction::Pressed,
+    }
+}
+
+fn enabled_container_color_keys(variant: ButtonVariant) -> Option<(&'static str, &'static str)> {
+    match variant {
+        ButtonVariant::Filled => Some((
+            "md.comp.button.filled.container.color",
+            "md.sys.color.primary",
+        )),
+        ButtonVariant::Tonal => Some((
+            "md.comp.button.tonal.container.color",
+            "md.sys.color.secondary-container",
+        )),
+        ButtonVariant::Elevated => Some((
+            "md.comp.button.elevated.container.color",
+            "md.sys.color.surface-container-low",
+        )),
+        ButtonVariant::Outlined | ButtonVariant::Text => None,
+    }
+}
+
+fn disabled_container_color_key(variant: ButtonVariant) -> &'static str {
+    match variant {
+        ButtonVariant::Filled => "md.comp.button.filled.disabled.container.color",
+        ButtonVariant::Tonal => "md.comp.button.tonal.disabled.container.color",
+        ButtonVariant::Elevated => "md.comp.button.elevated.disabled.container.color",
+        ButtonVariant::Outlined => "md.comp.button.outlined.disabled.container.color",
+        ButtonVariant::Text => "md.comp.button.text.disabled.container.color",
+    }
 }
 
 fn container_elevation_key(
