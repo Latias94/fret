@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 539
+- Dedicated directories: 540
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2270,6 +2270,7 @@ Rule:
 - `docs/workstreams/material3-token-fallback-hardening-v2/` — first n/a, latest n/a, 7 markdown docs (closed fearless-refactor lane for reducing duplicated Material3 chip-family token fallback logic; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-logical-edge-layout-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for Material3 logical inline edge helpers plus FilterChip/InputChip RTL padding and trailing-action inset proof; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-select-popup-rtl-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for Material3 Select popup logical start alignment and listbox option RTL visual-slot proof; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-slider-token-defaults-v1/` — first n/a, latest n/a, 7 markdown docs (closed fearless-refactor lane for moving Material3 Slider visual default matrices into token helper policy; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-canvas-draw-region-diagnostics-v1/` — first 2026-05-28, latest 2026-05-28, 7 markdown docs (closed follow-on for Material3 ProgressIndicator/Slider canvas draw-region diagnostics, recipe-level rectangular anchors, and named SceneOp mechanism split; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-component-alignment-sweep-v1/` — first 2026-05-27, latest 2026-05-28, 6 markdown docs (closed Material 3 all-component alignment sweep with component matrix, packet waves, foundation-escalation rules, closeout audit, and current follow-on closure audit; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-visual-behavior-layout-parity-v2/` — first 2026-05-28, latest 2026-05-28, 5 markdown docs (complete fearless-refactor lane for shadcn-level Material3 style/behavior/layout parity axes, v2 matrix, and bounded packet gates; includes `WORKSTREAM.json`)

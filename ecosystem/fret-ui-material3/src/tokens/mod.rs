@@ -38,6 +38,7 @@ pub(crate) mod selectable_menu_item;
 pub(crate) mod shape;
 pub(crate) mod sheet_bottom;
 pub(crate) mod slider;
+pub(crate) mod slider_common;
 pub(crate) mod snackbar;
 pub(crate) mod suggestion_chip;
 pub(crate) mod switch;

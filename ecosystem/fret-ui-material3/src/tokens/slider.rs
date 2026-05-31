@@ -10,7 +10,7 @@ use fret_ui_kit::typography::TextIntent;
 use crate::foundation::token_resolver::{
     MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
 };
-use crate::tokens::typography;
+use crate::tokens::{slider_common, typography};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SliderInteraction {
@@ -23,7 +23,7 @@ pub(crate) enum SliderInteraction {
 pub(crate) fn state_layer_size(theme: &Theme) -> Px {
     theme
         .metric_by_key("md.comp.slider.state-layer.size")
-        .unwrap_or(Px(40.0))
+        .unwrap_or_else(slider_common::state_layer_size)
 }
 
 pub(crate) fn state_layer_target_opacity(
@@ -87,7 +87,7 @@ fn state_layer_color_key(interaction: SliderInteraction) -> &'static str {
 pub(crate) fn value_indicator_bottom_space(theme: &Theme) -> Px {
     theme
         .metric_by_key("md.comp.slider.value-indicator.active.bottom-space")
-        .unwrap_or(Px(12.0))
+        .unwrap_or_else(slider_common::value_indicator_bottom_space)
 }
 
 pub(crate) fn value_indicator_container_color(theme: &Theme) -> Color {
@@ -117,7 +117,7 @@ pub(crate) fn value_indicator_label_style(theme: &Theme) -> TextStyle {
 pub(crate) fn tick_mark_size(theme: &Theme) -> Px {
     theme
         .metric_by_key("md.comp.slider.with-tick-marks.container.size")
-        .unwrap_or(Px(2.0))
+        .unwrap_or_else(slider_common::tick_mark_size)
 }
 
 pub(crate) fn tick_mark_shape(theme: &Theme) -> Corners {
@@ -128,7 +128,7 @@ pub(crate) fn tick_mark_shape(theme: &Theme) -> Corners {
                 .metric_by_key("md.comp.slider.with-tick-marks.container.shape")
                 .map(Corners::all)
         })
-        .unwrap_or_else(|| Corners::all(Px(9999.0)))
+        .unwrap_or_else(slider_common::full_shape)
 }
 
 pub(crate) fn tick_mark_color(theme: &Theme, enabled: bool, active: bool) -> Color {
@@ -153,7 +153,7 @@ pub(crate) fn tick_mark_opacity(theme: &Theme, enabled: bool, active: bool) -> f
     if !enabled {
         return tokens.number_optional(
             Some("md.comp.slider.with-tick-marks.disabled.container.opacity"),
-            0.38,
+            slider_common::tick_mark_opacity(),
         );
     }
 
@@ -162,13 +162,13 @@ pub(crate) fn tick_mark_opacity(theme: &Theme, enabled: bool, active: bool) -> f
     } else {
         "md.comp.slider.with-tick-marks.inactive.container.opacity"
     };
-    tokens.number_optional(Some(key), 0.38)
+    tokens.number_optional(Some(key), slider_common::tick_mark_opacity())
 }
 
 pub(crate) fn stop_indicator_size(theme: &Theme) -> Px {
     theme
         .metric_by_key("md.comp.slider.stop-indicator.size")
-        .unwrap_or(Px(4.0))
+        .unwrap_or_else(slider_common::stop_indicator_size)
 }
 
 pub(crate) fn stop_indicator_shape(theme: &Theme) -> Corners {
@@ -179,13 +179,13 @@ pub(crate) fn stop_indicator_shape(theme: &Theme) -> Corners {
                 .metric_by_key("md.comp.slider.stop-indicator.shape")
                 .map(Corners::all)
         })
-        .unwrap_or_else(|| Corners::all(Px(9999.0)))
+        .unwrap_or_else(slider_common::full_shape)
 }
 
 pub(crate) fn stop_indicator_trailing_space(theme: &Theme) -> Px {
     theme
         .metric_by_key("md.comp.slider.stop-indicator.trailing-space")
-        .unwrap_or(Px(4.0))
+        .unwrap_or_else(slider_common::stop_indicator_trailing_space)
 }
 
 pub(crate) fn stop_indicator_color(theme: &Theme, enabled: bool, selected: bool) -> Color {
@@ -205,17 +205,17 @@ pub(crate) fn stop_indicator_color(theme: &Theme, enabled: bool, selected: bool)
     let opacity = if !enabled {
         tokens.number_optional(
             Some("md.comp.slider.disabled.stop-indicator.container.opacity"),
-            0.38,
+            slider_common::disabled_content_opacity(),
         )
     } else if selected {
         tokens.number_optional(
             Some("md.comp.slider.active.stop-indicator.container.opacity"),
-            1.0,
+            slider_common::selected_stop_indicator_opacity(),
         )
     } else {
         tokens.number_optional(
             Some("md.comp.slider.inactive.stop-indicator.container.opacity"),
-            1.0,
+            slider_common::unselected_stop_indicator_opacity(),
         )
     };
 
@@ -225,13 +225,13 @@ pub(crate) fn stop_indicator_color(theme: &Theme, enabled: bool, selected: bool)
 pub(crate) fn active_track_height(theme: &Theme) -> Px {
     theme
         .metric_by_key("md.comp.slider.active.track.height")
-        .unwrap_or(Px(16.0))
+        .unwrap_or_else(slider_common::track_height)
 }
 
 pub(crate) fn inactive_track_height(theme: &Theme) -> Px {
     theme
         .metric_by_key("md.comp.slider.inactive.track.height")
-        .unwrap_or(Px(16.0))
+        .unwrap_or_else(slider_common::track_height)
 }
 
 pub(crate) fn active_track_color(
@@ -245,8 +245,10 @@ pub(crate) fn active_track_color(
             "md.comp.slider.disabled.active.track.color",
             "md.sys.color.on-surface",
         );
-        let opacity =
-            tokens.number_optional(Some("md.comp.slider.disabled.active.track.opacity"), 0.38);
+        let opacity = tokens.number_optional(
+            Some("md.comp.slider.disabled.active.track.opacity"),
+            slider_common::disabled_content_opacity(),
+        );
         return alpha_mul(base, opacity);
     }
 
@@ -270,8 +272,10 @@ pub(crate) fn inactive_track_color(
             "md.comp.slider.disabled.inactive.track.color",
             "md.sys.color.on-surface",
         );
-        let opacity =
-            tokens.number_optional(Some("md.comp.slider.disabled.inactive.track.opacity"), 0.12);
+        let opacity = tokens.number_optional(
+            Some("md.comp.slider.disabled.inactive.track.opacity"),
+            slider_common::disabled_inactive_track_opacity(),
+        );
         return alpha_mul(base, opacity);
     }
 
@@ -293,7 +297,10 @@ pub(crate) fn handle_color(theme: &Theme, enabled: bool, interaction: SliderInte
             "md.comp.slider.disabled.handle.color",
             "md.sys.color.on-surface",
         );
-        let opacity = tokens.number_optional(Some("md.comp.slider.disabled.handle.opacity"), 0.38);
+        let opacity = tokens.number_optional(
+            Some("md.comp.slider.disabled.handle.opacity"),
+            slider_common::disabled_content_opacity(),
+        );
         return alpha_mul(base, opacity);
     }
 
@@ -316,35 +323,35 @@ pub(crate) fn track_shape(theme: &Theme) -> Corners {
                 .map(Corners::all)
         })
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
-        .unwrap_or_else(|| Corners::all(Px(9999.0)))
+        .unwrap_or_else(slider_common::full_shape)
 }
 
 pub(crate) fn handle_height(theme: &Theme) -> Px {
     theme
         .metric_by_key("md.comp.slider.handle.height")
-        .unwrap_or(Px(44.0))
+        .unwrap_or_else(slider_common::handle_height)
 }
 
 pub(crate) fn handle_width(theme: &Theme, enabled: bool, interaction: SliderInteraction) -> Px {
     if !enabled {
         return theme
             .metric_by_key("md.comp.slider.disabled.handle.width")
-            .unwrap_or(Px(4.0));
+            .unwrap_or_else(slider_common::handle_resting_width);
     }
 
     match interaction {
         SliderInteraction::Pressed => theme
             .metric_by_key("md.comp.slider.pressed.handle.width")
-            .unwrap_or(Px(2.0)),
+            .unwrap_or_else(slider_common::handle_pressed_width),
         SliderInteraction::Focused => theme
             .metric_by_key("md.comp.slider.focus.handle.width")
-            .unwrap_or(Px(2.0)),
+            .unwrap_or_else(slider_common::handle_focused_width),
         SliderInteraction::Hovered => theme
             .metric_by_key("md.comp.slider.hover.handle.width")
             .unwrap_or_else(|| handle_width(theme, enabled, SliderInteraction::None)),
         SliderInteraction::None => theme
             .metric_by_key("md.comp.slider.handle.width")
-            .unwrap_or(Px(4.0)),
+            .unwrap_or_else(slider_common::handle_resting_width),
     }
 }
 
@@ -357,5 +364,5 @@ pub(crate) fn handle_shape(theme: &Theme) -> Corners {
                 .map(Corners::all)
         })
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
-        .unwrap_or_else(|| Corners::all(Px(9999.0)))
+        .unwrap_or_else(slider_common::full_shape)
 }

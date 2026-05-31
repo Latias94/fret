@@ -29,6 +29,7 @@ TOKEN_POLICY_HELPER_MODULES = {
     "chip_common.rs",
     "fab_common.rs",
     "shape.rs",
+    "slider_common.rs",
     "time_period_common.rs",
     "typography.rs",
 }
