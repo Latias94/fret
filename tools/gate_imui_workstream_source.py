@@ -939,6 +939,7 @@ def main() -> None:
                 "ecosystem/fret-ui-editor/src/controls/text_assist_field.rs",
                 "ecosystem/fret-ui-editor/src/controls/color_edit/popup/copy.rs",
                 "ecosystem/fret-ui-editor/src/controls/color_edit/popup/options.rs",
+                "ecosystem/fret-ui-editor/src/controls/color_edit/popup/options/button.rs",
                 "ecosystem/fret-ui-editor/src/controls/color_edit/popup/options/thumbnail.rs",
                 "ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview.rs",
                 "ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview/fill.rs",
@@ -33590,13 +33591,16 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/color_edit/popup/options.rs"),
             required=[
+                "mod button;",
                 "mod thumbnail;",
+                "pub(super) use button::option_button;",
                 "use thumbnail::{PICKER_OPTION_THUMBNAIL_HEIGHT, picker_option_thumbnail};",
-                "use crate::primitives::readout::{",
-                "editor_popup_list_centered_row_text_props(",
+                "use crate::primitives::readout::editor_popup_list_option_caption_text_props;",
                 "editor_popup_list_option_caption_text_props(",
             ],
             forbidden=[
+                "pub(super) fn option_button",
+                "editor_popup_list_centered_row_text_props",
                 "fn picker_option_thumbnail",
                 "fn hue_bar_picker_thumbnail",
                 "fn hue_wheel_picker_thumbnail",
@@ -33609,6 +33613,26 @@ def main() -> None:
                 "TextStyle {",
                 "wrap: TextWrap::None,",
                 "editor_popup_list_row_text_style",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/popup/options/button.rs"),
+            required=[
+                "pub(in crate::controls::color_edit::popup) fn option_button",
+                "PressableProps",
+                "PressableA11y",
+                "editor_popup_list_row_palette",
+                "EditorPopupListRowState",
+                "editor_popup_list_row_radius",
+                "editor_popup_list_centered_row_text_props",
+                "checked: matches!(role, SemanticsRole::Checkbox | SemanticsRole::RadioButton)",
+            ],
+            forbidden=[
+                "ColorEditPopupRuntimeOptions",
+                "ColorEditPopupPicker",
+                "picker_option_thumbnail",
+                "editor_popup_list_option_caption_text_props",
+                "hsv_from_color",
             ],
         ),
         SourceCheck(
