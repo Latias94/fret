@@ -1240,6 +1240,13 @@ Last updated: 2026-05-31
       Result: `controls/color_edit/tests.rs` is now a test hub with module routing plus the shared
       HSV assertion helper. `controls/color_edit/tests/affordances.rs` owns eyedropper,
       tooltip-preview, and copy payload coverage.
+- [x] Split editor color-edit copy payload entries into a private child owner without changing
+      copy-menu overlay behavior, clipboard write effects, menu row chrome, Dear ImGui-style
+      float/int/hex payload text, or affordance tests.
+      Result: `color_edit/popup/copy.rs` keeps overlay, panel, row pressable, focus restore, and
+      clipboard-effect orchestration, while `color_edit/popup/copy/entries.rs` owns
+      `ColorEditCopyFormat`, `ColorEditCopyEntry`, channel conversion, finite-value fallback, and
+      `color_copy_entries(...)`.
 - [x] Split editor color-edit alpha bar previews and interaction into a private owner without
       changing horizontal/vertical alpha bars, alpha coordinate mapping, popup picker composition,
       color-edit helper tests, or color-edit popup policy tests.
