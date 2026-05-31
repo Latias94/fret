@@ -30,7 +30,7 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 | SegmentedButton | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Single and multi-select are covered. |
 | Tabs | Strong | Strong | Strong | Strong | Strong | Strong | Strong | 2026-05-31: gained active `TabPanel` content API, panel semantics, label relation, and content `test_id`. Residuals: optional force-mount/presence panels and richer overflow polish. |
 | Menu / DropdownMenu | Strong | Strong | Strong | Strong | Strong | Strong | Strong | 2026-05-31: gained labels, rich slots, checkbox/radio items, two-line rows, and close-on-select coverage. Residuals: grouped API, submenus, long-menu scroll affordances. |
-| Select / ExposedDropdown / Autocomplete | Strong | Strong | Strong | Strong | Strong | Partial | Strong | Field-family overlay behavior is mature; keep improving active-descendant/AT and motion evidence. |
+| Select / ExposedDropdown / Autocomplete | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Motion gates cover Select, Autocomplete, and ExposedDropdown chevron + overlay open/close fade/scale. |
 | TextField | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Floating-label and token work are mature; keep extending field-family compositions. |
 | Dialog / BottomSheet | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Dialog gates cover open/close fade + rise/scale; BottomSheet gates cover open/close sheet-height slide without panel fade. |
 | Tooltip | Partial | Strong | Strong | Partial | Strong | Partial | Strong | `TooltipStyle` now covers plain/rich visual slots; rich tooltip actions are still constrained by non-hit-testable tooltip overlay policy. |
@@ -82,6 +82,13 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     accidental panel fade; scrim alpha remains token-driven paint, not panel opacity.
   - Gates: `dialog_state::dialog_scrim_and_panel_animate_on_open_close_frames`,
     `bottom_sheet_motion::modal_bottom_sheet_slides_from_own_height_without_panel_fade`.
+- 2026-06-01 Select/Autocomplete motion evidence calibration:
+  - Select motion gates cover chevron rotation and overlay fade/scale on open and close.
+  - Autocomplete and ExposedDropdown motion gates cover chevron rotation and popup fade/scale on
+    open and close.
+  - Gates: `select_behavior::select_chevron_rotates_on_first_open_frame`,
+    `autocomplete_motion::{autocomplete_popup_and_chevron_animate_on_open_close_frames,
+    exposed_dropdown_popup_and_chevron_animate_on_open_close_frames}`.
 
 ## Next Recommended Focus
 
@@ -90,5 +97,5 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 2. Revisit Tooltip policy:
    decide whether rich tooltip actions require a popover-like hit-testable surface, a new
    hit-testable rich-tooltip overlay kind, or should remain non-interactive per tooltip semantics.
-3. Start the next component-family audit on Select overlay motion or Tooltip rich-action policy,
-   focusing on the remaining `Partial` rows.
+3. Start the next component-family audit on Tooltip rich-action policy, or broaden gallery coverage
+   for the now-Strong families.

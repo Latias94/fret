@@ -270,6 +270,8 @@ before continuing component surface work:
       `calculateMaxHeight`, focus / semantics behaviors).
   - Evidence:
     - `apps/fret-ui-gallery/src/ui.rs` (Material 3 Dialog page includes a Select inside the dialog)
+    - `ecosystem/fret-ui-material3/tests/select_behavior.rs`
+      (`select_chevron_rotates_on_first_open_frame`)
     - `tools/diag-scripts/ui-gallery-material3-select-dialog-overlay-screenshots.json` (fretboard screenshots)
       - Expected: both `ui-gallery-material3-dialog-select-listbox` and
         `ui-gallery-material3-dialog-select-bottom-listbox` open without being clipped by the dialog
@@ -493,6 +495,9 @@ before continuing component surface work:
             - `ecosystem/fret-ui-material3/src/text_field.rs` (`TextField::{trailing_icon,field_id_out}`)
             - `ecosystem/fret-ui-material3/src/autocomplete.rs` (popover request `dismissable_branches`)
             - `ecosystem/fret-ui-material3/src/exposed_dropdown.rs` (`Autocomplete::trailing_dropdown_icon(true)`)
+            - `ecosystem/fret-ui-material3/tests/autocomplete_motion.rs`
+              (`autocomplete_popup_and_chevron_animate_on_open_close_frames`,
+              `exposed_dropdown_popup_and_chevron_animate_on_open_close_frames`)
             - `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
               (`material3_exposed_dropdown_trailing_icon_toggles_overlay_v1`)
             - `tools/diag-scripts/ui-gallery-material3-exposed-dropdown-filtering.json`
