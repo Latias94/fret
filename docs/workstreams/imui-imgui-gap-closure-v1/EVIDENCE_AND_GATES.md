@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Docking Declarative Registry Owner-Split Evidence - 2026-06-01
+
+Claim verified: docking declarative registry and panel-root binding moved out of the large
+declarative dock-space orchestration owner into a private `declarative/registry.rs` owner without
+changing public `DockSpaceElementOptions`, `DockPanelElement`, `DockPanelElementRegistry`,
+`DockPanelElementRegistryService`, `dock_panel_element`, managed dock-space entrypoints, registry
+fallback content, panel ordering, panel-node binding, or public re-export paths.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs` keeps dock-space orchestration, input routing,
+  layout/render assembly, and public entrypoint functions while re-exporting the registry public
+  surface through the existing module path.
+- `ecosystem/fret-docking/src/dock/declarative/registry.rs` owns registry public types, registry
+  service storage, panel collection/order, missing-panel fallback UI, and panel-node binding
+  helpers.
+- `tools/gate_imui_workstream_source.py` now tracks the declarative/registry split and rejects
+  registry/panel-root policy from drifting back into the declarative orchestration owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the registry owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking --no-fail-fast`: pass (90 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Declarative Tab Metrics Owner-Split Evidence - 2026-06-01
 
 Claim verified: docking declarative tab metrics and scroll policy moved out of the large

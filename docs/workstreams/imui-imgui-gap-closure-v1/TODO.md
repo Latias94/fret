@@ -58,6 +58,17 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split docking declarative registry and panel-root binding into a private child owner without
+      changing public `DockSpaceElementOptions`, `DockPanelElement`,
+      `DockPanelElementRegistry`, `DockPanelElementRegistryService`, `dock_panel_element`, managed
+      dock-space entrypoints, registry fallback content, panel ordering, panel-node binding, or
+      public re-export paths.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, input routing, layout/render
+      assembly, and public entrypoint functions while re-exporting the registry public surface.
+      `dock/declarative/registry.rs` owns registry public types, registry service storage,
+      panel collection/order, missing-panel fallback UI, and panel-node binding helpers. The
+      source gate prevents registry/panel-root policy from drifting back into the declarative
+      orchestration owner.
 - [x] Split docking declarative tab metrics and scroll policy into a private child owner without
       changing tab title/glyph text preparation, measured/fallback tab width routing, overflow
       geometry, active-tab visibility clamping, tab-strip wheel scroll persistence, drag
