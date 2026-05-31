@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Checkbox Entry Render Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI checkbox entry rendering split into a private render owner without changing
+label identity scoping, model reads, `CheckboxOptions` a11y/test-id wiring, behavior installation,
+field chrome, visual row assembly, adapter seams, or public checkbox facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/entry.rs` now owns public checkbox
+  model entrypoints and label identity scoping only.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/entry/render.rs` owns model reads,
+  pressable props, checkbox behavior installation, field chrome, indicator mounting, label
+  mounting, and response return.
+- `tools/gate_imui_workstream_source.py` now checks the checkbox entry/render split and rejects
+  render details from drifting back into `entry.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new checkbox render owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass (5 passed).
+- `cargo nextest run -p fret-imui models_controls::checkbox label_identity::model_controls --no-fail-fast`: pass on rerun after the earlier parallel command timed out waiting on build locks (3 passed, 183 skipped).
+
 ## IMUI Tooltip Runtime Model Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI tooltip runtime model creation and trigger gate installation split into a

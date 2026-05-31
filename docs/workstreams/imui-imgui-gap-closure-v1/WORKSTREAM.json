@@ -590,6 +590,7 @@
     "ecosystem/fret-ui-kit/src/imui/boolean_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/entry.rs",
+    "ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/entry/render.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/props.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/behavior/activation.rs",

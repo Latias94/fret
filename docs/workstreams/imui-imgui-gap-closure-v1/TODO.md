@@ -44,6 +44,12 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI checkbox entry rendering into a private owner without changing label identity
+      scoping, model reads, `CheckboxOptions` a11y/test-id wiring, behavior installation, field
+      chrome, visual row assembly, adapter seams, or public checkbox facade behavior.
+      Result: `checkbox/entry.rs` now owns public checkbox model entrypoints and label identity
+      scoping only. `checkbox/entry/render.rs` owns model reads, pressable props, behavior
+      installation, field chrome, indicator/label mounting, and response return.
 - [x] Split IMUI tooltip runtime model creation and trigger gate installation into a private owner
       without changing trigger-id validation, provider option defaults, layout projection,
       hover/focus interaction updates, overlay request submission, or public tooltip facade

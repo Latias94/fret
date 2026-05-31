@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 checkbox entry render owner-split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/entry.rs` now owns public checkbox model
+entrypoints and label identity scoping only. `entry/render.rs` owns model reads, pressable props,
+behavior installation, field chrome, indicator/label mounting, and response return. Public
+checkbox facade behavior remains unchanged.
+
 2026-05-31 tooltip runtime model owner-split result:
 `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` now keeps trigger-id validation,
 provider defaults, layout/interaction/request orchestration, and response return only.
