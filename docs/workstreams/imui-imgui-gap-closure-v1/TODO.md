@@ -1253,6 +1253,12 @@ Last updated: 2026-05-31
       Result: `color_edit/popup/copy.rs` keeps overlay/panel assembly and focus restore, while
       `color_edit/popup/copy/row.rs` owns row pressable/a11y/palette/text, clipboard write effect,
       and close-on-copy model update.
+- [x] Split editor color-edit copy menu panel assembly into a private child owner without changing
+      overlay placement/focus restore, copy payload generation, row test-id derivation, menu
+      semantics, row chrome, or clipboard write behavior.
+      Result: `color_edit/popup/copy.rs` now keeps anchored overlay request orchestration only,
+      while `color_edit/popup/copy/panel.rs` owns popup chrome, density lookup, entry-to-row
+      mapping, menu semantics, and row test-id derivation.
 - [x] Split editor color-edit alpha bar previews and interaction into a private owner without
       changing horizontal/vertical alpha bars, alpha coordinate mapping, popup picker composition,
       color-edit helper tests, or color-edit popup policy tests.
