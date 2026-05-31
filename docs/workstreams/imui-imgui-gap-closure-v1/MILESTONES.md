@@ -80,6 +80,12 @@ payload, and shared HSV assertion coverage. `color_edit/tests/palette.rs` owns p
 hex formatting, default palette source, and app-owned palette/history slot coverage. Public
 ColorEdit palette/history option behavior remains unchanged.
 
+2026-05-31 editor color-edit affordance tests owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` is now a test hub with module routing
+plus the shared HSV assertion helper. `color_edit/tests/affordances.rs` owns app-owned eyedropper
+defaults, sample alpha application, tooltip preview text, and copy-as payload formats. Public
+ColorEdit eyedropper/tooltip/copy behavior remains unchanged.
+
 2026-05-31 menu interaction behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` now owns active-trigger
 installation and keyboard behavior orchestration only. `behavior/activation.rs` owns activate

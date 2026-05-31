@@ -939,6 +939,12 @@ Last updated: 2026-05-31
       Result: `controls/color_edit/tests.rs` keeps eyedropper, tooltip/copy payload, and shared HSV
       assertion coverage. `controls/color_edit/tests/palette.rs` owns preset uniqueness/default
       palette source and app-owned palette/history slot coverage.
+- [x] Split editor color-edit eyedropper/tooltip/copy affordance tests into a private test owner
+      without changing app-owned eyedropper defaults, sample alpha application, tooltip preview
+      text, copy-as payload formats, or shared HSV assertions.
+      Result: `controls/color_edit/tests.rs` is now a test hub with module routing plus the shared
+      HSV assertion helper. `controls/color_edit/tests/affordances.rs` owns eyedropper,
+      tooltip-preview, and copy payload coverage.
 - [x] Split editor color-edit alpha bar previews and interaction into a private owner without
       changing horizontal/vertical alpha bars, alpha coordinate mapping, popup picker composition,
       color-edit helper tests, or color-edit popup policy tests.

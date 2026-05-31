@@ -32694,6 +32694,7 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs"),
             required=[
+                "mod affordances;",
                 "mod drag_drop;",
                 "mod numeric;",
                 "mod palette;",
@@ -32717,6 +32718,23 @@ def main() -> None:
                 "drag_drop_payload_apply_matches_imgui_col3f_col4f_alpha_rules",
                 "color_presets_are_unique_and_hex_formattable",
                 "color_edit_palette_entries_are_app_owned_rgb_slots",
+                "eyedropper_request_applies_sample_alpha_by_visibility",
+                "color_tooltip_lines_match_imgui_hex_rgb_hsv_preview_text",
+                "color_copy_entries_match_imgui_copy_as_payloads",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests/affordances.rs"),
+            required=[
+                "use super::*;",
+                "eyedropper_defaults_to_app_owned_opt_in",
+                "eyedropper_request_applies_sample_alpha_by_visibility",
+                "color_tooltip_lines_match_imgui_hex_rgb_hsv_preview_text",
+                "color_copy_entries_match_imgui_copy_as_payloads",
+            ],
+            forbidden=[
+                "color_presets_are_unique_and_hex_formattable",
+                "drag_drop_payload_shape_tracks_alpha_visibility",
             ],
         ),
         SourceCheck(
