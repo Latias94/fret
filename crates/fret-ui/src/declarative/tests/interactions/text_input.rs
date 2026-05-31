@@ -276,6 +276,56 @@ fn text_input_paste_requests_clipboard_text_when_editable() {
 }
 
 #[test]
+fn text_input_text_input_event_updates_model() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-text-input-event-updates-model",
+        |cx| {
+            let mut props = crate::element::TextInputProps::new(model.clone());
+            props.layout.size.width = Length::Px(Px(200.0));
+            props.layout.size.height = Length::Px(Px(40.0));
+            props.a11y_label = Some(Arc::<str>::from("input"));
+            props.test_id = Some(Arc::<str>::from("plain-text-input"));
+            vec![cx.text_input(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::TextInput("a".to_string()),
+    );
+
+    assert_eq!(
+        app.models().get_cloned(&model).as_deref(),
+        Some("a"),
+        "expected text input event to update the bound model"
+    );
+}
+
+#[test]
 fn text_input_read_only_blocks_mutation_but_allows_selection_copy() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::PlatformCapabilities::default());

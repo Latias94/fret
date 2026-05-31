@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 532
+- Dedicated directories: 533
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2293,6 +2293,7 @@ Rule:
 - `docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 TimePicker value-derived clock dial label selectors and picker accessibility residual-risk split; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-time-picker-input-error-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 TimePicker invalid input error text, invalid semantics, and supporting-text live-region anchors; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-time-picker-string-registry-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 TimePicker string registry wiring through `I18nService` plus bootstrap default resources; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-text-input-mechanism-test-ownership-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor follow-on for moving the final plain TextInput residual coverage into `fret-ui` mechanism tests and deleting the empty Material3 residual interaction binary; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-token-visual-matrix-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor lane for exhaustive Material3 token visual matrix schema, source map, fixture strategy, and family token packets; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 TopAppBar promoted gallery scroll diagnostics; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-tooltip-rich-parts-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 RichTooltip title/supporting-text selectors, shared tooltip root/chrome wiring, and click-through mechanism boundary; includes `WORKSTREAM.json`)
