@@ -26,6 +26,12 @@ and shared list-row text-role mounting only. `selectable_controls/visual/palette
 `SelectablePalette`, selected/hover/pressed/disabled palette fallback order, and highlighted-row
 palette semantics. Public selectable behavior remains unchanged.
 
+2026-05-31 boolean-control indicator owner-split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs` now keeps shared boolean label text and
+indicator re-export routing only. `boolean_controls/visual/indicators.rs` owns checkbox badge,
+radio ring/dot, and switch state badge chrome. Public checkbox, radio, and switch behavior remains
+unchanged.
+
 2026-05-31 editor axis-drag-value session owner-split result:
 `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps scrub/typing control
 orchestration and child-owner routing. `controls/axis_drag_value/session.rs` owns hidden layout
@@ -2624,8 +2630,9 @@ selectable item rows, option test-id suffixes, model updates, and popup close. `
 changed/edited/deactivated-after-edit response projection.
 
 2026-05-26 boolean visual owner-split result:
-`ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs` now owns checkbox badges, radio
-indicators, switch state badges, and shared boolean label text. `boolean_controls.rs` keeps
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs` now owns shared boolean label text and
+re-export routing for checkbox/radio/switch indicator chrome. The 2026-05-31 follow-up moved the
+indicator chrome into `boolean_controls/visual/indicators.rs`. `boolean_controls.rs` keeps
 checkbox/radio pressable orchestration, shortcut/context-menu handling, and response population,
 while `boolean_controls/switch.rs` keeps switch active-trigger behavior and model updates. The
 public checkbox, radio, and switch APIs remain unchanged.

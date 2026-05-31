@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Boolean-Control Indicator Owner-Split Evidence - 2026-05-31
+
+Claim verified: IMUI checkbox/radio/switch indicator chrome moved behind a private visual child
+owner without changing checkbox badge text, radio ring/dot sizing, switch badge text, palette
+channel selection, shared boolean label mounting, or public checkbox/radio/switch behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs` keeps shared boolean label text and
+  re-export routing for indicator helpers.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual/indicators.rs` owns checkbox badge,
+  radio ring/dot, and switch state badge chrome.
+- `tools/gate_imui_workstream_source.py` tracks the new indicators owner and rejects indicator
+  chrome bodies from drifting back into `visual.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new indicators owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test
+  imui_button_smoke --no-fail-fast`: pass (4 passed).
+- `cargo nextest run -p fret-imui models_controls --no-fail-fast`: pass (11 passed, 175 skipped).
+- `git diff --check`: pass.
+
 ## Selectable Visual Palette Owner-Split Evidence - 2026-05-31
 
 Claim verified: IMUI selectable palette resolution moved behind a private visual child owner
@@ -15059,16 +15089,17 @@ changing the public boolean-control surface.
 
 Evidence:
 
-- `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs` owns checkbox badges, radio
-  indicators, switch state badges, and shared boolean label text.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs` owns shared boolean label text and
+  re-export routing for checkbox/radio/switch indicator chrome. The 2026-05-31 follow-up moved
+  indicator chrome into `boolean_controls/visual/indicators.rs`.
 - `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` keeps checkbox/radio label identity,
   pressable behavior, shortcut/context-menu handling, model reads/updates, and `ResponseExt`
   population.
 - `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs` keeps switch active-trigger behavior,
   shortcut handling, model updates, and response population while delegating badge/label rendering
   to the shared visual owner.
-- `tools/gate_imui_workstream_source.py` now requires the visual owner and rejects checkbox/radio
-  badge or switch state-badge rendering from drifting back into behavior files.
+- `tools/gate_imui_workstream_source.py` now requires the visual and indicator owners and rejects
+  checkbox/radio badge or switch state-badge rendering from drifting back into behavior files.
 
 Focused gates:
 

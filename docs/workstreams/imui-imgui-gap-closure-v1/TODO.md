@@ -2428,9 +2428,16 @@ Last updated: 2026-05-31
 - [x] Split IMUI boolean-control visual chrome out of
       `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` and its switch owner without changing
       the public checkbox/radio/switch surface.
-      Result: `boolean_controls/visual.rs` owns checkbox badges, radio indicators, switch state
-      badges, and shared boolean label text. The root checkbox/radio file and `switch.rs` keep
+      Result: `boolean_controls/visual.rs` owns shared boolean label text and re-export routing for
+      checkbox/radio/switch indicator chrome. The 2026-05-31 follow-up moved indicator chrome into
+      `boolean_controls/visual/indicators.rs`. The root checkbox/radio file and `switch.rs` keep
       pressable behavior, shortcut handling, model updates, and response population.
+- [x] Split IMUI boolean-control indicator chrome out of the shared visual owner without changing
+      checkbox badge text, radio ring/dot sizing, switch badge text, palette channel selection,
+      shared boolean label mounting, or public checkbox/radio/switch behavior.
+      Result: `boolean_controls/visual.rs` keeps shared boolean label text and re-export routing,
+      while `boolean_controls/visual/indicators.rs` owns checkbox, radio, and switch indicator
+      chrome.
 - [x] Split IMUI checkbox/radio boolean-control behavior out of
       `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` into private owner modules without
       changing the public checkbox/radio/switch facade surface.
