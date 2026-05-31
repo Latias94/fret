@@ -1233,6 +1233,7 @@
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/swatches.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/swatches/slot.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/tooltip.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/tooltip/panel.rs",
     "ecosystem/fret-ui-editor/src/controls/numeric_input.rs",
     "ecosystem/fret-ui-editor/src/controls/numeric_input/model.rs",
     "ecosystem/fret-ui-editor/src/controls/numeric_input/model/tests.rs",

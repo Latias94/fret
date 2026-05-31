@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor Color-Edit Tooltip Panel Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor color-edit tooltip panel rendering moved out of the tooltip overlay request
+owner into a private `popup/tooltip/panel.rs` owner without changing tooltip open gating, anchored
+placement, dismissal routing, hover-preview content, color tooltip line formatting, preview fill
+routing, tooltip readout text role, tooltip semantics, or public tooltip test helpers.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/tooltip.rs` keeps tooltip overlay request
+  lifecycle, open gating, anchored placement, close behavior, and `color_tooltip_lines`.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/tooltip/panel.rs` owns tooltip panel
+  chrome, preview swatch composition, readout text mounting, and tooltip semantics attachment.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now reads the tooltip panel owner
+  directly while preserving assertions that the root tooltip owner keeps request lifecycle and line
+  formatting helpers.
+- `tools/gate_imui_workstream_source.py` now tracks the tooltip root/panel split and rejects panel
+  rendering policy from drifting back into the overlay request owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the tooltip panel owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor --lib color_edit --no-fail-fast`: pass (51 passed).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass (2 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+
 ## Editor Color-Edit Popup Side Preview Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor color-edit popup side-preview cell and restore behavior moved out of the

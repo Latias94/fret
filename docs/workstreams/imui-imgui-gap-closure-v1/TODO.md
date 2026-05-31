@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor color-edit tooltip panel rendering into a private child owner without changing
+      tooltip open gating, anchored placement, dismissal routing, hover-preview content, color
+      tooltip line formatting, preview fill routing, tooltip readout text role, tooltip semantics,
+      or public tooltip test helpers.
+      Result: `controls/color_edit/popup/tooltip.rs` keeps tooltip overlay request lifecycle,
+      placement, close behavior, and `color_tooltip_lines`. `controls/color_edit/popup/tooltip/panel.rs`
+      owns tooltip panel chrome, preview swatch composition, readout text mounting, and tooltip
+      semantics. The source gate prevents panel rendering policy from drifting back into the
+      overlay request owner.
 - [x] Split editor color-edit popup side-preview cell and restore behavior into a private child
       owner without changing current/original preview composition, original restore alpha rules,
       side-preview swatch sizing, preview caption text roles, alpha-preview fill routing, public

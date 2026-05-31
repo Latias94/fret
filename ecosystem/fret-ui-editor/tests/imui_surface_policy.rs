@@ -74,6 +74,8 @@ const COLOR_EDIT_POPUP_SWATCHES_SLOT_RS: &str =
     include_str!("../src/controls/color_edit/popup/swatches/slot.rs");
 const COLOR_EDIT_POPUP_TOOLTIP_RS: &str =
     include_str!("../src/controls/color_edit/popup/tooltip.rs");
+const COLOR_EDIT_POPUP_TOOLTIP_PANEL_RS: &str =
+    include_str!("../src/controls/color_edit/popup/tooltip/panel.rs");
 
 fn normalize_ws(source: &str) -> String {
     source.split_whitespace().collect()
@@ -320,9 +322,14 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("take_delivered_color_drop("));
     assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("ColorEditPaletteSlotDrop::new("));
     assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("color_preview_stack("));
+    assert!(COLOR_EDIT_POPUP_TOOLTIP_RS.contains("mod panel;"));
     assert!(COLOR_EDIT_POPUP_TOOLTIP_RS.contains("fn request_color_tooltip_overlay<"));
     assert!(COLOR_EDIT_POPUP_TOOLTIP_RS.contains("fn color_tooltip_lines("));
     assert!(COLOR_EDIT_POPUP_TOOLTIP_RS.contains("radix_tooltip::tooltip_request("));
+    assert!(COLOR_EDIT_POPUP_TOOLTIP_PANEL_RS.contains("fn color_tooltip_panel<"));
+    assert!(COLOR_EDIT_POPUP_TOOLTIP_PANEL_RS.contains("editor_tooltip_readout_text_props("));
+    assert!(COLOR_EDIT_POPUP_TOOLTIP_PANEL_RS.contains("SemanticsRole::Tooltip"));
+    assert!(!COLOR_EDIT_POPUP_TOOLTIP_RS.contains("editor_tooltip_readout_text_props("));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_hue_wheel_picker<"));
     assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS.contains("fn hue_wheel_picker<"));
     assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS.contains("fn apply_hue_wheel_position("));
