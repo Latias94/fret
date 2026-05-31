@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 SameLine status-drift refresh result:
+`P0_CURRENT_SOURCE_AUDIT_2026-05-06.md`, the long-form TODO readiness notes, and historical
+milestone summary now agree that SameLine is a narrow proven teaching-surface helper. Remaining
+porting-sugar pressure stays on item-width stacks, next-item width defaults, and label-ID helpers
+until a future two-surface proof justifies widening.
+
 2026-05-31 same-line porting sugar proof result:
 `apps/fret-cookbook/examples/imui_action_basics.rs` now teaches the existing closure-scoped
 `ui.same_line_with_options(...)` helper for the IMUI payload button row, with a stable row
@@ -3107,10 +3113,12 @@ Exit criteria:
   Dear ImGui's mutable style stack or make a generic style editor without visual/tooling proof.
   2026-05-14 cleanup result: the unused `apply_editor_theme_patch_v1` compatibility wrapper was
   deleted; explicit preset entry points remain the only editor theme patch authoring path.
-  Current porting-sugar audit result: keep `SameLine` / item-width / label-ID sugar candidate-only
-  until at least two proof surfaces pay the same authoring tax. Prefer typed Fret helpers
-  (`horizontal_with_options`, `PropertyGrid::row_with`, explicit `id_source` / `test_id`) over
-  copying Dear ImGui's mutable cursor, item-width stack, or label suffix parser.
+  Current porting-sugar audit result: `SameLine` is now a narrow proven teaching-surface helper
+  through the existing closure-scoped layout sugar and cookbook payload-row proof. Keep item-width,
+  next-item width, and label-ID sugar candidate-only until at least two proof surfaces pay the same
+  authoring tax. Prefer typed Fret helpers (`horizontal_with_options`,
+  `PropertyGrid::row_with`, explicit `id_source` / `test_id`) over copying Dear ImGui's mutable
+  cursor, item-width stack, or label suffix parser.
   2026-05-14 cleanup result: the unused public `PropertyGridRow` wrapper was deleted so the grid
   row authoring surface stays on the canonical `PropertyGridRowCx::row(...)` / `row_with(...)`
   path instead of growing a second row-policy wrapper.

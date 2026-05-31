@@ -2303,6 +2303,10 @@ def main() -> None:
                 "Closed on the IMUI side: `imui_editor_workbench_demo` is the canonical product-facing editor route",
                 "`imui_editor_workbench_golden_path_surface`",
                 "full Dear ImGui-class product closure still depends on external owner lanes",
+                "`SameLine` is now a narrow proven teaching-surface helper",
+                "closure-scoped `same_line` helpers",
+                "same-line cookbook proof + two-proof helper-readiness rule",
+                "keep the closure-scoped `same_line` helper narrow",
                 "Keep the canonical workbench route current",
             ],
             forbidden=[
@@ -2310,6 +2314,7 @@ def main() -> None:
                 "P2 golden-path proof: make `imui_editor_controls_basics` the minimal \"real editor panel\" teaching",
                 "Fret still has adjacent proofs.",
                 "cookbook IMUI examples + source gate",
+                "so `SameLine` / item-width / label-ID sugar stays candidate-only",
             ],
         ),
         SourceCheck(
@@ -2338,6 +2343,8 @@ def main() -> None:
                 "`ColorEditEyedropperRequest`, and `ColorEditDragDropPayload`",
                 "2026-05-14 state-catalog gate follow-up: the source gate now treats public `*State` structs",
                 "`ImUiMultiSelectState` is now covered by the reusable",
+                "`SameLine` is now a narrow proven helper through the closure-scoped",
+                "Do not widen remaining",
                 "Performance alignment: keep Dear ImGui-class smoothness pressure in the dedicated perf lanes",
                 "`P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`",
                 "2026-05-16 control readout text role follow-up",
@@ -2652,6 +2659,8 @@ def main() -> None:
                 "`TableColumnVisibilityMenuResponse`, `TableColumnVisibilityHeaderContextMenuResponse`, and",
             ],
             forbidden=[
+                "`SameLine`/item-width/label-ID helpers only if two proof surfaces pay",
+                "Do not widen sugar until a\n   second surface repeats the same pattern",
                 "`apps/fret-examples/src/imui_editor_proof_demo.rs` plus the demo-local\n      `collection.rs` module is the selected proof surface",
                 "`cargo run -p fret-demo --bin imui_editor_proof_demo` as the heavier editor-panel proof",
                 "Remaining advanced-table candidates are freeze panes, persistence, and old columns API shape",
@@ -2662,6 +2671,9 @@ def main() -> None:
         SourceCheck(
             Path("docs/workstreams/imui-imgui-gap-closure-v1/MILESTONES.md"),
             required=[
+                "`SameLine` is now a narrow proven teaching-surface helper",
+                "Keep item-width,",
+                "next-item width, and label-ID sugar candidate-only",
                 "2026-05-18 current advanced-table gap read",
                 "visibility snapshot/restore, freeze-pane pinning, and",
                 "the old `TableColumn` public field-bag API shape are closed or narrowed",

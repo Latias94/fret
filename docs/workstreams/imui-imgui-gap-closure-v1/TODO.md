@@ -51,6 +51,10 @@ Last updated: 2026-05-31
       `ui.same_line_with_options(...)` plus a stable row `test_id` for the IMUI payload action
       button row. The source gate freezes the cookbook marker and the updated P3 readiness doc keeps
       item-width and label-ID helpers candidate-only / explicit.
+- [x] Refresh the P0 gap matrix and older workstream status notes after the SameLine proof landed.
+      Result: active docs now treat `SameLine` as a narrow proven teaching-surface helper while
+      keeping item-width, next-item width, and label-ID sugar candidate-only. The source gate rejects
+      the older blanket `SameLine` candidate-only wording.
 
 ## Owner Split Follow-Ups - 2026-05-26
 
@@ -4404,13 +4408,14 @@ Readiness order for the next locally testable review slices:
    narrow follow-on with evidence.
    2026-05-14 cleanup: the unused `apply_editor_theme_patch_v1` compatibility wrapper was deleted;
    apps and tests now stay on explicit preset entry points.
-4. Porting sugar readiness: `SameLine`/item-width/label-ID helpers only if two proof surfaces pay
-   the same tax. Current proof surfaces already keep most of that tax local with
-   `PropertyGrid`, `row_with`, `horizontal_with_options`, `child_region_with_options`, and
-   explicit `id_source` / `test_id` wiring.
-   Current readiness audit: `P3_PORTING_SUGAR_READINESS_2026-05-06.md`. Do not widen sugar until a
-   second surface repeats the same pattern; do not copy Dear ImGui's string-label parser or
-   stack/next-item width grammar into Fret by default.
+4. Porting sugar readiness: `SameLine` is now a narrow proven helper through the closure-scoped
+   `same_line` layout sugar and cookbook payload-row proof; item-width, next-item width, and
+   label-ID helpers still need two proof surfaces before widening. Current proof surfaces already
+   keep most of that tax local with `PropertyGrid`, `row_with`, `horizontal_with_options`,
+   `child_region_with_options`, and explicit `id_source` / `test_id` wiring.
+   Current readiness audit: `P3_PORTING_SUGAR_READINESS_2026-05-06.md`. Do not widen remaining
+   sugar until a second surface repeats the same pattern; do not copy Dear ImGui's string-label
+   parser or stack/next-item width grammar into Fret by default.
    2026-05-14 cleanup: the unused `PropertyGridRow` wrapper was deleted so property-grid row
    authoring stays on `PropertyGridRowCx::row(...)` / `row_with(...)` plus raw `PropertyRow` for
    genuinely custom rows.

@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-05-31
 
+## SameLine Status-Drift Refresh Evidence - 2026-05-31
+
+Claim verified: active workstream status docs no longer describe SameLine as wholly candidate-only
+after the cookbook SameLine proof landed. SameLine is now recorded as a narrow proven
+teaching-surface helper, while item-width stacks, next-item width defaults, and label-ID helpers
+remain candidate-only.
+
+Evidence:
+
+- `docs/workstreams/imui-imgui-gap-closure-v1/P0_CURRENT_SOURCE_AUDIT_2026-05-06.md` now names
+  closure-scoped `same_line` helpers in the current P3 porting ergonomics read and points the first
+  gate at the same-line cookbook proof plus the two-proof helper-readiness rule.
+- `docs/workstreams/imui-imgui-gap-closure-v1/TODO.md` and `MILESTONES.md` now carry the same
+  current SameLine status instead of the older blanket candidate-only wording.
+- `tools/gate_imui_workstream_source.py` now requires the refreshed P0/TODO/MILESTONES markers and
+  rejects the stale blanket SameLine candidate-only wording in active docs.
+
+Focused gates:
+
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `rg -n "SameLine.*candidate-only|same_line.*candidate-only|Do not widen sugar until|two proof
+  surfaces pay" docs/workstreams/imui-imgui-gap-closure-v1 tools/gate_imui_workstream_source.py`:
+  pass; remaining hits are either the refreshed item-width/label-ID candidate-only wording or
+  source-gate forbidden markers.
+- `git diff --check`: pass.
+
 ## SameLine Porting Sugar Cookbook Proof Evidence - 2026-05-31
 
 Claim verified: the existing closure-scoped SameLine porting sugar is now promoted into a
