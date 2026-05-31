@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 IMUI switch entry render owner-split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/entry.rs` now keeps public switch model
+entrypoints and label identity scoping only. `switch/entry/render.rs` owns model reads,
+`PressableProps` construction, active-trigger behavior installation, field chrome, switch state
+badge/label mounting, and response return. Public switch facade behavior, label identity scoping,
+`SwitchOptions` a11y/test-id wiring, active-trigger semantics, and visual row output remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-05-31 window overlay toast render helper owner-split result:
 `ecosystem/fret-ui-kit/src/window_overlays/render.rs` now keeps overlay render orchestration and
 toast layer assembly. `window_overlays/render/toast_render.rs` owns toast viewport pause state,
@@ -2897,8 +2905,11 @@ public checkbox, radio, and switch APIs remain unchanged.
 
 2026-05-30 switch entry/props owner split result:
 `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs` is now a thin module/re-export hub.
-`switch/entry.rs` owns label identity, model reads, active-trigger behavior installation, field
-chrome, switch state badge mounting, boolean label mounting, and fill-row visual assembly.
+`switch/entry.rs` initially owned label identity, model reads, active-trigger behavior
+installation, field chrome, switch state badge mounting, boolean label mounting, and fill-row
+visual assembly. The 2026-05-31 follow-up moved those render/runtime concerns into
+`switch/entry/render.rs`, leaving `switch/entry.rs` with public entrypoints and label identity
+scoping only.
 `switch/props.rs` owns `PressableProps` construction plus switch a11y label, checked state, and
 test-id wiring.
 

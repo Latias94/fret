@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Switch Entry Render Owner-Split Evidence - 2026-05-31
+
+Claim verified: IMUI switch entry rendering moved out of `switch/entry.rs` into a private
+`switch/entry/render.rs` owner without changing label identity scoping, model reads,
+`SwitchOptions` a11y/test-id wiring, active-trigger behavior installation, field chrome, switch
+state badge mounting, boolean label mounting, fill-row visual assembly, or public switch facade
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/entry.rs` now keeps public switch model
+  entrypoints and label identity scoping only.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/entry/render.rs` owns model reads,
+  pressable props, active-trigger behavior installation, field chrome, switch badge/label
+  mounting, and response return.
+- `tools/gate_imui_workstream_source.py` now gates the root/render split and rejects model-read,
+  behavior, chrome, and visual-row assembly from drifting back into `switch/entry.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the switch entry render
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-imui switch_model --no-fail-fast`: pass (2 passed, 184 skipped).
+
+Broader workspace gates skipped for this slice: the change is a private owner split inside switch
+entry rendering, and the focused compile/source/switch-model gates cover the moved behavior.
+
 ## Window Overlay Toast Render Helper Owner-Split Evidence - 2026-05-31
 
 Claim verified: window overlay toast render helpers moved out of the large overlay render owner

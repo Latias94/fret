@@ -58,6 +58,13 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI switch entry rendering into a private owner without changing label identity
+      scoping, model reads, `SwitchOptions` a11y/test-id wiring, active-trigger behavior
+      installation, field chrome, switch state badge mounting, boolean label mounting, or fill-row
+      visual assembly.
+      Result: `switch/entry.rs` now owns public switch model entrypoints and label identity
+      scoping only. `switch/entry/render.rs` owns model reads, pressable props, active-trigger
+      behavior installation, field chrome, switch badge/label mounting, and response return.
 - [x] Split window overlay toast render helpers into a private child owner without changing toast
       layer request synthesis, viewport pause/focus behavior, action/cancel/close test IDs,
       Sonner-style typography, icon override routing, stack-shift animation, or toast dismissal
@@ -2742,9 +2749,11 @@ Last updated: 2026-05-31
       `SwitchOptions` a11y/test-id wiring, active-trigger behavior installation, field chrome, or
       visual row layout.
       Result: `boolean_controls/switch.rs` is now a thin module/re-export hub,
-      `switch/entry.rs` owns label identity, model read, behavior installation, field chrome, and
-      visual row assembly, and `switch/props.rs` owns `PressableProps` plus switch semantics
-      wiring.
+      `switch/entry.rs` initially owned label identity, model read, behavior installation, field
+      chrome, and visual row assembly, and `switch/props.rs` owns `PressableProps` plus switch
+      semantics wiring. The 2026-05-31 follow-up moved switch model reads, behavior installation,
+      field chrome, and visual row assembly into `switch/entry/render.rs`, leaving `switch/entry.rs`
+      with public entrypoints and label identity scoping only.
 - [x] Split IMUI interaction-runtime hover internals out of
       `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs` into private owner modules
       without changing hovered-query, shared-delay, active-item block, or long-press behavior.
