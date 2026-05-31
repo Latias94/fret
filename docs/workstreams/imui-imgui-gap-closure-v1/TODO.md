@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor color-edit drag source pointer lifecycle into a private child owner without
+      changing drag threshold resolution, local/cross-window drag startup, pointer
+      down/move/up routing, active session payload capture, hover-target preservation, delivery on
+      pointer up, or public swatch/popup drag-drop call paths.
+      Result: `controls/color_edit/drag_drop.rs` keeps store ownership, target hover/delivery
+      consumption, delivered-drop application, payload alpha rules, and root re-exports.
+      `controls/color_edit/drag_drop/source.rs` owns threshold resolution and drag source hook
+      installation. The source gate prevents pointer hook policy from drifting back into the root
+      drag-drop owner.
 - [x] Split IMUI input-text picker popup request/render orchestration into a private core popup
       owner without changing trigger identity, popup open model forwarding, keyboard handler
       installation gating, selected candidate routing, picked index/value propagation, or public
