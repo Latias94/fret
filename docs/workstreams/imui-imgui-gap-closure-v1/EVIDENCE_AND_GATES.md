@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Table Render Planning Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI table render planning split into a private owner without changing palette
+resolution, visible-column filtering, horizontal scroll handle allocation, header visibility,
+column test-id suffixing, or header/body/root assembly.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` now keeps final table assembly only:
+  palette resolution, header/body construction calls, root packing, and `TableResponse` return.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/render/plan.rs` owns visible-column scanning,
+  pinned-column scroll planning, header gating, and column test-id suffix preparation.
+- `tools/gate_imui_workstream_source.py` now checks the render assembly owner and the private plan
+  owner, and rejects visible-column / scroll / suffix planning from drifting back into
+  `render.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new render planning
+  owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib hidden_table_columns_do_not_render_header_body_or_response horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Table Body Wrapper Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI table body wrapper rendering split into private row and cell owners without

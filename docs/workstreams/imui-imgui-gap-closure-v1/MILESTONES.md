@@ -60,6 +60,11 @@ Public table rendering behavior remains unchanged.
 `body/row.rs` owns row wrapping and grouped row chrome, while `body/cell.rs` owns cell wrapping
 and semantics decoration. Public table body wrapper behavior remains unchanged.
 
+2026-05-31 table render planning owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` now keeps final table assembly only.
+`render/plan.rs` owns visible-column scanning, horizontal scroll-handle planning, header gating,
+and column test-id suffix preparation. Public table rendering behavior remains unchanged.
+
 2026-05-31 facade-writer text test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` is now a thin test hub.
 `tests/text.rs` owns `ui.text(...)` dense single-line coverage, while `tests/wrapped.rs` owns

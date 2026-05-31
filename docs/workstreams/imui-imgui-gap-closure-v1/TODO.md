@@ -93,6 +93,12 @@ Last updated: 2026-05-31
       or cell test-id/heading semantics.
       Result: `table_controls/body.rs` is now a thin hub. `body/row.rs` owns row wrapping and
       grouped row chrome, while `body/cell.rs` owns cell wrapping and semantics decoration.
+- [x] Split IMUI table render planning into a private owner without changing palette resolution,
+      visible-column filtering, horizontal scroll handle allocation, header visibility, column
+      test-id suffixing, or header/body/root assembly.
+      Result: `table_controls/render.rs` now keeps final table assembly only.
+      `render/plan.rs` owns visible-column scanning, scroll-handle planning, header gating, and
+      column test-id suffix preparation.
 - [x] Split IMUI debug-draw path-builder regression coverage into private sub-owners without
       changing path stroke/fill command recording, rectangle/rounded-rectangle sampling, Bezier
       defaults, circular/elliptical arc defaults, or invalid finished-path cleanup.
