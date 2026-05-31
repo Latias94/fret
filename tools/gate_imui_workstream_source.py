@@ -32692,6 +32692,41 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs"),
+            required=[
+                "mod numeric;",
+                "color_presets_are_unique_and_hex_formattable",
+                "sv_picker_position_preserves_hue_and_clamps_sv",
+                "alpha_bar_position_maps_local_x_to_clamped_alpha",
+                "fn assert_hsv_close(",
+            ],
+            forbidden=[
+                "popup_numeric_input_modes_are_explicit_and_ordered",
+                "rgb_hex_parse_preserves_alpha_when_alpha_is_not_explicit",
+                "numeric_input_rejects_out_of_range_or_incomplete_values",
+                "hsv_conversion_roundtrips_color_presets",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests/numeric.rs"),
+            required=[
+                "use super::*;",
+                "popup_numeric_input_modes_are_explicit_and_ordered",
+                "rgb_hex_parse_preserves_alpha_when_alpha_is_not_explicit",
+                "rgba_hex_parse_is_only_available_when_alpha_is_visible",
+                "numeric_readout_formats_rgb_hsv_and_optional_alpha",
+                "rgb_numeric_input_parses_channels_and_optional_alpha_percent",
+                "hsv_numeric_input_parses_degrees_and_percentages_preserving_alpha",
+                "numeric_input_rejects_out_of_range_or_incomplete_values",
+                "hsv_conversion_matches_primary_colors",
+                "hsv_conversion_roundtrips_color_presets",
+            ],
+            forbidden=[
+                "sv_picker_position_preserves_hue_and_clamps_sv",
+                "alpha_bar_position_maps_local_x_to_clamped_alpha",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/color_edit/popup/copy.rs"),
             required=[
                 "use crate::primitives::readout::editor_popup_list_row_text_props;",

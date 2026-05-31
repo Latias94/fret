@@ -907,6 +907,12 @@ Last updated: 2026-05-31
       color-edit popup policy tests.
       Result: `color_edit/popup/picker.rs` keeps picker composition and interactions, while
       `color_edit/popup/picker/hue_wheel.rs` owns hue-wheel canvas painting and geometry helpers.
+- [x] Split editor color-edit numeric/HSV tests into a private test owner without changing RGB/HSV
+      parse/format behavior, alpha preservation rules, popup numeric mode ordering, HSV conversion
+      helpers, picker tests, or popup policy coverage.
+      Result: `controls/color_edit/tests.rs` keeps color-edit policy/picker/preview test routing
+      plus shared HSV assertions. `controls/color_edit/tests/numeric.rs` owns numeric readout,
+      parse, and HSV conversion coverage.
 - [x] Split editor color-edit alpha bar previews and interaction into a private owner without
       changing horizontal/vertical alpha bars, alpha coordinate mapping, popup picker composition,
       color-edit helper tests, or color-edit popup policy tests.

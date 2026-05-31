@@ -47,6 +47,12 @@ focus/blur/session helpers, commit/cancel helpers, and shortcut policy only. `bu
 owns focus/blur plan coverage, stable line-box default coverage, and draft-controller
 commit/discard/no-op behavior tests.
 
+2026-05-31 editor color-edit numeric tests owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` now keeps color-edit policy, picker,
+preview, drag/drop, copy, tooltip, and shared HSV assertion coverage. `color_edit/tests/numeric.rs`
+owns popup numeric mode ordering, RGB/HSV readout formatting, hex/numeric parsing, alpha
+preservation, and HSV conversion roundtrip coverage.
+
 2026-05-31 menu interaction behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` now owns active-trigger
 installation and keyboard behavior orchestration only. `behavior/activation.rs` owns activate

@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor ColorEdit Numeric Tests Owner Split Evidence - 2026-05-31
+
+Claim verified: editor color-edit numeric/HSV tests split into a private test owner without
+changing RGB/HSV parse/format behavior, alpha preservation rules, popup numeric mode ordering, HSV
+conversion helpers, picker tests, or popup policy coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` keeps color-edit policy, picker,
+  preview, drag/drop, copy, tooltip, and shared HSV assertion coverage.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/tests/numeric.rs` owns popup numeric mode
+  ordering, RGB/HSV readout formatting, hex/numeric parsing, alpha preservation, and HSV
+  conversion roundtrip coverage.
+- `tools/gate_imui_workstream_source.py` checks the color-edit root/numeric test split and rejects
+  migrated numeric test names from drifting back into the root test file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new color-edit numeric
+  test owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui color_edit --no-fail-fast`: pass (52
+  passed, 153 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Editor TextField Buffered Tests Owner Split Evidence - 2026-05-31
 
 Claim verified: editor text-field buffered tests split into a private test owner without changing
