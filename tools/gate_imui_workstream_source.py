@@ -32696,6 +32696,7 @@ def main() -> None:
             required=[
                 "mod numeric;",
                 "mod picker;",
+                "mod popup_policy;",
                 "color_presets_are_unique_and_hex_formattable",
                 "fn assert_hsv_close(",
             ],
@@ -32708,6 +32709,9 @@ def main() -> None:
                 "hue_wheel_ring_maps_screen_angle_to_hue",
                 "popup_preview_hides_alpha_when_alpha_editing_is_not_visible",
                 "alpha_bar_position_maps_local_x_to_clamped_alpha",
+                "popup_options_default_to_imgui_like_hue_bar_surface",
+                "popup_runtime_options_are_local_overrides_until_defaults_change",
+                "popup_runtime_options_are_ignored_when_options_surface_is_disabled",
             ],
         ),
         SourceCheck(
@@ -32748,6 +32752,29 @@ def main() -> None:
             forbidden=[
                 "popup_numeric_input_modes_are_explicit_and_ordered",
                 "numeric_input_rejects_out_of_range_or_incomplete_values",
+                "popup_options_default_to_imgui_like_hue_bar_surface",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests/popup_policy.rs"),
+            required=[
+                "use super::*;",
+                "popup_options_default_to_imgui_like_hue_bar_surface",
+                "popup_side_preview_defaults_to_imgui_current_and_original",
+                "popup_side_preview_uses_imgui_three_by_two_color_button_ratio",
+                "alpha_preview_options_cover_imgui_color_button_preview_modes",
+                "tooltip_options_default_to_imgui_hover_preview_enabled",
+                "copy_options_default_to_imgui_context_copy_enabled",
+                "popup_options_can_hide_every_popup_affordance",
+                "empty_palette_does_not_count_as_visible_popup_content",
+                "non_empty_history_counts_as_visible_popup_content_without_palette",
+                "popup_runtime_options_are_local_overrides_until_defaults_change",
+                "popup_runtime_options_do_not_re_enable_hidden_picker_policy",
+                "popup_runtime_options_are_ignored_when_options_surface_is_disabled",
+            ],
+            forbidden=[
+                "popup_numeric_input_modes_are_explicit_and_ordered",
+                "sv_picker_position_preserves_hue_and_clamps_sv",
             ],
         ),
         SourceCheck(

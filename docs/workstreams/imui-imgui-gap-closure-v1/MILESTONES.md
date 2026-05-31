@@ -60,6 +60,13 @@ picker, hue bar, hue wheel, alpha bar, checkerboard, preview alpha visibility, o
 and a11y alpha percent coverage. Picker geometry, preview alpha policy, original-restore component
 rules, and public color-edit behavior remain unchanged.
 
+2026-05-31 editor color-edit popup policy tests owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` now keeps palette/history, drag/drop,
+eyedropper, tooltip/copy payload, and shared HSV assertion coverage.
+`color_edit/tests/popup_policy.rs` owns popup defaults, side-preview ratio/defaults, alpha-preview
+modes, tooltip/copy defaults, visible-content swatch policy, and runtime override sync coverage.
+Popup policy and public color-edit behavior remain unchanged.
+
 2026-05-31 menu interaction behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` now owns active-trigger
 installation and keyboard behavior orchestration only. `behavior/activation.rs` owns activate

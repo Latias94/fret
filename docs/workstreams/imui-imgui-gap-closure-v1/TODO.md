@@ -920,6 +920,13 @@ Last updated: 2026-05-31
       tooltip, and shared HSV assertion coverage. `controls/color_edit/tests/picker.rs` owns SV
       picker, hue bar, hue wheel, alpha bar, checkerboard, preview alpha visibility, original
       restore, and a11y alpha percent coverage.
+- [x] Split editor color-edit popup policy/default/runtime tests into a private test owner without
+      changing popup picker defaults, side preview policy, alpha preview modes, tooltip/copy
+      defaults, swatch visibility counting, runtime override sync, or shared HSV assertions.
+      Result: `controls/color_edit/tests.rs` keeps palette/history, drag/drop, eyedropper,
+      tooltip/copy payload, and shared HSV assertion coverage.
+      `controls/color_edit/tests/popup_policy.rs` owns popup default, side-preview, alpha-preview,
+      tooltip/copy default, visible-content, and runtime override policy coverage.
 - [x] Split editor color-edit alpha bar previews and interaction into a private owner without
       changing horizontal/vertical alpha bars, alpha coordinate mapping, popup picker composition,
       color-edit helper tests, or color-edit popup policy tests.
