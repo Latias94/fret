@@ -32696,9 +32696,9 @@ def main() -> None:
             required=[
                 "mod drag_drop;",
                 "mod numeric;",
+                "mod palette;",
                 "mod picker;",
                 "mod popup_policy;",
-                "color_presets_are_unique_and_hex_formattable",
                 "fn assert_hsv_close(",
             ],
             forbidden=[
@@ -32715,6 +32715,8 @@ def main() -> None:
                 "popup_runtime_options_are_ignored_when_options_surface_is_disabled",
                 "palette_slot_drop_event_replaces_rgb_and_preserves_slot_metadata",
                 "drag_drop_payload_apply_matches_imgui_col3f_col4f_alpha_rules",
+                "color_presets_are_unique_and_hex_formattable",
+                "color_edit_palette_entries_are_app_owned_rgb_slots",
             ],
         ),
         SourceCheck(
@@ -32750,6 +32752,20 @@ def main() -> None:
             forbidden=[
                 "sv_picker_position_preserves_hue_and_clamps_sv",
                 "alpha_bar_position_maps_local_x_to_clamped_alpha",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests/palette.rs"),
+            required=[
+                "use super::*;",
+                "color_presets_are_unique_and_hex_formattable",
+                "color_edit_options_default_to_the_builtin_palette_source",
+                "color_edit_palette_entries_are_app_owned_rgb_slots",
+                "color_edit_history_entries_are_app_owned_recent_rgb_slots",
+            ],
+            forbidden=[
+                "drag_drop_payload_shape_tracks_alpha_visibility",
+                "popup_options_default_to_imgui_like_hue_bar_surface",
             ],
         ),
         SourceCheck(

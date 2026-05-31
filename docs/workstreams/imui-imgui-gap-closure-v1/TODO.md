@@ -933,6 +933,12 @@ Last updated: 2026-05-31
       Result: `controls/color_edit/tests.rs` keeps palette/history, eyedropper, tooltip/copy
       payload, and shared HSV assertion coverage. `controls/color_edit/tests/drag_drop.rs` owns
       palette slot drop defaults/events and color drag/drop payload shape/application coverage.
+- [x] Split editor color-edit palette/history tests into a private test owner without changing
+      built-in preset uniqueness/hex formatting, default palette source, app-owned palette/history
+      slots, drag/drop payload tests, or shared HSV assertions.
+      Result: `controls/color_edit/tests.rs` keeps eyedropper, tooltip/copy payload, and shared HSV
+      assertion coverage. `controls/color_edit/tests/palette.rs` owns preset uniqueness/default
+      palette source and app-owned palette/history slot coverage.
 - [x] Split editor color-edit alpha bar previews and interaction into a private owner without
       changing horizontal/vertical alpha bars, alpha coordinate mapping, popup picker composition,
       color-edit helper tests, or color-edit popup policy tests.

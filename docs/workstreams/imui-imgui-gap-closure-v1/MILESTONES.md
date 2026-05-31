@@ -74,6 +74,12 @@ palette slot drop defaults/events and color drag/drop payload shape/application 
 slot metadata, RGB-only palette slot semantics, local payload defaults, and COL3F/COL4F alpha rules
 remain unchanged.
 
+2026-05-31 editor color-edit palette tests owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` now keeps eyedropper, tooltip/copy
+payload, and shared HSV assertion coverage. `color_edit/tests/palette.rs` owns preset uniqueness,
+hex formatting, default palette source, and app-owned palette/history slot coverage. Public
+ColorEdit palette/history option behavior remains unchanged.
+
 2026-05-31 menu interaction behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` now owns active-trigger
 installation and keyboard behavior orchestration only. `behavior/activation.rs` owns activate

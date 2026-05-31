@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor ColorEdit Palette Tests Owner Split Evidence - 2026-05-31
+
+Claim verified: editor color-edit palette/history tests split into a private test owner without
+changing built-in preset uniqueness/hex formatting, default palette source, app-owned
+palette/history slots, drag/drop payload tests, picker tests, popup policy tests, numeric tests, or
+shared HSV assertions.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` keeps eyedropper, tooltip/copy
+  payload, and shared HSV assertion coverage.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/tests/palette.rs` owns preset uniqueness, hex
+  formatting, default palette source, and app-owned palette/history slot coverage.
+- `tools/gate_imui_workstream_source.py` checks the color-edit root/drag-drop/numeric/palette/
+  picker/popup-policy test split and rejects migrated palette/history test names from drifting back
+  into the root test file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new color-edit palette
+  test owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui color_edit --no-fail-fast`: pass (52
+  passed, 153 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Editor ColorEdit Drag/Drop Tests Owner Split Evidence - 2026-05-31
 
 Claim verified: editor color-edit drag/drop tests split into a private test owner without changing
