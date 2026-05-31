@@ -1,0 +1,6 @@
+{"role":"architecture","path":"docs/architecture.md","reason":"Overall Fret mechanism/policy layering context."}
+{"role":"adr","path":"docs/adr/0066-fret-ui-runtime-contract-surface.md","reason":"Keeps interaction policy outside the core mechanism crate."}
+{"role":"workstream","path":"docs/workstreams/material3-time-picker-interaction-family-split-v1/WORKSTREAM.json","reason":"Previous residual split and final owner-boundary queue."}
+{"role":"design","path":"docs/workstreams/material3-field-interaction-family-split-v1/DESIGN.md","reason":"Current lane intent, boundaries, and residual ownership."}
+{"role":"tasks","path":"docs/workstreams/material3-field-interaction-family-split-v1/TODO.md","reason":"Closed task ledger for the field-family split."}
+{"role":"gates","path":"docs/workstreams/material3-field-interaction-family-split-v1/EVIDENCE_AND_GATES.md","reason":"Verification commands and evidence anchors."}

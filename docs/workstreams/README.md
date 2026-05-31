@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 531
+- Dedicated directories: 532
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2257,6 +2257,7 @@ Rule:
 - `docs/workstreams/material3-interaction-regression-family-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor lane for splitting the first Material3 interaction-regression family packet into navigation, overlay, and choice/action owner binaries while leaving field/time/text input residuals for later audits; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-layout-direction-provider-bridge-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for bridging resolved Material3 layout direction into the core `LayoutDirection` provider and proving Tabs RTL physical order; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-field-logical-insets-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for Material3 TextField/Select floating label and supporting text logical inline insets with RTL geometry proof; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-field-interaction-family-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor follow-on for splitting Autocomplete and ExposedDropdown residual interaction regressions into a field-family test binary while leaving plain TextInput for mechanism ownership audit; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-foundation-deepening-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor lane for deepening Material3 context, field-family chrome, and token matrix interfaces; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-headless-golden-harness-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor lane for moving broad Material3 headless golden suites out of `radio_alignment.rs` into a purpose-owned test binary; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-headless-golden-hygiene-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor lane for isolating stale Material3 navigation/overlay headless golden suites from the default `radio_alignment` gate; includes `WORKSTREAM.json`)
