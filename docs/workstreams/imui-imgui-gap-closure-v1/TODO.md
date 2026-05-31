@@ -389,6 +389,12 @@ Last updated: 2026-05-31
       routing.
       Result: `controls/axis_drag_value/model.rs` keeps model/type definitions plus test-owner
       routing. `controls/axis_drag_value/model/tests.rs` owns density line-height coverage.
+- [x] Split editor axis-drag-value session helpers into a private child owner without changing
+      scrub/typing mounting, hidden layout projection, local draft/error model allocation, outcome
+      callback routing, focus handoff, or public AxisDragValue options.
+      Result: `controls/axis_drag_value.rs` keeps scrub/typing control orchestration.
+      `controls/axis_drag_value/session.rs` owns hidden layout projection, outcome callback emit,
+      and draft/error local model allocation.
 - [x] Split editor slider chrome/color resolution into a private child owner without changing
       pointer/typing behavior, value formatting, theme token precedence, hover/pressed/disabled
       color mixing, or slider option/public constructor behavior.

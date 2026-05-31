@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 editor axis-drag-value session owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps scrub/typing control
+orchestration and child-owner routing. `controls/axis_drag_value/session.rs` owns hidden layout
+projection, outcome callback emit, and draft/error local model allocation. Scrub/typing mounting,
+focus handoff, local state identity, outcome routing, and public AxisDragValue options remain
+unchanged.
+
 2026-05-31 menu interaction behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` now owns active-trigger
 installation and keyboard behavior orchestration only. `behavior/activation.rs` owns activate

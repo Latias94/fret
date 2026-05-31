@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor AxisDragValue Session Owner Split Evidence - 2026-05-31
+
+Claim verified: editor axis-drag-value session helpers split into a private child owner without
+changing scrub/typing mounting, hidden layout projection, local draft/error model allocation,
+outcome callback routing, focus handoff, or public AxisDragValue options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` keeps scrub/typing control
+  orchestration and child-owner routing.
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/session.rs` owns hidden layout projection,
+  outcome callback emit, and draft/error local model allocation.
+- `tools/gate_imui_workstream_source.py` checks the axis-drag-value root/session split and rejects
+  session helpers from drifting back into the root control file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new session owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui axis_drag_value --no-fail-fast`: pass (2
+  passed, 203 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Editor VecEdit Layout Owner Split Evidence - 2026-05-31
 
 Claim verified: editor vector auto-layout planning and axis color resolution split into a private

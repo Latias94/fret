@@ -33207,6 +33207,7 @@ def main() -> None:
             Path("ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs"),
             required=[
                 "mod model;",
+                "mod session;",
                 "mod tests;",
                 "pub use model::{",
                 "AxisDragValueOptions",
@@ -33214,6 +33215,7 @@ def main() -> None:
                 "AxisDragValueResetAction",
                 "OnAxisDragValueOutcome",
                 "use model::{AxisDragValueMode, AxisDragValueState, axis_drag_value_input_text_style};",
+                "use session::{draft_model, emit_axis_drag_value_outcome, error_model, hidden_layout};",
                 "pub struct AxisDragValue<T>",
             ],
             forbidden=[
@@ -33224,8 +33226,29 @@ def main() -> None:
                 "pub type AxisDragValueOutcome",
                 "pub type OnAxisDragValueOutcome",
                 "fn axis_drag_value_input_text_style",
+                "fn hidden_layout(",
+                "fn emit_axis_drag_value_outcome(",
+                "fn draft_model",
+                "fn error_model",
                 "axis_drag_value_input_text_style_uses_density_row_height_for_typing_line_box",
                 "axis_drag_value_from_presentation_adopts_format_parse_and_chrome_affixes",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/axis_drag_value/session.rs"),
+            required=[
+                "pub(super) fn hidden_layout",
+                "pub(super) fn emit_axis_drag_value_outcome",
+                "pub(super) fn draft_model",
+                "pub(super) fn error_model",
+                "cx.local_model(String::new)",
+                "cx.local_model(|| None::<Arc<str>>)",
+                "Overflow::Clip",
+            ],
+            forbidden=[
+                "pub struct AxisDragValue<T>",
+                "AxisDragValue::from_presentation",
+                "axis_drag_value_input_text_style",
             ],
         ),
         SourceCheck(
