@@ -2797,7 +2797,15 @@ Last updated: 2026-05-31
       Result: `selectable_controls/behavior.rs` owns pressable behavior installation,
       activate-handler popup close/click signaling, keyboard owner delegation, transient clicked
       reads, and `ResponseExt` population. `selectable_controls.rs` keeps label identity,
-      `SelectableOptions` a11y wiring, selected/highlighted state reads, and row visual assembly.
+      selected/highlighted state reads, behavior wiring, and row visual assembly. The 2026-05-31
+      follow-up moved pressable/a11y prop construction into `selectable_controls/props.rs`.
+- [x] Split IMUI selectable pressable/a11y props out of the selectable root owner without changing
+      label identity, enabled/focusable gating, fill-width/auto-height sizing, default listbox
+      option role fallback, a11y label/test-id/selected forwarding, behavior installation, or row
+      visual composition.
+      Result: `selectable_controls.rs` keeps label identity, option state reads, behavior wiring,
+      and row visual assembly. `selectable_controls/props.rs` owns pressable props,
+      `PressableProps`, and `PressableA11y` construction.
 - [x] Split IMUI selectable regression tests into private palette and row-text owners without
       changing selected/hover/disabled palette resolution, highlight semantics, shared list-row
       text role layout, or inherited foreground assertions.

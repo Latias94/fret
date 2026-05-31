@@ -2,15 +2,14 @@
 
 use std::sync::Arc;
 
-use fret_core::SemanticsRole;
 use fret_ui::UiHost;
-use fret_ui::element::{Length, PressableA11y, PressableProps};
 
 use super::label_identity::parse_label_identity;
 use super::{ResponseExt, SelectableOptions, UiWriterImUiFacadeExt};
 
 mod behavior;
 mod keyboard;
+mod props;
 mod visual;
 
 use visual::selectable_row_element;
@@ -45,18 +44,8 @@ fn selectable_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
         let activate_shortcut = options.activate_shortcut;
         let shortcut_repeat = options.shortcut_repeat;
 
-        let mut props = PressableProps::default();
-        props.enabled = enabled;
-        props.focusable = focusable;
-        props.layout.size.width = Length::Fill;
-        props.layout.size.height = Length::Auto;
-        props.a11y = PressableA11y {
-            role: options.a11y_role.or(Some(SemanticsRole::ListBoxOption)),
-            label: options.a11y_label.clone().or_else(|| Some(label.clone())),
-            test_id: options.test_id.clone(),
-            selected,
-            ..Default::default()
-        };
+        let props =
+            props::selectable_pressable_props(&label, &options, enabled, focusable, selected);
 
         cx.pressable_with_id(props, move |cx, state, id| {
             behavior::install_selectable_behavior(

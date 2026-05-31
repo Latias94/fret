@@ -32,6 +32,12 @@ indicator re-export routing only. `boolean_controls/visual/indicators.rs` owns c
 radio ring/dot, and switch state badge chrome. Public checkbox, radio, and switch behavior remains
 unchanged.
 
+2026-05-31 selectable pressable/a11y props owner-split result:
+`ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` now keeps label identity, option state
+reads, behavior wiring, and row visual assembly. `selectable_controls/props.rs` owns fill-width
+pressable props, enabled/focusable forwarding, listbox-option role fallback, and a11y
+label/test-id/selected forwarding. Public selectable behavior remains unchanged.
+
 2026-05-31 disclosure layout props owner-split result:
 `ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout.rs` now keeps body `ImUiFacade` mounting,
 root/content composition, and test-id routing only. `disclosure_controls/layout/props.rs` owns the
@@ -2815,7 +2821,8 @@ item, command menu item, submenu, and menubar behavior remain unchanged.
 `ecosystem/fret-ui-kit/src/imui/selectable_controls/behavior.rs` now owns pressable behavior
 installation, activate-handler popup close/click signaling, keyboard owner delegation, transient
 clicked reads, and `ResponseExt` population. `selectable_controls.rs` keeps label identity,
-`SelectableOptions` a11y wiring, selected/highlighted state reads, and row visual assembly.
+selected/highlighted state reads, behavior wiring, and row visual assembly. The 2026-05-31
+follow-up moved pressable/a11y prop construction into `selectable_controls/props.rs`.
 
 2026-05-26 textarea owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_controls/textarea.rs` now owns textarea props assembly,

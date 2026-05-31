@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Selectable Pressable Props Owner-Split Evidence - 2026-05-31
+
+Claim verified: IMUI selectable pressable/a11y props moved behind a private selectable child owner
+without changing label identity, enabled/focusable gating, fill-width/auto-height sizing, default
+listbox option role fallback, a11y label/test-id/selected forwarding, behavior installation, or row
+visual composition.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` keeps label identity, option state reads,
+  behavior wiring, and row visual assembly.
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/props.rs` owns `PressableProps` and
+  `PressableA11y` construction.
+- `tools/gate_imui_workstream_source.py` tracks the new props owner and rejects pressable prop
+  bodies from drifting back into `selectable_controls.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new selectable props
+  owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke --no-fail-fast`:
+  pass (1 passed).
+- `cargo nextest run -p fret-ui-kit --features imui --lib selectable_controls::tests
+  --no-fail-fast`: pass (3 passed, 690 skipped).
+- `git diff --check`: pass.
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+
 ## Disclosure Layout Props Owner-Split Evidence - 2026-05-31
 
 Claim verified: IMUI disclosure content/root layout props moved behind a private layout child owner
@@ -11158,14 +11190,18 @@ visual composition.
 Evidence:
 
 - `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` keeps label identity,
-  `SelectableOptions` a11y wiring, selected/highlighted state reads, and row visual assembly.
+  selected/highlighted state reads, behavior wiring, and row visual assembly. The 2026-05-31
+  follow-up moved pressable/a11y prop construction into `selectable_controls/props.rs`.
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/props.rs` owns pressable props,
+  fill-width/auto-height sizing, enabled/focusable forwarding, default listbox-option role fallback,
+  and a11y label/test-id/selected forwarding.
 - `ecosystem/fret-ui-kit/src/imui/selectable_controls/behavior.rs` owns pressable behavior
   installation, activate-handler popup close/click signaling, keyboard owner delegation, transient
   clicked reads, and `ResponseExt` population.
 - `ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard.rs` continues to own shortcut
   handling, context-menu requests, and popup menu arrow-key navigation.
 - `tools/gate_imui_workstream_source.py` now requires the selectable behavior owner and rejects
-  pressable behavior bodies from drifting back into `selectable_controls.rs`.
+  pressable props and behavior bodies from drifting back into `selectable_controls.rs`.
 
 Focused gates:
 

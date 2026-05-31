@@ -789,6 +789,7 @@
     "ecosystem/fret-ui-kit/src/imui/selectable_controls/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard/popup_nav.rs",
+    "ecosystem/fret-ui-kit/src/imui/selectable_controls/props.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls/visual.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls/visual/palette.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls/tests.rs",
