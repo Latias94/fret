@@ -167,6 +167,12 @@ Last updated: 2026-05-31
       shared compact paragraph semantics.
       Result: `bullet_text_controls/tests.rs` now keeps shared fixtures and module routing only.
       `tests/text_role.rs` owns compact paragraph text-role coverage.
+- [x] Split IMUI bullet-text element assembly into a private child owner without changing public
+      bullet text facade behavior, bullet indicator layout, label test-id forwarding, inherited
+      foreground, or compact paragraph text-role semantics.
+      Result: `bullet_text_controls.rs` keeps the immediate-mode entry point and forwards to the
+      element owner. `bullet_text_controls/element.rs` owns bullet indicator/track layout, label
+      semantics/test IDs, inherited foreground, and compact paragraph mounting.
 - [x] Split IMUI drag/drop no-trigger regression coverage into private source and target owners
       without changing inactive source returns, empty target responses, payload accessors, or
       no-output behavior.

@@ -613,6 +613,7 @@
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/visual/indicators.rs",
     "ecosystem/fret-ui-kit/src/imui/bullet_text_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/bullet_text_controls/element.rs",
     "ecosystem/fret-ui-kit/src/imui/bullet_text_controls/tests.rs",
     "ecosystem/fret-ui-kit/src/imui/bullet_text_controls/tests/text_role.rs",
     "ecosystem/fret-ui-kit/src/imui/button_controls.rs",

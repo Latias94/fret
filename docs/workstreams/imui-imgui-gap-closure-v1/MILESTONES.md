@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 IMUI bullet-text element owner-split result:
+`ecosystem/fret-ui-kit/src/imui/bullet_text_controls.rs` now keeps the immediate-mode entry point
+only. `bullet_text_controls/element.rs` owns bullet indicator/track layout, label semantics/test
+IDs, inherited foreground, and compact paragraph mounting. Public bullet text facade behavior,
+bullet indicator layout, label test-id forwarding, inherited foreground, and compact paragraph
+text-role semantics remain unchanged.
+
 2026-05-31 IMUI multi-select interaction owner-split result:
 `ecosystem/fret-ui-kit/src/imui/multi_select.rs` now keeps controllable model hooks, selected-state
 reads, selectable response wiring, and changed-signal propagation. `multi_select/interaction.rs`

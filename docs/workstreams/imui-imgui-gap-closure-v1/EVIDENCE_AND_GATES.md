@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Bullet Text Element Owner-Split Evidence - 2026-05-31
+
+Claim verified: IMUI bullet-text element assembly moved out of `bullet_text_controls.rs` into a
+private `bullet_text_controls/element.rs` owner without changing public bullet text facade behavior,
+bullet indicator layout, label test-id forwarding, inherited foreground, or compact paragraph
+text-role semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/bullet_text_controls.rs` now keeps the immediate-mode entry point
+  and forwards to the element owner.
+- `ecosystem/fret-ui-kit/src/imui/bullet_text_controls/element.rs` owns bullet indicator/track
+  layout, label semantics/test IDs, inherited foreground, and compact paragraph mounting.
+- `ecosystem/fret-ui-kit/src/imui/bullet_text_controls/tests/text_role.rs` keeps the existing
+  compact paragraph text-role coverage through the crate-local `bullet_text_element` path.
+- `tools/gate_imui_workstream_source.py` now gates the root/element split and keeps tests out of the
+  element owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new element owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui bullet_text --no-fail-fast`: pass (2 passed,
+  752 skipped; rerun after an over-filtered `--test imui_bullet_text_smoke` attempt found no
+  matching tests).
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Multi-Select Interaction Owner-Split Evidence - 2026-05-31
 
 Claim verified: IMUI multi-select click-modifier policy moved out of `multi_select.rs` into a
