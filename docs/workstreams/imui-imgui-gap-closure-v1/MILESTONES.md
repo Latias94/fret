@@ -19,6 +19,13 @@ projection, outcome callback emit, and draft/error local model allocation. Scrub
 focus handoff, local state identity, outcome routing, and public AxisDragValue options remain
 unchanged.
 
+2026-05-31 editor axis-drag-value ids owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps control orchestration while
+delegating scrub/typing/reset child test-id derivation to `controls/axis_drag_value/ids.rs`.
+`ids/tests.rs` covers active typing gating, default scrub/typing child ids, explicit reset-id
+precedence, and typing reset suffix behavior. Diagnostics naming, control routing, and public
+AxisDragValue options remain unchanged.
+
 2026-05-31 editor slider options model owner-split result:
 `ecosystem/fret-ui-editor/src/controls/slider.rs` now re-exports `SliderOptions` from the model
 owner and keeps Slider constructors/builders plus control orchestration. `controls/slider/model.rs`

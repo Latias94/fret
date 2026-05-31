@@ -407,6 +407,12 @@ Last updated: 2026-05-31
       Result: `controls/axis_drag_value.rs` keeps scrub/typing control orchestration.
       `controls/axis_drag_value/session.rs` owns hidden layout projection, outcome callback emit,
       and draft/error local model allocation.
+- [x] Split editor axis-drag-value child test-id derivation into a private ids owner without
+      changing scrub/typing/reset test-id strings, explicit reset-id precedence, active typing
+      gating, diagnostics naming, control routing, or public AxisDragValue options.
+      Result: `controls/axis_drag_value.rs` now keeps control orchestration only.
+      `controls/axis_drag_value/ids.rs` owns scrub/typing/reset test-id derivation, with focused
+      coverage in `controls/axis_drag_value/ids/tests.rs`.
 - [x] Split editor slider chrome/color resolution into a private child owner without changing
       pointer/typing behavior, value formatting, theme token precedence, hover/pressed/disabled
       color mixing, or slider option/public constructor behavior.

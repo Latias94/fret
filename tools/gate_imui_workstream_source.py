@@ -33412,6 +33412,7 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs"),
             required=[
+                "mod ids;",
                 "mod model;",
                 "mod session;",
                 "mod tests;",
@@ -33420,11 +33421,15 @@ def main() -> None:
                 "AxisDragValueOutcome",
                 "AxisDragValueResetAction",
                 "OnAxisDragValueOutcome",
+                "use ids::axis_drag_value_test_ids;",
                 "use model::{AxisDragValueMode, AxisDragValueState, axis_drag_value_input_text_style};",
                 "use session::{draft_model, emit_axis_drag_value_outcome, error_model, hidden_layout};",
                 "pub struct AxisDragValue<T>",
+                "axis_drag_value_test_ids(",
             ],
             forbidden=[
+                "derived_test_id(",
+                "Arc::<str>::from(format!(\"{}.typing\"",
                 "pub struct AxisDragValueOptions",
                 "pub struct AxisDragValueResetAction",
                 "struct AxisDragValueState",
@@ -33438,6 +33443,40 @@ def main() -> None:
                 "fn error_model",
                 "axis_drag_value_input_text_style_uses_density_row_height_for_typing_line_box",
                 "axis_drag_value_from_presentation_adopts_format_parse_and_chrome_affixes",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/axis_drag_value/ids.rs"),
+            required=[
+                "mod tests;",
+                "pub(super) struct AxisDragValueTestIds",
+                "pub(super) fn axis_drag_value_test_ids",
+                "derived_test_id(scrub_test_id.as_ref(), \"axis\")",
+                "derived_test_id(active_typing.as_ref(), \"input\")",
+                "Arc::<str>::from(format!(\"{}.typing\", id.as_ref()))",
+            ],
+            forbidden=[
+                "pub struct AxisDragValue<T>",
+                "TextInputProps::new",
+                "DragValueCore::new",
+                "editor_input_group_frame",
+                "axis_drag_value_test_ids_derive_scrub_and_active_typing_segments",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/axis_drag_value/ids/tests.rs"),
+            required=[
+                "axis_drag_value_test_ids_derive_scrub_and_active_typing_segments",
+                "axis_drag_value_test_ids_use_explicit_reset_ids_for_scrub_and_typing",
+                "axis_drag_value_test_ids_skip_typing_segments_when_not_typing",
+                "transform.x.typing.input",
+                "reset-x.typing",
+            ],
+            forbidden=[
+                "pub struct AxisDragValue<T>",
+                "TextInputProps::new",
+                "DragValueCore::new",
+                "editor_input_group_frame",
             ],
         ),
         SourceCheck(

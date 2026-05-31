@@ -20,10 +20,10 @@ use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::colors::{editor_invalid_border, editor_muted_foreground};
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
-    EditorInputGroupFrameOverrides, derived_test_id, editor_axis_segment,
-    editor_icon_button_segment, editor_icon_segment, editor_input_group_divider,
-    editor_input_group_frame, editor_input_group_frame_with_overrides, editor_input_group_inset,
-    editor_input_group_row, editor_input_value_text, editor_text_segment,
+    EditorInputGroupFrameOverrides, editor_axis_segment, editor_icon_button_segment,
+    editor_icon_segment, editor_input_group_divider, editor_input_group_frame,
+    editor_input_group_frame_with_overrides, editor_input_group_inset, editor_input_group_row,
+    editor_input_value_text, editor_text_segment,
 };
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
@@ -38,11 +38,13 @@ use crate::primitives::{
     DragValueCore, DragValueCoreOptions, NumericPresentation, constrain_numeric_value,
 };
 
+mod ids;
 mod model;
 mod session;
 #[cfg(test)]
 mod tests;
 
+use ids::axis_drag_value_test_ids;
 use model::{AxisDragValueMode, AxisDragValueState, axis_drag_value_input_text_style};
 pub use model::{
     AxisDragValueOptions, AxisDragValueOutcome, AxisDragValueResetAction, OnAxisDragValueOutcome,
@@ -172,28 +174,26 @@ where
             self.options.suffix.clone(),
         );
         let reset_action = self.options.reset.clone();
-        let scrub_test_id = self.options.test_id.clone();
-        let typing_test_id = derived_test_id(self.options.test_id.as_ref(), "typing");
-        let active_typing_test_id = if typing { typing_test_id.clone() } else { None };
-        let scrub_axis_test_id = derived_test_id(scrub_test_id.as_ref(), "axis");
-        let scrub_value_test_id = derived_test_id(scrub_test_id.as_ref(), "value");
-        let scrub_prefix_test_id = derived_test_id(scrub_test_id.as_ref(), "prefix");
-        let scrub_suffix_test_id = derived_test_id(scrub_test_id.as_ref(), "suffix");
-        let typing_axis_test_id = derived_test_id(active_typing_test_id.as_ref(), "axis");
-        let typing_input_test_id = derived_test_id(active_typing_test_id.as_ref(), "input");
-        let typing_prefix_test_id = derived_test_id(active_typing_test_id.as_ref(), "prefix");
-        let typing_suffix_test_id = derived_test_id(active_typing_test_id.as_ref(), "suffix");
-        let typing_error_icon_test_id = derived_test_id(active_typing_test_id.as_ref(), "error");
-        let explicit_reset_test_id = reset_action
-            .as_ref()
-            .and_then(|reset| reset.test_id.clone());
-        let scrub_reset_test_id = explicit_reset_test_id
-            .clone()
-            .or_else(|| derived_test_id(scrub_test_id.as_ref(), "reset"));
-        let typing_reset_test_id = explicit_reset_test_id
-            .as_ref()
-            .and_then(|id| typing.then(|| Arc::<str>::from(format!("{}.typing", id.as_ref()))))
-            .or_else(|| derived_test_id(active_typing_test_id.as_ref(), "reset"));
+        let test_ids = axis_drag_value_test_ids(
+            self.options.test_id.clone(),
+            reset_action
+                .as_ref()
+                .and_then(|reset| reset.test_id.clone()),
+            typing,
+        );
+        let scrub_test_id = test_ids.scrub.clone();
+        let active_typing_test_id = test_ids.active_typing.clone();
+        let scrub_axis_test_id = test_ids.scrub_axis.clone();
+        let scrub_value_test_id = test_ids.scrub_value.clone();
+        let scrub_prefix_test_id = test_ids.scrub_prefix.clone();
+        let scrub_suffix_test_id = test_ids.scrub_suffix.clone();
+        let typing_axis_test_id = test_ids.typing_axis.clone();
+        let typing_input_test_id = test_ids.typing_input.clone();
+        let typing_prefix_test_id = test_ids.typing_prefix.clone();
+        let typing_suffix_test_id = test_ids.typing_suffix.clone();
+        let typing_error_icon_test_id = test_ids.typing_error_icon.clone();
+        let scrub_reset_test_id = test_ids.scrub_reset.clone();
+        let typing_reset_test_id = test_ids.typing_reset.clone();
 
         let (density, frame_chrome, (text_style, input_chrome)) = {
             let theme = Theme::global(&*cx.app);

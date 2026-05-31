@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor AxisDragValue Ids Owner Split Evidence - 2026-05-31
+
+Claim verified: editor axis-drag-value child test-id derivation moved into a private ids owner
+without changing scrub/typing/reset test-id strings, explicit reset-id precedence, active typing
+gating, diagnostics naming, control routing, public AxisDragValue options, or existing
+model/session/test child-owner boundaries.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` keeps control orchestration while
+  delegating scrub/typing/reset child test-id derivation to the ids owner.
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/ids.rs` owns `AxisDragValueTestIds` and
+  `axis_drag_value_test_ids(...)`.
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/ids/tests.rs` covers default scrub/typing
+  child id derivation, explicit reset-id precedence, `.typing` reset suffix behavior, and inactive
+  typing segment suppression.
+- `tools/gate_imui_workstream_source.py` checks the axis-drag-value root/ids/test split and rejects
+  derived test-id logic from drifting back into `axis_drag_value.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new axis-drag-value ids
+  owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui axis_drag_value --no-fail-fast`: pass (5
+  passed, 219 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Editor Slider Track/Thumb Props Chrome Owner Split Evidence - 2026-05-31
 
 Claim verified: editor slider track/thumb chrome props moved into the chrome owner without changing
