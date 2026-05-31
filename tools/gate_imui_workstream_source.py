@@ -49,7 +49,7 @@ IMUI_DIRECT_TEXT_PROPS_ALLOWED: dict[Path, dict[str, int]] = {}
 
 EDITOR_DIRECT_TEXT_PROPS_ALLOWED = {
     Path("ecosystem/fret-ui-editor/src/primitives/readout.rs"): {
-        "TextProps {": 4,
+        "TextProps {": 1,
     },
     Path("ecosystem/fret-ui-editor/src/primitives/readout/feedback.rs"): {
         "TextProps {": 3,
@@ -62,6 +62,9 @@ EDITOR_DIRECT_TEXT_PROPS_ALLOWED = {
     },
     Path("ecosystem/fret-ui-editor/src/primitives/readout/section.rs"): {
         "TextProps {": 2,
+    },
+    Path("ecosystem/fret-ui-editor/src/primitives/readout/surface.rs"): {
+        "TextProps {": 3,
     },
     Path("ecosystem/fret-ui-editor/src/primitives/readout/popup_list.rs"): {
         "TextProps {": 2,
@@ -32467,18 +32470,20 @@ def main() -> None:
                 "mod tests;",
                 "mod property;",
                 "mod section;",
+                "mod surface;",
                 "mod theme_preset;",
                 "pub(crate) use feedback::{",
                 "pub(crate) use input::{",
                 "pub(crate) use property::{",
                 "pub(crate) use section::{",
+                "pub(crate) use surface::{",
                 "pub(crate) use theme_preset::{",
-                "pub(crate) fn editor_preview_caption_text_props",
-                "pub(crate) fn editor_empty_state_text_props",
-                "pub(crate) fn editor_tooltip_readout_text_props",
-                "min_width: Some(Length::Px(Px(0.0))),",
+                "pub fn compact_readout_text_px",
+                "fn compact_readout_fg",
+                "pub struct EditorCompactReadoutStyle",
+                "pub fn resolve",
+                "pub fn text_props",
                 "wrap: TextWrap::None,",
-                "overflow: TextOverflow::Ellipsis,",
             ],
             forbidden=[
                 "pub(crate) fn editor_theme_preset_picker_header_text_props",
@@ -32518,6 +32523,9 @@ def main() -> None:
                 "pub(crate) fn editor_axis_marker_text_props",
                 "pub(crate) fn editor_section_badge_text_props",
                 "pub(crate) fn editor_section_heading_text_props",
+                "pub(crate) fn editor_preview_caption_text_props",
+                "pub(crate) fn editor_empty_state_text_props",
+                "pub(crate) fn editor_tooltip_readout_text_props",
             ],
         ),
         SourceCheck(
@@ -32541,6 +32549,30 @@ def main() -> None:
                 "pub(crate) fn editor_inline_control_label_text_props",
                 "pub(crate) fn editor_property_group_header_text_props",
                 "pub(crate) fn editor_popup_list_row_text_props",
+                "pub(crate) fn editor_theme_preset_picker_header_text_props",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/readout/surface.rs"),
+            required=[
+                "pub(crate) fn editor_preview_caption_text_props",
+                "pub(crate) fn editor_empty_state_text_props",
+                "pub(crate) fn editor_tooltip_readout_text_props",
+                "min_width: Some(Length::Px(Px(0.0)))",
+                "width: Length::Fill,",
+                "width: Length::Auto,",
+                "wrap: TextWrap::None,",
+                "overflow: TextOverflow::Ellipsis",
+                "align: TextAlign::Start",
+            ],
+            forbidden=[
+                "editor_preview_caption_text_is_single_line_and_shrinkable",
+                "editor_empty_state_text_is_single_line_and_shrinkable",
+                "editor_tooltip_readout_text_is_single_line_and_shrinkable",
+                "pub(crate) fn editor_status_badge_text_props",
+                "pub(crate) fn editor_inline_control_label_text_props",
+                "pub(crate) fn editor_property_group_header_text_props",
+                "pub(crate) fn editor_section_badge_text_props",
                 "pub(crate) fn editor_theme_preset_picker_header_text_props",
             ],
         ),

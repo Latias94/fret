@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Readout Surface Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor preview caption, empty-state, and tooltip readout text props moved into a
+private `readout/surface.rs` owner without changing color popup preview captions, gradient empty
+state text, color tooltip readout layout semantics, re-export paths, or readout regression coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps only the shared compact readout
+  style owner plus child-module re-exports.
+- `ecosystem/fret-ui-editor/src/primitives/readout/surface.rs` owns preview caption, empty-state,
+  and tooltip readout text props.
+- `tools/gate_imui_workstream_source.py` now gates the hub/surface split and moves the three direct
+  `TextProps` allowlist entries from `readout.rs` to `readout/surface.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new surface owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor editor_preview_caption_text_is_single_line_and_shrinkable
+  editor_empty_state_text_is_single_line_and_shrinkable
+  editor_tooltip_readout_text_is_single_line_and_shrinkable --no-fail-fast`: pass (4 passed, 218
+  skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass (with Git's line-ending warning for `primitives/readout.rs`).
+
 ## Readout Section Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor section badge/heading readout text props moved into a private

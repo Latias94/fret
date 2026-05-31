@@ -692,6 +692,13 @@ section helpers. `primitives/readout/section.rs` owns section badge and section 
 Transform section badge/heading layout semantics, re-export paths, and readout regression coverage
 remain unchanged.
 
+2026-05-31 editor readout surface child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps only the shared compact readout style
+owner plus child-module re-exports. `primitives/readout/surface.rs` owns preview caption,
+empty-state, and tooltip readout text props. Color popup preview captions, gradient empty-state
+text, color tooltip readout layout semantics, re-export paths, and readout regression coverage
+remain unchanged.
+
 2026-05-30 editor vec-edit axis child-owner result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps Vec2/Vec3/Vec4 public control
 orchestration. `controls/vec_edit/axis.rs` owns `VecEditAxis`, `VecEditAxisOutcome`, reset options,
