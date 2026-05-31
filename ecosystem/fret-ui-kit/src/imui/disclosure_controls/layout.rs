@@ -1,12 +1,10 @@
-use fret_core::Px;
-use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, LayoutStyle, Length, Overflow, SizeStyle,
-    SpacingLength,
-};
+use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
-use super::{spec::DisclosureSpec, visual};
+use super::spec::DisclosureSpec;
 use crate::imui::ImUiFacade;
+
+mod props;
 
 pub(super) fn disclosure_content_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -15,34 +13,9 @@ pub(super) fn disclosure_content_element<H: UiHost>(
 ) -> AnyElement {
     let mut build = Some(f);
     let mut content = cx.named("content", |cx| {
-        let mut props = ContainerProps::default();
-        props.layout = LayoutStyle {
-            size: SizeStyle {
-                width: Length::Fill,
-                height: Length::Auto,
-                ..Default::default()
-            },
-            overflow: Overflow::Visible,
-            ..Default::default()
-        };
-        props.padding = visual::disclosure_content_padding(spec).into();
-
-        cx.container(props, move |cx| {
-            vec![cx.column(
-                ColumnProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Auto,
-                            ..Default::default()
-                        },
-                        overflow: Overflow::Visible,
-                        ..Default::default()
-                    },
-                    gap: SpacingLength::Px(Px(0.0)),
-                    ..Default::default()
-                },
-                move |cx| {
+        cx.container(props::disclosure_content_container_props(spec), move |cx| {
+            vec![
+                cx.column(props::disclosure_content_column_props(), move |cx| {
                     let mut out = Vec::new();
                     let mut body_ui = ImUiFacade {
                         cx,
@@ -53,8 +26,8 @@ pub(super) fn disclosure_content_element<H: UiHost>(
                         build(&mut body_ui);
                     }
                     out
-                },
-            )]
+                }),
+            ]
         })
     });
     if let Some(test_id) = spec.content_test_id.as_ref() {
@@ -68,22 +41,9 @@ pub(super) fn disclosure_root_element<H: UiHost>(
     spec: &DisclosureSpec,
     root_children: Vec<AnyElement>,
 ) -> AnyElement {
-    let mut root = cx.column(
-        ColumnProps {
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Auto,
-                    ..Default::default()
-                },
-                overflow: Overflow::Visible,
-                ..Default::default()
-            },
-            gap: SpacingLength::Px(Px(0.0)),
-            ..Default::default()
-        },
-        move |_cx| root_children,
-    );
+    let mut root = cx.column(props::disclosure_root_column_props(), move |_cx| {
+        root_children
+    });
     if let Some(test_id) = spec.root_test_id.as_ref() {
         root = root.test_id(test_id.clone());
     }

@@ -652,6 +652,7 @@
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/entry/body.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/entry/state.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout.rs",
+    "ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout/props.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior.rs",

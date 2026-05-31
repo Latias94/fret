@@ -3,6 +3,52 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Disclosure Layout Props Owner-Split Evidence - 2026-05-31
+
+Claim verified: IMUI disclosure content/root layout props moved behind a private layout child owner
+without changing fill-width/auto-height layout, visible overflow, zero-gap column packing, content
+padding, body `ImUiFacade` mounting, root/content test-id routing, or public disclosure facade
+calls.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout.rs` keeps body `ImUiFacade` mounting,
+  root/content composition, and test-id routing.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout/props.rs` owns content container
+  props, content column props, root column props, and content padding application.
+- `tools/gate_imui_workstream_source.py` tracks the new props owner and rejects layout prop bodies
+  from drifting back into `layout.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new layout props owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_disclosure_smoke --no-fail-fast`:
+  pass (1 passed).
+- `cargo nextest run -p fret-ui-kit --features imui --lib disclosure_controls::tests
+  --no-fail-fast`: pass (6 passed, 687 skipped).
+- `git diff --check`: pass.
+
+Commit-time rechecks:
+
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_disclosure_smoke --no-fail-fast`:
+  pass (1 passed).
+
+Broader gate not recorded as pass:
+
+- `cargo nextest run -p fret-imui disclosure_tree --no-fail-fast` was attempted, but the
+  `fret-imui` test binary failed during MSVC `link.exe` with unrelated unresolved external symbols
+  from dependency/codegen artifacts before tests ran.
+
 ## Boolean-Control Indicator Owner-Split Evidence - 2026-05-31
 
 Claim verified: IMUI checkbox/radio/switch indicator chrome moved behind a private visual child
@@ -10347,11 +10393,12 @@ Evidence:
 
 - `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` keeps label identity parsing, open-model
   reads, trigger mounting, and aggregate `DisclosureResponse` writes.
-- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout.rs` owns content container
-  composition, body `ImUiFacade` construction, root column layout, and content/root test-id
-  application.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout.rs` owns body `ImUiFacade`
+  construction, root/content composition, and content/root test-id application. The 2026-05-31
+  follow-up moved content/root props into `disclosure_controls/layout/props.rs`.
 - `tools/gate_imui_workstream_source.py` now rejects disclosure content/root layout bodies from
-  drifting back into root `disclosure_controls.rs`.
+  drifting back into root `disclosure_controls.rs` and layout prop bodies from drifting back into
+  `layout.rs`.
 
 Focused gates:
 

@@ -2355,10 +2355,17 @@ Last updated: 2026-05-31
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` into a private layout owner without
       changing label identity parsing, open-model reads, trigger mounting, content body building,
       content/root test IDs, open/toggled response population, or public disclosure facade calls.
-      Result: `disclosure_controls/layout.rs` owns content container composition, body `ImUiFacade`
-      construction, root column layout, and content/root test-id application. The root file keeps
-      label identity parsing, open-model reads, trigger mounting, and aggregate `DisclosureResponse`
-      writes.
+      Result: `disclosure_controls/layout.rs` owns body `ImUiFacade` construction, root/content
+      composition, and content/root test-id application. The 2026-05-31 follow-up moved content/root
+      props into `disclosure_controls/layout/props.rs`. The root file keeps label identity parsing,
+      open-model reads, trigger mounting, and aggregate `DisclosureResponse` writes.
+- [x] Split IMUI disclosure content/root layout props out of the layout composition owner without
+      changing fill-width/auto-height layout, visible overflow, zero-gap column packing, content
+      padding, body `ImUiFacade` mounting, root/content test-id routing, or public disclosure
+      facade calls.
+      Result: `disclosure_controls/layout.rs` keeps composition and test-id routing, while
+      `disclosure_controls/layout/props.rs` owns content container props, content column props, and
+      root column props.
 - [x] Split IMUI disclosure entry/open-state assembly into a private entry owner without changing
       collapsing-header/tree-node label identity parsing, open-model reads, trigger mounting,
       content body building, open/toggled response population, or public disclosure facade calls.

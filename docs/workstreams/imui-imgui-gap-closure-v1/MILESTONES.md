@@ -32,6 +32,12 @@ indicator re-export routing only. `boolean_controls/visual/indicators.rs` owns c
 radio ring/dot, and switch state badge chrome. Public checkbox, radio, and switch behavior remains
 unchanged.
 
+2026-05-31 disclosure layout props owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout.rs` now keeps body `ImUiFacade` mounting,
+root/content composition, and test-id routing only. `disclosure_controls/layout/props.rs` owns the
+fill-width/auto-height visible-overflow props, zero-gap column props, and content padding
+application. Public collapsing-header/tree-node behavior remains unchanged.
+
 2026-05-31 editor axis-drag-value session owner-split result:
 `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps scrub/typing control
 orchestration and child-owner routing. `controls/axis_drag_value/session.rs` owns hidden layout
@@ -1983,10 +1989,11 @@ wrappers, checkbox/radio/action role selection, noop-hook routing, and identity-
 `menu_controls/routing.rs` is now a private dispatch/identity/mount module index and re-export hub.
 
 2026-05-27 disclosure layout owner-split result:
-`ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout.rs` now owns content container
-composition, body `ImUiFacade` construction, root column layout, and content/root test-id
-application. `disclosure_controls.rs` keeps label identity parsing, open-model reads, trigger
-mounting, and aggregate `DisclosureResponse` writes.
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout.rs` now owns body `ImUiFacade`
+construction, root/content composition, and content/root test-id application. The 2026-05-31
+follow-up moved content/root props into `disclosure_controls/layout/props.rs`.
+`disclosure_controls.rs` keeps label identity parsing, open-model reads, trigger mounting, and
+aggregate `DisclosureResponse` writes.
 
 2026-05-30 disclosure entry owner-split result:
 `ecosystem/fret-ui-kit/src/imui/disclosure_controls/entry.rs` now owns collapsing-header/tree-node
