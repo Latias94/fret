@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## InputGroup Frame Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor input-group base frame and frame override policy moved into a private
+`input_group/frame.rs` owner without changing the existing `crate::primitives::input_group::*`
+call path, joined-input composition, segment helpers, text-role helpers, pointer pressed behavior,
+or public crate-visible primitive APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/input_group.rs` now keeps segment helpers, joined-input
+  assembly, pointer-region behavior, axis segment composition, text-role usage, and re-exports the
+  frame owner APIs at the existing module path.
+- `ecosystem/fret-ui-editor/src/primitives/input_group/frame.rs` owns `EditorInputGroupFrameOverrides`,
+  base frame construction, min-height fallback, semantic/bg/border override application, and
+  `EditorWidgetVisuals` frame visual resolution.
+- `tools/gate_imui_workstream_source.py` now gates the root/frame split so frame visual resolution
+  stays out of the larger primitive root while text-role helpers remain in the root owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new frame-owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor input_group --no-fail-fast`: pass (1 passed, 221
+  skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass.
+
 ## TransformEdit Element Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor `TransformEdit` keyed element assembly moved into a private

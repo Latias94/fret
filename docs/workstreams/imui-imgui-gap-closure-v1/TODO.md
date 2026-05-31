@@ -58,6 +58,15 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor input-group base frame and frame override policy into a private child owner
+      without changing the existing `crate::primitives::input_group::*` call path, joined-input
+      composition, segment helpers, text-role helpers, pointer pressed behavior, or crate-visible
+      primitive APIs.
+      Result: `primitives/input_group.rs` keeps segment helpers, joined-input assembly,
+      pointer-region behavior, axis segment composition, text-role usage, and re-exports the frame
+      owner APIs. `primitives/input_group/frame.rs` owns `EditorInputGroupFrameOverrides`, base
+      frame construction, min-height fallback, semantic/bg/border override application, and
+      `EditorWidgetVisuals` frame visual resolution.
 - [x] Split editor `TransformEdit` keyed element assembly into a private child owner without
       changing callsite keying, section layout variants, Vec3Edit composition, linked-scale
       model/sync behavior, link-toggle test-id derivation, axis outcome routing, or public

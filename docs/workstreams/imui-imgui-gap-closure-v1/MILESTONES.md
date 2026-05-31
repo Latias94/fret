@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 editor input-group frame owner-split result:
+`ecosystem/fret-ui-editor/src/primitives/input_group.rs` now keeps segment helpers, joined-input
+assembly, pointer-region behavior, axis segment composition, text-role usage, and re-exports the
+frame owner APIs at the existing module path. The private `primitives/input_group/frame.rs` owner
+now contains `EditorInputGroupFrameOverrides`, base frame construction, min-height fallback,
+semantic/bg/border override application, and `EditorWidgetVisuals` frame visual resolution.
+Crate-visible input-group APIs remain unchanged.
+
 2026-05-31 editor TransformEdit element owner-split result:
 `ecosystem/fret-ui-editor/src/controls/transform_edit.rs` now keeps public options,
 section/outcome records, constructors, presentation adoption, builder methods, and callsite/
