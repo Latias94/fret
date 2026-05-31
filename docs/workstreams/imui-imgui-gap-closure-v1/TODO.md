@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor color-edit popup body assembly into a private child owner without changing
+      overlay request placement, close-focus behavior, popup open model, picker/runtime option
+      semantics, side preview composition, numeric rows, eyedropper action, swatch/history rows,
+      standalone alpha bar behavior, popup chrome, width policy, or public popup entrypoints.
+      Result: `controls/color_edit/popup.rs` keeps overlay request lifecycle, anchored placement,
+      pointer-region wrapping, and close-on-focus/resize policy. `controls/color_edit/popup/body.rs`
+      owns popup content assembly, picker/body width selection, side-preview row layout, popup
+      chrome, and all child affordance composition. The source gate prevents body assembly from
+      drifting back into the overlay request owner.
 - [x] Split editor color-edit drag source pointer lifecycle into a private child owner without
       changing drag threshold resolution, local/cross-window drag startup, pointer
       down/move/up routing, active session payload capture, hover-target preservation, delivery on

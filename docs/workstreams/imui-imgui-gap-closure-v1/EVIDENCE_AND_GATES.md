@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor Color-Edit Popup Body Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor color-edit popup body assembly moved out of the overlay request root into a
+private `popup/body.rs` owner without changing anchored overlay placement, close-focus behavior,
+popup open model forwarding, picker/runtime option semantics, side preview composition, numeric
+rows, eyedropper action, swatch/history rows, standalone alpha bar behavior, popup chrome, width
+policy, or public popup entrypoints.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup.rs` keeps overlay request lifecycle,
+  anchored placement, pointer-region wrapping, close-on-focus/resize policy, and forwards popup
+  body construction through `ColorPopupBodyArgs`.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/body.rs` owns popup content assembly,
+  picker/runtime option projection, side-preview row layout, popup width selection, popup surface
+  chrome, and child affordance composition.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now reads the body owner directly and
+  asserts the popup root stays free of picker/body composition details.
+- `tools/gate_imui_workstream_source.py` now tracks the popup root/body split and rejects body
+  assembly details from drifting back into the overlay request owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the popup root and body owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor --lib color_edit --no-fail-fast`: pass (51 passed).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass (2 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+
 ## Editor Color-Edit Drag Source Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor color-edit drag source pointer lifecycle moved out of the drag-drop root into

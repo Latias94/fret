@@ -22,6 +22,7 @@ const COLOR_EDIT_RECORDS_RS: &str = include_str!("../src/controls/color_edit/rec
 const COLOR_EDIT_STATE_RS: &str = include_str!("../src/controls/color_edit/state.rs");
 const COLOR_EDIT_SWATCH_RS: &str = include_str!("../src/controls/color_edit/swatch.rs");
 const COLOR_EDIT_POPUP_RS: &str = include_str!("../src/controls/color_edit/popup.rs");
+const COLOR_EDIT_POPUP_BODY_RS: &str = include_str!("../src/controls/color_edit/popup/body.rs");
 const COLOR_EDIT_POPUP_NUMERIC_RS: &str =
     include_str!("../src/controls/color_edit/popup/numeric.rs");
 const COLOR_EDIT_POPUP_NUMERIC_FIELD_RS: &str =
@@ -219,7 +220,16 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_COPY_PANEL_RS.contains("fn color_copy_menu_panel<"));
     assert!(COLOR_EDIT_POPUP_COPY_ROW_RS.contains("Effect::ClipboardWriteText"));
     assert!(!COLOR_EDIT_POPUP_COPY_RS.contains("Effect::ClipboardWriteText"));
-    assert!(COLOR_EDIT_POPUP_RS.contains("color_eyedropper_action("));
+    assert!(COLOR_EDIT_POPUP_RS.contains("mod body;"));
+    assert!(
+        COLOR_EDIT_POPUP_RS.contains("use self::body::{ColorPopupBodyArgs, color_popup_body};")
+    );
+    assert!(COLOR_EDIT_POPUP_RS.contains("request_popup_overlay<"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("OverlayRequest::dismissible_menu"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("on_close_auto_focus"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("color_popup_body("));
+    assert!(!COLOR_EDIT_POPUP_RS.contains("color_eyedropper_action("));
+    assert!(!COLOR_EDIT_POPUP_RS.contains("picker_side_preview_row("));
     assert!(COLOR_EDIT_POPUP_EYEDROPPER_RS.contains("fn color_eyedropper_action<"));
     assert!(COLOR_EDIT_POPUP_EYEDROPPER_RS.contains("ColorEditEyedropperRequest::new("));
     assert!(!COLOR_EDIT_POPUP_EYEDROPPER_RS.contains("Effect::"));
@@ -253,11 +263,14 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("SIDE_PREVIEW_SWATCH_HEIGHT"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("fn restore_reference_color("));
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("fn preview_color_for_alpha_visibility("));
-    assert!(COLOR_EDIT_POPUP_RS.contains("fn picker_side_preview_row<"));
-    assert!(COLOR_EDIT_POPUP_RS.contains("COLOR_POPUP_WITH_SIDE_PREVIEW_WIDTH"));
-    assert!(COLOR_EDIT_POPUP_RS.contains("ColorEditPopupPicker::HsvHueBar"));
-    assert!(COLOR_EDIT_POPUP_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
-    assert!(COLOR_EDIT_POPUP_RS.contains("color_picker_options("));
+    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("struct ColorPopupBodyArgs"));
+    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("fn color_popup_body<"));
+    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("fn picker_side_preview_row<"));
+    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("COLOR_POPUP_WITH_SIDE_PREVIEW_WIDTH"));
+    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("ColorEditPopupPicker::HsvHueBar"));
+    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
+    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("color_picker_options("));
+    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("color_eyedropper_action("));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("ColorEditPaletteEntry"));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("fn history_swatches<"));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("install_color_drag_source("));
@@ -280,7 +293,7 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_OPTIONS_THUMBNAIL_RS.contains("fn hue_wheel_picker_thumbnail<"));
     assert!(COLOR_EDIT_POPUP_OPTIONS_THUMBNAIL_RS.contains("sv_picker_preview_stack("));
     assert!(COLOR_EDIT_POPUP_OPTIONS_THUMBNAIL_RS.contains("hue_wheel_canvas("));
-    assert!(COLOR_EDIT_POPUP_RS.contains("popup_options.side_preview"));
+    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("popup_options.side_preview"));
     assert!(COLOR_EDIT_MODEL_RS.contains("ColorEditPopupNumericInputs::RgbAndHsv"));
     assert!(COLOR_EDIT_MODEL_RS.contains("fn color_numeric_input_modes("));
     assert!(COLOR_EDIT_OPTIONS_RS.contains("fn has_visible_content_with_swatches("));
