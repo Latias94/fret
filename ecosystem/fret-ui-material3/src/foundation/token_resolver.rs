@@ -21,6 +21,30 @@ pub(crate) fn blend_over(base: Color, overlay: Color, opacity: f32) -> Color {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum MaterialStateLayerInteraction {
+    Hovered,
+    Focused,
+    Pressed,
+}
+
+impl MaterialStateLayerInteraction {
+    fn sys_opacity_key(self) -> &'static str {
+        match self {
+            Self::Hovered => "md.sys.state.hover.state-layer-opacity",
+            Self::Focused => "md.sys.state.focus.state-layer-opacity",
+            Self::Pressed => "md.sys.state.pressed.state-layer-opacity",
+        }
+    }
+
+    fn fallback_opacity(self) -> f32 {
+        match self {
+            Self::Hovered => 0.08,
+            Self::Focused | Self::Pressed => 0.1,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct MaterialTokenResolver<'a> {
     theme: &'a Theme,
@@ -78,6 +102,22 @@ impl<'a> MaterialTokenResolver<'a> {
             .or_else(|| self.theme.number_by_key(sys_key))
             .unwrap_or(fallback)
     }
+
+    pub fn state_layer_opacity(
+        &self,
+        comp_key: &str,
+        interaction: MaterialStateLayerInteraction,
+    ) -> f32 {
+        self.number_comp_or_sys(
+            comp_key,
+            interaction.sys_opacity_key(),
+            interaction.fallback_opacity(),
+        )
+    }
+
+    pub fn disabled_state_layer_opacity(&self) -> f32 {
+        self.number_sys("md.sys.state.disabled.state-layer-opacity", 0.38)
+    }
 }
 
 fn fallback_color_for_sys(sys_key: &str) -> Color {
@@ -116,5 +156,21 @@ mod tests {
         assert!((blended.g - 0.0).abs() < 1e-6);
         assert!((blended.b - 0.75).abs() < 1e-6);
         assert!((blended.a - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn state_layer_interaction_fallbacks_match_material_defaults() {
+        assert_eq!(
+            MaterialStateLayerInteraction::Hovered.fallback_opacity(),
+            0.08
+        );
+        assert_eq!(
+            MaterialStateLayerInteraction::Focused.fallback_opacity(),
+            0.1
+        );
+        assert_eq!(
+            MaterialStateLayerInteraction::Pressed.fallback_opacity(),
+            0.1
+        );
     }
 }

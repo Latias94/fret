@@ -49,3 +49,15 @@ Last updated: 2026-05-31
 - `cargo fmt --package fret-ui-material3 --check`: passed.
 - `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes foundation::token_resolver::tests`:
   3 passed.
+
+## M3TRF-030 Evidence
+
+- `rg -n "md\\.sys\\.state\\.(hover|focus|pressed)\\.state-layer-opacity" ecosystem/fret-ui-material3/src/tokens/checkbox.rs ecosystem/fret-ui-material3/src/tokens/radio.rs ecosystem/fret-ui-material3/src/tokens/switch.rs ecosystem/fret-ui-material3/src/tokens/slider.rs ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`:
+  state-layer interaction opacity system keys are centralized in
+  `foundation/token_resolver.rs` for migrated control token modules.
+- `cargo fmt --package fret-ui-material3 --check`: passed.
+- `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes foundation::token_resolver::tests`:
+  4 passed.
+- `cargo check -p fret-ui-material3 --features diagnostics --tests`: passed.
+- `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`:
+  passed.

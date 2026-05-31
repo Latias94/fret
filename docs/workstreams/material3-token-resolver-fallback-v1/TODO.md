@@ -21,11 +21,15 @@ Task IDs use `M3TRF-*`.
   - Note: `alpha_mul` and `blend_over` now live in `foundation::token_resolver`; local copies were
     removed from field, selection, slider/list/switch token modules and the visual fixture runner.
 
-- [ ] M3TRF-030: Add resolver helpers for common component-to-system fallback chains.
+- [x] M3TRF-030: Add resolver helpers for common component-to-system fallback chains.
   - Scope: high-duplication color/number fallback paths in field and selection token modules.
   - Expected result: token modules describe Material token role/state selection while resolver owns
     primitive fallback semantics.
   - Gate: token visual fixtures plus targeted tests for migrated families.
+  - Note: `MaterialTokenResolver` now owns Material state-layer interaction opacity and disabled
+    state-layer opacity fallback semantics. Checkbox, Radio, Switch, and Slider token modules now
+    keep only component role/state key selection for migrated state-layer color/opacity paths.
+    Field-family migration is intentionally left to M3TRF-040.
 
 - [ ] M3TRF-040: Migrate the heaviest field-family fallback modules.
   - Scope: TextField, Select, Autocomplete token modules.

@@ -7,7 +7,9 @@ use fret_core::{Color, Corners, FontWeight, Px, TextStyle};
 use fret_ui::Theme;
 use fret_ui_kit::typography::{self, TextIntent};
 
-use crate::foundation::token_resolver::alpha_mul;
+use crate::foundation::token_resolver::{
+    MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SliderInteraction {
@@ -32,42 +34,53 @@ pub(crate) fn state_layer_target_opacity(
         return 0.0;
     }
 
-    match interaction {
-        SliderInteraction::None => 0.0,
-        SliderInteraction::Pressed => theme
-            .number_by_key("md.comp.slider.pressed.state-layer.opacity")
-            .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-            .unwrap_or(0.1),
-        SliderInteraction::Focused => theme
-            .number_by_key("md.comp.slider.focus.state-layer.opacity")
-            .or_else(|| theme.number_by_key("md.sys.state.focus.state-layer-opacity"))
-            .unwrap_or(0.1),
-        SliderInteraction::Hovered => theme
-            .number_by_key("md.comp.slider.hover.state-layer.opacity")
-            .or_else(|| theme.number_by_key("md.sys.state.hover.state-layer-opacity"))
-            .unwrap_or(0.08),
-    }
+    let Some(material_interaction) = material_state_layer_interaction(interaction) else {
+        return 0.0;
+    };
+
+    MaterialTokenResolver::new(theme)
+        .state_layer_opacity(state_layer_opacity_key(interaction), material_interaction)
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key("md.comp.slider.pressed.state-layer.opacity")
-        .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        state_layer_opacity_key(SliderInteraction::Pressed),
+        MaterialStateLayerInteraction::Pressed,
+    )
 }
 
 pub(crate) fn state_layer_color(theme: &Theme, interaction: SliderInteraction) -> Color {
-    let key = match interaction {
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(state_layer_color_key(interaction), "md.sys.color.primary")
+}
+
+fn material_state_layer_interaction(
+    interaction: SliderInteraction,
+) -> Option<MaterialStateLayerInteraction> {
+    match interaction {
+        SliderInteraction::Pressed => Some(MaterialStateLayerInteraction::Pressed),
+        SliderInteraction::Focused => Some(MaterialStateLayerInteraction::Focused),
+        SliderInteraction::Hovered => Some(MaterialStateLayerInteraction::Hovered),
+        SliderInteraction::None => None,
+    }
+}
+
+fn state_layer_opacity_key(interaction: SliderInteraction) -> &'static str {
+    match interaction {
+        SliderInteraction::Pressed => "md.comp.slider.pressed.state-layer.opacity",
+        SliderInteraction::Focused => "md.comp.slider.focus.state-layer.opacity",
+        SliderInteraction::Hovered => "md.comp.slider.hover.state-layer.opacity",
+        SliderInteraction::None => "md.comp.slider.hover.state-layer.opacity",
+    }
+}
+
+fn state_layer_color_key(interaction: SliderInteraction) -> &'static str {
+    match interaction {
         SliderInteraction::Hovered => "md.comp.slider.hover.state-layer.color",
         SliderInteraction::Focused => "md.comp.slider.focus.state-layer.color",
         SliderInteraction::Pressed => "md.comp.slider.pressed.state-layer.color",
         SliderInteraction::None => "md.comp.slider.hover.state-layer.color",
-    };
-
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
+    }
 }
 
 pub(crate) fn value_indicator_bottom_space(theme: &Theme) -> Px {

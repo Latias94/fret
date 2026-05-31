@@ -6,7 +6,9 @@
 use fret_core::{Color, Px};
 use fret_ui::Theme;
 
-use crate::foundation::token_resolver::alpha_mul;
+use crate::foundation::token_resolver::{
+    MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RadioInteraction {
@@ -42,28 +44,21 @@ pub(crate) fn state_layer_target_opacity(
         return 0.0;
     }
 
-    match interaction {
-        RadioInteraction::None => 0.0,
-        RadioInteraction::Pressed => theme
-            .number_by_key(state_layer_opacity_key(checked, RadioInteraction::Pressed))
-            .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-            .unwrap_or(0.1),
-        RadioInteraction::Focused => theme
-            .number_by_key(state_layer_opacity_key(checked, RadioInteraction::Focused))
-            .or_else(|| theme.number_by_key("md.sys.state.focus.state-layer-opacity"))
-            .unwrap_or(0.1),
-        RadioInteraction::Hovered => theme
-            .number_by_key(state_layer_opacity_key(checked, RadioInteraction::Hovered))
-            .or_else(|| theme.number_by_key("md.sys.state.hover.state-layer-opacity"))
-            .unwrap_or(0.08),
-    }
+    let Some(material_interaction) = material_state_layer_interaction(interaction) else {
+        return 0.0;
+    };
+
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        state_layer_opacity_key(checked, interaction),
+        material_interaction,
+    )
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme, checked: bool) -> f32 {
-    theme
-        .number_by_key(state_layer_opacity_key(checked, RadioInteraction::Pressed))
-        .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        state_layer_opacity_key(checked, RadioInteraction::Pressed),
+        MaterialStateLayerInteraction::Pressed,
+    )
 }
 
 pub(crate) fn state_layer_color(
@@ -71,13 +66,10 @@ pub(crate) fn state_layer_color(
     checked: bool,
     interaction: RadioInteraction,
 ) -> Color {
-    theme
-        .color_by_key(state_layer_color_key(checked, interaction))
-        .unwrap_or_else(|| {
-            theme
-                .color_by_key("md.sys.color.primary")
-                .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
-        })
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        state_layer_color_key(checked, interaction),
+        "md.sys.color.primary",
+    )
 }
 
 pub(crate) fn icon_color(
@@ -99,21 +91,25 @@ pub(crate) fn icon_color(
             )
         };
 
-        let base = theme
-            .color_by_key(color_key)
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
+        let base = MaterialTokenResolver::new(theme)
+            .color_comp_or_sys(color_key, "md.sys.color.on-surface");
         let opacity = theme.number_by_key(opacity_key).unwrap_or(0.38);
         return alpha_mul(base, opacity);
     }
 
-    theme
-        .color_by_key(icon_color_key(checked, interaction))
-        .unwrap_or_else(|| {
-            theme
-                .color_by_key("md.sys.color.primary")
-                .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
-        })
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(icon_color_key(checked, interaction), "md.sys.color.primary")
+}
+
+fn material_state_layer_interaction(
+    interaction: RadioInteraction,
+) -> Option<MaterialStateLayerInteraction> {
+    match interaction {
+        RadioInteraction::Pressed => Some(MaterialStateLayerInteraction::Pressed),
+        RadioInteraction::Focused => Some(MaterialStateLayerInteraction::Focused),
+        RadioInteraction::Hovered => Some(MaterialStateLayerInteraction::Hovered),
+        RadioInteraction::None => None,
+    }
 }
 
 fn state_layer_opacity_key(checked: bool, interaction: RadioInteraction) -> &'static str {

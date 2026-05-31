@@ -19,6 +19,8 @@ Status: Complete
 
 ## M2 - Fallback Resolver Deepened
 
+Status: Complete
+
 - Common component-to-system fallback chains move behind `MaterialTokenResolver` helpers.
 - Migrated token modules retain component-specific adapter ownership.
 

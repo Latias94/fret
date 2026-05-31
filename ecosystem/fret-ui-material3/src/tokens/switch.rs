@@ -6,7 +6,9 @@
 use fret_core::{Color, Corners, Px};
 use fret_ui::Theme;
 
-use crate::foundation::token_resolver::alpha_mul;
+use crate::foundation::token_resolver::{
+    MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SwitchInteraction {
@@ -39,29 +41,21 @@ pub(crate) fn icon_color(
     interaction: SwitchInteraction,
 ) -> Color {
     if !enabled {
-        let base = theme
-            .color_by_key(disabled_icon_color_key(selected))
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
+        let base = MaterialTokenResolver::new(theme)
+            .color_comp_or_sys(disabled_icon_color_key(selected), "md.sys.color.on-surface");
         let opacity = theme
             .number_by_key(disabled_icon_opacity_key(selected))
             .unwrap_or(0.38);
         return alpha_mul(base, opacity);
     }
 
-    theme
-        .color_by_key(icon_color_key(selected, interaction))
-        .unwrap_or_else(|| {
-            if selected {
-                theme
-                    .color_by_key("md.sys.color.on-primary")
-                    .unwrap_or_else(|| theme.color_token("md.sys.color.on-primary"))
-            } else {
-                theme
-                    .color_by_key("md.sys.color.on-surface-variant")
-                    .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
-            }
-        })
+    let sys_key = if selected {
+        "md.sys.color.on-primary"
+    } else {
+        "md.sys.color.on-surface-variant"
+    };
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(icon_color_key(selected, interaction), sys_key)
 }
 
 fn shape_or_full(theme: &Theme, key: &str) -> Corners {
@@ -94,40 +88,21 @@ pub(crate) fn state_layer_target_opacity(
         return 0.0;
     }
 
-    match interaction {
-        SwitchInteraction::None => 0.0,
-        SwitchInteraction::Pressed => theme
-            .number_by_key(state_layer_opacity_key(
-                selected,
-                SwitchInteraction::Pressed,
-            ))
-            .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-            .unwrap_or(0.1),
-        SwitchInteraction::Focused => theme
-            .number_by_key(state_layer_opacity_key(
-                selected,
-                SwitchInteraction::Focused,
-            ))
-            .or_else(|| theme.number_by_key("md.sys.state.focus.state-layer-opacity"))
-            .unwrap_or(0.1),
-        SwitchInteraction::Hovered => theme
-            .number_by_key(state_layer_opacity_key(
-                selected,
-                SwitchInteraction::Hovered,
-            ))
-            .or_else(|| theme.number_by_key("md.sys.state.hover.state-layer-opacity"))
-            .unwrap_or(0.08),
-    }
+    let Some(material_interaction) = material_state_layer_interaction(interaction) else {
+        return 0.0;
+    };
+
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        state_layer_opacity_key(selected, interaction),
+        material_interaction,
+    )
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme, selected: bool) -> f32 {
-    theme
-        .number_by_key(state_layer_opacity_key(
-            selected,
-            SwitchInteraction::Pressed,
-        ))
-        .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        state_layer_opacity_key(selected, SwitchInteraction::Pressed),
+        MaterialStateLayerInteraction::Pressed,
+    )
 }
 
 pub(crate) fn state_layer_color(
@@ -135,13 +110,10 @@ pub(crate) fn state_layer_color(
     selected: bool,
     interaction: SwitchInteraction,
 ) -> Color {
-    theme
-        .color_by_key(state_layer_color_key(selected, interaction))
-        .unwrap_or_else(|| {
-            theme
-                .color_by_key("md.sys.color.primary")
-                .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
-        })
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        state_layer_color_key(selected, interaction),
+        "md.sys.color.primary",
+    )
 }
 
 pub(crate) fn chrome(
@@ -157,38 +129,27 @@ pub(crate) fn chrome(
     let track_key = track_color_key(selected, interaction);
     let handle_key = handle_color_key(selected, interaction);
 
-    let track_color = theme.color_by_key(track_key).unwrap_or_else(|| {
-        if selected {
-            theme
-                .color_by_key("md.sys.color.primary")
-                .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
-        } else {
-            theme
-                .color_by_key("md.sys.color.surface-container-highest")
-                .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-highest"))
-        }
-    });
+    let track_sys_key = if selected {
+        "md.sys.color.primary"
+    } else {
+        "md.sys.color.surface-container-highest"
+    };
+    let track_color = MaterialTokenResolver::new(theme).color_comp_or_sys(track_key, track_sys_key);
 
-    let handle_color = theme.color_by_key(handle_key).unwrap_or_else(|| {
-        if selected {
-            theme
-                .color_by_key("md.sys.color.on-primary")
-                .unwrap_or_else(|| theme.color_token("md.sys.color.on-primary"))
-        } else {
-            theme
-                .color_by_key("md.sys.color.outline")
-                .unwrap_or_else(|| theme.color_token("md.sys.color.outline"))
-        }
-    });
+    let handle_sys_key = if selected {
+        "md.sys.color.on-primary"
+    } else {
+        "md.sys.color.outline"
+    };
+    let handle_color =
+        MaterialTokenResolver::new(theme).color_comp_or_sys(handle_key, handle_sys_key);
 
     let outline_color = if selected {
         None
     } else {
         Some(
-            theme
-                .color_by_key(track_outline_color_key(interaction))
-                .or_else(|| theme.color_by_key("md.sys.color.outline"))
-                .unwrap_or_else(|| theme.color_token("md.sys.color.outline")),
+            MaterialTokenResolver::new(theme)
+                .color_comp_or_sys(track_outline_color_key(interaction), "md.sys.color.outline"),
         )
     };
 
@@ -205,8 +166,7 @@ fn disabled_chrome(theme: &Theme, selected: bool) -> SwitchChrome {
     } else {
         theme.color_by_key("md.comp.switch.disabled.unselected.track.color")
     }
-    .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-    .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
+    .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"));
 
     let track_opacity = theme
         .number_by_key("md.comp.switch.disabled.track.opacity")
@@ -222,7 +182,7 @@ fn disabled_chrome(theme: &Theme, selected: bool) -> SwitchChrome {
             .color_by_key("md.comp.switch.disabled.unselected.handle.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
     }
-    .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
+    .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"));
 
     let handle_opacity = if selected {
         theme.number_by_key("md.comp.switch.disabled.selected.handle.opacity")
@@ -245,6 +205,17 @@ fn disabled_chrome(theme: &Theme, selected: bool) -> SwitchChrome {
         track_color,
         outline_color,
         handle_color,
+    }
+}
+
+fn material_state_layer_interaction(
+    interaction: SwitchInteraction,
+) -> Option<MaterialStateLayerInteraction> {
+    match interaction {
+        SwitchInteraction::Pressed => Some(MaterialStateLayerInteraction::Pressed),
+        SwitchInteraction::Focused => Some(MaterialStateLayerInteraction::Focused),
+        SwitchInteraction::Hovered => Some(MaterialStateLayerInteraction::Hovered),
+        SwitchInteraction::None => None,
     }
 }
 

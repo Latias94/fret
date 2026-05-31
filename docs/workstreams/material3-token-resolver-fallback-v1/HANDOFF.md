@@ -10,8 +10,12 @@ This lane is open as a narrow follow-on from `material3-foundation-deepening-v1`
 M3TRF-020 is implemented: pure color composition helpers (`alpha_mul`, `blend_over`) now live in
 `foundation::token_resolver`, and local copies were removed from component token modules.
 
-The next executable task is M3TRF-030: add resolver helpers for common component-to-system fallback
-chains and migrate one high-duplication family at a time.
+M3TRF-030 is implemented: `MaterialTokenResolver` now owns Material state-layer interaction opacity
+fallbacks and disabled state-layer opacity fallback, and Checkbox/Radio/Switch/Slider use it for
+their migrated state-layer color/opacity paths.
+
+The next executable task is M3TRF-040: migrate the heaviest field-family fallback modules
+(TextField, Select, Autocomplete) onto the shared resolver vocabulary without visual drift.
 
 ## Guardrails
 
@@ -21,6 +25,6 @@ chains and migrate one high-duplication family at a time.
 
 ## Suggested First Gate
 
-For M3TRF-030, start with:
+For M3TRF-040, start with:
 
 `cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes`

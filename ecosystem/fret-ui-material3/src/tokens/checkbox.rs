@@ -6,7 +6,9 @@
 use fret_core::{Color, Px};
 use fret_ui::Theme;
 
-use crate::foundation::token_resolver::alpha_mul;
+use crate::foundation::token_resolver::{
+    MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CheckboxInteraction {
@@ -66,16 +68,21 @@ fn state_layer_opacity_key(selected: bool, interaction: CheckboxInteraction) -> 
         (false, CheckboxInteraction::Hovered) => {
             "md.comp.checkbox.unselected.hover.state-layer.opacity"
         }
-        (_, CheckboxInteraction::None) => "md.sys.state.hover.state-layer-opacity",
+        (true, CheckboxInteraction::None) => "md.comp.checkbox.selected.hover.state-layer.opacity",
+        (false, CheckboxInteraction::None) => {
+            "md.comp.checkbox.unselected.hover.state-layer.opacity"
+        }
     }
 }
 
-fn sys_state_opacity_key(interaction: CheckboxInteraction) -> &'static str {
+fn material_state_layer_interaction(
+    interaction: CheckboxInteraction,
+) -> Option<MaterialStateLayerInteraction> {
     match interaction {
-        CheckboxInteraction::Pressed => "md.sys.state.pressed.state-layer-opacity",
-        CheckboxInteraction::Focused => "md.sys.state.focus.state-layer-opacity",
-        CheckboxInteraction::Hovered => "md.sys.state.hover.state-layer-opacity",
-        CheckboxInteraction::None => "md.sys.state.hover.state-layer-opacity",
+        CheckboxInteraction::Pressed => Some(MaterialStateLayerInteraction::Pressed),
+        CheckboxInteraction::Focused => Some(MaterialStateLayerInteraction::Focused),
+        CheckboxInteraction::Hovered => Some(MaterialStateLayerInteraction::Hovered),
+        CheckboxInteraction::None => None,
     }
 }
 
@@ -89,40 +96,21 @@ pub(crate) fn state_layer_target_opacity(
         return 0.0;
     }
 
-    match interaction {
-        CheckboxInteraction::None => 0.0,
-        CheckboxInteraction::Pressed => theme
-            .number_by_key(state_layer_opacity_key(
-                selected,
-                CheckboxInteraction::Pressed,
-            ))
-            .or_else(|| theme.number_by_key(sys_state_opacity_key(CheckboxInteraction::Pressed)))
-            .unwrap_or(0.1),
-        CheckboxInteraction::Focused => theme
-            .number_by_key(state_layer_opacity_key(
-                selected,
-                CheckboxInteraction::Focused,
-            ))
-            .or_else(|| theme.number_by_key(sys_state_opacity_key(CheckboxInteraction::Focused)))
-            .unwrap_or(0.1),
-        CheckboxInteraction::Hovered => theme
-            .number_by_key(state_layer_opacity_key(
-                selected,
-                CheckboxInteraction::Hovered,
-            ))
-            .or_else(|| theme.number_by_key(sys_state_opacity_key(CheckboxInteraction::Hovered)))
-            .unwrap_or(0.08),
-    }
+    let Some(material_interaction) = material_state_layer_interaction(interaction) else {
+        return 0.0;
+    };
+
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        state_layer_opacity_key(selected, interaction),
+        material_interaction,
+    )
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme, selected: bool) -> f32 {
-    theme
-        .number_by_key(state_layer_opacity_key(
-            selected,
-            CheckboxInteraction::Pressed,
-        ))
-        .or_else(|| theme.number_by_key(sys_state_opacity_key(CheckboxInteraction::Pressed)))
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        state_layer_opacity_key(selected, CheckboxInteraction::Pressed),
+        MaterialStateLayerInteraction::Pressed,
+    )
 }
 
 fn state_layer_color_key(selected: bool, interaction: CheckboxInteraction) -> &'static str {
@@ -151,10 +139,10 @@ pub(crate) fn state_layer_color(
     selected: bool,
     interaction: CheckboxInteraction,
 ) -> Color {
-    theme
-        .color_by_key(state_layer_color_key(selected, interaction))
-        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        state_layer_color_key(selected, interaction),
+        "md.sys.color.primary",
+    )
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -166,9 +154,7 @@ pub(crate) struct CheckboxChrome {
 }
 
 fn disabled_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key("md.sys.state.disabled.state-layer-opacity")
-        .unwrap_or(0.38)
+    MaterialTokenResolver::new(theme).disabled_state_layer_opacity()
 }
 
 fn selected_outline_width_key(interaction: CheckboxInteraction) -> &'static str {
