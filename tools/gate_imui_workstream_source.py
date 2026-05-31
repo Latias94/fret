@@ -34386,9 +34386,11 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-docking/src/dock/declarative.rs"),
             required=[
+                "mod frame;",
                 "mod interaction;",
                 "mod registry;",
                 "mod tab_metrics;",
+                "use frame::DockSpaceElementFrame;",
                 "use interaction::{",
                 "pub use registry::{",
                 "use registry::{",
@@ -34402,6 +34404,9 @@ def main() -> None:
                 "DeclarativeDockInteractionService::default",
             ],
             forbidden=[
+                "struct DockSpaceElementFrame",
+                "fn from_snapshot(",
+                "floating_chrome_nodes:",
                 "ContainerProps",
                 "Length::Fill",
                 "fn fill_layout",
@@ -34438,6 +34443,27 @@ def main() -> None:
                 "fn declarative_tab_scroll_for_frame",
                 "fn declarative_apply_tab_bar_drag_auto_scroll",
                 "fn declarative_sync_tab_scroll_for_window",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-docking/src/dock/declarative/frame.rs"),
+            required=[
+                "pub(super) struct DockSpaceElementFrame",
+                "pub(super) fn empty",
+                "pub(super) fn from_snapshot",
+                "super::drop_hints_from_hover",
+                "DockSpaceLayoutSnapshot",
+                "ComplexDropOverlayPaintInput",
+                "ViewportSurfacePaintInput",
+            ],
+            forbidden=[
+                "DockPanelElementRegistryService",
+                "DeclarativeDockInteractionService",
+                "pub fn dock_space_element",
+                "managed_surface_with_prepaint",
+                "paint_tab_chrome_inputs",
+                "paint_viewport_surface_inputs",
+                "resolve_dock_drop_target",
             ],
         ),
         SourceCheck(

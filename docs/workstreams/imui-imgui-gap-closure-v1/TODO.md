@@ -58,6 +58,16 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split docking declarative frame output aggregation into a private child owner without
+      changing managed dock-space entrypoints, panel layout, tab/floating paint input reuse, drop
+      hint projection, viewport surface input storage, split handle paint input storage, or public
+      docking APIs.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, input routing, layout/render
+      event wiring, and public entrypoint functions. `dock/declarative/frame.rs` owns
+      `DockSpaceElementFrame`, empty-frame construction, layout snapshot projection, cached panel
+      sizes, tab/floating/viewport/split paint input storage, drag ghost storage, and drop-hint
+      derivation. The source gate prevents frame aggregation details from drifting back into the
+      declarative orchestration owner.
 - [x] Split docking declarative registry and panel-root binding into a private child owner without
       changing public `DockSpaceElementOptions`, `DockPanelElement`,
       `DockPanelElementRegistry`, `DockPanelElementRegistryService`, `dock_panel_element`, managed

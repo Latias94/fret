@@ -22,8 +22,7 @@ use super::host_frame::{
 use super::layout::{dock_space_regions, hidden_bounds};
 use super::manager::DockManager;
 use super::paint::{
-    ComplexDropOverlayPaintInput, DockDragGhostPaint, FloatingChromePaintInput,
-    SplitHandlePaintInput, TabChromePaintInput, TabDetailPaintInput, ViewportSurfacePaintInput,
+    DockDragGhostPaint, FloatingChromePaintInput, TabChromePaintInput, TabDetailPaintInput,
     complex_drop_overlay_paint_inputs, paint_basic_drop_overlay, paint_complex_drop_overlay_inputs,
     paint_drag_payload_ghost, paint_drop_hints, paint_floating_chrome_inputs,
     paint_split_handle_inputs, paint_tab_chrome_inputs, paint_tab_detail_inputs,
@@ -48,10 +47,12 @@ use super::viewport::{
 use fret_runtime::Effect;
 use fret_ui_headless::tab_strip_controller as tabstrip_controller;
 
+mod frame;
 mod interaction;
 mod registry;
 mod tab_metrics;
 
+use frame::DockSpaceElementFrame;
 use interaction::{
     DeclarativeDividerDrag, DeclarativeDockInteractionService, DeclarativeFloatingDrag,
     DeclarativeFloatingHover, DeclarativePendingDockDrag, DeclarativePendingDockTabsDrag,
@@ -71,90 +72,6 @@ use tab_metrics::{
     declarative_tab_widths_for_layout, declarative_tab_widths_from_prepared_titles,
     prepare_declarative_tab_detail_paint, prepare_declarative_tab_title,
 };
-
-#[derive(Debug, Clone)]
-struct DockSpaceElementFrame {
-    paint_panel_bounds: Vec<(PanelKey, Rect)>,
-    panel_last_sizes: HashMap<PanelKey, Size>,
-    layout_all: HashMap<fret_core::DockNodeId, Rect>,
-    hover: Option<super::types::DockDropTarget>,
-    drop_hints: Option<DockDropHints>,
-    tab_chrome_inputs: Vec<TabChromePaintInput>,
-    tab_detail_inputs: Vec<TabDetailPaintInput>,
-    tab_widths: HashMap<fret_core::DockNodeId, Arc<[fret_core::Px]>>,
-    tab_scroll: HashMap<fret_core::DockNodeId, fret_core::Px>,
-    complex_drop_overlay_inputs: Vec<ComplexDropOverlayPaintInput>,
-    floating_chrome_inputs: Vec<FloatingChromePaintInput>,
-    floating_chrome_nodes: Vec<fret_core::DockNodeId>,
-    dock_drag_ghost: Option<DockDragGhostSnapshot>,
-    split_handle_inputs: Vec<SplitHandlePaintInput>,
-    viewport_surface_inputs: Vec<ViewportSurfacePaintInput>,
-    split_handle_gap: fret_core::Px,
-    split_handle_hit_thickness: fret_core::Px,
-}
-
-impl DockSpaceElementFrame {
-    fn empty(panel_last_sizes: HashMap<PanelKey, Size>) -> Self {
-        Self {
-            paint_panel_bounds: Vec::new(),
-            panel_last_sizes,
-            layout_all: HashMap::new(),
-            hover: None,
-            drop_hints: None,
-            tab_chrome_inputs: Vec::new(),
-            tab_detail_inputs: Vec::new(),
-            tab_widths: HashMap::new(),
-            tab_scroll: HashMap::new(),
-            complex_drop_overlay_inputs: Vec::new(),
-            floating_chrome_inputs: Vec::new(),
-            floating_chrome_nodes: Vec::new(),
-            dock_drag_ghost: None,
-            split_handle_inputs: Vec::new(),
-            viewport_surface_inputs: Vec::new(),
-            split_handle_gap: fret_core::Px(0.0),
-            split_handle_hit_thickness: fret_core::Px(0.0),
-        }
-    }
-
-    fn from_snapshot(
-        snapshot: &DockSpaceLayoutSnapshot,
-        panel_last_sizes: HashMap<PanelKey, Size>,
-        hover: Option<super::types::DockDropTarget>,
-        tab_chrome_inputs: Vec<TabChromePaintInput>,
-        tab_detail_inputs: Vec<TabDetailPaintInput>,
-        tab_widths: HashMap<fret_core::DockNodeId, Arc<[fret_core::Px]>>,
-        tab_scroll: HashMap<fret_core::DockNodeId, fret_core::Px>,
-        complex_drop_overlay_inputs: Vec<ComplexDropOverlayPaintInput>,
-        floating_chrome_inputs: Vec<FloatingChromePaintInput>,
-        dock_drag_ghost: Option<DockDragGhostSnapshot>,
-        split_handle_inputs: Vec<SplitHandlePaintInput>,
-        viewport_surface_inputs: Vec<ViewportSurfacePaintInput>,
-    ) -> Self {
-        Self {
-            paint_panel_bounds: snapshot.paint_panel_bounds.clone(),
-            panel_last_sizes,
-            layout_all: snapshot.layout_all.clone(),
-            drop_hints: drop_hints_from_hover(hover.as_ref()),
-            hover,
-            tab_chrome_inputs,
-            tab_detail_inputs,
-            tab_widths,
-            tab_scroll,
-            complex_drop_overlay_inputs,
-            floating_chrome_nodes: snapshot
-                .floating_layouts
-                .iter()
-                .map(|floating| floating.floating.floating)
-                .collect(),
-            floating_chrome_inputs,
-            dock_drag_ghost,
-            split_handle_inputs,
-            viewport_surface_inputs,
-            split_handle_gap: snapshot.split_handle_gap,
-            split_handle_hit_thickness: snapshot.split_handle_hit_thickness,
-        }
-    }
-}
 
 fn keep_internal_drag_route_alive<H: UiHost>(app: &mut H, window: AppWindowId, host_node: NodeId) {
     fret_ui::internal_drag::set_route(app, window, fret_runtime::DRAG_KIND_DOCK_PANEL, host_node);

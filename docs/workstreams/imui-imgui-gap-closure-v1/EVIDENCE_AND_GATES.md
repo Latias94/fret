@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Docking Declarative Frame Owner-Split Evidence - 2026-06-01
+
+Claim verified: docking declarative frame output aggregation moved out of the large declarative
+dock-space orchestration owner into a private `declarative/frame.rs` owner without changing managed
+dock-space entrypoints, panel layout, tab/floating paint input reuse, drop hint projection, viewport
+surface input storage, split handle paint input storage, or public docking APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs` keeps dock-space orchestration, input routing,
+  layout/render event wiring, and public entrypoint functions while importing the private frame
+  output owner.
+- `ecosystem/fret-docking/src/dock/declarative/frame.rs` owns `DockSpaceElementFrame`, empty-frame
+  construction, layout snapshot projection, cached panel sizes, tab/floating/viewport/split paint
+  input storage, drag ghost storage, and drop-hint derivation.
+- `tools/gate_imui_workstream_source.py` now tracks the declarative/frame split and rejects frame
+  aggregation details from drifting back into the declarative orchestration owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the frame owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking --no-fail-fast`: pass (90 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Declarative Registry Owner-Split Evidence - 2026-06-01
 
 Claim verified: docking declarative registry and panel-root binding moved out of the large

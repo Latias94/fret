@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 docking declarative frame owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, input routing,
+layout/render event wiring, and public entrypoint functions while importing the private frame
+output owner. The private `dock/declarative/frame.rs` owner contains `DockSpaceElementFrame`, empty
+frame construction, layout snapshot projection, cached panel sizes, tab/floating/viewport/split
+paint input storage, drag ghost storage, and drop-hint derivation. Managed dock-space entrypoints
+and public docking APIs remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split.
+
 2026-06-01 docking declarative registry owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, input routing,
 layout/render assembly, and public entrypoint functions while re-exporting the registry public
