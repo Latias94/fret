@@ -1247,6 +1247,12 @@ Last updated: 2026-05-31
       clipboard-effect orchestration, while `color_edit/popup/copy/entries.rs` owns
       `ColorEditCopyFormat`, `ColorEditCopyEntry`, channel conversion, finite-value fallback, and
       `color_copy_entries(...)`.
+- [x] Split editor color-edit copy menu row pressable into a private child owner without changing
+      copy-menu overlay behavior, clipboard write effects, row chrome, menu item a11y, row test
+      IDs, or affordance tests.
+      Result: `color_edit/popup/copy.rs` keeps overlay/panel assembly and focus restore, while
+      `color_edit/popup/copy/row.rs` owns row pressable/a11y/palette/text, clipboard write effect,
+      and close-on-copy model update.
 - [x] Split editor color-edit alpha bar previews and interaction into a private owner without
       changing horizontal/vertical alpha bars, alpha coordinate mapping, popup picker composition,
       color-edit helper tests, or color-edit popup policy tests.
