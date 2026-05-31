@@ -58,13 +58,21 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI input-text picker popup request/render orchestration into a private core popup
+      owner without changing trigger identity, popup open model forwarding, keyboard handler
+      installation gating, selected candidate routing, picked index/value propagation, or public
+      picker APIs.
+      Result: `text_picker_controls/core.rs` now keeps session/input/open-policy orchestration.
+      `text_picker_controls/core/popup.rs` owns popup request construction and render dispatch,
+      while `text_picker_controls/response.rs` keeps popup-result finalization.
 - [x] Split IMUI input-text picker response finalization out of the core orchestration owner
       without changing popup open reporting, picked index/value propagation, picked-change merging,
       edited/deactivated-after-edit flags, or public `InputTextPickerResponse` APIs.
-      Result: `text_picker_controls/core.rs` now keeps session/input/open-policy/popup
-      orchestration, while `text_picker_controls/response.rs` owns popup-result finalization and
-      picked-change response merging. The source gate prevents merge/finalization logic from
-      drifting back into the core owner.
+      Result: `text_picker_controls/core.rs` initially kept session/input/open-policy/popup
+      orchestration; the 2026-06-01 follow-up moved popup request/render dispatch into
+      `text_picker_controls/core/popup.rs`. `text_picker_controls/response.rs` owns popup-result
+      finalization and picked-change response merging. The source gate prevents
+      merge/finalization logic from drifting back into the core owner.
 - [x] Split IMUI debug-draw paint clip-stack balancing into a private paint owner without changing
       command order, empty clip elision, unmatched pop elision, final clip cleanup, media dispatch,
       shape dispatch, or public debug-draw drawing APIs.
@@ -2179,7 +2187,8 @@ Last updated: 2026-05-31
       Result: `text_picker_controls/core.rs` owns model reads, candidate visibility, keyboard
       snapshot reconciliation, input root mounting, open-policy application, popup rendering, and
       initially pick response merging; the 2026-06-01 follow-up moved popup-result finalization
-      and picked-change merging into `text_picker_controls/response.rs`.
+      and picked-change merging into `text_picker_controls/response.rs`, then moved popup
+      request/render dispatch into `text_picker_controls/core/popup.rs`.
       `text_picker_controls.rs` is now a private module index and re-export hub for core and entry
       wrappers.
 - [x] Split IMUI input-text picker session preparation out of
@@ -2190,7 +2199,8 @@ Last updated: 2026-05-31
       Result: `text_picker_controls/core/session.rs` owns model/candidate/popup/keyboard snapshot
       preparation and `picker_expanded` derivation. `core.rs` keeps input-root mounting,
       open-policy application, and popup rendering; the 2026-06-01 follow-up moved popup-result
-      finalization and picked-change merging into `text_picker_controls/response.rs`.
+      finalization and picked-change merging into `text_picker_controls/response.rs`, then moved
+      popup request/render dispatch into `text_picker_controls/core/popup.rs`.
 - [x] Split IMUI table header cell layout/resize wrapping out of
       `ecosystem/fret-ui-kit/src/imui/table_controls/header.rs` into a private cell owner without
       changing sortable/plain header behavior, resize handle wiring, header test IDs, table layout,

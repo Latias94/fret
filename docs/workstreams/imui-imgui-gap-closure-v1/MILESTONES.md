@@ -12,12 +12,22 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
-2026-06-01 IMUI text-picker response finalization owner-split result:
+2026-06-01 IMUI text-picker popup render owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` now keeps
-session/input/open-policy/popup orchestration only. `text_picker_controls/response.rs` owns
-popup-result finalization and picked-change response merging, including changed/edited/
-deactivated-after-edit propagation. Public `InputTextPickerResponse` behavior and picker popup
-semantics remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+session/input/open-policy orchestration only. `text_picker_controls/core/popup.rs` owns popup
+request construction and render dispatch, including trigger forwarding, popup open model
+forwarding, keyboard handler gating, selected candidate routing, and pending keyboard pick
+forwarding. Public picker APIs, popup semantics, and response finalization remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 IMUI text-picker response finalization owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` initially kept
+session/input/open-policy/popup orchestration. The 2026-06-01 popup owner follow-up moved popup
+request construction and render dispatch into `text_picker_controls/core/popup.rs`.
+`text_picker_controls/response.rs` owns popup-result finalization and picked-change response
+merging, including changed/edited/deactivated-after-edit propagation. Public
+`InputTextPickerResponse` behavior and picker popup semantics remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
 
 2026-06-01 IMUI debug-draw paint clip-stack owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint.rs` now keeps command iteration plus
@@ -1933,7 +1943,8 @@ keyboard model creation, enabled/empty/exact-match reconciliation, active source
 pending keyboard pick projection, and active descendant element projection. `core.rs` keeps model
 reads, candidate visibility, input-root mounting, open-policy application, and popup rendering; the
 2026-06-01 follow-up moved popup-result finalization and picked-change response merging into
-`text_picker_controls/response.rs`.
+`text_picker_controls/response.rs`, then moved popup request/render dispatch into
+`text_picker_controls/core/popup.rs`.
 
 2026-05-28 child-region resize handle owner-split result:
 `ecosystem/fret-ui-kit/src/imui/child_region/resize/handle.rs` now owns the shared pointer-region
@@ -2216,7 +2227,8 @@ unchanged.
 orchestration: model reads, candidate visibility, keyboard snapshot reconciliation, input root
 mounting, open-policy application, popup rendering, and initially pick response merging. The
 2026-06-01 follow-up moved popup-result finalization and picked-change response merging into
-`text_picker_controls/response.rs`.
+`text_picker_controls/response.rs`, then moved popup request/render dispatch into
+`text_picker_controls/core/popup.rs`.
 `text_picker_controls.rs` is now a private module index and re-export hub for the core picker and
 completion/history entry wrappers.
 
@@ -2225,7 +2237,8 @@ completion/history entry wrappers.
 candidate visibility, popup-open model lookup, enabled-scope checks, keyboard snapshot
 reconciliation, popup snapshot reads, and `picker_expanded` derivation. `core.rs` keeps input-root
 mounting, open-policy application, and popup rendering; the 2026-06-01 follow-up moved
-popup-result finalization and picked-change response merging into `text_picker_controls/response.rs`.
+popup-result finalization and picked-change response merging into `text_picker_controls/response.rs`,
+then moved popup request/render dispatch into `text_picker_controls/core/popup.rs`.
 
 2026-05-27 table header-cell owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/header/cell.rs` now owns header cell layout,
