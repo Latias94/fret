@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor Color-Edit Hue-Bar Interaction Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor color-edit hue-bar position mutation moved out of the hue-bar root into a
+private `hue_bar/interaction.rs` owner without changing the hue-bar entrypoint, pointer
+capture/release behavior, hue coordinate mapping, shared HSV color application, preview stack
+routing, or popup policy tests.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/hue_bar.rs` now keeps the hue-bar
+  pressable entrypoint, a11y value text, focused border/ring chrome, and preview stack routing.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/hue_bar/interaction.rs` owns local
+  y to hue mutation, model readback, height projection, and shared HSV apply dispatch.
+- `tools/gate_imui_workstream_source.py` now gates the hue-bar root/interaction/preview split and
+  rejects hue mutation helpers from drifting back into the hue-bar root.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new hue-bar interaction
+  owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor --lib color_edit --no-fail-fast`: pass (51 passed).
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`:
+  pass (2 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Color-Edit SV Bar Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor color-edit SV picker entry rendering moved out of the SV picker root into a

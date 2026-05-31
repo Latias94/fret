@@ -1302,6 +1302,13 @@ Last updated: 2026-06-01
       Result: `color_edit/popup/picker/hue_bar.rs` keeps pressable/pointer interaction and shared
       HSV apply wiring, while `color_edit/popup/picker/hue_bar/preview.rs` owns the hue gradient,
       preview stack, thumb overlay, and spacer layout.
+- [x] Split editor color-edit hue-bar position mutation into a private child owner without
+      changing hue-bar entrypoint, pointer capture/release behavior, hue coordinate mapping, shared
+      HSV color application, preview stack routing, or popup policy tests.
+      Result: `color_edit/popup/picker/hue_bar.rs` keeps the pressable entrypoint, a11y value text,
+      focused border/ring chrome, and preview stack routing, while
+      `color_edit/popup/picker/hue_bar/interaction.rs` owns local y to hue mutation and shared HSV
+      apply dispatch.
 - [x] Split editor color-edit saturation/value picker previews and interaction into a private
       owner without changing HSV hue-bar picker composition, option thumbnails, SV coordinate
       mapping, shared HSV color application, or color-edit popup policy tests.

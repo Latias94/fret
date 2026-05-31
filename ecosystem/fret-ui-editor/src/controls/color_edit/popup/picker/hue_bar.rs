@@ -2,19 +2,19 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, MouseButton, Px};
 use fret_runtime::Model;
-use fret_ui::action::{
-    ActionCx, PressablePointerDownResult, PressablePointerUpResult, UiPointerActionHost,
-};
+use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PressableA11y, PressableProps,
     SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use super::super::super::model::{hsv_from_color, hue_from_local_y, hue_percent_text};
-use super::{HSV_PICKER_SIZE, apply_hsv_color, picker_border_and_ring};
+use super::super::super::model::{hsv_from_color, hue_percent_text};
+use super::{HSV_PICKER_SIZE, picker_border_and_ring};
 
+mod interaction;
 mod preview;
+use interaction::apply_hue_bar_position;
 pub(in crate::controls::color_edit::popup) use preview::hue_bar_preview_stack;
 
 pub(super) fn hue_bar<H: UiHost>(
@@ -126,25 +126,4 @@ pub(super) fn hue_bar<H: UiHost>(
         bar = bar.test_id(test_id);
     }
     bar.a11y_value(value)
-}
-
-fn apply_hue_bar_position(
-    host: &mut dyn UiPointerActionHost,
-    action_cx: ActionCx,
-    model: &Model<Color>,
-    draft: &Model<String>,
-    error: &Model<Option<Arc<str>>>,
-    show_alpha: bool,
-    y: f32,
-) {
-    let height = host.bounds().size.height.0;
-    let current = host
-        .models_mut()
-        .get_copied(model)
-        .unwrap_or(Color::TRANSPARENT);
-    let mut next_hsv = hsv_from_color(current);
-    next_hsv.hue = hue_from_local_y(y, height);
-    apply_hsv_color(
-        host, action_cx, model, draft, error, show_alpha, current, next_hsv,
-    );
 }
