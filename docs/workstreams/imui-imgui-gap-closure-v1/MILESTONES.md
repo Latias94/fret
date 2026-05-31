@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 menu interaction behavior owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` now owns active-trigger
+installation and keyboard behavior orchestration only. `behavior/activation.rs` owns activate
+handling, close-popup mutation, clicked transient recording, lifecycle instant marking, and command
+dispatch. `behavior/response.rs` owns clicked transient consumption and response population.
+Public menu item behavior remains unchanged.
+
 2026-05-31 checkbox entry render owner-split result:
 `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/entry.rs` now owns public checkbox model
 entrypoints and label identity scoping only. `entry/render.rs` owns model reads, pressable props,

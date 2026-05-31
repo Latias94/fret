@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Menu Interaction Behavior Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI menu-item behavior activation and response population split into private
+owners without changing active-trigger installation, popup/menubar keyboard installation, close-on
+activate, clicked transient delivery, command dispatch source recording, lifecycle edges, or public
+menu item facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` now owns active-trigger
+  installation and keyboard behavior orchestration only.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior/activation.rs` owns activate
+  handling, close-popup mutation, clicked transient recording, lifecycle instant marking, and
+  command dispatch.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior/response.rs` owns clicked
+  transient consumption and `ResponseExt` population.
+- `tools/gate_imui_workstream_source.py` now checks the menu behavior root/activation/response
+  split and rejects activation or response details from drifting back into the root behavior file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new menu behavior owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation interaction_press::lifecycle::menu_item interaction_shortcuts::command_metadata popup_hover::item_keyboard --no-fail-fast`: pass (14 passed, 172 skipped).
+
 ## IMUI Checkbox Entry Render Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI checkbox entry rendering split into a private render owner without changing

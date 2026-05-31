@@ -44,6 +44,14 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI menu-item behavior activation and response population into private owners without
+      changing active-trigger installation, popup/menubar keyboard installation, close-on-activate,
+      clicked transient delivery, command dispatch source recording, lifecycle edges, or public
+      menu item facade behavior.
+      Result: `menu_controls/interaction/behavior.rs` now owns active-trigger installation and
+      keyboard orchestration only. `behavior/activation.rs` owns activate handling and command
+      dispatch, while `behavior/response.rs` owns clicked transient consumption and response
+      population.
 - [x] Split IMUI checkbox entry rendering into a private owner without changing label identity
       scoping, model reads, `CheckboxOptions` a11y/test-id wiring, behavior installation, field
       chrome, visual row assembly, adapter seams, or public checkbox facade behavior.
