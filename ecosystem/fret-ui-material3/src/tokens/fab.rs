@@ -9,10 +9,7 @@ use fret_ui_kit::typography::TextIntent;
 
 use crate::fab::{FabSize, FabVariant};
 use crate::foundation::token_resolver::{MaterialTokenResolver, alpha_mul};
-use crate::tokens::typography;
-
-pub(crate) const DISABLED_CONTAINER_OPACITY: f32 = 0.12;
-pub(crate) const DISABLED_CONTENT_OPACITY: f32 = 0.38;
+use crate::tokens::{fab_common, typography};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum FabInteraction {
@@ -23,40 +20,24 @@ pub(crate) enum FabInteraction {
 
 pub(crate) fn container_size(theme: &Theme, size: FabSize) -> Px {
     let key = format!("{}.container.height", size_prefix(size));
-    theme.metric_by_key(&key).unwrap_or(match size {
-        FabSize::Small => Px(40.0),
-        FabSize::Regular => Px(56.0),
-        FabSize::Medium => Px(80.0),
-        FabSize::Large => Px(96.0),
-    })
+    theme
+        .metric_by_key(&key)
+        .unwrap_or_else(|| fab_common::icon_container_size(size))
 }
 
 pub(crate) fn icon_size(theme: &Theme, size: FabSize) -> Px {
     let key = format!("{}.icon.size", size_prefix(size));
-    theme.metric_by_key(&key).unwrap_or(match size {
-        FabSize::Small => Px(24.0),
-        FabSize::Regular => Px(24.0),
-        FabSize::Medium => Px(28.0),
-        FabSize::Large => Px(36.0),
-    })
+    theme
+        .metric_by_key(&key)
+        .unwrap_or_else(|| fab_common::icon_size(size))
 }
 
 pub(crate) fn container_shape(theme: &Theme, size: FabSize) -> Corners {
     let key = format!("{}.container.shape", size_prefix(size));
     let radius = theme
         .metric_by_key(&key)
-        .or_else(|| match size {
-            FabSize::Small => theme.metric_by_key("md.sys.shape.corner.medium"),
-            FabSize::Regular => theme.metric_by_key("md.sys.shape.corner.large"),
-            FabSize::Medium => theme.metric_by_key("md.sys.shape.corner.large-increased"),
-            FabSize::Large => theme.metric_by_key("md.sys.shape.corner.extra-large"),
-        })
-        .unwrap_or(match size {
-            FabSize::Small => Px(12.0),
-            FabSize::Regular => Px(16.0),
-            FabSize::Medium => Px(20.0),
-            FabSize::Large => Px(28.0),
-        });
+        .or_else(|| theme.metric_by_key(fab_common::icon_container_shape_system_key(size)))
+        .unwrap_or_else(|| fab_common::icon_container_shape_radius(size));
 
     Corners::all(radius)
 }
@@ -64,47 +45,28 @@ pub(crate) fn container_shape(theme: &Theme, size: FabSize) -> Corners {
 pub(crate) fn extended_container_height(theme: &Theme, size: FabSize) -> Px {
     theme
         .metric_by_key(&format!("{}.container.height", extended_size_prefix(size)))
-        .unwrap_or(match size {
-            FabSize::Small | FabSize::Regular => Px(56.0),
-            FabSize::Medium => Px(80.0),
-            FabSize::Large => Px(96.0),
-        })
+        .unwrap_or_else(|| fab_common::extended_container_height(size))
 }
 
 pub(crate) fn extended_min_width(theme: &Theme, size: FabSize) -> Px {
     theme
         .metric_by_key(&format!("{}.container.width", extended_size_prefix(size)))
-        .unwrap_or(match size {
-            FabSize::Regular => Px(80.0),
-            FabSize::Small => extended_container_height(theme, size),
-            FabSize::Medium => extended_container_height(theme, size),
-            FabSize::Large => extended_container_height(theme, size),
+        .unwrap_or_else(|| {
+            fab_common::extended_min_width(size, extended_container_height(theme, size))
         })
 }
 
 pub(crate) fn extended_icon_size(theme: &Theme, size: FabSize) -> Px {
     theme
         .metric_by_key(&format!("{}.icon.size", extended_size_prefix(size)))
-        .unwrap_or(match size {
-            FabSize::Small | FabSize::Regular => Px(24.0),
-            FabSize::Medium => Px(28.0),
-            FabSize::Large => Px(36.0),
-        })
+        .unwrap_or_else(|| fab_common::extended_icon_size(size))
 }
 
 pub(crate) fn extended_container_shape(theme: &Theme, size: FabSize) -> Corners {
     let radius = theme
         .metric_by_key(&format!("{}.container.shape", extended_size_prefix(size)))
-        .or_else(|| match size {
-            FabSize::Small | FabSize::Regular => theme.metric_by_key("md.sys.shape.corner.large"),
-            FabSize::Medium => theme.metric_by_key("md.sys.shape.corner.large-increased"),
-            FabSize::Large => theme.metric_by_key("md.sys.shape.corner.extra-large"),
-        })
-        .unwrap_or(match size {
-            FabSize::Small | FabSize::Regular => Px(16.0),
-            FabSize::Medium => Px(20.0),
-            FabSize::Large => Px(28.0),
-        });
+        .or_else(|| theme.metric_by_key(fab_common::extended_container_shape_system_key(size)))
+        .unwrap_or_else(|| fab_common::extended_container_shape_radius(size));
 
     Corners::all(radius)
 }
@@ -112,11 +74,7 @@ pub(crate) fn extended_container_shape(theme: &Theme, size: FabSize) -> Corners 
 pub(crate) fn extended_leading_space(theme: &Theme, size: FabSize, has_icon: bool) -> Px {
     let leading = theme
         .metric_by_key(&format!("{}.leading-space", extended_size_prefix(size)))
-        .unwrap_or(match size {
-            FabSize::Small | FabSize::Regular => Px(16.0),
-            FabSize::Medium => Px(26.0),
-            FabSize::Large => Px(28.0),
-        });
+        .unwrap_or_else(|| fab_common::extended_leading_space(size));
     let trailing = extended_trailing_space(theme, size);
     if has_icon { leading } else { trailing }
 }
@@ -124,22 +82,13 @@ pub(crate) fn extended_leading_space(theme: &Theme, size: FabSize, has_icon: boo
 pub(crate) fn extended_trailing_space(theme: &Theme, size: FabSize) -> Px {
     theme
         .metric_by_key(&format!("{}.trailing-space", extended_size_prefix(size)))
-        .unwrap_or(match size {
-            FabSize::Regular => Px(20.0),
-            FabSize::Small => Px(16.0),
-            FabSize::Medium => Px(26.0),
-            FabSize::Large => Px(28.0),
-        })
+        .unwrap_or_else(|| fab_common::extended_trailing_space(size))
 }
 
 pub(crate) fn extended_icon_label_space(theme: &Theme, size: FabSize) -> Px {
     theme
         .metric_by_key(&format!("{}.icon-label-space", extended_size_prefix(size)))
-        .unwrap_or(match size {
-            FabSize::Small => Px(8.0),
-            FabSize::Regular | FabSize::Medium => Px(12.0),
-            FabSize::Large => Px(16.0),
-        })
+        .unwrap_or_else(|| fab_common::extended_icon_label_space(size))
 }
 
 pub(crate) fn container_background(
@@ -158,7 +107,7 @@ pub(crate) fn container_background(
 
     if !enabled {
         let mut c = tokens.color_sys("md.sys.color.on-surface");
-        c.a *= DISABLED_CONTAINER_OPACITY;
+        c.a *= fab_common::disabled_container_opacity();
         return c;
     }
 
@@ -187,7 +136,7 @@ pub(crate) fn container_elevation(
     interaction: Option<FabInteraction>,
 ) -> Px {
     if !enabled {
-        return Px(0.0);
+        return fab_common::disabled_container_elevation();
     }
 
     let prefix = if extended {
@@ -231,7 +180,7 @@ pub(crate) fn container_elevation(
         }
     }
 
-    Px(0.0)
+    fab_common::disabled_container_elevation()
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme, extended: bool, variant: FabVariant) -> Color {
@@ -267,7 +216,7 @@ pub(crate) fn icon_color(
     let mut color = tokens.color_comp_chain_or_sys(&comp_refs, "md.sys.color.on-surface");
 
     if !enabled {
-        color = alpha_mul(color, DISABLED_CONTENT_OPACITY);
+        color = alpha_mul(color, fab_common::disabled_content_opacity());
     }
 
     color
@@ -287,7 +236,7 @@ pub(crate) fn label_color(
     let mut color = tokens.color_comp_chain_or_sys(&comp_refs, "md.sys.color.on-surface");
 
     if !enabled {
-        color = alpha_mul(color, DISABLED_CONTENT_OPACITY);
+        color = alpha_mul(color, fab_common::disabled_content_opacity());
     }
 
     color
@@ -298,16 +247,9 @@ pub(crate) fn extended_label_text_style(
     size: FabSize,
     variant: FabVariant,
 ) -> TextStyle {
-    let source_key = match size {
-        FabSize::Small => "md.sys.typescale.title-medium",
-        FabSize::Regular => "md.comp.extended-fab.label-text",
-        FabSize::Medium => "md.sys.typescale.title-large",
-        FabSize::Large => "md.sys.typescale.headline-small",
-    };
-
     typography::text_style_with_weight(
         theme,
-        Some(source_key),
+        Some(fab_common::extended_label_text_source(size)),
         "md.sys.typescale.label-large",
         Some(extended_label_text_weight_key(variant)),
         TextIntent::Control,
@@ -354,19 +296,19 @@ pub(crate) fn state_layer_opacity(
             format!("{prefix}.hovered.state-layer.opacity"),
             format!("{prefix}.hover.state-layer.opacity"),
             "md.sys.state.hover.state-layer-opacity",
-            0.08,
+            fab_common::hovered_state_layer_opacity(),
         ),
         FabInteraction::Focused => (
             format!("{prefix}.focused.state-layer.opacity"),
             format!("{prefix}.focus.state-layer.opacity"),
             "md.sys.state.focus.state-layer-opacity",
-            0.1,
+            fab_common::focused_state_layer_opacity(),
         ),
         FabInteraction::Pressed => (
             format!("{prefix}.pressed.state-layer.opacity"),
             String::new(),
             "md.sys.state.pressed.state-layer-opacity",
-            0.1,
+            fab_common::pressed_state_layer_opacity(),
         ),
     };
 
@@ -381,7 +323,10 @@ pub(crate) fn state_layer_opacity(
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme) -> f32 {
-    MaterialTokenResolver::new(theme).number_sys("md.sys.state.pressed.state-layer-opacity", 0.1)
+    MaterialTokenResolver::new(theme).number_sys(
+        "md.sys.state.pressed.state-layer-opacity",
+        fab_common::pressed_state_layer_opacity(),
+    )
 }
 
 pub(crate) fn pressed_state_layer_opacity_for_variant(

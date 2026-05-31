@@ -18,6 +18,7 @@ pub(crate) mod dialog;
 pub(crate) mod divider;
 pub(crate) mod dropdown_menu;
 pub(crate) mod fab;
+pub(crate) mod fab_common;
 pub(crate) mod filter_chip;
 pub(crate) mod icon_button;
 pub(crate) mod input_chip;

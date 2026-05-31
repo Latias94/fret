@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 537
+- Dedicated directories: 538
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2251,6 +2251,7 @@ Rule:
 - `docs/workstreams/material3-dialog-diagnostics-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 Dialog modal barrier, panel/scrim selectors, Dialog role, Escape dismissal, and focus-restore diagnostics; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-expressive-alignment-v1/` — first 2026-02-18, latest 2026-02-18, 4 markdown docs
 - `docs/workstreams/material3-exposed-dropdown-diagnostics-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 ExposedDropdown filtering popup diagnostics, selector evidence, and recipe/foundation boundary classification; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-fab-token-defaults-v1/` — first n/a, latest n/a, 7 markdown docs (closed fearless-refactor lane for moving Material3 FAB and extended-FAB visual default matrices into token helper policy; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-icon-toggle-button-expressive-v1/` — first 2026-02-18, latest 2026-02-18, 3 markdown docs
 - `docs/workstreams/material3-icon-button-diagnostics-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 IconButton centered-chrome diagnostics, stale navigation repair, and pressed-scene evidence; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-interaction-regression-harness-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor lane for moving non-Radio Material3 interaction regressions out of `radio_alignment.rs` into a purpose-owned test binary; includes `WORKSTREAM.json`)

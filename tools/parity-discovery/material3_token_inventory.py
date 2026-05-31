@@ -27,6 +27,7 @@ COLOR_HEX_RE = re.compile(r"Color::from_srgb_hex_rgb\((0x[0-9a-fA-F_]+)\)")
 
 SHARED_TOKEN_HELPER_MODULES = {
     "chip_common.rs",
+    "fab_common.rs",
     "shape.rs",
     "time_period_common.rs",
     "typography.rs",
