@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Open Response Owner-Split Evidence - 2026-05-31
+
+Claim verified: IMUI disclosure/combo open response structs moved out of
+`response/widgets/open.rs` into private child owners without changing public response type names,
+accessor semantics, crate-visible field access for existing control builders, or re-export paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/open.rs` is now a thin response hub that
+  re-exports the existing `ComboResponse` and `DisclosureResponse` names.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/open/disclosure.rs` owns
+  `DisclosureResponse`, its `empty()` constructor, and open/toggled/clicked query methods.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/open/combo.rs` owns `ComboResponse` and its
+  open/toggled/clicked query methods.
+- `tools/gate_imui_workstream_source.py` now gates the open response hub split and keeps both
+  response structs opaque in their child owners.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new response owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_combo_smoke --test
+  imui_disclosure_smoke --no-fail-fast`: pass (3 passed, 0 skipped).
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `git diff --check`: pass.
+
 ## Readout Surface Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor preview caption, empty-state, and tooltip readout text props moved into a

@@ -1003,6 +1003,8 @@
     "ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize/y.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize/y/tests.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets/open.rs",
+    "ecosystem/fret-ui-kit/src/imui/response/widgets/open/combo.rs",
+    "ecosystem/fret-ui-kit/src/imui/response/widgets/open/disclosure.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets/table.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets/table/header.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets/table/resize.rs",

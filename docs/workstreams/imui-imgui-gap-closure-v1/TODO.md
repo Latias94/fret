@@ -2739,13 +2739,19 @@ Last updated: 2026-05-31
 - [x] Split IMUI widget response types out of
       `ecosystem/fret-ui-kit/src/imui/response/widgets.rs` into private owner modules without
       changing response type names or accessors.
-      Result: `response/widgets/open.rs` owns disclosure/combo responses,
+      Result: `response/widgets/open.rs` routes disclosure/combo response owners,
       `response/widgets/text_picker.rs` owns input text picker responses,
       `response/widgets/tabs.rs` owns tab responses, `response/widgets/table.rs` owns table
       response aggregation, `response/widgets/table/header.rs` owns table header responses,
       `response/widgets/table/resize.rs` owns table resize responses, and
       `response/widgets/virtual_list.rs` owns virtual-list responses. The root
       `widgets.rs` file is now a thin module/re-export index beside the existing child-region owner.
+- [x] Split IMUI open response structs out of
+      `ecosystem/fret-ui-kit/src/imui/response/widgets/open.rs` into private child owners without
+      changing public response type names, accessors, crate-visible field access, or re-export
+      paths.
+      Result: `response/widgets/open.rs` is now a thin hub. `response/widgets/open/disclosure.rs`
+      owns `DisclosureResponse` and `response/widgets/open/combo.rs` owns `ComboResponse`.
 - [x] Split IMUI text-control option types out of
       `ecosystem/fret-ui-kit/src/imui/options/controls/text.rs` into private owner modules without
       changing option type names, fields, defaults, or re-export paths.

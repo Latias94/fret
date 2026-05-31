@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 IMUI open response owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/widgets/open.rs` is now a thin hub that re-exports open
+response child owners. `response/widgets/open/disclosure.rs` owns `DisclosureResponse` and its
+`empty()` constructor plus query accessors. `response/widgets/open/combo.rs` owns `ComboResponse`
+and its query accessors. Public response type names, accessor semantics, crate-visible field access,
+and re-export paths remain unchanged.
+
 2026-05-31 editor input-group segments owner-split result:
 `ecosystem/fret-ui-editor/src/primitives/input_group.rs` is now a thin hub that re-exports frame,
 joined-input, and segment owner APIs at the existing module path. The private
