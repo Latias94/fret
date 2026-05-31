@@ -1308,6 +1308,12 @@ Last updated: 2026-05-31
       Result: `color_edit/popup/picker/hue_wheel.rs` keeps canvas entry and paint orchestration,
       while `color_edit/popup/picker/hue_wheel/path.rs` owns circle/triangle path construction,
       absolute point projection, triangle grid barycentric steps, and triangle local projection.
+- [x] Split editor color-edit hue-wheel triangle painting into a private child owner without
+      changing triangle cell tessellation, barycentric color projection, border stroke, canvas
+      keying, ring/cursor paint, hue-wheel target math, or popup policy tests.
+      Result: `color_edit/popup/picker/hue_wheel.rs` keeps canvas entry plus ring/cursor paint
+      orchestration, while `color_edit/popup/picker/hue_wheel/triangle.rs` owns triangle mesh
+      painting, border painting, and triangle-cell color projection.
 - [x] Split editor color-edit hue-wheel model math into a private child owner without changing
       hue-wheel public-in-color-edit import paths, target hit-testing, rotated triangle geometry,
       SV cursor projection, HSV update math, numeric input parsing, or picker tests.
