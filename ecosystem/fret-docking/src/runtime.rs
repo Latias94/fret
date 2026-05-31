@@ -7,7 +7,7 @@
 //! - translate `RequestFloatTabsToNewWindow` into a `WindowRequest::Create`
 //! - complete the float by updating the graph once the OS window exists
 
-use fret_core::{AppWindowId, DockOp, PointerId};
+use fret_core::{AppWindowId, DockOp};
 use fret_runtime::{
     CreateWindowKind, CreateWindowRequest, Effect, PlatformCapabilities, UiHost, WindowRequest,
 };
@@ -16,132 +16,12 @@ use crate::DockManager;
 use crate::dock::{DockPanelDragPayload, DockTabsDragPayload};
 use crate::invalidation::DockInvalidationService;
 
-#[derive(Debug, Clone, Copy)]
-enum DockTearOffCompletion {
-    Proceed,
-    CancelAndCloseWindow,
-}
+mod tear_off;
 
-#[derive(Default)]
-struct DockFloatingOsWindowRegistry {
-    windows: std::collections::HashSet<AppWindowId>,
-}
-
-impl DockFloatingOsWindowRegistry {
-    fn register(&mut self, window: AppWindowId) {
-        self.windows.insert(window);
-    }
-
-    fn remove(&mut self, window: AppWindowId) {
-        self.windows.remove(&window);
-    }
-
-    fn contains(&self, window: AppWindowId) -> bool {
-        self.windows.contains(&window)
-    }
-}
-
-pub(crate) fn is_dock_floating_os_window<H: UiHost>(app: &H, window: AppWindowId) -> bool {
-    app.global::<DockFloatingOsWindowRegistry>()
-        .is_some_and(|reg| reg.contains(window))
-}
-
-#[derive(Debug, Clone)]
-struct DockTearOffPending {
-    source_window: AppWindowId,
-    kind: DockTearOffKind,
-    pointer_id: Option<PointerId>,
-    requested_at: fret_runtime::TickId,
-    canceled: bool,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum DockTearOffKind {
-    Panel,
-    Tabs { source_tabs: fret_core::DockNodeId },
-}
-
-/// Small runtime-layer state machine to keep tear-off window creation idempotent.
-///
-/// This intentionally lives outside `fret-core` (graph stays pure) and outside the UI widget
-/// (covers duplicate ops emitted by runners/drivers or other app code).
-#[derive(Default)]
-struct DockTearOffMachine {
-    pending_by_panel: std::collections::HashMap<fret_core::PanelKey, DockTearOffPending>,
-}
-
-impl DockTearOffMachine {
-    // If a create request fails (e.g. backend error), we may never receive `window_created`.
-    // Use a TTL so a later tear-off attempt can recover.
-    const PENDING_TTL_TICKS: u64 = 600;
-
-    fn prune_expired(&mut self, now: fret_runtime::TickId) {
-        self.pending_by_panel.retain(|_, pending| {
-            let age = now.0.saturating_sub(pending.requested_at.0);
-            age <= Self::PENDING_TTL_TICKS
-        });
-    }
-
-    fn register_request(
-        &mut self,
-        now: fret_runtime::TickId,
-        source_window: AppWindowId,
-        panel: &fret_core::PanelKey,
-        kind: DockTearOffKind,
-        pointer_id: Option<PointerId>,
-    ) -> bool {
-        self.prune_expired(now);
-        match self.pending_by_panel.get(panel) {
-            Some(_) => false,
-            None => {
-                self.pending_by_panel.insert(
-                    panel.clone(),
-                    DockTearOffPending {
-                        source_window,
-                        kind,
-                        pointer_id,
-                        requested_at: now,
-                        canceled: false,
-                    },
-                );
-                true
-            }
-        }
-    }
-
-    fn cancel_for_panel(&mut self, panel: &fret_core::PanelKey) {
-        if let Some(pending) = self.pending_by_panel.get_mut(panel) {
-            pending.canceled = true;
-        }
-    }
-
-    fn complete_for_create_request(
-        &mut self,
-        request: &CreateWindowRequest,
-        now: fret_runtime::TickId,
-    ) -> (DockTearOffCompletion, Option<DockTearOffPending>) {
-        self.prune_expired(now);
-        let CreateWindowKind::DockFloating {
-            source_window,
-            panel,
-        } = &request.kind
-        else {
-            return (DockTearOffCompletion::Proceed, None);
-        };
-
-        let Some(pending) = self.pending_by_panel.remove(panel) else {
-            // If we can't correlate the request, default to proceeding; callers may still apply the
-            // graph update if the panel exists.
-            return (DockTearOffCompletion::Proceed, None);
-        };
-
-        if pending.canceled || pending.source_window != *source_window {
-            return (DockTearOffCompletion::CancelAndCloseWindow, Some(pending));
-        }
-
-        (DockTearOffCompletion::Proceed, Some(pending))
-    }
-}
+pub(crate) use tear_off::is_dock_floating_os_window;
+use tear_off::{
+    DockFloatingOsWindowRegistry, DockTearOffCompletion, DockTearOffKind, DockTearOffMachine,
+};
 
 fn invalidate_windows<H: UiHost>(app: &mut H, windows: impl IntoIterator<Item = AppWindowId>) {
     DockInvalidationService::bump_windows(app, windows);
@@ -484,7 +364,7 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                     // Scan all known dock-owned floating OS windows rather than trying to keep an
                     // exhaustive list of which DockOps might have emptied a particular window.
                     if tearoff_log {
-                        for window in reg.windows.iter().copied() {
+                        for window in reg.windows() {
                             let panel_count = dock.graph.collect_panels_in_window(window).len();
                             tracing::info!(
                                 window = ?window,
@@ -493,7 +373,7 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                             );
                         }
                     }
-                    for window in reg.windows.iter().copied() {
+                    for window in reg.windows() {
                         if dock.graph.collect_panels_in_window(window).is_empty() {
                             windows_to_auto_close.push(window);
                         }

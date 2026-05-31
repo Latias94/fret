@@ -387,6 +387,13 @@ Each TODO is labeled:
       - The local proof reran source guards, `--reuse-built` policy-skip matrix, campaign
         validation, Linux capability posture, fallback behavior, IMUI source guard, catalog, JSON
         shape, and diff checks, but still did not run on a qualifying Linux Wayland compositor.
+    - [x] 2026-05-31 docking runtime tear-off owner split keeps the fallback boundary smaller:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M23_DOCKING_RUNTIME_TEAR_OFF_OWNER_SPLIT_2026-05-31.md`
+      - `ecosystem/fret-docking/src/runtime.rs` keeps DockOp orchestration and public runtime
+        hooks, while `ecosystem/fret-docking/src/runtime/tear_off.rs` owns the dock-floating
+        OS-window registry plus pending tear-off correlation/cancellation state.
+      - Focused compile, fallback regression, source gate, JSON shape, and diff checks passed
+        locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
