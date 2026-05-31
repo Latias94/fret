@@ -12,6 +12,16 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor DragValueCore behavior owner-split result:
+`ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs` now keeps public API shape,
+slot-state lookup, layout/a11y setup, current-value synchronization, and response construction.
+The private `primitives/drag_value_core/behavior.rs` owner contains pressable pointer down/move/up
+handler installation, Escape key capture, pointer capture/release calls, scrub delta calculation,
+constraint application, and commit/cancel/live callback dispatch. Public constructors/builders,
+options import paths, drag threshold crossing, unexpected pointer-stream cleanup, pointer-up
+commit, Escape cancel, and response accessor behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor DragValueCore options owner-split result:
 `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs` now keeps the public drag-to-edit
 primitive entrypoint, pressable/key handler wiring, and response construction while re-exporting

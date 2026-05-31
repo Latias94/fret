@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor DragValueCore Behavior Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `DragValueCore` pointer/key scrub behavior installation moved out of the
+public drag-to-edit primitive owner into a private `primitives/drag_value_core/behavior.rs` owner
+without changing public constructors/builders, options/default import paths, pointer-down
+focus/capture behavior, drag threshold crossing, live value callbacks, unexpected pointer-stream
+cleanup, pointer-up commit behavior, Escape cancel behavior, or public response accessors.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs` keeps public API shape, slot-state
+  lookup, layout/a11y setup, current-value synchronization, and response construction.
+- `ecosystem/fret-ui-editor/src/primitives/drag_value_core/behavior.rs` owns pressable pointer
+  down/move/up handler installation, Escape key capture, pointer capture/release calls, scrub delta
+  calculation, constraint application, and commit/cancel/live callback dispatch.
+- `tools/gate_imui_workstream_source.py` now tracks the DragValueCore behavior split and rejects
+  handler wiring and scrub move policy from drifting back into the public primitive owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the behavior owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor drag_state_commit_requires_a_live_value_change
+  drag_state_commit_remembers_any_live_edit_in_the_session
+  drag_state_cancel_clears_live_edit_tracking
+  drag_value_core_response_exposes_read_only_signals --no-fail-fast`: pass (4 passed, 218 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor DragValueCore Options Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `DragValueCore` options/default/theme-resolution policy moved out of the

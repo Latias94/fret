@@ -5,22 +5,21 @@
 //! - pointer move scrubs horizontally with modifier-based multipliers,
 //! - pointer up commits,
 //! - Escape cancels to the pre-edit value.
+mod behavior;
 mod options;
 mod state;
 
 use std::sync::{Arc, Mutex};
 
-use fret_core::{KeyCode, MouseButton};
-use fret_ui::action::{
-    ActionCx, PressablePointerDownResult, PressablePointerUpResult, UiActionHost,
-};
+use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{AnyElement, Length, PressableA11y, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use super::{EditorDensity, constrain_numeric_value};
+use super::EditorDensity;
+use behavior::install_drag_value_core_behavior;
 pub use options::DragValueCoreOptions;
 use options::resolve_options;
-use state::{DragState, DragValueCoreMoveAction, resolve_scrub_multiplier};
+use state::DragState;
 
 #[cfg(test)]
 mod tests;
@@ -198,165 +197,13 @@ where
                     let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
                     st.current_value = value;
                 }
-                let pressable_id = cx.root_id();
-                let state_for_down = state.clone();
-                cx.pressable_add_on_pointer_down(Arc::new(move |host, _action_cx, down| {
-                    if down.button != MouseButton::Left {
-                        return PressablePointerDownResult::Continue;
-                    }
-
-                    if !opts.scrub_on_double_click && down.click_count >= 2 {
-                        return PressablePointerDownResult::SkipDefaultAndStopPropagation;
-                    }
-
-                    // Own focus for the active scrub session so Escape cancel routes to this
-                    // control even when the gesture started from a pointer-only interaction.
-                    host.request_focus(pressable_id);
-                    host.capture_pointer();
-
-                    let mut st = state_for_down.lock().unwrap_or_else(|e| e.into_inner());
-                    st.begin_session(down.pointer_id, down.position_local);
-                    PressablePointerDownResult::Continue
-                }));
-
-                let state_for_move = state.clone();
-                let on_change_live_for_move = on_change_live.clone();
-                let on_commit_for_move = on_commit.clone();
-                let on_cancel_for_move = on_cancel.clone();
-                cx.pressable_add_on_pointer_move(Arc::new(move |host, action_cx, mv| {
-                    let action = {
-                        let mut st = state_for_move.lock().unwrap_or_else(|e| e.into_inner());
-                        if !st.armed || st.pointer_id != Some(mv.pointer_id) {
-                            return false;
-                        }
-
-                        // Best-effort cleanup for unexpected end-of-stream:
-                        // If we are armed but the runtime reports no pressed left button,
-                        // treat it like "pointer up/cancel" to avoid stuck sessions.
-                        if !mv.buttons.left {
-                            let was_dragging = st.dragging;
-                            st.clear_pointer_session();
-                            if st.session.is_active() {
-                                if was_dragging {
-                                    let edited = st.commit_session();
-                                    DragValueCoreMoveAction::Commit { edited }
-                                } else {
-                                    let pre = st.cancel_session();
-                                    DragValueCoreMoveAction::Cancel(pre)
-                                }
-                            } else {
-                                DragValueCoreMoveAction::None
-                            }
-                        } else {
-                            if !st.dragging {
-                                let dx = mv.position_local.x.0 - st.down_pos.x.0;
-                                let dy = mv.position_local.y.0 - st.down_pos.y.0;
-                                let dist2 = (dx as f64) * (dx as f64) + (dy as f64) * (dy as f64);
-                                let th = opts.drag_threshold.0 as f64;
-                                if dist2 < th * th {
-                                    return false;
-                                }
-
-                                st.dragging = true;
-                                // Reset the delta origin when crossing the threshold to avoid an initial jump.
-                                st.start_x = mv.position_local.x.0 as f64;
-                                st.down_pos = mv.position_local;
-                            }
-
-                            let delta_x = mv.position_local.x.0 as f64 - st.start_x;
-                            let multiplier = resolve_scrub_multiplier(
-                                mv.modifiers,
-                                opts.slow_multiplier,
-                                opts.fast_multiplier,
-                            );
-                            let delta = delta_x * opts.scrub_speed * multiplier;
-                            let next = constrain_numeric_value(
-                                opts.constraints,
-                                T::from_f64(st.start_value.to_f64() + delta),
-                            );
-                            if st.apply_live_value(next) {
-                                DragValueCoreMoveAction::Live(next)
-                            } else {
-                                DragValueCoreMoveAction::None
-                            }
-                        }
-                    };
-
-                    match action {
-                        DragValueCoreMoveAction::None => false,
-                        DragValueCoreMoveAction::Live(next) => {
-                            (on_change_live_for_move)(host, action_cx, next);
-                            true
-                        }
-                        DragValueCoreMoveAction::Commit { edited } => {
-                            host.release_pointer_capture();
-                            if edited && let Some(cb) = on_commit_for_move.as_ref() {
-                                cb(host, action_cx);
-                            }
-                            host.request_redraw(action_cx.window);
-                            true
-                        }
-                        DragValueCoreMoveAction::Cancel(pre) => {
-                            host.release_pointer_capture();
-                            if let Some(pre) = pre {
-                                (on_change_live_for_move)(host, action_cx, pre);
-                            }
-                            if let Some(cb) = on_cancel_for_move.as_ref() {
-                                cb(host, action_cx);
-                            }
-                            host.request_redraw(action_cx.window);
-                            true
-                        }
-                    }
-                }));
-
-                let state_for_up = state.clone();
-                let on_commit_for_up = on_commit.clone();
-                cx.pressable_add_on_pointer_up(Arc::new(move |host, action_cx, up| {
-                    if up.button != MouseButton::Left {
-                        return PressablePointerUpResult::Continue;
-                    }
-
-                    let mut st = state_for_up.lock().unwrap_or_else(|e| e.into_inner());
-                    if st.pointer_id.is_some() && st.pointer_id != Some(up.pointer_id) {
-                        return PressablePointerUpResult::Continue;
-                    }
-                    let was_dragging = st.dragging;
-                    st.clear_pointer_session();
-                    let edited = st.commit_session();
-                    host.release_pointer_capture();
-                    if was_dragging
-                        && edited
-                        && let Some(cb) = on_commit_for_up.as_ref()
-                    {
-                        cb(host, action_cx);
-                    }
-                    PressablePointerUpResult::Continue
-                }));
-
-                let state_for_key = state.clone();
-                let on_cancel_for_key = on_cancel.clone();
-                cx.key_add_on_key_down_capture_for(
-                    cx.root_id(),
-                    Arc::new(move |host, action_cx, key| {
-                        if key.key != KeyCode::Escape {
-                            return false;
-                        }
-
-                        let mut st = state_for_key.lock().unwrap_or_else(|e| e.into_inner());
-                        if !st.session.is_active() {
-                            return false;
-                        }
-
-                        st.clear_pointer_session();
-                        if let Some(pre) = st.cancel_session() {
-                            (on_change_live)(host, action_cx, pre);
-                        }
-                        if let Some(cb) = on_cancel_for_key.as_ref() {
-                            cb(host, action_cx);
-                        }
-                        true
-                    }),
+                install_drag_value_core_behavior(
+                    cx,
+                    state.clone(),
+                    opts,
+                    on_change_live.clone(),
+                    on_commit.clone(),
+                    on_cancel.clone(),
                 );
 
                 let dragging = state.lock().unwrap_or_else(|e| e.into_inner()).dragging;

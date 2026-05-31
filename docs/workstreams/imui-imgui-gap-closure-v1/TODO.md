@@ -58,6 +58,17 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `DragValueCore` pointer/key scrub behavior installation into a private child
+      owner without changing public constructors/builders, options/default import paths,
+      pointer-down focus/capture behavior, drag threshold crossing, live value callbacks,
+      unexpected pointer-stream cleanup, pointer-up commit behavior, Escape cancel behavior, or
+      public response accessors.
+      Result: `primitives/drag_value_core.rs` now keeps public API shape, slot-state lookup,
+      layout/a11y setup, current-value synchronization, and response construction.
+      `primitives/drag_value_core/behavior.rs` owns pressable pointer down/move/up handler
+      installation, Escape key capture, capture/release calls, scrub delta calculation, commit and
+      cancel callback dispatch, and live-value constraint application. The source gate prevents
+      handler wiring and scrub move policy from drifting back into the public primitive owner.
 - [x] Split editor `DragValueCore` options/default/theme-resolution policy into a private child
       owner without changing public `DragValueCoreOptions` import paths, defaults, theme token
       fallback behavior, finite-value sanitization, drag threshold clamping, or public
