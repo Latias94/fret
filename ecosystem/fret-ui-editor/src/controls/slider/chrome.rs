@@ -1,6 +1,6 @@
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::colors::{editor_accent, editor_border, editor_subtle_bg};
-use fret_core::Color;
+use fret_core::{Color, Px};
 use fret_ui::Theme;
 
 #[cfg(test)]
@@ -23,6 +23,33 @@ pub(super) fn mix(a: Color, b: Color, t: f32) -> Color {
 pub(super) fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) struct ResolvedSliderGeometry {
+    pub(super) track_h: Px,
+    pub(super) thumb_d: Px,
+    pub(super) track_radius: Px,
+    pub(super) thumb_radius: Px,
+}
+
+pub(super) fn resolve_slider_geometry(theme: &Theme) -> ResolvedSliderGeometry {
+    let track_h = theme
+        .metric_by_key(EditorTokenKeys::SLIDER_TRACK_HEIGHT)
+        .unwrap_or(Px(4.0));
+    let thumb_d = theme
+        .metric_by_key(EditorTokenKeys::SLIDER_THUMB_DIAMETER)
+        .unwrap_or(Px(12.0));
+
+    let track_h = Px(track_h.0.max(1.0));
+    let thumb_d = Px(thumb_d.0.max(track_h.0));
+
+    ResolvedSliderGeometry {
+        track_h,
+        thumb_d,
+        track_radius: Px(track_h.0 * 0.5),
+        thumb_radius: Px(thumb_d.0 * 0.5),
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

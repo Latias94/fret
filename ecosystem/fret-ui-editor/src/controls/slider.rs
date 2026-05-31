@@ -13,7 +13,6 @@ use crate::controls::numeric_input::{
     NumericFormatFn, NumericInput, NumericInputErrorDisplay, NumericInputOptions,
     NumericInputOutcome, NumericParseFn, NumericValidateFn,
 };
-use crate::primitives::EditorTokenKeys;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
     derived_test_id, editor_input_group_divider, editor_input_group_frame,
@@ -45,7 +44,7 @@ mod tests;
 mod typing;
 mod value_math;
 
-use chrome::resolve_slider_paint;
+use chrome::{resolve_slider_geometry, resolve_slider_paint};
 pub use model::SliderOptions;
 use model::{
     SliderMode, SliderState, compose_affixed_value_text, default_slider_format,
@@ -152,18 +151,11 @@ where
         let density = style.density;
         let frame = style.frame_chrome_small();
 
-        let track_h = theme
-            .metric_by_key(EditorTokenKeys::SLIDER_TRACK_HEIGHT)
-            .unwrap_or(Px(4.0));
-        let thumb_d = theme
-            .metric_by_key(EditorTokenKeys::SLIDER_THUMB_DIAMETER)
-            .unwrap_or(Px(12.0));
-
-        let track_h = Px(track_h.0.max(1.0));
-        let thumb_d = Px(thumb_d.0.max(track_h.0));
-
-        let track_radius = Px(track_h.0 * 0.5);
-        let thumb_radius = Px(thumb_d.0 * 0.5);
+        let geometry = resolve_slider_geometry(theme);
+        let track_h = geometry.track_h;
+        let thumb_d = geometry.thumb_d;
+        let track_radius = geometry.track_radius;
+        let thumb_radius = geometry.thumb_radius;
 
         let (min, max) = if self.min <= self.max {
             (self.min, self.max)

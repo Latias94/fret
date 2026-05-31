@@ -53,6 +53,13 @@ tokens, hover/pressed accent mixing, and disabled alpha attenuation, while `chro
 token precedence plus paint state behavior. Pointer/typing behavior, rendering layout, and public
 `SliderOptions` remain unchanged.
 
+2026-05-31 editor slider geometry chrome owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now consumes resolved track/thumb geometry from
+the chrome owner. `controls/slider/chrome.rs` owns slider track/thumb metric fallback, minimum track
+height, thumb-at-least-track clamping, and radius derivation, while `chrome/tests.rs` covers default
+and clamped geometry behavior. Pointer math, rendering layout, and public `SliderOptions` remain
+unchanged.
+
 2026-05-31 editor numeric-input model/session owner-split result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps NumericInput constructors,
 builder methods, keyed control orchestration, validation message rendering, and presentation test

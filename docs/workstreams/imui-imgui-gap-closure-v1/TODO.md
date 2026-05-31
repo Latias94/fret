@@ -477,6 +477,12 @@ Last updated: 2026-05-31
       Result: `controls/slider.rs` now asks `controls/slider/chrome.rs` for resolved runtime
       paint only. `controls/slider/chrome.rs` owns chrome token fallback plus hover/pressed/
       disabled paint derivation, with focused tests in `controls/slider/chrome/tests.rs`.
+- [x] Split editor slider geometry resolution into the chrome owner without changing track/thumb
+      theme metric precedence, minimum track height, thumb-at-least-track clamp, radius derivation,
+      pointer math, rendering layout, or public `SliderOptions`.
+      Result: `controls/slider.rs` now asks `controls/slider/chrome.rs` for resolved geometry only.
+      `controls/slider/chrome.rs` owns track/thumb metric fallback, clamping, and radius derivation,
+      with focused geometry tests in `controls/slider/chrome/tests.rs`.
 - [x] Split editor enum-select row rendering, selection commit policy, and item test-id
       sanitization into a private child owner without changing trigger composition, overlay
       dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row

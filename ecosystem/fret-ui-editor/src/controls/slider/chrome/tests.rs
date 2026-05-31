@@ -1,7 +1,7 @@
-use super::{resolve_slider_chrome, resolve_slider_paint};
+use super::{resolve_slider_chrome, resolve_slider_geometry, resolve_slider_paint};
 use crate::primitives::EditorTokenKeys;
 use fret_app::App;
-use fret_core::Color;
+use fret_core::{Color, Px};
 use fret_ui::{Theme, ThemeConfig};
 
 fn install_slider_colors(app: &mut App) {
@@ -35,12 +35,60 @@ fn install_slider_colors(app: &mut App) {
     });
 }
 
+fn install_slider_metrics(app: &mut App, track_h: f32, thumb_d: f32) {
+    Theme::with_global_mut(app, |theme| {
+        let mut cfg = ThemeConfig::default();
+        cfg.metrics
+            .insert(EditorTokenKeys::SLIDER_TRACK_HEIGHT.to_string(), track_h);
+        cfg.metrics
+            .insert(EditorTokenKeys::SLIDER_THUMB_DIAMETER.to_string(), thumb_d);
+        theme.apply_config_patch(&cfg);
+    });
+}
+
 fn assert_color_close(actual: Color, expected: Color) {
     const EPSILON: f32 = 0.000_001;
     assert!((actual.r - expected.r).abs() <= EPSILON);
     assert!((actual.g - expected.g).abs() <= EPSILON);
     assert!((actual.b - expected.b).abs() <= EPSILON);
     assert!((actual.a - expected.a).abs() <= EPSILON);
+}
+
+#[test]
+fn slider_geometry_uses_default_track_and_thumb_metrics() {
+    let app = App::new();
+    let theme = Theme::global(&app);
+    let geometry = resolve_slider_geometry(theme);
+
+    assert_eq!(geometry.track_h, Px(4.0));
+    assert_eq!(geometry.thumb_d, Px(12.0));
+    assert_eq!(geometry.track_radius, Px(2.0));
+    assert_eq!(geometry.thumb_radius, Px(6.0));
+}
+
+#[test]
+fn slider_geometry_clamps_track_and_keeps_thumb_at_least_track_height() {
+    let mut app = App::new();
+    install_slider_metrics(&mut app, 0.25, 0.5);
+
+    let theme = Theme::global(&app);
+    let geometry = resolve_slider_geometry(theme);
+
+    assert_eq!(geometry.track_h, Px(1.0));
+    assert_eq!(geometry.thumb_d, Px(1.0));
+    assert_eq!(geometry.track_radius, Px(0.5));
+    assert_eq!(geometry.thumb_radius, Px(0.5));
+
+    let mut app = App::new();
+    install_slider_metrics(&mut app, 8.0, 3.0);
+
+    let theme = Theme::global(&app);
+    let geometry = resolve_slider_geometry(theme);
+
+    assert_eq!(geometry.track_h, Px(8.0));
+    assert_eq!(geometry.thumb_d, Px(8.0));
+    assert_eq!(geometry.track_radius, Px(4.0));
+    assert_eq!(geometry.thumb_radius, Px(4.0));
 }
 
 #[test]

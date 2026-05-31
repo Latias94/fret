@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Slider Geometry Chrome Owner Split Evidence - 2026-05-31
+
+Claim verified: editor slider track/thumb geometry resolution moved into the chrome owner without
+changing theme metric precedence, minimum track height, thumb-at-least-track clamping, radius
+derivation, pointer math, rendering layout, public `SliderOptions`, or existing model/pointer/
+typing/value-math child-owner boundaries.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/slider.rs` keeps event wiring, pointer math inputs,
+  layout, and rendering application while delegating track/thumb geometry resolution to the chrome
+  owner.
+- `ecosystem/fret-ui-editor/src/controls/slider/chrome.rs` owns `ResolvedSliderGeometry`,
+  `resolve_slider_geometry(...)`, editor token metric lookup, fallback track/thumb sizes, minimum
+  track height, thumb-at-least-track clamping, and derived radii.
+- `ecosystem/fret-ui-editor/src/controls/slider/chrome/tests.rs` covers default geometry fallback
+  plus clamped track/thumb geometry behavior.
+- `tools/gate_imui_workstream_source.py` checks the slider root/chrome/test split and rejects
+  geometry metric resolution from drifting back into `slider.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui slider --no-fail-fast`: pass (26 passed,
+  193 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Editor Slider Runtime Paint Chrome Owner Split Evidence - 2026-05-31
 
 Claim verified: editor slider runtime paint resolution moved into the chrome owner without changing
