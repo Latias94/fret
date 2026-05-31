@@ -1314,6 +1314,13 @@ Last updated: 2026-06-01
       Result: `color_edit/popup/picker/sv.rs` keeps pressable/pointer interaction and shared HSV
       apply wiring, while `color_edit/popup/picker/sv/preview.rs` owns the SV grid, preview stack,
       thumb overlay, and spacer layout.
+- [x] Split editor color-edit SV picker position mutation into a private child owner without
+      changing SV picker entrypoint, pointer capture/release behavior, local coordinate mapping,
+      shared HSV color application, preview stack routing, or popup policy tests.
+      Result: `color_edit/popup/picker/sv.rs` keeps the pressable entrypoint, a11y value text,
+      focused border/ring chrome, and preview stack routing, while
+      `color_edit/popup/picker/sv/interaction.rs` owns local x/y to HSV mutation and shared HSV
+      apply dispatch.
 - [x] Split editor color-edit hue-wheel picker interaction into a private owner without changing
       hue-wheel picker composition, pure canvas painting ownership, hue-wheel target math, shared
       HSV color application, or color-edit popup policy tests.
