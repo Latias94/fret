@@ -46,6 +46,13 @@ matching-pointer policy, while `pointer/tests.rs` covers the state transitions. 
 entry, missed-pointer-up cleanup, matching-pointer release, NumericInput commit/cancel reset, and
 public `SliderOptions` remain unchanged.
 
+2026-05-31 editor slider runtime paint chrome owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps event wiring, layout, and paint
+application only. `controls/slider/chrome.rs` owns resolved runtime paint derivation from chrome
+tokens, hover/pressed accent mixing, and disabled alpha attenuation, while `chrome/tests.rs` covers
+token precedence plus paint state behavior. Pointer/typing behavior, rendering layout, and public
+`SliderOptions` remain unchanged.
+
 2026-05-31 editor numeric-input model/session owner-split result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps NumericInput constructors,
 builder methods, keyed control orchestration, validation message rendering, and presentation test

@@ -471,6 +471,12 @@ Last updated: 2026-05-31
       Result: `controls/slider.rs` keeps pointer event wiring and rendering.
       `controls/slider/pointer.rs` owns slide/typing mode resets plus drag pointer
       begin/clear/finish/match policy, with focused tests in `controls/slider/pointer/tests.rs`.
+- [x] Split editor slider runtime paint resolution into the chrome owner without changing theme
+      token precedence, hover/pressed color mixing, disabled alpha attenuation, pointer/typing
+      behavior, rendering layout, or public `SliderOptions`.
+      Result: `controls/slider.rs` now asks `controls/slider/chrome.rs` for resolved runtime
+      paint only. `controls/slider/chrome.rs` owns chrome token fallback plus hover/pressed/
+      disabled paint derivation, with focused tests in `controls/slider/chrome/tests.rs`.
 - [x] Split editor enum-select row rendering, selection commit policy, and item test-id
       sanitization into a private child owner without changing trigger composition, overlay
       dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row

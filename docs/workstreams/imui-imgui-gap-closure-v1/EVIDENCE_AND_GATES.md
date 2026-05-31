@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Slider Runtime Paint Chrome Owner Split Evidence - 2026-05-31
+
+Claim verified: editor slider runtime paint resolution moved into the chrome owner without changing
+theme token precedence, hover/pressed accent mixing, disabled alpha attenuation, pointer/typing
+behavior, rendering layout, public `SliderOptions`, or existing model/pointer/typing/value-math
+child-owner boundaries.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/slider.rs` keeps pointer event wiring, layout, and paint
+  application while delegating runtime paint derivation to the chrome owner.
+- `ecosystem/fret-ui-editor/src/controls/slider/chrome.rs` owns `ResolvedSliderPaint`,
+  `resolve_slider_paint(...)`, chrome token fallback, hover/pressed track/fill mixing, and disabled
+  alpha attenuation for track, fill, thumb, and thumb border.
+- `ecosystem/fret-ui-editor/src/controls/slider/chrome/tests.rs` covers editor-owned token
+  precedence, disabled alpha application across all chrome channels, and hover/pressed track/fill
+  state mixing.
+- `tools/gate_imui_workstream_source.py` checks the slider root/chrome/test split and rejects
+  runtime paint derivation bodies from drifting back into `slider.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui slider --no-fail-fast`: pass (24 passed,
+  193 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Editor Slider Pointer State Owner Split Evidence - 2026-05-31
 
 Claim verified: editor slider pointer/typing state transitions moved into a private owner without

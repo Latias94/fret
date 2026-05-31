@@ -14,7 +14,6 @@ use crate::controls::numeric_input::{
     NumericInputOutcome, NumericParseFn, NumericValidateFn,
 };
 use crate::primitives::EditorTokenKeys;
-use crate::primitives::colors::editor_accent;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
     derived_test_id, editor_input_group_divider, editor_input_group_frame,
@@ -46,7 +45,7 @@ mod tests;
 mod typing;
 mod value_math;
 
-use chrome::{alpha_mul, mix, resolve_slider_chrome};
+use chrome::resolve_slider_paint;
 pub use model::SliderOptions;
 use model::{
     SliderMode, SliderState, compose_affixed_value_text, default_slider_format,
@@ -358,29 +357,12 @@ where
                 let pressed = st.pressed;
                 let focused = st.focused;
 
-                let accent = editor_accent(theme);
-                let disabled_alpha = if interactive_enabled { 1.0 } else { 0.55 };
-                let chrome = resolve_slider_chrome(theme);
-
-                let mut track_bg = chrome.track_bg;
-                let mut fill_bg = chrome.fill_bg;
-                let thumb_bg = chrome.thumb_bg;
-                let thumb_border = chrome.thumb_border;
-
-                if hovered && enabled {
-                    track_bg = mix(track_bg, accent, 0.06);
-                    fill_bg = mix(fill_bg, accent, 0.04);
-                }
-                if pressed && enabled {
-                    track_bg = mix(track_bg, accent, 0.10);
-                    fill_bg = mix(fill_bg, accent, 0.08);
-                }
-
-                track_bg = alpha_mul(track_bg, disabled_alpha);
-                fill_bg = alpha_mul(fill_bg, disabled_alpha);
-
-                let thumb_bg = alpha_mul(thumb_bg, disabled_alpha);
-                let thumb_border = alpha_mul(thumb_border, disabled_alpha);
+                let paint =
+                    resolve_slider_paint(theme, interactive_enabled, enabled, hovered, pressed);
+                let track_bg = paint.track_bg;
+                let fill_bg = paint.fill_bg;
+                let thumb_bg = paint.thumb_bg;
+                let thumb_border = paint.thumb_border;
                 let readout_style = EditorCompactReadoutStyle::resolve(theme, density.row_height);
 
                 let left_grow = t.clamp(0.0, 1.0);
