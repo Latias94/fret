@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Slider Typing Adapter Owner Split Evidence - 2026-05-31
+
+Claim verified: editor slider typing parse/validate adapters moved into a private owner without
+changing NumericInput typing mode, clamp/step quantization, unclamped range validation,
+custom-validator delegation, focus restore, public `SliderOptions`, or existing chrome/model/
+value-math child-owner boundaries.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/slider.rs` keeps NumericInput composition and typing mode
+  lifecycle while delegating parse/validate adapter construction to the typing owner.
+- `ecosystem/fret-ui-editor/src/controls/slider/typing.rs` owns `slider_typing_parse(...)` and
+  `slider_typing_validate(...)`.
+- `ecosystem/fret-ui-editor/src/controls/slider/typing/tests.rs` covers clamp/step parse
+  quantization, unclamped range validation, and custom-validator delegation.
+- `tools/gate_imui_workstream_source.py` checks the slider root/typing/test split and rejects the
+  parse/validate adapter bodies from drifting back into `slider.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new slider typing owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui slider --no-fail-fast`: pass (17 passed,
+  193 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Editor Slider Default Text Strategy Owner Split Evidence - 2026-05-31
 
 Claim verified: editor slider default format/parse strategy moved into the model owner without

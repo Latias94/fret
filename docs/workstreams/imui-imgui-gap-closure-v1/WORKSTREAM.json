@@ -1188,6 +1188,8 @@
     "ecosystem/fret-ui-editor/src/controls/slider/model/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/chrome.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/chrome/tests.rs",
+    "ecosystem/fret-ui-editor/src/controls/slider/typing.rs",
+    "ecosystem/fret-ui-editor/src/controls/slider/typing/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/value_math.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/value_math/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select.rs",

@@ -42,6 +42,7 @@ mod chrome;
 mod model;
 #[cfg(test)]
 mod tests;
+mod typing;
 mod value_math;
 
 use chrome::{alpha_mul, mix, resolve_slider_chrome};
@@ -50,6 +51,7 @@ use model::{
     SliderMode, SliderState, compose_affixed_value_text, default_slider_format,
     default_slider_parse, hidden_layout,
 };
+use typing::{slider_typing_parse, slider_typing_validate};
 use value_math::{quantize_value, t_from_value, value_from_slider_local_x};
 
 #[derive(Clone)]
@@ -614,28 +616,8 @@ where
         let format = self.format.clone();
         let validate = self.validate.clone();
 
-        let parse_for_input: NumericParseFn<T> = Arc::new(move |s| {
-            let v = parse(s)?;
-            let next = quantize_value(min, max, clamp, step, v.to_f64());
-            Some(T::from_f64(next))
-        });
-
-        let validate_for_input: Option<NumericValidateFn<T>> = if clamp {
-            validate
-        } else {
-            let validate = validate.clone();
-            Some(Arc::new(move |v| {
-                let f = v.to_f64();
-                if f < min || f > max {
-                    return Some(Arc::from("Out of range"));
-                }
-                if let Some(validate) = validate.as_ref() {
-                    validate(v)
-                } else {
-                    None
-                }
-            }))
-        };
+        let parse_for_input = slider_typing_parse(parse, min, max, clamp, step);
+        let validate_for_input = slider_typing_validate(validate, min, max, clamp);
 
         let state_for_input = state.clone();
         let input_focus_target: Arc<Mutex<Option<fret_ui::GlobalElementId>>> =

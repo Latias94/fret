@@ -32,6 +32,13 @@ construction to `controls/slider/model.rs`. `model.rs` owns integer-or-three-dec
 and trimmed f64 parsing defaults, while `model/tests.rs` owns focused coverage for those defaults.
 Presentation overrides, pointer/typing behavior, and public `SliderOptions` remain unchanged.
 
+2026-05-31 editor slider typing adapter owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps NumericInput composition and typing
+mode lifecycle only. `controls/slider/typing.rs` owns typing parse quantization and validation
+adapter construction, while `typing/tests.rs` covers clamp/step quantization, unclamped range
+validation, and custom-validator delegation. Focus restore, NumericInput typing mode, and public
+`SliderOptions` remain unchanged.
+
 2026-05-31 editor numeric-input model/session owner-split result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps NumericInput constructors,
 builder methods, keyed control orchestration, validation message rendering, and presentation test

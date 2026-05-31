@@ -33506,11 +33506,13 @@ def main() -> None:
                 "mod chrome;",
                 "mod model;",
                 "mod tests;",
+                "mod typing;",
                 "mod value_math;",
                 "use chrome::{alpha_mul, mix, resolve_slider_chrome};",
                 "default_slider_format",
                 "default_slider_parse",
                 "pub use model::SliderOptions;",
+                "use typing::{slider_typing_parse, slider_typing_validate};",
                 "use value_math::{quantize_value, t_from_value, value_from_slider_local_x};",
                 "resolve_slider_chrome(theme)",
                 "value_from_slider_local_x(",
@@ -33540,6 +33542,9 @@ def main() -> None:
                 "EditorTokenKeys::SLIDER_TRACK_BG.to_string()",
                 "format!(\"{f:.3}\")",
                 "s.trim().parse::<f64>()",
+                "let parse_for_input: NumericParseFn",
+                "let validate_for_input: Option<NumericValidateFn",
+                "return Some(Arc::from(\"Out of range\"));",
             ],
         ),
         SourceCheck(
@@ -33634,6 +33639,34 @@ def main() -> None:
                 "resolve_slider_chrome(theme)",
             ],
             forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/slider/typing.rs"),
+            required=[
+                "mod tests;",
+                "pub(super) fn slider_typing_parse",
+                "pub(super) fn slider_typing_validate",
+                "quantize_value(min, max, clamp, step",
+                "return Some(Arc::from(\"Out of range\"));",
+            ],
+            forbidden=[
+                "pub struct Slider<T>",
+                "NumericInput::new(",
+                "value_from_slider_local_x(",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/slider/typing/tests.rs"),
+            required=[
+                "slider_typing_parse_quantizes_and_clamps_parsed_values",
+                "slider_typing_validate_adds_range_check_only_when_unclamped",
+                "slider_typing_validate_delegates_custom_validator_inside_range",
+            ],
+            forbidden=[
+                "pub struct Slider<T>",
+                "NumericInput::new(",
+                "value_from_slider_local_x(",
+            ],
         ),
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/slider/value_math.rs"),

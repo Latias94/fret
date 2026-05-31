@@ -459,6 +459,12 @@ Last updated: 2026-05-31
       Result: `controls/slider.rs` delegates default format/parse construction to
       `controls/slider/model.rs`; `controls/slider/model/tests.rs` owns the default text strategy
       coverage alongside affixed-value helper coverage.
+- [x] Split editor slider typing parse/validate adapters into a private owner without changing
+      NumericInput typing mode, clamp/step quantization, unclamped range validation,
+      custom-validator delegation, focus restore, or public `SliderOptions`.
+      Result: `controls/slider.rs` keeps NumericInput composition and typing mode lifecycle.
+      `controls/slider/typing.rs` owns parse quantization and validate range/custom delegation,
+      with focused tests in `controls/slider/typing/tests.rs`.
 - [x] Split editor enum-select row rendering, selection commit policy, and item test-id
       sanitization into a private child owner without changing trigger composition, overlay
       dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row
