@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 debug-draw command type hub owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs` is now a thin private command-type
+re-export hub, while
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` owns the private
+`DebugDrawCommand` payload enum and all draw-list command variants. Command module wiring, summary
+projection, draw-list recording, paint dispatch, public debug-draw summaries, and facade APIs remain
+unchanged.
+
 2026-05-31 editor axis-drag-value session owner-split result:
 `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps scrub/typing control
 orchestration and child-owner routing. `controls/axis_drag_value/session.rs` owns hidden layout
@@ -1939,9 +1947,11 @@ construction. The 2026-05-28 follow-ups split the linear and round families into
 `paths/round/{circle,ngon,ellipse}.rs`.
 
 2026-05-27 debug-draw command payload owner-split result:
-`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs` now owns the private
-`DebugDrawCommand` payload enum and all draw-list command variants. `debug_draw_controls/commands.rs`
-keeps summary projection wiring plus the parent-visible command re-export.
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs` is now a private command-type re-export hub.
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` owns
+the private `DebugDrawCommand` payload enum and all draw-list command variants.
+`debug_draw_controls/commands.rs` keeps summary projection wiring plus the parent-visible command
+re-export.
 
 2026-05-27 table builder owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/builder.rs` now owns `ImUiTable` /

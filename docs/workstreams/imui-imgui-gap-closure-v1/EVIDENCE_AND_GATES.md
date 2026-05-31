@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Debug-Draw Command Type Hub Owner-Split Evidence - 2026-05-31
+
+Claim verified: IMUI debug-draw command payload enum moved from the type hub into a child owner
+without changing command variant names, parent-visible `DebugDrawCommand` routing, draw-list
+recording paths, summary projection, paint dispatch, public debug-draw summaries, or facade APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs` is now a private
+  command-type re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` owns the private
+  `DebugDrawCommand` payload enum and all draw-list command variants.
+- `tools/gate_imui_workstream_source.py` tracks the new owner file, rejects payload variants from
+  drifting back into the hub, and requires the child-owner enum body.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new command owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls::tests
+  --no-fail-fast`: pass (41 passed, 652 skipped).
+
 ## Editor AxisDragValue Joined Input Chrome Reuse Evidence - 2026-05-31
 
 Claim verified: editor axis-drag-value typing field now reuses the shared joined text-input chrome
@@ -10143,10 +10170,12 @@ Evidence:
 
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands.rs` keeps command module wiring,
   summary projection installation, and the parent-visible `DebugDrawCommand` re-export.
-- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs` owns private
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs` is now a private
+  command-type re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` owns private
   `DebugDrawCommand` payload variants.
 - `tools/gate_imui_workstream_source.py` now rejects command payload variants from drifting back
-  into `commands.rs`.
+  into the hub files.
 
 Focused gates:
 
