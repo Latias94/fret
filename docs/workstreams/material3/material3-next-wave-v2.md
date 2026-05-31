@@ -543,6 +543,8 @@ before continuing component surface work:
     - `ecosystem/fret-ui-material3/src/tokens/v30.rs` (v30 token injection wiring)
     - `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs` (token import + codegen covers `md.comp.date-picker.*`)
     - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_date_picker_suite_goldens_v1`)
+    - `ecosystem/fret-ui-material3/tests/date_picker_motion.rs`
+      (`date_picker_modal_scrim_and_panel_animate_on_open_close_frames`)
     - `goldens/material3-headless/v1/material3-date-picker.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
     - `apps/fret-ui-gallery/src/spec.rs` + `apps/fret-ui-gallery/src/ui.rs` + `apps/fret-ui-gallery/src/docs.rs`
   - References:
@@ -559,6 +561,9 @@ before continuing component surface work:
     - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_time_picker_suite_goldens_v1`)
     - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`time_picker_clock_dial_drag_updates_time`, `time_picker_selector_keyboard_arrows_step_time`)
     - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`time_picker_time_input_replaces_and_auto_advances_hour`)
+    - `ecosystem/fret-ui-material3/tests/time_picker_motion.rs`
+      (`time_picker_modal_scrim_and_panel_animate_on_open_close_frames`,
+      `docked_time_picker_clock_face_crossfades_and_moves_selector_on_selection_change`)
     - `goldens/material3-headless/v1/material3-time-picker.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
     - `apps/fret-ui-gallery/src/spec.rs` + `apps/fret-ui-gallery/src/ui.rs` + `apps/fret-ui-gallery/src/docs.rs`
   - References:

@@ -37,7 +37,7 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 | Snackbar | Strong | Strong | Strong | Strong | Strong | Strong | Strong | 2026-06-01: gained public `SnackbarStyle`, host `.style(...)`, direct Material style adoption in the shared toast renderer, and style override paint/layout gates. Residuals: richer app-level queue policy examples. |
 | NavigationBar / Rail / Drawer | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Continue polishing adaptive examples and route/content integration. |
 | TopAppBar | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Scroll behavior policy is in Material ecosystem code; nested-scroll consumption remains a future mechanism trigger. |
-| DatePicker / TimePicker | Strong | Strong | Strong | Strong | Strong | Partial | Strong | Main residual is broader composition/demo coverage, not basic API completeness. |
+| DatePicker / TimePicker | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Motion gates cover modal fade/rise/scale and TimePicker docked clock-face transitions; residuals are broader composition/demo coverage. |
 | SearchBar / SearchView | Strong | Strong | Strong | Strong | Strong | Strong | Strong | `SearchBarStyle`/`SearchViewStyle` now cover visual slots; motion gates cover hover/ripple, docked fade/height, and full-screen geometry expand/collapse. |
 
 ## Current Batches
@@ -71,6 +71,11 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     `SearchBarStyle` to docked/full-screen search headers.
   - Gates: `search_bar_motion` and `search_view_behavior`, including style paint/layout tests plus
     existing hover/ripple and docked/full-screen motion tests.
+- 2026-06-01 Date/Time motion evidence calibration:
+  - DatePicker modal motion is already covered by fixed-frame fade + rise/scale tests.
+  - TimePicker modal motion is covered for dial and input modes; docked clock-face transitions are
+    covered by crossfade and selector-translation tests.
+  - Gates: `date_picker_motion`, `time_picker_motion`.
 
 ## Next Recommended Focus
 
@@ -79,5 +84,5 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 2. Revisit Tooltip policy:
    decide whether rich tooltip actions require a popover-like hit-testable surface, a new
    hit-testable rich-tooltip overlay kind, or should remain non-interactive per tooltip semantics.
-3. Start the next component-family audit on DatePicker/TimePicker, focusing on where
-   motion/presence evidence is still marked `Partial`.
+3. Start the next component-family audit on Dialog/BottomSheet motion/presence or Select overlay
+   motion, focusing on the remaining `Partial` motion rows.
