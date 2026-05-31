@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 editor AxisDragValue element owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps public control construction,
+presentation adoption, builder methods, and callsite/id-source keying only. The private
+`controls/axis_drag_value/element.rs` owner now contains keyed scrub/typing element assembly,
+focus handoff, Enter/Escape commit/cancel policy, reset segment wiring, and error icon chrome.
+Public AxisDragValue options/outcome APIs remain unchanged.
+
 2026-05-31 editor proof helper owner-split result:
 `apps/fret-examples/src/imui_editor_proof_demo.rs` now keeps workflow rendering, docking/window
 glue, model factories, and proof orchestration, while

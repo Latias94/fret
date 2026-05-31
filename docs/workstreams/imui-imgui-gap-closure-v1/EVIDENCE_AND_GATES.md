@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## AxisDragValue Element Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor `AxisDragValue` keyed element assembly moved into a private
+`axis_drag_value/element.rs` owner without changing callsite keying, scrub/typing mode transitions,
+focus handoff, commit/cancel outcome routing, reset action wiring, test-id derivation, or public
+`AxisDragValue` options/outcome APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps the public control record,
+  constructors, presentation adoption, builder methods, and callsite/id-source keying.
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` owns keyed element assembly:
+  scrub `DragValueCore`, typing `TextInputProps`, focus handoff, Enter/Escape commit/cancel policy,
+  scrub/typing frame composition, reset button segments, and error icon chrome.
+- `tools/gate_imui_workstream_source.py` now gates the root/element split so render/input body
+  internals stay out of the public control root.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new element-owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor axis_drag_value --no-fail-fast`: pass (5 passed, 217
+  skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass.
+
 ## Editor Proof Helper Owner-Split Evidence - 2026-05-31
 
 Claim verified: `imui_editor_proof_demo` demo-local proof/readout helpers moved to

@@ -58,6 +58,13 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `AxisDragValue` keyed element assembly into a private child owner without
+      changing callsite keying, scrub/typing mode transitions, focus handoff, commit/cancel outcome
+      routing, reset action wiring, test-id derivation, or public option/outcome APIs.
+      Result: `controls/axis_drag_value.rs` keeps the public control record, constructors,
+      presentation adoption, builder methods, and callsite/id-source keying.
+      `controls/axis_drag_value/element.rs` owns keyed element assembly, scrub and typing frame
+      composition, Enter/Escape handling, focus handoff, reset segments, and error icon chrome.
 - [x] Split `imui_editor_proof_demo` proof/readout helpers into a demo-local owner without changing
       render workflow, docking/window glue, collection module ownership, model factories, or public
       IMUI/editor APIs.
