@@ -1133,6 +1133,7 @@
     "ecosystem/fret-ui-editor/src/primitives/visuals.rs",
     "ecosystem/fret-ui-editor/src/primitives/visuals/tests.rs",
     "ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs",
+    "ecosystem/fret-ui-editor/src/primitives/drag_value_core/options.rs",
     "ecosystem/fret-ui-editor/src/primitives/drag_value_core/state.rs",
     "ecosystem/fret-ui-editor/src/primitives/drag_value_core/tests.rs",
     "ecosystem/fret-ui-editor/src/primitives/input_group.rs",

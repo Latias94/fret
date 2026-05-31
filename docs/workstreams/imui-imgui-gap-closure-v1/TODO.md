@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `DragValueCore` options/default/theme-resolution policy into a private child
+      owner without changing public `DragValueCoreOptions` import paths, defaults, theme token
+      fallback behavior, finite-value sanitization, drag threshold clamping, or public
+      `DragValueCore` behavior.
+      Result: `primitives/drag_value_core.rs` keeps the public drag-to-edit primitive entrypoint,
+      pressable/key handler wiring, and response construction while re-exporting
+      `DragValueCoreOptions`. `primitives/drag_value_core/options.rs` owns public options,
+      defaults, and theme-token resolution. The source gate prevents options/default policy from
+      drifting back into the public primitive owner.
 - [x] Split editor `DragValueCore` scrub session state into a private child owner without changing
       public `DragValueCore` constructors/builders, response accessor shape, pointer
       down/move/up routing, Escape cancel behavior, live value callbacks, commit/cancel callbacks,

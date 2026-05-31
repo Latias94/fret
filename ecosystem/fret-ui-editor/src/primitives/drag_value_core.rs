@@ -5,18 +5,21 @@
 //! - pointer move scrubs horizontally with modifier-based multipliers,
 //! - pointer up commits,
 //! - Escape cancels to the pre-edit value.
+mod options;
 mod state;
 
 use std::sync::{Arc, Mutex};
 
-use fret_core::{KeyCode, MouseButton, Px};
+use fret_core::{KeyCode, MouseButton};
 use fret_ui::action::{
     ActionCx, PressablePointerDownResult, PressablePointerUpResult, UiActionHost,
 };
-use fret_ui::element::{AnyElement, LayoutStyle, Length, PressableA11y, PressableProps};
+use fret_ui::element::{AnyElement, Length, PressableA11y, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use super::{EditorDensity, EditorTokenKeys, NumericValueConstraints, constrain_numeric_value};
+use super::{EditorDensity, constrain_numeric_value};
+pub use options::DragValueCoreOptions;
+use options::resolve_options;
 use state::{DragState, DragValueCoreMoveAction, resolve_scrub_multiplier};
 
 #[cfg(test)]
@@ -54,40 +57,6 @@ impl DragValueScalar for i32 {
 
     fn from_f64(v: f64) -> Self {
         v.round().clamp(i32::MIN as f64, i32::MAX as f64) as i32
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct DragValueCoreOptions {
-    pub layout: LayoutStyle,
-    pub enabled: bool,
-    pub scrub_on_double_click: bool,
-    pub drag_threshold: Px,
-    pub scrub_speed: f64,
-    pub slow_multiplier: f64,
-    pub fast_multiplier: f64,
-    pub constraints: NumericValueConstraints,
-}
-
-impl Default for DragValueCoreOptions {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle {
-                size: fret_ui::element::SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Auto,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            enabled: true,
-            scrub_on_double_click: true,
-            drag_threshold: Px(4.0),
-            scrub_speed: 0.02,
-            slow_multiplier: 0.1,
-            fast_multiplier: 10.0,
-            constraints: NumericValueConstraints::default(),
-        }
     }
 }
 
@@ -403,44 +372,4 @@ where
             },
         )
     }
-}
-
-fn resolve_options(theme: &Theme, mut opts: DragValueCoreOptions) -> DragValueCoreOptions {
-    let scrub_speed = theme
-        .metric_by_key(EditorTokenKeys::NUMERIC_SCRUB_SPEED)
-        .map(|m| m.0 as f64)
-        .unwrap_or(opts.scrub_speed);
-    let slow_multiplier = theme
-        .metric_by_key(EditorTokenKeys::NUMERIC_SCRUB_SLOW_MULTIPLIER)
-        .map(|m| m.0 as f64)
-        .unwrap_or(opts.slow_multiplier);
-    let fast_multiplier = theme
-        .metric_by_key(EditorTokenKeys::NUMERIC_SCRUB_FAST_MULTIPLIER)
-        .map(|m| m.0 as f64)
-        .unwrap_or(opts.fast_multiplier);
-    let drag_threshold = theme
-        .metric_by_key(EditorTokenKeys::NUMERIC_SCRUB_DRAG_THRESHOLD)
-        .unwrap_or(opts.drag_threshold);
-
-    if !scrub_speed.is_finite() {
-        opts.scrub_speed = 0.02;
-    } else {
-        opts.scrub_speed = scrub_speed.max(0.0);
-    }
-    opts.slow_multiplier = if slow_multiplier.is_finite() {
-        slow_multiplier.max(0.0)
-    } else {
-        0.1
-    };
-    opts.fast_multiplier = if fast_multiplier.is_finite() {
-        fast_multiplier.max(0.0)
-    } else {
-        10.0
-    };
-    opts.drag_threshold = if drag_threshold.0.is_finite() {
-        Px(drag_threshold.0.max(0.0))
-    } else {
-        Px(4.0)
-    };
-    opts
 }

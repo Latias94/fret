@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor DragValueCore Options Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `DragValueCore` options/default/theme-resolution policy moved out of the
+public drag-to-edit primitive owner into a private `primitives/drag_value_core/options.rs` owner
+without changing public `DragValueCoreOptions` import paths, defaults, theme token fallback
+behavior, finite-value sanitization, drag threshold clamping, or public `DragValueCore` behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs` keeps the public drag-to-edit
+  primitive entrypoint, pressable/key handler wiring, and response construction while re-exporting
+  `DragValueCoreOptions`.
+- `ecosystem/fret-ui-editor/src/primitives/drag_value_core/options.rs` owns public options,
+  defaults, theme-token resolution, finite-value sanitization, and drag-threshold clamping.
+- `tools/gate_imui_workstream_source.py` now tracks the DragValueCore options split and rejects
+  options/default/theme-resolution policy from drifting back into the public primitive owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the options owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor drag_state_commit_requires_a_live_value_change
+  drag_state_commit_remembers_any_live_edit_in_the_session
+  drag_state_cancel_clears_live_edit_tracking
+  drag_value_core_response_exposes_read_only_signals --no-fail-fast`: pass (4 passed, 218 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor DragValueCore Scrub-State Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `DragValueCore` scrub session state moved out of the public drag-to-edit
