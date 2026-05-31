@@ -44,3 +44,26 @@ pub(super) fn value_from_x(
     let v = min + (max - min) * t;
     quantize_value(min, max, clamp, step, v)
 }
+
+pub(super) fn value_from_slider_local_x(
+    min: f64,
+    max: f64,
+    clamp: bool,
+    step: Option<f64>,
+    local_x: f64,
+    total_width: f64,
+    show_value: bool,
+    value_width: f64,
+    padding_left: f64,
+    padding_right: f64,
+    thumb_d: f64,
+) -> f64 {
+    let divider_w = if show_value { 1.0 } else { 0.0 };
+    let track_outer_w =
+        (total_width - divider_w - if show_value { value_width } else { 0.0 }).max(0.0);
+    let x_outer = local_x.clamp(0.0, track_outer_w);
+    let interactive_w = (track_outer_w - padding_left - padding_right).max(0.0);
+    let inner_x = (x_outer - padding_left).clamp(0.0, interactive_w);
+
+    value_from_x(min, max, clamp, step, inner_x, interactive_w, thumb_d)
+}

@@ -453,6 +453,13 @@ implementation and test-owner routing. `controls/slider/value_math/tests.rs` own
 coverage. Quantization, normalized progress, thumb-radius pointer projection, degenerate track
 fallback, and slider control routing remain unchanged.
 
+2026-05-31 editor slider pointer projection value-math result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now delegates pointer-down and pointer-move local
+x projection to `controls/slider/value_math.rs::value_from_slider_local_x(...)`. The value-math
+owner now covers value-readout width subtraction, frame padding compensation, pointer clamping,
+thumb-radius mapping, and clamp/step quantization. Pointer down/drag event flow, value display
+layout, and public slider options remain unchanged.
+
 2026-05-31 editor slider presentation tests child-owner result:
 `ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider control orchestration and
 child-owner routing. `controls/slider/tests.rs` owns presentation adoption coverage. Slider public

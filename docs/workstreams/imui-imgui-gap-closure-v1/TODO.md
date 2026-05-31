@@ -403,6 +403,12 @@ Last updated: 2026-05-31
       or slider control routing.
       Result: `controls/slider/value_math.rs` keeps value-domain math implementation plus
       test-owner routing. `controls/slider/value_math/tests.rs` owns value-math coverage.
+- [x] Split editor slider pointer-local projection into the value-math owner without changing
+      pointer down/drag event flow, value readout width handling, frame padding compensation,
+      thumb-radius mapping, clamp/step quantization, or public slider options.
+      Result: `controls/slider.rs` now delegates pointer-down and pointer-move local x projection
+      to `controls/slider/value_math.rs::value_from_slider_local_x(...)`. The value-math tests cover
+      value-readout width, frame padding, pointer clamping, thumb radius, and quantization.
 - [x] Split editor slider presentation regression tests into a private test owner without changing
       slider public constructors, NumericPresentation adoption, duplicate chrome affix suppression,
       or slider chrome/value-math child owner boundaries.

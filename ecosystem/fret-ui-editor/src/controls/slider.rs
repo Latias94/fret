@@ -46,7 +46,7 @@ mod value_math;
 
 use chrome::{alpha_mul, mix, resolve_slider_chrome};
 use model::{SliderMode, SliderState, compose_affixed_value_text, hidden_layout};
-use value_math::{quantize_value, t_from_value, value_from_x};
+use value_math::{quantize_value, t_from_value, value_from_slider_local_x};
 
 #[derive(Debug, Clone)]
 pub struct SliderOptions {
@@ -344,30 +344,17 @@ where
                     }
 
                     let bounds = host.bounds();
-                    let width = bounds.size.width.0 as f64;
-                    let divider_w = if show_value { 1.0 } else { 0.0 };
-                    let track_outer_w = (width
-                        - divider_w
-                        - if show_value {
-                            value_width.0 as f64
-                        } else {
-                            0.0
-                        })
-                    .max(0.0);
-                    let x_outer = (down.position_local.x.0 as f64).clamp(0.0, track_outer_w);
-                    let interactive_w = (track_outer_w
-                        - frame.padding.left.0 as f64
-                        - frame.padding.right.0 as f64)
-                        .max(0.0);
-                    let inner_x = (x_outer - frame.padding.left.0 as f64).clamp(0.0, interactive_w);
-
-                    let next = value_from_x(
+                    let next = value_from_slider_local_x(
                         min,
                         max,
                         clamp,
                         step,
-                        inner_x,
-                        interactive_w,
+                        down.position_local.x.0 as f64,
+                        bounds.size.width.0 as f64,
+                        show_value,
+                        value_width.0 as f64,
+                        frame.padding.left.0 as f64,
+                        frame.padding.right.0 as f64,
                         thumb_d.0 as f64,
                     );
                     let next_t = T::from_f64(next);
@@ -399,30 +386,17 @@ where
                     }
 
                     let bounds = host.bounds();
-                    let width = bounds.size.width.0 as f64;
-                    let divider_w = if show_value { 1.0 } else { 0.0 };
-                    let track_outer_w = (width
-                        - divider_w
-                        - if show_value {
-                            value_width.0 as f64
-                        } else {
-                            0.0
-                        })
-                    .max(0.0);
-                    let x_outer = (mv.position_local.x.0 as f64).clamp(0.0, track_outer_w);
-                    let interactive_w = (track_outer_w
-                        - frame.padding.left.0 as f64
-                        - frame.padding.right.0 as f64)
-                        .max(0.0);
-                    let inner_x = (x_outer - frame.padding.left.0 as f64).clamp(0.0, interactive_w);
-
-                    let next = value_from_x(
+                    let next = value_from_slider_local_x(
                         min,
                         max,
                         clamp,
                         step,
-                        inner_x,
-                        interactive_w,
+                        mv.position_local.x.0 as f64,
+                        bounds.size.width.0 as f64,
+                        show_value,
+                        value_width.0 as f64,
+                        frame.padding.left.0 as f64,
+                        frame.padding.right.0 as f64,
                         thumb_d.0 as f64,
                     );
                     let next_t = T::from_f64(next);

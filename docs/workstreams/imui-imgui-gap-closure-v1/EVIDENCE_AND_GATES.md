@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Slider Pointer Projection Owner Split Evidence - 2026-05-31
+
+Claim verified: editor slider pointer-local x projection moved into the value-math owner without
+changing pointer down/drag event flow, value readout width handling, frame padding compensation,
+thumb-radius mapping, clamp/step quantization, or public slider options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/slider.rs` now delegates pointer-down and pointer-move
+  local x projection to `value_math::value_from_slider_local_x(...)`.
+- `ecosystem/fret-ui-editor/src/controls/slider/value_math.rs` owns value-readout width subtraction,
+  frame padding compensation, pointer clamping, thumb-radius mapping, and clamp/step quantization.
+- `ecosystem/fret-ui-editor/src/controls/slider/value_math/tests.rs` covers both the old inner
+  track projection and the new full slider-local projection with readout/padding/clamping inputs.
+- `tools/gate_imui_workstream_source.py` now requires the root control to call
+  `value_from_slider_local_x(...)` and guards the expanded value-math test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui slider_value_from --no-fail-fast`: pass (4
+  passed, 199 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Editor Slider Model Owner Split Evidence - 2026-05-31
 
 Claim verified: editor slider mode/state, hidden layout projection, and affixed-value helper logic

@@ -1,4 +1,4 @@
-use super::{t_from_value, value_from_x};
+use super::{t_from_value, value_from_slider_local_x, value_from_x};
 
 #[test]
 fn slider_t_from_value_returns_zero_for_degenerate_ranges() {
@@ -25,4 +25,32 @@ fn slider_value_from_x_returns_quantized_min_when_track_has_no_available_width()
     let value = value_from_x(0.3, 1.0, true, Some(0.25), 10.0, 8.0, 10.0);
 
     assert_eq!(value, 0.3);
+}
+
+#[test]
+fn slider_value_from_local_x_accounts_for_value_readout_and_padding() {
+    let value = value_from_slider_local_x(
+        0.0,
+        10.0,
+        true,
+        Some(0.5),
+        74.5,
+        200.0,
+        true,
+        50.0,
+        10.0,
+        10.0,
+        10.0,
+    );
+
+    assert_eq!(value, 5.0);
+}
+
+#[test]
+fn slider_value_from_local_x_clamps_pointer_inside_track_region() {
+    let value = value_from_slider_local_x(
+        0.0, 10.0, true, None, 500.0, 200.0, true, 50.0, 10.0, 10.0, 10.0,
+    );
+
+    assert_eq!(value, 10.0);
 }
