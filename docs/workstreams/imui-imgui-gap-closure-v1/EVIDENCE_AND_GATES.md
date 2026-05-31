@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor PropertyRow Options Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `PropertyRow` options/default policy moved out of the root composite owner
+into a private `composites/property_row/options.rs` owner without changing public
+`PropertyRowOptions` import paths, layout defaults, slot width defaults, auto-stack
+identity/test-id fields, row/column assembly, reset slot behavior, value-slot marking, or
+property-row text role behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/property_row.rs` keeps the public composite, label
+  helper, keyed row entrypoint, row/column child assembly, value-slot marking, and reset-slot
+  wiring while re-exporting `PropertyRowOptions`.
+- `ecosystem/fret-ui-editor/src/composites/property_row/options.rs` owns public options fields and
+  defaults.
+- `tools/gate_imui_workstream_source.py` now tracks the PropertyRow options split and rejects
+  options/default policy from drifting back into the root composite owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the options owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor
+  row_label_slot_keeps_fixed_line_box_when_label_text_wraps_under_narrow_layout
+  row_value_slot_keeps_overflow_visible_for_wrapping_value_children
+  row_value_slot_grows_to_wrapping_value_text_under_narrow_layout
+  property_row_auto_layout_variant_stacks_only_below_nonzero_width_threshold
+  property_row_resolved_layout_preserves_minimum_affordance_slots
+  property_row_min_height_applies_density_row_height_without_clobbering_override
+  editor_property_row_label_text_is_single_line_and_shrinkable
+  editor_property_row_reset_glyph_text_keeps_fixed_button_line_box --no-fail-fast`: pass (8
+  passed, 214 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor DragValueCore Behavior Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `DragValueCore` pointer/key scrub behavior installation moved out of the

@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor PropertyRow options owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the public composite, label
+helper, keyed row entrypoint, row/column child assembly, value-slot marking, and reset-slot wiring
+while re-exporting `PropertyRowOptions`. The private `composites/property_row/options.rs` owner
+contains public option fields and defaults. Public import paths, layout defaults, slot-width
+defaults, auto-stack identity/test-id fields, row/column assembly, reset slot behavior, value-slot
+marking, and property-row text role behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor DragValueCore behavior owner-split result:
 `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs` now keeps public API shape,
 slot-state lookup, layout/a11y setup, current-value synchronization, and response construction.

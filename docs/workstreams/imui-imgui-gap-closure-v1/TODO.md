@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `PropertyRow` options/default policy into a private child owner without
+      changing public `PropertyRowOptions` import paths, layout defaults, slot width defaults,
+      auto-stack identity/test-id fields, row/column assembly, reset slot behavior, value-slot
+      marking, or property-row text role behavior.
+      Result: `composites/property_row.rs` keeps the public composite, label helper, keyed row
+      entrypoint, row/column child assembly, value-slot marking, and reset-slot wiring while
+      re-exporting `PropertyRowOptions`. `composites/property_row/options.rs` owns public options
+      fields and defaults. The source gate prevents options/default policy from drifting back into
+      the root composite owner.
 - [x] Split editor `DragValueCore` pointer/key scrub behavior installation into a private child
       owner without changing public constructors/builders, options/default import paths,
       pointer-down focus/capture behavior, drag threshold crossing, live value callbacks,
