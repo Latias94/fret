@@ -99,6 +99,11 @@ Last updated: 2026-05-31
       Result: `table_controls/render.rs` now keeps final table assembly only.
       `render/plan.rs` owns visible-column scanning, scroll-handle planning, header gating, and
       column test-id suffix preparation.
+- [x] Split IMUI table row-group composition into private pinned and unpinned owners without
+      changing no-pinned fill/scroll behavior, left/center/right pinned assembly, center scroll
+      wrapping, or row outer-group packing.
+      Result: `row_groups.rs` now dispatches only. `row_groups/unpinned.rs` owns the no-pinned
+      fill/scroll path, while `row_groups/pinned.rs` owns split group assembly.
 - [x] Split IMUI debug-draw path-builder regression coverage into private sub-owners without
       changing path stroke/fill command recording, rectangle/rounded-rectangle sampling, Bezier
       defaults, circular/elliptical arc defaults, or invalid finished-path cleanup.

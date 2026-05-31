@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-31
 
+## IMUI Table Row-Group Composition Owner Split Evidence - 2026-05-31
+
+Claim verified: IMUI table row-group composition split into private pinned and unpinned owners
+without changing no-pinned fill/scroll behavior, left/center/right pinned assembly, center scroll
+wrapping, or row outer-group packing.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` now dispatches between pinned and
+  unpinned paths only.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups/unpinned.rs` owns the no-pinned
+  fill/scroll row-group path.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups/pinned.rs` owns left/center/right
+  pinned group assembly and outer-group packing.
+- `tools/gate_imui_workstream_source.py` now checks the row-group dispatcher plus both private
+  composition owners and rejects direct layout/scroll composition from drifting back into
+  `row_groups.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new row-group owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `git diff --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib hidden_table_columns_do_not_render_header_body_or_response horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --test
+  imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass.
+
 ## IMUI Table Render Planning Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI table render planning split into a private owner without changing palette

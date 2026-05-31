@@ -65,6 +65,11 @@ and semantics decoration. Public table body wrapper behavior remains unchanged.
 `render/plan.rs` owns visible-column scanning, horizontal scroll-handle planning, header gating,
 and column test-id suffix preparation. Public table rendering behavior remains unchanged.
 
+2026-05-31 table row-group composition owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` now dispatches only.
+`row_groups/unpinned.rs` owns the no-pinned fill/scroll path, while `row_groups/pinned.rs` owns
+left/center/right pinned group assembly. Public table row-group behavior remains unchanged.
+
 2026-05-31 facade-writer text test-owner split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` is now a thin test hub.
 `tests/text.rs` owns `ui.text(...)` dense single-line coverage, while `tests/wrapped.rs` owns
