@@ -12,6 +12,7 @@ pub(crate) mod card;
 pub(crate) mod carousel_item;
 pub(crate) mod checkbox;
 pub(crate) mod chip;
+pub(crate) mod chip_common;
 pub(crate) mod date_picker;
 pub(crate) mod dialog;
 pub(crate) mod divider;

@@ -25,11 +25,12 @@ CONST_NUMBER_RE = re.compile(
 )
 COLOR_HEX_RE = re.compile(r"Color::from_srgb_hex_rgb\((0x[0-9a-fA-F_]+)\)")
 
-SHARED_TOKEN_HELPER_MODULES = {"shape.rs", "typography.rs"}
+SHARED_TOKEN_HELPER_MODULES = {"chip_common.rs", "shape.rs", "typography.rs"}
 TOKEN_MODULE_SKIP = {
     "material_web_v30.rs",
     "mod.rs",
     "v30.rs",
+    "visual_fixture_model.rs",
     "visual_fixtures.rs",
 }.union(SHARED_TOKEN_HELPER_MODULES)
 FALLBACK_MARKERS = {

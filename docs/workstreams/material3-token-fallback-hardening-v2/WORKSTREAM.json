@@ -1,0 +1,38 @@
+{
+  "id": "material3-token-fallback-hardening-v2",
+  "title": "Material3 Token Fallback Hardening v2",
+  "status": "closed",
+  "created": "2026-05-31",
+  "updated": "2026-05-31",
+  "owner": "codex",
+  "scope": [
+    "ecosystem/fret-ui-material3/src/tokens",
+    "ecosystem/fret-ui-material3/tests",
+    "tools/parity-discovery/material3_token_inventory.py",
+    "docs/workstreams/material3-token-fallback-hardening-v2",
+    "docs/workstreams/material3-token-fallback-hardening-v2/CLOSEOUT_AUDIT_2026-05-31.md"
+  ],
+  "goals": [
+    "Reduce repeated Material3 chip-family token fallback logic without changing component APIs.",
+    "Keep shared Material token fallback policy inside ecosystem/fret-ui-material3.",
+    "Regenerate inventory evidence for the hardened slice."
+  ],
+  "non_goals": [
+    "Full elimination of all Material3 fallback sites.",
+    "Core mechanism changes.",
+    "Public chip API changes."
+  ],
+  "validation": [
+    "cargo fmt --package fret-ui-material3 --check",
+    "cargo nextest run -p fret-ui-material3 --features diagnostics --lib tokens::chip_common",
+    "cargo nextest run -p fret-ui-material3 --features diagnostics --test chip_state",
+    "cargo nextest run -p fret-ui-material3 --features diagnostics --test material3_headless_goldens material3_headless_controls_suite_goldens_v1",
+    "cargo check -p fret-ui-material3 --features diagnostics --tests",
+    "cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings",
+    "python -m json.tool docs/workstreams/material3-token-fallback-hardening-v2/WORKSTREAM.json | Out-Null",
+    "python -m json.tool docs/workstreams/material3-token-fallback-hardening-v2/artifacts/material3_token_inventory_report_v2.json | Out-Null",
+    "python tools/check_workstream_catalog.py",
+    "python tools/check_layering.py",
+    "git diff --check"
+  ]
+}
