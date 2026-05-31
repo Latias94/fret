@@ -58,6 +58,13 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor theme preset/replay regressions into a private `theme/tests.rs` owner without
+      changing public editor theme preset APIs, installed-preset replay semantics, or host theme
+      sync behavior.
+      Result: `ecosystem/fret-ui-editor/src/theme.rs` now keeps only public preset metadata,
+      install/replay helpers, host-theme sync helpers, and a `#[cfg(test)] mod tests;` route.
+      `ecosystem/fret-ui-editor/src/theme/tests.rs` owns the eight preset/replay regressions, and
+      the source gate prevents those tests from drifting back into the runtime theme entry point.
 - [x] Refresh the `fret-imui` runtime boundary gate so the thin authoring facade cannot drift into
       kit/editor/docking policy ownership without changing public IMUI facade APIs.
       Result: `tools/gate_imui_workstream_source.py` now checks `ecosystem/fret-imui/src/lib.rs`

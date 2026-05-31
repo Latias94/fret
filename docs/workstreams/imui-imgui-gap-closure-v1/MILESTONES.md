@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 editor theme tests owner-split result:
+`ecosystem/fret-ui-editor/src/theme.rs` now keeps public editor theme preset metadata, preset
+install/replay helpers, and host theme sync helpers only, plus a `#[cfg(test)] mod tests;` route.
+`ecosystem/fret-ui-editor/src/theme/tests.rs` owns the preset metadata, default/dense token patch,
+installed-preset replay, and window-metrics sync regressions. `tools/gate_imui_workstream_source.py`
+now gates that split so test bodies stay out of the runtime theme entry point, while
+`theme/patches.rs` remains the private token patch owner.
+
 2026-05-31 IMUI runtime boundary source-gate refresh:
 `fret-imui` remains a thin policy-light authoring facade over `fret-authoring` and `fret-ui`.
 `tools/gate_imui_workstream_source.py` now also freezes the public `ecosystem/fret-imui/src/lib.rs`

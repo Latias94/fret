@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Theme Tests Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor theme preset/replay regressions moved out of the runtime
+`theme.rs` entry point into a private `theme/tests.rs` owner without changing public preset
+metadata, install/replay APIs, host theme sync behavior, or private token patch ownership.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/theme.rs` now keeps public `EditorThemePresetV1` metadata,
+  install/replay helpers, host-theme sync helpers, and a `#[cfg(test)] mod tests;` route only.
+- `ecosystem/fret-ui-editor/src/theme/tests.rs` owns the eight preset metadata, default/dense
+  patch, installed-preset replay, and window-metrics sync regressions.
+- `ecosystem/fret-ui-editor/src/theme/patches.rs` remains the private token patch owner.
+- `tools/gate_imui_workstream_source.py` now gates the theme entry/test split and prevents test
+  bodies from drifting back into `theme.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new test owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor theme::tests --no-fail-fast`: pass (8 passed, 214 skipped).
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Runtime Boundary Source-Gate Refresh Evidence - 2026-05-31
 
 Claim verified: `fret-imui` remains a thin, policy-light authoring facade over
