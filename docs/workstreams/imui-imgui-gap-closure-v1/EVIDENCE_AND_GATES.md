@@ -3,6 +3,28 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Canonical Workbench Discovery Refresh Evidence - 2026-05-31
+
+Claim verified: the canonical IMUI editor workbench route and Demo/Metrics/Debug discovery chain
+remain intact after the latest owner splits.
+
+Evidence:
+
+- `cargo check -p fret-demo --bin imui_editor_workbench_demo`: pass with existing warnings from
+  `fret-plot` and `fret-chart`.
+- `cargo nextest run -p fret-examples --test imui_editor_workbench_golden_path_surface
+  --no-fail-fast`: pass on rerun after an earlier command wrapper timeout while waiting on build
+  locks (2 passed).
+- `python tools\diag_gate_imui_product_chain.py --only discovery --reuse-built`: pass. This covered
+  fretboard help/list discovery, cookbook examples, native demos, tool apps JSON, DevTools GUI/MCP
+  product workflow source, and `diag doctor campaigns`.
+
+Skipped broader gate:
+
+- `python tools\diag_gate_imui_product_chain.py` default mode timed out after 304 seconds without
+  usable output in this turn, so it is not used as evidence here. The focused discovery gate above
+  is the relevant product-chain proof for this verification slice.
+
 ## IMUI Menu Interaction Behavior Owner Split Evidence - 2026-05-31
 
 Claim verified: IMUI menu-item behavior activation and response population split into private
