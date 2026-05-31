@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor DragValue Scrub Frame Owner-Split Evidence - 2026-05-31
+
+Claim verified: editor `DragValue` scrub frame rendering moved out of the root control into a
+private `drag_value/scrub.rs` owner without changing public `DragValue` options,
+`DragValueCore` commit/cancel routing, double-click typing handoff, scrub response state mapping,
+stable test-id routing, or typed `NumericInput` fallback behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps keyed control orchestration,
+  mode switching, `DragValueCore` commit/cancel wiring, live model updates, and `NumericInput`
+  typing routing.
+- `ecosystem/fret-ui-editor/src/controls/drag_value/scrub.rs` owns scrub frame chrome,
+  prefix/value/suffix segment rendering, value a11y/test-id stamping, and the frame visual state
+  mapping from `DragValueCoreResponse` accessors.
+- `tools/gate_imui_workstream_source.py` now gates the root/scrub split and prevents scrub frame
+  chrome or value-text assembly from drifting back into the root control.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new scrub owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor drag_value --no-fail-fast`: pass (10 passed, 212 skipped).
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json | Out-Null`:
+  pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass.
+
 ## Editor Input-Group Icon Segment Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor input-group icon/clear-button segment rendering moved out of the general

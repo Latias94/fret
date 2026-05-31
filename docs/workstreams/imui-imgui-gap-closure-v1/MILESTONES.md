@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 editor DragValue scrub frame owner-split result:
+`ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps keyed control orchestration,
+mode switching, `DragValueCore` commit/cancel wiring, live model updates, and `NumericInput`
+typing routing. `controls/drag_value/scrub.rs` owns scrub frame chrome, prefix/value/suffix segment
+rendering, and scrub test-id stamping. Public `DragValue` options and double-click typing handoff
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-05-31 editor input-group icon segment owner-split result:
 `ecosystem/fret-ui-editor/src/primitives/input_group/segments.rs` now keeps segment layout, text,
 value, axis, and derived-test-id helpers plus re-exports the icon segment helper names.

@@ -58,6 +58,13 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `DragValue` scrub frame rendering into a private child owner without changing
+      `DragValueCore` commit/cancel routing, double-click typing handoff, scrub response state
+      mapping, stable test-id routing, or public `DragValue` options.
+      Result: `controls/drag_value.rs` keeps keyed control orchestration, mode switching, live
+      model updates, and `NumericInput` typing routing. `controls/drag_value/scrub.rs` owns scrub
+      frame chrome, prefix/value/suffix segment rendering, and scrub test-id stamping. The source
+      gate prevents frame chrome and value text assembly from drifting back into the root control.
 - [x] Split editor input-group icon/clear-button segment rendering into a private child owner
       without changing the existing `crate::primitives::input_group::*` helper names or segment
       call paths.

@@ -12,34 +12,32 @@ use crate::controls::numeric_input::{
     NumericFormatFn, NumericInput, NumericInputErrorDisplay, NumericInputOptions,
     NumericInputOutcome, NumericInputSelectionBehavior, NumericParseFn, NumericValidateFn,
 };
-use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::drag_value_core::DragValueScalar;
-use crate::primitives::input_group::{
-    derived_test_id, editor_input_group_divider, editor_input_group_inset, editor_input_group_row,
-    editor_input_value_text, editor_text_segment,
-};
+use crate::primitives::input_group::derived_test_id;
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
     NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
     sync_numeric_text_entry_focus_handoff,
 };
 use crate::primitives::style::EditorStyle;
-use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{
     DragValueCore, DragValueCoreOptions, EditSessionOutcome, NumericPresentation,
     NumericValueConstraints, constrain_numeric_value,
 };
-use fret_core::{Corners, Edges, Px};
+use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PressablePointerDownResult, UiActionHost};
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexItemStyle, InsetStyle, LayoutStyle, Length, Overflow,
-    PositionStyle, SizeStyle,
+    AnyElement, FlexItemStyle, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 #[cfg(test)]
 mod tests;
+
+mod scrub;
+
+use scrub::{DragValueScrubFrameArgs, drag_value_scrub_frame};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DragValueMode {
@@ -298,99 +296,23 @@ where
                             },
                         ));
 
-                        let theme = Theme::global(&*cx.app);
-                        let visuals = EditorWidgetVisuals::new(theme).frame_visuals(
-                            scrub_chrome,
-                            EditorFrameState {
-                                enabled: true,
+                        let scrub_frame = drag_value_scrub_frame(
+                            cx,
+                            DragValueScrubFrameArgs {
+                                density,
+                                scrub_chrome,
                                 hovered: resp.hovered(),
                                 pressed: resp.dragging() || resp.pressed(),
                                 focused: resp.focused() || cx.is_focused_element(scrub_id),
-                                open: false,
-                                semantic: EditorFrameSemanticState::default(),
+                                value_text: value_text.clone(),
+                                prefix: prefix_for_scrub.clone(),
+                                suffix: suffix_for_scrub.clone(),
+                                scrub_test_id: scrub_test_id.clone(),
+                                prefix_test_id: prefix_test_id.clone(),
+                                suffix_test_id: suffix_test_id.clone(),
+                                value_test_id: value_test_id.clone(),
                             },
                         );
-
-                        let mut scrub_frame = cx.container(
-                            ContainerProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
-                                        min_height: Some(Length::Px(density.row_height)),
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                padding: scrub_chrome.padding.into(),
-                                background: Some(visuals.bg),
-                                border: Edges::all(scrub_chrome.border_width),
-                                border_color: Some(visuals.border),
-                                corner_radii: Corners::all(scrub_chrome.radius),
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                let theme = Theme::global(&*cx.app);
-                                let affix_color = editor_muted_foreground(theme);
-                                let divider = visuals.border;
-                                let value_text_el = editor_input_value_text(
-                                    cx,
-                                    density,
-                                    scrub_chrome.text_px,
-                                    value_text.clone(),
-                                    visuals.fg,
-                                    Length::Auto,
-                                );
-                                let mut value = editor_input_group_inset(
-                                    cx,
-                                    scrub_chrome.padding,
-                                    value_text_el,
-                                );
-                                if let Some(test_id) = value_test_id.as_ref() {
-                                    value = value
-                                        .test_id(test_id.clone())
-                                        .a11y_label(value_text.clone());
-                                }
-                                let mut segments = Vec::new();
-                                if let Some(prefix) = prefix_for_scrub.clone() {
-                                    let mut segment = editor_text_segment(
-                                        cx,
-                                        density,
-                                        scrub_chrome.text_px,
-                                        prefix.clone(),
-                                        affix_color,
-                                        scrub_chrome.padding,
-                                    );
-                                    if let Some(test_id) = prefix_test_id.as_ref() {
-                                        segment =
-                                            segment.test_id(test_id.clone()).a11y_label(prefix);
-                                    }
-                                    segments.push(segment);
-                                    segments.push(editor_input_group_divider(cx, divider));
-                                }
-                                segments.push(value);
-                                if let Some(suffix) = suffix_for_scrub.clone() {
-                                    segments.push(editor_input_group_divider(cx, divider));
-                                    let mut segment = editor_text_segment(
-                                        cx,
-                                        density,
-                                        scrub_chrome.text_px,
-                                        suffix.clone(),
-                                        affix_color,
-                                        scrub_chrome.padding,
-                                    );
-                                    if let Some(test_id) = suffix_test_id.as_ref() {
-                                        segment =
-                                            segment.test_id(test_id.clone()).a11y_label(suffix);
-                                    }
-                                    segments.push(segment);
-                                }
-                                vec![editor_input_group_row(cx, Px(0.0), segments)]
-                            },
-                        );
-                        if let Some(test_id) = scrub_test_id.as_ref() {
-                            scrub_frame = scrub_frame.test_id(test_id.clone());
-                        }
                         vec![scrub_frame]
                     })
             },
