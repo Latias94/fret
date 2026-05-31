@@ -58,6 +58,14 @@ Last updated: 2026-05-31
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor input-group segment/text/axis helper implementation into a private child owner
+      without changing the existing `crate::primitives::input_group::*` call path, frame owner
+      routing, joined-input owner routing, text-role semantics, icon-button chrome, axis marker
+      tinting, derived test-id policy, or crate-visible primitive APIs.
+      Result: `primitives/input_group.rs` is now a thin hub that re-exports frame, joined-input,
+      and segment owner APIs. `primitives/input_group/segments.rs` owns inset/segment/row/divider
+      helpers, icon/clear/text/value segments, derived test-id policy, axis segment composition,
+      and axis tint color mixing.
 - [x] Split editor joined-input frame assembly and pointer pressed-state behavior into a private
       child owner without changing the existing `crate::primitives::input_group::*` call path, base
       frame owner routing, segment helpers, text-role helpers, axis segment composition, or

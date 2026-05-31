@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-31 editor input-group segments owner-split result:
+`ecosystem/fret-ui-editor/src/primitives/input_group.rs` is now a thin hub that re-exports frame,
+joined-input, and segment owner APIs at the existing module path. The private
+`primitives/input_group/segments.rs` owner now contains inset/segment/row/divider helpers,
+icon/clear/text/value segments, derived test-id policy, axis segment composition, and axis tint
+color mixing. Crate-visible input-group APIs remain unchanged.
+
 2026-05-31 editor input-group joined owner-split result:
 `ecosystem/fret-ui-editor/src/primitives/input_group.rs` now keeps segment helpers, text-role
 helpers, axis segment composition, and re-exports joined-input APIs at the existing module path.
