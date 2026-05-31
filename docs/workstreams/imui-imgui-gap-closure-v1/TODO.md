@@ -435,6 +435,12 @@ Last updated: 2026-05-31
       pointer/input behavior, and child-owner routing. `controls/slider/model.rs` owns
       `SliderMode`, `SliderState`, hidden layout projection, and affixed value composition, while
       `controls/slider/model/tests.rs` owns affixed-value helper coverage.
+- [x] Split editor slider public options into the model owner without changing option field names,
+      default values, NumericPresentation adoption, duplicate chrome affix suppression,
+      pointer/typing behavior, or public re-export path.
+      Result: `controls/slider.rs` keeps the Slider public constructor/builder surface and control
+      orchestration. `controls/slider/model.rs` owns `SliderOptions`, its defaults, mode/state,
+      hidden layout projection, and affixed value composition.
 - [x] Split editor enum-select row rendering, selection commit policy, and item test-id
       sanitization into a private child owner without changing trigger composition, overlay
       dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row

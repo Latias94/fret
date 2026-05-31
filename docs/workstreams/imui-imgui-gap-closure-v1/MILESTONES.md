@@ -19,6 +19,13 @@ projection, outcome callback emit, and draft/error local model allocation. Scrub
 focus handoff, local state identity, outcome routing, and public AxisDragValue options remain
 unchanged.
 
+2026-05-31 editor slider options model owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now re-exports `SliderOptions` from the model
+owner and keeps Slider constructors/builders plus control orchestration. `controls/slider/model.rs`
+owns `SliderOptions`, its default layout/value/readout/typing policy values, mode/state, hidden
+layout projection, and affixed-value helper. Public option field names and defaults remain
+unchanged.
+
 2026-05-31 menu interaction behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` now owns active-trigger
 installation and keyboard behavior orchestration only. `behavior/activation.rs` owns activate

@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-31
 
+## Editor Slider Options Model Owner Split Evidence - 2026-05-31
+
+Claim verified: editor slider public options split into the model owner without changing option
+field names, default values, NumericPresentation adoption, duplicate chrome affix suppression,
+pointer/typing behavior, or public re-export path.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/slider.rs` now re-exports `SliderOptions` from the model
+  owner while keeping Slider constructors/builders and control orchestration.
+- `ecosystem/fret-ui-editor/src/controls/slider/model.rs` owns `SliderOptions`, its defaults,
+  mode/state, hidden layout projection, and affixed value composition.
+- `tools/gate_imui_workstream_source.py` checks the slider root/model split and rejects
+  `SliderOptions` defaults from drifting back into the root control file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui slider --no-fail-fast`: pass (12 passed,
+  193 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`:
+  pass (1 passed).
+- `git diff --check`: pass.
+
 ## Editor AxisDragValue Session Owner Split Evidence - 2026-05-31
 
 Claim verified: editor axis-drag-value session helpers split into a private child owner without

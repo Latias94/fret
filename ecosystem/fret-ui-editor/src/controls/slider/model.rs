@@ -1,11 +1,69 @@
 use std::sync::Arc;
 
+use crate::controls::numeric_input::NumericInputSelectionBehavior;
 use fret_core::{PointerId, Px};
 use fret_ui::GlobalElementId;
-use fret_ui::element::{InsetStyle, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle};
+use fret_ui::element::{
+    FlexItemStyle, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle,
+};
 
 #[cfg(test)]
 mod tests;
+
+#[derive(Debug, Clone)]
+pub struct SliderOptions {
+    pub layout: LayoutStyle,
+    pub enabled: bool,
+    pub prefix: Option<Arc<str>>,
+    pub suffix: Option<Arc<str>>,
+    pub selection_behavior: NumericInputSelectionBehavior,
+    pub clamp: bool,
+    /// Quantize to a step size in value space (e.g. `0.01` for normalized floats).
+    pub step: Option<f64>,
+    pub show_value: bool,
+    pub value_width: Px,
+    pub allow_typing: bool,
+    /// Explicit identity source for internal state (drag/typing focus restore).
+    ///
+    /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
+    /// Use this when a helper function builds multiple sliders from the same callsite and
+    /// you need stable, per-instance state separation.
+    pub id_source: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
+    pub a11y_label: Option<Arc<str>>,
+}
+
+impl Default for SliderOptions {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                flex: FlexItemStyle {
+                    grow: 1.0,
+                    basis: Length::Px(Px(0.0)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            enabled: true,
+            prefix: None,
+            suffix: None,
+            selection_behavior: NumericInputSelectionBehavior::ReplaceAllOnFocus,
+            clamp: true,
+            step: None,
+            show_value: true,
+            value_width: Px(52.0),
+            allow_typing: true,
+            id_source: None,
+            test_id: None,
+            a11y_label: None,
+        }
+    }
+}
 
 pub(super) fn compose_affixed_value_text(
     value: &Arc<str>,
