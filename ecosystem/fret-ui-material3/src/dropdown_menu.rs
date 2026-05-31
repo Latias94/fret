@@ -218,6 +218,7 @@ impl DropdownMenu {
 
                 let (
                     menu_item_height,
+                    menu_item_two_line_height,
                     menu_item_min_width,
                     menu_item_max_width,
                     menu_vertical_padding,
@@ -227,7 +228,8 @@ impl DropdownMenu {
                 ) = {
                     let theme = Theme::global(&*cx.app);
                     (
-                        menu_tokens::list_item_height(theme),
+                        menu_tokens::list_item_height_for_supporting(theme, false),
+                        menu_tokens::list_item_height_for_supporting(theme, true),
                         menu_tokens::item_min_width(theme),
                         menu_tokens::item_max_width(theme),
                         menu_tokens::container_vertical_padding(theme),
@@ -248,6 +250,7 @@ impl DropdownMenu {
                     menu_item_max_width,
                     &menu_entries,
                     menu_item_height,
+                    menu_item_two_line_height,
                     divider_height,
                     divider_margin,
                     menu_vertical_padding,
@@ -373,12 +376,8 @@ fn wrap_close_on_select(entries: Vec<MenuEntry>, open: Model<bool>) -> Vec<MenuE
                 if item.disabled {
                     return MenuEntry::Item(item);
                 }
-                let Some(prev) = item.on_select.clone() else {
-                    return MenuEntry::Item(item);
-                };
                 let open = open.clone();
-                item.on_select = Some(Arc::new(move |host, cx, reason| {
-                    prev(host, cx, reason);
+                item.append_on_select(Arc::new(move |host, cx, _reason| {
                     let _ = host.models_mut().update(&open, |v| *v = false);
                     host.request_redraw(cx.window);
                 }));
@@ -394,6 +393,7 @@ fn estimated_menu_panel_size(
     max_width: Px,
     entries: &[MenuEntry],
     item_height: Px,
+    two_line_item_height: Px,
     divider_height: Px,
     divider_margin_total: Px,
     vertical_padding: Px,
@@ -401,7 +401,14 @@ fn estimated_menu_panel_size(
     let mut h = (vertical_padding.0.max(0.0) * 2.0).max(0.0);
     for e in entries {
         match e {
-            MenuEntry::Item(_) => h += item_height.0.max(0.0),
+            MenuEntry::Item(item) => {
+                let height = if item.has_supporting_text() {
+                    two_line_item_height
+                } else {
+                    item_height
+                };
+                h += height.0.max(0.0);
+            }
             MenuEntry::Separator => {
                 h += divider_height.0.max(0.0) + divider_margin_total.0.max(0.0)
             }
@@ -503,6 +510,7 @@ mod tests {
             Px(280.0),
             &entries,
             Px(48.0),
+            Px(64.0),
             Px(1.0),
             Px(8.0),
             Px(8.0),
@@ -516,6 +524,7 @@ mod tests {
             Px(280.0),
             &entries,
             Px(48.0),
+            Px(64.0),
             Px(1.0),
             Px(8.0),
             Px(8.0),

@@ -15,6 +15,9 @@ pub(crate) const ITEM_MIN_WIDTH_FALLBACK: Px = Px(112.0);
 pub(crate) const ITEM_MAX_WIDTH_FALLBACK: Px = Px(280.0);
 pub(crate) const CONTAINER_VERTICAL_PADDING_FALLBACK: Px = Px(8.0);
 pub(crate) const ITEM_HORIZONTAL_PADDING_FALLBACK: Px = Px(12.0);
+pub(crate) const ITEM_TWO_LINE_HEIGHT_FALLBACK: Px = Px(64.0);
+pub(crate) const ITEM_ICON_SIZE_FALLBACK: Px = Px(24.0);
+pub(crate) const ITEM_SLOT_GAP_FALLBACK: Px = Px(12.0);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum MenuItemInteraction {
@@ -28,6 +31,21 @@ pub(crate) fn list_item_height(theme: &Theme) -> Px {
     theme
         .metric_by_key("md.comp.menu.list-item.container.height")
         .unwrap_or(Px(48.0))
+}
+
+pub(crate) fn list_item_two_line_height(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.menu.list-item.two-line-container.height")
+        .or_else(|| theme.metric_by_key("md.comp.menu.list-item.supporting-text.container.height"))
+        .unwrap_or(ITEM_TWO_LINE_HEIGHT_FALLBACK)
+}
+
+pub(crate) fn list_item_height_for_supporting(theme: &Theme, has_supporting_text: bool) -> Px {
+    if has_supporting_text {
+        list_item_two_line_height(theme)
+    } else {
+        list_item_height(theme)
+    }
 }
 
 pub(crate) fn item_min_width(theme: &Theme) -> Px {
@@ -54,12 +72,46 @@ pub(crate) fn item_horizontal_padding(theme: &Theme) -> Px {
         .unwrap_or(ITEM_HORIZONTAL_PADDING_FALLBACK)
 }
 
+pub(crate) fn item_slot_gap(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.menu.list-item.content.gap")
+        .or_else(|| theme.metric_by_key("md.comp.menu.list-item.leading-icon.trailing-space"))
+        .unwrap_or(ITEM_SLOT_GAP_FALLBACK)
+}
+
+pub(crate) fn item_icon_size(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.menu.list-item.icon.size")
+        .or_else(|| theme.metric_by_key("md.comp.menu.list-item.leading-icon.size"))
+        .unwrap_or(ITEM_ICON_SIZE_FALLBACK)
+}
+
 pub(crate) fn item_label_text_style(theme: &Theme) -> TextStyle {
     typography::text_style_with_weight(
         theme,
         Some("md.comp.menu.list-item.label-text"),
         "md.sys.typescale.label-large",
         Some("md.comp.menu.list-item.label-text.weight"),
+        TextIntent::Control,
+    )
+}
+
+pub(crate) fn item_supporting_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        Some("md.comp.menu.list-item.supporting-text"),
+        "md.sys.typescale.body-medium",
+        Some("md.comp.menu.list-item.supporting-text.weight"),
+        TextIntent::Control,
+    )
+}
+
+pub(crate) fn item_trailing_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        Some("md.comp.menu.list-item.trailing-text"),
+        "md.sys.typescale.label-large",
+        Some("md.comp.menu.list-item.trailing-text.weight"),
         TextIntent::Control,
     )
 }
@@ -153,4 +205,54 @@ pub(crate) fn item_outcomes(
     }
 
     (label, state_layer, opacity)
+}
+
+pub(crate) fn item_icon_color(theme: &Theme, enabled: bool) -> Color {
+    item_content_color(
+        theme,
+        enabled,
+        &[
+            "md.comp.menu.list-item.leading-icon.color",
+            "md.comp.menu.list-item.trailing-icon.color",
+            "md.comp.menu.list-item.icon.color",
+        ],
+        "md.comp.menu.list-item.disabled.leading-icon.opacity",
+    )
+}
+
+pub(crate) fn item_supporting_text_color(theme: &Theme, enabled: bool) -> Color {
+    item_content_color(
+        theme,
+        enabled,
+        &["md.comp.menu.list-item.supporting-text.color"],
+        "md.comp.menu.list-item.disabled.supporting-text.opacity",
+    )
+}
+
+pub(crate) fn item_trailing_text_color(theme: &Theme, enabled: bool) -> Color {
+    item_content_color(
+        theme,
+        enabled,
+        &[
+            "md.comp.menu.list-item.trailing-text.color",
+            "md.comp.menu.list-item.shortcut.color",
+        ],
+        "md.comp.menu.list-item.disabled.trailing-text.opacity",
+    )
+}
+
+fn item_content_color(
+    theme: &Theme,
+    enabled: bool,
+    comp_keys: &[&str],
+    disabled_opacity_key: &str,
+) -> Color {
+    let defaults = MaterialContentDefaults::on_surface(theme);
+    let tokens = MaterialTokenResolver::new(theme);
+    let mut color = tokens.color_comp_chain_or_sys(comp_keys, "md.sys.color.on-surface-variant");
+    if !enabled {
+        let opacity = tokens.number_optional(Some(disabled_opacity_key), defaults.disabled_opacity);
+        color = alpha_mul(color, opacity);
+    }
+    color
 }

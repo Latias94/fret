@@ -28,6 +28,29 @@ Non-goals:
   outcomes.
 - Favor suite-style headless goldens + small scripted interaction tests over pixel snapshots.
 
+### Progress notes (2026-05-31)
+
+- Menu shadcn-level breadth batch landed in `ecosystem/fret-ui-material3`:
+  - API: `MenuItem::{leading_icon,trailing_icon,supporting_text,shortcut,checkbox,radio}`.
+  - Semantics: checkbox/radio menu items expose `MenuItemCheckbox` / `MenuItemRadio` with
+    `checked` and `checked_state`.
+  - Layout/parts: two-line 64dp menu rows, 24dp icon slots, shortcut text, and stable part
+    selectors (`.label`, `.leading-icon`, `.supporting-text`, `.shortcut`, `.trailing-icon`).
+  - Style: `MenuStyle` now covers label, icon, supporting text, trailing text, state-layer, and
+    text-style override slots using ADR 0220 shape.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/tests/menu_state.rs`
+      (`menu_rich_items_expose_material_slots_and_checked_semantics`,
+      `menu_checkbox_and_radio_items_update_models_on_activation`)
+    - `ecosystem/fret-ui-material3/tests/automation_surface.rs`
+      (`material3_menu_and_dropdown_expose_stable_part_test_ids`)
+    - `apps/fret-ui-gallery/src/ui/snippets/material3/menu.rs`
+- Remaining Menu residuals:
+  - group/section labels and explicit grouped APIs,
+  - nested submenu overlay behavior,
+  - scroll buttons / max-height behavior for long menus,
+  - optional value/callback authoring parity with shadcn's non-model menu helpers.
+
 ### Infrastructure notes (2026-02-06)
 
 Recent Material3 and shadcn alignment work uncovered a few mechanism gaps that were worth fixing

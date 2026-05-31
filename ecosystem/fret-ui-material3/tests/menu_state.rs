@@ -3,9 +3,10 @@
 use std::sync::Arc;
 
 use fret_core::{
-    AppWindowId, KeyCode, Paint, Point, PointerId, Px, Rect, Scene, SceneOp, SemanticsNode,
-    SemanticsRole, Size, UiServices,
+    AppWindowId, KeyCode, Paint, Point, PointerId, Px, Rect, Scene, SceneOp, SemanticsCheckedState,
+    SemanticsNode, SemanticsRole, Size, UiServices,
 };
+use fret_icons::ids;
 use fret_runtime::{ModelHost, PlatformCapabilities};
 use fret_ui::element::{Length, PressableA11y, PressableProps};
 use fret_ui::{UiTree, declarative};
@@ -223,6 +224,204 @@ fn menu_matches_material_item_geometry_and_semantics() {
     assert_eq!(gamma.role, SemanticsRole::MenuItem);
     assert_eq!(gamma.pos_in_set, Some(3));
     assert_eq!(gamma.set_size, Some(3));
+}
+
+#[test]
+fn menu_rich_items_expose_material_slots_and_checked_semantics() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let checked = app.models_mut().insert(true);
+    let selected = app
+        .models_mut()
+        .insert(Some(Arc::<str>::from("comfortable")));
+    let checked_for_render = checked.clone();
+    let selected_for_render = selected.clone();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(520.0), Px(360.0)),
+    );
+    let render = move |ui: &mut UiTree<TestHost>,
+                       app: &mut TestHost,
+                       services: &mut dyn UiServices| {
+        let checked = checked_for_render.clone();
+        let selected = selected_for_render.clone();
+        declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let menu = Menu::new()
+                .a11y_label("Rich Material menu")
+                .test_id("m3-rich-menu")
+                .entries(vec![
+                    MenuEntry::Item(
+                        MenuItem::checkbox(checked, "Show toolbar")
+                            .supporting_text("Always visible")
+                            .shortcut("Ctrl+B")
+                            .test_id("m3-rich-toolbar"),
+                    ),
+                    MenuEntry::Item(
+                        MenuItem::radio(selected.clone(), "comfortable", "Comfortable")
+                            .trailing_icon(ids::ui::CHEVRON_RIGHT)
+                            .test_id("m3-rich-comfortable"),
+                    ),
+                    MenuEntry::Item(
+                        MenuItem::radio(selected, "compact", "Compact").test_id("m3-rich-compact"),
+                    ),
+                ])
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), menu)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let toolbar = live_test_id_layout_bounds(&ui, &app, window, "m3-rich-toolbar.chrome");
+    assert_px_close(toolbar.size.height.0, 64.0, "two-line menu item height");
+    assert!(
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-toolbar.label")
+            .size
+            .width
+            .0
+            > 0.0
+    );
+    assert!(
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-toolbar.supporting-text")
+            .size
+            .width
+            .0
+            > 0.0
+    );
+    assert_px_close(
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-toolbar.leading-icon")
+            .size
+            .width
+            .0,
+        24.0,
+        "checkbox leading indicator slot width",
+    );
+    assert!(
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-toolbar.shortcut")
+            .size
+            .width
+            .0
+            > 0.0
+    );
+    assert_px_close(
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-comfortable.trailing-icon")
+            .size
+            .width
+            .0,
+        24.0,
+        "trailing icon slot width",
+    );
+    assert_px_close(
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-compact.leading-icon")
+            .size
+            .width
+            .0,
+        24.0,
+        "unchecked radio still reserves leading indicator slot",
+    );
+
+    let toolbar_sem = semantics_node_by_test_id(&ui, "m3-rich-toolbar");
+    assert_eq!(toolbar_sem.role, SemanticsRole::MenuItemCheckbox);
+    assert_eq!(toolbar_sem.flags.checked, Some(true));
+    assert_eq!(
+        toolbar_sem.flags.checked_state,
+        Some(SemanticsCheckedState::True)
+    );
+
+    let comfortable_sem = semantics_node_by_test_id(&ui, "m3-rich-comfortable");
+    assert_eq!(comfortable_sem.role, SemanticsRole::MenuItemRadio);
+    assert_eq!(comfortable_sem.flags.checked, Some(true));
+    assert_eq!(
+        comfortable_sem.flags.checked_state,
+        Some(SemanticsCheckedState::True)
+    );
+
+    let compact_sem = semantics_node_by_test_id(&ui, "m3-rich-compact");
+    assert_eq!(compact_sem.role, SemanticsRole::MenuItemRadio);
+    assert_eq!(compact_sem.flags.checked, Some(false));
+    assert_eq!(
+        compact_sem.flags.checked_state,
+        Some(SemanticsCheckedState::False)
+    );
+}
+
+#[test]
+fn menu_checkbox_and_radio_items_update_models_on_activation() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let checked = app.models_mut().insert(false);
+    let selected = app.models_mut().insert(Some(Arc::<str>::from("list")));
+    let checked_for_render = checked.clone();
+    let selected_for_render = selected.clone();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(260.0)),
+    );
+    let render = move |ui: &mut UiTree<TestHost>,
+                       app: &mut TestHost,
+                       services: &mut dyn UiServices| {
+        let checked = checked_for_render.clone();
+        let selected = selected_for_render.clone();
+        declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let menu = Menu::new()
+                .a11y_label("Mutable Material menu")
+                .test_id("m3-mutable-menu")
+                .entries(vec![
+                    MenuEntry::Item(
+                        MenuItem::checkbox(checked, "Show toolbar").test_id("m3-mutable-toolbar"),
+                    ),
+                    MenuEntry::Item(
+                        MenuItem::radio(selected, "grid", "Grid").test_id("m3-mutable-grid"),
+                    ),
+                ])
+                .into_element(cx);
+            vec![with_padding(cx, Px(24.0), menu)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let toolbar = semantics_node_id_by_test_id(&ui, "m3-mutable-toolbar")
+        .expect("expected toolbar menu item semantics node");
+    ui.set_focus(Some(toolbar));
+    dispatch_key_pair(&mut ui, &mut app, &mut services, KeyCode::Enter);
+    assert_eq!(app.models().get_copied(&checked), Some(true));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let grid = semantics_node_id_by_test_id(&ui, "m3-mutable-grid")
+        .expect("expected grid menu item semantics node");
+    ui.set_focus(Some(grid));
+    dispatch_key_pair(&mut ui, &mut app, &mut services, KeyCode::Enter);
+    assert_eq!(
+        app.models().get_cloned(&selected).flatten().as_deref(),
+        Some("grid")
+    );
 }
 
 #[test]

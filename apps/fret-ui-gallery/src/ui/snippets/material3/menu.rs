@@ -4,6 +4,7 @@ pub const SOURCE: &str = include_str!("menu.rs");
 use std::sync::Arc;
 
 use fret::{AppComponentCx, UiChild};
+use fret_icons::ids;
 use fret_ui::action::OnActivate;
 use fret_ui_kit::{ColorRef, WidgetStateProperty};
 use fret_ui_material3 as material3;
@@ -19,6 +20,10 @@ pub fn render(
         .test_id("ui-gallery-material3-menu");
     let open = dropdown.open_model();
     let override_open = cx.local_model_keyed("override_open", || false);
+    let show_toolbar = cx.local_model_keyed("show_toolbar", || true);
+    let density = cx.local_model_keyed("density", || {
+        Some(Arc::<str>::from("comfortable"))
+    });
 
     fn on_select(id: &'static str, last_action: Model<Arc<str>>) -> OnActivate {
         Arc::new(move |host, action_cx, _reason| {
@@ -49,6 +54,8 @@ pub fn render(
     };
 
     let last_action_for_entries = last_action.clone();
+    let show_toolbar_for_entries = show_toolbar.clone();
+    let density_for_entries = density.clone();
     let dropdown = dropdown.into_element(
         cx,
         move |cx| {
@@ -62,6 +69,8 @@ pub fn render(
             vec![
                 material3::MenuEntry::Item(
                     material3::MenuItem::new("Cut")
+                        .leading_icon(ids::ui::SLASH)
+                        .shortcut("Ctrl+X")
                         .test_id("ui-gallery-material3-menu-item-cut")
                         .on_select(on_select(
                             "material3.menu.cut",
@@ -70,6 +79,8 @@ pub fn render(
                 ),
                 material3::MenuEntry::Item(
                     material3::MenuItem::new("Copy")
+                        .leading_icon(ids::ui::COPY)
+                        .shortcut("Ctrl+C")
                         .test_id("ui-gallery-material3-menu-item-copy")
                         .on_select(on_select(
                             "material3.menu.copy",
@@ -78,12 +89,46 @@ pub fn render(
                 ),
                 material3::MenuEntry::Item(
                     material3::MenuItem::new("Paste")
+                        .supporting_text("Clipboard is empty")
+                        .shortcut("Ctrl+V")
                         .test_id("ui-gallery-material3-menu-item-paste")
                         .disabled(true),
                 ),
                 material3::MenuEntry::Separator,
                 material3::MenuEntry::Item(
+                    material3::MenuItem::checkbox(show_toolbar_for_entries.clone(), "Show toolbar")
+                        .supporting_text("Keep editor tools visible")
+                        .shortcut("Ctrl+B")
+                        .test_id("ui-gallery-material3-menu-item-toolbar")
+                        .on_select(on_select(
+                            "material3.menu.toolbar",
+                            last_action_for_entries.clone(),
+                        )),
+                ),
+                material3::MenuEntry::Item(
+                    material3::MenuItem::radio(
+                        density_for_entries.clone(),
+                        "comfortable",
+                        "Comfortable density",
+                    )
+                    .test_id("ui-gallery-material3-menu-item-density-comfortable")
+                    .on_select(on_select(
+                        "material3.menu.density.comfortable",
+                        last_action_for_entries.clone(),
+                    )),
+                ),
+                material3::MenuEntry::Item(
+                    material3::MenuItem::radio(density_for_entries, "compact", "Compact density")
+                        .test_id("ui-gallery-material3-menu-item-density-compact")
+                        .on_select(on_select(
+                            "material3.menu.density.compact",
+                            last_action_for_entries.clone(),
+                        )),
+                ),
+                material3::MenuEntry::Separator,
+                material3::MenuEntry::Item(
                     material3::MenuItem::new("Settings")
+                        .trailing_icon(ids::ui::CHEVRON_RIGHT)
                         .test_id("ui-gallery-material3-menu-item-settings")
                         .on_select(on_select(
                             "material3.menu.settings",
@@ -100,6 +145,15 @@ pub fn render(
             theme.color_token("md.sys.color.secondary-container"),
         ))))
         .item_label_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            theme.color_token("md.sys.color.on-secondary-container"),
+        ))))
+        .item_icon_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            theme.color_token("md.sys.color.on-secondary-container"),
+        ))))
+        .item_supporting_text_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            theme.color_token("md.sys.color.on-secondary-container"),
+        ))))
+        .item_trailing_text_color(WidgetStateProperty::new(Some(ColorRef::Color(
             theme.color_token("md.sys.color.on-secondary-container"),
         ))))
         .item_state_layer_color(WidgetStateProperty::new(Some(ColorRef::Color(

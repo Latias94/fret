@@ -3550,6 +3550,7 @@ fn material3_time_picker_uses_material_string_registry() {
 
 #[test]
 fn material3_menu_and_dropdown_expose_stable_part_test_ids() {
+    use fret_icons::ids;
     use fret_ui_material3::menu::{Menu, MenuEntry, MenuItem};
     use fret_ui_material3::{Button, ButtonVariant, DropdownMenu};
 
@@ -3575,9 +3576,19 @@ fn material3_menu_and_dropdown_expose_stable_part_test_ids() {
                         .a11y_label("Material menu")
                         .test_id("m3-menu")
                         .entries(vec![
-                            MenuEntry::Item(MenuItem::new("Alpha").test_id("m3-menu-alpha")),
+                            MenuEntry::Item(
+                                MenuItem::new("Alpha")
+                                    .leading_icon(ids::ui::COPY)
+                                    .shortcut("Ctrl+A")
+                                    .test_id("m3-menu-alpha"),
+                            ),
                             MenuEntry::Separator,
-                            MenuEntry::Item(MenuItem::new("Beta").test_id("m3-menu-beta")),
+                            MenuEntry::Item(
+                                MenuItem::new("Beta")
+                                    .supporting_text("Secondary line")
+                                    .trailing_icon(ids::ui::CHEVRON_RIGHT)
+                                    .test_id("m3-menu-beta"),
+                            ),
                         ])
                         .into_element(cx);
                     vec![with_padding(cx, Px(32.0), menu)]
@@ -3594,6 +3605,11 @@ fn material3_menu_and_dropdown_expose_stable_part_test_ids() {
             "m3-menu.chrome",
             "m3-menu-alpha",
             "m3-menu-alpha.chrome",
+            "m3-menu-alpha.label",
+            "m3-menu-alpha.leading-icon",
+            "m3-menu-alpha.shortcut",
+            "m3-menu-beta.supporting-text",
+            "m3-menu-beta.trailing-icon",
         ] {
             assert!(
                 live_test_id_exists(&ui, &app, window, id),
@@ -3666,6 +3682,7 @@ fn material3_menu_and_dropdown_expose_stable_part_test_ids() {
             "m3-dropdown.chrome",
             "m3-dropdown-alpha",
             "m3-dropdown-alpha.chrome",
+            "m3-dropdown-alpha.label",
         ] {
             assert!(
                 live_test_id_exists(&ui, &app, window, id),
