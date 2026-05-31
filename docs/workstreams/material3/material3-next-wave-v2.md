@@ -531,6 +531,8 @@ before continuing component surface work:
     - `ecosystem/fret-ui-material3/src/tokens/v30.rs` (v30 token injection wiring)
     - `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs` (token import allowlist includes `md.comp.sheet.bottom.*`)
     - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_bottom_sheet_suite_goldens_v1`)
+    - `ecosystem/fret-ui-material3/tests/bottom_sheet_motion.rs`
+      (`modal_bottom_sheet_slides_from_own_height_without_panel_fade`)
     - `goldens/material3-headless/v1/material3-bottom-sheet.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
     - `apps/fret-ui-gallery/src/spec.rs` + `apps/fret-ui-gallery/src/ui.rs` + `apps/fret-ui-gallery/src/docs.rs`
   - References:

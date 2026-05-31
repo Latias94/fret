@@ -32,7 +32,7 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 | Menu / DropdownMenu | Strong | Strong | Strong | Strong | Strong | Strong | Strong | 2026-05-31: gained labels, rich slots, checkbox/radio items, two-line rows, and close-on-select coverage. Residuals: grouped API, submenus, long-menu scroll affordances. |
 | Select / ExposedDropdown / Autocomplete | Strong | Strong | Strong | Strong | Strong | Partial | Strong | Field-family overlay behavior is mature; keep improving active-descendant/AT and motion evidence. |
 | TextField | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Floating-label and token work are mature; keep extending field-family compositions. |
-| Dialog / BottomSheet | Strong | Strong | Strong | Strong | Strong | Partial | Strong | Overlay policy is in ecosystem layers; motion/presence parity remains the main polish area. |
+| Dialog / BottomSheet | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Dialog gates cover open/close fade + rise/scale; BottomSheet gates cover open/close sheet-height slide without panel fade. |
 | Tooltip | Partial | Strong | Strong | Partial | Strong | Partial | Strong | `TooltipStyle` now covers plain/rich visual slots; rich tooltip actions are still constrained by non-hit-testable tooltip overlay policy. |
 | Snackbar | Strong | Strong | Strong | Strong | Strong | Strong | Strong | 2026-06-01: gained public `SnackbarStyle`, host `.style(...)`, direct Material style adoption in the shared toast renderer, and style override paint/layout gates. Residuals: richer app-level queue policy examples. |
 | NavigationBar / Rail / Drawer | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Continue polishing adaptive examples and route/content integration. |
@@ -76,6 +76,12 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
   - TimePicker modal motion is covered for dial and input modes; docked clock-face transitions are
     covered by crossfade and selector-translation tests.
   - Gates: `date_picker_motion`, `time_picker_motion`.
+- 2026-06-01 Dialog/BottomSheet motion hardening:
+  - Dialog motion evidence was already present in `dialog_state` for open/close fade + rise/scale.
+  - BottomSheet motion now asserts both open and close sheet-height slide and guards against
+    accidental panel fade; scrim alpha remains token-driven paint, not panel opacity.
+  - Gates: `dialog_state::dialog_scrim_and_panel_animate_on_open_close_frames`,
+    `bottom_sheet_motion::modal_bottom_sheet_slides_from_own_height_without_panel_fade`.
 
 ## Next Recommended Focus
 
@@ -84,5 +90,5 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 2. Revisit Tooltip policy:
    decide whether rich tooltip actions require a popover-like hit-testable surface, a new
    hit-testable rich-tooltip overlay kind, or should remain non-interactive per tooltip semantics.
-3. Start the next component-family audit on Dialog/BottomSheet motion/presence or Select overlay
-   motion, focusing on the remaining `Partial` motion rows.
+3. Start the next component-family audit on Select overlay motion or Tooltip rich-action policy,
+   focusing on the remaining `Partial` rows.
