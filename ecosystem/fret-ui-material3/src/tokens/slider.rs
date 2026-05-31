@@ -3,13 +3,14 @@
 //! This module centralizes token key mapping and fallback chains so slider visuals remain stable
 //! and drift-resistant during refactors.
 
-use fret_core::{Color, Corners, FontWeight, Px, TextStyle};
+use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
-use fret_ui_kit::typography::{self, TextIntent};
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::{
     MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
 };
+use crate::tokens::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SliderInteraction {
@@ -104,17 +105,13 @@ pub(crate) fn value_indicator_label_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn value_indicator_label_style(theme: &Theme) -> TextStyle {
-    let mut style = theme
-        .text_style_by_key("md.sys.typescale.label-large")
-        .unwrap_or_default();
-
-    if let Some(weight) =
-        theme.number_by_key("md.comp.slider.value-indicator.label.label-text.weight")
-    {
-        style.weight = FontWeight(weight.round().clamp(1.0, 1000.0) as u16);
-    }
-
-    typography::with_intent(style, TextIntent::Control)
+    typography::text_style_with_weight(
+        theme,
+        None,
+        "md.sys.typescale.label-large",
+        Some("md.comp.slider.value-indicator.label.label-text.weight"),
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn tick_mark_size(theme: &Theme) -> Px {

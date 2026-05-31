@@ -129,10 +129,12 @@ pub(crate) fn time_input_field_state_layer_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn time_input_field_state_layer_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key(&token_key("time-input-field.hover.state-layer.opacity"))
-        .or_else(|| theme.number_by_key("md.sys.state.hover.state-layer-opacity"))
-        .unwrap_or(0.0)
+    MaterialTokenResolver::new(theme)
+        .number_comp_or_sys(
+            &token_key("time-input-field.hover.state-layer.opacity"),
+            "md.sys.state.hover.state-layer-opacity",
+            0.0,
+        )
         .clamp(0.0, 1.0)
 }
 
@@ -309,9 +311,7 @@ pub(crate) fn period_selector_state_layer_opacity(
             "md.sys.state.pressed.state-layer-opacity",
         ),
     };
-    theme
-        .number_by_key(&token_key(suffix))
-        .or_else(|| theme.number_by_key(fallback))
-        .unwrap_or(0.0)
+    MaterialTokenResolver::new(theme)
+        .number_comp_or_sys(&token_key(suffix), fallback, 0.0)
         .clamp(0.0, 1.0)
 }

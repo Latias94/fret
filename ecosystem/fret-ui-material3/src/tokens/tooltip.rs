@@ -152,7 +152,5 @@ pub(crate) fn shadow_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn close_duration_ms(theme: &Theme) -> u32 {
-    theme
-        .duration_ms_by_key("md.sys.motion.duration.short1")
-        .unwrap_or(50)
+    MaterialTokenResolver::new(theme).duration_ms_sys("md.sys.motion.duration.short1", 50)
 }

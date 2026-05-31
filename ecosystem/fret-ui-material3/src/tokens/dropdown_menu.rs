@@ -6,10 +6,10 @@
 use fret_core::{Edges, Px};
 use fret_ui::Theme;
 
+use crate::foundation::token_resolver::MaterialTokenResolver;
+
 pub(crate) fn close_duration_ms(theme: &Theme) -> u32 {
-    theme
-        .duration_ms_by_key("md.sys.motion.duration.short2")
-        .unwrap_or(100)
+    MaterialTokenResolver::new(theme).duration_ms_sys("md.sys.motion.duration.short2", 100)
 }
 
 pub(crate) fn divider_margin_total(theme: &Theme) -> Px {

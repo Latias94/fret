@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 525
+- Dedicated directories: 526
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2256,8 +2256,9 @@ Rule:
 - `docs/workstreams/material3-layout-direction-provider-bridge-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for bridging resolved Material3 layout direction into the core `LayoutDirection` provider and proving Tabs RTL physical order; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-field-logical-insets-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for Material3 TextField/Select floating label and supporting text logical inline insets with RTL geometry proof; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-foundation-deepening-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor lane for deepening Material3 context, field-family chrome, and token matrix interfaces; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-non-color-token-governance-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor follow-on for Material3 typography weight, opacity, motion easing, and time picker/input non-color token ownership; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-token-resolver-fallback-v1/` — first n/a, latest n/a, 5 markdown docs (active fearless-refactor lane for deepening Material3 token resolver fallback, alpha, and blend policy; includes `WORKSTREAM.json`)
-- `docs/workstreams/material3-token-resolver-non-field-fallback-v1/` — first n/a, latest n/a, 5 markdown docs (active fearless-refactor follow-on for non-field Material3 token fallback chains, starting with Button; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-token-resolver-non-field-fallback-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor follow-on for non-field Material3 token fallback chains; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-logical-edge-layout-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for Material3 logical inline edge helpers plus FilterChip/InputChip RTL padding and trailing-action inset proof; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-select-popup-rtl-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for Material3 Select popup logical start alignment and listbox option RTL visual-slot proof; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-canvas-draw-region-diagnostics-v1/` — first 2026-05-28, latest 2026-05-28, 7 markdown docs (closed follow-on for Material3 ProgressIndicator/Slider canvas draw-region diagnostics, recipe-level rectangular anchors, and named SceneOp mechanism split; includes `WORKSTREAM.json`)

@@ -81,21 +81,18 @@ pub(crate) fn supporting_text_style(theme: &Theme) -> TextStyle {
 }
 
 pub(crate) fn open_duration_ms(theme: &Theme) -> u32 {
-    theme
-        .duration_ms_by_key("md.sys.motion.duration.short4")
-        .unwrap_or(200)
+    MaterialTokenResolver::new(theme).duration_ms_sys("md.sys.motion.duration.short4", 200)
 }
 
 pub(crate) fn close_duration_ms(theme: &Theme) -> u32 {
-    theme
-        .duration_ms_by_key("md.sys.motion.duration.short2")
-        .unwrap_or(100)
+    MaterialTokenResolver::new(theme).duration_ms_sys("md.sys.motion.duration.short2", 100)
 }
 
 pub(crate) fn easing(theme: &Theme) -> Option<CubicBezier> {
-    theme
-        .easing_by_key("md.sys.motion.easing.emphasized")
-        .or_else(|| theme.easing_by_key("md.sys.motion.easing.standard"))
+    MaterialTokenResolver::new(theme).easing_chain(&[
+        "md.sys.motion.easing.emphasized",
+        "md.sys.motion.easing.standard",
+    ])
 }
 
 pub(crate) fn single_line_min_height(theme: &Theme) -> Option<Px> {

@@ -293,10 +293,8 @@ pub(crate) fn time_selector_state_layer_opacity(
             "md.sys.state.pressed.state-layer-opacity",
         ),
     };
-    theme
-        .number_by_key(&token_key(suffix))
-        .or_else(|| theme.number_by_key(fallback))
-        .unwrap_or(0.0)
+    MaterialTokenResolver::new(theme)
+        .number_comp_or_sys(&token_key(suffix), fallback, 0.0)
         .clamp(0.0, 1.0)
 }
 
@@ -434,9 +432,7 @@ pub(crate) fn period_selector_state_layer_opacity(
             "md.sys.state.pressed.state-layer-opacity",
         ),
     };
-    theme
-        .number_by_key(&token_key(suffix))
-        .or_else(|| theme.number_by_key(fallback))
-        .unwrap_or(0.0)
+    MaterialTokenResolver::new(theme)
+        .number_comp_or_sys(&token_key(suffix), fallback, 0.0)
         .clamp(0.0, 1.0)
 }

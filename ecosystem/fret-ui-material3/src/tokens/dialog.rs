@@ -4,8 +4,7 @@
 //! and drift-resistant during refactors.
 
 use fret_core::{Color, Corners, Edges, Px, TextStyle};
-use fret_ui::Theme;
-use fret_ui::theme::CubicBezier;
+use fret_ui::{Theme, theme::CubicBezier};
 use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::{MaterialStateLayerInteraction, MaterialTokenResolver};
@@ -90,25 +89,16 @@ pub(crate) fn supporting_text_style(theme: &Theme) -> TextStyle {
 }
 
 pub(crate) fn default_open_duration_ms(theme: &Theme) -> u32 {
-    theme
-        .duration_ms_by_key("md.sys.motion.duration.medium2")
-        .unwrap_or(300)
+    MaterialTokenResolver::new(theme).duration_ms_sys("md.sys.motion.duration.medium2", 300)
 }
 
 pub(crate) fn default_close_duration_ms(theme: &Theme) -> u32 {
-    theme
-        .duration_ms_by_key("md.sys.motion.duration.medium2")
-        .unwrap_or(300)
+    MaterialTokenResolver::new(theme).duration_ms_sys("md.sys.motion.duration.medium2", 300)
 }
 
 pub(crate) fn easing(theme: &Theme, easing_key: Option<&str>) -> CubicBezier {
     let key = easing_key.unwrap_or("md.sys.motion.easing.emphasized");
-    theme.easing_by_key(key).unwrap_or(CubicBezier {
-        x1: 0.0,
-        y1: 0.0,
-        x2: 1.0,
-        y2: 1.0,
-    })
+    MaterialTokenResolver::new(theme).easing_optional_or_linear(Some(key))
 }
 
 pub(crate) fn panel_padding(theme: &Theme) -> Edges {

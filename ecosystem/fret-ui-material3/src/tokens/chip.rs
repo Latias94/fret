@@ -4,12 +4,13 @@
 //! the chip recipe (`leading-space`, `trailing-space`, etc.). We keep those as component-level
 //! layout constants in `chip.rs` instead of inventing new `md.*` keys.
 
-use fret_core::{Color, Corners, FontWeight, Px, TextStyle};
+use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
-use fret_ui_kit::typography::{self, TextIntent};
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::interaction::PressableInteraction;
 use crate::foundation::token_resolver::{MaterialTokenResolver, alpha_mul};
+use crate::tokens::typography;
 
 pub(crate) const COMPONENT_PREFIX: &str = "md.comp.assist-chip";
 
@@ -79,13 +80,13 @@ pub(crate) fn label_color(
 }
 
 pub(crate) fn label_text_style(theme: &Theme) -> TextStyle {
-    let mut style = theme
-        .text_style_by_key("md.sys.typescale.label-large")
-        .unwrap_or_default();
-    if let Some(weight) = theme.number_by_key("md.comp.assist-chip.label-text.weight") {
-        style.weight = FontWeight(weight.round().clamp(1.0, 1000.0) as u16);
-    }
-    typography::with_intent(style, TextIntent::Control)
+    typography::text_style_with_weight(
+        theme,
+        None,
+        "md.sys.typescale.label-large",
+        Some("md.comp.assist-chip.label-text.weight"),
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn leading_icon_size(theme: &Theme) -> Px {

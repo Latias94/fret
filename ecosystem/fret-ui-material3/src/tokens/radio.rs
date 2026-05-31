@@ -91,9 +91,9 @@ pub(crate) fn icon_color(
             )
         };
 
-        let base = MaterialTokenResolver::new(theme)
-            .color_comp_or_sys(color_key, "md.sys.color.on-surface");
-        let opacity = theme.number_by_key(opacity_key).unwrap_or(0.38);
+        let tokens = MaterialTokenResolver::new(theme);
+        let base = tokens.color_comp_or_sys(color_key, "md.sys.color.on-surface");
+        let opacity = tokens.number_optional(Some(opacity_key), 0.38);
         return alpha_mul(base, opacity);
     }
 

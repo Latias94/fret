@@ -168,10 +168,11 @@ pub(crate) fn date_selected_label_text_color(
 }
 
 pub(crate) fn date_outside_month_opacity(theme: &Theme, variant: DatePickerTokenVariant) -> f32 {
-    theme
-        .number_by_key(&token_key(
+    MaterialTokenResolver::new(theme).number_optional(
+        Some(&token_key(
             variant,
             "date.unselected.outside-month.label-text.opacity",
-        ))
-        .unwrap_or(0.38)
+        )),
+        0.38,
+    )
 }

@@ -37,6 +37,7 @@ use crate::foundation::strings::{
 };
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{absolute_region_layout, diagnostic_anchor, part_test_id};
+use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion;
 use crate::tokens::date_picker as date_tokens;
 use crate::tokens::date_picker::DatePickerTokenVariant;
@@ -449,27 +450,14 @@ impl DatePickerDialog {
 
             let (theme_motion_ms, bezier) = {
                 let theme = Theme::global(&*cx.app);
-                let motion_ms = theme.duration_ms_by_key("md.sys.motion.duration.medium2");
-                let bezier =
-                    theme
-                        .easing_by_key(easing_key.as_ref())
-                        .unwrap_or(fret_ui::theme::CubicBezier {
-                            x1: 0.0,
-                            y1: 0.0,
-                            x2: 1.0,
-                            y2: 1.0,
-                        });
+                let tokens = MaterialTokenResolver::new(theme);
+                let motion_ms = tokens.duration_ms_sys("md.sys.motion.duration.medium2", 300);
+                let bezier = tokens.easing_optional_or_linear(Some(easing_key.as_ref()));
                 (motion_ms, bezier)
             };
 
-            let open_ms = self
-                .open_duration_ms
-                .or(theme_motion_ms)
-                .unwrap_or(300);
-            let close_ms = self
-                .close_duration_ms
-                .or(theme_motion_ms)
-                .unwrap_or(300);
+            let open_ms = self.open_duration_ms.unwrap_or(theme_motion_ms);
+            let close_ms = self.close_duration_ms.unwrap_or(theme_motion_ms);
             let open_ticks = motion::ms_to_frames(open_ms);
             let close_ticks = motion::ms_to_frames(close_ms);
 

@@ -54,6 +54,7 @@ use crate::foundation::strings::{
 };
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::part_test_id;
+use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::icon_button::{IconButton, IconButtonVariant};
 use crate::motion::{self, SpringAnimator, SpringSpec};
 use crate::tokens::time_input as time_input_tokens;
@@ -471,27 +472,18 @@ impl TimePickerDialog {
 
             let (open_ms, close_ms, bezier, scrim_base) = {
                 let theme = Theme::global(&*cx.app);
+                let tokens = MaterialTokenResolver::new(theme);
 
                 let open_ms = self
                     .open_duration_ms
-                    .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                    .unwrap_or(300);
+                    .unwrap_or_else(|| tokens.duration_ms_sys("md.sys.motion.duration.medium2", 300));
                 let close_ms = self
                     .close_duration_ms
-                    .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                    .unwrap_or(300);
+                    .unwrap_or_else(|| tokens.duration_ms_sys("md.sys.motion.duration.medium2", 300));
 
-                let bezier =
-                    theme
-                        .easing_by_key(easing_key.as_ref())
-                        .unwrap_or(fret_ui::theme::CubicBezier {
-                            x1: 0.0,
-                            y1: 0.0,
-                            x2: 1.0,
-                            y2: 1.0,
-                        });
+                let bezier = tokens.easing_optional_or_linear(Some(easing_key.as_ref()));
 
-                let scrim_base = theme.color_token("md.sys.color.scrim");
+                let scrim_base = tokens.color_sys("md.sys.color.scrim");
 
                 (open_ms, close_ms, bezier, scrim_base)
             };
@@ -516,9 +508,11 @@ impl TimePickerDialog {
                 let open_model_for_request = self.open.clone();
                 let open_model_for_overlay = self.open.clone();
 
-                let scrim_opacity = Theme::global(&*cx.app)
-                    .number_by_key("md.sys.fret.material.time-picker.scrim.opacity")
-                    .unwrap_or(self.scrim_opacity)
+                let scrim_opacity = MaterialTokenResolver::new(Theme::global(&*cx.app))
+                    .number_optional(
+                        Some("md.sys.fret.material.time-picker.scrim.opacity"),
+                        self.scrim_opacity,
+                    )
                     .clamp(0.0, 1.0);
                 let scrim_alpha = (scrim_base.a * scrim_opacity * transition.progress)
                     .clamp(0.0, 1.0);

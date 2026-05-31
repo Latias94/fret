@@ -8,6 +8,7 @@ use fret_ui::elements::ElementContext;
 use fret_ui::theme::CubicBezier;
 
 use crate::foundation::context::{MaterialRippleConfiguration, inherited_ripple_configuration};
+use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::interaction::ripple::{RippleAnimator, RippleOrigin, RipplePaintFrame};
 use crate::interaction::state_layer::StateLayerAnimator;
 
@@ -61,17 +62,15 @@ pub fn material_pressable_indication_config(
     ripple_radius: Option<Px>,
 ) -> IndicationConfig {
     let defaults = IndicationConfig::default();
-    let state_duration_ms = theme
-        .duration_ms_by_key("md.sys.motion.duration.short2")
-        .unwrap_or(defaults.state_duration_ms);
-    let ripple_expand_ms = theme
-        .duration_ms_by_key("md.sys.motion.duration.short4")
-        .unwrap_or(defaults.ripple_expand_ms);
-    let ripple_fade_ms = theme
-        .duration_ms_by_key("md.sys.motion.duration.short2")
-        .unwrap_or(defaults.ripple_fade_ms);
-    let easing = theme
-        .easing_by_key("md.sys.motion.easing.standard")
+    let tokens = MaterialTokenResolver::new(theme);
+    let state_duration_ms =
+        tokens.duration_ms_sys("md.sys.motion.duration.short2", defaults.state_duration_ms);
+    let ripple_expand_ms =
+        tokens.duration_ms_sys("md.sys.motion.duration.short4", defaults.ripple_expand_ms);
+    let ripple_fade_ms =
+        tokens.duration_ms_sys("md.sys.motion.duration.short2", defaults.ripple_fade_ms);
+    let easing = tokens
+        .easing_optional(Some("md.sys.motion.easing.standard"))
         .unwrap_or(defaults.easing);
 
     IndicationConfig {

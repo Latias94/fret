@@ -1,5 +1,5 @@
 use fret_core::Color;
-use fret_ui::Theme;
+use fret_ui::{Theme, theme::CubicBezier};
 
 pub(crate) fn alpha_mul(mut color: Color, multiplier: f32) -> Color {
     color.a = (color.a * multiplier).clamp(0.0, 1.0);
@@ -264,6 +264,35 @@ impl<'a> MaterialTokenResolver<'a> {
     pub fn disabled_state_layer_opacity(&self) -> f32 {
         self.number_sys("md.sys.state.disabled.state-layer-opacity", 0.38)
     }
+
+    pub fn duration_ms_sys(&self, sys_key: &str, fallback: u32) -> u32 {
+        debug_assert!(
+            sys_key.starts_with("md.sys."),
+            "expected md.sys.* duration key, got: {sys_key}"
+        );
+        self.theme.duration_ms_by_key(sys_key).unwrap_or(fallback)
+    }
+
+    pub fn easing_optional(&self, key: Option<&str>) -> Option<CubicBezier> {
+        debug_assert!(
+            key.is_none_or(|key| key.starts_with("md.")),
+            "expected md.* easing token key, got: {key:?}"
+        );
+        key.and_then(|key| self.theme.easing_by_key(key))
+    }
+
+    pub fn easing_chain(&self, keys: &[&str]) -> Option<CubicBezier> {
+        debug_assert!(!keys.is_empty(), "expected at least one md.* key");
+        debug_assert!(
+            keys.iter().all(|key| key.starts_with("md.")),
+            "expected md.* easing token keys, got: {keys:?}"
+        );
+        keys.iter().find_map(|key| self.theme.easing_by_key(key))
+    }
+
+    pub fn easing_optional_or_linear(&self, key: Option<&str>) -> CubicBezier {
+        self.easing_optional(key).unwrap_or_else(linear_easing)
+    }
 }
 
 fn debug_assert_comp_keys(comp_keys: &[&str]) {
@@ -302,6 +331,15 @@ fn fallback_color_for_sys(sys_key: &str) -> Color {
         "md.sys.color.scrim" => Color::from_srgb_hex_rgb(0x00_00_00),
         "md.sys.color.shadow" => Color::from_srgb_hex_rgb(0x00_00_00),
         _ => Color::from_srgb_hex_rgb(0xff_00_ff),
+    }
+}
+
+fn linear_easing() -> CubicBezier {
+    CubicBezier {
+        x1: 0.0,
+        y1: 0.0,
+        x2: 1.0,
+        y2: 1.0,
     }
 }
 
