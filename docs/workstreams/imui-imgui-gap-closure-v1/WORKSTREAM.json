@@ -797,6 +797,7 @@
     "ecosystem/fret-ui-kit/src/imui/list_box_controls/semantics.rs",
     "ecosystem/fret-ui-kit/src/imui/multi_select.rs",
     "ecosystem/fret-ui-kit/src/imui/multi_select/interaction.rs",
+    "ecosystem/fret-ui-kit/src/imui/multi_select/model.rs",
     "ecosystem/fret-ui-kit/src/imui/multi_select/state.rs",
     "ecosystem/fret-ui-kit/src/imui/multi_select/state/selection.rs",
     "ecosystem/fret-ui-kit/src/imui/multi_select/tests.rs",

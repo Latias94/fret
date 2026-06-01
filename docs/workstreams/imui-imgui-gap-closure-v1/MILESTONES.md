@@ -5179,3 +5179,9 @@ facade-facing helper pair only.
 bridge for `ImUiTableColumnVisibilityState`. `table_column_visibility.rs` keeps the public
 `table_column_visibility_use_model(...)` signature as a forwarding helper, plus option/response/
 state re-exports and menu delegation.
+
+2026-06-01 multi-select model owner split result:
+`ecosystem/fret-ui-kit/src/imui/multi_select/model.rs` now owns the controllable-model bridge for
+`ImUiMultiSelectState<K>`. `multi_select.rs` keeps the public `multi_select_use_model(...)`
+signature as a forwarding helper, plus state re-export, click-policy delegation, and selectable
+entry wiring.

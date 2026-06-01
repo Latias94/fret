@@ -1,6 +1,7 @@
 //! Immediate multi-select collection helpers.
 
 mod interaction;
+mod model;
 mod state;
 
 use std::sync::Arc;
@@ -19,7 +20,7 @@ pub fn multi_select_use_model<H: UiHost, K: Clone + 'static>(
     controlled: Option<Model<ImUiMultiSelectState<K>>>,
     default_value: impl FnOnce() -> ImUiMultiSelectState<K>,
 ) -> crate::primitives::controllable_state::ControllableModel<ImUiMultiSelectState<K>> {
-    crate::primitives::controllable_state::use_controllable_model(cx, controlled, default_value)
+    model::multi_select_use_model(cx, controlled, default_value)
 }
 
 pub(super) fn multi_selectable_with_options<

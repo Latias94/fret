@@ -5885,3 +5885,11 @@ opening the slice.
       `use_controllable_model(...)` bridge for `ImUiTableColumnVisibilityState`.
       `table_column_visibility.rs` keeps the public forwarding helper plus option/response/state
       re-exports and menu delegation.
+- [x] Split IMUI multi-select controllable-model hook out of
+      `ecosystem/fret-ui-kit/src/imui/multi_select.rs` into a private model owner without changing
+      the public helper signature, selected-state storage, click-modifier policy, or selectable
+      response wiring.
+      Result: `ecosystem/fret-ui-kit/src/imui/multi_select/model.rs` owns the
+      `use_controllable_model(...)` bridge for `ImUiMultiSelectState<K>`.
+      `multi_select.rs` keeps the public forwarding helper, state re-export, click-policy
+      delegation, and selectable entry wiring.

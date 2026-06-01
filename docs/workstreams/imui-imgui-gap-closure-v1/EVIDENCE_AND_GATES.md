@@ -25428,3 +25428,25 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI multi-select model owner split:
+
+- Claim: multi-select controllable-model hook moved from
+  `ecosystem/fret-ui-kit/src/imui/multi_select.rs` into
+  `ecosystem/fret-ui-kit/src/imui/multi_select/model.rs` without changing the public helper
+  signature, selected-state storage, click-modifier policy, or selectable response wiring.
+- Evidence anchors: `multi_select.rs` declares `mod model;`, keeps `multi_select_use_model(...)`
+  as the public forwarding helper, re-exports `ImUiMultiSelectState`, and continues to delegate
+  click policy to `interaction::apply_click`; `model.rs` owns the private
+  `use_controllable_model(...)` bridge for `ImUiMultiSelectState<K>`; the source gate rejects the
+  controllable-model body drifting back into the root multi-select hub.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit --features imui`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke selectable_option_defaults_compile --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-imui multi_selectable_supports_plain_toggle_and_range_clicks --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
