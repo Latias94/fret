@@ -8,9 +8,10 @@ This refresh keeps the Dear ImGui-style Demo/Metrics/Debug route productized in 
 reducing the remaining `native.rs` GUI shell file:
 
 - `apps/fret-devtools/src/demo_metrics_debug.rs` now owns action metadata, action command text,
-  selected-bundle readiness projection, and the full route/metrics/debug guide line projection.
-- `apps/fret-devtools/src/native.rs` keeps the GUI panel assembly, selected-bundle state read, and
-  copy-action button dispatch.
+  selected-bundle readiness projection, full route/metrics/debug guide line projection, GUI panel
+  assembly, and the copy-action button row.
+- `apps/fret-devtools/src/native.rs` keeps the surrounding Guide tab composition and command
+  dispatch for copying the generated action bundle.
 - `tools/gate_imui_workstream_source.py` now rejects the Demo/Metrics/Debug guide projection from
   drifting back into `native.rs`.
 

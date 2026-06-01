@@ -9,6 +9,12 @@ use super::{
     DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND, DEVTOOLS_METRICS_MEMORY_COMMAND,
     DEVTOOLS_METRICS_STATS_COMMAND, IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND,
 };
+use super::{CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS, State, diag_section};
+use fret_app::App;
+use fret_ui::element::AnyElement;
+use fret_ui::ElementContext;
+use fret_ui_kit::ui;
+use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct DemoMetricsDebugActionSpec {
@@ -160,4 +166,45 @@ pub(crate) fn devtools_demo_metrics_debug_lines_with_state(
         format!("docking policy-skip local: {DEVTOOLS_DOCKING_POLICY_SKIP_COMMAND}"),
     ]);
     lines
+}
+
+pub(crate) fn devtools_demo_metrics_debug_panel(
+    cx: &mut ElementContext<'_, App>,
+    st: &State,
+) -> AnyElement {
+    let mut demo_metrics_debug_rows = Vec::new();
+    let demo_metrics_debug_selected_bundle_count = cx
+        .app
+        .models()
+        .read(&st.regression_selected_bundle_dirs, |v| v.len())
+        .unwrap_or(0);
+    for line in devtools_demo_metrics_debug_lines_with_state(
+        st.cfg.fs_out_dir.as_ref(),
+        demo_metrics_debug_selected_bundle_count,
+    ) {
+        demo_metrics_debug_rows.push(cx.text(line));
+    }
+    demo_metrics_debug_rows.push(devtools_demo_metrics_debug_action_row(cx));
+    diag_section(
+        cx,
+        "Demo / Metrics / Debug Routes",
+        "Always-available editor demos, action commands, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
+        demo_metrics_debug_rows,
+    )
+}
+
+fn devtools_demo_metrics_debug_action_row(cx: &mut ElementContext<'_, App>) -> AnyElement {
+    ui::h_row(|cx| {
+        [
+            shadcn::Button::new("Copy Demo/Metrics/Debug actions")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .on_click(CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS)
+                .into_element(cx),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx)
 }

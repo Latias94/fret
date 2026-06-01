@@ -54,12 +54,12 @@ mod workflow_run;
 mod ws;
 
 use demo_metrics_debug::{
-    demo_metrics_debug_action_command_text, devtools_demo_metrics_debug_lines_with_state,
+    demo_metrics_debug_action_command_text, devtools_demo_metrics_debug_panel,
 };
 #[cfg(test)]
 use demo_metrics_debug::{
     demo_metrics_debug_action_metadata_lines, demo_metrics_debug_action_readiness_lines,
-    devtools_demo_metrics_debug_lines,
+    devtools_demo_metrics_debug_lines, devtools_demo_metrics_debug_lines_with_state,
 };
 
 const CMD_COPY_WS_URL: &str = "fret.devtools.copy_ws_url";
@@ -1737,22 +1737,6 @@ fn first_open_recent_evidence_action_row(
         .into_element(cx)
 }
 
-fn devtools_demo_metrics_debug_action_row(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    ui::h_row(|cx| {
-        [
-            shadcn::Button::new("Copy Demo/Metrics/Debug actions")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .on_click(CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS)
-                .into_element(cx),
-        ]
-    })
-    .gap(fret_ui_kit::Space::N2)
-    .items_center()
-    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-    .into_element(cx)
-}
-
 fn resizable_body(
     cx: &mut ElementContext<'_, App>,
     theme: fret_ui::ThemeSnapshot,
@@ -3295,25 +3279,7 @@ fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElem
         "UI gallery selector capture, script patching, run/pack, and offline viewer handoff stay visible from the GUI shell.",
         dogfood_workflow_rows,
     );
-    let mut demo_metrics_debug_rows = Vec::new();
-    let demo_metrics_debug_selected_bundle_count = cx
-        .app
-        .models()
-        .read(&st.regression_selected_bundle_dirs, |v| v.len())
-        .unwrap_or(0);
-    for line in devtools_demo_metrics_debug_lines_with_state(
-        st.cfg.fs_out_dir.as_ref(),
-        demo_metrics_debug_selected_bundle_count,
-    ) {
-        demo_metrics_debug_rows.push(cx.text(line));
-    }
-    demo_metrics_debug_rows.push(devtools_demo_metrics_debug_action_row(cx));
-    let demo_metrics_debug_panel = diag_section(
-        cx,
-        "Demo / Metrics / Debug Routes",
-        "Always-available editor demos, action commands, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
-        demo_metrics_debug_rows,
-    );
+    let demo_metrics_debug_panel = devtools_demo_metrics_debug_panel(cx, st);
     let mut workflow_run_rows = Vec::new();
     for line in devtools_workflow_run_lines(st.cfg.fs_out_dir.as_ref()) {
         workflow_run_rows.push(cx.text(line));
