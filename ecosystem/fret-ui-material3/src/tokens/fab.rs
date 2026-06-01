@@ -18,77 +18,100 @@ pub(crate) enum FabInteraction {
     Pressed,
 }
 
+fn fab_metric(theme: &Theme, key: impl AsRef<str>, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key.as_ref()), fallback)
+}
+
 pub(crate) fn container_size(theme: &Theme, size: FabSize) -> Px {
-    let key = format!("{}.container.height", size_prefix(size));
-    theme
-        .metric_by_key(&key)
-        .unwrap_or_else(|| fab_common::icon_container_size(size))
+    fab_metric(
+        theme,
+        format!("{}.container.height", size_prefix(size)),
+        fab_common::icon_container_size(size),
+    )
 }
 
 pub(crate) fn icon_size(theme: &Theme, size: FabSize) -> Px {
-    let key = format!("{}.icon.size", size_prefix(size));
-    theme
-        .metric_by_key(&key)
-        .unwrap_or_else(|| fab_common::icon_size(size))
+    fab_metric(
+        theme,
+        format!("{}.icon.size", size_prefix(size)),
+        fab_common::icon_size(size),
+    )
 }
 
 pub(crate) fn container_shape(theme: &Theme, size: FabSize) -> Corners {
     let key = format!("{}.container.shape", size_prefix(size));
-    let radius = theme
-        .metric_by_key(&key)
-        .or_else(|| theme.metric_by_key(fab_common::icon_container_shape_system_key(size)))
-        .unwrap_or_else(|| fab_common::icon_container_shape_radius(size));
+    let radius = MaterialTokenResolver::new(theme).metric_chain(
+        &[
+            key.as_str(),
+            fab_common::icon_container_shape_system_key(size),
+        ],
+        fab_common::icon_container_shape_radius(size),
+    );
 
     Corners::all(radius)
 }
 
 pub(crate) fn extended_container_height(theme: &Theme, size: FabSize) -> Px {
-    theme
-        .metric_by_key(&format!("{}.container.height", extended_size_prefix(size)))
-        .unwrap_or_else(|| fab_common::extended_container_height(size))
+    fab_metric(
+        theme,
+        format!("{}.container.height", extended_size_prefix(size)),
+        fab_common::extended_container_height(size),
+    )
 }
 
 pub(crate) fn extended_min_width(theme: &Theme, size: FabSize) -> Px {
-    theme
-        .metric_by_key(&format!("{}.container.width", extended_size_prefix(size)))
-        .unwrap_or_else(|| {
-            fab_common::extended_min_width(size, extended_container_height(theme, size))
-        })
+    fab_metric(
+        theme,
+        format!("{}.container.width", extended_size_prefix(size)),
+        fab_common::extended_min_width(size, extended_container_height(theme, size)),
+    )
 }
 
 pub(crate) fn extended_icon_size(theme: &Theme, size: FabSize) -> Px {
-    theme
-        .metric_by_key(&format!("{}.icon.size", extended_size_prefix(size)))
-        .unwrap_or_else(|| fab_common::extended_icon_size(size))
+    fab_metric(
+        theme,
+        format!("{}.icon.size", extended_size_prefix(size)),
+        fab_common::extended_icon_size(size),
+    )
 }
 
 pub(crate) fn extended_container_shape(theme: &Theme, size: FabSize) -> Corners {
-    let radius = theme
-        .metric_by_key(&format!("{}.container.shape", extended_size_prefix(size)))
-        .or_else(|| theme.metric_by_key(fab_common::extended_container_shape_system_key(size)))
-        .unwrap_or_else(|| fab_common::extended_container_shape_radius(size));
+    let key = format!("{}.container.shape", extended_size_prefix(size));
+    let radius = MaterialTokenResolver::new(theme).metric_chain(
+        &[
+            key.as_str(),
+            fab_common::extended_container_shape_system_key(size),
+        ],
+        fab_common::extended_container_shape_radius(size),
+    );
 
     Corners::all(radius)
 }
 
 pub(crate) fn extended_leading_space(theme: &Theme, size: FabSize, has_icon: bool) -> Px {
-    let leading = theme
-        .metric_by_key(&format!("{}.leading-space", extended_size_prefix(size)))
-        .unwrap_or_else(|| fab_common::extended_leading_space(size));
+    let leading = fab_metric(
+        theme,
+        format!("{}.leading-space", extended_size_prefix(size)),
+        fab_common::extended_leading_space(size),
+    );
     let trailing = extended_trailing_space(theme, size);
     if has_icon { leading } else { trailing }
 }
 
 pub(crate) fn extended_trailing_space(theme: &Theme, size: FabSize) -> Px {
-    theme
-        .metric_by_key(&format!("{}.trailing-space", extended_size_prefix(size)))
-        .unwrap_or_else(|| fab_common::extended_trailing_space(size))
+    fab_metric(
+        theme,
+        format!("{}.trailing-space", extended_size_prefix(size)),
+        fab_common::extended_trailing_space(size),
+    )
 }
 
 pub(crate) fn extended_icon_label_space(theme: &Theme, size: FabSize) -> Px {
-    theme
-        .metric_by_key(&format!("{}.icon-label-space", extended_size_prefix(size)))
-        .unwrap_or_else(|| fab_common::extended_icon_label_space(size))
+    fab_metric(
+        theme,
+        format!("{}.icon-label-space", extended_size_prefix(size)),
+        fab_common::extended_icon_label_space(size),
+    )
 }
 
 pub(crate) fn container_background(
@@ -171,12 +194,11 @@ pub(crate) fn container_elevation(
             None => [format!("{base}.container.elevation"), String::new()],
         };
 
-        if let Some(v) = theme.metric_by_key(&keys[0]).or_else(|| {
-            (!keys[1].is_empty())
-                .then(|| theme.metric_by_key(&keys[1]))
-                .flatten()
-        }) {
-            return v;
+        let tokens = MaterialTokenResolver::new(theme);
+        for key in keys.iter().filter(|key| !key.is_empty()) {
+            if let Some(value) = tokens.metric_value(key) {
+                return value;
+            }
         }
     }
 
@@ -420,5 +442,133 @@ fn extended_label_text_weight_key(variant: FabVariant) -> &'static str {
         FabVariant::Primary => "md.comp.extended-fab.primary.label-text.weight",
         FabVariant::Secondary => "md.comp.extended-fab.secondary.label-text.weight",
         FabVariant::Tertiary => "md.comp.extended-fab.tertiary.label-text.weight",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn fab_metrics_default_to_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(container_size(theme, FabSize::Regular), Px(56.0));
+        assert_eq!(icon_size(theme, FabSize::Large), Px(36.0));
+        assert_eq!(
+            container_shape(theme, FabSize::Small),
+            Corners::all(Px(12.0))
+        );
+        assert_eq!(extended_container_height(theme, FabSize::Medium), Px(80.0));
+        assert_eq!(extended_min_width(theme, FabSize::Regular), Px(80.0));
+        assert_eq!(extended_icon_size(theme, FabSize::Medium), Px(28.0));
+        assert_eq!(
+            extended_leading_space(theme, FabSize::Regular, true),
+            Px(16.0)
+        );
+        assert_eq!(extended_trailing_space(theme, FabSize::Regular), Px(20.0));
+        assert_eq!(extended_icon_label_space(theme, FabSize::Large), Px(16.0));
+        assert_eq!(
+            container_elevation(theme, false, FabVariant::Primary, true, false, None),
+            Px(0.0)
+        );
+    }
+
+    #[test]
+    fn fab_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.fab.container.height".to_string(), 58.0);
+        patch
+            .metrics
+            .insert("md.comp.fab.large.icon.size".to_string(), 38.0);
+        patch
+            .metrics
+            .insert("md.comp.fab.small.container.shape".to_string(), 14.0);
+        patch.metrics.insert(
+            "md.comp.extended-fab.medium.container.height".to_string(),
+            82.0,
+        );
+        patch
+            .metrics
+            .insert("md.comp.extended-fab.container.width".to_string(), 84.0);
+        patch
+            .metrics
+            .insert("md.comp.extended-fab.medium.icon.size".to_string(), 30.0);
+        patch
+            .metrics
+            .insert("md.comp.extended-fab.leading-space".to_string(), 18.0);
+        patch
+            .metrics
+            .insert("md.comp.extended-fab.trailing-space".to_string(), 22.0);
+        patch.metrics.insert(
+            "md.comp.extended-fab.large.icon-label-space".to_string(),
+            18.0,
+        );
+        patch.metrics.insert(
+            "md.comp.fab.primary-container.hover.container.elevation".to_string(),
+            5.0,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(container_size(&theme, FabSize::Regular), Px(58.0));
+        assert_eq!(icon_size(&theme, FabSize::Large), Px(38.0));
+        assert_eq!(
+            container_shape(&theme, FabSize::Small),
+            Corners::all(Px(14.0))
+        );
+        assert_eq!(extended_container_height(&theme, FabSize::Medium), Px(82.0));
+        assert_eq!(extended_min_width(&theme, FabSize::Regular), Px(84.0));
+        assert_eq!(extended_icon_size(&theme, FabSize::Medium), Px(30.0));
+        assert_eq!(
+            extended_leading_space(&theme, FabSize::Regular, true),
+            Px(18.0)
+        );
+        assert_eq!(extended_trailing_space(&theme, FabSize::Regular), Px(22.0));
+        assert_eq!(extended_icon_label_space(&theme, FabSize::Large), Px(18.0));
+        assert_eq!(
+            container_elevation(
+                &theme,
+                false,
+                FabVariant::Primary,
+                true,
+                false,
+                Some(FabInteraction::Hovered),
+            ),
+            Px(5.0)
+        );
+    }
+
+    #[test]
+    fn fab_shapes_use_system_fallbacks() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.sys.shape.corner.medium".to_string(), 10.0);
+        patch
+            .metrics
+            .insert("md.sys.shape.corner.large-increased".to_string(), 22.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_shape(&theme, FabSize::Small),
+            Corners::all(Px(10.0))
+        );
+        assert_eq!(
+            extended_container_shape(&theme, FabSize::Medium),
+            Corners::all(Px(22.0))
+        );
     }
 }
