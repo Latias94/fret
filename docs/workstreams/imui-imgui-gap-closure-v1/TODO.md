@@ -5805,3 +5805,11 @@ opening the slice.
       Result: `ecosystem/fret-ui-kit/src/imui/floating_window/state.rs` owns optional open-model
       reads and chrome-to-response assembly. `floating_window.rs` keeps option destructuring,
       closed-window routing, floating-area options, and render-in-area composition.
+- [x] Split IMUI shared active-trigger type definitions out of
+      `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs` into a private type owner without
+      changing the `active_trigger_behavior::ActiveTrigger*` call surface, lifecycle model access,
+      pointer/key behavior, or response population.
+      Result: `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/types.rs` owns
+      `ActiveTriggerBehavior`, `ActiveTriggerBehaviorOptions`, and `ActiveTriggerResponseInput`.
+      The root behavior file now re-exports those types privately and keeps only behavior
+      installation plus response delegation.

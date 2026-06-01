@@ -1,45 +1,16 @@
 //! Private shared behavior for active-only immediate-mode triggers.
 
-use fret_runtime::Model;
 use fret_ui::element::PressableState;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
-
-use super::interaction_runtime::{ImUiActiveItemState, ImUiLifecycleSessionState};
 
 mod keyboard;
 mod pointer;
 mod response;
+mod types;
 
-pub(super) struct ActiveTriggerBehavior {
-    pub(super) active_item_model: Model<ImUiActiveItemState>,
-    pub(super) context_anchor_model: Model<Option<fret_core::Point>>,
-    pub(super) lifecycle_model: Model<ImUiLifecycleSessionState>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(super) struct ActiveTriggerBehaviorOptions {
-    pub(super) primary_active: bool,
-    pub(super) request_focus_on_press: bool,
-    pub(super) clear_pointer_move: bool,
-}
-
-impl Default for ActiveTriggerBehaviorOptions {
-    fn default() -> Self {
-        Self {
-            primary_active: true,
-            request_focus_on_press: true,
-            clear_pointer_move: false,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-pub(super) struct ActiveTriggerResponseInput {
-    pub(super) enabled: bool,
-    pub(super) clicked: bool,
-    pub(super) changed: bool,
-    pub(super) lifecycle_edited: bool,
-}
+pub(super) use types::{
+    ActiveTriggerBehavior, ActiveTriggerBehaviorOptions, ActiveTriggerResponseInput,
+};
 
 pub(super) fn install_active_trigger_behavior<H: UiHost>(
     cx: &mut ElementContext<'_, H>,

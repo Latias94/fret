@@ -25140,6 +25140,29 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-01 IMUI active-trigger type owner split:
+
+- Claim: shared active-trigger type definitions moved from
+  `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs` into
+  `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/types.rs` without changing the private
+  `active_trigger_behavior::ActiveTrigger*` call surface, lifecycle model access, pointer/key
+  behavior, or response population.
+- Evidence anchors: `active_trigger_behavior.rs` declares `mod types;` and privately re-exports
+  `ActiveTriggerBehavior`, `ActiveTriggerBehaviorOptions`, and `ActiveTriggerResponseInput`;
+  `types.rs` owns those data shapes with `pub(in crate::imui)` visibility for existing in-module
+  and sibling owner access; `tools/gate_imui_workstream_source.py` rejects those struct definitions
+  drifting back into the behavior root.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_combo_smoke --test imui_image_item_smoke --test imui_selectable_smoke --test imui_table_smoke --no-fail-fast`
+  (15 tests passed).
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-01 IMUI combo popup state owner split:
 
 - Claim: combo popup state orchestration moved from

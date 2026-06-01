@@ -5118,3 +5118,9 @@ trigger option wiring, popup body composition, and final `ComboResponse` assembl
 chrome-to-`FloatingWindowResponse` assembly. `floating_window.rs` keeps floating-area setup,
 closed-window routing, and render-in-area wiring, while `floating_window/closed.rs` remains the
 closed response sentinel owner.
+
+2026-06-01 active-trigger type owner split result:
+`ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/types.rs` now owns the shared
+`ActiveTriggerBehavior`, `ActiveTriggerBehaviorOptions`, and `ActiveTriggerResponseInput` data
+shapes. The root behavior file re-exports those types through the original private module path and
+keeps behavior installation plus response delegation only.
