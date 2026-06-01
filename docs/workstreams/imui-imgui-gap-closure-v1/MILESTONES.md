@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor DragValue scrub-element owner-split result:
+`ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps keyed control orchestration and
+scrub/input owner composition while delegating `DragValueCore` scrub assembly to
+`controls/drag_value/scrub_element.rs`. The private scrub-element owner contains live model update
+wiring, commit/cancel callback emission, scrub layout hiding while typing, double-click typing
+handoff, focus-handoff arming, scrub id recording, scrub response state mapping, and scrub frame
+owner routing. Public `DragValue` options, mounted scrub/input semantics, and scrub frame visuals
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor DragValue typing owner-split result:
 `ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps keyed control orchestration, scrub
 mode switching, `DragValueCore` wiring, live model updates, and scrub/input composition while

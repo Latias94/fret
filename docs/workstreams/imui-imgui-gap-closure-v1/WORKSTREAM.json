@@ -1263,6 +1263,7 @@
     "ecosystem/fret-ui-editor/src/controls/drag_value/options.rs",
     "ecosystem/fret-ui-editor/src/controls/drag_value/model.rs",
     "ecosystem/fret-ui-editor/src/controls/drag_value/scrub.rs",
+    "ecosystem/fret-ui-editor/src/controls/drag_value/scrub_element.rs",
     "ecosystem/fret-ui-editor/src/controls/drag_value/session.rs",
     "ecosystem/fret-ui-editor/src/controls/drag_value/typing.rs",
     "ecosystem/fret-ui-editor/src/controls/drag_value/tests.rs",

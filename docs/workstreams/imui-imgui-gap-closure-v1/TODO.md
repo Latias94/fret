@@ -478,6 +478,15 @@ Last updated: 2026-06-01
       model updates, and `NumericInput` typing routing. `controls/drag_value/scrub.rs` owns scrub
       frame chrome, prefix/value/suffix segment rendering, and scrub test-id stamping. The source
       gate prevents frame chrome and value text assembly from drifting back into the root control.
+- [x] Split editor `DragValue` scrub element assembly into a private child owner without changing
+      `DragValueCore` live update wiring, commit/cancel callbacks, scrub layout hiding while
+      typing, double-click typing handoff, focus-handoff arming, scrub id recording, scrub frame
+      state mapping, test-id routing, or public `DragValue` options.
+      Result: `controls/drag_value.rs` keeps keyed control orchestration and scrub/input owner
+      composition. `controls/drag_value/scrub_element.rs` owns `DragValueCore` options and
+      callbacks, double-click typing transition, live model updates, scrub focus id recording, and
+      scrub frame owner routing. The source gate prevents scrub behavior policy from drifting back
+      into the root control.
 - [x] Split editor `DragValue` options/default records into a private child owner without changing
       public `DragValueOptions` import paths, fill-width/flex defaults, prefix/suffix fields,
       shared numeric constraints, replace-all typing selection behavior, id-source semantics,

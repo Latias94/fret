@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor DragValue Scrub-Element Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `DragValue` scrub element assembly moved out of the root control owner into
+a private `controls/drag_value/scrub_element.rs` owner without changing `DragValueCore` live update
+wiring, commit/cancel callbacks, scrub layout hiding while typing, double-click typing handoff,
+focus-handoff arming, scrub id recording, scrub response state mapping, test-id routing, or public
+`DragValue` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/drag_value.rs` keeps keyed control orchestration,
+  shared state lookup, current model reads, affix/test-id derivation, and scrub/input owner
+  composition.
+- `ecosystem/fret-ui-editor/src/controls/drag_value/scrub_element.rs` owns `DragValueCore`
+  options/callback wiring, live model updates, double-click typing transition, focus-handoff
+  arming, scrub id recording, scrub response state mapping, and scrub frame owner routing.
+- `tools/gate_imui_workstream_source.py` now tracks the scrub-element split and rejects scrub
+  behavior policy from drifting back into the drag-value root owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the scrub-element owner file.
+- `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md` includes the new
+  scrub-element owner in its cross-workstream evidence anchor list.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor drag_value --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor DragValue Typing Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `DragValue` typing input assembly moved out of the root control owner into

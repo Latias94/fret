@@ -12,17 +12,12 @@ use crate::controls::numeric_input::{NumericFormatFn, NumericParseFn, NumericVal
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::derived_test_id;
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
-use crate::primitives::numeric_text_entry::{
-    NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
-};
-use crate::primitives::style::EditorStyle;
-use crate::primitives::{
-    DragValueCore, DragValueCoreOptions, EditSessionOutcome, NumericPresentation,
-};
+use crate::primitives::numeric_text_entry::NumericTextEntryFocusHandoffState;
+use crate::primitives::{EditSessionOutcome, NumericPresentation};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, PointerDownCx, PressablePointerDownResult, UiActionHost};
+use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, UiHost};
 
 #[cfg(test)]
 mod tests;
@@ -30,13 +25,14 @@ mod tests;
 mod model;
 mod options;
 mod scrub;
+mod scrub_element;
 mod session;
 mod typing;
 
 use model::{DragValueMode, DragValueState};
 pub use options::DragValueOptions;
-use scrub::{DragValueScrubFrameArgs, drag_value_scrub_frame};
-use session::{emit_drag_value_outcome, hidden_layout};
+use scrub_element::{DragValueScrubElementArgs, drag_value_scrub_element};
+use session::hidden_layout;
 use typing::{DragValueTypingInputArgs, drag_value_typing_input};
 
 pub type DragValueOutcome = EditSessionOutcome;
@@ -143,112 +139,26 @@ where
         let suffix_test_id = derived_test_id(scrub_test_id.as_ref(), "suffix");
         let value_test_id = derived_test_id(scrub_test_id.as_ref(), "value");
 
-        let (density, scrub_chrome) = {
-            let theme = Theme::global(&*cx.app);
-            let style = EditorStyle::resolve(theme);
-            (style.density, style.frame_chrome_small())
-        };
-
-        let model_for_change = self.model.clone();
-        let on_change_live: Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, T) + 'static> =
-            Arc::new(move |host, action_cx, next| {
-                let _ = host.models_mut().update(&model_for_change, |v| *v = next);
-                host.request_redraw(action_cx.window);
-            });
-
-        let mut scrub_opts = DragValueCoreOptions::default();
-        scrub_opts.layout = if typing {
-            hidden_layout(self.options.layout)
-        } else {
-            self.options.layout
-        };
-        scrub_opts.enabled = mode == DragValueMode::Scrub;
-        scrub_opts.scrub_on_double_click = false;
-        scrub_opts.constraints = self.options.constraints;
-
-        let state_for_scrub = state.clone();
-        let focus_handoff_for_scrub = focus_handoff.clone();
-        let on_outcome_for_scrub = on_outcome.clone();
-        let prefix_for_scrub_root = prefix.clone();
-        let suffix_for_scrub_root = suffix.clone();
-        let scrub = cx.keyed(
-            ("fret-ui-editor.drag_value.scrub", scrub_revision),
-            move |cx| {
-                let prefix_for_scrub = prefix_for_scrub_root.clone();
-                let suffix_for_scrub = suffix_for_scrub_root.clone();
-                let state_for_scrub_record = state_for_scrub.clone();
-                let focus_handoff_for_double_click = focus_handoff_for_scrub.clone();
-                let on_outcome_for_scrub_commit = on_outcome_for_scrub.clone();
-                let on_outcome_for_scrub_cancel = on_outcome_for_scrub.clone();
-                DragValueCore::new(value, on_change_live)
-                    .on_commit(Some(Arc::new(move |host, action_cx| {
-                        emit_drag_value_outcome(
-                            host,
-                            action_cx,
-                            on_outcome_for_scrub_commit.as_ref(),
-                            DragValueOutcome::Committed,
-                        );
-                    })))
-                    .on_cancel(Some(Arc::new(move |host, action_cx| {
-                        emit_drag_value_outcome(
-                            host,
-                            action_cx,
-                            on_outcome_for_scrub_cancel.as_ref(),
-                            DragValueOutcome::Canceled,
-                        );
-                    })))
-                    .a11y_label(value_text.clone())
-                    .options(scrub_opts)
-                    .into_element(cx, move |cx, resp| {
-                        // Record the scrub element id for focus restore from typing mode.
-                        let scrub_id = cx.root_id();
-                        let mut st = state_for_scrub_record
-                            .lock()
-                            .unwrap_or_else(|e| e.into_inner());
-                        st.scrub_id = Some(scrub_id);
-
-                        let state_for_double_click = state_for_scrub_record.clone();
-                        let focus_handoff_for_double_click = focus_handoff_for_double_click.clone();
-                        cx.pressable_add_on_pointer_down(Arc::new(
-                            move |host, action_cx, down: PointerDownCx| {
-                                if down.click_count < 2 {
-                                    return PressablePointerDownResult::Continue;
-                                }
-
-                                let mut st = state_for_double_click
-                                    .lock()
-                                    .unwrap_or_else(|e| e.into_inner());
-                                st.mode = DragValueMode::Typing;
-                                {
-                                    let mut handoff = focus_handoff_for_double_click
-                                        .lock()
-                                        .unwrap_or_else(|e| e.into_inner());
-                                    arm_numeric_text_entry_focus_handoff(&mut handoff);
-                                }
-                                host.request_redraw(action_cx.window);
-                                PressablePointerDownResult::SkipDefaultAndStopPropagation
-                            },
-                        ));
-
-                        let scrub_frame = drag_value_scrub_frame(
-                            cx,
-                            DragValueScrubFrameArgs {
-                                density,
-                                scrub_chrome,
-                                hovered: resp.hovered(),
-                                pressed: resp.dragging() || resp.pressed(),
-                                focused: resp.focused() || cx.is_focused_element(scrub_id),
-                                value_text: value_text.clone(),
-                                prefix: prefix_for_scrub.clone(),
-                                suffix: suffix_for_scrub.clone(),
-                                scrub_test_id: scrub_test_id.clone(),
-                                prefix_test_id: prefix_test_id.clone(),
-                                suffix_test_id: suffix_test_id.clone(),
-                                value_test_id: value_test_id.clone(),
-                            },
-                        );
-                        vec![scrub_frame]
-                    })
+        let scrub = drag_value_scrub_element(
+            cx,
+            DragValueScrubElementArgs {
+                model: self.model.clone(),
+                value,
+                value_text: value_text.clone(),
+                layout: self.options.layout,
+                typing,
+                scrub_enabled: mode == DragValueMode::Scrub,
+                constraints: self.options.constraints,
+                scrub_revision,
+                state: state.clone(),
+                focus_handoff: focus_handoff.clone(),
+                on_outcome: on_outcome.clone(),
+                prefix: prefix.clone(),
+                suffix: suffix.clone(),
+                scrub_test_id: scrub_test_id.clone(),
+                prefix_test_id: prefix_test_id.clone(),
+                suffix_test_id: suffix_test_id.clone(),
+                value_test_id: value_test_id.clone(),
             },
         );
 
