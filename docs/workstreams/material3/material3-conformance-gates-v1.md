@@ -29,6 +29,9 @@ shadcn-level completeness work exposed two shallow test surfaces.
   now a thin conformance Adapter over `tokens::usage`.
 - `material3_token_audit` now audits the same 121-source usage set as the manifest gate instead of
   recursively scanning generated token preset files or maintainer binaries.
+- `material3_token_audit -- --check-usage-manifest` now regenerates the expected manifest from
+  `tokens::usage` in memory and fails when the checked fixture is stale; `--update-usage-manifest`
+  rewrites the fixture from the same Interface.
 - v30 token injection now fills the previously missing button, menu, navigation, search, date, and
   time-picker Material/Fret-specific token aliases used by recipe token modules.
 
@@ -39,10 +42,11 @@ shadcn-level completeness work exposed two shallow test surfaces.
 - `cargo test -p fret-ui-material3 --features diagnostics --lib material3_token_usage_manifest_matches_literal_md_sources`
 - `cargo test -p fret-ui-material3 --features diagnostics --lib material3_literal_md_tokens_resolve_in_v30_theme`
 - `cargo run -p fret-ui-material3 --bin material3_token_audit -- --no-material-missing --limit 5`
+- `cargo run -p fret-ui-material3 --bin material3_token_audit -- --check-usage-manifest`
 
 ## Residual Risk
 
-- The literal token coverage gate still reads Rust source text to detect manifest drift. It no
-  longer uses source scanning as the coverage source of truth, and source discovery now lives in
-  one shared Module. The next deepening step is a maintainer command that regenerates the checked
-  manifest from this same Interface.
+- The literal token coverage gate still reads Rust source text to detect manifest drift, but source
+  discovery and manifest regeneration now share one Module. The remaining risk is that the scanner
+  intentionally handles only normal Rust string literals; if recipes begin using raw strings or
+  macro-expanded token keys, the usage Interface should be extended before relying on those forms.

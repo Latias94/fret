@@ -419,6 +419,11 @@ These files are primarily *shared policy primitives*, not one-off component layo
     - Notes: `material3_token_audit` now audits the same 121 manifest-owned source files and
       excludes generated token presets, maintainer binaries, and crate-internal test token
       namespaces from missing-injection reports.
+  - [x] Add maintainer regeneration/check commands for the structured token usage manifest.
+    - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs`
+      (`--check-usage-manifest`, `--update-usage-manifest`),
+      `ecosystem/fret-ui-material3/src/tokens/usage.rs` (`default_usage_manifest_json`).
+    - Repro: `cargo run -p fret-ui-material3 --bin material3_token_audit -- --check-usage-manifest`.
   - [x] IconButton token keys + fallbacks centralized.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/icon_button.rs`,
       `ecosystem/fret-ui-material3/src/icon_button.rs`.

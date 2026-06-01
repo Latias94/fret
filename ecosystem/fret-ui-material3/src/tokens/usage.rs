@@ -1,6 +1,7 @@
 //! Shared Material token usage discovery for conformance tests and maintainer tools.
 
 use std::collections::BTreeSet;
+use std::fmt::Write as _;
 use std::fs;
 use std::path::Path;
 
@@ -15,6 +16,8 @@ const TOKEN_SOURCE_EXCLUDES: &[&str] = &[
     "visual_fixture_model.rs",
     "visual_fixtures.rs",
 ];
+pub const MATERIAL_TOKEN_USAGE_MANIFEST_SUITE: &str = "material3-token-usage-manifest-v1";
+pub const MATERIAL_TOKEN_USAGE_MANIFEST_NOTES: &str = "Structured manifest for literal Material token uses in Material3 recipes, foundations, and token modules. It is checked against source drift and v30 theme resolution by tokens::coverage; crate-internal *test* token namespaces are intentionally excluded.";
 
 #[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
@@ -81,20 +84,36 @@ impl MaterialTokenUsageScan {
 }
 
 pub fn discover_audited_sources(crate_dir: &Path) -> Result<Vec<MaterialTokenSource>, String> {
-    let mut paths = BTreeSet::new();
-    collect_rs_files(crate_dir, "src", ROOT_SOURCE_EXCLUDES, &mut paths)?;
-    collect_rs_files(crate_dir, "src/foundation", &[], &mut paths)?;
-    collect_rs_files(crate_dir, "src/interaction", &[], &mut paths)?;
-    collect_rs_files(crate_dir, "src/tokens", TOKEN_SOURCE_EXCLUDES, &mut paths)?;
-
-    Ok(paths
-        .into_iter()
-        .map(|path| MaterialTokenSource {
+    let mut sources = Vec::new();
+    for path in collect_rs_files(crate_dir, "src", ROOT_SOURCE_EXCLUDES)? {
+        sources.push(MaterialTokenSource {
             id: source_id_from_path(&path),
             layer: expected_source_layer(&path),
             path,
-        })
-        .collect())
+        });
+    }
+    for path in collect_rs_files(crate_dir, "src/foundation", &[])? {
+        sources.push(MaterialTokenSource {
+            id: source_id_from_path(&path),
+            layer: expected_source_layer(&path),
+            path,
+        });
+    }
+    for path in collect_rs_files(crate_dir, "src/interaction", &[])? {
+        sources.push(MaterialTokenSource {
+            id: source_id_from_path(&path),
+            layer: expected_source_layer(&path),
+            path,
+        });
+    }
+    for path in collect_rs_files(crate_dir, "src/tokens", TOKEN_SOURCE_EXCLUDES)? {
+        sources.push(MaterialTokenSource {
+            id: source_id_from_path(&path),
+            layer: expected_source_layer(&path),
+            path,
+        });
+    }
+    Ok(sources)
 }
 
 pub fn scan_audited_sources(crate_dir: &Path) -> Result<MaterialTokenUsageScan, String> {
@@ -175,13 +194,59 @@ pub fn expand_key_templates(
     expansion
 }
 
+pub fn usage_manifest_json(scan: &MaterialTokenUsageScan, suite: &str, notes: &str) -> String {
+    let mut out = String::new();
+    out.push_str("{\n");
+    out.push_str("  \"schema_version\": 1,\n");
+    out.push_str("  \"suite\": ");
+    push_json_string(&mut out, suite);
+    out.push_str(",\n");
+    out.push_str("  \"notes\": ");
+    push_json_string(&mut out, notes);
+    out.push_str(",\n");
+    out.push_str("  \"sources\": [\n");
+
+    for (source_idx, source) in scan.sources.iter().enumerate() {
+        out.push_str("    {\n");
+        out.push_str("      \"id\": ");
+        push_json_string(&mut out, &source.source.id);
+        out.push_str(",\n");
+        out.push_str("      \"layer\": ");
+        push_json_string(&mut out, source.source.layer.as_str());
+        out.push_str(",\n");
+        out.push_str("      \"path\": ");
+        push_json_string(&mut out, &source.source.path);
+        out.push_str(",\n");
+        out.push_str("      \"tokens\": ");
+        push_json_string_array(&mut out, &source.literals.exact, 6);
+        out.push('\n');
+        out.push_str("    }");
+        if source_idx + 1 != scan.sources.len() {
+            out.push(',');
+        }
+        out.push('\n');
+    }
+
+    out.push_str("  ]\n");
+    out.push_str("}\n");
+    out
+}
+
+pub fn default_usage_manifest_json(scan: &MaterialTokenUsageScan) -> String {
+    usage_manifest_json(
+        scan,
+        MATERIAL_TOKEN_USAGE_MANIFEST_SUITE,
+        MATERIAL_TOKEN_USAGE_MANIFEST_NOTES,
+    )
+}
+
 fn collect_rs_files(
     root: &Path,
     relative_dir: &str,
     excluded_names: &[&str],
-    paths: &mut BTreeSet<String>,
-) -> Result<(), String> {
+) -> Result<Vec<String>, String> {
     let dir = root.join(relative_dir);
+    let mut paths = BTreeSet::new();
     let entries = fs::read_dir(&dir).map_err(|err| {
         format!(
             "{}: failed to read audited source dir: {err}",
@@ -207,7 +272,7 @@ fn collect_rs_files(
         }
         paths.insert(format!("{relative_dir}/{name}"));
     }
-    Ok(())
+    Ok(paths.into_iter().collect())
 }
 
 fn should_skip_md_literal(key: &str) -> bool {
@@ -233,6 +298,44 @@ fn should_skip_md_literal(key: &str) -> bool {
 
 fn is_internal_test_token(key: &str) -> bool {
     key.contains(".test-") || key.contains("-test-")
+}
+
+fn push_json_string_array(out: &mut String, values: &BTreeSet<String>, indent: usize) {
+    if values.is_empty() {
+        out.push_str("[]");
+        return;
+    }
+
+    out.push_str("[\n");
+    let pad = " ".repeat(indent + 2);
+    for (idx, value) in values.iter().enumerate() {
+        out.push_str(&pad);
+        push_json_string(out, value);
+        if idx + 1 != values.len() {
+            out.push(',');
+        }
+        out.push('\n');
+    }
+    out.push_str(&" ".repeat(indent));
+    out.push(']');
+}
+
+fn push_json_string(out: &mut String, value: &str) {
+    out.push('"');
+    for ch in value.chars() {
+        match ch {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            ch if ch.is_control() => {
+                write!(out, "\\u{:04x}", ch as u32).ok();
+            }
+            ch => out.push(ch),
+        }
+    }
+    out.push('"');
 }
 
 fn expand_key_template(crate_dir: &Path, template: &str) -> Option<BTreeSet<String>> {
@@ -535,5 +638,18 @@ mod tests {
             scan.templates,
             BTreeSet::from(["md.comp.button.{variant_key}.{suffix}".to_string()])
         );
+    }
+
+    #[test]
+    fn generated_manifest_matches_checked_fixture() {
+        let crate_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let scan = scan_audited_sources(crate_dir).expect("material token usage scan must succeed");
+        let generated = default_usage_manifest_json(&scan);
+        let checked = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/material3_token_usage_manifest_v1.json"
+        ));
+
+        assert_eq!(generated, checked.replace("\r\n", "\n"));
     }
 }

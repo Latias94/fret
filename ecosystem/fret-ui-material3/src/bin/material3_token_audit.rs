@@ -15,6 +15,8 @@ use std::process::Command;
 
 use fret_ui_material3::tokens::{usage, v30};
 
+const TOKEN_USAGE_MANIFEST_PATH: &str = "tests/fixtures/material3_token_usage_manifest_v1.json";
+
 fn allowlisted_non_material_web_tokens() -> BTreeSet<&'static str> {
     BTreeSet::from([
         // Fret-specific: enforced minimum touch target policy.
@@ -47,6 +49,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let _ = std::io::stderr().flush();
     }
     let used = usage::scan_audited_sources(&crate_dir).map_err(std::io::Error::other)?;
+
+    if args.check_usage_manifest {
+        check_usage_manifest(&crate_dir, &used)?;
+        return Ok(());
+    }
+    if args.update_usage_manifest {
+        update_usage_manifest(&crate_dir, &used)?;
+        return Ok(());
+    }
+
     let used_exact = used.exact_keys();
     let used_templates = used.template_keys();
     let template_expansion = usage::expand_key_templates(&crate_dir, &used_templates);
@@ -261,6 +273,8 @@ struct Args {
     show_material_missing: bool,
     debug: bool,
     check: bool,
+    check_usage_manifest: bool,
+    update_usage_manifest: bool,
 }
 
 impl Args {
@@ -272,6 +286,8 @@ impl Args {
             show_material_missing: true,
             debug: false,
             check: false,
+            check_usage_manifest: false,
+            update_usage_manifest: false,
         };
 
         let mut it = args.into_iter();
@@ -296,12 +312,20 @@ impl Args {
                 "--no-material-missing" => out.show_material_missing = false,
                 "--debug" => out.debug = true,
                 "--check" => out.check = true,
+                "--check-usage-manifest" => out.check_usage_manifest = true,
+                "--update-usage-manifest" => out.update_usage_manifest = true,
                 "--help" | "-h" => {
                     print_help();
                     std::process::exit(0);
                 }
                 other => return Err(format!("unknown arg: {other} (try --help)")),
             }
+        }
+        if out.check_usage_manifest && out.update_usage_manifest {
+            return Err(
+                "--check-usage-manifest and --update-usage-manifest are mutually exclusive"
+                    .to_string(),
+            );
         }
         Ok(out)
     }
@@ -320,10 +344,44 @@ fn print_help() {
            --limit <n>                 Max items per section (default: 50)\n\
            --show-unused               Print injected-but-unused keys\n\
            --check                     Exit non-zero when coverage is not clean\n\
+           --check-usage-manifest      Exit non-zero when the checked token usage manifest is stale\n\
+           --update-usage-manifest     Rewrite the checked token usage manifest from source scan\n\
            --no-material-missing       Skip material-web missing-by-prefix report\n\
            --debug                     Print progress to stderr\n\
            --help                      Show this help\n"
     );
+}
+
+fn check_usage_manifest(
+    crate_dir: &Path,
+    used: &usage::MaterialTokenUsageScan,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let path = token_usage_manifest_path(crate_dir);
+    let expected = fs::read_to_string(&path)?;
+    let generated = usage::default_usage_manifest_json(used);
+    if expected.replace("\r\n", "\n") == generated {
+        println!("OK {}", path.display());
+        return Ok(());
+    }
+
+    eprintln!("check failed: generated token usage manifest differs from checked fixture");
+    eprintln!("path: {}", path.display());
+    eprintln!("hint: run with --update-usage-manifest to refresh it");
+    std::process::exit(1);
+}
+
+fn update_usage_manifest(
+    crate_dir: &Path,
+    used: &usage::MaterialTokenUsageScan,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let path = token_usage_manifest_path(crate_dir);
+    fs::write(&path, usage::default_usage_manifest_json(used))?;
+    println!("Wrote {}", path.display());
+    Ok(())
+}
+
+fn token_usage_manifest_path(crate_dir: &Path) -> PathBuf {
+    crate_dir.join(TOKEN_USAGE_MANIFEST_PATH)
 }
 
 fn injected_md_keys_from_v30_theme_config() -> BTreeSet<String> {
