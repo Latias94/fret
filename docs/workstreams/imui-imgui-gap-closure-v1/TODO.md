@@ -5813,3 +5813,10 @@ opening the slice.
       `ActiveTriggerBehavior`, `ActiveTriggerBehaviorOptions`, and `ActiveTriggerResponseInput`.
       The root behavior file now re-exports those types privately and keeps only behavior
       installation plus response delegation.
+- [x] Split IMUI menubar policy state out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs` into a private policy-state owner
+      without changing provided-state lookup, menu trigger policy, popup/menu integration, or
+      menubar close-auto-focus suppression behavior.
+      Result: `ecosystem/fret-ui-kit/src/imui/menu_family_controls/policy_state.rs` owns
+      `ImUiMenubarPolicyState` and its model fields with the same `crate::imui` visibility.
+      `menu_family_controls.rs` re-exports the type privately and keeps menu bar composition.

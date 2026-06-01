@@ -5124,3 +5124,9 @@ closed response sentinel owner.
 `ActiveTriggerBehavior`, `ActiveTriggerBehaviorOptions`, and `ActiveTriggerResponseInput` data
 shapes. The root behavior file re-exports those types through the original private module path and
 keeps behavior installation plus response delegation only.
+
+2026-06-01 menubar policy-state owner split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/policy_state.rs` now owns
+`ImUiMenubarPolicyState` and its open-menu/group-active/registry/close-auto-focus model handles.
+`menu_family_controls.rs` re-exports the type through the original private module path and keeps
+menu-bar composition plus child mounting only.

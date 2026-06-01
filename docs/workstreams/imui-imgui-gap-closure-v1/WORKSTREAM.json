@@ -717,6 +717,7 @@
     "ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard/popup/nav.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard/popup/shortcut.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_family_controls/policy_state.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/open_policy.rs",

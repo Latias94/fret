@@ -25210,3 +25210,26 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI menubar policy-state owner split:
+
+- Claim: shared menubar policy state moved from
+  `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs` into
+  `ecosystem/fret-ui-kit/src/imui/menu_family_controls/policy_state.rs` without changing
+  provided-state lookup, menu trigger policy, popup/menu integration, or close-auto-focus
+  suppression behavior.
+- Evidence anchors: `menu_family_controls.rs` declares `mod policy_state;` and privately re-exports
+  `ImUiMenubarPolicyState`; `policy_state.rs` owns the open-menu, group-active, registry, and
+  suppress-close-auto-focus model handles with `pub(in crate::imui)` visibility; and
+  `tools/gate_imui_workstream_source.py` rejects the policy state definition drifting back into the
+  menu-bar composition root.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_popup_options_smoke --test imui_response_contract_smoke --no-fail-fast`
+  (3 tests passed).
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

@@ -5,7 +5,6 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::SemanticsRole;
-use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
@@ -14,21 +13,15 @@ use crate::primitives::menubar::trigger_row as menubar_trigger_row;
 
 mod menu;
 mod menu_state;
+mod policy_state;
 mod submenu;
 mod submenu_state;
 mod trigger;
 mod visual;
 
 pub(super) use menu::begin_menu_with_options;
+pub(in crate::imui) use policy_state::ImUiMenubarPolicyState;
 pub(super) use submenu::begin_submenu_with_options;
-
-#[derive(Debug, Clone)]
-pub(in crate::imui) struct ImUiMenubarPolicyState {
-    pub(super) open_menu: Model<Option<Arc<str>>>,
-    pub(super) group_active: Model<Option<menubar_trigger_row::MenubarActiveTrigger>>,
-    pub(super) registry: Model<Vec<menubar_trigger_row::MenubarTriggerRowEntry>>,
-    pub(super) suppress_close_auto_focus_once: Model<bool>,
-}
 
 pub(super) fn menu_bar_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
