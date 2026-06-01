@@ -5836,3 +5836,13 @@ opening the slice.
       initialization, enabled/focusable/selected/highlighted derivation, `pressable_with_id`
       assembly, behavior installation, visual row mounting, and final response return.
       `selectable_controls.rs` keeps label identity parsing and the stable `push_id` wrapper.
+- [x] Split IMUI ListBox scroll-host and semantics assembly out of
+      `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` into private owner modules without
+      changing keyed identity, scroll/layout merging, viewport/content/root test IDs, hosted
+      children focus forwarding, ListBox semantics, or the container boundary that excludes
+      selection, filtering, and active-descendant policy.
+      Result: `list_box_controls/scroll_host.rs` owns scroll-area composition, child hosting,
+      scrollbar/handle/test-id wiring, and final semantics attachment; `list_box_controls/semantics.rs`
+      owns `SemanticsRole::ListBox`, optional label, and multiselectable flag
+      construction. `list_box_controls.rs` now keeps only keyed wrapper orchestration and
+      `ListBoxOptions` destructuring.

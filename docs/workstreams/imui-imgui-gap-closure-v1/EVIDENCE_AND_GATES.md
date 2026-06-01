@@ -25279,3 +25279,28 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI ListBox scroll-host and semantics owner split:
+
+- Claim: ListBox scroll-host and semantics assembly moved from
+  `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` into
+  `ecosystem/fret-ui-kit/src/imui/list_box_controls/scroll_host.rs` and
+  `ecosystem/fret-ui-kit/src/imui/list_box_controls/semantics.rs` without changing keyed identity,
+  scroll/layout merging, viewport/content/root test IDs, hosted child focus forwarding, ListBox
+  semantics, or the no-selection/no-filter/no-active-descendant container boundary.
+- Evidence anchors: `list_box_controls.rs` declares `mod scroll_host;` and `mod semantics;`,
+  destructures `ListBoxOptions`, and delegates to both private owners; `scroll_host.rs` owns
+  scroll-area composition, child hosting, handle/scrollbar/test-id wiring, and final semantics
+  attachment; `semantics.rs` owns `SemanticsRole::ListBox`, optional label, and multiselectable
+  flag construction; `tools/gate_imui_workstream_source.py` rejects scroll-host and semantics
+  details drifting back into the root ListBox hub.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit --features imui`.
+- Passed:
+  `cargo nextest run -p fret-imui list_box_container_stamps_semantics_scroll_and_hosts_selectables --no-fail-fast`
+  (1 test passed, 185 skipped).
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

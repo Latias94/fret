@@ -5143,3 +5143,10 @@ entry assembly: response initialization, enabled/focusable/selected/highlighted 
 `PressableProps` delegation, `pressable_with_id` mounting, behavior installation, visual row
 mounting, and final response return. `selectable_controls.rs` keeps label identity parsing plus the
 stable `push_id` wrapper.
+
+2026-06-01 ListBox scroll-host and semantics owner split result:
+`ecosystem/fret-ui-kit/src/imui/list_box_controls/scroll_host.rs` now owns ListBox scroll-area
+composition, hosted child focus forwarding, content/root/viewport test-id wiring, scrollbar/handle
+application, and final semantics attachment. `list_box_controls/semantics.rs` owns ListBox role,
+label, and multiselectable semantics construction. `list_box_controls.rs` keeps keyed identity and
+`ListBoxOptions` destructuring only.
