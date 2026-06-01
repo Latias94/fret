@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor TextField Buffered Actions Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `TextField` buffered commit/cancel action finalizers moved out of
+`controls/text_field/buffered.rs` into private `controls/text_field/buffered/actions.rs` without
+changing focus transition planning, draft sync, blur timer arming, pending blur dispatch, buffered
+key routing, draft-controller commit/discard behavior, clear-button reset behavior, outcome
+emission, submit-command dispatch, redraw requests, or public `TextFieldDraftController` /
+`TextField` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs` keeps buffered state, focus plans,
+  draft model allocation, model-to-draft sync, focus/timer orchestration, blur dispatch, and
+  multiline commit shortcut classification.
+- `ecosystem/fret-ui-editor/src/controls/text_field/buffered/actions.rs` owns pending-blur
+  clearing, clear-state reset, model/draft commit and cancel finalizers, draft-controller
+  finalizers, outcome emission, submit-command dispatch, and redraw requests.
+- `tools/gate_imui_workstream_source.py` now tracks the buffered actions owner and rejects action
+  finalizer policy from drifting back into the buffered state owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new buffered actions
+  owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor text_field --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor TextField Entry Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `TextField` entry mounting and session wiring moved out of

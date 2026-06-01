@@ -192,6 +192,17 @@ Last updated: 2026-06-01
       reporting, buffered session/key/blur wiring, draft-controller binding, focus-selection
       routing, and unbuffered Escape-clear installation. The source gate prevents entry behavior
       from drifting back into the root element owner.
+- [x] Split editor `TextField` buffered commit/cancel action finalizers into a private buffered
+      child owner without changing focus transition planning, draft sync, blur timer arming,
+      pending blur dispatch, buffered key routing, draft-controller commit/discard behavior,
+      clear-button reset behavior, outcome emission, submit-command dispatch, redraw requests, or
+      public `TextFieldDraftController` / `TextField` options.
+      Result: `controls/text_field/buffered.rs` keeps buffered state, focus plans, draft model
+      allocation, model-to-draft sync, focus/timer orchestration, blur dispatch, and multiline
+      commit shortcut classification. `controls/text_field/buffered/actions.rs` owns pending-blur
+      clearing, clear-state reset, model/draft commit and cancel finalizers, controller finalizers,
+      outcome emission, submit-command dispatch, and redraw requests. The source gate prevents
+      action finalizer policy from drifting back into the buffered state owner.
 - [x] Split editor `Slider` pressable pointer interaction installation into a private element child
       owner without changing click-to-update, drag begin/move/up, missed pointer-up cleanup,
       double-click typing handoff, cursor selection, value math, focus handoff arming, slider frame

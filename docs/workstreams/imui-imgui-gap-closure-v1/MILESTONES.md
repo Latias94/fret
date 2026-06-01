@@ -12,6 +12,16 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor TextField buffered actions owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs` now keeps buffered state, focus
+transition planning, draft model allocation, model-to-draft sync, focus/timer orchestration, blur
+dispatch, and multiline commit shortcut classification while delegating commit/cancel finalizers to
+`controls/text_field/buffered/actions.rs`. The private actions owner contains pending-blur
+clearing, clear-state reset, model/draft commit and cancel finalizers, draft-controller finalizers,
+outcome emission, submit-command dispatch, and redraw requests. Public `TextFieldDraftController`
+and `TextField` options remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split.
+
 2026-06-01 editor TextField entry owner-split result:
 `ecosystem/fret-ui-editor/src/controls/text_field/element.rs` now keeps public construction,
 callsite/model keying, joined frame/chrome orchestration, current draft sync, clear trailing
