@@ -40,15 +40,13 @@ pub(crate) fn icon_size(theme: &Theme, size: FabSize) -> Px {
 
 pub(crate) fn container_shape(theme: &Theme, size: FabSize) -> Corners {
     let key = format!("{}.container.shape", size_prefix(size));
-    let radius = MaterialTokenResolver::new(theme).metric_chain(
+    MaterialTokenResolver::new(theme).corners_chain_or(
         &[
             key.as_str(),
             fab_common::icon_container_shape_system_key(size),
         ],
-        fab_common::icon_container_shape_radius(size),
-    );
-
-    Corners::all(radius)
+        Corners::all(fab_common::icon_container_shape_radius(size)),
+    )
 }
 
 pub(crate) fn extended_container_height(theme: &Theme, size: FabSize) -> Px {
@@ -77,15 +75,13 @@ pub(crate) fn extended_icon_size(theme: &Theme, size: FabSize) -> Px {
 
 pub(crate) fn extended_container_shape(theme: &Theme, size: FabSize) -> Corners {
     let key = format!("{}.container.shape", extended_size_prefix(size));
-    let radius = MaterialTokenResolver::new(theme).metric_chain(
+    MaterialTokenResolver::new(theme).corners_chain_or(
         &[
             key.as_str(),
             fab_common::extended_container_shape_system_key(size),
         ],
-        fab_common::extended_container_shape_radius(size),
-    );
-
-    Corners::all(radius)
+        Corners::all(fab_common::extended_container_shape_radius(size)),
+    )
 }
 
 pub(crate) fn extended_leading_space(theme: &Theme, size: FabSize, has_icon: bool) -> Px {
@@ -569,6 +565,56 @@ mod tests {
         assert_eq!(
             extended_container_shape(&theme, FabSize::Medium),
             Corners::all(Px(22.0))
+        );
+    }
+
+    #[test]
+    fn fab_shapes_prefer_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.fab.small.container.shape".to_string(), 14.0);
+        patch.corners.insert(
+            "md.comp.fab.small.container.shape".to_string(),
+            Corners {
+                top_left: Px(2.0),
+                top_right: Px(4.0),
+                bottom_right: Px(6.0),
+                bottom_left: Px(8.0),
+            },
+        );
+        patch.metrics.insert(
+            "md.comp.extended-fab.medium.container.shape".to_string(),
+            22.0,
+        );
+        patch.corners.insert(
+            "md.comp.extended-fab.medium.container.shape".to_string(),
+            Corners {
+                top_left: Px(10.0),
+                top_right: Px(12.0),
+                bottom_right: Px(14.0),
+                bottom_left: Px(16.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_shape(&theme, FabSize::Small),
+            Corners {
+                top_left: Px(2.0),
+                top_right: Px(4.0),
+                bottom_right: Px(6.0),
+                bottom_left: Px(8.0),
+            }
+        );
+        assert_eq!(
+            extended_container_shape(&theme, FabSize::Medium),
+            Corners {
+                top_left: Px(10.0),
+                top_right: Px(12.0),
+                bottom_right: Px(14.0),
+                bottom_left: Px(16.0),
+            }
         );
     }
 }
