@@ -232,6 +232,8 @@ const DEVTOOLS_DOCKING_POLICY_SKIP_COMMAND: &str =
     "python tools/diag_gate_docking_wayland_policy_skip.py";
 const CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS: &str =
     "fret.devtools.demo_metrics_debug.copy_actions";
+const CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW: &str =
+    "fret.devtools.demo_metrics_debug.run_docking_workflow";
 
 #[derive(Clone)]
 struct DevtoolsConfig {
@@ -6741,9 +6743,17 @@ fn selected_workflow_run_command_from_state(
         .ok()
         .flatten()
         .unwrap_or_else(|| Arc::<str>::from(DEVTOOLS_WORKFLOW_FIRST_OPEN_VALIDATE_ID));
+    workflow_run_command_by_id_from_state(app, st, selected_workflow_id.as_ref())
+}
+
+fn workflow_run_command_by_id_from_state(
+    app: &App,
+    st: &State,
+    workflow_id: &str,
+) -> Option<workflow_run::DevtoolsWorkflowRunCommandV1> {
     devtools_workflow_commands_from_state(app, st)
         .into_iter()
-        .find(|command| command.id == selected_workflow_id.as_ref())
+        .find(|command| command.id == workflow_id)
 }
 
 fn generated_gate_command_from_state(
@@ -7048,6 +7058,27 @@ fn on_command(
                 token,
                 text: demo_metrics_debug_action_command_text(),
             });
+        }
+        CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW => {
+            let Some(command) =
+                workflow_run_command_by_id_from_state(app, st, DEVTOOLS_WORKFLOW_IMUI_P3_VALIDATE_ID)
+            else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "demo metrics debug workflow refused (missing IMUI P3 docking workflow)",
+                );
+                app.request_redraw(window);
+                return;
+            };
+            if let Err(err) = workflow_run::start_workflow_run(app, st, command) {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    &format!("demo metrics debug workflow refused: {err}"),
+                );
+            }
+            app.request_redraw(window);
         }
         CMD_INSPECT_ENABLE | CMD_INSPECT_DISABLE => {
             if !ws::require_session_selected(app, st) {
@@ -11971,6 +12002,9 @@ mod tests {
             "action surface: dedicated DevTools guide panel + copyable action command bundle and per-action copy commands"
         ));
         assert!(text.contains(
+            "workflow handoff: validate docking campaign | workflow_id=campaign-validate-imui-p3-multiwindow | run_command=fret.devtools.demo_metrics_debug.run_docking_workflow"
+        ));
+        assert!(text.contains(
             "command palette: deferred until DevTools has a shared command palette contract"
         ));
         assert!(text.contains(
@@ -12066,6 +12100,10 @@ mod tests {
         assert_eq!(
             CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS,
             "fret.devtools.demo_metrics_debug.copy_actions"
+        );
+        assert_eq!(
+            CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW,
+            "fret.devtools.demo_metrics_debug.run_docking_workflow"
         );
         let metadata = demo_metrics_debug_action_metadata_lines();
         assert!(metadata.contains(&"action metadata: open workbench | id=open_workbench | category=demo | primary=true | requires_bundle=false".to_string()));

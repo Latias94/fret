@@ -7,9 +7,13 @@ use super::{
     DEVTOOLS_DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC, DEVTOOLS_DOCKING_ARBITRATION_COMMAND,
     DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND, DEVTOOLS_DOCKING_POLICY_SKIP_COMMAND,
     DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND, DEVTOOLS_METRICS_MEMORY_COMMAND,
-    DEVTOOLS_METRICS_STATS_COMMAND, IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND,
+    DEVTOOLS_METRICS_STATS_COMMAND, DEVTOOLS_WORKFLOW_IMUI_P3_VALIDATE_ID,
+    IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND,
 };
-use super::{CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS, State, diag_section};
+use super::{
+    CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS, CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW, State,
+    diag_section,
+};
 use fret_app::{App, CommandId};
 use fret_ui::element::AnyElement;
 use fret_ui::ElementContext;
@@ -172,6 +176,9 @@ pub(crate) fn devtools_demo_metrics_debug_lines_with_state(
             .to_string(),
         "action surface: dedicated DevTools guide panel + copyable action command bundle and per-action copy commands"
             .to_string(),
+        format!(
+            "workflow handoff: validate docking campaign | workflow_id={DEVTOOLS_WORKFLOW_IMUI_P3_VALIDATE_ID} | run_command={CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW}"
+        ),
         "command palette: deferred until DevTools has a shared command palette contract".to_string(),
         format!("action: open workbench -> {DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND}"),
         format!("action: run product discovery -> {IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND}"),
@@ -218,7 +225,7 @@ pub(crate) fn devtools_demo_metrics_debug_panel(
     ) {
         demo_metrics_debug_rows.push(cx.text(line));
     }
-    demo_metrics_debug_rows.push(devtools_demo_metrics_debug_action_row(cx));
+    demo_metrics_debug_rows.push(devtools_demo_metrics_debug_action_row(cx, st));
     diag_section(
         cx,
         "Demo / Metrics / Debug Routes",
@@ -227,12 +234,26 @@ pub(crate) fn devtools_demo_metrics_debug_panel(
     )
 }
 
-fn devtools_demo_metrics_debug_action_row(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn devtools_demo_metrics_debug_action_row(
+    cx: &mut ElementContext<'_, App>,
+    st: &State,
+) -> AnyElement {
+    let workflow_run_in_flight = cx
+        .app
+        .models()
+        .read(&st.workflow_run_in_flight, |v| *v)
+        .unwrap_or(false);
     let mut actions = vec![
         shadcn::Button::new("Copy Demo/Metrics/Debug actions")
             .variant(shadcn::ButtonVariant::Outline)
             .size(shadcn::ButtonSize::Sm)
             .on_click(CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS)
+            .into_element(cx),
+        shadcn::Button::new("Run docking workflow")
+            .variant(shadcn::ButtonVariant::Secondary)
+            .size(shadcn::ButtonSize::Sm)
+            .disabled(workflow_run_in_flight)
+            .on_click(CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW)
             .into_element(cx),
     ];
     actions.extend(DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS.iter().map(|action| {
