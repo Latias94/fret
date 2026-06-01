@@ -13,11 +13,10 @@ use super::host_frame::{DockSpaceLayoutSnapshot, panel_root_placements_for_snaps
 use super::layout::{dock_space_regions, hidden_bounds};
 use super::manager::DockManager;
 use super::paint::{
-    complex_drop_overlay_paint_inputs, paint_basic_drop_overlay, paint_complex_drop_overlay_inputs,
-    paint_drag_payload_ghost, paint_drop_hints, paint_floating_chrome_inputs,
-    paint_split_handle_inputs, paint_tab_chrome_inputs, paint_tab_detail_inputs,
-    paint_tab_insert_preview_title, paint_viewport_surface_inputs, split_handle_paint_inputs,
-    tab_chrome_paint_inputs, tab_detail_paint_inputs, viewport_surface_paint_inputs,
+    paint_basic_drop_overlay, paint_complex_drop_overlay_inputs, paint_drag_payload_ghost,
+    paint_drop_hints, paint_floating_chrome_inputs, paint_split_handle_inputs,
+    paint_tab_chrome_inputs, paint_tab_detail_inputs, paint_tab_insert_preview_title,
+    paint_viewport_surface_inputs,
 };
 use super::services::{DockFocusRequestService, DockPanelContentService};
 use super::types::DockDropTarget;
@@ -31,6 +30,7 @@ mod drag_resolve;
 mod drag_route;
 mod floating;
 mod frame;
+mod frame_state;
 mod geometry;
 mod interaction;
 mod overflow;
@@ -40,8 +40,7 @@ mod tab_paint_state;
 mod tear_off;
 
 use drag_preview::{
-    declarative_tab_insert_preview_title, dock_drag_ghost_for_window, drag_ghost_title,
-    prepare_declarative_drag_ghost,
+    declarative_tab_insert_preview_title, drag_ghost_title, prepare_declarative_drag_ghost,
 };
 use drag_resolve::{
     begin_declarative_panel_drag, begin_declarative_tabs_group_drag,
@@ -52,10 +51,10 @@ use drag_route::{dock_dragging_affects_window, is_dock_drag_kind, keep_internal_
 use floating::{
     apply_declarative_floating_hover_paint_state, declarative_floating_hover_for_window,
     declarative_hit_test_floating_close, declarative_hit_test_floating_title_bar,
-    declarative_pressed_floating_close_for_window,
-    declarative_resolve_floating_title_bar_drag_target, floating_chrome_paint_inputs,
+    declarative_resolve_floating_title_bar_drag_target,
 };
 use frame::DockSpaceElementFrame;
+use frame_state::prepare_declarative_frame_paint_state;
 use geometry::{
     declarative_hit_test_active_viewport_panel, declarative_hit_test_tab_bar_empty_space,
     declarative_hit_test_tab_close, declarative_hit_test_tab_content,
@@ -184,81 +183,20 @@ where
             };
 
             let theme = cx.theme().snapshot();
-            let tab_widths = declarative_tab_widths_for_layout(
+            let frame_state = prepare_declarative_frame_paint_state(
                 cx.app(),
                 window,
-                theme.clone(),
-                &snapshot.layout_all,
-            );
-            let tab_scroll = declarative_tab_scroll_for_frame(
-                cx.app(),
-                window,
-                theme.clone(),
-                &snapshot.layout_all,
-                &tab_widths,
+                theme,
+                &snapshot,
+                settings,
                 true,
             );
             declarative_sync_tab_scroll_for_window(
                 cx.app(),
                 window,
-                &tab_scroll,
+                &frame_state.tab_scroll,
                 snapshot.layout_all.keys().copied(),
             );
-            let tab_overflow_menu = declarative_tab_overflow_menu_for_window(cx.app(), window);
-            let tab_hover = declarative_tab_hover_for_window(cx.app(), window);
-            let floating_hover = declarative_floating_hover_for_window(cx.app(), window);
-            let pressed_floating_close =
-                declarative_pressed_floating_close_for_window(cx.app(), window);
-            let floating_chrome_inputs =
-                floating_chrome_paint_inputs(&snapshot, pressed_floating_close, floating_hover);
-            let dock_drag_ghost = dock_drag_ghost_for_window(cx.app(), window);
-            let (
-                hover,
-                tab_chrome_inputs,
-                tab_detail_inputs,
-                complex_drop_overlay_inputs,
-                split_handle_inputs,
-                viewport_surface_inputs,
-            ) = cx
-                .app()
-                .global::<DockManager>()
-                .map(|dock| {
-                    (
-                        dock.hover.clone(),
-                        tab_chrome_paint_inputs(
-                            &dock.graph,
-                            &snapshot.layout_all,
-                            &tab_widths,
-                            &tab_scroll,
-                            tab_hover.tab,
-                        ),
-                        tab_detail_paint_inputs(
-                            &dock.graph,
-                            &snapshot.layout_all,
-                            &tab_widths,
-                            &tab_scroll,
-                            tab_hover.tab,
-                            tab_hover.tab_close,
-                            tab_hover.overflow_button,
-                            None,
-                            tab_overflow_menu.clone(),
-                        ),
-                        complex_drop_overlay_paint_inputs(
-                            theme.clone(),
-                            dock.hover.clone(),
-                            window,
-                            &dock.graph,
-                            &snapshot.layout_all,
-                            settings.split_handle_gap,
-                            settings.split_handle_hit_thickness,
-                            &tab_scroll,
-                            &tab_widths,
-                        ),
-                        split_handle_paint_inputs(&dock.graph, &snapshot.layout_all),
-                        viewport_surface_paint_inputs(dock, window, &snapshot.layout_all),
-                    )
-                })
-                .unwrap_or_default();
             sync_declarative_viewport_layouts(cx.app(), window, &snapshot);
 
             let panel_nodes: HashMap<PanelKey, NodeId> = cx
@@ -290,20 +228,7 @@ where
                 let _ = cx.layout_child(child, hidden_bounds(size));
             }
 
-            cx.set_output(DockSpaceElementFrame::from_snapshot(
-                &snapshot,
-                panel_last_sizes,
-                hover,
-                tab_chrome_inputs,
-                tab_detail_inputs,
-                tab_widths,
-                tab_scroll,
-                complex_drop_overlay_inputs,
-                floating_chrome_inputs,
-                dock_drag_ghost,
-                split_handle_inputs,
-                viewport_surface_inputs,
-            ));
+            cx.set_output(frame_state.into_frame(&snapshot, panel_last_sizes));
         },
         move |cx| {
             let host_node = cx.node();
@@ -337,81 +262,20 @@ where
             };
 
             let theme = cx.theme().snapshot();
-            let tab_widths = declarative_tab_widths_for_layout(
+            let frame_state = prepare_declarative_frame_paint_state(
                 cx.app(),
                 window,
-                theme.clone(),
-                &snapshot.layout_all,
-            );
-            let tab_scroll = declarative_tab_scroll_for_frame(
-                cx.app(),
-                window,
-                theme.clone(),
-                &snapshot.layout_all,
-                &tab_widths,
+                theme,
+                &snapshot,
+                settings,
                 false,
             );
             declarative_sync_tab_scroll_for_window(
                 cx.app(),
                 window,
-                &tab_scroll,
+                &frame_state.tab_scroll,
                 snapshot.layout_all.keys().copied(),
             );
-            let tab_overflow_menu = declarative_tab_overflow_menu_for_window(cx.app(), window);
-            let tab_hover = declarative_tab_hover_for_window(cx.app(), window);
-            let floating_hover = declarative_floating_hover_for_window(cx.app(), window);
-            let pressed_floating_close =
-                declarative_pressed_floating_close_for_window(cx.app(), window);
-            let floating_chrome_inputs =
-                floating_chrome_paint_inputs(&snapshot, pressed_floating_close, floating_hover);
-            let dock_drag_ghost = dock_drag_ghost_for_window(cx.app(), window);
-            let (
-                hover,
-                tab_chrome_inputs,
-                tab_detail_inputs,
-                complex_drop_overlay_inputs,
-                split_handle_inputs,
-                viewport_surface_inputs,
-            ) = cx
-                .app()
-                .global::<DockManager>()
-                .map(|dock| {
-                    (
-                        dock.hover.clone(),
-                        tab_chrome_paint_inputs(
-                            &dock.graph,
-                            &snapshot.layout_all,
-                            &tab_widths,
-                            &tab_scroll,
-                            tab_hover.tab,
-                        ),
-                        tab_detail_paint_inputs(
-                            &dock.graph,
-                            &snapshot.layout_all,
-                            &tab_widths,
-                            &tab_scroll,
-                            tab_hover.tab,
-                            tab_hover.tab_close,
-                            tab_hover.overflow_button,
-                            None,
-                            tab_overflow_menu.clone(),
-                        ),
-                        complex_drop_overlay_paint_inputs(
-                            theme.clone(),
-                            dock.hover.clone(),
-                            window,
-                            &dock.graph,
-                            &snapshot.layout_all,
-                            settings.split_handle_gap,
-                            settings.split_handle_hit_thickness,
-                            &tab_scroll,
-                            &tab_widths,
-                        ),
-                        split_handle_paint_inputs(&dock.graph, &snapshot.layout_all),
-                        viewport_surface_paint_inputs(dock, window, &snapshot.layout_all),
-                    )
-                })
-                .unwrap_or_default();
             sync_declarative_viewport_layouts(cx.app(), window, &snapshot);
 
             let panel_last_sizes = snapshot
@@ -419,20 +283,7 @@ where
                 .iter()
                 .map(|(panel, rect)| (panel.clone(), rect.size))
                 .collect();
-            cx.set_output(DockSpaceElementFrame::from_snapshot(
-                &snapshot,
-                panel_last_sizes,
-                hover,
-                tab_chrome_inputs,
-                tab_detail_inputs,
-                tab_widths,
-                tab_scroll,
-                complex_drop_overlay_inputs,
-                floating_chrome_inputs,
-                dock_drag_ghost,
-                split_handle_inputs,
-                viewport_surface_inputs,
-            ));
+            cx.set_output(frame_state.into_frame(&snapshot, panel_last_sizes));
         },
         move |cx| {
             let host_node = cx.node();
