@@ -12,6 +12,16 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor NumericInput error presentation owner-split result:
+`ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` now keeps keyed field assembly,
+affix rendering, draft/focus sync, and keyboard handler wiring while delegating trailing error icon
+and inline validation text rendering to private `controls/numeric_input/element/error.rs`. The
+error owner contains error display-mode gating, invalid border/foreground color resolution,
+validation-message text role routing, error icon/test-id stamping, inline error test-id/a11y label
+routing, and source text size/line-height adoption. Public `NumericInput` constructors, options,
+keyboard behavior, draft/error model ownership, and affix behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor PropertyGroup element owner-split result:
 `ecosystem/fret-ui-editor/src/composites/property_group.rs` now keeps the public
 `PropertyGroup` builder/toggle API and delegates header/content/root construction to private

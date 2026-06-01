@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use fret_core::{Axis, Edges, Px, SemanticsInvalid, TextStyle};
+use fret_core::{Axis, Edges, Px, SemanticsInvalid};
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacingLength,
     TextInputProps,
@@ -9,11 +9,9 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ChromeRefinement;
 
 use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
-use crate::primitives::colors::{
-    editor_invalid_border, editor_invalid_foreground, editor_muted_foreground,
-};
+use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::input_group::{
-    EditorInputGroupFrameOverrides, derived_test_id, editor_icon_segment,
+    EditorInputGroupFrameOverrides, derived_test_id,
     editor_joined_input_frame_segments_with_overrides, editor_text_segment,
 };
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
@@ -21,12 +19,15 @@ use crate::primitives::numeric_text_entry::{
     clear_numeric_error_when_draft_changes, numeric_text_entry_focus_state,
     sync_numeric_text_entry_focus,
 };
-use crate::primitives::readout::editor_validation_message_text_props;
 use crate::primitives::style::EditorStyle;
+
+mod error;
+
+use error::{numeric_input_inline_error, numeric_input_trailing_error_icon};
 
 use super::NumericInput;
 use super::keyboard::{NumericInputKeyHandlerArgs, numeric_input_key_down_handler};
-use super::model::{NumericInputErrorDisplay, editor_numeric_input_text_style};
+use super::model::editor_numeric_input_text_style;
 use super::session::{draft_model, error_model};
 
 pub(super) fn numeric_input_into_element_keyed<T, H>(
@@ -229,38 +230,15 @@ where
                 segments.push(segment);
             }
 
-            let show_icon = matches!(
-                error_display,
-                NumericInputErrorDisplay::TrailingIcon
-                    | NumericInputErrorDisplay::InlineTextAndIcon
-            );
-            if !show_icon {
-                return segments;
-            }
-
-            let error_msg = cx
-                .get_model_cloned(&error_for_trailing, Invalidation::Paint)
-                .unwrap_or(None);
-            if error_msg.is_none() {
-                return segments;
-            }
-
-            let error_border = {
-                let theme = Theme::global(&*cx.app);
-                editor_invalid_border(theme)
-            };
-
-            let mut icon = editor_icon_segment(
+            if let Some(icon) = numeric_input_trailing_error_icon(
                 cx,
                 density,
-                fret_icons::ids::ui::STATUS_FAILED,
-                Some(Px(12.0)),
-                Some(fret_ui_kit::ColorRef::Color(error_border)),
-            );
-            if let Some(test_id) = error_icon_test_id.as_ref() {
-                icon = icon.test_id(test_id.clone());
+                error_display,
+                &error_for_trailing,
+                error_icon_test_id.clone(),
+            ) {
+                segments.push(icon);
             }
-            segments.push(icon);
             segments
         },
     );
@@ -269,32 +247,13 @@ where
         .get_model_cloned(&error, Invalidation::Paint)
         .unwrap_or(None);
 
-    let error_color = {
-        let theme = Theme::global(&*cx.app);
-        editor_invalid_foreground(theme)
-    };
-    let show_inline_error = matches!(
+    let error_el = numeric_input_inline_error(
+        cx,
         error_display,
-        NumericInputErrorDisplay::InlineText | NumericInputErrorDisplay::InlineTextAndIcon
+        error_msg,
+        error_text_test_id.clone(),
+        text_style,
     );
-
-    let error_el = (show_inline_error).then_some(()).and_then(|_| {
-        error_msg.map(|msg| {
-            let mut error = cx.text_props(editor_validation_message_text_props(
-                msg.clone(),
-                error_color,
-                TextStyle {
-                    size: text_style.size,
-                    line_height: text_style.line_height,
-                    ..Default::default()
-                },
-            ));
-            if let Some(test_id) = error_text_test_id.as_ref() {
-                error = error.test_id(test_id.clone()).a11y_label(msg.clone());
-            }
-            error
-        })
-    });
 
     let mut layout = options.layout;
     if layout.size.min_height.is_none() {

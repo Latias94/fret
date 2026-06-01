@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor NumericInput Error Presentation Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `NumericInput` trailing error icon and inline validation text presentation
+moved out of `controls/numeric_input/element.rs` into private
+`controls/numeric_input/element/error.rs` without changing trailing error icon visibility, inline
+error visibility, validation message text role, invalid border/foreground theme colors,
+error icon/test-id routing, inline error test-id/a11y label routing, source text size/line-height
+adoption, draft/error model reads, keyboard behavior, or public `NumericInput` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` keeps keyed field assembly,
+  affix rendering, draft/focus sync, keyboard handler wiring, and delegates error presentation to
+  the private error owner.
+- `ecosystem/fret-ui-editor/src/controls/numeric_input/element/error.rs` owns display-mode gating,
+  invalid border/foreground color resolution, status-failed icon mounting, validation-message text
+  role routing, test-id/a11y decoration, and source text style projection.
+- `tools/gate_imui_workstream_source.py` now tracks the error owner and rejects error presentation
+  policy from drifting back into the root element owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new error owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor numeric_input --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor PropertyGroup Element Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `PropertyGroup` header/content/root element assembly moved out of

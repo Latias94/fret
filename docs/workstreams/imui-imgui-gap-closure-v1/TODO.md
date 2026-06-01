@@ -535,6 +535,15 @@ Last updated: 2026-06-01
       owns key-down replacement delegation, Enter commit, Escape cancel, validation failure
       handling, invalid parse errors, last-draft tracking, and outcome emission. The source gate
       prevents keyboard commit/cancel policy from drifting back into the root control owner.
+- [x] Split editor `NumericInput` error presentation into a private element child owner without
+      changing trailing error icon visibility, inline error visibility, validation message text
+      role, invalid border/foreground theme colors, error icon/test-id routing, inline error
+      test-id/a11y label routing, source text size/line-height adoption, draft/error model reads,
+      keyboard behavior, or public `NumericInput` options.
+      Result: `controls/numeric_input/element.rs` keeps keyed field assembly, affix rendering,
+      draft/focus sync, and keyboard handler wiring while delegating error icon and inline error
+      rendering to `controls/numeric_input/element/error.rs`. The source gate prevents error
+      presentation policy from drifting back into the root element owner.
 - [x] Split editor color-edit tooltip panel rendering into a private child owner without changing
       tooltip open gating, anchored placement, dismissal routing, hover-preview content, color
       tooltip line formatting, preview fill routing, tooltip readout text role, tooltip semantics,
