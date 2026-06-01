@@ -181,6 +181,16 @@ Last updated: 2026-06-01
       joined chrome, field style resolution, assistive semantics, command forwarding, and
       multiline min-height/stable line-box policy. The source gate prevents text-entry props
       policy from drifting back into the element assembly owner.
+- [x] Split editor `Slider` pressable pointer interaction installation into a private element child
+      owner without changing click-to-update, drag begin/move/up, missed pointer-up cleanup,
+      double-click typing handoff, cursor selection, value math, focus handoff arming, slider frame
+      assembly, NumericInput typing behavior, or public `Slider` options.
+      Result: `controls/slider/element.rs` keeps keyed state lookup, current value reads,
+      quantization, affix/test-id routing, pressable/frame composition, NumericInput typing
+      composition, and focus handoff sync. `controls/slider/element/interaction.rs` owns pointer
+      handler installation, drag state transitions, pointer-to-value updates, double-click typing
+      transition, redraw requests, and col-resize cursor setting. The source gate prevents pointer
+      interaction policy from drifting back into the element assembly owner.
 - [x] Split editor `VecEdit` options/default records into a private child owner without changing
       public `VecEditOptions` / `VecEditLayoutVariant` import paths, layout defaults, auto-stack
       defaults, id-source/test-id fields, Vec2/Vec3/Vec4 constructors, or layout/axis assembly.

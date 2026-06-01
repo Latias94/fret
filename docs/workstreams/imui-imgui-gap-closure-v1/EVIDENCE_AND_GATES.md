@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor Slider Interaction Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `Slider` pressable pointer interaction installation moved out of
+`controls/slider/element.rs` into private `controls/slider/element/interaction.rs` without
+changing click-to-update, drag begin/move/up, missed pointer-up cleanup, double-click typing
+handoff, cursor selection, value math, focus handoff arming, slider frame assembly, NumericInput
+typing behavior, focus handoff sync, or public `Slider` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/slider/element.rs` keeps keyed state lookup, current value
+  reads, quantization, affix/test-id routing, pressable/frame composition, NumericInput typing
+  composition, and focus handoff sync.
+- `ecosystem/fret-ui-editor/src/controls/slider/element/interaction.rs` owns pointer handler
+  installation, drag state transitions, pointer-to-value updates, double-click typing transition,
+  focus handoff arming, redraw requests, and col-resize cursor setting.
+- `tools/gate_imui_workstream_source.py` now tracks the interaction owner and rejects pointer
+  interaction policy from drifting back into the element assembly owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new interaction owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor slider --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor TextField Entry-Props Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `TextField` TextInput/TextArea props assembly moved out of

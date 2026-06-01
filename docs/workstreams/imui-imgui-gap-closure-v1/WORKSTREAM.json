@@ -1287,6 +1287,7 @@
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value/model/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/slider.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/element.rs",
+    "ecosystem/fret-ui-editor/src/controls/slider/element/interaction.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/frame.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/model.rs",

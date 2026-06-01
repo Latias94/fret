@@ -181,6 +181,16 @@ forwarding, and multiline min-height/stable line-box policy. Public TextField op
 single-line/multiline routing, buffered behavior, focus selection, clear behavior, and mounted entry
 IDs remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor Slider interaction owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider/element.rs` now keeps keyed state lookup, current
+value reads, quantization, affix/test-id routing, pressable/frame composition, NumericInput typing
+composition, and focus handoff sync while delegating pointer interaction handler installation to
+`controls/slider/element/interaction.rs`. The private interaction owner contains click-to-update,
+drag begin/move/up, missed pointer-up cleanup, double-click typing handoff, value math updates,
+redraw requests, and col-resize cursor setting. Public Slider options, frame assembly,
+NumericInput typing behavior, and focus handoff behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor VecEdit options owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps the public Vec2/Vec3/Vec4 control hub,
 constructors, builder methods, keyed entrypoints, presentation adoption, and axis exports while

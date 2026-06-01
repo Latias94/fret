@@ -7,12 +7,9 @@ use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::derived_test_id;
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
-    NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
-    sync_numeric_text_entry_focus_handoff,
+    NumericTextEntryFocusHandoffState, sync_numeric_text_entry_focus_handoff,
 };
 use crate::primitives::style::EditorStyle;
-use fret_core::{CursorIcon, MouseButton};
-use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{AnyElement, Length, PressableA11y, PressableProps};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
@@ -20,12 +17,13 @@ use super::Slider;
 use super::chrome::{resolve_slider_geometry, resolve_slider_paint};
 use super::frame::{SliderFrameArgs, slider_frame};
 use super::model::{SliderMode, compose_affixed_value_text, hidden_layout};
-use super::pointer::{
-    begin_slider_drag, clear_slider_drag, enter_slider_typing, finish_slider_drag,
-    is_slider_drag_pointer, reset_slider_interaction,
-};
+use super::pointer::reset_slider_interaction;
 use super::typing::{slider_typing_parse, slider_typing_validate};
-use super::value_math::{quantize_value, t_from_value, value_from_slider_local_x};
+use super::value_math::{quantize_value, t_from_value};
+
+mod interaction;
+
+use interaction::{SliderInteractionHandlersArgs, install_slider_interaction_handlers};
 
 pub(super) fn slider_into_element_keyed<T, H>(
     slider: Slider<T>,
@@ -148,96 +146,25 @@ where
                 st.slider_id = Some(slider_id);
             }
 
-            let state_for_down = state_for_slider.clone();
-            let focus_handoff_for_down = focus_handoff_for_slider.clone();
-            let model_for_down = model_for_change.clone();
-            cx.pressable_add_on_pointer_down(Arc::new(move |host, action_cx, down| {
-                if !interactive_enabled {
-                    return PressablePointerDownResult::Continue;
-                }
-                if allow_typing && down.button == MouseButton::Left && down.click_count >= 2 {
-                    let mut st = state_for_down.lock().unwrap_or_else(|e| e.into_inner());
-                    enter_slider_typing(&mut st);
-                    {
-                        let mut handoff = focus_handoff_for_down
-                            .lock()
-                            .unwrap_or_else(|e| e.into_inner());
-                        arm_numeric_text_entry_focus_handoff(&mut handoff);
-                    }
-                    host.request_redraw(action_cx.window);
-                    return PressablePointerDownResult::SkipDefaultAndStopPropagation;
-                }
-
-                if down.button != MouseButton::Left {
-                    return PressablePointerDownResult::Continue;
-                }
-
-                let bounds = host.bounds();
-                let next = value_from_slider_local_x(
+            install_slider_interaction_handlers(
+                cx,
+                SliderInteractionHandlersArgs {
+                    state: state_for_slider.clone(),
+                    focus_handoff: focus_handoff_for_slider.clone(),
+                    model: model_for_change.clone(),
+                    interactive_enabled,
+                    allow_typing,
                     min,
                     max,
                     clamp,
                     step,
-                    down.position_local.x.0 as f64,
-                    bounds.size.width.0 as f64,
                     show_value,
-                    value_width.0 as f64,
-                    frame.padding.left.0 as f64,
-                    frame.padding.right.0 as f64,
-                    thumb_d.0 as f64,
-                );
-                let next_t = T::from_f64(next);
-                let _ = host.models_mut().update(&model_for_down, |v| *v = next_t);
-                host.request_redraw(action_cx.window);
-
-                host.set_cursor_icon(CursorIcon::ColResize);
-
-                let mut st = state_for_down.lock().unwrap_or_else(|e| e.into_inner());
-                begin_slider_drag(&mut st, down.pointer_id);
-
-                PressablePointerDownResult::Continue
-            }));
-
-            let state_for_move = state_for_slider.clone();
-            let model_for_move = model_for_change.clone();
-            cx.pressable_add_on_pointer_move(Arc::new(move |host, action_cx, mv| {
-                let mut st_lock = state_for_move.lock().unwrap_or_else(|e| e.into_inner());
-                if !is_slider_drag_pointer(&st_lock, mv.pointer_id) {
-                    return false;
-                }
-
-                // Best-effort cleanup when the pointer-up event is missed.
-                if !mv.buttons.left {
-                    clear_slider_drag(&mut st_lock);
-                    return false;
-                }
-
-                let bounds = host.bounds();
-                let next = value_from_slider_local_x(
-                    min,
-                    max,
-                    clamp,
-                    step,
-                    mv.position_local.x.0 as f64,
-                    bounds.size.width.0 as f64,
-                    show_value,
-                    value_width.0 as f64,
-                    frame.padding.left.0 as f64,
-                    frame.padding.right.0 as f64,
-                    thumb_d.0 as f64,
-                );
-                let next_t = T::from_f64(next);
-                let _ = host.models_mut().update(&model_for_move, |v| *v = next_t);
-                host.request_redraw(action_cx.window);
-                true
-            }));
-
-            let state_for_up = state_for_slider.clone();
-            cx.pressable_add_on_pointer_up(Arc::new(move |_host, _action_cx, up| {
-                let mut st = state_for_up.lock().unwrap_or_else(|e| e.into_inner());
-                finish_slider_drag(&mut st, up.pointer_id);
-                PressablePointerUpResult::Continue
-            }));
+                    value_width,
+                    frame_padding_left: frame.padding.left,
+                    frame_padding_right: frame.padding.right,
+                    thumb_d,
+                },
+            );
 
             let theme = Theme::global(&*cx.app);
             let hovered = st.hovered || st.hovered_raw;
