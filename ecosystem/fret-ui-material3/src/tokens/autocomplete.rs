@@ -5,18 +5,21 @@
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::{TextInputStyle, Theme};
-use fret_ui_kit::typography::{self, TextIntent};
 
-use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::text_field::TextFieldVariant;
 use crate::tokens::{
     field_common::{self, FieldIconRole, FieldState, FieldTokenSet, FieldVariant},
-    selectable_menu_item as selectable_item_tokens, shape,
+    field_menu_common::{self, FieldMenuTokenSet},
+    selectable_menu_item as selectable_item_tokens,
 };
 
 const AUTOCOMPLETE_FIELD_TOKENS: FieldTokenSet = FieldTokenSet::new(
     "md.comp.outlined-autocomplete.text-field",
     "md.comp.filled-autocomplete.text-field",
+);
+const AUTOCOMPLETE_MENU_TOKENS: FieldMenuTokenSet = FieldMenuTokenSet::new(
+    "md.comp.outlined-autocomplete.menu",
+    "md.comp.filled-autocomplete.menu",
 );
 
 pub(crate) fn text_field_container_height(theme: &Theme, variant: TextFieldVariant) -> Px {
@@ -148,47 +151,27 @@ fn field_state(hovered: bool, disabled: bool, error: bool, focused: bool) -> Fie
 }
 
 pub(crate) fn menu_container_background(theme: &Theme, variant: TextFieldVariant) -> Color {
-    let key = match variant {
-        TextFieldVariant::Outlined => "md.comp.outlined-autocomplete.menu.container.color",
-        TextFieldVariant::Filled => "md.comp.filled-autocomplete.menu.container.color",
-    };
-    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.surface-container")
+    field_menu_common::container_background(theme, AUTOCOMPLETE_MENU_TOKENS, field_variant(variant))
 }
 
 pub(crate) fn menu_container_elevation(theme: &Theme, variant: TextFieldVariant) -> Px {
-    let key = match variant {
-        TextFieldVariant::Outlined => "md.comp.outlined-autocomplete.menu.container.elevation",
-        TextFieldVariant::Filled => "md.comp.filled-autocomplete.menu.container.elevation",
-    };
-    theme.metric_by_key(key).unwrap_or(Px(3.0))
+    field_menu_common::container_elevation(theme, AUTOCOMPLETE_MENU_TOKENS, field_variant(variant))
 }
 
 pub(crate) fn menu_container_shadow_color(theme: &Theme, variant: TextFieldVariant) -> Color {
-    let key = match variant {
-        TextFieldVariant::Outlined => "md.comp.outlined-autocomplete.menu.container.shadow-color",
-        TextFieldVariant::Filled => "md.comp.filled-autocomplete.menu.container.shadow-color",
-    };
-    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.shadow")
+    field_menu_common::container_shadow_color(
+        theme,
+        AUTOCOMPLETE_MENU_TOKENS,
+        field_variant(variant),
+    )
 }
 
 pub(crate) fn menu_container_shape(theme: &Theme, variant: TextFieldVariant) -> Corners {
-    let key = match variant {
-        TextFieldVariant::Outlined => "md.comp.outlined-autocomplete.menu.container.shape",
-        TextFieldVariant::Filled => "md.comp.filled-autocomplete.menu.container.shape",
-    };
-    shape::corners_or_metric(theme, key)
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
-        .unwrap_or_else(|| Corners::all(Px(4.0)))
+    field_menu_common::container_shape(theme, AUTOCOMPLETE_MENU_TOKENS, field_variant(variant))
 }
 
 pub(crate) fn menu_list_item_height(theme: &Theme, variant: TextFieldVariant) -> Px {
-    let key = match variant {
-        TextFieldVariant::Outlined => {
-            "md.comp.outlined-autocomplete.menu.list-item.container.height"
-        }
-        TextFieldVariant::Filled => "md.comp.filled-autocomplete.menu.list-item.container.height",
-    };
-    theme.metric_by_key(key).unwrap_or(Px(48.0))
+    field_menu_common::list_item_height(theme, AUTOCOMPLETE_MENU_TOKENS, field_variant(variant))
 }
 
 pub(crate) fn menu_selectable_item_outer_horizontal_padding(
@@ -225,9 +208,7 @@ pub(crate) fn menu_list_item_label_text_style(
     theme: &Theme,
     _variant: TextFieldVariant,
 ) -> Option<TextStyle> {
-    theme
-        .text_style_by_key("md.sys.typescale.label-large")
-        .map(|style| typography::with_intent(style, TextIntent::Control))
+    field_menu_common::list_item_label_text_style(theme)
 }
 
 pub(crate) fn menu_list_item_label_text_color(
@@ -236,33 +217,22 @@ pub(crate) fn menu_list_item_label_text_color(
     enabled: bool,
     selected: bool,
 ) -> Color {
-    if let Some(label) =
-        selectable_item_tokens::selected_or_disabled_label_color(theme, selected, enabled)
-    {
-        return label;
-    }
-
-    let key = match variant {
-        TextFieldVariant::Outlined => {
-            "md.comp.outlined-autocomplete.menu.list-item.label-text.color"
-        }
-        TextFieldVariant::Filled => "md.comp.filled-autocomplete.menu.list-item.label-text.color",
-    };
-    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface")
+    field_menu_common::list_item_label_text_color(
+        theme,
+        AUTOCOMPLETE_MENU_TOKENS,
+        field_variant(variant),
+        enabled,
+        selected,
+    )
 }
 
 pub(crate) fn menu_list_item_selected_container_color(
     theme: &Theme,
     variant: TextFieldVariant,
 ) -> Color {
-    let key = match variant {
-        TextFieldVariant::Outlined => {
-            "md.comp.outlined-autocomplete.menu.list-item.selected.container.color"
-        }
-        TextFieldVariant::Filled => {
-            "md.comp.filled-autocomplete.menu.list-item.selected.container.color"
-        }
-    };
-    MaterialTokenResolver::new(theme)
-        .color_comp_or_sys(key, "md.sys.color.surface-container-highest")
+    field_menu_common::list_item_selected_container_color(
+        theme,
+        AUTOCOMPLETE_MENU_TOKENS,
+        field_variant(variant),
+    )
 }

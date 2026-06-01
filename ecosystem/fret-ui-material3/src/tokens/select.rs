@@ -9,13 +9,16 @@ use crate::foundation::token_resolver::{MaterialTokenResolver, blend_over};
 use crate::select::SelectVariant;
 use crate::tokens::{
     field_common::{self, FieldIconRole, FieldState, FieldTokenSet, FieldVariant},
-    selectable_menu_item as selectable_item_tokens, shape,
+    field_menu_common::{self, FieldMenuTokenSet, MenuItemIconRole},
+    selectable_menu_item as selectable_item_tokens,
 };
 
 const SELECT_FIELD_TOKENS: FieldTokenSet = FieldTokenSet::new(
     "md.comp.outlined-select.text-field",
     "md.comp.filled-select.text-field",
 );
+const SELECT_MENU_TOKENS: FieldMenuTokenSet =
+    FieldMenuTokenSet::new("md.comp.outlined-select.menu", "md.comp.filled-select.menu");
 
 pub(crate) fn container_height(theme: &Theme, variant: SelectVariant) -> Px {
     field_common::container_height(theme, field_prefix(variant))
@@ -225,45 +228,23 @@ fn field_state(hovered: bool, disabled: bool, error: bool, focused: bool) -> Fie
 }
 
 pub(crate) fn menu_container_background(theme: &Theme, variant: SelectVariant) -> Color {
-    let key = match variant {
-        SelectVariant::Outlined => "md.comp.outlined-select.menu.container.color",
-        SelectVariant::Filled => "md.comp.filled-select.menu.container.color",
-    };
-    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.surface-container")
+    field_menu_common::container_background(theme, SELECT_MENU_TOKENS, field_variant(variant))
 }
 
 pub(crate) fn menu_container_elevation(theme: &Theme, variant: SelectVariant) -> Px {
-    let key = match variant {
-        SelectVariant::Outlined => "md.comp.outlined-select.menu.container.elevation",
-        SelectVariant::Filled => "md.comp.filled-select.menu.container.elevation",
-    };
-    theme.metric_by_key(key).unwrap_or(Px(3.0))
+    field_menu_common::container_elevation(theme, SELECT_MENU_TOKENS, field_variant(variant))
 }
 
 pub(crate) fn menu_container_shadow_color(theme: &Theme, variant: SelectVariant) -> Color {
-    let key = match variant {
-        SelectVariant::Outlined => "md.comp.outlined-select.menu.container.shadow-color",
-        SelectVariant::Filled => "md.comp.filled-select.menu.container.shadow-color",
-    };
-    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.shadow")
+    field_menu_common::container_shadow_color(theme, SELECT_MENU_TOKENS, field_variant(variant))
 }
 
 pub(crate) fn menu_container_shape(theme: &Theme, variant: SelectVariant) -> Corners {
-    let key = match variant {
-        SelectVariant::Outlined => "md.comp.outlined-select.menu.container.shape",
-        SelectVariant::Filled => "md.comp.filled-select.menu.container.shape",
-    };
-    shape::corners_or_metric(theme, key)
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
-        .unwrap_or_else(|| Corners::all(Px(4.0)))
+    field_menu_common::container_shape(theme, SELECT_MENU_TOKENS, field_variant(variant))
 }
 
 pub(crate) fn menu_list_item_height(theme: &Theme, variant: SelectVariant) -> Px {
-    let key = match variant {
-        SelectVariant::Outlined => "md.comp.outlined-select.menu.list-item.container.height",
-        SelectVariant::Filled => "md.comp.filled-select.menu.list-item.container.height",
-    };
-    theme.metric_by_key(key).unwrap_or(Px(48.0))
+    field_menu_common::list_item_height(theme, SELECT_MENU_TOKENS, field_variant(variant))
 }
 
 pub(crate) fn menu_selectable_item_outer_horizontal_padding(
@@ -307,9 +288,7 @@ pub(crate) fn menu_list_item_label_text_style(
     let _ = variant;
     // Material Web v30 `menu.list-item.label-text.type` is a mixin. The underlying scalars map to
     // sys `label-large`, so use that as the stable default in v1.
-    theme
-        .text_style_by_key("md.sys.typescale.label-large")
-        .map(|style| typography::with_intent(style, TextIntent::Control))
+    field_menu_common::list_item_label_text_style(theme)
 }
 
 pub(crate) fn menu_list_item_label_text_color(
@@ -318,29 +297,22 @@ pub(crate) fn menu_list_item_label_text_color(
     enabled: bool,
     selected: bool,
 ) -> Color {
-    if let Some(label) =
-        selectable_item_tokens::selected_or_disabled_label_color(theme, selected, enabled)
-    {
-        return label;
-    }
-
-    let key = match variant {
-        SelectVariant::Outlined => "md.comp.outlined-select.menu.list-item.label-text.color",
-        SelectVariant::Filled => "md.comp.filled-select.menu.list-item.label-text.color",
-    };
-    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface")
+    field_menu_common::list_item_label_text_color(
+        theme,
+        SELECT_MENU_TOKENS,
+        field_variant(variant),
+        enabled,
+        selected,
+    )
 }
 
 pub(crate) fn menu_list_item_leading_icon_size(theme: &Theme, variant: SelectVariant) -> Px {
-    let key = match variant {
-        SelectVariant::Outlined => {
-            "md.comp.outlined-select.menu.list-item.with-leading-icon.leading-icon.size"
-        }
-        SelectVariant::Filled => {
-            "md.comp.filled-select.menu.list-item.with-leading-icon.leading-icon.size"
-        }
-    };
-    theme.metric_by_key(key).unwrap_or(Px(24.0))
+    field_menu_common::list_item_icon_size(
+        theme,
+        SELECT_MENU_TOKENS,
+        field_variant(variant),
+        MenuItemIconRole::Leading,
+    )
 }
 
 pub(crate) fn menu_list_item_leading_icon_color(
@@ -349,33 +321,23 @@ pub(crate) fn menu_list_item_leading_icon_color(
     enabled: bool,
     selected: bool,
 ) -> Color {
-    if let Some(icon) =
-        selectable_item_tokens::selected_or_disabled_icon_color(theme, selected, enabled)
-    {
-        return icon;
-    }
-
-    let key = match variant {
-        SelectVariant::Outlined => {
-            "md.comp.outlined-select.menu.list-item.with-leading-icon.leading-icon.color"
-        }
-        SelectVariant::Filled => {
-            "md.comp.filled-select.menu.list-item.with-leading-icon.leading-icon.color"
-        }
-    };
-    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface-variant")
+    field_menu_common::list_item_icon_color(
+        theme,
+        SELECT_MENU_TOKENS,
+        field_variant(variant),
+        MenuItemIconRole::Leading,
+        enabled,
+        selected,
+    )
 }
 
 pub(crate) fn menu_list_item_trailing_icon_size(theme: &Theme, variant: SelectVariant) -> Px {
-    let key = match variant {
-        SelectVariant::Outlined => {
-            "md.comp.outlined-select.menu.list-item.with-trailing-icon.trailing-icon.size"
-        }
-        SelectVariant::Filled => {
-            "md.comp.filled-select.menu.list-item.with-trailing-icon.trailing-icon.size"
-        }
-    };
-    theme.metric_by_key(key).unwrap_or(Px(24.0))
+    field_menu_common::list_item_icon_size(
+        theme,
+        SELECT_MENU_TOKENS,
+        field_variant(variant),
+        MenuItemIconRole::Trailing,
+    )
 }
 
 pub(crate) fn menu_list_item_trailing_icon_color(
@@ -384,35 +346,25 @@ pub(crate) fn menu_list_item_trailing_icon_color(
     enabled: bool,
     selected: bool,
 ) -> Color {
-    if let Some(icon) =
-        selectable_item_tokens::selected_or_disabled_icon_color(theme, selected, enabled)
-    {
-        return icon;
-    }
-
-    let key = match variant {
-        SelectVariant::Outlined => {
-            "md.comp.outlined-select.menu.list-item.with-trailing-icon.trailing-icon.color"
-        }
-        SelectVariant::Filled => {
-            "md.comp.filled-select.menu.list-item.with-trailing-icon.trailing-icon.color"
-        }
-    };
-    MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface-variant")
+    field_menu_common::list_item_icon_color(
+        theme,
+        SELECT_MENU_TOKENS,
+        field_variant(variant),
+        MenuItemIconRole::Trailing,
+        enabled,
+        selected,
+    )
 }
 
 pub(crate) fn menu_list_item_selected_container_color(
     theme: &Theme,
     variant: SelectVariant,
 ) -> Color {
-    let key = match variant {
-        SelectVariant::Outlined => {
-            "md.comp.outlined-select.menu.list-item.selected.container.color"
-        }
-        SelectVariant::Filled => "md.comp.filled-select.menu.list-item.selected.container.color",
-    };
-    MaterialTokenResolver::new(theme)
-        .color_comp_or_sys(key, "md.sys.color.surface-container-highest")
+    field_menu_common::list_item_selected_container_color(
+        theme,
+        SELECT_MENU_TOKENS,
+        field_variant(variant),
+    )
 }
 
 pub(crate) fn menu_list_item_state_layer_color(theme: &Theme) -> Color {
