@@ -5877,3 +5877,11 @@ opening the slice.
       open checks, floating-area mounting, chrome capture, and in-area render dispatch.
       `floating_window.rs` keeps the facade-facing public helper pair and delegates the options
       path to the entry owner.
+- [x] Split IMUI table-column visibility controllable-model hook out of
+      `ecosystem/fret-ui-kit/src/imui/table_column_visibility.rs` into a private model owner
+      without changing the public helper signature, caller-owned visibility state, or the menu/
+      header context-menu policy owners.
+      Result: `ecosystem/fret-ui-kit/src/imui/table_column_visibility/model.rs` owns the
+      `use_controllable_model(...)` bridge for `ImUiTableColumnVisibilityState`.
+      `table_column_visibility.rs` keeps the public forwarding helper plus option/response/state
+      re-exports and menu delegation.

@@ -25406,3 +25406,25 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI table-column visibility model owner split:
+
+- Claim: table-column visibility controllable-model hook moved from
+  `ecosystem/fret-ui-kit/src/imui/table_column_visibility.rs` into
+  `ecosystem/fret-ui-kit/src/imui/table_column_visibility/model.rs` without changing the public
+  helper signature, caller-owned visibility state, or menu/header context-menu policy owners.
+- Evidence anchors: `table_column_visibility.rs` declares `mod model;`, keeps
+  `table_column_visibility_use_model(...)` as the public forwarding helper, and continues to
+  delegate menu/header helpers to `menu`; `model.rs` owns the private
+  `use_controllable_model(...)` bridge for `ImUiTableColumnVisibilityState`; the source gate
+  rejects the controllable-model body drifting back into the root table-column visibility hub.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit --features imui`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_column_visibility_helpers_compile table_column_visibility_state_applies_runtime_visibility_by_column_id --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-imui table_column_visibility --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

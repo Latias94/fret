@@ -6,6 +6,7 @@ use fret_ui::{ElementContext, UiHost};
 use super::{MenuItemOptions, ResponseExt, TableColumn, TableResponse, UiWriterImUiFacadeExt};
 
 mod menu;
+mod model;
 mod options;
 mod response;
 mod state;
@@ -46,7 +47,7 @@ pub fn table_column_visibility_use_model<H: UiHost>(
     controlled: Option<Model<ImUiTableColumnVisibilityState>>,
     default_value: impl FnOnce() -> ImUiTableColumnVisibilityState,
 ) -> crate::primitives::controllable_state::ControllableModel<ImUiTableColumnVisibilityState> {
-    crate::primitives::controllable_state::use_controllable_model(cx, controlled, default_value)
+    model::table_column_visibility_use_model(cx, controlled, default_value)
 }
 
 pub fn table_column_visibility_menu_items<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(

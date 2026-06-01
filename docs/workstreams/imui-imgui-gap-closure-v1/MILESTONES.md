@@ -5173,3 +5173,9 @@ frame palette resolution, frame props, and the outer frame container.
 orchestration: option destructuring, open checks, floating-area mounting, chrome capture, in-area
 render dispatch, and final response assembly delegation. `floating_window.rs` keeps the
 facade-facing helper pair only.
+
+2026-06-01 table-column visibility model owner split result:
+`ecosystem/fret-ui-kit/src/imui/table_column_visibility/model.rs` now owns the controllable-model
+bridge for `ImUiTableColumnVisibilityState`. `table_column_visibility.rs` keeps the public
+`table_column_visibility_use_model(...)` signature as a forwarding helper, plus option/response/
+state re-exports and menu delegation.
