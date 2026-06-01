@@ -5136,3 +5136,10 @@ menu-bar composition plus child mounting only.
 construction for image items and image buttons, including sanitized size, focusability, key
 activation policy, and a11y role/label/test id propagation. `image_item_controls.rs` keeps the
 identity, behavior, chrome, image props, and response wiring.
+
+2026-06-01 selectable entry owner split result:
+`ecosystem/fret-ui-kit/src/imui/selectable_controls/entry.rs` now owns the visible-label selectable
+entry assembly: response initialization, enabled/focusable/selected/highlighted derivation,
+`PressableProps` delegation, `pressable_with_id` mounting, behavior installation, visual row
+mounting, and final response return. `selectable_controls.rs` keeps label identity parsing plus the
+stable `push_id` wrapper.

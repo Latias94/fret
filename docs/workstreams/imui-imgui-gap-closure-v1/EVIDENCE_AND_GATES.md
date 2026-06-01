@@ -25255,3 +25255,27 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI selectable entry owner split:
+
+- Claim: visible-label selectable pressable entry assembly moved from
+  `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` into
+  `ecosystem/fret-ui-kit/src/imui/selectable_controls/entry.rs` without changing label identity,
+  `push_id` scope, selectable props/behavior/visual ownership, popup close policy, shortcut
+  activation, or response semantics.
+- Evidence anchors: `selectable_controls.rs` declares `mod entry;` and keeps
+  `parse_label_identity(label.as_ref())` plus the stable `ui.push_id(("selectable-label",
+  identity), ...)` wrapper; `entry.rs` owns `ResponseExt` initialization, enabled/focusable/
+  selected/highlighted derivation, `pressable_with_id` assembly, behavior installation, visual row
+  mounting, and final response return; `tools/gate_imui_workstream_source.py` rejects those entry
+  assembly details drifting back into the root selectable hub.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit --features imui`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke --test imui_response_contract_smoke --no-fail-fast`
+  (3 tests passed).
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

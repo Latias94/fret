@@ -5828,3 +5828,11 @@ opening the slice.
       `PressableProps` construction. `image_item_controls.rs` now keeps only item identity,
       enabled/focusable derivation, chrome/behavior wiring, image props mounting, and response
       assembly.
+- [x] Split IMUI selectable visible-label pressable entry assembly out of
+      `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` into a private entry owner without
+      changing label identity, `push_id` scope, selectable props/behavior/visual ownership, popup
+      close policy, shortcut activation, or response semantics.
+      Result: `ecosystem/fret-ui-kit/src/imui/selectable_controls/entry.rs` owns `ResponseExt`
+      initialization, enabled/focusable/selected/highlighted derivation, `pressable_with_id`
+      assembly, behavior installation, visual row mounting, and final response return.
+      `selectable_controls.rs` keeps label identity parsing and the stable `push_id` wrapper.
