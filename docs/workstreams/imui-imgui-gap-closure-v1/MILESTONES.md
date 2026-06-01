@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-06-01
+Last updated: 2026-06-02
 
 ## M6 - Continuing IMUI Owner-Split Pressure
 
@@ -11,6 +11,14 @@ Exit criteria:
 - Keep public IMUI facade method names, options, responses, and behavior stable.
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
+
+2026-06-02 IMUI begin-menu active-trigger child owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger.rs`
+now keeps guard/orchestration and the reconcile re-export while delegating current-trigger
+group-active readback to `active_trigger/read.rs` and `MenubarActiveTrigger` plus row-open
+activation writes to `active_trigger/activate.rs`. Menubar open-menu synchronization, post-trigger
+reconciliation, and begin-menu response semantics remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
 
 2026-06-01 IMUI begin-menu open-request bridge owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` now keeps trigger mounting, popup body

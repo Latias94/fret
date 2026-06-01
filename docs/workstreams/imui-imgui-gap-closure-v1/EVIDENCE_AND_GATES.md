@@ -1,7 +1,39 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-06-01
+Last updated: 2026-06-02
+
+## IMUI Begin-Menu Active-Trigger Child Owner-Split Evidence - 2026-06-02
+
+Claim verified: IMUI begin-menu active-trigger readback and activation writes moved out of
+`menu_state/open_policy/active_trigger.rs` into private `active_trigger/read.rs` and
+`active_trigger/activate.rs` without changing active-trigger synchronization, menubar open-menu
+updates, group-active writes, row-open activation, post-trigger reconciliation, or begin-menu
+response semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger.rs`
+  keeps guard/orchestration and the private reconcile re-export.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger/read.rs`
+  owns group-active readback for the current trigger.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger/activate.rs`
+  owns `MenubarActiveTrigger` and row-open activation writes.
+- `tools/gate_imui_workstream_source.py` now tracks the read/write child owners and rejects these
+  bodies drifting back into the root active-trigger owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks both new owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_family_controls::tests --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
 
 ## IMUI Begin-Menu Open-Request Bridge Owner-Split Evidence - 2026-06-01
 

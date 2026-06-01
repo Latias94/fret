@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-06-01
+Last updated: 2026-06-02
 
 ## Worktree Convergence - 2026-05-26
 
@@ -4041,6 +4041,15 @@ Last updated: 2026-06-01
       `open_policy/toggle.rs` owns trigger-click menubar/popup toggling,
       `open_policy/resolve.rs` owns open-request resolution and stale row/popup close cleanup, and
       `open_policy/disabled.rs` owns disabled-popup close cleanup.
+- [x] Split IMUI begin-menu active-trigger read and activation writes out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger.rs`
+      into private child owners without changing active-trigger synchronization, menubar open-menu
+      updates, group-active writes, row-open activation, post-trigger reconciliation, or begin-menu
+      response semantics.
+      Result: `open_policy/active_trigger/read.rs` owns group-active readback for the current
+      trigger, `open_policy/active_trigger/activate.rs` owns `MenubarActiveTrigger` plus row-open
+      activation writes, and `active_trigger.rs` now keeps guard/orchestration plus reconcile
+      re-export.
 - [x] Split IMUI begin-submenu trigger wiring and open-policy reconciliation out of
       `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu.rs` into private owner modules
       without changing submenu trigger geometry hints, hover/shortcut behavior, sibling switching,
