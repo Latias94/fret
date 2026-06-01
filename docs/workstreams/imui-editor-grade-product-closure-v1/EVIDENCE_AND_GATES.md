@@ -2,6 +2,25 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI facade trait roster owner split - 2026-06-02
+
+This refresh continues the `fret-ui-kit::imui` file split by moving the public writer extension
+trait roster out of the facade writer hub without changing the public import path:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/trait_ext.rs` now owns the
+  `UiWriterImUiFacadeExt` macro roster and blanket `UiWriter` implementation.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps module declarations, and
+  `facade_writer.rs` remains the public re-export hub for `ImUiFacade` and
+  `UiWriterImUiFacadeExt`.
+- `tools/gate_imui_workstream_source.py` now checks `trait_ext.rs` as the roster owner and rejects
+  the extension trait returning to `facade_writer.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui imui_text --no-fail-fast` - passed.
+
 ## Fret Plot declarative panel entrypoint owner split - 2026-06-02
 
 This refresh follows the plot props split by moving the public declarative panel adapters out of
