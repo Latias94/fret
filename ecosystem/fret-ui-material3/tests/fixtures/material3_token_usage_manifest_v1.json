@@ -1996,12 +1996,6 @@
       "id": "tokens.time_picker",
       "layer": "token_module",
       "path": "src/tokens/time_picker.rs",
-      "tokens": []
-    },
-    {
-      "id": "tokens.time_picker_common",
-      "layer": "token_module",
-      "path": "src/tokens/time_picker_common.rs",
       "tokens": [
         "md.sys.color.on-primary",
         "md.sys.color.on-primary-container",
