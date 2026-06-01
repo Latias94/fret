@@ -2,6 +2,31 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## DevTools Demo/Metrics/Debug per-action copy commands - 2026-06-02
+
+This refresh keeps the Demo/Metrics/Debug route always available in the DevTools GUI while making
+each canonical action individually copyable:
+
+- `apps/fret-devtools/src/demo_metrics_debug.rs` now owns stable
+  `fret.devtools.demo_metrics_debug.copy_action.*` command ids, per-action copy command projection,
+  and GUI buttons for each action in addition to the full action-bundle copy button.
+- `apps/fret-devtools/src/native.rs` routes those dynamic action-copy command ids to clipboard
+  writes without claiming a shared DevTools command palette contract.
+- The existing first-open/product-chain discovery gates keep their original route-surface marker
+  and now also cover the per-action copy command GUI source.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `cargo check -p fret-devtools` - passed.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## IMUI facade trait roster owner split - 2026-06-02
 
 This refresh continues the `fret-ui-kit::imui` file split by moving the public writer extension

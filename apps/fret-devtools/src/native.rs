@@ -54,12 +54,14 @@ mod workflow_run;
 mod ws;
 
 use demo_metrics_debug::{
-    demo_metrics_debug_action_command_text, devtools_demo_metrics_debug_panel,
+    demo_metrics_debug_action_command_for_copy_command, demo_metrics_debug_action_command_text,
+    devtools_demo_metrics_debug_panel,
 };
 #[cfg(test)]
 use demo_metrics_debug::{
-    demo_metrics_debug_action_metadata_lines, demo_metrics_debug_action_readiness_lines,
-    devtools_demo_metrics_debug_lines, devtools_demo_metrics_debug_lines_with_state,
+    demo_metrics_debug_action_copy_command_lines, demo_metrics_debug_action_metadata_lines,
+    demo_metrics_debug_action_readiness_lines, devtools_demo_metrics_debug_lines,
+    devtools_demo_metrics_debug_lines_with_state,
 };
 
 const CMD_COPY_WS_URL: &str = "fret.devtools.copy_ws_url";
@@ -7007,6 +7009,16 @@ fn on_command(
 ) {
     ws::sync_selected_session_to_client(app, st);
 
+    if let Some(text) = demo_metrics_debug_action_command_for_copy_command(cmd.as_str()) {
+        let token = app.next_clipboard_token();
+        app.push_effect(Effect::ClipboardWriteText {
+            window,
+            token,
+            text,
+        });
+        return;
+    }
+
     match cmd.as_str() {
         CMD_COPY_WS_URL => {
             let text = format!(
@@ -11956,7 +11968,7 @@ mod tests {
         ));
         assert!(text.contains("artifacts root: target/fret-diag"));
         assert!(text.contains(
-            "action surface: dedicated DevTools guide panel + copyable action command bundle"
+            "action surface: dedicated DevTools guide panel + copyable action command bundle and per-action copy commands"
         ));
         assert!(text.contains(
             "command palette: deferred until DevTools has a shared command palette contract"
@@ -11981,6 +11993,12 @@ mod tests {
         ));
         assert!(text.contains(
             "action metadata: inspect debug trace | id=inspect_debug_trace | category=debug | primary=false | requires_bundle=true"
+        ));
+        assert!(text.contains(
+            "action copy command: open workbench | id=open_workbench | copy_command=fret.devtools.demo_metrics_debug.copy_action.open_workbench"
+        ));
+        assert!(text.contains(
+            "action copy command: inspect debug trace | id=inspect_debug_trace | copy_command=fret.devtools.demo_metrics_debug.copy_action.inspect_debug_trace"
         ));
         assert!(text.contains(
             "action readiness: open workbench | id=open_workbench | category=demo | runnable=true | reason=no bundle required"
@@ -12052,6 +12070,22 @@ mod tests {
         let metadata = demo_metrics_debug_action_metadata_lines();
         assert!(metadata.contains(&"action metadata: open workbench | id=open_workbench | category=demo | primary=true | requires_bundle=false".to_string()));
         assert!(metadata.contains(&"action metadata: inspect metrics stats | id=inspect_metrics_stats | category=metrics | primary=false | requires_bundle=true".to_string()));
+        let copy_commands = demo_metrics_debug_action_copy_command_lines();
+        assert!(copy_commands.contains(&"action copy command: open workbench | id=open_workbench | copy_command=fret.devtools.demo_metrics_debug.copy_action.open_workbench".to_string()));
+        assert!(copy_commands.contains(&"action copy command: validate docking campaign | id=validate_docking_campaign | copy_command=fret.devtools.demo_metrics_debug.copy_action.validate_docking_campaign".to_string()));
+        assert_eq!(
+            demo_metrics_debug_action_command_for_copy_command(
+                "fret.devtools.demo_metrics_debug.copy_action.open_workbench"
+            )
+            .as_deref(),
+            Some(DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND)
+        );
+        assert!(
+            demo_metrics_debug_action_command_for_copy_command(
+                "fret.devtools.demo_metrics_debug.copy_action.unknown"
+            )
+            .is_none()
+        );
         let no_bundle = demo_metrics_debug_action_readiness_lines(0);
         assert!(no_bundle.contains(&"action readiness: inspect metrics stats | id=inspect_metrics_stats | category=metrics | runnable=false | reason=select a regression bundle".to_string()));
         let with_bundle = demo_metrics_debug_action_readiness_lines(1);

@@ -10,11 +10,14 @@ use super::{
     DEVTOOLS_METRICS_STATS_COMMAND, IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND,
 };
 use super::{CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS, State, diag_section};
-use fret_app::App;
+use fret_app::{App, CommandId};
 use fret_ui::element::AnyElement;
 use fret_ui::ElementContext;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::facade as shadcn;
+
+const DEVTOOLS_DEMO_METRICS_DEBUG_COPY_ACTION_PREFIX: &str =
+    "fret.devtools.demo_metrics_debug.copy_action.";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct DemoMetricsDebugActionSpec {
@@ -77,6 +80,36 @@ pub(crate) fn demo_metrics_debug_action_command_text() -> String {
         .join("\n")
 }
 
+pub(crate) fn demo_metrics_debug_action_copy_command_id(action_id: &str) -> CommandId {
+    CommandId::new(format!(
+        "{DEVTOOLS_DEMO_METRICS_DEBUG_COPY_ACTION_PREFIX}{action_id}"
+    ))
+}
+
+pub(crate) fn demo_metrics_debug_action_command_for_copy_command(
+    command_id: &str,
+) -> Option<String> {
+    let action_id = command_id.strip_prefix(DEVTOOLS_DEMO_METRICS_DEBUG_COPY_ACTION_PREFIX)?;
+    DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS
+        .iter()
+        .find(|action| action.id == action_id)
+        .map(|action| action.command.to_string())
+}
+
+pub(crate) fn demo_metrics_debug_action_copy_command_lines() -> Vec<String> {
+    DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS
+        .iter()
+        .map(|action| {
+            format!(
+                "action copy command: {} | id={} | copy_command={}",
+                action.label,
+                action.id,
+                demo_metrics_debug_action_copy_command_id(action.id).as_str()
+            )
+        })
+        .collect()
+}
+
 pub(crate) fn demo_metrics_debug_action_metadata_lines() -> Vec<String> {
     DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS
         .iter()
@@ -137,7 +170,7 @@ pub(crate) fn devtools_demo_metrics_debug_lines_with_state(
         format!("artifacts root: {artifacts_root}"),
         "route surface: Always-available editor demos, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell."
             .to_string(),
-        "action surface: dedicated DevTools guide panel + copyable action command bundle"
+        "action surface: dedicated DevTools guide panel + copyable action command bundle and per-action copy commands"
             .to_string(),
         "command palette: deferred until DevTools has a shared command palette contract".to_string(),
         format!("action: open workbench -> {DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND}"),
@@ -147,6 +180,7 @@ pub(crate) fn devtools_demo_metrics_debug_lines_with_state(
         format!("action: validate docking campaign -> {DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND}"),
     ];
     lines.extend(demo_metrics_debug_action_metadata_lines());
+    lines.extend(demo_metrics_debug_action_copy_command_lines());
     lines.extend(demo_metrics_debug_action_readiness_lines(
         selected_bundle_count,
     ));
@@ -188,21 +222,27 @@ pub(crate) fn devtools_demo_metrics_debug_panel(
     diag_section(
         cx,
         "Demo / Metrics / Debug Routes",
-        "Always-available editor demos, action commands, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
+        "Always-available editor demos, action commands, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell. Per-action copy commands stay visible alongside the bundle copy control.",
         demo_metrics_debug_rows,
     )
 }
 
 fn devtools_demo_metrics_debug_action_row(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    ui::h_row(|cx| {
-        [
-            shadcn::Button::new("Copy Demo/Metrics/Debug actions")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .on_click(CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS)
-                .into_element(cx),
-        ]
-    })
+    let mut actions = vec![
+        shadcn::Button::new("Copy Demo/Metrics/Debug actions")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Sm)
+            .on_click(CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS)
+            .into_element(cx),
+    ];
+    actions.extend(DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS.iter().map(|action| {
+        shadcn::Button::new(format!("Copy {}", action.label))
+            .variant(shadcn::ButtonVariant::Ghost)
+            .size(shadcn::ButtonSize::Sm)
+            .on_click(demo_metrics_debug_action_copy_command_id(action.id))
+            .into_element(cx)
+    }));
+    ui::h_row(|_cx| actions)
     .gap(fret_ui_kit::Space::N2)
     .items_center()
     .layout(fret_ui_kit::LayoutRefinement::default().w_full())
