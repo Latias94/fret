@@ -145,6 +145,14 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     physical destination-order mirroring.
   - Gates: `navigation_state::{navigation_bar_rtl_arrow_left_moves_to_next_logical_destination,
     navigation_bar_rtl_theme_direction_mirrors_physical_destination_order}`.
+- 2026-06-01 NavigationDrawer RTL slot mirroring:
+  - `NavigationDrawer` now resolves the Material theme default layout direction and provides it to
+    its subtree, so drawer item text/flex layout receives the same direction context as Bar/Tabs.
+  - Drawer items keep the Compose Material3 logical row order (`icon -> label -> badge`) while
+    using logical inline padding (`start=16dp`, `end=24dp`) through the shared Material logical-edge
+    helper.
+  - Gates:
+    `navigation_state::navigation_drawer_rtl_theme_direction_mirrors_item_slots_and_padding`.
 - 2026-06-01 ModalNavigationDrawer routed-content composition:
   - `NavigationDrawerItem::on_select(...)` exposes the caller-owned destination activation hook
     needed to model Compose-style `selected = item; drawerState.close()` flows without baking modal
@@ -159,7 +167,5 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 
 1. Finish Tabs residuals only if panel presence becomes a real app need:
    `force_mount` content, presence motion, and overflow/scroll affordance polish.
-2. Audit `NavigationDrawer` icon/text slot mirroring under RTL if drawer-heavy RTL app surfaces
-   become a priority.
-3. Extend real-device/mobile IME and inset proof for overlay-heavy Material flows if mobile search
+2. Extend real-device/mobile IME and inset proof for overlay-heavy Material flows if mobile search
    and bottom-sheet surfaces become product priorities.

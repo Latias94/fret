@@ -11,7 +11,10 @@ use fret_core::{
 use fret_runtime::{Model, ModelHost, PlatformCapabilities};
 use fret_ui::UiTree;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
-use fret_ui_material3::{NavigationBar, NavigationBarItem, NavigationRail, NavigationRailItem};
+use fret_ui_material3::{
+    NavigationBar, NavigationBarItem, NavigationDrawer, NavigationDrawerItem, NavigationRail,
+    NavigationRailItem,
+};
 
 mod support;
 
@@ -97,6 +100,37 @@ fn render_navigation_rail(
     ui.layout_all(app, services, bounds(), 1.0);
 }
 
+fn render_navigation_drawer(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+) {
+    let root =
+        fret_ui::declarative::render_root(ui, app, services, window, bounds(), "root", |cx| {
+            let drawer = NavigationDrawer::new(selected)
+                .a11y_label("Material navigation drawer")
+                .test_id("m3-navigation-drawer")
+                .items(vec![
+                    NavigationDrawerItem::new("inbox", "Inbox", fret_icons::ids::ui::SEARCH)
+                        .badge_label("99")
+                        .test_id("m3-drawer-inbox"),
+                    NavigationDrawerItem::new(
+                        "settings",
+                        "Settings",
+                        fret_icons::ids::ui::SETTINGS,
+                    )
+                    .test_id("m3-drawer-settings"),
+                ])
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), drawer)]
+        });
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(app, services, bounds(), 1.0);
+}
+
 fn paint(ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices) -> Scene {
     let mut scene = Scene::default();
     ui.paint_all(app, services, bounds(), &mut scene, 1.0);
@@ -175,6 +209,27 @@ fn rect_center_x(rect: Rect) -> f32 {
 
 fn rect_center_y(rect: Rect) -> f32 {
     rect.origin.y.0 + rect.size.height.0 * 0.5
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DrawerItemSlotRects {
+    chrome: Rect,
+    icon: Rect,
+    label: Rect,
+    badge: Rect,
+}
+
+fn drawer_item_slot_rects(
+    ui: &UiTree<TestHost>,
+    app: &TestHost,
+    window: AppWindowId,
+) -> DrawerItemSlotRects {
+    DrawerItemSlotRects {
+        chrome: visual_bounds_by_test_id(ui, app, window, "m3-drawer-inbox.chrome"),
+        icon: visual_bounds_by_test_id(ui, app, window, "m3-drawer-inbox.icon"),
+        label: visual_bounds_by_test_id(ui, app, window, "m3-drawer-inbox.label"),
+        badge: visual_bounds_by_test_id(ui, app, window, "m3-drawer-inbox.badge"),
+    }
 }
 
 fn assert_px_close(actual: f32, expected: f32, context: &str) {
@@ -414,5 +469,49 @@ fn navigation_rail_uses_full_width_56dp_items_and_active_indicator_geometry() {
         rect_center_y(indicator),
         rect_center_y(icon),
         "navigation rail active indicator center y",
+    );
+}
+
+#[test]
+fn navigation_drawer_rtl_theme_direction_mirrors_item_slots_and_padding() {
+    let (mut app, window, mut services, mut ui) = harness();
+    let selected = app.models_mut().insert(Arc::<str>::from("inbox"));
+    render_navigation_drawer(&mut ui, &mut app, &mut services, window, selected);
+    let ltr = drawer_item_slot_rects(&ui, &app, window);
+
+    assert!(
+        ltr.icon.origin.x.0 < ltr.label.origin.x.0 && ltr.label.origin.x.0 < ltr.badge.origin.x.0,
+        "expected LTR drawer slots to render icon, label, then badge: {ltr:?}"
+    );
+    assert_px_close(
+        ltr.icon.origin.x.0 - ltr.chrome.origin.x.0,
+        16.0,
+        "LTR drawer icon uses logical start padding",
+    );
+    assert_px_close(
+        rect_right(ltr.chrome) - rect_right(ltr.badge),
+        24.0,
+        "LTR drawer badge uses logical end padding",
+    );
+
+    let (mut app, window, mut services, mut ui) = harness();
+    apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+    let selected = app.models_mut().insert(Arc::<str>::from("inbox"));
+    render_navigation_drawer(&mut ui, &mut app, &mut services, window, selected);
+    let rtl = drawer_item_slot_rects(&ui, &app, window);
+
+    assert!(
+        rtl.badge.origin.x.0 < rtl.label.origin.x.0 && rtl.label.origin.x.0 < rtl.icon.origin.x.0,
+        "expected RTL drawer slots to render badge, label, then icon: {rtl:?}"
+    );
+    assert_px_close(
+        rtl.badge.origin.x.0 - rtl.chrome.origin.x.0,
+        24.0,
+        "RTL drawer badge uses logical end padding on the physical left",
+    );
+    assert_px_close(
+        rect_right(rtl.chrome) - rect_right(rtl.icon),
+        16.0,
+        "RTL drawer icon uses logical start padding on the physical right",
     );
 }

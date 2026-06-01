@@ -369,5 +369,5 @@ Residual risk:
 
 - `NavigationRail` is vertical, so this batch does not assert a horizontal destination-order mirror
   for it.
-- `NavigationDrawer` leading/trailing icon/text slot mirroring under RTL remains a focused visual
-  polish follow-up if drawer-heavy RTL app surfaces need it.
+- `NavigationDrawer` leading/trailing icon/text slot mirroring under RTL is now covered by
+  `docs/workstreams/material3/material3-navigation-drawer-rtl-slot-mirroring-v1.md`.
