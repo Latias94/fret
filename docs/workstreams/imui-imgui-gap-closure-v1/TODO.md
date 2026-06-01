@@ -58,6 +58,14 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `EnumSelect` overlay filtering policy into a private child owner without
+      changing trim/lowercase matching, label/value match coverage, empty-query behavior, overlay
+      request assembly, popup/list layout, row routing, selected-row reveal, close-focus policy, or
+      public `EnumSelect` options.
+      Result: `controls/enum_select/overlay.rs` keeps overlay request/layout/reveal orchestration.
+      `controls/enum_select/overlay/filter.rs` owns query normalization and label/value filtering
+      with focused filter tests. The source gate prevents filtering policy from drifting back into
+      the overlay request owner.
 - [x] Split `fret-ui-kit::imui` debug-draw stroke visibility/path-style projection into a private
       child owner without changing `DebugDrawStrokeStyle` fields, builders, default values,
       invalid dash/miter guards, `is_visible(...)`, `path_style(...)`, or public debug-draw option

@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor EnumSelect Overlay Filter Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `EnumSelect` overlay filtering policy moved out of
+`controls/enum_select/overlay.rs` into a private `controls/enum_select/overlay/filter.rs` owner
+without changing trim/lowercase query matching, label/value matching, empty-query behavior, overlay
+request assembly, popup/list layout, row routing, selected-row reveal, close-focus policy, dismiss
+behavior, or public `EnumSelect` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` keeps overlay request assembly,
+  popup/list layout, search box composition, selected-row reveal, close-focus policy, and dismiss
+  behavior.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay/filter.rs` owns query normalization
+  and label/value filtering.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay/filter/tests.rs` covers case-insensitive
+  label matching, case-insensitive value matching, and empty-query order preservation.
+- `tools/gate_imui_workstream_source.py` now tracks the filter owner and rejects filtering policy
+  from drifting back into the overlay request owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new filter owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor enum_select --no-fail-fast`: pass (8 passed, 217 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Kit IMUI Debug-Draw Stroke Style Owner-Split Evidence - 2026-06-01
 
 Claim verified: `fret-ui-kit::imui` debug-draw stroke visibility/path-style projection moved out

@@ -25,6 +25,10 @@ use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 use super::{EnumSelectItem, EnumSelectOptions, row};
 
+mod filter;
+
+use filter::filter_enum_select_items;
+
 #[cfg(test)]
 mod tests;
 
@@ -81,15 +85,7 @@ pub(super) fn request_overlay<H: UiHost>(
     let filter_text = cx
         .get_model_cloned(&filter, Invalidation::Paint)
         .unwrap_or_default();
-    let q = filter_text.trim().to_lowercase();
-    let matches = |s: &str| q.is_empty() || s.to_lowercase().contains(&q);
-
-    let filtered: Arc<[EnumSelectItem]> = items
-        .iter()
-        .filter(|it| matches(it.label.as_ref()) || matches(it.value.as_ref()))
-        .cloned()
-        .collect::<Vec<_>>()
-        .into();
+    let filtered = filter_enum_select_items(items.as_ref(), filter_text.as_ref());
     let queue_selected_reveal = cx.slot_state(
         || false,
         |was_open| {

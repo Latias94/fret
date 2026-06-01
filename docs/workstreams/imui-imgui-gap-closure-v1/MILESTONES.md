@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor EnumSelect overlay-filter owner-split result:
+`ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` now keeps overlay request assembly,
+popup/list layout, selected-row reveal, close-focus policy, and dismiss behavior while delegating
+query normalization plus label/value filtering to `controls/enum_select/overlay/filter.rs`. The
+private filter owner preserves trim/lowercase matching, empty-query ordering, and label/value match
+coverage with focused tests. Public `EnumSelect` options, row routing, selected reveal behavior,
+and overlay chrome remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 kit IMUI debug-draw stroke-style owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/stroke.rs` now keeps the public
 `DebugDrawStrokeStyle` record, builders, defaults, invalid dash/miter guards, and method names
