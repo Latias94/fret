@@ -22,6 +22,10 @@ pub(crate) struct ChipOutline {
     pub color: Color,
 }
 
+fn chip_metric(theme: &Theme, key: impl AsRef<str>, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key.as_ref()), fallback)
+}
+
 pub(crate) fn disabled_on_surface_color(
     theme: &Theme,
     color_key: &str,
@@ -38,25 +42,23 @@ pub(crate) fn disabled_on_surface_color(
 }
 
 pub(crate) fn container_height(theme: &Theme, component_prefix: &str) -> Px {
-    theme
-        .metric_by_key(&format!("{component_prefix}.container.height"))
-        .unwrap_or(DEFAULT_CONTAINER_HEIGHT)
+    chip_metric(
+        theme,
+        format!("{component_prefix}.container.height"),
+        DEFAULT_CONTAINER_HEIGHT,
+    )
 }
 
 pub(crate) fn container_shape(theme: &Theme, component_prefix: &str) -> Corners {
-    theme
-        .metric_by_key(&format!("{component_prefix}.container.shape"))
-        .map(Corners::all)
-        .or_else(|| {
-            theme
-                .metric_by_key("md.sys.shape.corner.small")
-                .map(Corners::all)
-        })
-        .unwrap_or_else(|| Corners::all(DEFAULT_CONTAINER_SHAPE))
+    let component_key = format!("{component_prefix}.container.shape");
+    Corners::all(MaterialTokenResolver::new(theme).metric_chain(
+        &[component_key.as_str(), "md.sys.shape.corner.small"],
+        DEFAULT_CONTAINER_SHAPE,
+    ))
 }
 
 pub(crate) fn icon_size(theme: &Theme, key: &str) -> Px {
-    theme.metric_by_key(key).unwrap_or(DEFAULT_ICON_SIZE)
+    chip_metric(theme, key, DEFAULT_ICON_SIZE)
 }
 
 pub(crate) fn label_text_style(theme: &Theme, component_prefix: &str) -> TextStyle {
@@ -138,11 +140,11 @@ pub(crate) fn elevated_container_elevation(
     interaction: Option<PressableInteraction>,
 ) -> Px {
     if !enabled {
-        return theme
-            .metric_by_key(&format!(
-                "{component_prefix}.elevated.disabled.container.elevation"
-            ))
-            .unwrap_or(DEFAULT_ELEVATION);
+        return chip_metric(
+            theme,
+            format!("{component_prefix}.elevated.disabled.container.elevation"),
+            DEFAULT_ELEVATION,
+        );
     }
 
     let key = match interaction {
@@ -152,9 +154,11 @@ pub(crate) fn elevated_container_elevation(
         None => "elevated.container.elevation",
     };
 
-    theme
-        .metric_by_key(&format!("{component_prefix}.{key}"))
-        .unwrap_or(DEFAULT_ELEVATION)
+    chip_metric(
+        theme,
+        format!("{component_prefix}.{key}"),
+        DEFAULT_ELEVATION,
+    )
 }
 
 pub(crate) fn elevated_container_shadow_color(theme: &Theme, component_prefix: &str) -> Color {
@@ -171,9 +175,11 @@ pub(crate) fn outline(
     interaction: Option<PressableInteraction>,
     keys: ChipOutlineKeys,
 ) -> ChipOutline {
-    let width = theme
-        .metric_by_key(&format!("{component_prefix}.{}", keys.width))
-        .unwrap_or(DEFAULT_OUTLINE_WIDTH);
+    let width = chip_metric(
+        theme,
+        format!("{component_prefix}.{}", keys.width),
+        DEFAULT_OUTLINE_WIDTH,
+    );
 
     if !enabled {
         return ChipOutline {
@@ -258,12 +264,45 @@ mod tests {
         patch
             .metrics
             .insert("md.comp.assist-chip.with-icon.icon.size".to_string(), 20.0);
+        patch.metrics.insert(
+            "md.comp.assist-chip.elevated.hover.container.elevation".to_string(),
+            6.0,
+        );
+        patch
+            .metrics
+            .insert("md.comp.assist-chip.outline.width".to_string(), 2.0);
         let (_app, theme) = theme_with_patch(patch);
 
         assert_eq!(container_height(&theme, "md.comp.assist-chip"), Px(40.0));
         assert_eq!(
             icon_size(&theme, "md.comp.assist-chip.with-icon.icon.size"),
             Px(20.0)
+        );
+        assert_eq!(
+            elevated_container_elevation(
+                &theme,
+                "md.comp.assist-chip",
+                true,
+                Some(PressableInteraction::Hovered),
+            ),
+            Px(6.0)
+        );
+        assert_eq!(
+            outline(
+                &theme,
+                "md.comp.assist-chip",
+                true,
+                None,
+                ChipOutlineKeys {
+                    width: "outline.width",
+                    disabled_color: "disabled.outline.color",
+                    disabled_opacity: "disabled.outline.opacity",
+                    focus_color: "focus.outline.color",
+                    color: "outline.color",
+                },
+            )
+            .width,
+            Px(2.0)
         );
     }
 
