@@ -439,6 +439,13 @@ Each TODO is labeled:
         emission for dock-owned floating OS windows.
       - Focused empty-window auto-close regression, source gate, JSON shape, catalog, and diff
         checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking runtime request owner split keeps tear-off request/fallback policy out of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M30_DOCKING_RUNTIME_REQUEST_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/runtime/request.rs` owns `RequestFloatPanelToNewWindow` and
+        `RequestFloatTabsToNewWindow` capability fallback, active drag pointer correlation,
+        pending request registration, and DockFloating create-request trigger policy.
+      - Focused request/create/fallback/idempotence regressions, source gate, JSON shape, catalog,
+        and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
