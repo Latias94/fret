@@ -54,43 +54,57 @@ pub(crate) fn active_shape(theme: &Theme) -> Corners {
 }
 
 pub(crate) fn linear_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.progress-indicator.linear.height")
-        .unwrap_or(DEFAULT_LINEAR_HEIGHT)
+    MaterialTokenResolver::new(theme).metric_optional(
+        Some("md.comp.progress-indicator.linear.height"),
+        DEFAULT_LINEAR_HEIGHT,
+    )
 }
 
 pub(crate) fn linear_track_thickness(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.progress-indicator.linear.track.thickness")
-        .or_else(|| theme.metric_by_key("md.comp.progress-indicator.track.thickness"))
-        .unwrap_or(DEFAULT_TRACK_THICKNESS)
+    MaterialTokenResolver::new(theme).metric_chain(
+        &[
+            "md.comp.progress-indicator.linear.track.thickness",
+            "md.comp.progress-indicator.track.thickness",
+        ],
+        DEFAULT_TRACK_THICKNESS,
+    )
 }
 
 pub(crate) fn linear_active_thickness(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.progress-indicator.linear.active-indicator.thickness")
-        .or_else(|| theme.metric_by_key("md.comp.progress-indicator.active-indicator.thickness"))
-        .unwrap_or(DEFAULT_ACTIVE_THICKNESS)
+    MaterialTokenResolver::new(theme).metric_chain(
+        &[
+            "md.comp.progress-indicator.linear.active-indicator.thickness",
+            "md.comp.progress-indicator.active-indicator.thickness",
+        ],
+        DEFAULT_ACTIVE_THICKNESS,
+    )
 }
 
 pub(crate) fn circular_size(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.progress-indicator.circular.size")
-        .unwrap_or(DEFAULT_CIRCULAR_SIZE)
+    MaterialTokenResolver::new(theme).metric_optional(
+        Some("md.comp.progress-indicator.circular.size"),
+        DEFAULT_CIRCULAR_SIZE,
+    )
 }
 
 pub(crate) fn circular_track_thickness(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.progress-indicator.circular.track.thickness")
-        .or_else(|| theme.metric_by_key("md.comp.progress-indicator.track.thickness"))
-        .unwrap_or(DEFAULT_TRACK_THICKNESS)
+    MaterialTokenResolver::new(theme).metric_chain(
+        &[
+            "md.comp.progress-indicator.circular.track.thickness",
+            "md.comp.progress-indicator.track.thickness",
+        ],
+        DEFAULT_TRACK_THICKNESS,
+    )
 }
 
 pub(crate) fn circular_active_thickness(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.progress-indicator.circular.active-indicator.thickness")
-        .or_else(|| theme.metric_by_key("md.comp.progress-indicator.active-indicator.thickness"))
-        .unwrap_or(DEFAULT_ACTIVE_THICKNESS)
+    MaterialTokenResolver::new(theme).metric_chain(
+        &[
+            "md.comp.progress-indicator.circular.active-indicator.thickness",
+            "md.comp.progress-indicator.active-indicator.thickness",
+        ],
+        DEFAULT_ACTIVE_THICKNESS,
+    )
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-use fret_core::Color;
+use fret_core::{Color, Px};
 use fret_ui::{Theme, theme::CubicBezier};
 
 pub(crate) fn alpha_mul(mut color: Color, multiplier: f32) -> Color {
@@ -236,6 +236,26 @@ impl<'a> MaterialTokenResolver<'a> {
             .unwrap_or(fallback)
     }
 
+    pub fn metric_optional(&self, key: Option<&str>, fallback: Px) -> Px {
+        debug_assert!(
+            key.is_none_or(|key| key.starts_with("md.")),
+            "expected md.* metric token key, got: {key:?}"
+        );
+        key.and_then(|key| self.theme.metric_by_key(key))
+            .unwrap_or(fallback)
+    }
+
+    pub fn metric_chain(&self, keys: &[&str], fallback: Px) -> Px {
+        debug_assert!(!keys.is_empty(), "expected at least one md.* key");
+        debug_assert!(
+            keys.iter().all(|key| key.starts_with("md.")),
+            "expected md.* metric token keys, got: {keys:?}"
+        );
+        keys.iter()
+            .find_map(|key| self.theme.metric_by_key(key))
+            .unwrap_or(fallback)
+    }
+
     pub fn color_comp_or_sys_with_opacity(
         &self,
         comp_key: &str,
@@ -346,6 +366,8 @@ fn linear_easing() -> CubicBezier {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
 
     fn color(r: f32, g: f32, b: f32, a: f32) -> Color {
         Color { r, g, b, a }
@@ -379,6 +401,27 @@ mod tests {
         assert_eq!(
             MaterialStateLayerInteraction::Pressed.fallback_opacity(),
             0.1
+        );
+    }
+
+    #[test]
+    fn metric_chain_prefers_first_present_material_metric() {
+        let mut app = App::new();
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.test.secondary".to_string(), 12.0);
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app);
+
+        let tokens = MaterialTokenResolver::new(theme);
+        assert_eq!(
+            tokens.metric_chain(&["md.comp.test.primary", "md.comp.test.secondary"], Px(4.0)),
+            Px(12.0)
+        );
+        assert_eq!(
+            tokens.metric_optional(Some("md.comp.test.missing"), Px(4.0)),
+            Px(4.0)
         );
     }
 }

@@ -308,14 +308,10 @@ fn apply_text_input_ink(
         "md.sys.color.on-surface",
     );
     style.placeholder_color = placeholder_color(theme, prefix, state);
-    style.selection_color = theme
-        .color_by_key("md.sys.color.primary")
-        .map(|c| alpha_mul(c, DEFAULT_SELECTION_ALPHA))
-        .unwrap_or(style.selection_color);
+    let primary = MaterialTokenResolver::new(theme).color_sys("md.sys.color.primary");
+    style.selection_color = alpha_mul(primary, DEFAULT_SELECTION_ALPHA);
     style.caret_color = caret_color(theme, prefix, state);
-    style.preedit_color = theme
-        .color_by_key("md.sys.color.primary")
-        .unwrap_or(style.preedit_color);
+    style.preedit_color = primary;
     style.preedit_underline_color = style.preedit_color;
 }
 
@@ -561,5 +557,28 @@ mod tests {
                 .expect("patched error hover outline color")
         );
         assert_eq!(opacity, 1.0);
+    }
+
+    #[test]
+    fn field_text_input_ink_uses_material_primary_for_selection_and_preedit() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .colors
+            .insert("md.sys.color.primary".to_string(), "#112233".to_string());
+        let (_app, theme) = theme_with_patch(patch);
+
+        let style = outlined_text_input_style(
+            &theme,
+            "md.comp.outlined-test-field",
+            FieldState::new(false, false, false, false),
+        );
+        let primary = MaterialTokenResolver::new(&theme).color_sys("md.sys.color.primary");
+
+        assert_eq!(
+            style.selection_color,
+            alpha_mul(primary, DEFAULT_SELECTION_ALPHA)
+        );
+        assert_eq!(style.preedit_color, primary);
+        assert_eq!(style.preedit_underline_color, primary);
     }
 }
