@@ -17,6 +17,21 @@ fn scene_has_quad_color(scene: &fret_core::Scene, expected: fret_core::Color) ->
     })
 }
 
+fn scene_has_quad_color_and_corners(
+    scene: &fret_core::Scene,
+    expected_color: fret_core::Color,
+    expected_corners: fret_core::Corners,
+) -> bool {
+    scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            fret_core::SceneOp::Quad { background, corner_radii, .. }
+                if matches!(background.paint, fret_core::Paint::Solid(color) if color_close(color, expected_color))
+                    && *corner_radii == expected_corners
+        )
+    })
+}
+
 fn scene_has_text_color(scene: &fret_core::Scene, expected: fret_core::Color) -> bool {
     scene.ops().iter().any(|op| {
         matches!(
@@ -388,6 +403,12 @@ fn toast_layer_style_direct_colors_are_painted() {
         b: 0.44,
         a: 1.0,
     };
+    let container_corners = fret_core::Corners {
+        top_left: Px(3.0),
+        top_right: Px(5.0),
+        bottom_right: Px(7.0),
+        bottom_left: Px(9.0),
+    };
 
     let store = toast_store(&mut app);
     let _ = toast_action(
@@ -416,6 +437,7 @@ fn toast_layer_style_direct_colors_are_painted() {
                 style.action.label_color = Some(action_color);
                 style.close.icon_color = Some(close_color);
                 style.border_width = Px(0.0);
+                style.container_corner_radii = Some(container_corners);
                 style
             }),
     );
@@ -428,6 +450,10 @@ fn toast_layer_style_direct_colors_are_painted() {
     assert!(
         scene_has_quad_color(&scene, background),
         "expected ToastLayerStyle.background_color to paint the toast container"
+    );
+    assert!(
+        scene_has_quad_color_and_corners(&scene, background, container_corners),
+        "expected ToastLayerStyle.container_corner_radii to paint the toast container corners"
     );
     assert!(
         scene_has_text_color(&scene, foreground),

@@ -11,7 +11,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::{Edges, Px};
+use fret_core::{Corners, Edges, Px};
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::UiActionHost;
 use fret_ui::element::AnyElement;
@@ -379,6 +379,19 @@ fn snackbar_metric_override(
     resolve_override_slot_with(slot.as_ref(), states, |value| *value, fallback)
 }
 
+fn snackbar_corner_radii_override(
+    slot: &OverrideSlot<Px>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> Corners,
+) -> Corners {
+    resolve_override_slot_with(
+        slot.as_ref(),
+        states,
+        |value| Corners::all(*value),
+        fallback,
+    )
+}
+
 fn snackbar_edges_override(
     slot: &OverrideSlot<Edges>,
     states: WidgetStates,
@@ -398,9 +411,13 @@ fn snackbar_optional_metric_override(
 fn snackbar_toast_layer_style(theme: &Theme, style: &SnackbarStyle) -> ToastLayerStyle {
     let icon_size = snackbar_tokens::icon_size(theme);
     let states = WidgetStates::empty();
-    let container_shape = snackbar_metric_override(&style.container_corner_radius, states, || {
+    let container_radius = snackbar_metric_override(&style.container_corner_radius, states, || {
         snackbar_tokens::container_shape_radius(theme)
     });
+    let container_corner_radii =
+        snackbar_corner_radii_override(&style.container_corner_radius, states, || {
+            snackbar_tokens::container_shape(theme)
+        });
     let shadow = snackbar_tokens::container_shadow(theme);
     let open_ticks = ms_to_frames(snackbar_tokens::open_duration_ms(theme));
     let close_ticks = ms_to_frames(snackbar_tokens::close_duration_ms(theme));
@@ -449,7 +466,8 @@ fn snackbar_toast_layer_style(theme: &Theme, style: &SnackbarStyle) -> ToastLaye
         single_line_min_height: single_line_height,
         two_line_min_height: two_line_height,
         container_padding: Some(container_padding),
-        container_radius: Some(container_shape),
+        container_corner_radii: Some(container_corner_radii),
+        container_radius: Some(container_radius),
         title: ToastTextStyle {
             style_key: Some("md.comp.snackbar.supporting-text".to_string()),
             color_key: Some("md.comp.snackbar.supporting-text.color".to_string()),

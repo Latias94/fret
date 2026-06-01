@@ -37,6 +37,11 @@ pub(crate) fn container_shape_radius(theme: &Theme) -> Px {
     snackbar_metric(theme, "md.comp.snackbar.container.shape", Px(4.0))
 }
 
+pub(crate) fn container_shape(theme: &Theme) -> Corners {
+    MaterialTokenResolver::new(theme)
+        .corners_chain_or(&["md.comp.snackbar.container.shape"], Corners::all(Px(4.0)))
+}
+
 pub(crate) fn container_elevation(theme: &Theme) -> Px {
     snackbar_metric(theme, "md.comp.snackbar.container.elevation", Px(0.0))
 }
@@ -50,9 +55,9 @@ pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
 
 pub(crate) fn container_shadow(theme: &Theme) -> Option<fret_ui::element::ShadowStyle> {
     let elevation = container_elevation(theme);
-    let r = container_shape_radius(theme);
+    let corner_radii = container_shape(theme);
     let shadow_color = container_shadow_color(theme);
-    shadow_for_elevation_with_color(theme, elevation, Some(shadow_color), Corners::all(r))
+    shadow_for_elevation_with_color(theme, elevation, Some(shadow_color), corner_radii)
 }
 
 #[cfg(test)]
@@ -489,5 +494,33 @@ mod tests {
         assert_eq!(container_elevation(&theme), Px(3.0));
         assert_eq!(single_line_min_height(&theme), Some(Px(48.0)));
         assert_eq!(two_line_min_height(&theme), Some(Px(68.0)));
+    }
+
+    #[test]
+    fn snackbar_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.snackbar.container.shape".to_string(), 6.0);
+        patch.corners.insert(
+            "md.comp.snackbar.container.shape".to_string(),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_shape(&theme),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            }
+        );
     }
 }

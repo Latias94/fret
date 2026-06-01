@@ -2444,7 +2444,7 @@ pub fn render<H: UiHost + 'static>(
                 // Sonner uses a 600px mobile breakpoint for `mobileOffset`.
                 let is_mobile = bounds.size.width.0 <= 600.0;
 
-                let (desktop_offset, mobile_offset, gap, radius) = {
+                let (desktop_offset, mobile_offset, gap, corner_radii) = {
                     let theme = fret_ui::Theme::global(&*cx.app);
                     let desktop_offset = offset_override
                         .or_else(|| margin_override.map(super::requests::ToastOffset::all))
@@ -2455,7 +2455,10 @@ pub fn render<H: UiHost + 'static>(
                     let radius = toast_style
                         .container_radius
                         .unwrap_or_else(|| theme.metric_token("metric.radius.md"));
-                    (desktop_offset, mobile_offset, gap, radius)
+                    let corner_radii = toast_style
+                        .container_corner_radii
+                        .unwrap_or_else(|| fret_core::Corners::all(radius));
+                    (desktop_offset, mobile_offset, gap, corner_radii)
                 };
 
                 let desktop_offset_top = desktop_offset.top.unwrap_or(Px(24.0));
@@ -2486,10 +2489,10 @@ pub fn render<H: UiHost + 'static>(
                         a: 0.2,
                     },
                     offset_color: None,
-                    corner_radii: fret_core::Corners::all(radius),
+                    corner_radii,
                 };
 
-                let shadow = toast_style.shadow.or_else(|| {
+                let shadow = toast_style.shadow.or({
                     // Source-aligned Sonner baseline from the checked-in open-mode web goldens:
                     // `rgba(0, 0, 0, 0.1) 0px 4px 12px 0px`.
                     Some(fret_ui::element::ShadowStyle {
@@ -2506,7 +2509,7 @@ pub fn render<H: UiHost + 'static>(
                             spread: Px(0.0),
                         },
                         secondary: None,
-                        corner_radii: fret_core::Corners::all(radius),
+                        corner_radii,
                     })
                 });
 
@@ -3826,7 +3829,7 @@ pub fn render<H: UiHost + 'static>(
                                                                     focus_ring_always_paint: false,
                                                                     focus_border_color: None,
                                                                     focus_within: false,
-                                                                    corner_radii: fret_core::Corners::all(radius),
+                                                                    corner_radii,
                                                                     snap_to_device_pixels: false,
                                                                 },
                                                                 move |cx| {

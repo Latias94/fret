@@ -1985,7 +1985,7 @@ fn actual_snackbar_number(
 
 fn actual_snackbar_corners(theme: &Theme, role: &str) -> Corners {
     match role {
-        "container_shape" => Corners::all(snackbar::container_shape_radius(theme)),
+        "container_shape" => snackbar::container_shape(theme),
         other => panic!("unsupported snackbar corners role {other}"),
     }
 }
