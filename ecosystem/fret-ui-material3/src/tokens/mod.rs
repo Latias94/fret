@@ -5,6 +5,9 @@
 
 pub mod v30;
 
+#[doc(hidden)]
+pub mod usage;
+
 #[cfg(test)]
 pub(crate) mod coverage;
 

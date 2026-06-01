@@ -411,6 +411,14 @@ These files are primarily *shared policy primitives*, not one-off component layo
       `ecosystem/fret-ui-material3/src/lib.rs`
       (`material3_token_usage_manifest_matches_literal_md_sources`,
       `material3_literal_md_tokens_resolve_in_v30_theme`).
+  - [x] Centralize Material token usage discovery and template expansion behind one crate-internal
+    Module shared by conformance tests and maintainer audit tooling.
+    - Evidence: `ecosystem/fret-ui-material3/src/tokens/usage.rs`,
+      `ecosystem/fret-ui-material3/src/tokens/coverage.rs`,
+      `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs`.
+    - Notes: `material3_token_audit` now audits the same 121 manifest-owned source files and
+      excludes generated token presets, maintainer binaries, and crate-internal test token
+      namespaces from missing-injection reports.
   - [x] IconButton token keys + fallbacks centralized.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/icon_button.rs`,
       `ecosystem/fret-ui-material3/src/icon_button.rs`.
