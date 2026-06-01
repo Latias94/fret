@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor EnumSelect Trigger-Key Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `EnumSelect` trigger keyboard open/close policy moved out of
+`controls/enum_select.rs` into a private `controls/enum_select/trigger_keys.rs` owner without
+changing enabled gating, Enter/NumpadEnter/Space/ArrowDown open behavior, Escape close behavior,
+open-change reason updates, redraw requests, trigger visual composition, overlay routing, row
+behavior, or public `EnumSelect` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/enum_select.rs` keeps public control construction, trigger
+  visuals, key-handler registration, and overlay routing.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/trigger_keys.rs` owns trigger key intent
+  classification plus open/escape model updates.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/trigger_keys/tests.rs` covers
+  Enter/NumpadEnter/Space/ArrowDown open intent, Escape close intent, and ignored ArrowUp behavior.
+- `tools/gate_imui_workstream_source.py` now tracks the trigger-key owner and rejects key policy
+  from drifting back into the root control owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new trigger-key owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor enum_select --no-fail-fast`: pass (10 passed, 217 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor EnumSelect Overlay Reveal Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `EnumSelect` overlay selected-row reveal and viewport visibility policy

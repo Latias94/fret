@@ -1293,6 +1293,8 @@
     "ecosystem/fret-ui-editor/src/controls/slider/value_math.rs",
     "ecosystem/fret-ui-editor/src/controls/slider/value_math/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select.rs",
+    "ecosystem/fret-ui-editor/src/controls/enum_select/trigger_keys.rs",
+    "ecosystem/fret-ui-editor/src/controls/enum_select/trigger_keys/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select/overlay/filter.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select/overlay/filter/tests.rs",

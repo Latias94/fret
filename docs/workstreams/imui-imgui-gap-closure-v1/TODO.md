@@ -58,6 +58,14 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `EnumSelect` trigger keyboard open/close policy into a private child owner
+      without changing enabled gating, Enter/NumpadEnter/Space/ArrowDown open behavior, Escape
+      close behavior, open-change reason updates, redraw requests, trigger composition, overlay
+      routing, or public `EnumSelect` options.
+      Result: `controls/enum_select.rs` keeps public control construction, trigger visuals, key
+      registration, and overlay routing. `controls/enum_select/trigger_keys.rs` owns trigger
+      keyboard intent classification plus open/escape model updates with focused tests. The source
+      gate prevents trigger key policy from drifting back into the root control owner.
 - [x] Split editor `EnumSelect` overlay selected-row reveal and viewport visibility policy into a
       private child owner without changing selected-row scroll-into-view behavior, already-visible
       detection, pending-reveal clearing, viewport test-id derivation, close-focus policy,

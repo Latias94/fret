@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor EnumSelect trigger-key owner-split result:
+`ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps public control construction,
+trigger visual composition, key-handler registration, and overlay routing while delegating
+trigger keyboard open/close policy to `controls/enum_select/trigger_keys.rs`. The private key
+owner preserves enabled gating, Enter/NumpadEnter/Space/ArrowDown open behavior, Escape close
+behavior, open-change reason updates, and redraw requests with focused key intent tests. Public
+`EnumSelect` options, trigger visuals, overlay routing, and row behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor EnumSelect overlay-reveal owner-split result:
 `ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` now keeps overlay request and popup
 layout orchestration while delegating selected-row reveal, active-descendant scroll-into-view,

@@ -8,9 +8,9 @@
 use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
-use fret_core::{Axis, Corners, Edges, KeyCode, Px};
+use fret_core::{Axis, Corners, Edges, Px};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, ActivateReason, OnActivate, OnKeyDown};
+use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableA11y, PressableProps, SizeStyle, SpacingLength,
@@ -31,8 +31,11 @@ use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 mod options;
 mod overlay;
 mod row;
+mod trigger_keys;
 
 pub use options::EnumSelectOptions;
+
+use trigger_keys::enum_select_trigger_open_keys;
 
 #[derive(Debug, Clone)]
 pub struct EnumSelectItem {
@@ -282,39 +285,11 @@ impl EnumSelect {
             .lock()
             .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
 
-        let enabled_for_keys = self.options.enabled;
-        let on_trigger_open_keys: OnKeyDown = Arc::new({
-            let open = open.clone();
-            let open_change_reason = open_change_reason.clone();
-            move |host, action_cx: ActionCx, down| {
-                if !enabled_for_keys {
-                    return false;
-                }
-                if matches!(
-                    down.key,
-                    KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space | KeyCode::ArrowDown
-                ) {
-                    let _ = host.models_mut().update(&open_change_reason, |v| {
-                        *v = Some(kit_combobox::ComboboxOpenChangeReason::TriggerPress);
-                    });
-                    let _ = host.models_mut().update(&open, |v| *v = true);
-                    host.request_redraw(action_cx.window);
-                    return true;
-                }
-                if down.key == KeyCode::Escape {
-                    let was_open = host.models_mut().get_copied(&open).unwrap_or(false);
-                    if was_open {
-                        let _ = host.models_mut().update(&open_change_reason, |v| {
-                            *v = Some(kit_combobox::ComboboxOpenChangeReason::EscapeKey);
-                        });
-                        let _ = host.models_mut().update(&open, |v| *v = false);
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-                }
-                false
-            }
-        });
+        let on_trigger_open_keys = enum_select_trigger_open_keys(
+            self.options.enabled,
+            open.clone(),
+            open_change_reason.clone(),
+        );
         cx.key_add_on_key_down_capture_for(trigger_id, on_trigger_open_keys);
 
         if let Some(test_id) = self.options.test_id.as_ref() {
