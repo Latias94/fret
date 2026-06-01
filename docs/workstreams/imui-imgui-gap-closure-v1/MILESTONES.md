@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor EnumSelect overlay-reveal owner-split result:
+`ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` now keeps overlay request and popup
+layout orchestration while delegating selected-row reveal, active-descendant scroll-into-view,
+viewport test-id derivation, pending-reveal clearing, and viewport visibility math to
+`controls/enum_select/overlay/reveal.rs`. Close-focus policy, filtering, row routing, popup/list
+layout, selected reveal behavior, and public `EnumSelect` options remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor EnumSelect overlay-filter owner-split result:
 `ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` now keeps overlay request assembly,
 popup/list layout, selected-row reveal, close-focus policy, and dismiss behavior while delegating

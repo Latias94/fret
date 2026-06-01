@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor EnumSelect Overlay Reveal Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `EnumSelect` overlay selected-row reveal and viewport visibility policy
+moved out of `controls/enum_select/overlay.rs` into a private
+`controls/enum_select/overlay/reveal.rs` owner without changing selected-row scroll-into-view
+behavior, already-visible detection, pending-reveal clearing, viewport test-id derivation,
+close-focus policy, filtering, row routing, popup/list layout, dismiss behavior, or public
+`EnumSelect` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` keeps overlay request assembly,
+  search/list layout, row routing, close-focus policy, and dismiss behavior.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay/reveal.rs` owns viewport test-id
+  derivation, active-descendant scroll-into-view, already-visible checks, pending-reveal clearing,
+  and viewport visibility math.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay/tests.rs` still covers close-focus
+  policy, viewport test-id derivation, and nearest visibility behavior.
+- `tools/gate_imui_workstream_source.py` now tracks the reveal owner and rejects active-descendant
+  reveal policy from drifting back into the overlay request owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new reveal owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor enum_select --no-fail-fast`: pass (8 passed, 217 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor EnumSelect Overlay Filter Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `EnumSelect` overlay filtering policy moved out of

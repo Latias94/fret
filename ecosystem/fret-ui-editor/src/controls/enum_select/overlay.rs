@@ -11,7 +11,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::primitives::{active_descendant as active_desc, combobox as kit_combobox, popper};
+use fret_ui_kit::primitives::{combobox as kit_combobox, popper};
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::controls::MiniSearchBox;
@@ -26,8 +26,10 @@ use crate::primitives::{EditorDensity, EditorTokenKeys};
 use super::{EnumSelectItem, EnumSelectOptions, row};
 
 mod filter;
+mod reveal;
 
 use filter::filter_enum_select_items;
+use reveal::{enum_select_viewport_test_id, reveal_selected_row_if_needed};
 
 #[cfg(test)]
 mod tests;
@@ -289,34 +291,13 @@ pub(super) fn request_overlay<H: UiHost>(
                                 let selected_row_element = *selected_row_element_out
                                     .lock()
                                     .unwrap_or_else(|e| e.into_inner());
-                                if let Some(selected_row_element) = selected_row_element {
-                                    let did_reveal = active_desc::scroll_active_element_into_view_y(
-                                        cx,
-                                        &scroll_handle_for_list,
-                                        viewport_id,
-                                        selected_row_element,
-                                    );
-                                    let already_visible = element_visible_within_viewport_y(
-                                        cx,
-                                        viewport_id,
-                                        selected_row_element,
-                                    )
-                                    .unwrap_or(false);
-                                    if did_reveal || already_visible {
-                                        let _ =
-                                            cx.app.models_mut().update(
-                                                &pending_selected_reveal_for_list,
-                                                |pending| *pending = false,
-                                            );
-                                    }
-                                } else {
-                                    let _ = cx
-                                        .app
-                                        .models_mut()
-                                        .update(&pending_selected_reveal_for_list, |pending| {
-                                            *pending = false
-                                        });
-                                }
+                                reveal_selected_row_if_needed(
+                                    cx,
+                                    &scroll_handle_for_list,
+                                    viewport_id,
+                                    selected_row_element,
+                                    &pending_selected_reveal_for_list,
+                                );
                             }
                             out.push(viewport);
                             out
@@ -360,37 +341,4 @@ pub(super) fn request_overlay<H: UiHost>(
 
 fn enum_select_close_auto_focus_policy() -> kit_combobox::ComboboxCloseAutoFocusPolicy {
     kit_combobox::ComboboxCloseAutoFocusPolicy::default()
-}
-
-fn enum_select_viewport_test_id(list_test_id: &str) -> Arc<str> {
-    Arc::from(format!("{list_test_id}.viewport"))
-}
-
-fn element_visible_within_viewport_y<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    viewport_element: GlobalElementId,
-    child_element: GlobalElementId,
-) -> Option<bool> {
-    let viewport = cx.last_bounds_for_element(viewport_element)?;
-    let child = cx.last_bounds_for_element(child_element)?;
-    Some(rect_visible_within_viewport_y(viewport, child))
-}
-
-fn rect_visible_within_viewport_y(viewport: fret_core::Rect, child: fret_core::Rect) -> bool {
-    let viewport_h = viewport.size.height.0.max(0.0);
-    if viewport_h <= 0.0 {
-        return false;
-    }
-
-    let view_top = viewport.origin.y.0;
-    let view_bottom = view_top + viewport_h;
-    let child_top = child.origin.y.0;
-    let child_h = child.size.height.0.max(0.0);
-    let child_bottom = child_top + child_h;
-
-    if child_h >= viewport_h - 0.01 {
-        child_top >= view_top - 0.01
-    } else {
-        child_top >= view_top - 0.01 && child_bottom <= view_bottom + 0.01
-    }
 }

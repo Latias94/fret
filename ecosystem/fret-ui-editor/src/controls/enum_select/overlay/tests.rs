@@ -1,7 +1,5 @@
-use super::{
-    enum_select_close_auto_focus_policy, enum_select_viewport_test_id,
-    rect_visible_within_viewport_y,
-};
+use super::enum_select_close_auto_focus_policy;
+use super::reveal::{enum_select_viewport_test_id, rect_visible_within_viewport_y};
 use fret_core::{Point, Px, Rect, Size};
 use fret_ui_kit::primitives::combobox::{
     ComboboxCloseAutoFocusDecision, ComboboxCloseAutoFocusPolicy,

@@ -58,6 +58,14 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `EnumSelect` overlay selected-row reveal and viewport visibility policy into a
+      private child owner without changing selected-row scroll-into-view behavior, already-visible
+      detection, pending-reveal clearing, viewport test-id derivation, close-focus policy,
+      filtering, row routing, popup/list layout, or public `EnumSelect` options.
+      Result: `controls/enum_select/overlay.rs` keeps overlay request/layout orchestration and
+      delegates selected-row reveal plus viewport visibility math to
+      `controls/enum_select/overlay/reveal.rs`. The source gate prevents active-descendant reveal
+      policy from drifting back into the overlay request owner.
 - [x] Split editor `EnumSelect` overlay filtering policy into a private child owner without
       changing trim/lowercase matching, label/value match coverage, empty-query behavior, overlay
       request assembly, popup/list layout, row routing, selected-row reveal, close-focus policy, or
