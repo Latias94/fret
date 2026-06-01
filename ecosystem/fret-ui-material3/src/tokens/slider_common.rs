@@ -37,10 +37,16 @@ pub(crate) enum SliderInteraction {
     Pressed,
 }
 
+fn slider_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
 pub(crate) fn state_layer_size(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.slider.state-layer.size")
-        .unwrap_or(DEFAULT_STATE_LAYER_SIZE)
+    slider_metric(
+        theme,
+        "md.comp.slider.state-layer.size",
+        DEFAULT_STATE_LAYER_SIZE,
+    )
 }
 
 pub(crate) fn state_layer_target_opacity(
@@ -73,9 +79,11 @@ pub(crate) fn state_layer_color(theme: &Theme, interaction: SliderInteraction) -
 }
 
 pub(crate) fn value_indicator_bottom_space(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.slider.value-indicator.active.bottom-space")
-        .unwrap_or(DEFAULT_VALUE_INDICATOR_BOTTOM_SPACE)
+    slider_metric(
+        theme,
+        "md.comp.slider.value-indicator.active.bottom-space",
+        DEFAULT_VALUE_INDICATOR_BOTTOM_SPACE,
+    )
 }
 
 pub(crate) fn value_indicator_container_color(theme: &Theme) -> Color {
@@ -103,9 +111,11 @@ pub(crate) fn value_indicator_label_style(theme: &Theme) -> TextStyle {
 }
 
 pub(crate) fn tick_mark_size(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.slider.with-tick-marks.container.size")
-        .unwrap_or(DEFAULT_TICK_MARK_SIZE)
+    slider_metric(
+        theme,
+        "md.comp.slider.with-tick-marks.container.size",
+        DEFAULT_TICK_MARK_SIZE,
+    )
 }
 
 pub(crate) fn tick_mark_shape(theme: &Theme) -> Corners {
@@ -148,9 +158,11 @@ pub(crate) fn tick_mark_opacity(theme: &Theme, enabled: bool, active: bool) -> f
 }
 
 pub(crate) fn stop_indicator_size(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.slider.stop-indicator.size")
-        .unwrap_or(DEFAULT_STOP_INDICATOR_SIZE)
+    slider_metric(
+        theme,
+        "md.comp.slider.stop-indicator.size",
+        DEFAULT_STOP_INDICATOR_SIZE,
+    )
 }
 
 pub(crate) fn stop_indicator_shape(theme: &Theme) -> Corners {
@@ -159,9 +171,11 @@ pub(crate) fn stop_indicator_shape(theme: &Theme) -> Corners {
 }
 
 pub(crate) fn stop_indicator_trailing_space(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.slider.stop-indicator.trailing-space")
-        .unwrap_or(DEFAULT_STOP_INDICATOR_TRAILING_SPACE)
+    slider_metric(
+        theme,
+        "md.comp.slider.stop-indicator.trailing-space",
+        DEFAULT_STOP_INDICATOR_TRAILING_SPACE,
+    )
 }
 
 pub(crate) fn stop_indicator_color(theme: &Theme, enabled: bool, selected: bool) -> Color {
@@ -199,15 +213,19 @@ pub(crate) fn stop_indicator_color(theme: &Theme, enabled: bool, selected: bool)
 }
 
 pub(crate) fn active_track_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.slider.active.track.height")
-        .unwrap_or(DEFAULT_TRACK_HEIGHT)
+    slider_metric(
+        theme,
+        "md.comp.slider.active.track.height",
+        DEFAULT_TRACK_HEIGHT,
+    )
 }
 
 pub(crate) fn inactive_track_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.slider.inactive.track.height")
-        .unwrap_or(DEFAULT_TRACK_HEIGHT)
+    slider_metric(
+        theme,
+        "md.comp.slider.inactive.track.height",
+        DEFAULT_TRACK_HEIGHT,
+    )
 }
 
 pub(crate) fn active_track_color(
@@ -297,31 +315,37 @@ pub(crate) fn track_shape(theme: &Theme) -> Corners {
 }
 
 pub(crate) fn handle_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.slider.handle.height")
-        .unwrap_or(DEFAULT_HANDLE_HEIGHT)
+    slider_metric(theme, "md.comp.slider.handle.height", DEFAULT_HANDLE_HEIGHT)
 }
 
 pub(crate) fn handle_width(theme: &Theme, enabled: bool, interaction: SliderInteraction) -> Px {
     if !enabled {
-        return theme
-            .metric_by_key("md.comp.slider.disabled.handle.width")
-            .unwrap_or(DEFAULT_HANDLE_RESTING_WIDTH);
+        return slider_metric(
+            theme,
+            "md.comp.slider.disabled.handle.width",
+            DEFAULT_HANDLE_RESTING_WIDTH,
+        );
     }
 
     match interaction {
-        SliderInteraction::Pressed => theme
-            .metric_by_key("md.comp.slider.pressed.handle.width")
-            .unwrap_or(DEFAULT_HANDLE_PRESSED_WIDTH),
-        SliderInteraction::Focused => theme
-            .metric_by_key("md.comp.slider.focus.handle.width")
-            .unwrap_or(DEFAULT_HANDLE_FOCUSED_WIDTH),
-        SliderInteraction::Hovered => theme
-            .metric_by_key("md.comp.slider.hover.handle.width")
+        SliderInteraction::Pressed => slider_metric(
+            theme,
+            "md.comp.slider.pressed.handle.width",
+            DEFAULT_HANDLE_PRESSED_WIDTH,
+        ),
+        SliderInteraction::Focused => slider_metric(
+            theme,
+            "md.comp.slider.focus.handle.width",
+            DEFAULT_HANDLE_FOCUSED_WIDTH,
+        ),
+        SliderInteraction::Hovered => MaterialTokenResolver::new(theme)
+            .metric_value("md.comp.slider.hover.handle.width")
             .unwrap_or_else(|| handle_width(theme, enabled, SliderInteraction::None)),
-        SliderInteraction::None => theme
-            .metric_by_key("md.comp.slider.handle.width")
-            .unwrap_or(DEFAULT_HANDLE_RESTING_WIDTH),
+        SliderInteraction::None => slider_metric(
+            theme,
+            "md.comp.slider.handle.width",
+            DEFAULT_HANDLE_RESTING_WIDTH,
+        ),
     }
 }
 
@@ -420,16 +444,75 @@ mod tests {
         let mut patch = ThemeConfig::default();
         patch
             .metrics
+            .insert("md.comp.slider.state-layer.size".to_string(), 42.0);
+        patch.metrics.insert(
+            "md.comp.slider.value-indicator.active.bottom-space".to_string(),
+            14.0,
+        );
+        patch.metrics.insert(
+            "md.comp.slider.with-tick-marks.container.size".to_string(),
+            3.0,
+        );
+        patch
+            .metrics
+            .insert("md.comp.slider.stop-indicator.size".to_string(), 5.0);
+        patch.metrics.insert(
+            "md.comp.slider.stop-indicator.trailing-space".to_string(),
+            6.0,
+        );
+        patch
+            .metrics
+            .insert("md.comp.slider.active.track.height".to_string(), 18.0);
+        patch
+            .metrics
+            .insert("md.comp.slider.inactive.track.height".to_string(), 20.0);
+        patch
+            .metrics
             .insert("md.comp.slider.handle.height".to_string(), 48.0);
         patch
             .metrics
             .insert("md.comp.slider.pressed.handle.width".to_string(), 6.0);
+        patch
+            .metrics
+            .insert("md.comp.slider.hover.handle.width".to_string(), 8.0);
+        patch
+            .metrics
+            .insert("md.comp.slider.disabled.handle.width".to_string(), 10.0);
         let (_app, theme) = theme_with_patch(patch);
 
+        assert_eq!(state_layer_size(&theme), Px(42.0));
+        assert_eq!(value_indicator_bottom_space(&theme), Px(14.0));
+        assert_eq!(tick_mark_size(&theme), Px(3.0));
+        assert_eq!(stop_indicator_size(&theme), Px(5.0));
+        assert_eq!(stop_indicator_trailing_space(&theme), Px(6.0));
+        assert_eq!(active_track_height(&theme), Px(18.0));
+        assert_eq!(inactive_track_height(&theme), Px(20.0));
         assert_eq!(handle_height(&theme), Px(48.0));
         assert_eq!(
             handle_width(&theme, true, SliderInteraction::Pressed),
             Px(6.0)
+        );
+        assert_eq!(
+            handle_width(&theme, true, SliderInteraction::Hovered),
+            Px(8.0)
+        );
+        assert_eq!(
+            handle_width(&theme, false, SliderInteraction::Pressed),
+            Px(10.0)
+        );
+    }
+
+    #[test]
+    fn slider_hovered_handle_width_falls_back_to_resting_width() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.slider.handle.width".to_string(), 7.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            handle_width(&theme, true, SliderInteraction::Hovered),
+            Px(7.0)
         );
     }
 
