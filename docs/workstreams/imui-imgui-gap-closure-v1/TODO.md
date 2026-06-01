@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `EnumSelect` trigger pressable/visual assembly into a private child owner
+      without changing trigger min-height fallback, a11y combobox state, focus ring geometry,
+      activate toggle behavior, trigger press open-change reason, text/caret layout, caret icon
+      selection, key registration, overlay routing, or public `EnumSelect` options.
+      Result: `controls/enum_select.rs` keeps public control construction, model reads,
+      key-handler registration, and overlay routing. `controls/enum_select/trigger.rs` owns
+      pressable props, activate toggle, frame chrome, readout text, divider, and caret segment
+      assembly. The source gate prevents trigger visual/pressable policy from drifting back into
+      the root control owner.
 - [x] Split editor `EnumSelect` trigger keyboard open/close policy into a private child owner
       without changing enabled gating, Enter/NumpadEnter/Space/ArrowDown open behavior, Escape
       close behavior, open-change reason updates, redraw requests, trigger composition, overlay

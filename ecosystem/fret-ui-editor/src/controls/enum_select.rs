@@ -8,33 +8,24 @@
 use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
-use fret_core::{Axis, Corners, Edges, Px};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
-use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, SizeStyle, SpacingLength,
-};
+use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::primitives::combobox as kit_combobox;
 
-use crate::primitives::icons::editor_icon_with;
-use crate::primitives::input_group::{
-    editor_input_group_divider, editor_input_group_frame, editor_input_group_inset,
-    editor_input_group_row, editor_input_value_text,
-};
 use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
 use crate::primitives::style::EditorStyle;
-use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 
 mod options;
 mod overlay;
 mod row;
+mod trigger;
 mod trigger_keys;
 
 pub use options::EnumSelectOptions;
 
+use trigger::{EnumSelectTriggerArgs, enum_select_trigger};
 use trigger_keys::enum_select_trigger_open_keys;
 
 #[derive(Debug, Clone)]
@@ -141,142 +132,23 @@ impl EnumSelect {
             (None, _) => self.options.none_label.clone(),
         };
 
-        let mut trigger_layout = self.options.layout;
-        if trigger_layout.size.min_height.is_none() {
-            trigger_layout.size.min_height = Some(Length::Px(density.row_height));
-        }
-
         let trigger_model = self.model.clone();
         let items_for_overlay = self.items.clone();
         let options_for_overlay = self.options.clone();
-        let open_for_overlay = open.clone();
-        let open_change_reason_for_overlay = open_change_reason.clone();
-        let enabled_for_paint = self.options.enabled;
-
-        let trigger = cx.pressable(
-            PressableProps {
-                layout: trigger_layout,
+        let trigger = enum_select_trigger(
+            cx,
+            EnumSelectTriggerArgs {
+                layout: self.options.layout,
                 enabled: self.options.enabled,
                 focusable: self.options.focusable,
-                a11y: PressableA11y {
-                    role: Some(fret_core::SemanticsRole::ComboBox),
-                    label: self.options.a11y_label.clone(),
-                    expanded: Some(is_open),
-                    ..Default::default()
-                },
-                focus_ring: Some(fret_ui::element::RingStyle {
-                    placement: fret_ui::element::RingPlacement::Outset,
-                    width: Px(2.0),
-                    offset: Px(2.0),
-                    color: ring,
-                    offset_color: None,
-                    corner_radii: Corners::all(frame_chrome.radius),
-                }),
-                ..Default::default()
-            },
-            move |cx, _st| {
-                cx.pressable_add_on_activate(kit_combobox::set_open_change_reason_on_activate(
-                    open_change_reason_for_overlay.clone(),
-                    kit_combobox::ComboboxOpenChangeReason::TriggerPress,
-                ));
-
-                let open = open_for_overlay.clone();
-                let on_activate: OnActivate =
-                    Arc::new(move |host, action_cx: ActionCx, _reason: ActivateReason| {
-                        let prev = host.models_mut().get_copied(&open).unwrap_or(false);
-                        let _ = host.models_mut().update(&open, |v| *v = !prev);
-                        host.request_redraw(action_cx.window);
-                    });
-                cx.pressable_add_on_activate(on_activate);
-
-                let caret_icon = if is_open {
-                    fret_icons::ids::ui::CHEVRON_UP
-                } else {
-                    fret_icons::ids::ui::CHEVRON_DOWN
-                };
-
-                let divider = frame_chrome.border;
-
-                vec![editor_input_group_frame(
-                    cx,
-                    LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    density,
-                    frame_chrome,
-                    EditorFrameState {
-                        enabled: enabled_for_paint,
-                        hovered: _st.hovered,
-                        pressed: _st.pressed,
-                        focused: _st.focused,
-                        open: is_open,
-                        semantic: EditorFrameSemanticState::default(),
-                    },
-                    move |cx, visuals| {
-                        let text_el = editor_input_value_text(
-                            cx,
-                            density,
-                            Px(12.0),
-                            trigger_text.clone(),
-                            visuals.fg,
-                            Length::Auto,
-                        );
-                        let text = editor_input_group_inset(cx, frame_chrome.padding, text_el);
-
-                        let sep = editor_input_group_divider(cx, divider);
-
-                        let caret = cx.container(
-                            ContainerProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Px(density.hit_thickness),
-                                        height: Length::Fill,
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                padding: Edges::all(Px(0.0)).into(),
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                vec![cx.flex(
-                                    FlexProps {
-                                        layout: LayoutStyle {
-                                            size: SizeStyle {
-                                                width: Length::Fill,
-                                                height: Length::Fill,
-                                                ..Default::default()
-                                            },
-                                            ..Default::default()
-                                        },
-                                        direction: Axis::Horizontal,
-                                        gap: SpacingLength::Px(Px(0.0)),
-                                        padding: Edges::all(Px(0.0)).into(),
-                                        justify: MainAlign::Center,
-                                        align: CrossAlign::Center,
-                                        wrap: false,
-                                    },
-                                    move |cx| {
-                                        vec![editor_icon_with(
-                                            cx,
-                                            density,
-                                            caret_icon,
-                                            Some(Px(12.0)),
-                                            Some(fret_ui_kit::ColorRef::Color(visuals.icon)),
-                                        )]
-                                    },
-                                )]
-                            },
-                        );
-
-                        vec![editor_input_group_row(cx, Px(0.0), vec![text, sep, caret])]
-                    },
-                )]
+                a11y_label: self.options.a11y_label.clone(),
+                density,
+                frame_chrome,
+                ring,
+                is_open,
+                trigger_text,
+                open: open.clone(),
+                open_change_reason: open_change_reason.clone(),
             },
         );
 

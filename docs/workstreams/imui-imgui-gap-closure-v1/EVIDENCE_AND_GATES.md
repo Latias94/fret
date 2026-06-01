@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor EnumSelect Trigger Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `EnumSelect` trigger pressable/visual assembly moved out of
+`controls/enum_select.rs` into a private `controls/enum_select/trigger.rs` owner without changing
+trigger min-height fallback, a11y combobox state, focus ring geometry, activate toggle behavior,
+trigger press open-change reason, text/caret layout, caret icon selection, key registration,
+overlay routing, row behavior, or public `EnumSelect` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/enum_select.rs` keeps public control construction, model
+  reads, selected-label projection, trigger-key registration, and overlay routing.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/trigger.rs` owns pressable props, activate
+  toggle handling, focus ring, frame chrome, readout text, divider, and caret segment assembly.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/trigger_keys.rs` remains the trigger keyboard
+  policy owner, so key behavior stays separated from visual/pressable assembly.
+- `tools/gate_imui_workstream_source.py` now tracks the trigger owner and rejects trigger
+  visual/pressable policy from drifting back into the root control owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new trigger owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor enum_select --no-fail-fast`: pass (10 passed, 217 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor EnumSelect Trigger-Key Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `EnumSelect` trigger keyboard open/close policy moved out of
