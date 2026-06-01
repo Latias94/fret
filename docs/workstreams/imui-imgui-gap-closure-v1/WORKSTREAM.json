@@ -1000,6 +1000,8 @@
     "ecosystem/fret-ui-kit/src/imui/floating_window_title_bar/row.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_title_bar/tests.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_title_bar_props.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_window_title_bar_props/close_button.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_window_title_bar_props/drag_surface.rs",
     "ecosystem/fret-ui-kit/src/imui/child_region.rs",
     "ecosystem/fret-ui-kit/src/imui/child_region/entry.rs",
     "ecosystem/fret-ui-kit/src/imui/child_region/resize.rs",

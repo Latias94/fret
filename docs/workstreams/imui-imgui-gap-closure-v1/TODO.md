@@ -5908,3 +5908,10 @@ opening the slice.
       Result: `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_bar.rs` owns the named
       menubar element, local policy models, registry clearing, child hosting, and row semantics.
       `menu_family_controls.rs` keeps only module routing plus begin-menu/submenu exports.
+- [x] Split floating-window title-bar drag-surface and close-button props out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar_props.rs` into private prop owners
+      without changing title-row sizing, drag-surface fill/shrink behavior, close-button
+      semantics/test id, or `floating_window_title_bar/row.rs` call paths.
+      Result: `floating_window_title_bar_props/drag_surface.rs` owns pointer-region layout and
+      resizable flex behavior; `floating_window_title_bar_props/close_button.rs` owns close-button
+      a11y and fixed sizing. The root props file keeps only row props plus private re-exports.

@@ -5196,3 +5196,9 @@ construction: text-role label chrome, trailing border rule, row layout, and test
 element, local policy models, trigger-row registry clearing, child hosting, row layout, and
 `SemanticsRole::MenuBar`. `menu_family_controls.rs` keeps only module routing plus begin-menu/
 submenu exports.
+
+2026-06-01 floating-window title-bar props owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_title_bar_props/drag_surface.rs` now owns
+pointer-region layout and resizable fill/shrink behavior, while
+`floating_window_title_bar_props/close_button.rs` owns close-button a11y/test-id wiring and fixed
+20px sizing. `floating_window_title_bar_props.rs` keeps title-row props plus private re-exports.

@@ -25496,3 +25496,28 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI floating-window title-bar props owner split:
+
+- Claim: floating-window title-bar drag-surface and close-button prop construction moved from
+  `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar_props.rs` into
+  `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar_props/drag_surface.rs` and
+  `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar_props/close_button.rs` without changing
+  title-row sizing, drag-surface fill/shrink behavior, close-button semantics/test id, or
+  `floating_window_title_bar/row.rs` call paths.
+- Evidence anchors: `floating_window_title_bar_props.rs` declares `mod drag_surface;` and
+  `mod close_button;`, keeps `title_bar_row_props(...)`, and privately re-exports the original
+  helper names; `drag_surface.rs` owns `PointerRegionProps`, `LayoutStyle`, flex grow/shrink/basis,
+  and min-width behavior; `close_button.rs` owns `PressableProps`, button semantics, "Close" label,
+  test id, fixed 20px size, and no-shrink policy; the source gate rejects those details drifting
+  back into the root props hub.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit --features imui`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-imui floating_window --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
