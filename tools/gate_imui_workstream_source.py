@@ -11961,15 +11961,39 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-plot/src/declarative.rs"),
             required=[
+                "mod panels;",
                 "mod props;",
+                "pub use panels::{",
                 "pub use props::{",
                 "LinePlotPanelProps",
+                "line_plot_panel_in",
                 "fn plot_panel<H: UiHost + 'static>",
                 "fn paint_line_plot_panel(",
             ],
             forbidden=[
+                "pub fn line_plot_panel<H: UiHost + 'static>",
+                "pub fn line_plot_panel_in<'a, H: UiHost + 'a + 'static, Cx>",
                 "pub struct LinePlotPanelProps",
                 "impl LinePlotPanelProps",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-plot/src/declarative/panels.rs"),
+            required=[
+                "//! Public declarative plot panel entrypoints.",
+                "use fret_ui::{ElementContext, ElementContextAccess, UiHost};",
+                "PlotPanelModel, PlotPanelProps",
+                "plot_panel,",
+                "pub fn line_plot_panel<H: UiHost + 'static>",
+                "pub fn line_plot_panel_in<'a, H: UiHost + 'a + 'static, Cx>",
+                "pub fn error_bars_plot_panel<H: UiHost + 'static>",
+                "pub fn stems_plot_panel_in<'a, H: UiHost + 'a + 'static, Cx>",
+                "cx.observe_model(&props.model, fret_ui::Invalidation::Paint);",
+                "plot_panel(",
+            ],
+            forbidden=[
+                "LinePlotCanvas",
+                "retained",
             ],
         ),
         SourceCheck(
@@ -50634,6 +50658,11 @@ def main() -> None:
         SourceCheck(
             Path("docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md"),
             required=[
+                "Fret Plot declarative panel entrypoint owner split - 2026-06-02",
+                "ecosystem/fret-plot/src/declarative/panels.rs",
+                "public `*_plot_panel` entrypoints",
+                "`*_plot_panel_in` wrappers",
+                "private normalized panel model and retained-free paint/event core stay in `declarative.rs`",
                 "Fret Plot declarative props owner split - 2026-06-02",
                 "ecosystem/fret-plot/src/declarative/props.rs",
                 "public `*PlotPanelProps` types",

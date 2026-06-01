@@ -2,6 +2,30 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative panel entrypoint owner split - 2026-06-02
+
+This refresh follows the plot props split by moving the public declarative panel adapters out of
+the root implementation file without changing the retained-free plot rendering path:
+
+- `ecosystem/fret-plot/src/declarative/panels.rs` now owns the public `*_plot_panel` entrypoints
+  and `*_plot_panel_in` wrappers for line, error-bars, histogram, bars, candlestick, heatmap,
+  histogram2d, area, shaded, and stems plot panels.
+- The private normalized panel model and retained-free paint/event core stay in `declarative.rs`,
+  including grid/axes, overlays, readout, interaction output, and tests.
+- `ecosystem/fret-plot/src/declarative/props.rs` remains the public props/builder owner, so the
+  optional `fret-plot/imui` adapter continues to delegate through declarative panel entrypoints.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot` - passed with existing dead-code warnings in `plot/view.rs`.
+- `cargo check -p fret-plot --features imui` - passed with the same existing warnings.
+- `cargo nextest run -p fret-plot --lib imui_adapter_stays_opt_in_and_declarative_only line_chart_builder_stays_model_only_on_default_surface --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative props owner split - 2026-06-02
 
 This refresh keeps the retained-canvas-free optional IMUI plot adapter declarative-only while
