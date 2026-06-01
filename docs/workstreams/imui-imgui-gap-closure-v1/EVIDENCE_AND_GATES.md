@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor AxisDragValue Scrub-Element Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `AxisDragValue` scrub `DragValueCore` assembly moved out of
+`controls/axis_drag_value/element.rs` into private
+`controls/axis_drag_value/element/scrub_element.rs` without changing scrub layout/hidden typing
+layout, live model updates, constraints, commit/cancel outcome routing, double-click typing
+handoff, focus handoff arming, scrub frame visuals/test ids/reset action, typing input/key/frame
+behavior, or public AxisDragValue options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` keeps scrub/typing
+  orchestration, focus sync, typing input/key/frame routing, error clearing, and final mounted
+  composition.
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element/scrub_element.rs` owns
+  DragValueCore options, live model update wiring, commit/cancel callbacks, double-click typing
+  transition, focus handoff arming, scrub id recording, response state mapping, and scrub frame
+  owner routing.
+- `tools/gate_imui_workstream_source.py` now tracks the scrub-element owner and rejects scrub
+  interaction/frame policy from drifting back into the root element owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new scrub-element owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor axis_drag_value --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Slider Interaction Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `Slider` pressable pointer interaction installation moved out of

@@ -12,6 +12,17 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor AxisDragValue scrub-element owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps scrub/typing
+orchestration, focus sync, typing input/key/frame routing, error clearing, and final mounted
+composition while delegating `DragValueCore` scrub assembly to
+`controls/axis_drag_value/element/scrub_element.rs`. The private scrub-element owner contains
+scrub options, live model update wiring, commit/cancel outcome callbacks, double-click typing
+handoff, focus-handoff arming, scrub id recording, scrub response state mapping, and scrub frame
+owner routing. Public AxisDragValue options, typing behavior, frame visuals/test ids/reset action,
+and hidden-layout semantics remain unchanged, and `tools/gate_imui_workstream_source.py` freezes
+the split.
+
 2026-06-01 editor TextAssistField option-row owner-split result:
 `ecosystem/fret-ui-editor/src/controls/text_assist_field/panel.rs` now keeps listbox semantics,
 scroll wrapping, popup surface chrome, and rendered panel packaging while delegating suggestion

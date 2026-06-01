@@ -191,6 +191,17 @@ Last updated: 2026-06-01
       handler installation, drag state transitions, pointer-to-value updates, double-click typing
       transition, redraw requests, and col-resize cursor setting. The source gate prevents pointer
       interaction policy from drifting back into the element assembly owner.
+- [x] Split editor `AxisDragValue` scrub DragValueCore assembly into a private element child owner
+      without changing scrub layout/hidden typing layout, live model updates, constraints,
+      commit/cancel outcome routing, double-click typing handoff, focus handoff arming, scrub frame
+      visuals/test ids/reset action, typing input/key/frame behavior, or public AxisDragValue
+      options.
+      Result: `controls/axis_drag_value/element.rs` keeps scrub/typing orchestration, focus sync,
+      typing input/key/frame routing, error clearing, and final mounting.
+      `controls/axis_drag_value/element/scrub_element.rs` owns DragValueCore options, live model
+      update wiring, commit/cancel callbacks, double-click typing transition, scrub id recording,
+      and scrub frame owner routing. The source gate prevents scrub interaction and frame routing
+      policy from drifting back into the root element owner.
 - [x] Split editor `VecEdit` options/default records into a private child owner without changing
       public `VecEditOptions` / `VecEditLayoutVariant` import paths, layout defaults, auto-stack
       defaults, id-source/test-id fields, Vec2/Vec3/Vec4 constructors, or layout/axis assembly.
