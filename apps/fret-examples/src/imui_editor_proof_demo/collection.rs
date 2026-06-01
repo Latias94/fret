@@ -27,12 +27,24 @@ use super::{
 };
 
 mod geometry;
+mod readouts;
 
 use geometry::{
     PROOF_COLLECTION_GRID_FALLBACK_COLUMNS, PROOF_COLLECTION_TILE_EXTENT_DEFAULT_PX,
     proof_collection_drag_rect, proof_collection_drag_threshold_met,
     proof_collection_layout_metrics, proof_collection_localize_rect,
     proof_collection_rects_intersect, proof_collection_zoom_line, proof_collection_zoom_request,
+};
+use readouts::{
+    proof_collection_active_line, proof_collection_assets_line,
+    proof_collection_command_package_line, proof_collection_command_status_line,
+    proof_collection_context_menu_line, proof_collection_delete_status,
+    proof_collection_duplicate_status, proof_collection_rename_cancel_status,
+    proof_collection_rename_commit_status, proof_collection_rename_invalid_status,
+    proof_collection_rename_line, proof_collection_rename_ready_status,
+    proof_collection_rename_status_line, proof_collection_select_all_line,
+    proof_collection_select_all_status, proof_collection_selection_line,
+    proof_collection_visible_order_line,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -141,32 +153,6 @@ fn proof_collection_selected_assets<'a>(
         .collect()
 }
 
-fn proof_collection_selection_line(
-    assets: &[ProofCollectionAsset],
-    selection: &ImUiMultiSelectState<Arc<str>>,
-) -> String {
-    let selected = proof_collection_selected_assets(assets, selection);
-    if selected.is_empty() {
-        return "Selection: none. Click to select, primary-modifier click to toggle, shift-click to extend, arrow/home/end to move the active tile, or drag background to box-select.".to_string();
-    }
-
-    let labels = selected
-        .iter()
-        .map(|asset| asset.label.as_ref())
-        .collect::<Vec<_>>()
-        .join(", ");
-    format!("Selection: {} asset(s) | {labels}", selected.len())
-}
-
-fn proof_collection_visible_order_line(assets: &[ProofCollectionAsset]) -> String {
-    let labels = assets
-        .iter()
-        .map(|asset| asset.label.as_ref())
-        .collect::<Vec<_>>()
-        .join(" -> ");
-    format!("Visible order: {labels}")
-}
-
 fn proof_collection_active_id(
     collection_keys: &[Arc<str>],
     selection: &ImUiMultiSelectState<Arc<str>>,
@@ -183,57 +169,6 @@ fn proof_collection_active_id(
         .or_else(|| collection_keys.first().cloned())
 }
 
-fn proof_collection_active_line(
-    assets: &[ProofCollectionAsset],
-    selection: &ImUiMultiSelectState<Arc<str>>,
-    keyboard: &ProofCollectionKeyboardState,
-) -> String {
-    let visible_keys = assets
-        .iter()
-        .map(|asset| asset.id.clone())
-        .collect::<Vec<_>>();
-    let active_id = proof_collection_active_id(&visible_keys, selection, keyboard);
-    let Some(active_id) = active_id else {
-        return "Active tile: none. Click background to focus the collection scope, then use Arrow/Home/End to drive selection app-locally.".to_string();
-    };
-    let Some(asset) = assets.iter().find(|asset| asset.id == active_id) else {
-        return "Active tile: none. Click background to focus the collection scope, then use Arrow/Home/End to drive selection app-locally.".to_string();
-    };
-
-    format!(
-        "Active tile: {}. Shift+Arrow/Home/End extends from the current anchor; Escape clears the selection without widening shared IMUI helper ownership.",
-        asset.label
-    )
-}
-
-fn proof_collection_assets_line(assets: &[ProofCollectionAsset]) -> String {
-    format!(
-        "Assets: {}. Press Delete/Backspace or use the explicit action button to remove the selected set app-locally.",
-        assets.len()
-    )
-}
-
-fn proof_collection_command_package_line() -> String {
-    "Duplicate, delete, rename, and select-all stay inside one app-owned collection command package; duplicate/delete/rename now route across keyboard, explicit buttons, and context menu without widening shared IMUI helpers.".to_string()
-}
-
-fn proof_collection_command_status_line(status: &str) -> String {
-    format!("Command status: {status}")
-}
-
-fn proof_collection_select_all_line() -> String {
-    "Primary+A selects all visible assets inside the focused collection scope.".to_string()
-}
-
-fn proof_collection_rename_line() -> String {
-    "F2, the explicit rename button, or the context menu starts an app-local inline rename editor for the current active asset.".to_string()
-}
-
-fn proof_collection_context_menu_line() -> String {
-    "Right-click an asset or the collection background to open app-local collection actions."
-        .to_string()
-}
-
 fn proof_collection_select_all_shortcut_matches(key: KeyCode, modifiers: Modifiers) -> bool {
     matches!(key, KeyCode::KeyA)
         && !modifiers.alt
@@ -246,10 +181,6 @@ fn proof_collection_duplicate_shortcut_matches(key: KeyCode, modifiers: Modifier
         && !modifiers.alt
         && !modifiers.shift
         && (modifiers.ctrl || modifiers.meta)
-}
-
-fn proof_collection_select_all_status(selected_count: usize) -> String {
-    format!("Selected all {selected_count} visible asset(s).")
 }
 
 fn proof_collection_select_all_selection(
@@ -275,46 +206,6 @@ fn proof_collection_select_all_selection(
             active_id: Some(next_active),
         },
     ))
-}
-
-fn proof_collection_rename_ready_status(label: &str) -> String {
-    format!(
-        "Rename ready: {label}. The inline editor will focus, Enter commits, and Escape or blur cancels."
-    )
-}
-
-fn proof_collection_rename_commit_status(previous: &str, next: &str) -> String {
-    format!("Renamed {previous} -> {next}.")
-}
-
-fn proof_collection_rename_invalid_status(label: &str) -> String {
-    format!("Rename for {label} still needs a non-empty label.")
-}
-
-fn proof_collection_rename_cancel_status(label: &str) -> String {
-    format!("Rename canceled for {label}.")
-}
-
-fn proof_collection_rename_status_line(status: &str) -> String {
-    format!("Rename status: {status}")
-}
-
-fn proof_collection_duplicate_status(duplicated_assets: &[ProofCollectionAsset]) -> String {
-    let labels = duplicated_assets
-        .iter()
-        .map(|asset| asset.label.as_ref())
-        .collect::<Vec<_>>()
-        .join(", ");
-    format!("Duplicated {} asset(s): {labels}", duplicated_assets.len())
-}
-
-fn proof_collection_delete_status(deleted_assets: &[ProofCollectionAsset]) -> String {
-    let labels = deleted_assets
-        .iter()
-        .map(|asset| asset.label.as_ref())
-        .collect::<Vec<_>>()
-        .join(", ");
-    format!("Deleted {} asset(s): {labels}", deleted_assets.len())
 }
 
 fn proof_collection_rename_shortcut_matches(key: KeyCode, modifiers: Modifiers) -> bool {

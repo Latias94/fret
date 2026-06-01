@@ -4383,6 +4383,42 @@ git diff --check
 Result: passed locally. `cargo check -p fret-examples` reported only the existing unrelated
 `fret-plot` / `fret-chart` dead-code warnings.
 
+## IMUI editor proof collection readout owner split - 2026-06-02
+
+Scope: keep the canonical editor proof collection surface app-owned while splitting pure
+collection readout/status string construction out of the large `collection.rs` behavior and render
+owner.
+
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs` now owns selection,
+  visible-order, active-tile, asset-count, command-package, select-all, inline-rename,
+  duplicate, and delete readout/status strings.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` keeps collection assets, selection
+  mutation, keyboard navigation, command behavior, inline rename behavior, context menu behavior,
+  drag/drop, and render assembly.
+- `tools/gate_imui_workstream_source.py` now requires the `readouts` child module and rejects the
+  moved readout/status function bodies returning to the parent collection module.
+- This remains a demo-local proof-surface refactor: no public `fret-imui`, `fret-ui-kit::imui`,
+  `fret-ui-editor`, docking, runner, or diagnostics API changed.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-examples
+cargo check -p fret-examples
+cargo nextest run -p fret-examples proof_collection --no-fail-fast
+cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The first concurrent nextest attempt timed out while both commands compiled
+`fret_examples`; the cargo/rustc child processes were allowed to exit naturally, then the gates were
+rerun serially. `proof_collection` reported `26 tests run: 26 passed`; the modularization surface
+test reported `1 test run: 1 passed`. `cargo check -p fret-examples` reported only the existing
+unrelated `fret-chart` and `fret-plot` dead-code warnings.
+
 ## Fresh resume verification for closed 2026-05-25 IMUI slices - 2026-05-25
 
 Scope: after context recovery, re-check the current worktree evidence for the seven new closed
