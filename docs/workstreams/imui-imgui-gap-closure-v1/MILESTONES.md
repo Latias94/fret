@@ -470,6 +470,15 @@ propagation, and public property row APIs remain unchanged. `tools/gate_imui_wor
 freezes the split and the value-slot overflow guard now tracks the two marked slots across root
 and row owners.
 
+2026-06-01 editor PropertyRow column branch owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_row/element.rs` now keeps layout-query /
+resolution, auto dispatch, row/column owner routing, and test-id application while delegating
+column branch construction to the private `composites/property_row/element/column.rs` owner.
+Row/column/auto layout variant resolution, column header/value stacking, header label line box,
+column value-slot overflow semantics, reset/action trailing slot wiring, column stack gap
+behavior, test-id propagation, and public property row APIs remain unchanged. The source gate and
+value-slot overflow guard now track the two marked slots across row and column owners.
+
 2026-06-01 editor PropertyRow options owner-split result:
 `ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the public composite, label
 helper, keyed row entrypoint, row/column child assembly, value-slot marking, and reset-slot wiring

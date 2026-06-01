@@ -415,6 +415,14 @@ Last updated: 2026-06-01
       column branch assembly, and test-id application while delegating row branch construction to
       `composites/property_row/element/row.rs`. The source gate and overflow guard now track the
       two marked value slots across root and row owners.
+- [x] Split editor `PropertyRow` column-layout branch assembly into a private element child owner
+      without changing row/column/auto layout variant resolution, column header/value stacking,
+      header label line box, column value-slot overflow semantics, reset/action trailing slot
+      wiring, column stack gap behavior, test-id propagation, or public property row APIs.
+      Result: `composites/property_row/element.rs` now keeps layout-query/resolution, auto
+      dispatch, row/column owner routing, and test-id application while delegating column branch
+      construction to `composites/property_row/element/column.rs`. The source gate and overflow
+      guard now track the two marked value slots across row and column owners.
 - [x] Split editor `PropertyRow` trailing reset/action slot wrapper into a private child owner
       without changing row/column layout, reset/action visibility, fixed slot width, min row height,
       clip overflow, end alignment, reset element routing, action element mounting, value-slot

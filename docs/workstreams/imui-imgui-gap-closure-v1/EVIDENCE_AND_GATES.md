@@ -1330,6 +1330,38 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Editor PropertyRow Column Branch Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `PropertyRow` column-layout branch assembly moved out of the element owner
+into a private `composites/property_row/element/column.rs` owner without changing row/column/auto
+layout variant resolution, column header/value stacking, header label line box, column value-slot
+overflow semantics, reset/action trailing slot wiring, column stack gap behavior, test-id
+propagation, or public property row APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/property_row/element.rs` keeps layout-query/resolution,
+  auto dispatch, row/column owner routing, and test-id application.
+- `ecosystem/fret-ui-editor/src/composites/property_row/element/column.rs` owns column branch
+  vertical stacking, header row, label line-box container, value-slot marking, reset/action trailing
+  slot mounting, and column value max-width routing.
+- `tools/gate_imui_workstream_source.py` now tracks the PropertyRow column branch split, and the
+  value-slot overflow guard checks the two marked value slots across row and column owners.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the column branch owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor property_row --no-fail-fast`: pass (10 passed, 218
+  skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor PropertyRow Row Branch Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `PropertyRow` row-layout branch assembly moved out of the element owner into
