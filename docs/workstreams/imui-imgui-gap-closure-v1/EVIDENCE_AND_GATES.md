@@ -7058,6 +7058,37 @@ Focused gates:
   forbids and moving the production semantics to `render.rs`.
 - `cargo nextest run -p fret-ui-editor editor_theme_preset_picker_stamps_listbox_options_and_selected_state editor_theme_preset_picker_click_updates_model_and_replays_reversible_preset --no-fail-fast`: pass (2 passed, 184 skipped).
 
+## Editor Theme Preset Picker Row Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor theme preset picker row chrome/activation moved out of the render owner into
+a private `render/row.rs` owner without changing listbox semantics, header rendering, row selected
+state, row item test IDs, click activation, density status labels, hover/pressed/selected color
+mixing, or public picker APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render.rs` keeps listbox
+  container semantics, preset iteration, and header text routing.
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row.rs` owns
+  ListBoxOption semantics, pressable activation, row chrome, row test IDs, density status label
+  rendering, and color mixing.
+- `tools/gate_imui_workstream_source.py` now gates the render/row split so row pressable/status
+  policy stays out of the listbox container owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new row render owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `cargo nextest run -p fret-ui-editor editor_theme_preset_picker --no-fail-fast`: pass (6 passed,
+  222 skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass.
+
 ## TextField Buffered Child-Owner Split Evidence - 2026-05-30
 
 Claim verified: IMUI text-field buffered draft/session handling split into a private child owner

@@ -1338,6 +1338,14 @@ installation, theme resolution, render dispatch, and test-owner routing.
 `controls/editor_theme_preset_picker/tests.rs` owns listbox semantics, selected state, click
 activation, and reversible preset replay coverage. Render child-owner boundaries remain unchanged.
 
+2026-06-01 editor theme preset picker row owner-split result:
+`ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render.rs` now keeps listbox
+container semantics, preset iteration, and header text routing. The private
+`controls/editor_theme_preset_picker/render/row.rs` owner contains ListBoxOption semantics,
+pressable activation, row chrome, row test IDs, density status label rendering, and color mixing.
+Listbox semantics, selected-state behavior, click activation, and public picker APIs remain
+unchanged.
+
 2026-05-31 editor numeric-input tests child-owner result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps numeric input control
 orchestration and test-owner routing. `controls/numeric_input/tests.rs` owns edit line-box and

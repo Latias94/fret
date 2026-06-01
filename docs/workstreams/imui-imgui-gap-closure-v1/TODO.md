@@ -1240,6 +1240,14 @@ Last updated: 2026-06-01
       Result: `editor_theme_preset_picker.rs` keeps preset installation, theme resolution, and
       render dispatch plus test-owner routing. `editor_theme_preset_picker/tests.rs` owns listbox
       semantics and preset replay coverage.
+- [x] Split editor theme preset picker row chrome/activation into a private render child owner
+      without changing listbox semantics, header rendering, row selected state, row item test IDs,
+      click activation, density status labels, hover/pressed/selected color mixing, or public
+      picker APIs.
+      Result: `editor_theme_preset_picker/render.rs` keeps listbox container semantics, preset
+      iteration, and header text routing. `editor_theme_preset_picker/render/row.rs` owns
+      ListBoxOption semantics, pressable activation, row chrome, status label rendering, row test
+      IDs, and color mixing.
 - [x] Split editor numeric-input text-style and presentation regressions into a private test owner
       without changing NumericInput public options, default selection behavior, validation message
       routing, density-derived edit line boxes, or NumericPresentation adoption.
