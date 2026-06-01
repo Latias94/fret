@@ -2688,6 +2688,37 @@ Focused gates:
 - `cargo fmt -p fret-ui-editor -- --check`: pass.
 - `git diff --check`: pass.
 
+## Slider Element Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor slider keyed element assembly moved into a private `slider/element.rs` owner
+without changing public constructors/builders, identity keying, state/focus-handoff storage,
+pointer event wiring, typing handoff, NumericInput commit/cancel reset, resolved paint/geometry
+policy, value display text/readout behavior, or public `SliderOptions`.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/slider.rs` keeps the public Slider API,
+  `NumericPresentation` adoption, identity keying, and child-owner routing.
+- `ecosystem/fret-ui-editor/src/controls/slider/element.rs` owns keyed element assembly, slider
+  state/focus-handoff storage, pressable pointer hooks, NumericInput typing composition, focus
+  handoff synchronization, and frame owner invocation.
+- `tools/gate_imui_workstream_source.py` now gates the root/element split so keyed assembly,
+  pressable/NumericInput composition, and focus handoff policy stay out of the public root owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new slider element owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `cargo nextest run -p fret-ui-editor slider --no-fail-fast`: pass (28 passed, 200 skipped).
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `git diff --check`: pass.
+
 ## AxisDragValue Scrub Frame Owner-Split Evidence - 2026-05-31
 
 Claim verified: editor axis-drag-value scrub frame assembly moved into a private

@@ -709,6 +709,14 @@ children, optional value display segment, readout styling, and value display tes
 Pointer event wiring, typing handoff, track/thumb render order, and public `SliderOptions` remain
 unchanged.
 
+2026-06-01 editor slider element owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps the public Slider API,
+`NumericPresentation` adoption, identity keying, and child-owner routing. The private
+`controls/slider/element.rs` owner contains keyed element assembly, slider state/focus-handoff
+storage, pressable pointer hooks, NumericInput typing composition, focus handoff synchronization,
+and frame owner invocation. Public constructors/builders, identity semantics, pointer/typing
+behavior, resolved paint/geometry policy, and public `SliderOptions` remain unchanged.
+
 2026-05-31 editor numeric-input model/session owner-split result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps NumericInput constructors,
 builder methods, keyed control orchestration, validation message rendering, and presentation test

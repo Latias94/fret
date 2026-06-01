@@ -1196,6 +1196,14 @@ Last updated: 2026-06-01
       Result: `controls/slider.rs` keeps public Slider orchestration, state, pointer handlers,
       value math, and NumericInput typing mode. `controls/slider/frame.rs` owns the input-group
       frame, track/thumb children, optional value display segment, and readout test-id decoration.
+- [x] Split editor slider keyed element assembly into a private element owner without changing
+      public constructors/builders, identity keying, state/focus-handoff storage, pointer event
+      wiring, typing handoff, NumericInput commit/cancel reset, resolved paint/geometry policy,
+      value display text/readout behavior, or public `SliderOptions`.
+      Result: `controls/slider.rs` keeps the public Slider API, `NumericPresentation` adoption,
+      identity keying, and child-owner routing. `controls/slider/element.rs` owns keyed element
+      assembly, slider state/focus-handoff storage, pressable pointer hooks, NumericInput typing
+      composition, focus handoff sync, and frame owner invocation.
 - [x] Split editor enum-select row rendering, selection commit policy, and item test-id
       sanitization into a private child owner without changing trigger composition, overlay
       dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row
