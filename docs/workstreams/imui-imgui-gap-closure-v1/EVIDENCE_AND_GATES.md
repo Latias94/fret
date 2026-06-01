@@ -25450,3 +25450,26 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI separator-text element owner split:
+
+- Claim: separator-text element construction moved from
+  `ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs` into
+  `ecosystem/fret-ui-kit/src/imui/separator_text_controls/element.rs` without changing visible-label
+  identity parsing, label text-role chrome, trailing rule styling, test-id suffixes, or facade entry
+  wiring.
+- Evidence anchors: `separator_text_controls.rs` declares `mod element;`, keeps
+  `parse_label_identity(label.as_ref())`, and delegates the element body to
+  `element::separator_text_element(...)`; `element.rs` owns text-section label chrome, border-theme
+  line props, row layout, and label/line/root test-id decoration; the source gate rejects the
+  element construction body drifting back into the root separator-text hub.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit --features imui`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_separator_text_smoke --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-imui separator_text_helper_renders_label_with_trailing_rule --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

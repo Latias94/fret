@@ -6561,9 +6561,36 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs"),
             required=[
-                "crate::declarative::text::text_section_chrome_label(cx, label)",
+                "mod element;",
+                "parse_label_identity(label.as_ref())",
+                "element::separator_text_element(cx, label, options)",
             ],
             forbidden=[
+                "text_section_chrome_label(cx, label)",
+                "ContainerProps::default()",
+                "Theme::global",
+                "line_props.layout.flex",
+                "crate::ui::h_flex",
+                "TextProps::new(label)",
+                "label_props.layout.flex.shrink",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/separator_text_controls/element.rs"),
+            required=[
+                "pub(super) fn separator_text_element<H: UiHost>",
+                "crate::declarative::text::text_section_chrome_label(cx, label)",
+                "label.attach_semantics(SemanticsDecoration::default().test_id(test_id))",
+                "line_props.background = Some(",
+                "line_props.layout.flex.grow = 1.0;",
+                "line_props.layout.flex.shrink = 1.0;",
+                "crate::ui::h_flex(move |_cx| vec![label, line])",
+            ],
+            forbidden=[
+                "pub fn separator_text_element",
+                "parse_label_identity",
+                "UiWriterImUiFacadeExt",
+                "ui.add",
                 "TextProps::new(label)",
                 "label_props.layout.flex.shrink",
             ],

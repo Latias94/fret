@@ -5893,3 +5893,11 @@ opening the slice.
       `use_controllable_model(...)` bridge for `ImUiMultiSelectState<K>`.
       `multi_select.rs` keeps the public forwarding helper, state re-export, click-policy
       delegation, and selectable entry wiring.
+- [x] Split IMUI separator-text element construction out of
+      `ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs` into a private element owner
+      without changing visible-label identity parsing, label text-role chrome, trailing rule
+      styling, test-id suffixes, or facade entry wiring.
+      Result: `ecosystem/fret-ui-kit/src/imui/separator_text_controls/element.rs` owns label/line
+      element construction, border-theme lookup, row layout, and test-id decoration.
+      `separator_text_controls.rs` keeps only the IMUI helper entry, visible-label parsing, and
+      `ui.add(...)` insertion.

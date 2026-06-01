@@ -5185,3 +5185,8 @@ state re-exports and menu delegation.
 `ImUiMultiSelectState<K>`. `multi_select.rs` keeps the public `multi_select_use_model(...)`
 signature as a forwarding helper, plus state re-export, click-policy delegation, and selectable
 entry wiring.
+
+2026-06-01 separator-text element owner split result:
+`ecosystem/fret-ui-kit/src/imui/separator_text_controls/element.rs` now owns section-label element
+construction: text-role label chrome, trailing border rule, row layout, and test-id decoration.
+`separator_text_controls.rs` keeps visible-label identity parsing and facade insertion only.
