@@ -376,9 +376,7 @@
       "tokens": [
         "md.sys.motion.duration.short2",
         "md.sys.motion.duration.short4",
-        "md.sys.motion.easing.standard",
-        "md.sys.state.disabled.state-layer-opacity",
-        "md.sys.state.pressed.state-layer-opacity"
+        "md.sys.motion.easing.standard"
       ]
     },
     {
@@ -752,9 +750,6 @@
       "layer": "token_module",
       "path": "src/tokens/card.rs",
       "tokens": [
-        "md.comp.elevated-card.hover.container.elevation",
-        "md.comp.filled-card.container.shape",
-        "md.comp.outlined-card.outline.width",
         "md.sys.color.on-surface",
         "md.sys.color.outline",
         "md.sys.color.shadow",
@@ -767,9 +762,6 @@
       "layer": "token_module",
       "path": "src/tokens/carousel_item.rs",
       "tokens": [
-        "md.comp.carousel-item.container.shape",
-        "md.comp.carousel-item.hover.container.elevation",
-        "md.comp.carousel-item.with-outline.outline.width",
         "md.sys.color.on-surface",
         "md.sys.color.outline",
         "md.sys.color.shadow",
@@ -858,15 +850,6 @@
       "layer": "token_module",
       "path": "src/tokens/chip_common.rs",
       "tokens": [
-        "md.comp.assist-chip.container.height",
-        "md.comp.assist-chip.elevated.hover.container.elevation",
-        "md.comp.assist-chip.focus.state-layer.color",
-        "md.comp.assist-chip.label-text.color",
-        "md.comp.assist-chip.outline.width",
-        "md.comp.assist-chip.with-icon.icon.size",
-        "md.comp.filter-chip.selected.hover.label-text.color",
-        "md.comp.filter-chip.selected.hover.state-layer.opacity",
-        "md.comp.input-chip.with-leading-icon.unselected.pressed.leading-icon.color",
         "md.sys.color.on-surface",
         "md.sys.color.outline-variant",
         "md.sys.color.shadow",
@@ -880,9 +863,6 @@
       "layer": "token_module",
       "path": "src/tokens/date_picker.rs",
       "tokens": [
-        "md.comp.date-picker.docked.container.width",
-        "md.comp.date-picker.modal.container.elevation",
-        "md.comp.date-picker.modal.date.container.height",
         "md.comp.date-picker.modal.header.headline",
         "md.comp.date-picker.modal.header.headline.color",
         "md.sys.color.on-primary",
@@ -958,19 +938,10 @@
       "layer": "token_module",
       "path": "src/tokens/fab.rs",
       "tokens": [
-        "md.comp.extended-fab.container.width",
-        "md.comp.extended-fab.large.icon-label-space",
-        "md.comp.extended-fab.medium.container.height",
-        "md.comp.extended-fab.medium.container.shape",
-        "md.comp.extended-fab.medium.icon.size",
         "md.comp.extended-fab.primary.label-text.weight",
         "md.comp.extended-fab.secondary.label-text.weight",
         "md.comp.extended-fab.surface.label-text.weight",
         "md.comp.extended-fab.tertiary.label-text.weight",
-        "md.comp.fab.container.height",
-        "md.comp.fab.large.icon.size",
-        "md.comp.fab.primary-container.hover.container.elevation",
-        "md.comp.fab.small.container.shape",
         "md.sys.color.on-surface",
         "md.sys.color.shadow",
         "md.sys.color.surface-container",
@@ -1353,8 +1324,6 @@
         "md.comp.navigation-bar.active-indicator.shape",
         "md.comp.navigation-bar.active-indicator.top-offset",
         "md.comp.navigation-bar.active-indicator.width",
-        "md.comp.navigation-bar.active.focus.icon.color",
-        "md.comp.navigation-bar.active.icon.color",
         "md.comp.navigation-bar.active.label-text.weight",
         "md.comp.navigation-bar.container.color",
         "md.comp.navigation-bar.container.elevation",
@@ -1364,16 +1333,13 @@
         "md.comp.navigation-bar.icon.size",
         "md.comp.navigation-bar.item.gap",
         "md.comp.navigation-bar.label-text.weight",
-        "md.comp.navigation-bar.pressed.state-layer.opacity",
         "md.comp.navigation-drawer.active-indicator.color",
         "md.comp.navigation-drawer.active-indicator.height",
         "md.comp.navigation-drawer.active-indicator.shape",
         "md.comp.navigation-drawer.active-indicator.width",
-        "md.comp.navigation-drawer.active.focus.state-layer.color",
         "md.comp.navigation-drawer.active.label-text.weight",
         "md.comp.navigation-drawer.container.shape",
         "md.comp.navigation-drawer.container.width",
-        "md.comp.navigation-drawer.focus.state-layer.opacity",
         "md.comp.navigation-drawer.icon.size",
         "md.comp.navigation-drawer.label-text.weight",
         "md.comp.navigation-drawer.large-badge-label.color",
@@ -1393,9 +1359,7 @@
         "md.comp.navigation-rail.container.color",
         "md.comp.navigation-rail.container.shape",
         "md.comp.navigation-rail.container.width",
-        "md.comp.navigation-rail.hover.state-layer.opacity",
         "md.comp.navigation-rail.icon.size",
-        "md.comp.navigation-rail.inactive.hover.label-text.color",
         "md.comp.navigation-rail.item.height",
         "md.comp.navigation-rail.item.width",
         "md.comp.navigation-rail.label-text.weight",
@@ -1696,40 +1660,25 @@
       "layer": "token_module",
       "path": "src/tokens/snackbar.rs",
       "tokens": [
-        "md.comp.snackbar.action.focus.label-text.color",
-        "md.comp.snackbar.action.focus.state-layer.color",
         "md.comp.snackbar.action.focus.state-layer.opacity",
-        "md.comp.snackbar.action.hover.label-text.color",
         "md.comp.snackbar.action.hover.state-layer.color",
         "md.comp.snackbar.action.hover.state-layer.opacity",
         "md.comp.snackbar.action.label-text",
         "md.comp.snackbar.action.label-text.color",
-        "md.comp.snackbar.action.label-text.weight",
-        "md.comp.snackbar.action.pressed.label-text.color",
-        "md.comp.snackbar.action.pressed.state-layer.color",
         "md.comp.snackbar.action.pressed.state-layer.opacity",
         "md.comp.snackbar.container.color",
         "md.comp.snackbar.container.elevation",
         "md.comp.snackbar.container.shadow-color",
         "md.comp.snackbar.container.shape",
         "md.comp.snackbar.icon.color",
-        "md.comp.snackbar.icon.focus.icon.color",
-        "md.comp.snackbar.icon.focus.state-layer.color",
         "md.comp.snackbar.icon.focus.state-layer.opacity",
-        "md.comp.snackbar.icon.hover.icon.color",
         "md.comp.snackbar.icon.hover.state-layer.color",
         "md.comp.snackbar.icon.hover.state-layer.opacity",
-        "md.comp.snackbar.icon.pressed.icon.color",
-        "md.comp.snackbar.icon.pressed.state-layer.color",
         "md.comp.snackbar.icon.pressed.state-layer.opacity",
         "md.comp.snackbar.icon.size",
         "md.comp.snackbar.supporting-text.color",
-        "md.comp.snackbar.supporting-text.weight",
         "md.comp.snackbar.with-single-line.container.height",
         "md.comp.snackbar.with-two-lines.container.height",
-        "md.sys.color.inverse-on-surface",
-        "md.sys.color.inverse-primary",
-        "md.sys.color.inverse-surface",
         "md.sys.color.shadow",
         "md.sys.motion.duration.short2",
         "md.sys.motion.duration.short4",
@@ -1737,9 +1686,7 @@
         "md.sys.motion.easing.standard",
         "md.sys.state.focus.state-layer-opacity",
         "md.sys.state.hover.state-layer-opacity",
-        "md.sys.state.pressed.state-layer-opacity",
-        "md.sys.typescale.body-medium",
-        "md.sys.typescale.label-large"
+        "md.sys.state.pressed.state-layer-opacity"
       ]
     },
     {
@@ -1942,11 +1889,6 @@
       "layer": "token_module",
       "path": "src/tokens/text_field.rs",
       "tokens": [
-        "md.comp.outlined-text-field.error.hover.label-text.color",
-        "md.comp.outlined-text-field.hover.label-text.color",
-        "md.comp.outlined-text-field.hover.supporting-text.color",
-        "md.comp.outlined-text-field.label-text.color",
-        "md.comp.outlined-text-field.supporting-text.color",
         "md.sys.color.on-surface-variant",
         "md.sys.color.surface"
       ]
@@ -1956,9 +1898,6 @@
       "layer": "token_module",
       "path": "src/tokens/time_input.rs",
       "tokens": [
-        "md.comp.time-input.time-input-field.container.height",
-        "md.comp.time-input.time-input-field.container.width",
-        "md.comp.time-input.time-input-field.focus.outline.width",
         "md.sys.color.error",
         "md.sys.color.error-container",
         "md.sys.color.on-error-container",
@@ -1980,15 +1919,11 @@
       "layer": "token_module",
       "path": "src/tokens/time_period_common.rs",
       "tokens": [
-        "md.comp.time-input.period-selector.container.height",
-        "md.comp.time-input.period-selector.pressed.state-layer.opacity",
-        "md.comp.time-picker.period-selector.vertical.container.width",
         "md.sys.color.on-surface-variant",
         "md.sys.color.on-tertiary-container",
         "md.sys.color.outline",
         "md.sys.color.tertiary-container",
         "md.sys.shape.corner.small",
-        "md.sys.state.focus.state-layer-opacity",
         "md.sys.typescale.title-medium"
       ]
     },
@@ -2009,7 +1944,6 @@
         "md.sys.shape.corner.extra-large",
         "md.sys.shape.corner.full",
         "md.sys.shape.corner.small",
-        "md.sys.state.focus.state-layer-opacity",
         "md.sys.typescale.body-large",
         "md.sys.typescale.display-large",
         "md.sys.typescale.label-medium"
@@ -2102,9 +2036,7 @@
       "id": "tokens.typography",
       "layer": "token_module",
       "path": "src/tokens/typography.rs",
-      "tokens": [
-        "md.sys.typescale.label-large"
-      ]
+      "tokens": []
     }
   ]
 }

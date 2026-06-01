@@ -125,6 +125,7 @@ pub fn scan_audited_sources(crate_dir: &Path) -> Result<MaterialTokenUsageScan, 
     let mut scans = Vec::with_capacity(sources.len());
     for source in sources {
         let text = read_source_text(crate_dir, &source.path)?;
+        let text = strip_cfg_test_items(&text);
         scans.push(MaterialTokenSourceScan {
             source,
             literals: scan_md_string_literals(&text),
@@ -179,6 +180,137 @@ pub fn scan_md_string_literals(source: &str) -> MaterialTokenLiteralScan {
         }
     }
     scan
+}
+
+fn strip_cfg_test_items(source: &str) -> String {
+    let mut out = String::with_capacity(source.len());
+    let mut cursor = 0;
+    while let Some(attr_rel) = source[cursor..].find("#[cfg(test)]") {
+        let attr_start = cursor + attr_rel;
+        out.push_str(&source[cursor..attr_start]);
+
+        let item_start = skip_ascii_whitespace(source, attr_start + "#[cfg(test)]".len());
+        let next_brace = source[item_start..].find('{').map(|idx| item_start + idx);
+        let next_semi = source[item_start..].find(';').map(|idx| item_start + idx);
+
+        cursor = match (next_brace, next_semi) {
+            (Some(brace), Some(semi)) if semi < brace => semi + 1,
+            (Some(brace), _) => find_matching_brace(source, brace).unwrap_or(source.len()),
+            (None, Some(semi)) => semi + 1,
+            (None, None) => source.len(),
+        };
+    }
+    out.push_str(&source[cursor..]);
+    out
+}
+
+fn skip_ascii_whitespace(source: &str, mut idx: usize) -> usize {
+    let bytes = source.as_bytes();
+    while idx < bytes.len() && bytes[idx].is_ascii_whitespace() {
+        idx += 1;
+    }
+    idx
+}
+
+fn find_matching_brace(source: &str, open_idx: usize) -> Option<usize> {
+    let bytes = source.as_bytes();
+    let mut idx = open_idx;
+    let mut depth = 0usize;
+    while idx < bytes.len() {
+        match bytes[idx] {
+            b'{' => {
+                depth += 1;
+                idx += 1;
+            }
+            b'}' => {
+                depth = depth.checked_sub(1)?;
+                idx += 1;
+                if depth == 0 {
+                    return Some(idx);
+                }
+            }
+            b'"' => idx = skip_string_literal(bytes, idx + 1),
+            b'r' => {
+                if let Some(next_idx) = skip_raw_string_literal(bytes, idx) {
+                    idx = next_idx;
+                } else {
+                    idx += 1;
+                }
+            }
+            b'/' if bytes.get(idx + 1) == Some(&b'/') => idx = skip_line_comment(bytes, idx + 2),
+            b'/' if bytes.get(idx + 1) == Some(&b'*') => idx = skip_block_comment(bytes, idx + 2),
+            _ => idx += 1,
+        }
+    }
+    None
+}
+
+fn skip_string_literal(bytes: &[u8], mut idx: usize) -> usize {
+    while idx < bytes.len() {
+        match bytes[idx] {
+            b'\\' => idx = (idx + 2).min(bytes.len()),
+            b'"' => return idx + 1,
+            _ => idx += 1,
+        }
+    }
+    idx
+}
+
+fn skip_raw_string_literal(bytes: &[u8], start: usize) -> Option<usize> {
+    let mut idx = start + 1;
+    let mut hashes = 0usize;
+    while bytes.get(idx) == Some(&b'#') {
+        hashes += 1;
+        idx += 1;
+    }
+    if bytes.get(idx) != Some(&b'"') {
+        return None;
+    }
+    idx += 1;
+
+    while idx < bytes.len() {
+        if bytes[idx] == b'"' {
+            let mut close = idx + 1;
+            let mut matched = 0usize;
+            while matched < hashes && bytes.get(close) == Some(&b'#') {
+                matched += 1;
+                close += 1;
+            }
+            if matched == hashes {
+                return Some(close);
+            }
+        }
+        idx += 1;
+    }
+    Some(bytes.len())
+}
+
+fn skip_line_comment(bytes: &[u8], mut idx: usize) -> usize {
+    while idx < bytes.len() && bytes[idx] != b'\n' {
+        idx += 1;
+    }
+    idx
+}
+
+fn skip_block_comment(bytes: &[u8], mut idx: usize) -> usize {
+    let mut depth = 1usize;
+    while idx + 1 < bytes.len() {
+        match (bytes[idx], bytes[idx + 1]) {
+            (b'/', b'*') => {
+                depth += 1;
+                idx += 2;
+            }
+            (b'*', b'/') => {
+                depth -= 1;
+                idx += 2;
+                if depth == 0 {
+                    return idx;
+                }
+            }
+            _ => idx += 1,
+        }
+    }
+    bytes.len()
 }
 
 pub fn expand_key_templates(
@@ -646,6 +778,36 @@ mod tests {
             scan.templates,
             BTreeSet::from(["md.comp.button.{variant_key}.{suffix}".to_string()])
         );
+    }
+
+    #[test]
+    fn audited_scan_ignores_cfg_test_items_before_scanning_literals() {
+        let source = r##"
+            let production = "md.comp.button.filled.container.color";
+
+            #[cfg(test)]
+            mod tests {
+                let exact = "md.comp.slider.handle.width";
+                let template = r#"md.comp.button.{variant_key}.{suffix}"#;
+            }
+
+            #[cfg(test)]
+            pub(crate) fn test_token_override() {
+                let token = "md.comp.radio-button.state-layer.shape";
+            }
+
+            let sys = "md.sys.color.primary";
+            "##;
+        let scan = scan_md_string_literals(&strip_cfg_test_items(source));
+
+        assert_eq!(
+            scan.exact,
+            BTreeSet::from([
+                "md.comp.button.filled.container.color".to_string(),
+                "md.sys.color.primary".to_string(),
+            ])
+        );
+        assert!(scan.templates.is_empty());
     }
 
     #[test]

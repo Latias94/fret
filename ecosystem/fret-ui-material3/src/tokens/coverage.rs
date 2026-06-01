@@ -1,6 +1,6 @@
 //! Material token coverage audit helpers used by crate-level conformance tests.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use fret_ui::Theme;
 use serde::Deserialize;
@@ -47,27 +47,43 @@ pub(crate) fn validate_manifest_against_sources() -> Result<(), String> {
     }
 
     let crate_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-    match usage::discover_audited_sources(crate_dir) {
-        Ok(discovered_sources) => {
-            let discovered_paths: BTreeSet<_> = discovered_sources
-                .iter()
-                .map(|source| source.path.clone())
-                .collect();
-            let manifest_paths: BTreeSet<_> = manifest
-                .sources
-                .iter()
-                .map(|source| source.path.clone())
-                .collect();
-            for path in discovered_paths.difference(&manifest_paths) {
-                errors.push(format!("manifest missing audited source file {path}"));
-            }
-            for path in manifest_paths.difference(&discovered_paths) {
-                errors.push(format!(
-                    "manifest references non-audited source file {path}"
-                ));
-            }
+    let audited_scan = match usage::scan_audited_sources(crate_dir) {
+        Ok(scan) => Some(scan),
+        Err(err) => {
+            errors.push(err);
+            None
         }
-        Err(err) => errors.push(err),
+    };
+
+    let actual_tokens_by_path: BTreeMap<_, _> = audited_scan
+        .as_ref()
+        .into_iter()
+        .flat_map(|scan| {
+            scan.sources
+                .iter()
+                .map(|source| (source.source.path.clone(), source.literals.exact.clone()))
+        })
+        .collect();
+
+    if let Some(scan) = &audited_scan {
+        let discovered_paths: BTreeSet<_> = scan
+            .sources
+            .iter()
+            .map(|source| source.source.path.clone())
+            .collect();
+        let manifest_paths: BTreeSet<_> = manifest
+            .sources
+            .iter()
+            .map(|source| source.path.clone())
+            .collect();
+        for path in discovered_paths.difference(&manifest_paths) {
+            errors.push(format!("manifest missing audited source file {path}"));
+        }
+        for path in manifest_paths.difference(&discovered_paths) {
+            errors.push(format!(
+                "manifest references non-audited source file {path}"
+            ));
+        }
     }
 
     let mut ids = BTreeSet::new();
@@ -90,22 +106,18 @@ pub(crate) fn validate_manifest_against_sources() -> Result<(), String> {
         }
         validate_sorted_unique_tokens(source, &mut errors);
 
-        match usage::read_source_text(crate_dir, &source.path) {
-            Ok(text) => {
-                let actual = usage::scan_md_string_literals(&text).exact;
-                let expected: BTreeSet<_> = source.tokens.iter().cloned().collect();
+        if let Some(actual) = actual_tokens_by_path.get(&source.path) {
+            let expected: BTreeSet<_> = source.tokens.iter().cloned().collect();
 
-                for key in actual.difference(&expected) {
-                    errors.push(format!(
-                        "{}: manifest missing literal token {key}",
-                        source.path
-                    ));
-                }
-                for key in expected.difference(&actual) {
-                    errors.push(format!("{}: stale manifest token {key}", source.path));
-                }
+            for key in actual.difference(&expected) {
+                errors.push(format!(
+                    "{}: manifest missing literal token {key}",
+                    source.path
+                ));
             }
-            Err(err) => errors.push(err),
+            for key in expected.difference(actual) {
+                errors.push(format!("{}: stale manifest token {key}", source.path));
+            }
         }
     }
 
