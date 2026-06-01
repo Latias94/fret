@@ -2365,18 +2365,13 @@ fn select_list_item<H: UiHost>(
                     item_container_shape,
                 ) = {
                     let theme = Theme::global(&*cx.app);
-                    let state_layer_color = theme
-                        .color_by_key("md.sys.color.on-surface")
-                        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-                    let pressed_opacity = theme
-                        .number_by_key("md.sys.state.pressed.state-layer-opacity")
-                        .unwrap_or(0.1);
-                    let hover_opacity = theme
-                        .number_by_key("md.sys.state.hover.state-layer-opacity")
-                        .unwrap_or(0.08);
-                    let focus_opacity = theme
-                        .number_by_key("md.sys.state.focus.state-layer-opacity")
-                        .unwrap_or(0.1);
+                    let state_layer_color = select_tokens::menu_list_item_state_layer_color(theme);
+                    let pressed_opacity =
+                        select_tokens::menu_list_item_pressed_state_layer_opacity(theme);
+                    let hover_opacity =
+                        select_tokens::menu_list_item_hover_state_layer_opacity(theme);
+                    let focus_opacity =
+                        select_tokens::menu_list_item_focus_state_layer_opacity(theme);
                     let ripple_base_opacity = pressed_opacity;
                     let config = material_pressable_indication_config_in_scope(&*cx, None);
 

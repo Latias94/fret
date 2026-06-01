@@ -414,3 +414,19 @@ pub(crate) fn menu_list_item_selected_container_color(
     MaterialTokenResolver::new(theme)
         .color_comp_or_sys(key, "md.sys.color.surface-container-highest")
 }
+
+pub(crate) fn menu_list_item_state_layer_color(theme: &Theme) -> Color {
+    MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface")
+}
+
+pub(crate) fn menu_list_item_pressed_state_layer_opacity(theme: &Theme) -> f32 {
+    MaterialTokenResolver::new(theme).number_sys("md.sys.state.pressed.state-layer-opacity", 0.1)
+}
+
+pub(crate) fn menu_list_item_hover_state_layer_opacity(theme: &Theme) -> f32 {
+    MaterialTokenResolver::new(theme).number_sys("md.sys.state.hover.state-layer-opacity", 0.08)
+}
+
+pub(crate) fn menu_list_item_focus_state_layer_opacity(theme: &Theme) -> f32 {
+    MaterialTokenResolver::new(theme).number_sys("md.sys.state.focus.state-layer-opacity", 0.1)
+}

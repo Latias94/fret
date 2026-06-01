@@ -661,9 +661,7 @@ impl TextField {
                 let mut states = WidgetStates::empty();
                 let mut input_bg = {
                     let theme = Theme::global(&*cx.app);
-                    theme
-                        .color_by_key("md.sys.color.surface")
-                        .unwrap_or_else(|| theme.color_token("md.sys.color.surface"))
+                    text_field_tokens::initial_input_background(theme)
                 };
                 let mut outline_width_for_notch = Px(0.0);
                 vec![cx.flex(

@@ -6,6 +6,7 @@
 use fret_core::{Color, Px};
 use fret_ui::{TextInputStyle, Theme};
 
+use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::text_field::TextFieldVariant;
 use crate::tokens::field_common::{self, FieldIconRole, FieldState, FieldTokenSet, FieldVariant};
 
@@ -14,6 +15,10 @@ const TEXT_FIELD_TOKENS: FieldTokenSet =
 
 pub(crate) fn container_height(theme: &Theme, variant: TextFieldVariant) -> Px {
     field_common::container_height(theme, field_prefix(variant))
+}
+
+pub(crate) fn initial_input_background(theme: &Theme) -> Color {
+    MaterialTokenResolver::new(theme).color_sys("md.sys.color.surface")
 }
 
 pub(crate) fn text_input_style(
