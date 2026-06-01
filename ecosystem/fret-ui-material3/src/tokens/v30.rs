@@ -1751,6 +1751,7 @@ fn inject_comp_radio_button_scalars(cfg: &mut ThemeConfig) {
         );
     }
     material_web_v30::inject_comp_radio_button_scalars(cfg);
+    v30_overlay::inject_radio_button_scalar_backfills(cfg);
 }
 
 fn inject_comp_radio_button_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -4050,6 +4051,12 @@ mod tests {
                 .get("md.comp.radio-button.state-layer.size")
                 .copied(),
             Some(40.0)
+        );
+        assert_eq!(
+            cfg.corners
+                .get("md.comp.radio-button.state-layer.shape")
+                .copied(),
+            Some(fret_core::Corners::all(fret_core::Px(9999.0)))
         );
         assert_eq!(
             cfg.numbers

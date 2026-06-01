@@ -108,6 +108,7 @@ const fn prefix_meta(
 const FRET_RUNTIME_SOURCE: &str = "Fret runtime policy";
 const FRET_MATERIAL_SOURCE: &str = "Fret Material3 overlay";
 const BUTTON_SOURCE: &str = "Material button defaults and Fret variant-shaped access";
+const RADIO_BUTTON_SOURCE: &str = "Material radio-button defaults and Fret state-layer access";
 const MENU_SOURCE: &str = "Material menu defaults and Fret variant-shaped access";
 const NAVIGATION_SOURCE: &str = "Material navigation layout defaults";
 const PRIMARY_TAB_SOURCE: &str = "Compose Material3 PrimaryNavigationTabTokens and TabRowDefaults";
@@ -226,6 +227,12 @@ pub const EXACT_TOKEN_METADATA: &[MaterialOverlayTokenMetadata] = &[
         Origin::VariantShapeAlias,
         BUTTON_SOURCE,
         VARIANT_ALIAS_REASON,
+    ),
+    meta(
+        "md.comp.radio-button.state-layer.shape",
+        Origin::MaterialDefaultBackfill,
+        RADIO_BUTTON_SOURCE,
+        MATERIAL_DEFAULT_REASON,
     ),
     meta(
         "md.comp.menu.container.max-height",

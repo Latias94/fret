@@ -114,6 +114,14 @@ pub(crate) fn inject_button_scalar_aliases(cfg: &mut ThemeConfig) {
     }
 }
 
+pub(crate) fn inject_radio_button_scalar_backfills(cfg: &mut ThemeConfig) {
+    // Material Web v30 emits the 40dp state layer size but omits the matching full state-layer
+    // shape that other circular controls expose.
+    cfg.corners
+        .entry("md.comp.radio-button.state-layer.shape".to_string())
+        .or_insert(Corners::all(Px(9999.0)));
+}
+
 pub(crate) fn inject_date_picker_docked_scalars(cfg: &mut ThemeConfig) {
     cfg.metrics
         .entry("md.sys.fret.material.date-picker.calendar.horizontal-padding".to_string())
