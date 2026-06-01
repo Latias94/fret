@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## IMUI Floating-Area Drag-State Commit Owner-Split Evidence - 2026-06-01
+
+Claim verified: IMUI floating-area drag-state commit and final placement readback moved out of
+`floating_surface/area/drag_state.rs` into private child owners without changing drag snapshot
+discovery, device-pixel snapping, test-id overrides, drag-position delta application,
+last-drag-position cleanup, child window resize feedback, or `FloatingAreaResponse`
+dragging/position semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state.rs` keeps drag snapshot
+  discovery, scale-factor lookup, prepared output assembly, and final-state re-export routing.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state/commit.rs` owns the
+  `cx.state_for(...)` commit block, initial/test-id state construction, drag delta application,
+  device-pixel snapping, and last-drag-position cleanup.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state/final_state.rs` owns final
+  placement readback after child window resize feedback.
+- `tools/gate_imui_workstream_source.py` now tracks the commit/readback child owners and rejects
+  drag-state commit policy from drifting back into the root drag-state owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new child owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui floating --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Table-Column Visibility Mutation Owner-Split Evidence - 2026-06-01
 
 Claim verified: IMUI table-column visibility override mutation moved out of

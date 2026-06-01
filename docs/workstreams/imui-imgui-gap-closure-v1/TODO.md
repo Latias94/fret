@@ -3810,9 +3810,20 @@ Last updated: 2026-06-01
       changing drag snapshot matching, device-pixel snapping, test-id overrides, child window
       resize feedback, or `FloatingAreaResponse` dragging/position semantics.
       Result: `floating_surface/area/drag_state.rs` owns drag snapshot discovery,
-      drag-position reconciliation, scale-factor snapping, test-id state updates, and final
-      placement readback. `floating_surface/area.rs` now only orchestrates layer registration,
+      scale-factor reads, and final placement readback. A 2026-06-01 follow-up below moved
+      drag-position reconciliation, scale-factor snapping, and test-id state updates into a
+      child commit owner. `floating_surface/area.rs` now only orchestrates layer registration,
       context creation, IMUI child mounting, layout shell creation, and response assembly.
+- [x] Split IMUI floating-area drag-state commit out of
+      `ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state.rs` into a private child
+      owner without changing drag snapshot discovery, device-pixel snapping, test-id overrides,
+      drag-position delta application, last-drag-position cleanup, child window resize feedback, or
+      `FloatingAreaResponse` dragging/position semantics.
+      Result: `floating_surface/area/drag_state/commit.rs` owns `cx.state_for(...)`,
+      initial/test-id state construction, drag delta application, snapping, and last-drag-position
+      reset, while `floating_surface/area/drag_state/final_state.rs` owns final placement readback.
+      `drag_state.rs` keeps snapshot discovery, scale-factor lookup, prepared output assembly, and
+      final-state re-export routing.
 - [x] Split IMUI floating-area drag-surface behavior out of
       `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` into a private owner module without
       changing drag setup delegation, focusable key stub installation, double-click hooks,

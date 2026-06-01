@@ -951,6 +951,8 @@
     "ecosystem/fret-ui-kit/src/imui/floating_surface.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/area.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state/commit.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state/final_state.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state/snapshot.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/area/layout.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/drag_surface.rs",

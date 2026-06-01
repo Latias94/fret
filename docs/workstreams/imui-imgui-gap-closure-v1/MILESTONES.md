@@ -12,6 +12,16 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 IMUI floating-area drag-state commit owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state.rs` now keeps drag snapshot
+discovery, scale-factor lookup, prepared output assembly, and final-state re-export routing while
+delegating drag-state commit to `floating_surface/area/drag_state/commit.rs` and final placement
+readback to `floating_surface/area/drag_state/final_state.rs`. The commit owner contains
+initial/test-id state construction, drag delta application, device-pixel snapping, and
+last-drag-position cleanup. Floating-area dragging/position response semantics, test-id overrides,
+and child-window resize feedback remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split.
+
 2026-06-01 IMUI table-column visibility mutation owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/overrides.rs` now keeps construction
 and read-side override queries while delegating `set_visible`, `show`, `hide`, `toggle`, `remove`,
