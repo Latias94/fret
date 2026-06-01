@@ -2,6 +2,31 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## DevTools Demo/Metrics/Debug workflow status loop - 2026-06-02
+
+This refresh makes the Demo/Metrics/Debug route a clearer workflow handoff loop instead of a
+button-only launch surface:
+
+- `apps/fret-devtools/src/demo_metrics_debug.rs` now projects workflow readiness for
+  `campaign-validate-imui-p3-multiwindow` and `perf-docking-suite-ws` into the same always-visible
+  Demo/Metrics/Debug panel.
+- The readiness rows report in-flight blocking, missing selected-session state, and selected-session
+  availability from the same `devtools_workflow_commands_from_state(...)` source used by the run
+  buttons.
+- The panel now also projects `workflow status` with in-flight state, last workflow result path, and
+  last workflow error so users can see the immediate result handoff without leaving the route.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `cargo check -p fret-devtools` - passed.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_workflow_lines_surface_runtime_readiness_and_status demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle devtools_workflow_commands_mark_suite_ws_missing_without_session devtools_workflow_commands_include_selected_session_for_suite_ws --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+
 ## DevTools Demo/Metrics/Debug perf workflow run entry - 2026-06-02
 
 This refresh extends the Demo/Metrics/Debug route from docking workflow execution to the existing

@@ -151,14 +151,79 @@ pub(crate) fn demo_metrics_debug_action_readiness_lines(
         .collect()
 }
 
+pub(crate) fn demo_metrics_debug_workflow_readiness_lines(
+    workflow_run_in_flight: bool,
+    perf_workflow_runnable: bool,
+) -> Vec<String> {
+    let docking_runnable = !workflow_run_in_flight;
+    let docking_reason = if workflow_run_in_flight {
+        "workflow run already in flight"
+    } else {
+        "no inputs required"
+    };
+    let perf_runnable = !workflow_run_in_flight && perf_workflow_runnable;
+    let perf_reason = if workflow_run_in_flight {
+        "workflow run already in flight"
+    } else if perf_workflow_runnable {
+        "selected session available"
+    } else {
+        "select a DevTools session"
+    };
+    vec![
+        format!(
+            "workflow readiness: validate docking campaign | workflow_id={DEVTOOLS_WORKFLOW_IMUI_P3_VALIDATE_ID} | runnable={docking_runnable} | reason={docking_reason}"
+        ),
+        format!(
+            "workflow readiness: run perf docking suite | workflow_id={DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID} | runnable={perf_runnable} | reason={perf_reason}"
+        ),
+    ]
+}
+
+pub(crate) fn demo_metrics_debug_workflow_status_lines(
+    workflow_run_in_flight: bool,
+    last_result_path: Option<&str>,
+    last_error: Option<&str>,
+) -> Vec<String> {
+    let last_result = last_result_path
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("-");
+    let last_error = last_error
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("-");
+    vec![format!(
+        "workflow status: in_flight={workflow_run_in_flight} | last_result={last_result} | last_error={last_error}"
+    )]
+}
+
 #[cfg(test)]
 pub(crate) fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
     devtools_demo_metrics_debug_lines_with_state(artifacts_root, 0)
 }
 
+#[cfg(test)]
 pub(crate) fn devtools_demo_metrics_debug_lines_with_state(
     artifacts_root: &str,
     selected_bundle_count: usize,
+) -> Vec<String> {
+    devtools_demo_metrics_debug_lines_with_runtime_state(
+        artifacts_root,
+        selected_bundle_count,
+        false,
+        false,
+        None,
+        None,
+    )
+}
+
+fn devtools_demo_metrics_debug_lines_with_runtime_state(
+    artifacts_root: &str,
+    selected_bundle_count: usize,
+    workflow_run_in_flight: bool,
+    perf_workflow_runnable: bool,
+    last_result_path: Option<&str>,
+    last_error: Option<&str>,
 ) -> Vec<String> {
     let artifacts_root = artifacts_root.trim();
     let artifacts_root = if artifacts_root.is_empty() {
@@ -195,6 +260,15 @@ pub(crate) fn devtools_demo_metrics_debug_lines_with_state(
     lines.extend(demo_metrics_debug_action_readiness_lines(
         selected_bundle_count,
     ));
+    lines.extend(demo_metrics_debug_workflow_readiness_lines(
+        workflow_run_in_flight,
+        perf_workflow_runnable,
+    ));
+    lines.extend(demo_metrics_debug_workflow_status_lines(
+        workflow_run_in_flight,
+        last_result_path,
+        last_error,
+    ));
     lines.extend([
         format!("demo editor workbench: {DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND}"),
         format!("demo editor proof supporting: {DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND}"),
@@ -223,13 +297,42 @@ pub(crate) fn devtools_demo_metrics_debug_panel(
         .models()
         .read(&st.regression_selected_bundle_dirs, |v| v.len())
         .unwrap_or(0);
-    for line in devtools_demo_metrics_debug_lines_with_state(
+    let workflow_run_in_flight = cx
+        .app
+        .models()
+        .read(&st.workflow_run_in_flight, |v| *v)
+        .unwrap_or(false);
+    let workflow_run_last_result_path = cx
+        .app
+        .models()
+        .read(&st.workflow_run_last_result_path, |v| v.clone())
+        .ok()
+        .flatten();
+    let workflow_run_last_error = cx
+        .app
+        .models()
+        .read(&st.workflow_run_last_error, |v| v.clone())
+        .ok()
+        .flatten();
+    let perf_workflow_runnable = devtools_workflow_commands_from_state(cx.app, st)
+        .into_iter()
+        .find(|command| command.id == DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID)
+        .is_some_and(|command| command.is_runnable());
+    for line in devtools_demo_metrics_debug_lines_with_runtime_state(
         st.cfg.fs_out_dir.as_ref(),
         demo_metrics_debug_selected_bundle_count,
+        workflow_run_in_flight,
+        perf_workflow_runnable,
+        workflow_run_last_result_path.as_deref(),
+        workflow_run_last_error.as_deref(),
     ) {
         demo_metrics_debug_rows.push(cx.text(line));
     }
-    demo_metrics_debug_rows.push(devtools_demo_metrics_debug_action_row(cx, st));
+    demo_metrics_debug_rows.push(devtools_demo_metrics_debug_action_row(
+        cx,
+        workflow_run_in_flight,
+        perf_workflow_runnable,
+    ));
     diag_section(
         cx,
         "Demo / Metrics / Debug Routes",
@@ -240,17 +343,9 @@ pub(crate) fn devtools_demo_metrics_debug_panel(
 
 fn devtools_demo_metrics_debug_action_row(
     cx: &mut ElementContext<'_, App>,
-    st: &State,
+    workflow_run_in_flight: bool,
+    perf_workflow_runnable: bool,
 ) -> AnyElement {
-    let workflow_run_in_flight = cx
-        .app
-        .models()
-        .read(&st.workflow_run_in_flight, |v| *v)
-        .unwrap_or(false);
-    let perf_workflow_runnable = devtools_workflow_commands_from_state(cx.app, st)
-        .into_iter()
-        .find(|command| command.id == DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID)
-        .is_some_and(|command| command.is_runnable());
     let mut actions = vec![
         shadcn::Button::new("Copy Demo/Metrics/Debug actions")
             .variant(shadcn::ButtonVariant::Outline)

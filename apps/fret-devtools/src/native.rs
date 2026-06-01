@@ -60,7 +60,8 @@ use demo_metrics_debug::{
 #[cfg(test)]
 use demo_metrics_debug::{
     demo_metrics_debug_action_copy_command_lines, demo_metrics_debug_action_metadata_lines,
-    demo_metrics_debug_action_readiness_lines, devtools_demo_metrics_debug_lines,
+    demo_metrics_debug_action_readiness_lines, demo_metrics_debug_workflow_readiness_lines,
+    demo_metrics_debug_workflow_status_lines, devtools_demo_metrics_debug_lines,
     devtools_demo_metrics_debug_lines_with_state,
 };
 
@@ -12066,6 +12067,13 @@ mod tests {
         assert!(text.contains(
             "action readiness: inspect metrics stats | id=inspect_metrics_stats | category=metrics | runnable=false | reason=select a regression bundle"
         ));
+        assert!(text.contains(
+            "workflow readiness: validate docking campaign | workflow_id=campaign-validate-imui-p3-multiwindow | runnable=true | reason=no inputs required"
+        ));
+        assert!(text.contains(
+            "workflow readiness: run perf docking suite | workflow_id=perf-docking-suite-ws | runnable=false | reason=select a DevTools session"
+        ));
+        assert!(text.contains("workflow status: in_flight=false | last_result=- | last_error=-"));
         assert!(text.contains("demo editor workbench: cargo run -p fret-demo --bin imui_editor_workbench_demo"));
         assert!(text.contains(
             "demo editor proof supporting: cargo run -p fret-demo --bin imui_editor_proof_demo"
@@ -12158,6 +12166,32 @@ mod tests {
         assert!(no_bundle.contains(&"action readiness: inspect metrics stats | id=inspect_metrics_stats | category=metrics | runnable=false | reason=select a regression bundle".to_string()));
         let with_bundle = demo_metrics_debug_action_readiness_lines(1);
         assert!(with_bundle.contains(&"action readiness: inspect metrics stats | id=inspect_metrics_stats | category=metrics | runnable=true | reason=selected bundle evidence available".to_string()));
+    }
+
+    #[test]
+    fn demo_metrics_debug_workflow_lines_surface_runtime_readiness_and_status() {
+        let missing_session = demo_metrics_debug_workflow_readiness_lines(false, false);
+        assert!(missing_session.contains(&"workflow readiness: validate docking campaign | workflow_id=campaign-validate-imui-p3-multiwindow | runnable=true | reason=no inputs required".to_string()));
+        assert!(missing_session.contains(&"workflow readiness: run perf docking suite | workflow_id=perf-docking-suite-ws | runnable=false | reason=select a DevTools session".to_string()));
+
+        let selected_session = demo_metrics_debug_workflow_readiness_lines(false, true);
+        assert!(selected_session.contains(&"workflow readiness: run perf docking suite | workflow_id=perf-docking-suite-ws | runnable=true | reason=selected session available".to_string()));
+
+        let in_flight = demo_metrics_debug_workflow_readiness_lines(true, true);
+        assert!(in_flight.contains(&"workflow readiness: validate docking campaign | workflow_id=campaign-validate-imui-p3-multiwindow | runnable=false | reason=workflow run already in flight".to_string()));
+        assert!(in_flight.contains(&"workflow readiness: run perf docking suite | workflow_id=perf-docking-suite-ws | runnable=false | reason=workflow run already in flight".to_string()));
+
+        assert!(demo_metrics_debug_workflow_status_lines(false, None, Some("")).contains(
+            &"workflow status: in_flight=false | last_result=- | last_error=-".to_string()
+        ));
+        assert!(demo_metrics_debug_workflow_status_lines(
+            true,
+            Some("target/fret-diag/devtools-workflows/perf-docking/result.json"),
+            Some("suite failed")
+        )
+        .contains(
+            &"workflow status: in_flight=true | last_result=target/fret-diag/devtools-workflows/perf-docking/result.json | last_error=suite failed".to_string()
+        ));
     }
 
     #[test]
