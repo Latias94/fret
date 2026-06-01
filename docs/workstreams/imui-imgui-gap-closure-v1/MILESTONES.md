@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor PropertyGroup element owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_group.rs` now keeps the public
+`PropertyGroup` builder/toggle API and delegates header/content/root construction to private
+`composites/property_group/element.rs`. The element owner contains theme metric/color resolution,
+collapsed model reads and toggle mutation, disclosure icon choice, hover/press header chrome,
+header action slot mounting, content visibility, test-id routing, root flex decoration, and outer
+panel chrome. Public `PropertyGroupOptions`, toggle callback behavior, collapsed defaults, and
+builder import paths remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor VecEdit element assembly owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/element.rs` now keeps Vec2/Vec3/Vec4 keyed
 entrypoints and maps concrete axis fields to axis descriptors while delegating shared element

@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor PropertyGroup Element Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `PropertyGroup` header/content/root element assembly moved out of
+`composites/property_group.rs` into private `composites/property_group/element.rs` without changing
+public builders, toggle callback behavior, collapsed model allocation, header/content/root test-id
+routing, theme metric/color resolution, disclosure icon choice, hover/press header chrome, header
+actions slot, content visibility, or panel container chrome.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/property_group.rs` keeps the public `PropertyGroup`
+  builder/toggle API, `into_element`/`into_element_in` entrypoints, options re-export, and delegates
+  construction to the private element owner.
+- `ecosystem/fret-ui-editor/src/composites/property_group/element.rs` owns metric/color resolution,
+  collapsed-state reads and toggle mutation, disclosure icon selection, header pressable assembly,
+  header actions slot mounting, content visibility, root flex decoration, test-id routing, and outer
+  panel chrome.
+- `tools/gate_imui_workstream_source.py` now tracks the element owner and rejects header/content/root
+  assembly policy from drifting back into the public group owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new element owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor property_group --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor VecEdit Element Assembly Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `VecEdit` keyed element assembly moved out of

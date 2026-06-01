@@ -335,6 +335,16 @@ Last updated: 2026-06-01
       behavior, header/content/root assembly, and re-exports `PropertyGroupOptions`.
       `composites/property_group/options.rs` owns option fields and defaults. The source gate
       prevents options/default policy from drifting back into the group owner.
+- [x] Split editor `PropertyGroup` header/content/root element assembly into a private child owner
+      without changing public builders, toggle callback behavior, collapsed model allocation,
+      header/content/root test-id routing, theme metric/color resolution, disclosure icon choice,
+      hover/press header chrome, header actions slot, content visibility, or panel container
+      chrome.
+      Result: `composites/property_group.rs` now delegates keyed element construction to
+      `composites/property_group/element.rs`, while the private element owner handles metrics,
+      collapsed-state reads/toggles, header pressable assembly, content mounting, root flex
+      decoration, and outer panel chrome. The source gate prevents element assembly policy from
+      drifting back into the public group owner.
 - [x] Split editor `PropertyRow` row/column element assembly into a private child owner without
       changing public constructors/builders, explicit id-source keying, label helper behavior,
       layout resolution, auto row/column switching, value-slot overflow semantics, reset slot
