@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor NumericInput text-entry mounting owner-split result:
+`ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` now keeps keyed field/frame
+assembly, affix routing, and error owner invocation while delegating TextInput props construction,
+focus-target capture, focus-state synchronization, last-draft tracking, key handler installation,
+and draft/error cleanup to private `controls/numeric_input/element/input.rs`. TextInput enabled,
+focusable, placeholder, test-id, invalid a11y state, joined input chrome, editor numeric text style,
+selection behavior, keyboard commit/cancel behavior, affix rendering, and public `NumericInput`
+options remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor NumericInput error presentation owner-split result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` now keeps keyed field assembly,
 affix rendering, draft/focus sync, and keyboard handler wiring while delegating trailing error icon

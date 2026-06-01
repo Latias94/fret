@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor NumericInput Text-Entry Mounting Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `NumericInput` text-input mounting, focus sync, key handler installation,
+and draft/error cleanup moved out of `controls/numeric_input/element.rs` into private
+`controls/numeric_input/element/input.rs` without changing TextInput props,
+enabled/focusable/placeholder/test-id routing, invalid a11y state, joined text-input chrome,
+editor numeric text style, focus-target capture, focus sync, last-draft tracking, keyboard handler
+installation, draft/error clearing, affix rendering, error presentation, or public `NumericInput`
+options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` keeps keyed field/frame assembly,
+  affix routing, error owner invocation, outer layout, and delegates text-entry mounting to the
+  private input owner.
+- `ecosystem/fret-ui-editor/src/controls/numeric_input/element/input.rs` owns `TextInputProps`
+  construction, joined text-input chrome application, invalid a11y projection, input id capture,
+  focus-target storage, focus-state synchronization, last-draft tracking, key handler installation,
+  and draft/error cleanup.
+- `tools/gate_imui_workstream_source.py` now tracks the input owner and rejects input-mount behavior
+  from drifting back into the root element owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new input owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor numeric_input --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor NumericInput Error Presentation Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `NumericInput` trailing error icon and inline validation text presentation

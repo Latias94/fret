@@ -1,32 +1,29 @@
 use std::sync::{Arc, Mutex};
 
-use fret_core::{Axis, Edges, Px, SemanticsInvalid};
+use fret_core::{Axis, Edges, Px};
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacingLength,
-    TextInputProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ChromeRefinement;
 
-use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
+use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::input_group::{
     EditorInputGroupFrameOverrides, derived_test_id,
     editor_joined_input_frame_segments_with_overrides, editor_text_segment,
 };
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
-use crate::primitives::numeric_text_entry::{
-    clear_numeric_error_when_draft_changes, numeric_text_entry_focus_state,
-    sync_numeric_text_entry_focus,
-};
+use crate::primitives::numeric_text_entry::numeric_text_entry_focus_state;
 use crate::primitives::style::EditorStyle;
 
 mod error;
+mod input;
 
 use error::{numeric_input_inline_error, numeric_input_trailing_error_icon};
+use input::{NumericInputTextEntryArgs, numeric_input_text_entry};
 
 use super::NumericInput;
-use super::keyboard::{NumericInputKeyHandlerArgs, numeric_input_key_down_handler};
 use super::model::editor_numeric_input_text_style;
 use super::session::{draft_model, error_model};
 
@@ -142,71 +139,31 @@ where
             segments
         },
         move |cx| {
-            let mut props = TextInputProps::new(draft.clone());
-            props.layout = LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Fill,
-                    min_height: Some(Length::Px(density.row_height)),
-                    ..Default::default()
-                },
-                ..Default::default()
-            };
-            props.enabled = enabled_for_paint;
-            props.focusable = focusable;
-            props.placeholder = placeholder.clone();
-            props.test_id = input_test_id.clone();
-            props.a11y_invalid = has_error.then_some(SemanticsInvalid::True);
-            props.chrome = joined_text_input_style(chrome);
-            props.text_style = text_style_for_field.clone();
-
-            let input = cx.text_input(props);
-            let input_id = input.id;
-            if let Some(focus_target) = focus_target.as_ref() {
-                let mut slot = focus_target.lock().unwrap_or_else(|e| e.into_inner());
-                *slot = Some(input_id);
-            }
-            let is_focused = cx.is_focused_element(input_id);
-
-            sync_numeric_text_entry_focus(
+            numeric_input_text_entry(
                 cx,
-                &focus_state,
-                is_focused,
-                &current_text,
-                &draft,
-                &error_for_field,
-                selection_behavior,
-            );
-
-            if !is_focused {
-                let mut last = last_draft_text.lock().unwrap_or_else(|e| e.into_inner());
-                *last = current_text.as_ref().to_string();
-            }
-
-            cx.key_add_on_key_down_capture_for(
-                input_id,
-                numeric_input_key_down_handler(NumericInputKeyHandlerArgs {
+                NumericInputTextEntryArgs {
                     model: model.clone(),
                     draft: draft.clone(),
                     error: error_for_field.clone(),
                     focus_state: focus_state.clone(),
                     last_draft_text: last_draft_text.clone(),
+                    current_text: current_text.clone(),
+                    has_error,
+                    density,
+                    enabled: enabled_for_paint,
+                    focusable,
+                    placeholder: placeholder.clone(),
+                    test_id: input_test_id.clone(),
+                    chrome: chrome.clone(),
+                    text_style: text_style_for_field.clone(),
+                    focus_target: focus_target.clone(),
+                    selection_behavior,
                     parse: parse.clone(),
                     format: format.clone(),
                     validate: validate.clone(),
                     on_outcome: on_outcome.clone(),
-                }),
-            );
-
-            clear_numeric_error_when_draft_changes(
-                cx,
-                is_focused,
-                &draft,
-                &error_for_field,
-                &last_draft_text,
-            );
-
-            input
+                },
+            )
         },
         move |cx| {
             let mut segments = Vec::new();

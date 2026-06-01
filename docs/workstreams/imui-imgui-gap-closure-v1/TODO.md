@@ -544,6 +544,15 @@ Last updated: 2026-06-01
       draft/focus sync, and keyboard handler wiring while delegating error icon and inline error
       rendering to `controls/numeric_input/element/error.rs`. The source gate prevents error
       presentation policy from drifting back into the root element owner.
+- [x] Split editor `NumericInput` text-entry mounting into a private element child owner without
+      changing TextInput props, enabled/focusable/placeholder/test-id routing, invalid a11y state,
+      joined text-input chrome, editor numeric text style, focus-target capture, focus sync,
+      last-draft tracking, key handler installation, draft/error clearing, affix rendering, error
+      presentation, or public `NumericInput` options.
+      Result: `controls/numeric_input/element.rs` keeps keyed field/frame assembly, affix routing,
+      and error owner invocation while delegating text input mounting, focus/key wiring, and
+      draft/error sync to `controls/numeric_input/element/input.rs`. The source gate prevents
+      input-mount behavior from drifting back into the root element owner.
 - [x] Split editor color-edit tooltip panel rendering into a private child owner without changing
       tooltip open gating, anchored placement, dismissal routing, hover-preview content, color
       tooltip line formatting, preview fill routing, tooltip readout text role, tooltip semantics,
