@@ -24,7 +24,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
-use fret_ui_kit::declarative::{ElementContextThemeExt as _, controllable_state};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{ColorRef, OverlayController, OverlayPresence};
@@ -34,7 +34,7 @@ use fret_ui_kit::{
 };
 
 use crate::foundation::arc_str::empty_arc_str;
-use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
+use crate::foundation::context::material_layout_direction_in_scope;
 use crate::foundation::field::{
     MaterialFieldFloatingLabelProps, MaterialFieldSupportingTextProps, MaterialFieldVariant,
     material_field_active_indicator_layer, material_field_floating_label,
@@ -512,8 +512,7 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
         } = select;
         let style: Arc<SelectStyle> = Arc::new(style);
         let runtime = select_runtime_models(cx);
-        let default_layout_direction = cx.with_theme(theme_default_layout_direction);
-        let layout_direction = resolved_layout_direction(cx, default_layout_direction);
+        let layout_direction = material_layout_direction_in_scope(cx);
 
         let is_open = cx
             .get_model_copied(&runtime.open, Invalidation::Layout)

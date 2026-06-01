@@ -22,13 +22,11 @@ use fret_ui::element::{
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
-use fret_ui_kit::declarative::{ElementContextThemeExt as _, controllable_state};
+use fret_ui_kit::declarative::controllable_state;
 
 use crate::foundation::active_indicator::{ActiveIndicatorRect, material_active_indicator_layer};
 use crate::foundation::arc_str::empty_arc_str;
-use crate::foundation::context::{
-    theme_default_layout_direction, with_material_resolved_layout_direction,
-};
+use crate::foundation::context::with_material_layout_direction_in_scope;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -217,240 +215,222 @@ impl NavigationBar {
         } = self;
 
         cx.scope(|cx| {
-            let default_layout_direction = cx.with_theme(theme_default_layout_direction);
-            with_material_resolved_layout_direction(
-                cx,
-                default_layout_direction,
-                move |cx, _layout_direction| {
-                    let values: Arc<[Arc<str>]> =
-                        Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
-                    let disabled_items: Arc<[bool]> = Arc::from(
-                        items
-                            .iter()
-                            .map(|it| disabled || it.disabled)
-                            .collect::<Vec<_>>(),
-                    );
-
-                    let selected = cx
-                        .get_model_cloned(&model, Invalidation::Layout)
-                        .unwrap_or_else(empty_arc_str);
-                    let selected_idx = items
+            with_material_layout_direction_in_scope(cx, move |cx, _layout_direction| {
+                let values: Arc<[Arc<str>]> =
+                    Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
+                let disabled_items: Arc<[bool]> = Arc::from(
+                    items
                         .iter()
-                        .position(|it| it.value.as_ref() == selected.as_ref());
+                        .map(|it| disabled || it.disabled)
+                        .collect::<Vec<_>>(),
+                );
 
-                    let tab_stop = items
-                        .iter()
-                        .position(|it| {
-                            !disabled && !it.disabled && it.value.as_ref() == selected.as_ref()
-                        })
-                        .or_else(|| items.iter().position(|it| !disabled && !it.disabled));
+                let selected = cx
+                    .get_model_cloned(&model, Invalidation::Layout)
+                    .unwrap_or_else(empty_arc_str);
+                let selected_idx = items
+                    .iter()
+                    .position(|it| it.value.as_ref() == selected.as_ref());
 
-                    let sem = SemanticsProps {
-                        role: SemanticsRole::TabList,
-                        label: a11y_label.clone(),
-                        test_id: test_id.clone(),
-                        orientation: Some(SemanticsOrientation::Horizontal),
-                        disabled,
-                        ..Default::default()
-                    };
-                    let part_test_ids = test_id.as_ref().map(NavigationBarPartTestIds::from_base);
-                    let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
-                    let indicator_test_id = part_test_ids
-                        .as_ref()
-                        .map(|ids| ids.active_indicator.clone());
-
-                    let (container_height, container_bg, shadow, corner_radii, item_gap) = {
-                        let theme = Theme::global(&*cx.app);
-
-                        let container_height = nav_tokens::container_height(theme);
-                        let container_bg = nav_tokens::container_background(theme);
-                        let elevation = nav_tokens::container_elevation(theme);
-                        let shadow_color = nav_tokens::container_shadow_color(theme);
-                        let corner_radii = nav_tokens::container_shape(theme);
-                        let surface = material_surface_style(
-                            theme,
-                            container_bg,
-                            elevation,
-                            Some(shadow_color),
-                            corner_radii,
-                        );
-                        (
-                            container_height,
-                            surface.background,
-                            surface.shadow,
-                            corner_radii,
-                            nav_tokens::item_gap(theme),
-                        )
-                    };
-
-                    let mut props = RovingFlexProps::default();
-                    props.flex.direction = Axis::Horizontal;
-                    props.flex.gap = item_gap.into();
-                    props.flex.justify = MainAlign::Start;
-                    props.flex.align = fret_ui::element::CrossAlign::Stretch;
-                    props.roving = fret_ui::element::RovingFocusProps {
-                        enabled: !disabled,
-                        wrap: loop_navigation,
-                        disabled: disabled_items.clone(),
-                    };
-
-                    cx.semantics(sem, move |cx| {
-                        let mut chrome = cx.container(
-                            ContainerProps {
-                                background: Some(container_bg),
-                                shadow,
-                                corner_radii,
-                                layout: {
-                                    let mut layout = fret_ui::element::LayoutStyle::default();
-                                    layout.size.width = Length::Fill;
-                                    layout.size.height = Length::Px(container_height);
-                                    layout
-                                },
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                let container_id = cx.root_id();
-                                let item_count = items.len();
-
-                                cx.state_for(
-                                    container_id,
-                                    NavigationBarLayoutRuntime::default,
-                                    |rt| {
-                                        rt.icon_slots.ensure_len(item_count);
-                                    },
-                                );
-
-                                let indicator = navigation_bar_active_indicator(
-                                    cx,
-                                    container_id,
-                                    item_count,
-                                    selected_idx,
-                                    indicator_test_id.clone(),
-                                );
-
-                                vec![
-                                    indicator,
-                                    cx.roving_flex(props, move |cx| {
-                                        let values_for_roving = values.clone();
-                                        let model_for_roving = model.clone();
-
-                                        cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
-                                            use fret_ui::action::RovingNavigateResult;
-
-                                            let is_disabled = |idx: usize| -> bool {
-                                                it.disabled.get(idx).copied().unwrap_or(false)
-                                            };
-
-                                            let forward = match (it.axis, it.key) {
-                                                (Axis::Horizontal, KeyCode::ArrowRight) => {
-                                                    Some(true)
-                                                }
-                                                (Axis::Horizontal, KeyCode::ArrowLeft) => {
-                                                    Some(false)
-                                                }
-                                                _ => None,
-                                            };
-
-                                            if it.key == KeyCode::Home {
-                                                let target = (0..it.len).find(|&i| !is_disabled(i));
-                                                return RovingNavigateResult::Handled { target };
-                                            }
-                                            if it.key == KeyCode::End {
-                                                let target =
-                                                    (0..it.len).rev().find(|&i| !is_disabled(i));
-                                                return RovingNavigateResult::Handled { target };
-                                            }
-
-                                            let Some(forward) = forward else {
-                                                return RovingNavigateResult::NotHandled;
-                                            };
-
-                                            let current = it
-                                                .current
-                                                .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
-                                            let Some(current) = current else {
-                                                return RovingNavigateResult::Handled {
-                                                    target: None,
-                                                };
-                                            };
-
-                                            let len = it.len;
-                                            let mut target: Option<usize> = None;
-                                            if it.wrap {
-                                                for step in 1..=len {
-                                                    let idx = if forward {
-                                                        (current + step) % len
-                                                    } else {
-                                                        (current + len - (step % len)) % len
-                                                    };
-                                                    if !is_disabled(idx) {
-                                                        target = Some(idx);
-                                                        break;
-                                                    }
-                                                }
-                                            } else if forward {
-                                                target =
-                                                    ((current + 1)..len).find(|&i| !is_disabled(i));
-                                            } else if current > 0 {
-                                                target =
-                                                    (0..current).rev().find(|&i| !is_disabled(i));
-                                            }
-
-                                            RovingNavigateResult::Handled { target }
-                                        }));
-
-                                        cx.roving_on_active_change(Arc::new(
-                                            move |host, action_cx, idx| {
-                                                let Some(value) =
-                                                    values_for_roving.get(idx).cloned()
-                                                else {
-                                                    return;
-                                                };
-                                                let already_selected = host
-                                                    .models_mut()
-                                                    .read(&model_for_roving, |v| {
-                                                        v.as_ref() == value.as_ref()
-                                                    })
-                                                    .ok()
-                                                    .unwrap_or(false);
-                                                if already_selected {
-                                                    return;
-                                                }
-                                                let _ = host.update_model(&model_for_roving, |v| {
-                                                    *v = value
-                                                });
-                                                host.request_redraw(action_cx.window);
-                                            },
-                                        ));
-
-                                        items
-                                            .iter()
-                                            .enumerate()
-                                            .map(|(idx, it)| {
-                                                let tab_stop = tab_stop.is_some_and(|t| t == idx);
-                                                navigation_bar_item(
-                                                    cx,
-                                                    container_id,
-                                                    model.clone(),
-                                                    it,
-                                                    idx,
-                                                    items.len(),
-                                                    tab_stop,
-                                                    disabled,
-                                                )
-                                            })
-                                            .collect::<Vec<_>>()
-                                    }),
-                                ]
-                            },
-                        );
-                        if let Some(chrome_test_id) = chrome_test_id.clone() {
-                            chrome = chrome.test_id(chrome_test_id);
-                        }
-                        vec![chrome]
+                let tab_stop = items
+                    .iter()
+                    .position(|it| {
+                        !disabled && !it.disabled && it.value.as_ref() == selected.as_ref()
                     })
-                },
-            )
+                    .or_else(|| items.iter().position(|it| !disabled && !it.disabled));
+
+                let sem = SemanticsProps {
+                    role: SemanticsRole::TabList,
+                    label: a11y_label.clone(),
+                    test_id: test_id.clone(),
+                    orientation: Some(SemanticsOrientation::Horizontal),
+                    disabled,
+                    ..Default::default()
+                };
+                let part_test_ids = test_id.as_ref().map(NavigationBarPartTestIds::from_base);
+                let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+                let indicator_test_id = part_test_ids
+                    .as_ref()
+                    .map(|ids| ids.active_indicator.clone());
+
+                let (container_height, container_bg, shadow, corner_radii, item_gap) = {
+                    let theme = Theme::global(&*cx.app);
+
+                    let container_height = nav_tokens::container_height(theme);
+                    let container_bg = nav_tokens::container_background(theme);
+                    let elevation = nav_tokens::container_elevation(theme);
+                    let shadow_color = nav_tokens::container_shadow_color(theme);
+                    let corner_radii = nav_tokens::container_shape(theme);
+                    let surface = material_surface_style(
+                        theme,
+                        container_bg,
+                        elevation,
+                        Some(shadow_color),
+                        corner_radii,
+                    );
+                    (
+                        container_height,
+                        surface.background,
+                        surface.shadow,
+                        corner_radii,
+                        nav_tokens::item_gap(theme),
+                    )
+                };
+
+                let mut props = RovingFlexProps::default();
+                props.flex.direction = Axis::Horizontal;
+                props.flex.gap = item_gap.into();
+                props.flex.justify = MainAlign::Start;
+                props.flex.align = fret_ui::element::CrossAlign::Stretch;
+                props.roving = fret_ui::element::RovingFocusProps {
+                    enabled: !disabled,
+                    wrap: loop_navigation,
+                    disabled: disabled_items.clone(),
+                };
+
+                cx.semantics(sem, move |cx| {
+                    let mut chrome = cx.container(
+                        ContainerProps {
+                            background: Some(container_bg),
+                            shadow,
+                            corner_radii,
+                            layout: {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Px(container_height);
+                                layout
+                            },
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let container_id = cx.root_id();
+                            let item_count = items.len();
+
+                            cx.state_for(container_id, NavigationBarLayoutRuntime::default, |rt| {
+                                rt.icon_slots.ensure_len(item_count);
+                            });
+
+                            let indicator = navigation_bar_active_indicator(
+                                cx,
+                                container_id,
+                                item_count,
+                                selected_idx,
+                                indicator_test_id.clone(),
+                            );
+
+                            vec![
+                                indicator,
+                                cx.roving_flex(props, move |cx| {
+                                    let values_for_roving = values.clone();
+                                    let model_for_roving = model.clone();
+
+                                    cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
+                                        use fret_ui::action::RovingNavigateResult;
+
+                                        let is_disabled = |idx: usize| -> bool {
+                                            it.disabled.get(idx).copied().unwrap_or(false)
+                                        };
+
+                                        let forward = match (it.axis, it.key) {
+                                            (Axis::Horizontal, KeyCode::ArrowRight) => Some(true),
+                                            (Axis::Horizontal, KeyCode::ArrowLeft) => Some(false),
+                                            _ => None,
+                                        };
+
+                                        if it.key == KeyCode::Home {
+                                            let target = (0..it.len).find(|&i| !is_disabled(i));
+                                            return RovingNavigateResult::Handled { target };
+                                        }
+                                        if it.key == KeyCode::End {
+                                            let target =
+                                                (0..it.len).rev().find(|&i| !is_disabled(i));
+                                            return RovingNavigateResult::Handled { target };
+                                        }
+
+                                        let Some(forward) = forward else {
+                                            return RovingNavigateResult::NotHandled;
+                                        };
+
+                                        let current = it
+                                            .current
+                                            .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
+                                        let Some(current) = current else {
+                                            return RovingNavigateResult::Handled { target: None };
+                                        };
+
+                                        let len = it.len;
+                                        let mut target: Option<usize> = None;
+                                        if it.wrap {
+                                            for step in 1..=len {
+                                                let idx = if forward {
+                                                    (current + step) % len
+                                                } else {
+                                                    (current + len - (step % len)) % len
+                                                };
+                                                if !is_disabled(idx) {
+                                                    target = Some(idx);
+                                                    break;
+                                                }
+                                            }
+                                        } else if forward {
+                                            target =
+                                                ((current + 1)..len).find(|&i| !is_disabled(i));
+                                        } else if current > 0 {
+                                            target = (0..current).rev().find(|&i| !is_disabled(i));
+                                        }
+
+                                        RovingNavigateResult::Handled { target }
+                                    }));
+
+                                    cx.roving_on_active_change(Arc::new(
+                                        move |host, action_cx, idx| {
+                                            let Some(value) = values_for_roving.get(idx).cloned()
+                                            else {
+                                                return;
+                                            };
+                                            let already_selected = host
+                                                .models_mut()
+                                                .read(&model_for_roving, |v| {
+                                                    v.as_ref() == value.as_ref()
+                                                })
+                                                .ok()
+                                                .unwrap_or(false);
+                                            if already_selected {
+                                                return;
+                                            }
+                                            let _ = host
+                                                .update_model(&model_for_roving, |v| *v = value);
+                                            host.request_redraw(action_cx.window);
+                                        },
+                                    ));
+
+                                    items
+                                        .iter()
+                                        .enumerate()
+                                        .map(|(idx, it)| {
+                                            let tab_stop = tab_stop.is_some_and(|t| t == idx);
+                                            navigation_bar_item(
+                                                cx,
+                                                container_id,
+                                                model.clone(),
+                                                it,
+                                                idx,
+                                                items.len(),
+                                                tab_stop,
+                                                disabled,
+                                            )
+                                        })
+                                        .collect::<Vec<_>>()
+                                }),
+                            ]
+                        },
+                    );
+                    if let Some(chrome_test_id) = chrome_test_id.clone() {
+                        chrome = chrome.test_id(chrome_test_id);
+                    }
+                    vec![chrome]
+                })
+            })
         })
     }
 }

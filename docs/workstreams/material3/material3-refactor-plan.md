@@ -189,6 +189,8 @@ Current progress:
 - `foundation::field_overlay` owns shared field-family popup geometry: anchor/content width policy,
   Material collision padding, placement gap, and scale transform-origin. `Select` and
   `Autocomplete` now consume that Module instead of duplicating listbox overlay math.
+- `foundation::context` owns theme/default RTL direction resolution for recipes; callers use the
+  Material-facing direction Interface instead of repeating the fallback/override sequence locally.
 - `Button` and `IconButton` pressed shape now uses the spring path (corner radius morph), which acts as a
   conformance probe for MotionScheme plumbing.
 - `Tabs` active indicator now animates via the same spring substrate (x/width/height) using a single

@@ -22,14 +22,14 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, Invalidation, TextAreaStyle, Theme, UiHost};
-use fret_ui_kit::declarative::{ElementContextThemeExt as _, controllable_state};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetState, WidgetStateProperty, WidgetStates,
     resolve_override_slot_with,
 };
 
-use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
+use crate::foundation::context::material_layout_direction_in_scope;
 use crate::foundation::field::{
     MaterialFieldFloatingLabelProps, MaterialFieldSupportingTextProps, MaterialFieldVariant,
     material_field_active_indicator_layer, material_field_floating_label,
@@ -574,8 +574,7 @@ impl TextField {
                     }
                 }
             };
-            let default_layout_direction = cx.with_theme(theme_default_layout_direction);
-            let layout_direction = resolved_layout_direction(cx, default_layout_direction);
+            let layout_direction = material_layout_direction_in_scope(cx);
             let height = if multiline {
                 multiline_min_height
                     .map(|min_height| Px(height.0.max(min_height.0)))

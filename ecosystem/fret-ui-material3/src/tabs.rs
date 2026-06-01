@@ -23,7 +23,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
-use fret_ui_kit::declarative::{ElementContextThemeExt as _, controllable_state};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::primitives::{direction as direction_prim, tabs as tabs_prim};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
@@ -31,9 +31,7 @@ use fret_ui_kit::{
 
 use crate::foundation::active_indicator::{ActiveIndicatorRect, material_active_indicator_layer};
 use crate::foundation::arc_str::empty_arc_str;
-use crate::foundation::context::{
-    theme_default_layout_direction, with_material_resolved_layout_direction,
-};
+use crate::foundation::context::with_material_layout_direction_in_scope;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -384,336 +382,324 @@ impl Tabs {
         let token_kind = variant.token_kind();
 
         cx.scope(|cx| {
-            let default_layout_direction = cx.with_theme(theme_default_layout_direction);
-            with_material_resolved_layout_direction(
-                cx,
-                default_layout_direction,
-                move |cx, layout_direction| {
-                    let values: Arc<[Arc<str>]> =
-                        Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
-                    let disabled_items: Arc<[bool]> = Arc::from(
-                        items
-                            .iter()
-                            .map(|it| disabled || it.disabled)
-                            .collect::<Vec<_>>(),
-                    );
-
-                    let selected_value = cx
-                        .get_model_cloned(&model, Invalidation::Paint)
-                        .unwrap_or_else(empty_arc_str);
-                    let selected_idx = items
+            with_material_layout_direction_in_scope(cx, move |cx, layout_direction| {
+                let values: Arc<[Arc<str>]> =
+                    Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
+                let disabled_items: Arc<[bool]> = Arc::from(
+                    items
                         .iter()
-                        .position(|it| it.value.as_ref() == selected_value.as_ref());
-                    let panel_item_metadata: Arc<[TabPanelItemMetadata]> = Arc::from(
-                        items
-                            .iter()
-                            .enumerate()
-                            .map(|(idx, it)| TabPanelItemMetadata {
-                                value: it.value.clone(),
-                                label: it.label.clone(),
-                                tab_index: idx,
-                            })
-                            .collect::<Vec<_>>(),
-                    );
-                    let has_stacked_tabs = items.iter().any(TabItem::uses_stacked_icon);
+                        .map(|it| disabled || it.disabled)
+                        .collect::<Vec<_>>(),
+                );
 
-                    let tab_stop = items
+                let selected_value = cx
+                    .get_model_cloned(&model, Invalidation::Paint)
+                    .unwrap_or_else(empty_arc_str);
+                let selected_idx = items
+                    .iter()
+                    .position(|it| it.value.as_ref() == selected_value.as_ref());
+                let panel_item_metadata: Arc<[TabPanelItemMetadata]> = Arc::from(
+                    items
                         .iter()
-                        .position(|it| {
-                            !disabled
-                                && !it.disabled
-                                && it.value.as_ref() == selected_value.as_ref()
+                        .enumerate()
+                        .map(|(idx, it)| TabPanelItemMetadata {
+                            value: it.value.clone(),
+                            label: it.label.clone(),
+                            tab_index: idx,
                         })
-                        .or_else(|| items.iter().position(|it| !disabled && !it.disabled));
+                        .collect::<Vec<_>>(),
+                );
+                let has_stacked_tabs = items.iter().any(TabItem::uses_stacked_icon);
 
-                    let sem = SemanticsProps {
-                        role: SemanticsRole::TabList,
-                        label: a11y_label.clone(),
-                        test_id: test_id.clone(),
-                        disabled,
-                        orientation: Some(SemanticsOrientation::Horizontal),
-                        ..Default::default()
-                    };
+                let tab_stop = items
+                    .iter()
+                    .position(|it| {
+                        !disabled && !it.disabled && it.value.as_ref() == selected_value.as_ref()
+                    })
+                    .or_else(|| items.iter().position(|it| !disabled && !it.disabled));
 
-                    let part_test_ids = test_id.as_ref().map(TabPartTestIds::from_base);
-                    let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
-                    let indicator_test_id = part_test_ids
-                        .as_ref()
-                        .map(|ids| ids.active_indicator.clone());
-                    let divider_test_id = part_test_ids.as_ref().map(|ids| ids.divider.clone());
-                    let default_active_panel_test_id =
-                        test_id.as_ref().map(|id| part_test_id(id, "panel"));
+                let sem = SemanticsProps {
+                    role: SemanticsRole::TabList,
+                    label: a11y_label.clone(),
+                    test_id: test_id.clone(),
+                    disabled,
+                    orientation: Some(SemanticsOrientation::Horizontal),
+                    ..Default::default()
+                };
 
-                    let container_states = if disabled {
-                        WidgetStates::DISABLED
+                let part_test_ids = test_id.as_ref().map(TabPartTestIds::from_base);
+                let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+                let indicator_test_id = part_test_ids
+                    .as_ref()
+                    .map(|ids| ids.active_indicator.clone());
+                let divider_test_id = part_test_ids.as_ref().map(|ids| ids.divider.clone());
+                let default_active_panel_test_id =
+                    test_id.as_ref().map(|id| part_test_id(id, "panel"));
+
+                let container_states = if disabled {
+                    WidgetStates::DISABLED
+                } else {
+                    Default::default()
+                };
+                let (container_height, container_bg) = {
+                    let theme = Theme::global(&*cx.app);
+                    let container_height = if has_stacked_tabs {
+                        tabs_tokens::stacked_container_height_for(theme, token_kind)
                     } else {
-                        Default::default()
+                        tabs_tokens::container_height_for(theme, token_kind)
                     };
-                    let (container_height, container_bg) = {
+                    let container_bg = resolve_override_slot_with(
+                        style.container_background.as_ref(),
+                        container_states,
+                        |color| color.resolve(theme),
+                        || tabs_tokens::container_background_for(theme, token_kind),
+                    );
+                    (container_height, container_bg)
+                };
+
+                let mut props = RovingFlexProps::default();
+                props.flex.direction = Axis::Horizontal;
+                props.flex.gap = Px(0.0).into();
+                props.flex.justify = MainAlign::Start;
+                props.flex.align = fret_ui::element::CrossAlign::Stretch;
+                if scrollable {
+                    let edge_padding = {
                         let theme = Theme::global(&*cx.app);
-                        let container_height = if has_stacked_tabs {
-                            tabs_tokens::stacked_container_height_for(theme, token_kind)
-                        } else {
-                            tabs_tokens::container_height_for(theme, token_kind)
-                        };
-                        let container_bg = resolve_override_slot_with(
-                            style.container_background.as_ref(),
-                            container_states,
-                            |color| color.resolve(theme),
-                            || tabs_tokens::container_background_for(theme, token_kind),
-                        );
-                        (container_height, container_bg)
+                        tabs_tokens::scrollable_edge_padding_for(theme, token_kind)
                     };
-
-                    let mut props = RovingFlexProps::default();
-                    props.flex.direction = Axis::Horizontal;
-                    props.flex.gap = Px(0.0).into();
-                    props.flex.justify = MainAlign::Start;
-                    props.flex.align = fret_ui::element::CrossAlign::Stretch;
-                    if scrollable {
-                        let edge_padding = {
-                            let theme = Theme::global(&*cx.app);
-                            tabs_tokens::scrollable_edge_padding_for(theme, token_kind)
-                        };
-                        props.flex.padding = Edges {
-                            left: edge_padding,
-                            right: edge_padding,
-                            top: Px(0.0),
-                            bottom: Px(0.0),
-                        }
-                        .into();
+                    props.flex.padding = Edges {
+                        left: edge_padding,
+                        right: edge_padding,
+                        top: Px(0.0),
+                        bottom: Px(0.0),
                     }
-                    props.roving = fret_ui::element::RovingFocusProps {
-                        enabled: !disabled,
-                        wrap: loop_navigation,
-                        disabled: disabled_items.clone(),
-                    };
+                    .into();
+                }
+                props.roving = fret_ui::element::RovingFocusProps {
+                    enabled: !disabled,
+                    wrap: loop_navigation,
+                    disabled: disabled_items.clone(),
+                };
 
-                    let tab_element_ids = (0..items.len())
-                        .map(|_| Cell::new(None))
-                        .collect::<Vec<_>>();
-                    let tab_element_ids = &tab_element_ids;
+                let tab_element_ids = (0..items.len())
+                    .map(|_| Cell::new(None))
+                    .collect::<Vec<_>>();
+                let tab_element_ids = &tab_element_ids;
 
-                    let tab_list = cx.semantics(sem, move |cx| {
-                        vec![cx.container(
-                            ContainerProps {
-                                background: Some(container_bg),
-                                layout: {
-                                    let mut layout = fret_ui::element::LayoutStyle::default();
-                                    layout.size.width = Length::Fill;
-                                    layout.size.height = Length::Px(container_height);
-                                    layout
-                                },
-                                ..Default::default()
+                let tab_list = cx.semantics(sem, move |cx| {
+                    vec![cx.container(
+                        ContainerProps {
+                            background: Some(container_bg),
+                            layout: {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Px(container_height);
+                                layout
                             },
-                            move |cx| {
-                                let tab_count = items.len();
-                                let container_id = cx.root_id();
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let tab_count = items.len();
+                            let container_id = cx.root_id();
 
-                                cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
-                                    rt.tabs.ensure_len(tab_count);
-                                    rt.labels.ensure_len(tab_count);
-                                    rt.icons.ensure_len(tab_count);
-                                });
-                                let indicator = tab_list_indicator(
-                                    cx,
-                                    container_id,
-                                    tab_count,
-                                    selected_idx,
-                                    indicator_test_id.clone(),
-                                    scrollable,
-                                    disabled,
-                                    token_kind,
-                                    &style,
-                                    layout_direction,
-                                );
-                                let divider =
-                                    tab_row_divider(cx, token_kind, divider_test_id.clone());
+                            cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
+                                rt.tabs.ensure_len(tab_count);
+                                rt.labels.ensure_len(tab_count);
+                                rt.icons.ensure_len(tab_count);
+                            });
+                            let indicator = tab_list_indicator(
+                                cx,
+                                container_id,
+                                tab_count,
+                                selected_idx,
+                                indicator_test_id.clone(),
+                                scrollable,
+                                disabled,
+                                token_kind,
+                                &style,
+                                layout_direction,
+                            );
+                            let divider = tab_row_divider(cx, token_kind, divider_test_id.clone());
 
-                                let roving = cx.roving_flex(props, move |cx| {
-                                    let values_for_roving = values.clone();
-                                    let model_for_roving = model.clone();
-                                    let layout_direction_for_roving = layout_direction;
+                            let roving = cx.roving_flex(props, move |cx| {
+                                let values_for_roving = values.clone();
+                                let model_for_roving = model.clone();
+                                let layout_direction_for_roving = layout_direction;
 
-                                    cx.roving_on_navigate(Arc::new(move |_host, _cx, it| {
-                                        use fret_ui::action::RovingNavigateResult;
+                                cx.roving_on_navigate(Arc::new(move |_host, _cx, it| {
+                                    use fret_ui::action::RovingNavigateResult;
 
-                                        if it.repeat || it.modifiers != Modifiers::default() {
-                                            return RovingNavigateResult::NotHandled;
-                                        }
-                                        if it.axis != Axis::Horizontal {
-                                            return RovingNavigateResult::NotHandled;
-                                        }
+                                    if it.repeat || it.modifiers != Modifiers::default() {
+                                        return RovingNavigateResult::NotHandled;
+                                    }
+                                    if it.axis != Axis::Horizontal {
+                                        return RovingNavigateResult::NotHandled;
+                                    }
 
-                                        let is_disabled = |idx: usize| -> bool {
-                                            it.disabled.get(idx).copied().unwrap_or(false)
-                                        };
+                                    let is_disabled = |idx: usize| -> bool {
+                                        it.disabled.get(idx).copied().unwrap_or(false)
+                                    };
 
-                                        if it.key == KeyCode::Home {
-                                            let target = (0..it.len).find(|&i| !is_disabled(i));
-                                            return RovingNavigateResult::Handled { target };
-                                        }
-                                        if it.key == KeyCode::End {
-                                            let target =
-                                                (0..it.len).rev().find(|&i| !is_disabled(i));
-                                            return RovingNavigateResult::Handled { target };
-                                        }
+                                    if it.key == KeyCode::Home {
+                                        let target = (0..it.len).find(|&i| !is_disabled(i));
+                                        return RovingNavigateResult::Handled { target };
+                                    }
+                                    if it.key == KeyCode::End {
+                                        let target = (0..it.len).rev().find(|&i| !is_disabled(i));
+                                        return RovingNavigateResult::Handled { target };
+                                    }
 
-                                        let Some(forward) =
-                                            direction_prim::horizontal_forward_for_key(
-                                                it.key,
-                                                layout_direction_for_roving,
-                                            )
-                                        else {
-                                            return RovingNavigateResult::NotHandled;
-                                        };
+                                    let Some(forward) = direction_prim::horizontal_forward_for_key(
+                                        it.key,
+                                        layout_direction_for_roving,
+                                    ) else {
+                                        return RovingNavigateResult::NotHandled;
+                                    };
 
-                                        let current = it
-                                            .current
-                                            .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
-                                        let Some(current) = current else {
-                                            return RovingNavigateResult::Handled { target: None };
-                                        };
+                                    let current = it
+                                        .current
+                                        .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
+                                    let Some(current) = current else {
+                                        return RovingNavigateResult::Handled { target: None };
+                                    };
 
-                                        let len = it.len;
-                                        let mut target: Option<usize> = None;
-                                        if it.wrap {
-                                            for step in 1..=len {
-                                                let idx = if forward {
-                                                    (current + step) % len
-                                                } else {
-                                                    (current + len - (step % len)) % len
-                                                };
-                                                if !is_disabled(idx) {
-                                                    target = Some(idx);
-                                                    break;
-                                                }
-                                            }
-                                        } else if forward {
-                                            target =
-                                                ((current + 1)..len).find(|&i| !is_disabled(i));
-                                        } else if current > 0 {
-                                            target = (0..current).rev().find(|&i| !is_disabled(i));
-                                        }
-
-                                        RovingNavigateResult::Handled { target }
-                                    }));
-
-                                    cx.roving_on_active_change(Arc::new(
-                                        move |host, action_cx, idx| {
-                                            let Some(value) = values_for_roving.get(idx).cloned()
-                                            else {
-                                                return;
+                                    let len = it.len;
+                                    let mut target: Option<usize> = None;
+                                    if it.wrap {
+                                        for step in 1..=len {
+                                            let idx = if forward {
+                                                (current + step) % len
+                                            } else {
+                                                (current + len - (step % len)) % len
                                             };
-                                            let already_selected = host
-                                                .models_mut()
-                                                .read(&model_for_roving, |v| {
-                                                    v.as_ref() == value.as_ref()
-                                                })
-                                                .ok()
-                                                .unwrap_or(false);
-                                            if already_selected {
-                                                return;
+                                            if !is_disabled(idx) {
+                                                target = Some(idx);
+                                                break;
                                             }
-                                            let _ = host
-                                                .update_model(&model_for_roving, |v| *v = value);
-                                            host.request_redraw(action_cx.window);
-                                        },
-                                    ));
+                                        }
+                                    } else if forward {
+                                        target = ((current + 1)..len).find(|&i| !is_disabled(i));
+                                    } else if current > 0 {
+                                        target = (0..current).rev().find(|&i| !is_disabled(i));
+                                    }
 
-                                    items
-                                        .iter()
-                                        .enumerate()
-                                        .map(|(idx, it)| {
-                                            let tab_stop = tab_stop.is_some_and(|t| t == idx);
-                                            material_tab(
-                                                cx,
-                                                container_id,
-                                                model.clone(),
-                                                it,
-                                                idx,
-                                                items.len(),
-                                                tab_stop,
-                                                disabled,
-                                                scrollable,
-                                                token_kind,
-                                                container_height,
-                                                selected_idx.is_some_and(|t| t == idx),
-                                                &style,
-                                                tab_element_ids.get(idx),
-                                            )
-                                        })
-                                        .collect::<Vec<_>>()
-                                });
+                                    RovingNavigateResult::Handled { target }
+                                }));
 
-                                let mut tabs = if scrollable {
-                                    let mut scroll_props = ScrollProps::default();
-                                    scroll_props.axis = ScrollAxis::X;
-                                    scroll_props.layout.size.width = Length::Fill;
-                                    scroll_props.layout.size.height = Length::Fill;
-                                    cx.scroll(scroll_props, move |_cx| vec![roving])
-                                } else {
-                                    roving
-                                };
-                                if let Some(chrome_test_id) = chrome_test_id.clone() {
-                                    tabs = tabs.test_id(chrome_test_id);
-                                }
+                                cx.roving_on_active_change(Arc::new(
+                                    move |host, action_cx, idx| {
+                                        let Some(value) = values_for_roving.get(idx).cloned()
+                                        else {
+                                            return;
+                                        };
+                                        let already_selected = host
+                                            .models_mut()
+                                            .read(&model_for_roving, |v| {
+                                                v.as_ref() == value.as_ref()
+                                            })
+                                            .ok()
+                                            .unwrap_or(false);
+                                        if already_selected {
+                                            return;
+                                        }
+                                        let _ =
+                                            host.update_model(&model_for_roving, |v| *v = value);
+                                        host.request_redraw(action_cx.window);
+                                    },
+                                ));
 
-                                vec![divider, indicator, tabs]
-                            },
-                        )]
-                    });
-
-                    let panel_elements = panels
-                        .into_iter()
-                        .filter_map(|panel| {
-                            let active = panel.value.as_ref() == selected_value.as_ref();
-                            let item_meta = panel_item_metadata
-                                .iter()
-                                .find(|meta| meta.value.as_ref() == panel.value.as_ref());
-                            let fallback_label = item_meta.map(|meta| meta.label.clone());
-                            let labelled_by_element = item_meta
-                                .and_then(|meta| tab_element_ids.get(meta.tab_index))
-                                .and_then(Cell::get);
-                            let test_id = panel.test_id.clone().or_else(|| {
-                                active
-                                    .then(|| default_active_panel_test_id.clone())
-                                    .flatten()
+                                items
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(idx, it)| {
+                                        let tab_stop = tab_stop.is_some_and(|t| t == idx);
+                                        material_tab(
+                                            cx,
+                                            container_id,
+                                            model.clone(),
+                                            it,
+                                            idx,
+                                            items.len(),
+                                            tab_stop,
+                                            disabled,
+                                            scrollable,
+                                            token_kind,
+                                            container_height,
+                                            selected_idx.is_some_and(|t| t == idx),
+                                            &style,
+                                            tab_element_ids.get(idx),
+                                        )
+                                    })
+                                    .collect::<Vec<_>>()
                             });
 
-                            material_tab_panel(
-                                cx,
-                                panel,
-                                active,
-                                fallback_label,
-                                labelled_by_element,
-                                test_id,
-                                content_fill_remaining,
-                            )
-                        })
-                        .collect::<Vec<_>>();
+                            let mut tabs = if scrollable {
+                                let mut scroll_props = ScrollProps::default();
+                                scroll_props.axis = ScrollAxis::X;
+                                scroll_props.layout.size.width = Length::Fill;
+                                scroll_props.layout.size.height = Length::Fill;
+                                cx.scroll(scroll_props, move |_cx| vec![roving])
+                            } else {
+                                roving
+                            };
+                            if let Some(chrome_test_id) = chrome_test_id.clone() {
+                                tabs = tabs.test_id(chrome_test_id);
+                            }
 
-                    if panel_elements.is_empty() {
-                        return tab_list;
-                    }
+                            vec![divider, indicator, tabs]
+                        },
+                    )]
+                });
 
-                    let mut root = FlexProps::default();
-                    root.layout.size.width = Length::Fill;
-                    root.layout.size.min_width = Some(Length::Px(Px(0.0)));
-                    root.direction = Axis::Vertical;
-                    root.justify = MainAlign::Start;
-                    root.align = CrossAlign::Stretch;
-                    root.gap = Px(0.0).into();
-                    root.padding = Edges::all(Px(0.0)).into();
+                let panel_elements = panels
+                    .into_iter()
+                    .filter_map(|panel| {
+                        let active = panel.value.as_ref() == selected_value.as_ref();
+                        let item_meta = panel_item_metadata
+                            .iter()
+                            .find(|meta| meta.value.as_ref() == panel.value.as_ref());
+                        let fallback_label = item_meta.map(|meta| meta.label.clone());
+                        let labelled_by_element = item_meta
+                            .and_then(|meta| tab_element_ids.get(meta.tab_index))
+                            .and_then(Cell::get);
+                        let test_id = panel.test_id.clone().or_else(|| {
+                            active
+                                .then(|| default_active_panel_test_id.clone())
+                                .flatten()
+                        });
 
-                    cx.flex(root, move |_cx| {
-                        let mut children = Vec::with_capacity(1 + panel_elements.len());
-                        children.push(tab_list);
-                        children.extend(panel_elements);
-                        children
+                        material_tab_panel(
+                            cx,
+                            panel,
+                            active,
+                            fallback_label,
+                            labelled_by_element,
+                            test_id,
+                            content_fill_remaining,
+                        )
                     })
-                },
-            )
+                    .collect::<Vec<_>>();
+
+                if panel_elements.is_empty() {
+                    return tab_list;
+                }
+
+                let mut root = FlexProps::default();
+                root.layout.size.width = Length::Fill;
+                root.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                root.direction = Axis::Vertical;
+                root.justify = MainAlign::Start;
+                root.align = CrossAlign::Stretch;
+                root.gap = Px(0.0).into();
+                root.padding = Edges::all(Px(0.0)).into();
+
+                cx.flex(root, move |_cx| {
+                    let mut children = Vec::with_capacity(1 + panel_elements.len());
+                    children.push(tab_list);
+                    children.extend(panel_elements);
+                    children
+                })
+            })
         })
     }
 }

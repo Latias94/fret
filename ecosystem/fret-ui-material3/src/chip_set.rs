@@ -14,12 +14,11 @@ use fret_ui::UiHost;
 use fret_ui::action::RovingNavigateResult;
 use fret_ui::element::{AnyElement, RovingFlexProps, SemanticsProps};
 use fret_ui::elements::ElementContext;
-use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::primitives::direction as direction_prim;
 
 use crate::chip::AssistChip;
 use crate::filter_chip::FilterChip;
-use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
+use crate::foundation::context::material_layout_direction_in_scope;
 use crate::input_chip::InputChip;
 use crate::suggestion_chip::SuggestionChip;
 
@@ -159,8 +158,7 @@ impl ChipSet {
             test_id,
         } = self;
 
-        let default_layout_direction = cx.with_theme(theme_default_layout_direction);
-        let layout_direction = resolved_layout_direction(cx, default_layout_direction);
+        let layout_direction = material_layout_direction_in_scope(cx);
 
         let disabled_items: Arc<[bool]> = Arc::from(
             items

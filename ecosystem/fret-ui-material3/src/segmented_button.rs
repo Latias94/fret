@@ -25,7 +25,7 @@ use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::arc_str::empty_arc_str;
-use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
+use crate::foundation::context::material_layout_direction_in_scope;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -156,11 +156,7 @@ impl SegmentedButtonSet {
             test_id,
         } = self;
 
-        let default_layout_direction = {
-            let theme = Theme::global(&*cx.app);
-            theme_default_layout_direction(theme)
-        };
-        let layout_direction = resolved_layout_direction(cx, default_layout_direction);
+        let layout_direction = material_layout_direction_in_scope(cx);
 
         let disabled_items: Arc<[bool]> = Arc::from(
             items

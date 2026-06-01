@@ -16,7 +16,7 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
 
-use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
+use crate::foundation::context::material_layout_direction_in_scope;
 use crate::foundation::test_id::part_test_id;
 use crate::tokens::badge as badge_tokens;
 
@@ -109,8 +109,7 @@ impl Badge {
 
             let (layout_direction, resolved) = {
                 let theme = Theme::global(&*cx.app);
-                let layout_direction =
-                    resolved_layout_direction(&*cx, theme_default_layout_direction(theme));
+                let layout_direction = material_layout_direction_in_scope(&*cx);
                 let resolved = BadgeResolvedTokens::resolve(theme);
                 (layout_direction, resolved)
             };

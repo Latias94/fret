@@ -28,9 +28,7 @@ use fret_ui_kit::{
     resolve_override_slot_with,
 };
 
-use crate::foundation::context::{
-    theme_default_layout_direction, with_material_resolved_layout_direction,
-};
+use crate::foundation::context::with_material_layout_direction_in_scope;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -297,7 +295,6 @@ impl FilterChip {
                     height,
                     leading_icon_px,
                     trailing_icon_px,
-                    default_layout_direction,
                     label_style,
                 ) = {
                     let theme = Theme::global(&*cx.app);
@@ -310,7 +307,6 @@ impl FilterChip {
                     let height = filter_chip_tokens::container_height(theme);
                     let leading_icon_px = filter_chip_tokens::leading_icon_size(theme);
                     let trailing_icon_px = filter_chip_tokens::trailing_icon_size(theme);
-                    let default_layout_direction = theme_default_layout_direction(theme);
                     let label_style = filter_chip_tokens::label_text_style(theme);
                     (
                         corner_radii,
@@ -318,7 +314,6 @@ impl FilterChip {
                         height,
                         leading_icon_px,
                         trailing_icon_px,
-                        default_layout_direction,
                         label_style,
                     )
                 };
@@ -552,10 +547,8 @@ impl FilterChip {
                         let trailing_icon = self.trailing_icon;
                         let trailing_icon_size = trailing_icon.as_ref().map(|_| trailing_icon_px);
 
-                        let content = with_material_resolved_layout_direction(
-                            cx,
-                            default_layout_direction,
-                            |cx, layout_direction| {
+                        let content =
+                            with_material_layout_direction_in_scope(cx, |cx, layout_direction| {
                                 chip_content(
                                     cx,
                                     label_style.clone(),
@@ -578,8 +571,7 @@ impl FilterChip {
                                     layout_direction,
                                     height,
                                 )
-                            },
-                        );
+                            });
 
                         let mut chrome = ContainerProps::default();
                         chrome.layout.overflow = Overflow::Visible;
