@@ -301,7 +301,10 @@ fn should_skip_md_literal(key: &str) -> bool {
 }
 
 fn is_internal_test_token(key: &str) -> bool {
-    key.contains(".test-") || key.contains("-test-")
+    key.contains(".test-")
+        || key.contains("-test-")
+        || key.starts_with("md.comp.test.")
+        || key.starts_with("md.sys.test.")
 }
 
 fn push_json_string_array(out: &mut String, values: &BTreeSet<String>, indent: usize) {
@@ -628,6 +631,7 @@ mod tests {
             let sys = "md.sys.color.primary";
             let template = "md.comp.button.{variant_key}.{suffix}";
             let internal = "md.comp.outlined-test-field.container.height";
+            let internal_namespace = "md.comp.test.focus.state-layer.opacity";
             "#,
         );
 

@@ -21,67 +21,18 @@
       "id": "bottom_sheet",
       "layer": "recipe",
       "path": "src/bottom_sheet.rs",
-      "tokens": [
-        "md.sys.motion.duration.medium2",
-        "md.sys.motion.easing.emphasized"
-      ]
+      "tokens": []
     },
     {
       "id": "button",
       "layer": "recipe",
       "path": "src/button.rs",
       "tokens": [
-        "md.comp.button.large.container.height",
-        "md.comp.button.large.container.shape.round",
-        "md.comp.button.large.icon-label-space",
-        "md.comp.button.large.icon.size",
         "md.comp.button.large.label-text",
-        "md.comp.button.large.leading-space",
-        "md.comp.button.large.outlined.outline.width",
-        "md.comp.button.large.pressed.container.shape",
-        "md.comp.button.large.trailing-space",
-        "md.comp.button.medium.container.height",
-        "md.comp.button.medium.container.shape.round",
-        "md.comp.button.medium.icon-label-space",
-        "md.comp.button.medium.icon.size",
         "md.comp.button.medium.label-text",
-        "md.comp.button.medium.leading-space",
-        "md.comp.button.medium.outlined.outline.width",
-        "md.comp.button.medium.pressed.container.shape",
-        "md.comp.button.medium.trailing-space",
-        "md.comp.button.outlined.disabled.outline.color",
-        "md.comp.button.outlined.outline.color",
-        "md.comp.button.small.container.height",
-        "md.comp.button.small.container.shape.round",
-        "md.comp.button.small.icon-label-space",
-        "md.comp.button.small.icon.size",
         "md.comp.button.small.label-text",
-        "md.comp.button.small.leading-space",
-        "md.comp.button.small.outlined.outline.width",
-        "md.comp.button.small.pressed.container.shape",
-        "md.comp.button.small.trailing-space",
-        "md.comp.button.xlarge.container.height",
-        "md.comp.button.xlarge.container.shape.round",
-        "md.comp.button.xlarge.icon-label-space",
-        "md.comp.button.xlarge.icon.size",
         "md.comp.button.xlarge.label-text",
-        "md.comp.button.xlarge.leading-space",
-        "md.comp.button.xlarge.outlined.outline.width",
-        "md.comp.button.xlarge.pressed.container.shape",
-        "md.comp.button.xlarge.trailing-space",
-        "md.comp.button.xsmall.container.height",
-        "md.comp.button.xsmall.container.shape.round",
-        "md.comp.button.xsmall.icon-label-space",
-        "md.comp.button.xsmall.icon.size",
         "md.comp.button.xsmall.label-text",
-        "md.comp.button.xsmall.leading-space",
-        "md.comp.button.xsmall.outlined.outline.width",
-        "md.comp.button.xsmall.pressed.container.shape",
-        "md.comp.button.xsmall.trailing-space",
-        "md.sys.color.outline",
-        "md.sys.color.outline-variant",
-        "md.sys.shape.corner.full",
-        "md.sys.shape.corner.small",
         "md.sys.typescale.label-large"
       ]
     },
@@ -101,9 +52,7 @@
       "id": "checkbox",
       "layer": "recipe",
       "path": "src/checkbox.rs",
-      "tokens": [
-        "md.sys.shape.corner.full"
-      ]
+      "tokens": []
     },
     {
       "id": "chip",
@@ -127,7 +76,6 @@
         "md.sys.fret.material.date-picker.modal.scrim.opacity",
         "md.sys.motion.duration.medium2",
         "md.sys.motion.easing.emphasized",
-        "md.sys.state.disabled.state-layer-opacity",
         "md.sys.typescale.title-large",
         "md.sys.typescale.title-medium"
       ]
@@ -237,17 +185,13 @@
       "id": "radio",
       "layer": "recipe",
       "path": "src/radio.rs",
-      "tokens": [
-        "md.sys.shape.corner.full"
-      ]
+      "tokens": []
     },
     {
       "id": "search_bar",
       "layer": "recipe",
       "path": "src/search_bar.rs",
-      "tokens": [
-        "md.sys.color.primary"
-      ]
+      "tokens": []
     },
     {
       "id": "search_view",
@@ -268,10 +212,6 @@
       "layer": "recipe",
       "path": "src/select.rs",
       "tokens": [
-        "md.sys.color.on-surface",
-        "md.sys.state.focus.state-layer-opacity",
-        "md.sys.state.hover.state-layer-opacity",
-        "md.sys.state.pressed.state-layer-opacity",
         "md.sys.typescale.body-large",
         "md.sys.typescale.body-small"
       ]
@@ -300,20 +240,7 @@
       "id": "switch",
       "layer": "recipe",
       "path": "src/switch.rs",
-      "tokens": [
-        "md.comp.switch.pressed.handle.height",
-        "md.comp.switch.pressed.handle.width",
-        "md.comp.switch.selected.handle.height",
-        "md.comp.switch.selected.handle.width",
-        "md.comp.switch.state-layer.size",
-        "md.comp.switch.track.height",
-        "md.comp.switch.track.outline.width",
-        "md.comp.switch.track.width",
-        "md.comp.switch.unselected.handle.height",
-        "md.comp.switch.unselected.handle.width",
-        "md.comp.switch.with-icon.handle.height",
-        "md.comp.switch.with-icon.handle.width"
-      ]
+      "tokens": []
     },
     {
       "id": "tabs",
@@ -326,18 +253,9 @@
       "layer": "recipe",
       "path": "src/text_field.rs",
       "tokens": [
-        "md.sys.color.surface",
-        "md.sys.state.hover.state-layer-opacity",
-        "md.sys.state.pressed.state-layer-opacity",
         "md.sys.typescale.body-large",
         "md.sys.typescale.body-small"
       ]
-    },
-    {
-      "id": "theme",
-      "layer": "recipe",
-      "path": "src/theme.rs",
-      "tokens": []
     },
     {
       "id": "time_picker",
@@ -458,7 +376,9 @@
       "tokens": [
         "md.sys.motion.duration.short2",
         "md.sys.motion.duration.short4",
-        "md.sys.motion.easing.standard"
+        "md.sys.motion.easing.standard",
+        "md.sys.state.disabled.state-layer-opacity",
+        "md.sys.state.pressed.state-layer-opacity"
       ]
     },
     {
@@ -587,6 +507,8 @@
         "md.sys.color.surface-container-high",
         "md.sys.color.surface-container-highest",
         "md.sys.color.surface-container-low",
+        "md.sys.color.surface-tint",
+        "md.sys.color.surface-tint-color",
         "md.sys.color.surface-variant",
         "md.sys.color.tertiary",
         "md.sys.color.tertiary-container",
@@ -594,21 +516,6 @@
         "md.sys.state.focus.state-layer-opacity",
         "md.sys.state.hover.state-layer-opacity",
         "md.sys.state.pressed.state-layer-opacity"
-      ]
-    },
-    {
-      "id": "foundation.tokens",
-      "layer": "foundation",
-      "path": "src/foundation/tokens.rs",
-      "tokens": [
-        "md.sys.color.background",
-        "md.sys.color.on-surface",
-        "md.sys.color.on-surface-variant",
-        "md.sys.color.outline",
-        "md.sys.color.outline-variant",
-        "md.sys.color.primary",
-        "md.sys.color.surface",
-        "md.sys.color.surface-container"
       ]
     },
     {
@@ -634,27 +541,7 @@
       "layer": "token_module",
       "path": "src/tokens/autocomplete.rs",
       "tokens": [
-        "md.comp.filled-autocomplete.menu.container.color",
-        "md.comp.filled-autocomplete.menu.container.elevation",
-        "md.comp.filled-autocomplete.menu.container.shadow-color",
-        "md.comp.filled-autocomplete.menu.container.shape",
-        "md.comp.filled-autocomplete.menu.list-item.container.height",
-        "md.comp.filled-autocomplete.menu.list-item.label-text.color",
-        "md.comp.filled-autocomplete.menu.list-item.selected.container.color",
-        "md.comp.outlined-autocomplete.menu.container.color",
-        "md.comp.outlined-autocomplete.menu.container.elevation",
-        "md.comp.outlined-autocomplete.menu.container.shadow-color",
-        "md.comp.outlined-autocomplete.menu.container.shape",
-        "md.comp.outlined-autocomplete.menu.list-item.container.height",
-        "md.comp.outlined-autocomplete.menu.list-item.label-text.color",
-        "md.comp.outlined-autocomplete.menu.list-item.selected.container.color",
-        "md.sys.color.on-surface",
-        "md.sys.color.on-surface-variant",
-        "md.sys.color.shadow",
-        "md.sys.color.surface-container",
-        "md.sys.color.surface-container-highest",
-        "md.sys.shape.corner.extra-small",
-        "md.sys.typescale.label-large"
+        "md.sys.color.on-surface-variant"
       ]
     },
     {
@@ -733,6 +620,22 @@
         "md.comp.button.focused.icon.color",
         "md.comp.button.hovered.icon.color",
         "md.comp.button.icon.color",
+        "md.comp.button.large.container.height",
+        "md.comp.button.large.container.shape.round",
+        "md.comp.button.large.icon-label-space",
+        "md.comp.button.large.icon.size",
+        "md.comp.button.large.leading-space",
+        "md.comp.button.large.outlined.outline.width",
+        "md.comp.button.large.pressed.container.shape",
+        "md.comp.button.large.trailing-space",
+        "md.comp.button.medium.container.height",
+        "md.comp.button.medium.container.shape.round",
+        "md.comp.button.medium.icon-label-space",
+        "md.comp.button.medium.icon.size",
+        "md.comp.button.medium.leading-space",
+        "md.comp.button.medium.outlined.outline.width",
+        "md.comp.button.medium.pressed.container.shape",
+        "md.comp.button.medium.trailing-space",
         "md.comp.button.outlined.container.elevation",
         "md.comp.button.outlined.container.shadow-color",
         "md.comp.button.outlined.disabled.container.color",
@@ -742,6 +645,7 @@
         "md.comp.button.outlined.disabled.icon.opacity",
         "md.comp.button.outlined.disabled.label-text.color",
         "md.comp.button.outlined.disabled.label-text.opacity",
+        "md.comp.button.outlined.disabled.outline.color",
         "md.comp.button.outlined.focused.container.elevation",
         "md.comp.button.outlined.focused.icon.color",
         "md.comp.button.outlined.focused.state-layer.color",
@@ -752,11 +656,20 @@
         "md.comp.button.outlined.hovered.state-layer.opacity",
         "md.comp.button.outlined.icon.color",
         "md.comp.button.outlined.label-text.color",
+        "md.comp.button.outlined.outline.color",
         "md.comp.button.outlined.pressed.container.elevation",
         "md.comp.button.outlined.pressed.icon.color",
         "md.comp.button.outlined.pressed.state-layer.color",
         "md.comp.button.outlined.pressed.state-layer.opacity",
         "md.comp.button.pressed.icon.color",
+        "md.comp.button.small.container.height",
+        "md.comp.button.small.container.shape.round",
+        "md.comp.button.small.icon-label-space",
+        "md.comp.button.small.icon.size",
+        "md.comp.button.small.leading-space",
+        "md.comp.button.small.outlined.outline.width",
+        "md.comp.button.small.pressed.container.shape",
+        "md.comp.button.small.trailing-space",
         "md.comp.button.text.container.elevation",
         "md.comp.button.text.container.shadow-color",
         "md.comp.button.text.disabled.container.color",
@@ -804,14 +717,34 @@
         "md.comp.button.tonal.pressed.icon.color",
         "md.comp.button.tonal.pressed.state-layer.color",
         "md.comp.button.tonal.pressed.state-layer.opacity",
+        "md.comp.button.xlarge.container.height",
+        "md.comp.button.xlarge.container.shape.round",
+        "md.comp.button.xlarge.icon-label-space",
+        "md.comp.button.xlarge.icon.size",
+        "md.comp.button.xlarge.leading-space",
+        "md.comp.button.xlarge.outlined.outline.width",
+        "md.comp.button.xlarge.pressed.container.shape",
+        "md.comp.button.xlarge.trailing-space",
+        "md.comp.button.xsmall.container.height",
+        "md.comp.button.xsmall.container.shape.round",
+        "md.comp.button.xsmall.icon-label-space",
+        "md.comp.button.xsmall.icon.size",
+        "md.comp.button.xsmall.leading-space",
+        "md.comp.button.xsmall.outlined.outline.width",
+        "md.comp.button.xsmall.pressed.container.shape",
+        "md.comp.button.xsmall.trailing-space",
         "md.sys.color.on-primary",
         "md.sys.color.on-secondary-container",
         "md.sys.color.on-surface",
         "md.sys.color.on-surface-variant",
+        "md.sys.color.outline",
+        "md.sys.color.outline-variant",
         "md.sys.color.primary",
         "md.sys.color.secondary-container",
         "md.sys.color.shadow",
-        "md.sys.color.surface-container-low"
+        "md.sys.color.surface-container-low",
+        "md.sys.shape.corner.full",
+        "md.sys.shape.corner.small"
       ]
     },
     {
@@ -819,6 +752,9 @@
       "layer": "token_module",
       "path": "src/tokens/card.rs",
       "tokens": [
+        "md.comp.elevated-card.hover.container.elevation",
+        "md.comp.filled-card.container.shape",
+        "md.comp.outlined-card.outline.width",
         "md.sys.color.on-surface",
         "md.sys.color.outline",
         "md.sys.color.shadow",
@@ -831,6 +767,9 @@
       "layer": "token_module",
       "path": "src/tokens/carousel_item.rs",
       "tokens": [
+        "md.comp.carousel-item.container.shape",
+        "md.comp.carousel-item.hover.container.elevation",
+        "md.comp.carousel-item.with-outline.outline.width",
         "md.sys.color.on-surface",
         "md.sys.color.outline",
         "md.sys.color.shadow",
@@ -869,6 +808,7 @@
         "md.comp.checkbox.selected.pressed.outline.width",
         "md.comp.checkbox.selected.pressed.state-layer.color",
         "md.comp.checkbox.selected.pressed.state-layer.opacity",
+        "md.comp.checkbox.state-layer.shape",
         "md.comp.checkbox.state-layer.size",
         "md.comp.checkbox.unselected.disabled.container.opacity",
         "md.comp.checkbox.unselected.disabled.outline.color",
@@ -891,7 +831,8 @@
         "md.sys.color.on-surface",
         "md.sys.color.on-surface-variant",
         "md.sys.color.primary",
-        "md.sys.color.surface"
+        "md.sys.color.surface",
+        "md.sys.shape.corner.full"
       ]
     },
     {
@@ -918,8 +859,14 @@
       "path": "src/tokens/chip_common.rs",
       "tokens": [
         "md.comp.assist-chip.container.height",
+        "md.comp.assist-chip.elevated.hover.container.elevation",
+        "md.comp.assist-chip.focus.state-layer.color",
+        "md.comp.assist-chip.label-text.color",
+        "md.comp.assist-chip.outline.width",
         "md.comp.assist-chip.with-icon.icon.size",
+        "md.comp.filter-chip.selected.hover.label-text.color",
         "md.comp.filter-chip.selected.hover.state-layer.opacity",
+        "md.comp.input-chip.with-leading-icon.unselected.pressed.leading-icon.color",
         "md.sys.color.on-surface",
         "md.sys.color.outline-variant",
         "md.sys.color.shadow",
@@ -933,6 +880,9 @@
       "layer": "token_module",
       "path": "src/tokens/date_picker.rs",
       "tokens": [
+        "md.comp.date-picker.docked.container.width",
+        "md.comp.date-picker.modal.container.elevation",
+        "md.comp.date-picker.modal.date.container.height",
         "md.comp.date-picker.modal.header.headline",
         "md.comp.date-picker.modal.header.headline.color",
         "md.sys.color.on-primary",
@@ -1008,30 +958,32 @@
       "layer": "token_module",
       "path": "src/tokens/fab.rs",
       "tokens": [
+        "md.comp.extended-fab.container.width",
+        "md.comp.extended-fab.large.icon-label-space",
+        "md.comp.extended-fab.medium.container.height",
+        "md.comp.extended-fab.medium.container.shape",
+        "md.comp.extended-fab.medium.icon.size",
         "md.comp.extended-fab.primary.label-text.weight",
         "md.comp.extended-fab.secondary.label-text.weight",
         "md.comp.extended-fab.surface.label-text.weight",
         "md.comp.extended-fab.tertiary.label-text.weight",
+        "md.comp.fab.container.height",
+        "md.comp.fab.large.icon.size",
+        "md.comp.fab.primary-container.hover.container.elevation",
+        "md.comp.fab.small.container.shape",
         "md.sys.color.on-surface",
         "md.sys.color.shadow",
         "md.sys.color.surface-container",
         "md.sys.color.surface-container-high",
-        "md.sys.state.focus.state-layer-opacity",
-        "md.sys.state.hover.state-layer-opacity",
-        "md.sys.state.pressed.state-layer-opacity",
-        "md.sys.typescale.label-large"
-      ]
-    },
-    {
-      "id": "tokens.fab_common",
-      "layer": "token_module",
-      "path": "src/tokens/fab_common.rs",
-      "tokens": [
         "md.sys.shape.corner.extra-large",
         "md.sys.shape.corner.large",
         "md.sys.shape.corner.large-increased",
         "md.sys.shape.corner.medium",
+        "md.sys.state.focus.state-layer-opacity",
+        "md.sys.state.hover.state-layer-opacity",
+        "md.sys.state.pressed.state-layer-opacity",
         "md.sys.typescale.headline-small",
+        "md.sys.typescale.label-large",
         "md.sys.typescale.title-large",
         "md.sys.typescale.title-medium"
       ]
@@ -1050,6 +1002,20 @@
         "md.sys.color.surface-container-highest",
         "md.sys.shape.corner.extra-small",
         "md.sys.shape.corner.extra-small.top"
+      ]
+    },
+    {
+      "id": "tokens.field_menu_common",
+      "layer": "token_module",
+      "path": "src/tokens/field_menu_common.rs",
+      "tokens": [
+        "md.sys.color.on-surface",
+        "md.sys.color.on-surface-variant",
+        "md.sys.color.shadow",
+        "md.sys.color.surface-container",
+        "md.sys.color.surface-container-highest",
+        "md.sys.shape.corner.extra-small",
+        "md.sys.typescale.label-large"
       ]
     },
     {
@@ -1217,12 +1183,6 @@
       "id": "tokens.list",
       "layer": "token_module",
       "path": "src/tokens/list.rs",
-      "tokens": []
-    },
-    {
-      "id": "tokens.list_common",
-      "layer": "token_module",
-      "path": "src/tokens/list_common.rs",
       "tokens": [
         "md.comp.list.list-item.between-space",
         "md.comp.list.list-item.bottom-space",
@@ -1473,12 +1433,6 @@
       "id": "tokens.progress_indicator",
       "layer": "token_module",
       "path": "src/tokens/progress_indicator.rs",
-      "tokens": []
-    },
-    {
-      "id": "tokens.progress_indicator_common",
-      "layer": "token_module",
-      "path": "src/tokens/progress_indicator_common.rs",
       "tokens": [
         "md.comp.progress-indicator.active-indicator.color",
         "md.comp.progress-indicator.active-indicator.shape",
@@ -1520,6 +1474,7 @@
         "md.comp.radio-button.selected.pressed.icon.color",
         "md.comp.radio-button.selected.pressed.state-layer.color",
         "md.comp.radio-button.selected.pressed.state-layer.opacity",
+        "md.comp.radio-button.state-layer.shape",
         "md.comp.radio-button.state-layer.size",
         "md.comp.radio-button.unselected.focus.icon.color",
         "md.comp.radio-button.unselected.focus.state-layer.color",
@@ -1532,7 +1487,8 @@
         "md.comp.radio-button.unselected.pressed.state-layer.color",
         "md.comp.radio-button.unselected.pressed.state-layer.opacity",
         "md.sys.color.on-surface",
-        "md.sys.color.primary"
+        "md.sys.color.primary",
+        "md.sys.shape.corner.full"
       ]
     },
     {
@@ -1556,6 +1512,7 @@
         "md.comp.search-bar.trailing-icon.color",
         "md.sys.color.on-surface",
         "md.sys.color.on-surface-variant",
+        "md.sys.color.primary",
         "md.sys.color.surface-container-high",
         "md.sys.fret.material.search-bar.container.max-width",
         "md.sys.fret.material.search-bar.container.min-width",
@@ -1618,40 +1575,17 @@
       "layer": "token_module",
       "path": "src/tokens/select.rs",
       "tokens": [
-        "md.comp.filled-select.menu.container.color",
-        "md.comp.filled-select.menu.container.elevation",
-        "md.comp.filled-select.menu.container.shadow-color",
-        "md.comp.filled-select.menu.container.shape",
-        "md.comp.filled-select.menu.list-item.container.height",
-        "md.comp.filled-select.menu.list-item.label-text.color",
-        "md.comp.filled-select.menu.list-item.selected.container.color",
-        "md.comp.filled-select.menu.list-item.with-leading-icon.leading-icon.color",
-        "md.comp.filled-select.menu.list-item.with-leading-icon.leading-icon.size",
-        "md.comp.filled-select.menu.list-item.with-trailing-icon.trailing-icon.color",
-        "md.comp.filled-select.menu.list-item.with-trailing-icon.trailing-icon.size",
         "md.comp.filled-select.text-field.container.color",
         "md.comp.filled-select.text-field.disabled.container.color",
         "md.comp.filled-select.text-field.disabled.container.opacity",
-        "md.comp.outlined-select.menu.container.color",
-        "md.comp.outlined-select.menu.container.elevation",
-        "md.comp.outlined-select.menu.container.shadow-color",
-        "md.comp.outlined-select.menu.container.shape",
-        "md.comp.outlined-select.menu.list-item.container.height",
-        "md.comp.outlined-select.menu.list-item.label-text.color",
-        "md.comp.outlined-select.menu.list-item.selected.container.color",
-        "md.comp.outlined-select.menu.list-item.with-leading-icon.leading-icon.color",
-        "md.comp.outlined-select.menu.list-item.with-leading-icon.leading-icon.size",
-        "md.comp.outlined-select.menu.list-item.with-trailing-icon.trailing-icon.color",
-        "md.comp.outlined-select.menu.list-item.with-trailing-icon.trailing-icon.size",
         "md.comp.outlined-select.text-field.container.color",
         "md.sys.color.on-surface",
         "md.sys.color.on-surface-variant",
-        "md.sys.color.shadow",
-        "md.sys.color.surface-container",
         "md.sys.color.surface-container-highest",
-        "md.sys.shape.corner.extra-small",
-        "md.sys.typescale.body-large",
-        "md.sys.typescale.label-large"
+        "md.sys.state.focus.state-layer-opacity",
+        "md.sys.state.hover.state-layer-opacity",
+        "md.sys.state.pressed.state-layer-opacity",
+        "md.sys.typescale.body-large"
       ]
     },
     {
@@ -1666,12 +1600,6 @@
       ]
     },
     {
-      "id": "tokens.shape",
-      "layer": "token_module",
-      "path": "src/tokens/shape.rs",
-      "tokens": []
-    },
-    {
       "id": "tokens.sheet_bottom",
       "layer": "token_module",
       "path": "src/tokens/sheet_bottom.rs",
@@ -1684,29 +1612,19 @@
         "md.comp.sheet.bottom.docked.drag-handle.width",
         "md.comp.sheet.bottom.docked.modal.container.elevation",
         "md.comp.sheet.bottom.docked.standard.container.elevation",
-        "md.comp.sheet.bottom.focus.indicator.color",
-        "md.comp.sheet.bottom.focus.indicator.outline.offset",
-        "md.comp.sheet.bottom.focus.indicator.thickness",
         "md.sys.color.on-surface-variant",
         "md.sys.color.scrim",
-        "md.sys.color.secondary",
         "md.sys.color.surface-container-low",
         "md.sys.fret.material.sheet.bottom.docked.modal.scrim.opacity",
-        "md.sys.shape.corner.extra-large.top",
-        "md.sys.state.focus-indicator.outer-offset",
-        "md.sys.state.focus-indicator.thickness"
+        "md.sys.motion.duration.medium2",
+        "md.sys.motion.easing.emphasized",
+        "md.sys.shape.corner.extra-large.top"
       ]
     },
     {
       "id": "tokens.slider",
       "layer": "token_module",
       "path": "src/tokens/slider.rs",
-      "tokens": []
-    },
-    {
-      "id": "tokens.slider_common",
-      "layer": "token_module",
-      "path": "src/tokens/slider_common.rs",
       "tokens": [
         "md.comp.slider.active.stop-indicator.container.opacity",
         "md.comp.slider.active.track.color",
@@ -1860,12 +1778,16 @@
         "md.comp.switch.disabled.unselected.track.color",
         "md.comp.switch.disabled.unselected.track.outline.color",
         "md.comp.switch.handle.shape",
+        "md.comp.switch.pressed.handle.height",
+        "md.comp.switch.pressed.handle.width",
         "md.comp.switch.selected.focus.handle.color",
         "md.comp.switch.selected.focus.icon.color",
         "md.comp.switch.selected.focus.state-layer.color",
         "md.comp.switch.selected.focus.state-layer.opacity",
         "md.comp.switch.selected.focus.track.color",
         "md.comp.switch.selected.handle.color",
+        "md.comp.switch.selected.handle.height",
+        "md.comp.switch.selected.handle.width",
         "md.comp.switch.selected.hover.handle.color",
         "md.comp.switch.selected.hover.icon.color",
         "md.comp.switch.selected.hover.state-layer.color",
@@ -1880,7 +1802,11 @@
         "md.comp.switch.selected.pressed.track.color",
         "md.comp.switch.selected.track.color",
         "md.comp.switch.state-layer.shape",
+        "md.comp.switch.state-layer.size",
+        "md.comp.switch.track.height",
+        "md.comp.switch.track.outline.width",
         "md.comp.switch.track.shape",
+        "md.comp.switch.track.width",
         "md.comp.switch.unselected.focus.handle.color",
         "md.comp.switch.unselected.focus.icon.color",
         "md.comp.switch.unselected.focus.state-layer.color",
@@ -1888,6 +1814,8 @@
         "md.comp.switch.unselected.focus.track.color",
         "md.comp.switch.unselected.focus.track.outline.color",
         "md.comp.switch.unselected.handle.color",
+        "md.comp.switch.unselected.handle.height",
+        "md.comp.switch.unselected.handle.width",
         "md.comp.switch.unselected.hover.handle.color",
         "md.comp.switch.unselected.hover.icon.color",
         "md.comp.switch.unselected.hover.state-layer.color",
@@ -1904,6 +1832,8 @@
         "md.comp.switch.unselected.pressed.track.outline.color",
         "md.comp.switch.unselected.track.color",
         "md.comp.switch.unselected.track.outline.color",
+        "md.comp.switch.with-icon.handle.height",
+        "md.comp.switch.with-icon.handle.width",
         "md.sys.color.on-primary",
         "md.sys.color.on-surface",
         "md.sys.color.on-surface-variant",
@@ -2017,7 +1947,8 @@
         "md.comp.outlined-text-field.hover.supporting-text.color",
         "md.comp.outlined-text-field.label-text.color",
         "md.comp.outlined-text-field.supporting-text.color",
-        "md.sys.color.on-surface-variant"
+        "md.sys.color.on-surface-variant",
+        "md.sys.color.surface"
       ]
     },
     {
@@ -2025,6 +1956,9 @@
       "layer": "token_module",
       "path": "src/tokens/time_input.rs",
       "tokens": [
+        "md.comp.time-input.time-input-field.container.height",
+        "md.comp.time-input.time-input-field.container.width",
+        "md.comp.time-input.time-input-field.focus.outline.width",
         "md.sys.color.error",
         "md.sys.color.error-container",
         "md.sys.color.on-error-container",
@@ -2055,8 +1989,6 @@
         "md.sys.color.tertiary-container",
         "md.sys.shape.corner.small",
         "md.sys.state.focus.state-layer-opacity",
-        "md.sys.state.hover.state-layer-opacity",
-        "md.sys.state.pressed.state-layer-opacity",
         "md.sys.typescale.title-medium"
       ]
     },
@@ -2084,8 +2016,6 @@
         "md.sys.shape.corner.full",
         "md.sys.shape.corner.small",
         "md.sys.state.focus.state-layer-opacity",
-        "md.sys.state.hover.state-layer-opacity",
-        "md.sys.state.pressed.state-layer-opacity",
         "md.sys.typescale.body-large",
         "md.sys.typescale.display-large",
         "md.sys.typescale.label-medium"
@@ -2178,7 +2108,9 @@
       "id": "tokens.typography",
       "layer": "token_module",
       "path": "src/tokens/typography.rs",
-      "tokens": []
+      "tokens": [
+        "md.sys.typescale.label-large"
+      ]
     }
   ]
 }
