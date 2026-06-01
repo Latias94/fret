@@ -456,6 +456,7 @@
     "ecosystem/fret-ui-kit/src/window_overlays/render/toast_render.rs",
     "ecosystem/fret-ui-kit/src/window_overlays/tests/toast.rs",
     "ecosystem/fret-ui-kit/src/imui.rs",
+    "ecosystem/fret-ui-kit/src/imui/exports.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/tests/text.rs",

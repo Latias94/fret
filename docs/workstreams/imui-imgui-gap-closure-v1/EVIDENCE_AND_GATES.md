@@ -25117,3 +25117,25 @@ Focused gates:
   passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
+
+2026-06-01 IMUI facade export owner split:
+
+- Claim: the public `fret_ui_kit::imui::*` re-export surface is owned by
+  `ecosystem/fret-ui-kit/src/imui/exports.rs`, while `ecosystem/fret-ui-kit/src/imui.rs` stays the
+  private module hub and internal shared-import owner.
+- Evidence anchors:
+  `ecosystem/fret-ui-kit/src/imui.rs` declares `mod exports;` and republishes `pub use exports::*;`;
+  `ecosystem/fret-ui-kit/src/imui/exports.rs` owns the debug draw, facade, floating, options,
+  response, table, tab, list, multi-select, and virtual-list re-export catalog; and
+  `tools/gate_imui_workstream_source.py` requires the export owner while rejecting the old public
+  re-export blocks in the root hub.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`
+  (5 tests passed).
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

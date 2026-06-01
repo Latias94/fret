@@ -5781,3 +5781,12 @@ opening the slice.
       commit `dee3d48f44` are recorded in `WORKTREE_CONVERGENCE_PLAN_2026-05-26.md` and
       `EVIDENCE_AND_GATES.md`. The merged tree keeps the editor-grade facade/container/listbox
       organization, preserves the `main` image-item owner split, and continues only from `main`.
+- [x] Split the IMUI root public re-export surface out of
+      `ecosystem/fret-ui-kit/src/imui.rs` into a dedicated facade export owner without changing
+      public `fret_ui_kit::imui::*` import paths, `fret-imui` thinness, or kit-owned policy
+      boundaries.
+      Result: `ecosystem/fret-ui-kit/src/imui/exports.rs` now owns the public debug draw, facade,
+      floating, options, response, table, tab, list, multi-select, and virtual-list re-exports.
+      `imui.rs` stays a private module hub plus shared internal imports and only republishes
+      `exports::*`; the source gate rejects the old public re-export blocks from drifting back into
+      the root hub.

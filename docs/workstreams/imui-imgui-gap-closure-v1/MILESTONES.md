@@ -5100,3 +5100,9 @@ topic: keep identical plot/table slices, prefer the IMUI worktree's more complet
 layout sugar, canonical workbench, Demo/Metrics/Debug, and style/theme picker work, and leave the
 `main`-only `facade_writer/image_items.rs` slice for a separate evidenced follow-up unless completed
 before checkpointing. The image-items slice was completed before the `main` checkpoint.
+
+2026-06-01 IMUI facade export owner split result:
+`ecosystem/fret-ui-kit/src/imui/exports.rs` now owns the public `fret_ui_kit::imui::*` re-export
+surface. `ecosystem/fret-ui-kit/src/imui.rs` remains the module hub and shared internal-import owner
+and republishes the same public surface through `pub use exports::*;`. This keeps downstream import
+paths stable while removing public API catalog churn from the root implementation hub.
