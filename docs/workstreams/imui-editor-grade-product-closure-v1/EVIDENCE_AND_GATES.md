@@ -2,6 +2,32 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI drag preview cross-window owner split - 2026-06-02
+
+This maintenance slice keeps the drag-preview recipe aligned with the Dear ImGui-style editor goal
+without moving preview policy into the thin `fret-imui` facade or the lower `fret-ui-kit::imui`
+mechanism layer:
+
+- `ecosystem/fret-ui-kit/src/recipes/imui_drag_preview.rs` now stays as the recipe facade for
+  options, same-window tooltip overlay presentation, anchor policy, and public re-exports.
+- `ecosystem/fret-ui-kit/src/recipes/imui_drag_preview/cross_window.rs` now owns the cross-window
+  descriptor store, publish helpers, current-window render loop, and stale-session pruning.
+- The public API remains under `fret_ui_kit::recipes::imui_drag_preview::{...}` through re-exports,
+  preserving existing proof surfaces and app call sites.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so the facade cannot silently
+  absorb the cross-window store again and the cross-window owner cannot absorb same-window overlay
+  policy.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_drag_preview_smoke --no-fail-fast` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui ghost_anchor_ --no-fail-fast` - passed, 2 tests.
+- `cargo nextest run -p fret-imui drag_preview_ghost_follows_pointer_and_clears_on_release cross_window_drag_preview_ghost_transfers_between_windows --no-fail-fast` - passed, 2 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+
 ## DevTools native regression test owner split - 2026-06-02
 
 This maintenance slice keeps the DevTools GUI source file reviewable while preserving the existing

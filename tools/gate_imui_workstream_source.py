@@ -43488,6 +43488,45 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/recipes/imui_drag_preview.rs"),
+            required=[
+                "mod cross_window;",
+                "pub use cross_window::{",
+                "publish_cross_window_drag_preview_ghost",
+                "publish_cross_window_drag_preview_ghost_with_options",
+                "render_cross_window_drag_preview_ghosts",
+                "fn sync_drag_preview_ghost_overlay",
+                "pub fn drag_preview_ghost",
+                "pub fn drag_preview_ghost_with_options",
+                "fn ghost_anchor_position",
+            ],
+            forbidden=[
+                "struct CrossWindowDragPreviewGhostStore",
+                "fn cross_window_drag_preview_store_model",
+                "fn remove_cross_window_drag_preview_sessions",
+                "pub fn render_cross_window_drag_preview_ghosts",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/recipes/imui_drag_preview/cross_window.rs"),
+            required=[
+                "struct CrossWindowDragPreviewGhostStore",
+                "fn cross_window_drag_preview_store_model",
+                "fn remove_cross_window_drag_preview_sessions",
+                "pub fn publish_cross_window_drag_preview_ghost",
+                "pub fn publish_cross_window_drag_preview_ghost_with_options",
+                "pub fn render_cross_window_drag_preview_ghosts",
+                "sync_drag_preview_ghost_overlay(",
+                "drag.current_window == cx.window",
+                "descriptor.stale_frame = Some(current_frame)",
+            ],
+            forbidden=[
+                "pub struct DragPreviewGhostOptions",
+                "pub fn drag_preview_ghost_with_options",
+                "radix_tooltip::",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-kit/tests/imui_response_contract_smoke.rs"),
             required=[
                 "response.core()",
