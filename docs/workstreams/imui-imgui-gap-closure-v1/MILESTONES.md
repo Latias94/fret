@@ -5156,3 +5156,9 @@ label, and multiselectable semantics construction. `list_box_controls.rs` keeps 
 orchestration: resize detection, scroll layout choice, scroll input assembly, resize-vs-scroll root
 test-id routing, response initialization, and resize-stack selection. `child_region.rs` keeps the
 facade-facing keyed wrapper only.
+
+2026-06-01 floating-window in-area assembly owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_on_area/assembly.rs` now owns prepared floating
+window state consumption plus title bar, content, and shell assembly for in-area windows.
+`floating_window_on_area.rs` keeps only the facade-facing `with_cx_mut` wrapper, window insertion,
+and chrome response return.

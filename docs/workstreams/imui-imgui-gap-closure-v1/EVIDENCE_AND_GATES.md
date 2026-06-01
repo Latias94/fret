@@ -25329,3 +25329,28 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI floating-window in-area assembly owner split:
+
+- Claim: floating-window in-area title/content/shell assembly moved from
+  `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into
+  `ecosystem/fret-ui-kit/src/imui/floating_window_on_area/assembly.rs` without changing area
+  identity, prepared resize/collapse state, title-bar wiring, content mounting, shell construction,
+  resize-handle test IDs, or `FloatingWindowChromeResponse` propagation.
+- Evidence anchors: `floating_window_on_area.rs` declares `mod assembly;` and delegates the
+  `with_cx_mut` body to `assembly::floating_window_in_area_element(...)`; `assembly.rs` owns
+  `prepare_floating_window_in_area_state(...)` consumption plus title-bar/content/shell assembly;
+  `state.rs` remains the resize/collapse/position state owner; the source gate rejects assembly
+  details drifting back into the root in-area window hub.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit --features imui`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke --no-fail-fast`
+  (3 tests passed).
+- Passed: `cargo nextest run -p fret-imui floating_window --no-fail-fast` (17 tests passed,
+  169 skipped).
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

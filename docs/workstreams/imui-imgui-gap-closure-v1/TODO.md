@@ -5853,3 +5853,11 @@ opening the slice.
       Result: `ecosystem/fret-ui-kit/src/imui/child_region/entry.rs` owns resize detection,
       scroll input assembly, response initialization, and resize-stack selection. `child_region.rs`
       now keeps only the facade-facing keyed wrapper and owner module declarations.
+- [x] Split IMUI floating-window in-area assembly out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into a private assembly owner
+      without changing area identity, prepared resize/collapse state, title-bar wiring, content
+      mounting, shell construction, resize-handle test IDs, or `FloatingWindowChromeResponse`
+      propagation.
+      Result: `ecosystem/fret-ui-kit/src/imui/floating_window_on_area/assembly.rs` owns prepared
+      state consumption plus title bar/content/shell assembly. `floating_window_on_area.rs` keeps
+      only the facade-facing `ui.with_cx_mut` wrapper, `ui.add(window)`, and chrome return.

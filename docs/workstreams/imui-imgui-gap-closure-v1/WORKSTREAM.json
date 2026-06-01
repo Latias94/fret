@@ -958,6 +958,7 @@
     "ecosystem/fret-ui-kit/src/imui/floating_window/closed.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window/state.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_window_on_area/assembly.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_on_area/state.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_on_area/state/collapsed.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_on_area/state/position.rs",
