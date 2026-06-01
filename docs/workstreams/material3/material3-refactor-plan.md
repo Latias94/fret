@@ -243,7 +243,7 @@ Rule of thumb:
 
 - `foundation::indication` (state layer + ripple) as the only supported ink orchestration path.
 - `foundation::motion_scheme` (spatial/effects mapping + spring configs).
-- `foundation::tokens` + `foundation::token_resolver` (typed access + strict fallback chain).
+- `foundation::token_resolver` (typed access + strict fallback chain).
 - `foundation::content` (content color defaults + disabled opacity conventions).
 - `foundation::elevation` (MD3 level → shadow + tonal overlay mapping).
 - `foundation::interactive_size` (minimum touch target enforcement + centered chrome).

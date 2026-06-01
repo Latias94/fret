@@ -207,6 +207,14 @@ impl<'a> MaterialTokenResolver<'a> {
             .unwrap_or(fallback)
     }
 
+    pub fn number_value(&self, key: &str) -> Option<f32> {
+        debug_assert!(
+            key.starts_with("md."),
+            "expected md.* number token key, got: {key}"
+        );
+        self.theme.number_by_key(key)
+    }
+
     pub fn number_chain(&self, keys: &[&str], fallback: f32) -> f32 {
         debug_assert!(!keys.is_empty(), "expected at least one md.* key");
         debug_assert!(

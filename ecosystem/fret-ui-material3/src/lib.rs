@@ -225,7 +225,6 @@ mod tests {
             include_str!("foundation/focus_ring.rs"),
             include_str!("foundation/geometry.rs"),
             include_str!("foundation/interaction.rs"),
-            include_str!("foundation/tokens.rs"),
             include_str!("tokens/icon_button.rs"),
             include_str!("tokens/badge.rs"),
             include_str!("tokens/button.rs"),
