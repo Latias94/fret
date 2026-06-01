@@ -2,6 +2,30 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## DevTools Demo/Metrics/Debug line projection owner split - 2026-06-02
+
+This refresh keeps the Dear ImGui-style Demo/Metrics/Debug route productized in DevTools while
+reducing the remaining `native.rs` GUI shell file:
+
+- `apps/fret-devtools/src/demo_metrics_debug.rs` now owns action metadata, action command text,
+  selected-bundle readiness projection, and the full route/metrics/debug guide line projection.
+- `apps/fret-devtools/src/native.rs` keeps the GUI panel assembly, selected-bundle state read, and
+  copy-action button dispatch.
+- `tools/gate_imui_workstream_source.py` now rejects the Demo/Metrics/Debug guide projection from
+  drifting back into `native.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `cargo check -p fret-devtools` - passed.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## TextAssistField element owner split - 2026-06-02
 
 This refresh keeps editor completion policy in `fret-ui-editor` while reducing another root control

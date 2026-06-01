@@ -1,7 +1,13 @@
 use super::{
-    DEVTOOLS_DEBUG_TRACE_COMMAND, DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND,
-    DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND, DEVTOOLS_METRICS_STATS_COMMAND,
-    IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND,
+    DEVTOOLS_DEBUG_HOTSPOTS_COMMAND, DEVTOOLS_DEBUG_TRACE_COMMAND, DEVTOOLS_DEBUG_TRIAGE_COMMAND,
+    DEVTOOLS_DEMO_DEVICE_SHELL_COMMAND, DEVTOOLS_DEMO_EDITOR_NOTES_COMMAND,
+    DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND, DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND,
+    DEVTOOLS_DEMO_METRICS_DEBUG_ACTION_METADATA_DOC, DEVTOOLS_DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC,
+    DEVTOOLS_DEMO_METRICS_DEBUG_OWNER_DOC, DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID,
+    DEVTOOLS_DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC, DEVTOOLS_DOCKING_ARBITRATION_COMMAND,
+    DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND, DEVTOOLS_DOCKING_POLICY_SKIP_COMMAND,
+    DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND, DEVTOOLS_METRICS_MEMORY_COMMAND,
+    DEVTOOLS_METRICS_STATS_COMMAND, IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -99,4 +105,59 @@ pub(crate) fn demo_metrics_debug_action_readiness_lines(
             )
         })
         .collect()
+}
+
+#[cfg(test)]
+pub(crate) fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
+    devtools_demo_metrics_debug_lines_with_state(artifacts_root, 0)
+}
+
+pub(crate) fn devtools_demo_metrics_debug_lines_with_state(
+    artifacts_root: &str,
+    selected_bundle_count: usize,
+) -> Vec<String> {
+    let artifacts_root = artifacts_root.trim();
+    let artifacts_root = if artifacts_root.is_empty() {
+        "<unset>"
+    } else {
+        artifacts_root
+    };
+    let mut lines = vec![
+        format!("route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}"),
+        format!("route owner: {DEVTOOLS_DEMO_METRICS_DEBUG_OWNER_DOC}"),
+        format!("action metadata owner: {DEVTOOLS_DEMO_METRICS_DEBUG_ACTION_METADATA_DOC}"),
+        format!("docking owner: {DEVTOOLS_DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC}"),
+        format!("wayland acceptance: {DEVTOOLS_DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC}"),
+        format!("artifacts root: {artifacts_root}"),
+        "route surface: Always-available editor demos, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell."
+            .to_string(),
+        "action surface: dedicated DevTools guide panel + copyable action command bundle"
+            .to_string(),
+        "command palette: deferred until DevTools has a shared command palette contract".to_string(),
+        format!("action: open workbench -> {DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND}"),
+        format!("action: run product discovery -> {IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND}"),
+        format!("action: inspect metrics stats -> {DEVTOOLS_METRICS_STATS_COMMAND}"),
+        format!("action: inspect debug trace -> {DEVTOOLS_DEBUG_TRACE_COMMAND}"),
+        format!("action: validate docking campaign -> {DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND}"),
+    ];
+    lines.extend(demo_metrics_debug_action_metadata_lines());
+    lines.extend(demo_metrics_debug_action_readiness_lines(
+        selected_bundle_count,
+    ));
+    lines.extend([
+        format!("demo editor workbench: {DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND}"),
+        format!("demo editor proof supporting: {DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND}"),
+        format!("demo editor notes: {DEVTOOLS_DEMO_EDITOR_NOTES_COMMAND}"),
+        format!("demo device shell: {DEVTOOLS_DEMO_DEVICE_SHELL_COMMAND}"),
+        format!("metrics stats: {DEVTOOLS_METRICS_STATS_COMMAND}"),
+        format!("metrics layout perf: {DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND}"),
+        format!("metrics memory: {DEVTOOLS_METRICS_MEMORY_COMMAND}"),
+        format!("debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}"),
+        format!("debug hotspots: {DEVTOOLS_DEBUG_HOTSPOTS_COMMAND}"),
+        format!("debug trace: {DEVTOOLS_DEBUG_TRACE_COMMAND}"),
+        format!("docking arbitration supporting: {DEVTOOLS_DOCKING_ARBITRATION_COMMAND}"),
+        format!("docking campaign validate: {DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND}"),
+        format!("docking policy-skip local: {DEVTOOLS_DOCKING_POLICY_SKIP_COMMAND}"),
+    ]);
+    lines
 }

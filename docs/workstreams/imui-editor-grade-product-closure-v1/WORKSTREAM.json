@@ -728,6 +728,7 @@
     "crates/fret-diag/src/regression_summary.rs",
     "apps/fret-devtools/src/main.rs",
     "apps/fret-devtools/src/native.rs",
+    "apps/fret-devtools/src/demo_metrics_debug.rs",
     "apps/fret-devtools/src/followup.rs",
     "apps/fret-devtools/src/workflow_run.rs",
     "apps/fret-devtools-mcp/src/main.rs",
