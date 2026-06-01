@@ -61,8 +61,8 @@ use demo_metrics_debug::{
 use demo_metrics_debug::{
     demo_metrics_debug_action_copy_command_lines, demo_metrics_debug_action_metadata_lines,
     demo_metrics_debug_action_readiness_lines, demo_metrics_debug_workflow_readiness_lines,
-    demo_metrics_debug_workflow_status_lines, devtools_demo_metrics_debug_lines,
-    devtools_demo_metrics_debug_lines_with_state,
+    demo_metrics_debug_workflow_result_action_lines, demo_metrics_debug_workflow_status_lines,
+    devtools_demo_metrics_debug_lines, devtools_demo_metrics_debug_lines_with_state,
 };
 
 const CMD_COPY_WS_URL: &str = "fret.devtools.copy_ws_url";
@@ -12074,6 +12074,12 @@ mod tests {
             "workflow readiness: run perf docking suite | workflow_id=perf-docking-suite-ws | runnable=false | reason=select a DevTools session"
         ));
         assert!(text.contains("workflow status: in_flight=false | last_result=- | last_error=-"));
+        assert!(text.contains(
+            "workflow result action: copy workflow result | command=fret.devtools.workflow.copy_result_path | enabled=false | reason=wait for workflow result artifact"
+        ));
+        assert!(text.contains(
+            "workflow result action: open workflow JSON | command=fret.devtools.workflow.open_result_json | enabled=false | reason=wait for workflow result artifact"
+        ));
         assert!(text.contains("demo editor workbench: cargo run -p fret-demo --bin imui_editor_workbench_demo"));
         assert!(text.contains(
             "demo editor proof supporting: cargo run -p fret-demo --bin imui_editor_proof_demo"
@@ -12192,6 +12198,14 @@ mod tests {
         .contains(
             &"workflow status: in_flight=true | last_result=target/fret-diag/devtools-workflows/perf-docking/result.json | last_error=suite failed".to_string()
         ));
+
+        let missing_result = demo_metrics_debug_workflow_result_action_lines(false);
+        assert!(missing_result.contains(&"workflow result action: copy workflow result | command=fret.devtools.workflow.copy_result_path | enabled=false | reason=wait for workflow result artifact".to_string()));
+        assert!(missing_result.contains(&"workflow result action: open workflow JSON | command=fret.devtools.workflow.open_result_json | enabled=false | reason=wait for workflow result artifact".to_string()));
+
+        let available_result = demo_metrics_debug_workflow_result_action_lines(true);
+        assert!(available_result.contains(&"workflow result action: copy workflow result | command=fret.devtools.workflow.copy_result_path | enabled=true | reason=workflow result available".to_string()));
+        assert!(available_result.contains(&"workflow result action: open workflow JSON | command=fret.devtools.workflow.open_result_json | enabled=true | reason=workflow result available".to_string()));
     }
 
     #[test]
