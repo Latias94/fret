@@ -1946,6 +1946,321 @@ fn search_view_and_dropdown_menu_arbitrate_sibling_popovers() {
 }
 
 #[test]
+fn search_view_full_screen_blocks_sibling_menu_until_dismissed() {
+    use fret_ui::action::OnActivate;
+    use fret_ui::element::{ContainerProps, FlexProps, Length, Overflow, SpacingLength};
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{
+        Button, DropdownMenu, List, ListItem, MenuEntry, MenuItem, SearchView,
+        SearchViewPresentation,
+    };
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::Expressive);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(760.0), Px(420.0)),
+    );
+
+    let search_open = app.models_mut().insert(false);
+    let search_query = app.models_mut().insert(String::new());
+    let selected_suggestion = app.models_mut().insert(Arc::<str>::from("alpha"));
+    let menu_open = app.models_mut().insert(false);
+
+    let search_open_for_render = search_open.clone();
+    let search_query_for_render = search_query.clone();
+    let selected_suggestion_for_render = selected_suggestion.clone();
+    let menu_open_for_render = menu_open.clone();
+    let render = move |ui: &mut UiTree<TestHost>,
+                       app: &mut TestHost,
+                       services: &mut dyn UiServices| {
+        let search_open = search_open_for_render.clone();
+        let search_query = search_query_for_render.clone();
+        let selected_suggestion = selected_suggestion_for_render.clone();
+        let menu_open = menu_open_for_render.clone();
+
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let search = SearchView::new(search_open.clone(), search_query.clone())
+                .a11y_label("Full screen search actions")
+                .placeholder("Search commands")
+                .presentation(SearchViewPresentation::FullScreen)
+                .test_id("search-full-search")
+                .overlay_test_id("search-full-panel")
+                .into_element(cx, move |cx| {
+                    vec![
+                        List::new(selected_suggestion.clone())
+                            .a11y_label("Full screen search suggestions")
+                            .test_id("search-full-suggestions")
+                            .items(vec![
+                                ListItem::new("alpha", "Alpha").test_id("search-full-option-alpha"),
+                                ListItem::new("beta", "Beta").test_id("search-full-option-beta"),
+                            ])
+                            .into_element(cx),
+                    ]
+                });
+
+            let search = {
+                let mut container = ContainerProps::default();
+                container.layout.size.width = Length::Px(Px(420.0));
+                container.layout.overflow = Overflow::Visible;
+                cx.container(container, move |_cx| vec![search])
+            };
+
+            let toggle_menu_open: OnActivate = {
+                let menu_open = menu_open.clone();
+                Arc::new(move |host, action_cx, _reason| {
+                    let _ = host.models_mut().update(&menu_open, |v| *v = !*v);
+                    host.request_redraw(action_cx.window);
+                })
+            };
+
+            let menu = DropdownMenu::new(menu_open.clone())
+                .a11y_label("Full screen search actions menu")
+                .test_id("search-full-menu")
+                .into_element(
+                    cx,
+                    move |cx| {
+                        Button::new("Actions")
+                            .on_activate(toggle_menu_open.clone())
+                            .test_id("search-full-menu-trigger")
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            MenuEntry::Item(
+                                MenuItem::new("Filter alpha").test_id("search-full-menu-alpha"),
+                            ),
+                            MenuEntry::Item(
+                                MenuItem::new("Clear search").test_id("search-full-menu-clear"),
+                            ),
+                        ]
+                    },
+                );
+
+            let mut row = FlexProps::default();
+            row.direction = fret_core::Axis::Horizontal;
+            row.align = fret_ui::element::CrossAlign::Center;
+            row.gap = SpacingLength::Px(Px(12.0));
+            row.layout.size.width = Length::Fill;
+
+            let row = cx.flex(row, move |_cx| vec![search, menu]);
+            vec![with_padding(cx, Px(24.0), row)]
+        })
+    };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let search_node = semantics_node_id_by_test_id(&ui, "search-full-search")
+        .expect("expected full-screen SearchView underlay input");
+    ui.set_focus(Some(search_node));
+    for _ in 0..64 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    assert_eq!(
+        app.models().get_copied(&search_open),
+        Some(true),
+        "expected focusing full-screen SearchView to open the modal"
+    );
+    assert!(
+        semantics_node_id_by_test_id(&ui, "search-full-panel").is_some(),
+        "expected full-screen SearchView modal panel"
+    );
+
+    let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+    assert!(
+        stack
+            .stack
+            .iter()
+            .any(|entry| entry.kind == OverlayStackEntryKind::Modal && entry.open && entry.visible),
+        "expected full-screen SearchView to occupy the modal overlay layer"
+    );
+
+    let header = semantics_node_id_by_test_id(&ui, "search-full-search.overlay.header")
+        .expect("expected full-screen SearchView overlay header input");
+    assert_eq!(
+        ui.focus(),
+        Some(header),
+        "expected full-screen SearchView to keep editing focus in the overlay header"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::TextInput("delta".to_string()),
+    );
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    assert_eq!(
+        app.models().get_cloned(&search_query).as_deref(),
+        Some("delta"),
+        "expected full-screen SearchView header input to update the shared query model"
+    );
+
+    let menu_trigger_node = semantics_node_id_by_test_id(&ui, "search-full-menu-trigger")
+        .expect("expected sibling DropdownMenu trigger");
+    let trigger_bounds = ui
+        .debug_node_visual_bounds(menu_trigger_node)
+        .expect("expected sibling DropdownMenu trigger bounds");
+    let click_at = Point::new(
+        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(7), click_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(7), click_at));
+    for _ in 0..8 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    assert_eq!(
+        app.models().get_copied(&menu_open),
+        Some(false),
+        "expected full-screen SearchView modal to block sibling menu trigger activation"
+    );
+    assert_eq!(
+        app.models().get_copied(&search_open),
+        Some(true),
+        "expected blocked sibling menu click to leave full-screen SearchView open"
+    );
+    assert!(
+        semantics_node_id_by_test_id(&ui, "search-full-panel").is_some(),
+        "expected full-screen SearchView panel to remain open after blocked sibling click"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Escape));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Escape));
+
+    let mut search_closed = false;
+    for _ in 0..80 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+        search_closed = semantics_node_id_by_test_id(&ui, "search-full-panel").is_none();
+        if search_closed {
+            break;
+        }
+    }
+
+    assert!(
+        search_closed,
+        "expected Escape to close full-screen SearchView"
+    );
+    assert_eq!(
+        app.models().get_copied(&search_open),
+        Some(false),
+        "expected Escape to collapse full-screen SearchView open model"
+    );
+    assert_eq!(
+        app.models().get_cloned(&search_query).as_deref(),
+        Some("delta"),
+        "expected closing full-screen SearchView to preserve query state"
+    );
+
+    let menu_trigger_after_close = semantics_node_id_by_test_id(&ui, "search-full-menu-trigger")
+        .expect("expected sibling DropdownMenu trigger after SearchView closes");
+    let trigger_bounds = ui
+        .debug_node_visual_bounds(menu_trigger_after_close)
+        .expect("expected sibling DropdownMenu trigger bounds after SearchView closes");
+    let click_at = Point::new(
+        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(8), click_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(8), click_at));
+
+    let mut menu_opened = false;
+    for _ in 0..80 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+        menu_opened = semantics_node_id_by_test_id(&ui, "search-full-menu").is_some();
+        if menu_opened {
+            break;
+        }
+    }
+
+    assert!(
+        menu_opened,
+        "expected sibling DropdownMenu to open after SearchView closes"
+    );
+    assert_eq!(
+        app.models().get_copied(&menu_open),
+        Some(true),
+        "expected sibling DropdownMenu open model after SearchView dismiss"
+    );
+    assert!(
+        semantics_node_id_by_test_id(&ui, "search-full-panel").is_none(),
+        "expected opening sibling DropdownMenu not to reopen full-screen SearchView"
+    );
+
+    let first_item = semantics_node_id_by_test_id(&ui, "search-full-menu-alpha")
+        .expect("expected first sibling menu item");
+    assert_eq!(
+        ui.focus(),
+        Some(first_item),
+        "expected sibling DropdownMenu to take focus after full-screen SearchView dismisses"
+    );
+}
+
+#[test]
 fn dialog_scrim_dismisses_without_activating_underlay() {
     use fret_ui_material3::{Button, Dialog, DialogAction};
 

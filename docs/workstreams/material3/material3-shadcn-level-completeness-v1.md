@@ -116,6 +116,21 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     overlay dismissal, menu role, first-item focus, and `Escape` focus restore.
   - Gates: `material3_overlay_interactions::search_view_and_dropdown_menu_arbitrate_sibling_popovers`
     plus `ui-gallery-material3-search-menu-sibling-popovers.json`.
+- 2026-06-01 SearchView edge/full-screen composition:
+  - Docked `SearchView` now has a focused bottom-edge collision test proving the shared popper
+    solver flips above the input, clamps height, and keeps the overlay inside the window collision
+    boundary.
+  - Full-screen `SearchView` now has a sibling `DropdownMenu` composition test proving modal-layer
+    ownership, overlay-header focus, query preservation, sibling trigger blocking while modal, and
+    menu focus takeover after dismissal.
+  - The Material Menu gallery includes bottom-edge and full-screen SearchView repro anchors, with a
+    diag script covering real-page panel bounds, dialog role, modal blocking, and post-dismiss menu
+    focus.
+  - Gates:
+    `search_view_behavior::search_view_docked_overlay_flips_and_clamps_near_viewport_bottom`,
+    `material3_overlay_interactions::search_view_full_screen_blocks_sibling_menu_until_dismissed`,
+    `material3_search_view_surface`, and
+    `ui-gallery-material3-search-view-edge-fullscreen-composition.json`.
 - 2026-06-01 Navigation routed-content composition:
   - `NavigationBar`, `NavigationRail`, and `NavigationDrawer` gallery snippets now render
     caller-owned route panels with stable route-panel and active-route anchors.
@@ -146,5 +161,5 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
    `force_mount` content, presence motion, and overflow/scroll affordance polish.
 2. Audit `NavigationDrawer` icon/text slot mirroring under RTL if drawer-heavy RTL app surfaces
    become a priority.
-3. Add focused SearchView edge/collision coverage if product surfaces place search near viewport
-   bottoms, including full-screen `SearchView` + menu composition if needed.
+3. Extend real-device/mobile IME and inset proof for overlay-heavy Material flows if mobile search
+   and bottom-sheet surfaces become product priorities.

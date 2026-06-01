@@ -21,6 +21,8 @@ pub fn render(
     let open = dropdown.open_model();
     let override_open = cx.local_model_keyed("override_open", || false);
     let search_menu_selected = cx.local_model_keyed("search_menu_selected", || Arc::<str>::from("alpha"));
+    let search_bottom_selected = cx.local_model_keyed("search_bottom_selected", || Arc::<str>::from("alpha"));
+    let search_full_screen_selected = cx.local_model_keyed("search_full_screen_selected", || Arc::<str>::from("alpha"));
     let show_toolbar = cx.local_model_keyed("show_toolbar", || true);
     let density = cx.local_model_keyed("density", || {
         Some(Arc::<str>::from("comfortable"))
@@ -58,14 +60,33 @@ pub fn render(
         .a11y_label("Material 3 Search actions menu")
         .test_id("ui-gallery-material3-menu-search-actions");
     let search_menu_open = search_menu_dropdown.open_model();
+    let search_full_screen_dropdown = material3::DropdownMenu::uncontrolled(cx)
+        .a11y_label("Material 3 full-screen Search actions menu")
+        .test_id("ui-gallery-material3-menu-search-full-screen-actions");
+    let search_full_screen_menu_open = search_full_screen_dropdown.open_model();
     let toggle_open_search_menu: OnActivate = {
         let open = open.clone();
         let override_open = override_open.clone();
         let search_menu_open = search_menu_open.clone();
+        let search_full_screen_menu_open = search_full_screen_menu_open.clone();
         Arc::new(move |host, action_cx, _reason| {
             let _ = host.models_mut().update(&open, |v| *v = false);
             let _ = host.models_mut().update(&override_open, |v| *v = false);
+            let _ = host.models_mut().update(&search_full_screen_menu_open, |v| *v = false);
             let _ = host.models_mut().update(&search_menu_open, |v| *v = !*v);
+            host.request_redraw(action_cx.window);
+        })
+    };
+    let toggle_open_search_full_screen_menu: OnActivate = {
+        let open = open.clone();
+        let override_open = override_open.clone();
+        let search_menu_open = search_menu_open.clone();
+        let search_full_screen_menu_open = search_full_screen_menu_open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = false);
+            let _ = host.models_mut().update(&override_open, |v| *v = false);
+            let _ = host.models_mut().update(&search_menu_open, |v| *v = false);
+            let _ = host.models_mut().update(&search_full_screen_menu_open, |v| *v = !*v);
             host.request_redraw(action_cx.window);
         })
     };
@@ -308,6 +329,120 @@ pub fn render(
         .items_center()
         .into_element(cx);
 
+    let search_bottom_suggestions = material3::List::new(search_bottom_selected)
+        .a11y_label("Bottom edge search suggestions")
+        .test_id("ui-gallery-material3-menu-search-bottom-suggestions")
+        .items(vec![
+            material3::ListItem::new("alpha", "Alpha")
+                .leading_icon(ids::ui::SEARCH)
+                .test_id("ui-gallery-material3-menu-search-bottom-option-alpha"),
+            material3::ListItem::new("beta", "Beta")
+                .leading_icon(ids::ui::SEARCH)
+                .test_id("ui-gallery-material3-menu-search-bottom-option-beta"),
+            material3::ListItem::new("gamma", "Gamma")
+                .leading_icon(ids::ui::SEARCH)
+                .test_id("ui-gallery-material3-menu-search-bottom-option-gamma"),
+        ])
+        .into_element(cx);
+
+    let search_bottom_view = material3::SearchView::uncontrolled(cx)
+        .leading_icon(ids::ui::SEARCH)
+        .trailing_icon(ids::ui::CLOSE)
+        .placeholder("Search near bottom")
+        .a11y_label("Search near bottom edge")
+        .max_height(Px(220.0))
+        .test_id("ui-gallery-material3-menu-search-bottom")
+        .overlay_test_id("ui-gallery-material3-menu-search-bottom-panel")
+        .into_element(cx, |_cx| vec![search_bottom_suggestions]);
+
+    let search_bottom_view = ui::v_stack(move |_cx| vec![search_bottom_view])
+        .layout(LayoutRefinement::default().w_px(Px(420.0)).min_w_0())
+        .into_element(cx);
+    let search_bottom_gap = ui::container(|_cx| Vec::<AnyElement>::new())
+        .layout(LayoutRefinement::default().w_full().h_px(Px(172.0)))
+        .into_element(cx)
+        .test_id("ui-gallery-material3-menu-search-bottom-gap");
+    let search_bottom_probe = ui::v_stack(move |_cx| vec![search_bottom_gap, search_bottom_view])
+        .layout(LayoutRefinement::default().w_full().h_px(Px(260.0)).overflow_visible().min_w_0())
+        .gap(Space::N0)
+        .items_start()
+        .into_element(cx)
+        .test_id("ui-gallery-material3-menu-search-bottom-probe");
+
+    let search_full_screen_suggestions = material3::List::new(search_full_screen_selected)
+        .a11y_label("Full-screen search suggestions")
+        .test_id("ui-gallery-material3-menu-search-full-screen-suggestions")
+        .items(vec![
+            material3::ListItem::new("alpha", "Alpha")
+                .leading_icon(ids::ui::SEARCH)
+                .test_id("ui-gallery-material3-menu-search-full-screen-option-alpha"),
+            material3::ListItem::new("beta", "Beta")
+                .leading_icon(ids::ui::SEARCH)
+                .test_id("ui-gallery-material3-menu-search-full-screen-option-beta"),
+            material3::ListItem::new("gamma", "Gamma")
+                .leading_icon(ids::ui::SEARCH)
+                .test_id("ui-gallery-material3-menu-search-full-screen-option-gamma"),
+        ])
+        .into_element(cx);
+
+    let search_full_screen_view = material3::SearchView::uncontrolled(cx)
+        .leading_icon(ids::ui::SEARCH)
+        .trailing_icon(ids::ui::CLOSE)
+        .placeholder("Search full screen")
+        .a11y_label("Full-screen search")
+        .presentation(material3::SearchViewPresentation::FullScreen)
+        .test_id("ui-gallery-material3-menu-search-full-screen")
+        .overlay_test_id("ui-gallery-material3-menu-search-full-screen-panel")
+        .into_element(cx, |_cx| vec![search_full_screen_suggestions]);
+
+    let search_full_screen_view = ui::v_stack(move |_cx| vec![search_full_screen_view])
+        .layout(LayoutRefinement::default().w_px(Px(420.0)).min_w_0())
+        .into_element(cx);
+
+    let last_action_for_full_screen_menu_entries = last_action.clone();
+    let search_full_screen_dropdown = search_full_screen_dropdown.into_element(
+        cx,
+        move |cx| {
+            material3::Button::new("Actions")
+                .variant(material3::ButtonVariant::Outlined)
+                .on_activate(toggle_open_search_full_screen_menu.clone())
+                .test_id("ui-gallery-material3-menu-search-full-screen-actions-trigger")
+                .into_element(cx)
+        },
+        move |_cx| {
+            vec![
+                material3::MenuEntry::Item(
+                    material3::MenuItem::new("Filter Alpha")
+                        .test_id("ui-gallery-material3-menu-search-full-screen-actions-alpha")
+                        .on_select(on_select(
+                            "material3.menu.search.full_screen.alpha",
+                            last_action_for_full_screen_menu_entries.clone(),
+                        )),
+                ),
+                material3::MenuEntry::Item(
+                    material3::MenuItem::new("Clear search")
+                        .test_id("ui-gallery-material3-menu-search-full-screen-actions-clear")
+                        .on_select(on_select(
+                            "material3.menu.search.full_screen.clear",
+                            last_action_for_full_screen_menu_entries.clone(),
+                        )),
+                ),
+            ]
+        },
+    );
+
+    let search_full_screen_row = ui::h_row(move |_cx| vec![search_full_screen_view, search_full_screen_dropdown])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N3)
+        .items_center()
+        .into_element(cx);
+
+    let search_compositions = ui::v_stack(move |_cx| vec![search_menu_row, search_bottom_probe, search_full_screen_row])
+        .layout(LayoutRefinement::default().w_full().min_w_0().overflow_visible())
+        .gap(Space::N4)
+        .items_start()
+        .into_element(cx);
+
     let last = cx
         .app
         .models()
@@ -358,11 +493,11 @@ pub fn render(
                     cx;
                     shadcn::card_title("Search + Menu"),
                     shadcn::card_description(
-                        "Sibling non-modal overlays: the SearchView closes when the actions menu opens.",
+                        "Sibling, edge, and full-screen SearchView compositions with Material menus.",
                     ),
                 ]
             }),
-            shadcn::card_content(move |_cx| vec![search_menu_row]),
+            shadcn::card_content(move |_cx| vec![search_compositions]),
         ]
     })
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())

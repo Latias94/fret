@@ -15,6 +15,7 @@ mod support;
 use support::events::{key_down, key_up};
 use support::goldens::{run_overlay_frame, run_overlay_frame_with_scene_scaled};
 use support::host::{FakeUiServices, TestHost};
+use support::layout::with_padding;
 use support::theme::apply_material_theme;
 
 fn semantics_test_id_layout_bounds(ui: &UiTree<TestHost>, id: &str) -> Rect {
@@ -305,6 +306,112 @@ fn search_view_docked_overlay_fades_and_expands_on_open_close_frames() {
         first_close_overlay.size.height.0 > 4.0 && first_close_overlay.size.height.0 < 236.0,
         "expected docked SearchView overlay height to shrink on the first close frame, got {}",
         first_close_overlay.size.height.0
+    );
+}
+
+#[test]
+fn search_view_docked_overlay_flips_and_clamps_near_viewport_bottom() {
+    use fret_ui::element::{ContainerProps, FlexProps, Length, Overflow, SpacingLength};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(260.0)),
+    );
+
+    let open = app.models_mut().insert(true);
+    let query = app.models_mut().insert(String::from("bottom"));
+    let open_model = open.clone();
+    let query_model = query.clone();
+
+    let render = move |ui: &mut UiTree<TestHost>,
+                       app: &mut TestHost,
+                       services: &mut dyn UiServices| {
+        let open = open_model.clone();
+        let query = query_model.clone();
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", move |cx| {
+            let search = SearchView::new(open, query)
+                .test_id("m3-search-view")
+                .placeholder("Search bottom edge")
+                .max_height(Px(180.0))
+                .into_element(cx, |cx| {
+                    vec![
+                        cx.text("Alpha"),
+                        cx.text("Bravo"),
+                        cx.text("Charlie"),
+                        cx.text("Delta"),
+                        cx.text("Echo"),
+                    ]
+                });
+
+            let search = {
+                let mut props = ContainerProps::default();
+                props.layout.size.width = Length::Px(Px(360.0));
+                props.layout.overflow = Overflow::Visible;
+                cx.container(props, move |_cx| vec![search])
+            };
+
+            let spacer = {
+                let mut props = ContainerProps::default();
+                props.layout.size.width = Length::Px(Px(360.0));
+                props.layout.size.height = Length::Px(Px(172.0));
+                cx.container(props, |_cx| Vec::<fret_ui::element::AnyElement>::new())
+            };
+
+            let mut column = FlexProps::default();
+            column.direction = fret_core::Axis::Vertical;
+            column.align = fret_ui::element::CrossAlign::Start;
+            column.gap = SpacingLength::Px(Px(0.0));
+            column.layout.size.width = Length::Px(Px(360.0));
+            column.layout.overflow = Overflow::Visible;
+
+            let content = cx.flex(column, move |_cx| vec![spacer, search]);
+            vec![with_padding(cx, Px(12.0), content)]
+        })
+    };
+
+    for _ in 0..64 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    let anchor = semantics_test_id_layout_bounds(&ui, "m3-search-view");
+    let overlay = semantics_test_id_layout_bounds(&ui, "m3-search-view.overlay");
+
+    assert!(
+        anchor.origin.y.0 > 160.0,
+        "test setup should place the SearchView input near the bottom edge; anchor={anchor:?}"
+    );
+    assert!(
+        overlay.origin.y.0 >= 20.0 - 0.5,
+        "docked SearchView overlay should respect window margin plus collision padding; overlay={overlay:?}"
+    );
+    assert!(
+        overlay.origin.y.0 + overlay.size.height.0 <= bounds.size.height.0 - 20.0 + 0.5,
+        "docked SearchView overlay should stay inside the bottom collision boundary; overlay={overlay:?}"
+    );
+    assert!(
+        overlay.origin.y.0 + overlay.size.height.0 <= anchor.origin.y.0 + 0.5,
+        "docked SearchView should flip above the input when bottom space is insufficient; anchor={anchor:?} overlay={overlay:?}"
+    );
+    assert!(
+        overlay.size.height.0 < 180.0 && overlay.size.height.0 > 80.0,
+        "docked SearchView should clamp height to the available top-side space; overlay={overlay:?}"
     );
 }
 

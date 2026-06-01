@@ -25,10 +25,11 @@ This medium goal is complete for the targeted composition set:
   physical destination order stayed LTR under RTL.
 
 Open follow-ups are intentionally outside this medium goal and listed in the residual sections
-below: full app-router proof for ADR 0230 route hooks, drawer slot mirroring under RTL, SearchView
-edge collision/full-screen composition, and real mobile IME/inset behavior for bottom-sheet fields.
-The modal drawer routed-content follow-up was completed later in
-`docs/workstreams/material3/material3-modal-navigation-drawer-routed-content-v1.md`.
+below: full app-router proof for ADR 0230 route hooks, drawer slot mirroring under RTL, and real
+mobile IME/inset behavior for bottom-sheet fields. The modal drawer routed-content follow-up was
+completed later in `docs/workstreams/material3/material3-modal-navigation-drawer-routed-content-v1.md`.
+The SearchView edge/full-screen composition follow-up was completed later in
+`docs/workstreams/material3/material3-search-view-edge-fullscreen-composition-v1.md`.
 
 ## Scope
 
@@ -254,13 +255,13 @@ Proof:
     passed with `run_id=1780281469011`; session:
     `target/fret-diag-material3-search-menu-sibling-popovers/sessions/1780281105569-228848`.
 
-Residual risk:
+Follow-up status:
 
-- The gate covers docked `SearchView` + sibling `DropdownMenu`. Full-screen `SearchView` + menu is
-  not covered.
-- Edge-collision behavior when a `SearchView` is opened at the bottom of a viewport should get its
-  own focused follow-up if it becomes a product requirement.
-- Navigation routed-content composition is still pending.
+- The original gate covered docked `SearchView` + sibling `DropdownMenu`.
+- Full-screen `SearchView` + sibling menu blocking and bottom-edge SearchView collision were
+  completed later in
+  `docs/workstreams/material3/material3-search-view-edge-fullscreen-composition-v1.md`.
+- Navigation routed-content composition was completed in Batch 5 below.
 
 ## Batch 5: Navigation Surfaces With Routed Content
 
