@@ -11,7 +11,9 @@ use fret_runtime::{ModelHost, PlatformCapabilities};
 use fret_ui::element::{Length, PressableA11y, PressableProps};
 use fret_ui::{UiTree, declarative};
 use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
-use fret_ui_material3::menu::{Menu, MenuEntry, MenuGroup, MenuItem, MenuLabel};
+use fret_ui_material3::menu::{
+    Menu, MenuEntry, MenuGroup, MenuItem, MenuLabel, MenuSub, MenuSubContent, MenuSubTrigger,
+};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 use fret_ui_material3::{DropdownMenu, DropdownMenuAlign};
 
@@ -942,6 +944,265 @@ fn dropdown_menu_matches_material_panel_focus_and_motion() {
     assert!(
         scene_has_intermediate_overlay_motion(&close_scene),
         "expected dropdown menu to fade and scale during close"
+    );
+}
+
+#[test]
+fn dropdown_menu_submenu_opens_on_arrow_right_and_arrow_left_restores_trigger_focus() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(720.0), Px(420.0)),
+    );
+    let open = app.models_mut().insert(true);
+    let render = move |ui: &mut UiTree<TestHost>,
+                       app: &mut TestHost,
+                       services: &mut dyn UiServices| {
+        let open = open.clone();
+        declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let dropdown = DropdownMenu::new(open)
+                .a11y_label("Material submenu dropdown")
+                .test_id("m3-submenu-dropdown")
+                .submenu_min_width(Px(176.0))
+                .into_element(
+                    cx,
+                    |cx| {
+                        let mut props = PressableProps::default();
+                        props.layout.size.width = Length::Px(Px(220.0));
+                        props.layout.size.height = Length::Px(Px(40.0));
+                        props.a11y = PressableA11y {
+                            label: Some(Arc::<str>::from("Open submenu menu")),
+                            test_id: Some(Arc::<str>::from("m3-submenu-trigger")),
+                            ..Default::default()
+                        };
+                        cx.pressable(props, |_cx, _st| Vec::new())
+                    },
+                    |_cx| {
+                        vec![
+                            MenuEntry::Item(
+                                MenuItem::new("Alpha").test_id("m3-submenu-alpha-root"),
+                            ),
+                            MenuSub::new(
+                                MenuSubTrigger::new("More").refine(|item| {
+                                    item.value("more").test_id("m3-submenu-more").shortcut(">")
+                                }),
+                                MenuSubContent::new(vec![
+                                    MenuEntry::Item(
+                                        MenuItem::new("Sub Alpha").test_id("m3-submenu-sub-alpha"),
+                                    ),
+                                    MenuEntry::Item(
+                                        MenuItem::new("Sub Beta").test_id("m3-submenu-sub-beta"),
+                                    ),
+                                ]),
+                            )
+                            .into_entry(),
+                        ]
+                    },
+                );
+            vec![with_padding(cx, Px(32.0), dropdown)]
+        })
+    };
+
+    for _ in 0..8 {
+        run_overlay_frame_with_scene_scaled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            1.0,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    let more = semantics_node_id_by_test_id(&ui, "m3-submenu-more")
+        .expect("expected submenu trigger semantics node");
+    ui.set_focus(Some(more));
+    dispatch_key_pair(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
+    run_overlay_frame_with_scene_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let more_sem = semantics_node_by_test_id(&ui, "m3-submenu-more");
+    assert_eq!(more_sem.role, SemanticsRole::MenuItem);
+    assert!(
+        more_sem.flags.expanded,
+        "expected ArrowRight to mark the submenu trigger expanded"
+    );
+    assert!(
+        !more_sem.controls.is_empty(),
+        "expected submenu trigger to expose a controls relation"
+    );
+    assert!(
+        live_test_id_layout_bounds(&ui, &app, window, "m3-submenu-more.submenu-chevron")
+            .size
+            .width
+            .0
+            > 0.0,
+        "expected Material submenu trigger to render an inline-end chevron"
+    );
+
+    let sub_alpha = semantics_node_id_by_test_id(&ui, "m3-submenu-sub-alpha")
+        .expect("expected submenu item semantics node after ArrowRight");
+    ui.set_focus(Some(sub_alpha));
+    dispatch_key_pair(&mut ui, &mut app, &mut services, KeyCode::ArrowLeft);
+    run_overlay_frame_with_scene_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    assert_eq!(
+        ui.focus(),
+        Some(more),
+        "expected ArrowLeft from submenu content to restore focus to the submenu trigger"
+    );
+    let more_sem = semantics_node_by_test_id(&ui, "m3-submenu-more");
+    assert!(
+        !more_sem.flags.expanded,
+        "expected ArrowLeft to close the submenu"
+    );
+}
+
+#[test]
+fn dropdown_menu_submenu_uses_rtl_inline_end_key_and_clamps_long_content() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(720.0), Px(420.0)),
+    );
+    let open = app.models_mut().insert(true);
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let open = open.clone();
+            declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let dropdown = DropdownMenu::new(open)
+                    .align(DropdownMenuAlign::Start)
+                    .a11y_label("RTL long Material submenu dropdown")
+                    .test_id("m3-rtl-long-submenu")
+                    .max_height(Px(160.0))
+                    .submenu_min_width(Px(192.0))
+                    .into_element(
+                        cx,
+                        |cx| {
+                            let mut props = PressableProps::default();
+                            props.layout.size.width = Length::Px(Px(220.0));
+                            props.layout.size.height = Length::Px(Px(40.0));
+                            props.a11y = PressableA11y {
+                                label: Some(Arc::<str>::from("Open RTL submenu menu")),
+                                test_id: Some(Arc::<str>::from("m3-rtl-long-submenu-trigger")),
+                                ..Default::default()
+                            };
+                            cx.pressable(props, |_cx, _st| Vec::new())
+                        },
+                        |_cx| {
+                            vec![
+                                MenuEntry::Item(
+                                    MenuItem::new("More")
+                                        .value("more")
+                                        .test_id("m3-rtl-long-submenu-more")
+                                        .submenu((0..20).map(|idx| {
+                                            MenuEntry::Item(
+                                                MenuItem::new(format!("Nested {idx:02}")).test_id(
+                                                    format!("m3-rtl-long-submenu-item-{idx:02}"),
+                                                ),
+                                            )
+                                        })),
+                                ),
+                                MenuEntry::Item(
+                                    MenuItem::new("Other").test_id("m3-rtl-long-submenu-other"),
+                                ),
+                            ]
+                        },
+                    );
+                vec![with_padding(cx, Px(320.0), dropdown)]
+            })
+        };
+
+    for _ in 0..8 {
+        run_overlay_frame_with_scene_scaled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            1.0,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    let more = semantics_node_id_by_test_id(&ui, "m3-rtl-long-submenu-more")
+        .expect("expected RTL submenu trigger semantics node");
+    ui.set_focus(Some(more));
+    dispatch_key_pair(&mut ui, &mut app, &mut services, KeyCode::ArrowLeft);
+    run_overlay_frame_with_scene_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let more_sem = semantics_node_by_test_id(&ui, "m3-rtl-long-submenu-more");
+    assert!(
+        more_sem.flags.expanded,
+        "expected RTL ArrowLeft to open the inline-end submenu"
+    );
+    assert!(
+        live_test_id_layout_bounds(
+            &ui,
+            &app,
+            window,
+            "m3-rtl-long-submenu-more.submenu-chevron"
+        )
+        .size
+        .width
+        .0 > 0.0,
+        "expected RTL submenu trigger chevron to render"
+    );
+
+    let submenu_panel =
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rtl-long-submenu.submenu-more");
+    assert!(
+        submenu_panel.size.height.0 <= 160.5,
+        "expected long Material submenu content to clamp to max height, got {submenu_panel:?}"
+    );
+    assert!(
+        semantics_node_id_by_test_id(&ui, "m3-rtl-long-submenu-item-00").is_some(),
+        "expected long submenu items to mount in the scrollable submenu panel"
     );
 }
 

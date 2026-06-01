@@ -184,15 +184,36 @@ pub fn render(
                     .test_id("ui-gallery-material3-menu-group-view"),
                 ),
                 material3::MenuEntry::Separator,
-                material3::MenuEntry::Item(
-                    material3::MenuItem::new("Settings")
-                        .trailing_icon(ids::ui::CHEVRON_RIGHT)
-                        .test_id("ui-gallery-material3-menu-item-settings")
-                        .on_select(on_select(
-                            "material3.menu.settings",
-                            last_action_for_entries.clone(),
-                        )),
-                ),
+                material3::MenuSub::new(
+                    material3::MenuSubTrigger::new("Settings").refine(|item| {
+                        item.value("settings")
+                            .test_id("ui-gallery-material3-menu-item-settings")
+                    }),
+                    material3::MenuSubContent::new(vec![
+                        material3::MenuEntry::Label(
+                            material3::MenuLabel::new("Workspace")
+                                .test_id("ui-gallery-material3-menu-label-workspace"),
+                        ),
+                        material3::MenuEntry::Item(
+                            material3::MenuItem::new("Preferences")
+                                .test_id("ui-gallery-material3-menu-item-preferences")
+                                .on_select(on_select(
+                                    "material3.menu.settings.preferences",
+                                    last_action_for_entries.clone(),
+                                )),
+                        ),
+                        material3::MenuEntry::Item(
+                            material3::MenuItem::new("Keyboard shortcuts")
+                                .shortcut("Ctrl+K")
+                                .test_id("ui-gallery-material3-menu-item-keymap")
+                                .on_select(on_select(
+                                    "material3.menu.settings.keymap",
+                                    last_action_for_entries.clone(),
+                                )),
+                        ),
+                    ]),
+                )
+                .into_entry(),
             ]
         },
     );

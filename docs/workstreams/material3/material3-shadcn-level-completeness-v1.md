@@ -29,7 +29,7 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 | Slider / RangeSlider | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Keep future work focused on higher-density examples and AT validation. |
 | SegmentedButton | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Single and multi-select are covered. |
 | Tabs | Strong | Strong | Strong | Strong | Strong | Strong | Strong | 2026-06-01: gained force-mounted `TabPanel` content while keeping inactive panels out of semantics. Residuals: presence motion and richer overflow polish only if a concrete app gate needs them. |
-| Menu / DropdownMenu | Strong | Strong | Strong | Strong | Strong | Strong | Strong | 2026-06-01: gained `MenuGroup` and clamped scrollable DropdownMenu viewports. Residual: Material submenu recipe wiring. |
+| Menu / DropdownMenu | Strong | Strong | Strong | Strong | Strong | Strong | Strong | 2026-06-01: gained `MenuGroup`, clamped scrollable DropdownMenu viewports, and kit-backed Material submenu wiring with LTR/RTL keyboard gates. Residual: pointer-corridor diagnostics only if product hover flows need stronger evidence. |
 | Select / ExposedDropdown / Autocomplete | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Motion gates cover Select, Autocomplete, and ExposedDropdown chevron + overlay open/close fade/scale. |
 | TextField | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Floating-label and token work are mature; keep extending field-family compositions. |
 | Dialog / BottomSheet | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Dialog gates cover open/close fade + rise/scale; BottomSheet gates cover open/close sheet-height slide without panel fade. |
@@ -55,6 +55,17 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
   - Gates:
     `menu_state::{menu_group_wraps_entries_without_skewing_collection_metadata,
     dropdown_menu_long_content_uses_scrollable_material_viewport}`.
+- 2026-06-01 Menu submenu wiring:
+  - `MenuSubTrigger`, `MenuSubContent`, `MenuSub`, `MenuItem::submenu(...)`, and
+    `DropdownMenu::submenu_min_width(...)` now expose a Material entry-tree authoring path for
+    nested menus.
+  - `DropdownMenu` reuses the existing `fret-ui-kit` Radix-aligned submenu policy models for hover
+    intent, logical inline-end keyboard opening, close/focus restore, submenu content semantics, and
+    long submenu viewport clamping.
+  - The menu gallery now demonstrates a real Settings submenu instead of a static trailing chevron.
+  - Gates:
+    `menu_state::{dropdown_menu_submenu_opens_on_arrow_right_and_arrow_left_restores_trigger_focus,
+    dropdown_menu_submenu_uses_rtl_inline_end_key_and_clamps_long_content}`.
 - 2026-05-31 Tabs panel ownership:
   - `TabPanel`, `.panel/.panels`, active tabpanel semantics, `labelled_by` relation to the selected
     tab, derived tab `controls`, and gallery snippet content panels.
@@ -186,8 +197,7 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 
 1. Add Tabs presence motion or richer scroll affordances only after a concrete product gate proves
    the current force-mounted presence contract or scrollable metric coverage is insufficient.
-2. Wire Material `MenuItem` submenus through the existing `fret-ui-kit` submenu primitives and
-   shadcn reference implementation, with hover intent, keyboard open/close, nested focus restore,
-   and long submenu viewport gates.
+2. Add a pointer-corridor diagnostics replay for Material submenus only if a product flow depends
+   on high-speed hover travel between root menu rows and submenu panels.
 3. Extend real-device/mobile IME and inset proof for overlay-heavy Material flows if mobile search
    and bottom-sheet surfaces become product priorities.

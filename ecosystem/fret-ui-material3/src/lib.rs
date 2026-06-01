@@ -78,7 +78,10 @@ pub use icon_button::{
 };
 pub use input_chip::{InputChip, InputChipStyle};
 pub use list::{List, ListItem};
-pub use menu::{Menu, MenuEntry, MenuGroup, MenuItem, MenuLabel, MenuStyle};
+pub use menu::{
+    Menu, MenuEntry, MenuGroup, MenuItem, MenuLabel, MenuStyle, MenuSub, MenuSubContent,
+    MenuSubTrigger,
+};
 pub use modal_navigation_drawer::ModalNavigationDrawer;
 pub use navigation_bar::{NavigationBar, NavigationBarItem};
 pub use navigation_drawer::{NavigationDrawer, NavigationDrawerItem, NavigationDrawerVariant};
