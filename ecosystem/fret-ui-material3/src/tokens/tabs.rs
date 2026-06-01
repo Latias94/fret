@@ -8,7 +8,7 @@ use fret_ui::Theme;
 use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::{MaterialStateLayerInteraction, MaterialTokenResolver};
-use crate::tokens::typography;
+use crate::tokens::{shape, typography};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum NavigationTabKind {
@@ -136,14 +136,16 @@ pub(crate) fn active_indicator_shape_for(theme: &Theme, kind: NavigationTabKind)
         return Corners::all(Px(0.0));
     }
 
-    theme
-        .corners_by_key("md.comp.primary-navigation-tab.active-indicator.shape")
-        .unwrap_or(Corners {
-            top_left: Px(3.0),
-            top_right: Px(3.0),
-            bottom_right: Px(0.0),
-            bottom_left: Px(0.0),
-        })
+    shape::corners_or_metric(
+        theme,
+        "md.comp.primary-navigation-tab.active-indicator.shape",
+    )
+    .unwrap_or(Corners {
+        top_left: Px(3.0),
+        top_right: Px(3.0),
+        bottom_right: Px(0.0),
+        bottom_left: Px(0.0),
+    })
 }
 
 pub(crate) fn indicator_matches_content(kind: NavigationTabKind) -> bool {
@@ -633,6 +635,39 @@ mod tests {
         assert_eq!(
             divider_height_for(&theme, NavigationTabKind::Secondary),
             Px(1.5)
+        );
+    }
+
+    #[test]
+    fn primary_tab_active_indicator_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert(
+            "md.comp.primary-navigation-tab.active-indicator.shape".to_string(),
+            6.0,
+        );
+        patch.corners.insert(
+            "md.comp.primary-navigation-tab.active-indicator.shape".to_string(),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            active_indicator_shape_for(&theme, NavigationTabKind::Primary),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            }
+        );
+        assert_eq!(
+            active_indicator_shape_for(&theme, NavigationTabKind::Secondary),
+            Corners::all(Px(0.0))
         );
     }
 }
