@@ -30,6 +30,14 @@ and redraw requests shared by keyboard acceptance and suggestion row activation.
 `TextAssistField` options, root key handling, panel row activation, and overlay routing remain
 unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor TextAssistField empty-label owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now keeps input/key orchestration,
+panel routing, and inline empty-label gating while delegating empty-label rendering to
+`controls/text_assist_field/empty.rs`. The private empty owner contains popup empty-text props,
+muted foreground resolution, density row-height routing, and empty test-id mounting. Inline gating,
+panel routing, overlay routing, and public `TextAssistField` options remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor TextField escape-clear owner-split result:
 `ecosystem/fret-ui-editor/src/controls/text_field/element.rs` now keeps TextInput/TextArea
 assembly, buffered key routing, focus-selection sync, blur handling, and clear-button composition

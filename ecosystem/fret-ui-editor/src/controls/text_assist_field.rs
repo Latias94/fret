@@ -12,6 +12,7 @@
 //! - default accept wiring that commits the chosen label back into the bound query model.
 
 mod accept;
+mod empty;
 mod model;
 mod overlay;
 mod panel;
@@ -29,7 +30,7 @@ use fret_ui::action::UiFocusActionHost;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
 };
-use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, GlobalElementId, Invalidation, UiHost};
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::headless::text_assist::{
     TextAssistItem, active_match_index, controller_with_active_item_id,
@@ -38,11 +39,9 @@ use fret_ui_kit::headless::text_assist::{
 };
 
 use super::{TextField, TextFieldAssistiveSemantics, TextFieldOptions};
-use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::popup_list::editor_popup_list_default_max_content_height;
-use crate::primitives::readout::editor_popup_empty_text_props;
-use crate::primitives::style::EditorStyle;
 use accept::accept_text_assist_match;
+use empty::render_text_assist_inline_empty_label;
 
 use model::RenderedTextAssistPanel;
 pub use model::{OnTextAssistFieldAccept, TextAssistFieldOptions, TextAssistFieldSurface};
@@ -261,18 +260,12 @@ impl TextAssistField {
                 let mut children = vec![field];
                 if let Some(panel) = inline_panel {
                     children.push(panel);
-                } else if show_inline_empty_label {
-                    let theme = Theme::global(&*cx.app);
-                    let empty = cx.text_props(editor_popup_empty_text_props(
-                        empty_label.clone(),
-                        editor_muted_foreground(theme),
-                        EditorStyle::resolve(theme).density.row_height,
-                    ));
-                    let empty = if let Some(test_id) = empty_test_id.as_ref() {
-                        empty.test_id(test_id.clone())
-                    } else {
-                        empty
-                    };
+                } else if let Some(empty) = render_text_assist_inline_empty_label(
+                    cx,
+                    show_inline_empty_label,
+                    empty_label.clone(),
+                    empty_test_id.clone(),
+                ) {
                     children.push(empty);
                 }
                 children
