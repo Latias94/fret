@@ -144,6 +144,14 @@ Last updated: 2026-06-01
       while delegating reset/action trailing slot chrome to `composites/property_row/slot.rs`. The
       source gate prevents fixed trailing-slot wrapper policy from drifting back into the element
       owner.
+- [x] Split editor `PropertyGrid` wrapping-layout regression coverage into a private test owner
+      without changing public `PropertyGridOptions`, row option defaults, row-context helpers,
+      row composition, wrapping value text measurement, row separation assertions, or test-id
+      propagation.
+      Result: `composites/property_grid.rs` keeps grid and row-context composition while routing
+      tests through `#[cfg(test)] mod tests;`. `composites/property_grid/tests.rs` owns the
+      wrapping-layout regression, and the source gate prevents layout-test fixtures from drifting
+      back into the grid owner.
 - [x] Split editor `PropertyRow` options/default policy into a private child owner without
       changing public `PropertyRowOptions` import paths, layout defaults, slot width defaults,
       auto-stack identity/test-id fields, row/column assembly, reset slot behavior, value-slot

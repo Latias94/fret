@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor PropertyGrid Test Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `PropertyGrid` wrapping-layout regression coverage moved out of the root
+grid owner into a private `composites/property_grid/tests.rs` owner without changing public
+`PropertyGridOptions`, row option defaults, row-context helpers, row composition, wrapping value
+text measurement, row separation assertions, or test-id propagation.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/property_grid.rs` keeps public grid options,
+  row-option resolution, row-context helper methods, and root grid composition.
+- `ecosystem/fret-ui-editor/src/composites/property_grid/tests.rs` owns the wrapping-layout
+  regression fixture, measured bounds helpers, row separation assertions, and test-id capture.
+- `tools/gate_imui_workstream_source.py` now tracks the test-owner split and rejects layout-test
+  fixtures from drifting back into the grid owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the property-grid test
+  owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor property_grid --no-fail-fast`: pass (1 passed, 221
+  skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor PropertyRow Trailing-Slot Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `PropertyRow` trailing reset/action fixed-width slot wrapper moved out of

@@ -65,6 +65,16 @@ zero gap/padding, horizontal end alignment, and center cross-axis alignment. Row
 reset/action visibility, reset element routing, action mounting, value-slot overflow semantics, and
 test-id propagation remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor PropertyGrid test owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_grid.rs` now keeps public grid options,
+row-option resolution, row-context helper methods, and root grid composition while routing
+regression coverage through `#[cfg(test)] mod tests;`. The private
+`composites/property_grid/tests.rs` owner contains the narrow wrapping-layout regression fixture,
+including wrapping text services, measured bounds helpers, row separation assertions, and test-id
+capture. Public `PropertyGridOptions`, row option defaults, row composition, wrapping value text
+measurement, and test-id propagation remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor GradientEditor stop-row owner-split result:
 `ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps public composition,
 preview/angle/stops group orchestration, add-stop behavior, and empty-state text role helper. The
