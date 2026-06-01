@@ -350,6 +350,15 @@ typing routing. `controls/drag_value/scrub.rs` owns scrub frame chrome, prefix/v
 rendering, and scrub test-id stamping. Public `DragValue` options and double-click typing handoff
 remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor DragValue options owner-split result:
+`ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps keyed control orchestration, mode
+switching, `DragValueCore` wiring, live model updates, and `NumericInput` typing routing while
+re-exporting `DragValueOptions`. The private `controls/drag_value/options.rs` owner contains
+option fields and defaults. Public `DragValueOptions` import paths, fill-width/flex defaults,
+prefix/suffix fields, shared numeric constraints, replace-all typing selection behavior,
+id-source semantics, test-id routing, scrub frame behavior, and typing input routing remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-05-31 editor input-group icon segment owner-split result:
 `ecosystem/fret-ui-editor/src/primitives/input_group/segments.rs` now keeps segment layout, text,
 value, axis, and derived-test-id helpers plus re-exports the icon segment helper names.

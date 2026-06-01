@@ -478,6 +478,15 @@ Last updated: 2026-06-01
       model updates, and `NumericInput` typing routing. `controls/drag_value/scrub.rs` owns scrub
       frame chrome, prefix/value/suffix segment rendering, and scrub test-id stamping. The source
       gate prevents frame chrome and value text assembly from drifting back into the root control.
+- [x] Split editor `DragValue` options/default records into a private child owner without changing
+      public `DragValueOptions` import paths, fill-width/flex defaults, prefix/suffix fields,
+      shared numeric constraints, replace-all typing selection behavior, id-source semantics,
+      test-id routing, keyed control orchestration, scrub frame behavior, or typing input routing.
+      Result: `controls/drag_value.rs` keeps keyed control orchestration, mode switching,
+      `DragValueCore` wiring, live model updates, and `NumericInput` typing routing while
+      re-exporting `DragValueOptions`. `controls/drag_value/options.rs` owns option fields and
+      defaults. The source gate prevents options/default policy from drifting back into the root
+      control.
 - [x] Split editor input-group icon/clear-button segment rendering into a private child owner
       without changing the existing `crate::primitives::input_group::*` helper names or segment
       call paths.

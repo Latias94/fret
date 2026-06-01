@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor DragValue Options Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `DragValue` options/default records moved out of the root control owner into
+a private `controls/drag_value/options.rs` owner without changing public `DragValueOptions` import
+paths, fill-width/flex defaults, prefix/suffix fields, shared numeric constraints, replace-all
+typing selection behavior, id-source semantics, test-id routing, keyed control orchestration, scrub
+frame behavior, or typing input routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/drag_value.rs` keeps keyed control orchestration, mode
+  switching, `DragValueCore` wiring, live model updates, and `NumericInput` typing routing while
+  re-exporting `DragValueOptions`.
+- `ecosystem/fret-ui-editor/src/controls/drag_value/options.rs` owns option fields and defaults.
+- `tools/gate_imui_workstream_source.py` now tracks the options split and rejects options/default
+  policy from drifting back into the drag-value root owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the drag-value options owner
+  file.
+- `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md` includes the new
+  options owner in its cross-workstream evidence anchor list.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor drag_value --no-fail-fast`: pass (10 passed, 212 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass after adding the product-closure evidence
+  anchor for `controls/drag_value/options.rs`.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Checkbox Indicator Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `Checkbox` indicator box and icon assembly moved out of the root control

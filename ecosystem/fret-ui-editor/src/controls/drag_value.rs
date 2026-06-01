@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::controls::numeric_input::{
     NumericFormatFn, NumericInput, NumericInputErrorDisplay, NumericInputOptions,
-    NumericInputOutcome, NumericInputSelectionBehavior, NumericParseFn, NumericValidateFn,
+    NumericInputOutcome, NumericParseFn, NumericValidateFn,
 };
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::derived_test_id;
@@ -22,67 +22,25 @@ use crate::primitives::numeric_text_entry::{
 use crate::primitives::style::EditorStyle;
 use crate::primitives::{
     DragValueCore, DragValueCoreOptions, EditSessionOutcome, NumericPresentation,
-    NumericValueConstraints, constrain_numeric_value,
+    constrain_numeric_value,
 };
-use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PressablePointerDownResult, UiActionHost};
-use fret_ui::element::{AnyElement, FlexItemStyle, LayoutStyle, Length, SizeStyle};
+use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 #[cfg(test)]
 mod tests;
 
 mod model;
+mod options;
 mod scrub;
 mod session;
 
 use model::{DragValueMode, DragValueState};
+pub use options::DragValueOptions;
 use scrub::{DragValueScrubFrameArgs, drag_value_scrub_frame};
 use session::{drag_value_outcome_from_numeric_input, emit_drag_value_outcome, hidden_layout};
-
-#[derive(Debug, Clone)]
-pub struct DragValueOptions {
-    pub layout: LayoutStyle,
-    pub prefix: Option<Arc<str>>,
-    pub suffix: Option<Arc<str>>,
-    /// Shared numeric edit constraints applied to scrub and typed commit paths.
-    pub constraints: NumericValueConstraints,
-    pub selection_behavior: NumericInputSelectionBehavior,
-    /// Explicit identity source for internal state (scrub/typing focus restore).
-    ///
-    /// This is the editor-control equivalent of egui's `id_source(...)` / ImGui's `PushID`.
-    /// Use this when a helper function builds multiple drag values from the same callsite and
-    /// you need stable, per-instance state separation.
-    pub id_source: Option<Arc<str>>,
-    pub test_id: Option<Arc<str>>,
-}
-
-impl Default for DragValueOptions {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Auto,
-                    ..Default::default()
-                },
-                flex: FlexItemStyle {
-                    grow: 1.0,
-                    basis: Length::Px(Px(0.0)),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            prefix: None,
-            suffix: None,
-            constraints: NumericValueConstraints::default(),
-            selection_behavior: NumericInputSelectionBehavior::ReplaceAllOnFocus,
-            id_source: None,
-            test_id: None,
-        }
-    }
-}
 
 pub type DragValueOutcome = EditSessionOutcome;
 pub type OnDragValueOutcome =
