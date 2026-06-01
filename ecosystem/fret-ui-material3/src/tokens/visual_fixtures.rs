@@ -23,7 +23,9 @@ use crate::tokens::{
 use crate::top_app_bar::TopAppBarVariant;
 
 use super::button::ButtonInteraction;
-use super::visual_fixture_model::{Assertion, Case, Component, load_suite, theme_for};
+use super::visual_fixture_model::{
+    Assertion, Case, Component, SchemeModeFixture, load_suite, theme_for,
+};
 
 mod fields;
 mod navigation;
@@ -81,6 +83,26 @@ fn material3_token_visual_fixtures_match_expected_token_outcomes() {
             Component::TopAppBar => navigation::run_top_app_bar_case(case, &theme),
         }
     }
+}
+
+#[test]
+fn material3_token_visual_fixtures_cover_light_and_dark_scheme_modes() {
+    let suite = load_suite();
+
+    assert!(
+        suite
+            .cases
+            .iter()
+            .any(|case| matches!(case.scheme.mode, SchemeModeFixture::Light)),
+        "visual fixture matrix must cover at least one light scheme case"
+    );
+    assert!(
+        suite
+            .cases
+            .iter()
+            .any(|case| matches!(case.scheme.mode, SchemeModeFixture::Dark)),
+        "visual fixture matrix must cover at least one dark scheme case"
+    );
 }
 
 fn actual_button_optional_color(

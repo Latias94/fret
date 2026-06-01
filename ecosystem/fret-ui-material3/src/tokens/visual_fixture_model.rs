@@ -81,7 +81,7 @@ pub(super) struct Scheme {
     pub variant: DynamicVariantFixture,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub(super) enum SchemeModeFixture {
     Light,

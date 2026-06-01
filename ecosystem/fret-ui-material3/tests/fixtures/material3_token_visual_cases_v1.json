@@ -1156,6 +1156,23 @@
       ]
     },
     {
+      "id": "badge-dot-and-large-dark",
+      "component": "badge",
+      "scheme": { "mode": "dark", "variant": "tonal_spot" },
+      "input": { "variant": "large" },
+      "assertions": [
+        { "role": "dot_size", "kind": "metric", "token": "md.comp.badge.size" },
+        { "role": "dot_color", "kind": "color", "token": "md.comp.badge.color" },
+        { "role": "dot_shape", "kind": "corners_metric", "token": "md.comp.badge.shape" },
+        { "role": "large_size", "kind": "metric", "token": "md.comp.badge.large.size" },
+        { "role": "large_color", "kind": "color", "token": "md.comp.badge.large.color" },
+        { "role": "large_shape", "kind": "corners_metric", "token": "md.comp.badge.large.shape" },
+        { "role": "large_label_color", "kind": "color", "token": "md.comp.badge.large.label-text.color" },
+        { "role": "large_label_text_style", "kind": "text_style_weight_source", "source_token": "md.comp.badge.large.label-text", "token": "md.comp.badge.large.label-text.weight" },
+        { "role": "theme_large_label_text_style", "kind": "text_style_alias", "token": "md.comp.badge.large.label-text", "source_token": "md.sys.typescale.label-small" }
+      ]
+    },
+    {
       "id": "fab-primary-regular-hovered-light",
       "component": "fab",
       "scheme": { "mode": "light", "variant": "tonal_spot" },
