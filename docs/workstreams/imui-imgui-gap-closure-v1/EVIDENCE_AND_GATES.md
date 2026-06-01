@@ -25354,3 +25354,29 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI floating-window shell body owner split:
+
+- Claim: floating-window shell body assembly moved from
+  `ecosystem/fret-ui-kit/src/imui/floating_window_shell.rs` into
+  `ecosystem/fret-ui-kit/src/imui/floating_window_shell/body.rs` without changing frame props,
+  title-bar container props, collapsed body selection, input blocker wiring, resize-stack
+  integration, activation-on-click policy, or resize handle test IDs.
+- Evidence anchors: `floating_window_shell.rs` declares `mod body;`, keeps frame palette
+  resolution plus `window_frame_props(...)`, and delegates body assembly to
+  `body::floating_window_shell_body_element(...)`; `body.rs` owns title/body/clipped-body
+  assembly, input blocker mounting, and resize-stack delegation; `floating_window_shell/props/*`
+  remains the props owner; the source gate rejects body assembly details drifting back into the root
+  shell hub.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit --features imui`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke --no-fail-fast`
+  (3 tests passed).
+- Passed: `cargo nextest run -p fret-imui floating_window --no-fail-fast` (17 tests passed,
+  169 skipped).
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

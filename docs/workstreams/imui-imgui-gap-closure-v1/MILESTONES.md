@@ -5162,3 +5162,8 @@ facade-facing keyed wrapper only.
 window state consumption plus title bar, content, and shell assembly for in-area windows.
 `floating_window_on_area.rs` keeps only the facade-facing `with_cx_mut` wrapper, window insertion,
 and chrome response return.
+
+2026-06-01 floating-window shell body owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_shell/body.rs` now owns title/body/clipped-body
+assembly, input blocker mounting, and resize-stack delegation. `floating_window_shell.rs` keeps
+frame palette resolution, frame props, and the outer frame container.

@@ -5861,3 +5861,11 @@ opening the slice.
       Result: `ecosystem/fret-ui-kit/src/imui/floating_window_on_area/assembly.rs` owns prepared
       state consumption plus title bar/content/shell assembly. `floating_window_on_area.rs` keeps
       only the facade-facing `ui.with_cx_mut` wrapper, `ui.add(window)`, and chrome return.
+- [x] Split IMUI floating-window shell body assembly out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_shell.rs` into a private body owner without
+      changing frame props, title-bar container props, collapsed body selection, input blocker
+      wiring, resize-stack integration, activation-on-click policy, or resize handle test IDs.
+      Result: `ecosystem/fret-ui-kit/src/imui/floating_window_shell/body.rs` owns title/body/
+      clipped-body assembly, input blocker mounting, and resize-stack delegation.
+      `floating_window_shell.rs` keeps frame palette resolution, frame props, and outer container
+      mounting.
