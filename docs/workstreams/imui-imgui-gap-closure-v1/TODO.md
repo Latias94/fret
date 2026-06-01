@@ -5922,3 +5922,10 @@ opening the slice.
       Result: `ecosystem/fret-ui-kit/src/imui/combo_controls/entry.rs` owns the direct combo
       trigger/popup/response flow. `combo_controls.rs` keeps the facade-facing helper signature and
       delegates to the entry owner.
+- [x] Split IMUI image-item pressable entry orchestration out of
+      `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs` into a private entry owner without
+      changing stable `push_id` scoping, enabled/disabled derivation, pressable props, behavior
+      installation, image chrome, image props, or response delivery.
+      Result: `ecosystem/fret-ui-kit/src/imui/image_item_controls/entry.rs` owns the inner
+      pressable element body. `image_item_controls.rs` keeps only the public helper and
+      `push_id(("image-item", id), ...)` scope.

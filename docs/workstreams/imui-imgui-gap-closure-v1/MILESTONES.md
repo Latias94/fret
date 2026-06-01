@@ -5208,3 +5208,9 @@ pointer-region layout and resizable fill/shrink behavior, while
 label parsing, enabled/open reads, trigger option construction, popup mounting, disabled cleanup,
 and `ComboResponse` open/toggled assembly. `combo_controls.rs` keeps the facade-facing helper
 signature and forwards to the entry owner.
+
+2026-06-01 image-item entry owner split result:
+`ecosystem/fret-ui-kit/src/imui/image_item_controls/entry.rs` now owns the inner pressable element
+body for image items/buttons: enabled/focusable derivation, pressable props, behavior installation,
+chrome, image props, element insertion, and `ResponseExt` return. `image_item_controls.rs` keeps
+the stable `push_id(("image-item", id), ...)` wrapper.

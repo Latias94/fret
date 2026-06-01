@@ -25544,3 +25544,28 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI image-item entry owner split:
+
+- Claim: image-item pressable entry orchestration moved from
+  `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs` into
+  `ecosystem/fret-ui-kit/src/imui/image_item_controls/entry.rs` without changing stable `push_id`
+  scoping, enabled/disabled derivation, pressable props, behavior installation, image chrome, image
+  props, or response delivery.
+- Evidence anchors: `image_item_controls.rs` declares `mod entry;`, keeps
+  `image_item_with_options(...)`, and preserves `ui.push_id(("image-item", id), ...)`; `entry.rs`
+  owns `ResponseExt::default()`, enabled/focusable derivation, `image_item_pressable_props(...)`,
+  `control_chrome_pressable_with_id_props(...)`, behavior installation, image chrome/image props,
+  `ui.add(element)`, and the response return; the source gate rejects those entry details drifting
+  back into the root image-item hub.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit --features imui`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_image_item_smoke --no-fail-fast`.
+- Passed:
+  `cargo nextest run -p fret-imui image_button_clicked_is_delivered_once image_button_shift_f10_sets_context_menu_requested_true_once --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
