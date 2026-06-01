@@ -82,6 +82,15 @@ Last updated: 2026-06-01
       orchestration, and overlay request routing while re-exporting options.
       `controls/enum_select/options.rs` owns option fields and defaults. The source gate prevents
       options/default policy from drifting back into the root control owner.
+- [x] Split editor `TextField` buffered key handling into a private element child owner without
+      changing single-line Enter commit, multiline Ctrl/Cmd+Enter commit, Escape cancel,
+      IME/repeat guards, submit-command forwarding, outcome routing, blur handling, clear button
+      behavior, or text input/area composition.
+      Result: `controls/text_field/element.rs` keeps keyed construction, joined frame/input/area
+      assembly, focus selection sync, blur handler installation, and clear affordance composition.
+      `controls/text_field/element/buffered_keys.rs` owns buffered single-line/multiline
+      commit/cancel key routing. The source gate prevents key policy from drifting back into the
+      element assembly owner.
 - [x] Split editor `InspectorPanel` options/default and search-assist option records into a
       private child owner without changing public `InspectorPanelOptions` or
       `InspectorPanelSearchAssistOptions` import paths, layout defaults, enabled/title/test-id

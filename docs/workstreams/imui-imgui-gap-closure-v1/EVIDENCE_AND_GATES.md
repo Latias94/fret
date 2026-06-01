@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor TextField Buffered-Key Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `TextField` buffered key handling moved out of the element assembly owner
+into a private `controls/text_field/element/buffered_keys.rs` owner without changing single-line
+Enter commit, multiline Ctrl/Cmd+Enter commit, Escape cancel, IME/repeat guards, submit-command
+forwarding, outcome routing, blur handling, clear button behavior, draft controller binding, or
+text input/area composition.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_field/element.rs` keeps keyed construction, joined
+  frame/input/area assembly, focus selection sync, blur handler installation, draft controller
+  binding, and clear affordance composition.
+- `ecosystem/fret-ui-editor/src/controls/text_field/element/buffered_keys.rs` owns buffered
+  single-line and multiline commit/cancel key routing.
+- `tools/gate_imui_workstream_source.py` now tracks the buffered-key split and rejects commit/cancel
+  key policy from drifting back into the element assembly owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the buffered-key owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor text_field --no-fail-fast`: pass (16 passed, 206 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor EnumSelect Options Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `EnumSelect` option records moved out of the root control owner into a

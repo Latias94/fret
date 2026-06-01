@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use fret_core::{KeyCode, Px, TextStyle};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
+use fret_ui::action::{ActivateReason, OnActivate};
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextAreaProps, TextInputProps};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ChromeRefinement;
@@ -20,6 +20,13 @@ use crate::primitives::input_group::{
 use crate::primitives::style::EditorStyle;
 use crate::primitives::text_entry::{
     EditorTextCancelBehavior, editor_text_entry_focus_state, sync_editor_text_entry_focus_selection,
+};
+
+mod buffered_keys;
+
+use buffered_keys::{
+    TextFieldBufferedKeyHandlerArgs, TextFieldBufferedKeyMode,
+    install_buffered_text_field_key_handler,
 };
 
 impl TextField {
@@ -205,43 +212,16 @@ impl TextField {
                             );
                         }
 
-                        let model_for_key = model_for_input.clone();
-                        let draft_for_key = draft.clone();
-                        let buffered_state_for_key = buffered_state.clone();
-                        let on_outcome_for_key = on_outcome_for_input.clone();
-                        cx.key_add_on_key_down_capture_for(
-                            area_id,
-                            Arc::new(move |host, action_cx: ActionCx, down| {
-                                if down.ime_composing || down.repeat {
-                                    return false;
-                                }
-                                match down.key {
-                                    KeyCode::Escape => buffered::cancel_buffered_text_field(
-                                        host,
-                                        action_cx,
-                                        &model_for_key,
-                                        &draft_for_key,
-                                        &buffered_state_for_key,
-                                        on_outcome_for_key.as_ref(),
-                                    ),
-                                    KeyCode::Enter | KeyCode::NumpadEnter
-                                        if buffered::is_multiline_buffered_commit_shortcut(
-                                            down,
-                                        ) =>
-                                    {
-                                        buffered::commit_buffered_text_field(
-                                            host,
-                                            action_cx,
-                                            &model_for_key,
-                                            &draft_for_key,
-                                            &buffered_state_for_key,
-                                            on_outcome_for_key.as_ref(),
-                                            None,
-                                        )
-                                    }
-                                    _ => false,
-                                }
-                            }),
+                        install_buffered_text_field_key_handler(
+                            cx,
+                            TextFieldBufferedKeyHandlerArgs {
+                                entry_id: area_id,
+                                mode: TextFieldBufferedKeyMode::Multiline,
+                                model: model_for_input.clone(),
+                                draft: draft.clone(),
+                                buffered_state: buffered_state.clone(),
+                                on_outcome: on_outcome_for_input.clone(),
+                            },
                         );
                     }
 
@@ -358,40 +338,18 @@ impl TextField {
                             );
                         }
 
-                        let model_for_key = model_for_input.clone();
-                        let draft_for_key = draft.clone();
-                        let buffered_state_for_key = buffered_state.clone();
-                        let on_outcome_for_key = on_outcome_for_input.clone();
-                        let submit_command_for_key = submit_command_for_input.clone();
-                        cx.key_add_on_key_down_capture_for(
-                            input_id,
-                            Arc::new(move |host, action_cx: ActionCx, down| {
-                                if down.ime_composing || down.repeat {
-                                    return false;
-                                }
-                                match down.key {
-                                    KeyCode::Enter | KeyCode::NumpadEnter => {
-                                        buffered::commit_buffered_text_field(
-                                            host,
-                                            action_cx,
-                                            &model_for_key,
-                                            &draft_for_key,
-                                            &buffered_state_for_key,
-                                            on_outcome_for_key.as_ref(),
-                                            submit_command_for_key.as_ref(),
-                                        )
-                                    }
-                                    KeyCode::Escape => buffered::cancel_buffered_text_field(
-                                        host,
-                                        action_cx,
-                                        &model_for_key,
-                                        &draft_for_key,
-                                        &buffered_state_for_key,
-                                        on_outcome_for_key.as_ref(),
-                                    ),
-                                    _ => false,
-                                }
-                            }),
+                        install_buffered_text_field_key_handler(
+                            cx,
+                            TextFieldBufferedKeyHandlerArgs {
+                                entry_id: input_id,
+                                mode: TextFieldBufferedKeyMode::SingleLine {
+                                    submit_command: submit_command_for_input.clone(),
+                                },
+                                model: model_for_input.clone(),
+                                draft: draft.clone(),
+                                buffered_state: buffered_state.clone(),
+                                on_outcome: on_outcome_for_input.clone(),
+                            },
                         );
                     }
 

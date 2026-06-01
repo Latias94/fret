@@ -38,6 +38,16 @@ fields and defaults. Public import paths, default layout, placeholder/none label
 and diagnostics fields, keyed state identity, trigger composition, open-key policy, and overlay
 routing remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor TextField buffered-key owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/element.rs` now keeps keyed construction, joined
+frame/input/area assembly, focus selection sync, blur handler installation, and clear affordance
+composition. The private `controls/text_field/element/buffered_keys.rs` owner contains buffered
+single-line and multiline commit/cancel key routing, including IME/repeat guards, single-line Enter
+commit, multiline Ctrl/Cmd+Enter commit, Escape cancel, submit-command forwarding, and outcome
+routing. Text input/area composition, blur behavior, clear-button behavior, draft controller
+binding, and public TextField options remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split.
+
 2026-06-01 editor InspectorPanel options owner-split result:
 `ecosystem/fret-ui-editor/src/composites/inspector_panel.rs` now keeps public cx/control records,
 builder methods, and child-owner routing while re-exporting options. The private
