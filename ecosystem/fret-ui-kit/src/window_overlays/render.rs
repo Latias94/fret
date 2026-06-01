@@ -736,6 +736,47 @@ fn finalize_hidden_non_modal_overlay<H: UiHost>(
     }
 }
 
+fn node_is_in_open_modal_layer<H: UiHost>(
+    ui: &UiTree<H>,
+    app: &mut H,
+    window: AppWindowId,
+    node: NodeId,
+) -> bool {
+    let Some(node_layer) = ui.node_layer(node) else {
+        return false;
+    };
+
+    app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        overlays
+            .modals
+            .iter()
+            .any(|((w, _id), entry)| *w == window && entry.open && entry.layer == node_layer)
+    })
+}
+
+fn visible_closing_popover_has_modal_restore_target<H: UiHost>(
+    ui: &UiTree<H>,
+    app: &mut H,
+    window: AppWindowId,
+) -> bool {
+    let candidates: Vec<(GlobalElementId, Option<NodeId>)> =
+        app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+            overlays
+                .popovers
+                .iter()
+                .filter_map(|((w, _id), entry)| {
+                    (*w == window && !entry.open && ui.is_layer_visible(entry.layer))
+                        .then_some((entry.trigger, entry.restore_focus))
+                })
+                .collect()
+        });
+
+    candidates.into_iter().any(|(trigger, restore_focus)| {
+        focus_scope_prim::resolve_restore_focus_node(ui, app, window, Some(trigger), restore_focus)
+            .is_some_and(|node| node_is_in_open_modal_layer(ui, app, window, node))
+    })
+}
+
 fn finalize_hidden_modal_overlay<H: UiHost>(
     ui: &mut UiTree<H>,
     app: &mut H,
@@ -1422,17 +1463,23 @@ pub fn render<H: UiHost + 'static>(
             }
         }
 
-        let focus_layer = ui.focus().and_then(|n| ui.node_layer(n));
+        let focus_now = ui.focus();
+        let focus_layer = focus_now.and_then(|n| ui.node_layer(n));
         let focus_in_modal_layer = layer.is_some_and(|layer| focus_layer == Some(layer));
         let focus_in_popover_layer = focus_layer.is_some_and(|focus_layer| {
             app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
                 overlays.popovers.iter().any(|((w, _id), entry)| {
-                    *w == window && entry.open && entry.layer == focus_layer
+                    *w == window
+                        && entry.layer == focus_layer
+                        && (entry.open || ui.is_layer_visible(entry.layer))
                 })
             })
         });
         let focus_in_layer = focus_in_modal_layer || focus_in_popover_layer;
-        let enforce_focus_containment = open_now && !focus_in_layer;
+        let waiting_for_closing_popover_restore = focus_now.is_none()
+            && visible_closing_popover_has_modal_restore_target(ui, app, window);
+        let enforce_focus_containment =
+            open_now && !focus_in_layer && !waiting_for_closing_popover_restore;
 
         let pending_initial_focus =
             app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
@@ -1753,13 +1800,30 @@ pub fn render<H: UiHost + 'static>(
             let focus_on_trigger = ui
                 .live_attached_node_for_element(app, trigger)
                 .is_some_and(|node| focus_now == Some(node));
+            let restore_focus =
+                app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                    overlays
+                        .popovers
+                        .get(&key)
+                        .and_then(|entry| entry.restore_focus)
+                });
+            let restore_node = focus_scope_prim::resolve_restore_focus_node(
+                ui,
+                app,
+                window,
+                Some(trigger),
+                restore_focus,
+            );
+            let restore_node_in_open_modal =
+                restore_node.is_some_and(|node| node_is_in_open_modal_layer(ui, app, window, node));
             let should_run_close_auto_focus = focus_in_layer
                 || focus_on_trigger
-                || (!focus_cleared_by_modal_scope && focus_now.is_none());
+                || (!focus_cleared_by_modal_scope && focus_now.is_none())
+                || (focus_now.is_none() && restore_node_in_open_modal);
 
             let mut close_auto_focus_prevented = false;
             if should_run_close_auto_focus
-                && !focus_cleared_by_modal_scope
+                && (!focus_cleared_by_modal_scope || restore_node_in_open_modal)
                 && let Some(on_close_auto_focus) = on_close_auto_focus.as_ref()
             {
                 let mut host = OverlayFocusActionHostAdapter { app, ui };
@@ -1782,24 +1846,12 @@ pub fn render<H: UiHost + 'static>(
             });
 
             if (!close_auto_focus_prevented)
-                && ((!focus_cleared_by_modal_scope && focus_now.is_none()) || focus_in_layer)
+                && ((!focus_cleared_by_modal_scope && focus_now.is_none())
+                    || (focus_now.is_none() && restore_node_in_open_modal)
+                    || focus_in_layer)
+                && let Some(node) = restore_node
             {
-                let restore_focus =
-                    app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
-                        overlays
-                            .popovers
-                            .get(&key)
-                            .and_then(|entry| entry.restore_focus)
-                    });
-                if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
-                    ui,
-                    app,
-                    window,
-                    Some(trigger),
-                    restore_focus,
-                ) {
-                    ui.set_focus(Some(node));
-                }
+                ui.set_focus(Some(node));
             }
         }
 

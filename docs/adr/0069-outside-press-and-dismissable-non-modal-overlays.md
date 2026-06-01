@@ -246,8 +246,12 @@ different widget as part of the same interaction. Therefore:
 
 - Overlay focus restoration must be conditional: restore previous focus **only if** focus is still
   inside the closing overlay (or is missing), otherwise do not override the new focus target.
+- When a non-modal overlay is nested above a modal layer, modal focus containment must not steal
+  focus from a still-visible closing child overlay before that child overlay has a chance to restore
+  focus to a live target inside the modal.
 
-This rule is implemented by `OverlayPortal::hide` and applies to all overlays.
+This rule is implemented by the window overlay policy layer and applies to all dismissable
+non-modal overlays.
 
 ## Consequences
 

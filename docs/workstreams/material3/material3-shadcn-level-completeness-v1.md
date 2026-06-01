@@ -99,7 +99,8 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 
 1. Finish Tabs residuals only if panel presence becomes a real app need:
    `force_mount` content, presence motion, and overflow/scroll affordance polish.
-2. Broaden gallery/diag coverage for now-Strong families, especially docs-path examples that prove
-   field, overlay, and navigation components together.
+2. Broaden gallery/diag coverage for now-Strong families through
+   `material3-composition-hardening-v1.md`, especially docs-path examples that prove field,
+   overlay, and navigation components together.
 3. Start a second-pass polish lane for cross-component compositions: Search + Menu, field overlays
    inside Dialog/BottomSheet, and navigation surfaces with routed panel content.
