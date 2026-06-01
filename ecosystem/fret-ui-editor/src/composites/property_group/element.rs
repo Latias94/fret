@@ -4,10 +4,9 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Corners, Edges, Px};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, SizeStyle, SpacerProps, SpacingLength,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
+    SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
@@ -16,10 +15,11 @@ use crate::primitives::colors::{
     editor_panel_background, editor_property_group_border, editor_property_header_background,
     editor_property_header_border, editor_property_header_foreground,
 };
-use crate::primitives::icons::editor_icon;
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
-use crate::primitives::readout::editor_property_group_header_text_props;
-use crate::primitives::visuals::hover_overlay_bg;
+
+mod header;
+
+use header::{PropertyGroupHeaderElementOptions, property_group_header_element};
 
 use super::{OnPropertyGroupToggle, PropertyGroupOptions};
 
@@ -81,140 +81,25 @@ where
             .get_model_copied(&collapsed_model, Invalidation::Layout)
             .unwrap_or(options.default_collapsed);
 
-        let disclosure_icon = options.collapsible.then_some({
-            if collapsed {
-                fret_icons::ids::ui::CHEVRON_RIGHT
-            } else {
-                fret_icons::ids::ui::CHEVRON_DOWN
-            }
-        });
-
-        let header_label = label.clone();
-        let collapsible = options.collapsible;
-        let enabled = options.enabled;
-        let collapsed_for_toggle = collapsed_model.clone();
-
-        let mut header = cx.pressable(
-            PressableProps {
-                enabled: enabled && collapsible,
-                layout: LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Auto,
-                        min_height: Some(Length::Px(Px(header_height.0.max(0.0)))),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                a11y: PressableA11y {
-                    label: Some(Arc::from(format!("Toggle {header_label}"))),
-                    ..Default::default()
-                },
-                ..Default::default()
+        let header = property_group_header_element(
+            cx,
+            PropertyGroupHeaderElementOptions {
+                label: label.clone(),
+                enabled: options.enabled,
+                collapsible: options.collapsible,
+                collapsed,
+                collapsed_model: collapsed_model.clone(),
+                on_toggle,
+                header_height,
+                density,
+                header_bg,
+                header_border,
+                radius,
+                header_fg,
+                test_id: options.header_test_id.clone(),
             },
-            move |cx, st| {
-                let on_activate: OnActivate = Arc::new({
-                    let on_toggle = on_toggle.clone();
-                    let collapsed_for_toggle = collapsed_for_toggle.clone();
-                    move |host, action_cx: ActionCx, _reason: ActivateReason| {
-                        let next = host
-                            .models_mut()
-                            .update(&collapsed_for_toggle, |b| {
-                                *b = !*b;
-                                *b
-                            })
-                            .unwrap_or(false);
-                        if let Some(cb) = on_toggle.as_ref() {
-                            cb(host, action_cx, next);
-                        }
-                        host.request_redraw(action_cx.window);
-                    }
-                });
-                cx.pressable_add_on_activate(on_activate);
-
-                let theme = Theme::global(&*cx.app);
-                let header_bg = hover_overlay_bg(theme, header_bg, st.hovered, st.pressed);
-
-                let actions = header_actions(cx);
-                vec![cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Auto,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        background: Some(header_bg),
-                        corner_radii: Corners {
-                            top_left: radius,
-                            top_right: radius,
-                            bottom_right: Px(0.0),
-                            bottom_left: Px(0.0),
-                        },
-                        border: Edges {
-                            top: Px(0.0),
-                            right: Px(0.0),
-                            bottom: Px(1.0),
-                            left: Px(0.0),
-                        },
-                        border_color: Some(header_border),
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        vec![
-                            cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Auto,
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    direction: Axis::Horizontal,
-                                    gap: SpacingLength::Px(Px(6.0)),
-                                    padding: Edges {
-                                        top: Px(density.padding_y.0 + 2.0),
-                                        right: density.padding_x,
-                                        bottom: Px(density.padding_y.0 + 2.0),
-                                        left: density.padding_x,
-                                    }
-                                    .into(),
-                                    justify: MainAlign::Start,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
-                                },
-                                move |cx| {
-                                    let mut out = Vec::new();
-                                    if let Some(icon) = disclosure_icon.clone() {
-                                        out.push(editor_icon(cx, density, icon, Some(Px(12.0))));
-                                    }
-                                    out.push(cx.text_props(
-                                        editor_property_group_header_text_props(
-                                            header_label.clone(),
-                                            header_fg,
-                                            header_height,
-                                        ),
-                                    ));
-                                    out.push(cx.spacer(SpacerProps::default()));
-                                    if let Some(actions) = actions {
-                                        out.push(actions);
-                                    }
-                                    out
-                                },
-                            ),
-                        ]
-                    },
-                )]
-            },
+            header_actions,
         );
-
-        if let Some(test_id) = options.header_test_id.as_ref() {
-            header = header.test_id(test_id.clone());
-        }
 
         let mut out = Vec::new();
         out.push(header);

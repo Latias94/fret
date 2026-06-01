@@ -1330,6 +1330,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Editor PropertyGroup Header Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `PropertyGroup` header pressable assembly moved out of the group element
+owner into a private `composites/property_group/element/header.rs` owner without changing toggle
+callback behavior, collapsed model mutation/redraw routing, disclosure icon choice,
+enabled/collapsible gating, hover/press header chrome, header text role, header actions slot,
+header test-id propagation, content visibility, or panel chrome.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/property_group/element.rs` keeps metric/theme
+  resolution, collapsed-state reads, content/root/panel assembly, and delegates header
+  construction.
+- `ecosystem/fret-ui-editor/src/composites/property_group/element/header.rs` owns toggle pressable
+  assembly, collapsed model mutation/redraw routing, disclosure icon selection, hover overlay
+  chrome, header text role, header action slot mounting, and header test-id propagation.
+- `tools/gate_imui_workstream_source.py` now tracks the PropertyGroup header split and rejects
+  header pressable policy from drifting back into the group element owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the header owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor property_group --no-fail-fast`: pass (1 passed, 227
+  skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor InspectorPanel Search Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `InspectorPanel` search field fallback/assist routing moved out of the panel

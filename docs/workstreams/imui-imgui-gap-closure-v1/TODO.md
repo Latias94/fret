@@ -354,6 +354,14 @@ Last updated: 2026-06-01
       collapsed-state reads/toggles, header pressable assembly, content mounting, root flex
       decoration, and outer panel chrome. The source gate prevents element assembly policy from
       drifting back into the public group owner.
+- [x] Split editor `PropertyGroup` header pressable assembly into a private element child owner
+      without changing toggle callback behavior, collapsed model mutation/redraw routing,
+      disclosure icon choice, enabled/collapsible gating, hover/press header chrome, header text
+      role, header actions slot, header test-id propagation, content visibility, or panel chrome.
+      Result: `composites/property_group/element.rs` keeps metric/theme resolution,
+      collapsed-state reads, content/root/panel assembly, and delegates header construction to
+      `composites/property_group/element/header.rs`. The source gate prevents header pressable
+      policy from drifting back into the group element owner.
 - [x] Split editor `PropertyRow` row/column element assembly into a private child owner without
       changing public constructors/builders, explicit id-source keying, label helper behavior,
       layout resolution, auto row/column switching, value-slot overflow semantics, reset slot
