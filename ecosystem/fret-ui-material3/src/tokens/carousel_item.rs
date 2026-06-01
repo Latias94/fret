@@ -6,9 +6,7 @@ use fret_core::{Color, Corners, Px};
 use fret_ui::Theme;
 
 use crate::foundation::interaction::PressableInteraction;
-use crate::foundation::token_resolver::{
-    MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
-};
+use crate::foundation::token_resolver::{MaterialTokenResolver, alpha_mul};
 
 pub(crate) const COMPONENT_PREFIX: &str = "md.comp.carousel-item";
 pub(crate) const WITH_OUTLINE_PREFIX: &str = "md.comp.carousel-item.with-outline";
@@ -63,17 +61,10 @@ pub(crate) fn container_elevation(
     let key = if disabled {
         format!("{COMPONENT_PREFIX}.disabled.container.elevation")
     } else if let Some(interaction) = interaction {
-        match interaction {
-            PressableInteraction::Hovered => {
-                format!("{COMPONENT_PREFIX}.hover.container.elevation")
-            }
-            PressableInteraction::Focused => {
-                format!("{COMPONENT_PREFIX}.focus.container.elevation")
-            }
-            PressableInteraction::Pressed => {
-                format!("{COMPONENT_PREFIX}.pressed.container.elevation")
-            }
-        }
+        format!(
+            "{COMPONENT_PREFIX}.{}.container.elevation",
+            interaction.token_state()
+        )
     } else {
         format!("{COMPONENT_PREFIX}.container.elevation")
     };
@@ -82,18 +73,13 @@ pub(crate) fn container_elevation(
 }
 
 pub(crate) fn state_layer_color(theme: &Theme, interaction: Option<PressableInteraction>) -> Color {
-    let key = match interaction {
-        Some(PressableInteraction::Hovered) => {
-            format!("{COMPONENT_PREFIX}.hover.state-layer.color")
-        }
-        Some(PressableInteraction::Focused) => {
-            format!("{COMPONENT_PREFIX}.focus.state-layer.color")
-        }
-        Some(PressableInteraction::Pressed) => {
-            format!("{COMPONENT_PREFIX}.pressed.state-layer.color")
-        }
-        None => return MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"),
+    let Some(interaction) = interaction else {
+        return MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface");
     };
+    let key = format!(
+        "{COMPONENT_PREFIX}.{}.state-layer.color",
+        interaction.token_state()
+    );
 
     MaterialTokenResolver::new(theme).color_comp_or_sys(&key, "md.sys.color.on-surface")
 }
@@ -103,22 +89,21 @@ pub(crate) fn state_layer_opacity(theme: &Theme, interaction: Option<PressableIn
         return 0.0;
     };
 
-    let key = match interaction {
-        PressableInteraction::Hovered => format!("{COMPONENT_PREFIX}.hover.state-layer.opacity"),
-        PressableInteraction::Focused => format!("{COMPONENT_PREFIX}.focus.state-layer.opacity"),
-        PressableInteraction::Pressed => format!("{COMPONENT_PREFIX}.pressed.state-layer.opacity"),
-    };
+    let key = format!(
+        "{COMPONENT_PREFIX}.{}.state-layer.opacity",
+        interaction.token_state()
+    );
 
     MaterialTokenResolver::new(theme)
-        .state_layer_opacity(&key, material_state_layer_interaction(interaction))
+        .pressable_state_layer_opacity(&key, interaction)
         .clamp(0.0, 1.0)
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme) -> f32 {
     MaterialTokenResolver::new(theme)
-        .state_layer_opacity(
+        .pressable_state_layer_opacity(
             &format!("{COMPONENT_PREFIX}.pressed.state-layer.opacity"),
-            MaterialStateLayerInteraction::Pressed,
+            PressableInteraction::Pressed,
         )
         .clamp(0.0, 1.0)
 }
@@ -145,18 +130,14 @@ pub(crate) fn outline(
             Some(format!("{WITH_OUTLINE_PREFIX}.disabled.outline.opacity")),
         )
     } else {
-        let key = match interaction {
-            Some(PressableInteraction::Hovered) => {
-                format!("{WITH_OUTLINE_PREFIX}.hover.outline.color")
-            }
-            Some(PressableInteraction::Focused) => {
-                format!("{WITH_OUTLINE_PREFIX}.focus.outline.color")
-            }
-            Some(PressableInteraction::Pressed) => {
-                format!("{WITH_OUTLINE_PREFIX}.pressed.outline.color")
-            }
-            None => format!("{WITH_OUTLINE_PREFIX}.outline.color"),
-        };
+        let key = interaction
+            .map(|interaction| {
+                format!(
+                    "{WITH_OUTLINE_PREFIX}.{}.outline.color",
+                    interaction.token_state()
+                )
+            })
+            .unwrap_or_else(|| format!("{WITH_OUTLINE_PREFIX}.outline.color"));
         (key, None)
     };
 
@@ -171,16 +152,6 @@ pub(crate) fn outline(
     }
 
     Some(CarouselItemOutline { width, color })
-}
-
-fn material_state_layer_interaction(
-    interaction: PressableInteraction,
-) -> MaterialStateLayerInteraction {
-    match interaction {
-        PressableInteraction::Hovered => MaterialStateLayerInteraction::Hovered,
-        PressableInteraction::Focused => MaterialStateLayerInteraction::Focused,
-        PressableInteraction::Pressed => MaterialStateLayerInteraction::Pressed,
-    }
 }
 
 #[cfg(test)]

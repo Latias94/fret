@@ -8,9 +8,7 @@ use fret_ui::Theme;
 
 use crate::card::CardVariant;
 use crate::foundation::interaction::PressableInteraction;
-use crate::foundation::token_resolver::{
-    MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
-};
+use crate::foundation::token_resolver::{MaterialTokenResolver, alpha_mul};
 
 pub(crate) const FILLED_COMPONENT_PREFIX: &str = "md.comp.filled-card";
 pub(crate) const ELEVATED_COMPONENT_PREFIX: &str = "md.comp.elevated-card";
@@ -85,12 +83,9 @@ pub(crate) fn container_elevation(
         );
     }
 
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => "pressed.container.elevation",
-        Some(PressableInteraction::Focused) => "focus.container.elevation",
-        Some(PressableInteraction::Hovered) => "hover.container.elevation",
-        None => "container.elevation",
-    };
+    let key = interaction
+        .map(|interaction| format!("{}.container.elevation", interaction.token_state()))
+        .unwrap_or_else(|| "container.elevation".to_string());
 
     card_metric(theme, format!("{prefix}.{key}"), Px(0.0))
 }
@@ -120,12 +115,9 @@ pub(crate) fn outline(
         return Some(CardOutline { width, color: c });
     }
 
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => "pressed.outline.color",
-        Some(PressableInteraction::Focused) => "focus.outline.color",
-        Some(PressableInteraction::Hovered) => "hover.outline.color",
-        None => "outline.color",
-    };
+    let key = interaction
+        .map(|interaction| format!("{}.outline.color", interaction.token_state()))
+        .unwrap_or_else(|| "outline.color".to_string());
 
     let state_key = format!("{prefix}.{key}");
     let default_key = format!("{prefix}.outline.color");
@@ -144,12 +136,9 @@ pub(crate) fn state_layer_color(
     interaction: Option<PressableInteraction>,
 ) -> Color {
     let prefix = component_prefix(variant);
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => "pressed.state-layer.color",
-        Some(PressableInteraction::Focused) => "focus.state-layer.color",
-        Some(PressableInteraction::Hovered) => "hover.state-layer.color",
-        None => "hover.state-layer.color",
-    };
+    let key = interaction
+        .map(|interaction| format!("{}.state-layer.color", interaction.token_state()))
+        .unwrap_or_else(|| "hover.state-layer.color".to_string());
 
     MaterialTokenResolver::new(theme)
         .color_comp_or_sys(&format!("{prefix}.{key}"), "md.sys.color.on-surface")
@@ -161,39 +150,23 @@ pub(crate) fn state_layer_opacity(
     interaction: Option<PressableInteraction>,
 ) -> f32 {
     let prefix = component_prefix(variant);
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => "pressed.state-layer.opacity",
-        Some(PressableInteraction::Focused) => "focus.state-layer.opacity",
-        Some(PressableInteraction::Hovered) => "hover.state-layer.opacity",
-        None => return 0.0,
-    };
-
-    let Some(interaction) = material_state_layer_interaction(interaction) else {
+    let Some(interaction) = interaction else {
         return 0.0;
     };
+
+    let key = format!("{}.state-layer.opacity", interaction.token_state());
     MaterialTokenResolver::new(theme)
-        .state_layer_opacity(&format!("{prefix}.{key}"), interaction)
+        .pressable_state_layer_opacity(&format!("{prefix}.{key}"), interaction)
         .clamp(0.0, 1.0)
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme, variant: CardVariant) -> f32 {
     MaterialTokenResolver::new(theme)
-        .state_layer_opacity(
+        .pressable_state_layer_opacity(
             &format!("{}.pressed.state-layer.opacity", component_prefix(variant)),
-            MaterialStateLayerInteraction::Pressed,
+            PressableInteraction::Pressed,
         )
         .clamp(0.0, 1.0)
-}
-
-fn material_state_layer_interaction(
-    interaction: Option<PressableInteraction>,
-) -> Option<MaterialStateLayerInteraction> {
-    match interaction {
-        Some(PressableInteraction::Pressed) => Some(MaterialStateLayerInteraction::Pressed),
-        Some(PressableInteraction::Focused) => Some(MaterialStateLayerInteraction::Focused),
-        Some(PressableInteraction::Hovered) => Some(MaterialStateLayerInteraction::Hovered),
-        None => None,
-    }
 }
 
 #[cfg(test)]

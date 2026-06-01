@@ -78,7 +78,7 @@ pub(crate) fn state_layer_color(
     interaction: Option<PressableInteraction>,
     sys_key: &str,
 ) -> Color {
-    let Some(interaction_suffix) = interaction_suffix(interaction) else {
+    let Some(interaction_suffix) = interaction.map(PressableInteraction::token_state) else {
         return Color::TRANSPARENT;
     };
     MaterialTokenResolver::new(theme).color_comp_or_sys(
@@ -98,7 +98,7 @@ pub(crate) fn state_layer_opacity(
     state_prefix: Option<&str>,
     interaction: Option<PressableInteraction>,
 ) -> f32 {
-    let Some(interaction_suffix) = interaction_suffix(interaction) else {
+    let Some(interaction_suffix) = interaction.map(PressableInteraction::token_state) else {
         return 0.0;
     };
     MaterialTokenResolver::new(theme)
@@ -147,12 +147,9 @@ pub(crate) fn elevated_container_elevation(
         );
     }
 
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => "elevated.pressed.container.elevation",
-        Some(PressableInteraction::Focused) => "elevated.focus.container.elevation",
-        Some(PressableInteraction::Hovered) => "elevated.hover.container.elevation",
-        None => "elevated.container.elevation",
-    };
+    let key = interaction
+        .map(|interaction| format!("elevated.{}.container.elevation", interaction.token_state()))
+        .unwrap_or_else(|| "elevated.container.elevation".to_string());
 
     chip_metric(
         theme,
@@ -214,15 +211,6 @@ pub(crate) struct ChipOutlineKeys {
     pub disabled_opacity: &'static str,
     pub focus_color: &'static str,
     pub color: &'static str,
-}
-
-fn interaction_suffix(interaction: Option<PressableInteraction>) -> Option<&'static str> {
-    match interaction {
-        Some(PressableInteraction::Pressed) => Some("pressed"),
-        Some(PressableInteraction::Focused) => Some("focus"),
-        Some(PressableInteraction::Hovered) => Some("hover"),
-        None => None,
-    }
 }
 
 fn state_key(

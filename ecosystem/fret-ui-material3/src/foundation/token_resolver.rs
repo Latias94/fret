@@ -1,6 +1,8 @@
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::{Theme, theme::CubicBezier};
 
+use crate::foundation::interaction::PressableInteraction;
+
 pub(crate) fn alpha_mul(mut color: Color, multiplier: f32) -> Color {
     color.a = (color.a * multiplier).clamp(0.0, 1.0);
     color
@@ -41,6 +43,16 @@ impl MaterialStateLayerInteraction {
         match self {
             Self::Hovered => 0.08,
             Self::Focused | Self::Pressed => 0.1,
+        }
+    }
+}
+
+impl From<PressableInteraction> for MaterialStateLayerInteraction {
+    fn from(interaction: PressableInteraction) -> Self {
+        match interaction {
+            PressableInteraction::Hovered => Self::Hovered,
+            PressableInteraction::Focused => Self::Focused,
+            PressableInteraction::Pressed => Self::Pressed,
         }
     }
 }
@@ -344,6 +356,14 @@ impl<'a> MaterialTokenResolver<'a> {
         )
     }
 
+    pub fn pressable_state_layer_opacity(
+        &self,
+        comp_key: &str,
+        interaction: PressableInteraction,
+    ) -> f32 {
+        self.state_layer_opacity(comp_key, interaction.into())
+    }
+
     pub fn disabled_state_layer_opacity(&self) -> f32 {
         self.number_sys("md.sys.state.disabled.state-layer-opacity", 0.38)
     }
@@ -467,6 +487,36 @@ mod tests {
         assert_eq!(
             MaterialStateLayerInteraction::Pressed.fallback_opacity(),
             0.1
+        );
+    }
+
+    #[test]
+    fn pressable_state_layer_opacity_uses_material_interaction_fallbacks() {
+        let mut app = App::new();
+        let mut patch = ThemeConfig::default();
+        patch
+            .numbers
+            .insert("md.sys.state.focus.state-layer-opacity".to_string(), 0.18);
+        patch
+            .numbers
+            .insert("md.comp.test.pressed.state-layer.opacity".to_string(), 0.26);
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app);
+
+        let tokens = MaterialTokenResolver::new(theme);
+        assert_eq!(
+            tokens.pressable_state_layer_opacity(
+                "md.comp.test.focus.state-layer.opacity",
+                PressableInteraction::Focused,
+            ),
+            0.18
+        );
+        assert_eq!(
+            tokens.pressable_state_layer_opacity(
+                "md.comp.test.pressed.state-layer.opacity",
+                PressableInteraction::Pressed,
+            ),
+            0.26
         );
     }
 
