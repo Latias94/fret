@@ -1,16 +1,16 @@
 //! Immediate-mode response-bearing image item helpers.
 
-use fret_core::{ImageId, SemanticsRole, Size};
+use fret_core::{ImageId, Size};
 use fret_ui::UiHost;
-use fret_ui::element::{Length, PressableA11y, PressableKeyActivation, PressableProps};
 
-use super::{ImageItemOptions, ImageItemVariant, ResponseExt, UiWriterImUiFacadeExt};
+use super::{ImageItemOptions, ResponseExt, UiWriterImUiFacadeExt};
 use crate::declarative::chrome::control_chrome_pressable_with_id_props;
 
 mod behavior;
+mod props;
 mod visual;
 
-use visual::{image_item_chrome, image_props_for_item, sanitize_item_size};
+use visual::{image_item_chrome, image_props_for_item};
 
 pub(super) fn image_item_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -37,25 +37,7 @@ fn image_item_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
         let enabled = options.enabled && !super::imui_is_disabled(cx);
         let focusable = enabled && options.focusable;
         let variant = options.variant;
-        let item_size = sanitize_item_size(size);
-
-        let mut props = PressableProps::default();
-        props.enabled = enabled;
-        props.focusable = focusable;
-        props.layout.size.width = Length::Px(item_size.width);
-        props.layout.size.height = Length::Px(item_size.height);
-        if matches!(variant, ImageItemVariant::Image) {
-            props.key_activation = PressableKeyActivation::None;
-        }
-        props.a11y = PressableA11y {
-            role: Some(match variant {
-                ImageItemVariant::Image => SemanticsRole::Image,
-                ImageItemVariant::Button => SemanticsRole::Button,
-            }),
-            label: options.a11y_label.clone(),
-            test_id: options.test_id.clone(),
-            ..Default::default()
-        };
+        let props = props::image_item_pressable_props(size, &options, enabled, focusable, variant);
 
         control_chrome_pressable_with_id_props(cx, move |cx, state, id| {
             behavior::install_image_item_behavior(cx, id, state, enabled, response);

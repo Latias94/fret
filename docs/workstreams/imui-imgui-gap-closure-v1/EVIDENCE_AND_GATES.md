@@ -25233,3 +25233,25 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI image-item pressable props owner split:
+
+- Claim: image item/button pressable props construction moved from
+  `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs` into
+  `ecosystem/fret-ui-kit/src/imui/image_item_controls/props.rs` without changing image-vs-button
+  semantics, focusability, a11y role/label/test id propagation, size sanitization, or image
+  visual/behavior ownership.
+- Evidence anchors: `image_item_controls.rs` declares `mod props;` and delegates to
+  `props::image_item_pressable_props(...)`; `props.rs` owns `PressableProps` construction and
+  consumes `visual::sanitize_item_size(...)`; `visual.rs` still owns image chrome/props and
+  sanitization helpers; `behavior.rs` still owns interaction and response population.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_image_item_smoke --test imui_response_contract_smoke --no-fail-fast`
+  (4 tests passed).
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

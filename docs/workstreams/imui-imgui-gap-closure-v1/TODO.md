@@ -5820,3 +5820,11 @@ opening the slice.
       Result: `ecosystem/fret-ui-kit/src/imui/menu_family_controls/policy_state.rs` owns
       `ImUiMenubarPolicyState` and its model fields with the same `crate::imui` visibility.
       `menu_family_controls.rs` re-exports the type privately and keeps menu bar composition.
+- [x] Split IMUI image-item pressable props out of
+      `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs` into a private props owner without
+      changing image-vs-button semantics, focusability, a11y role/label/test id propagation, size
+      sanitization, or image visual/behavior ownership.
+      Result: `ecosystem/fret-ui-kit/src/imui/image_item_controls/props.rs` owns the
+      `PressableProps` construction. `image_item_controls.rs` now keeps only item identity,
+      enabled/focusable derivation, chrome/behavior wiring, image props mounting, and response
+      assembly.

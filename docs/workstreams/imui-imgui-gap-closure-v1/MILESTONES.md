@@ -5130,3 +5130,9 @@ keeps behavior installation plus response delegation only.
 `ImUiMenubarPolicyState` and its open-menu/group-active/registry/close-auto-focus model handles.
 `menu_family_controls.rs` re-exports the type through the original private module path and keeps
 menu-bar composition plus child mounting only.
+
+2026-06-01 image-item pressable props owner split result:
+`ecosystem/fret-ui-kit/src/imui/image_item_controls/props.rs` now owns `PressableProps`
+construction for image items and image buttons, including sanitized size, focusability, key
+activation policy, and a11y role/label/test id propagation. `image_item_controls.rs` keeps the
+identity, behavior, chrome, image props, and response wiring.
