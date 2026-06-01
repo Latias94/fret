@@ -1330,6 +1330,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Editor GradientEditor Stop Model Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `GradientEditor` stop model read/sort preparation moved out of the root
+composite owner into a private `composites/gradient_editor/stops_model.rs` owner without changing
+paint-invalidation model reads, transparent color fallback, preview stop clamping, preview stop
+sorting, stop-row sorting, preview drag stop-model collection, preview assembly, Stops group
+assembly, angle row behavior, or public gradient editor options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` keeps keyed element composition and
+  final preview / angle / Stops group / root assembly while delegating stop model reads and derived
+  row data.
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor/stops_model.rs` owns paint-invalidation
+  position/color reads, transparent color fallback, preview stop clamping/sorting, stop-row sorting,
+  and preview drag stop-model collection.
+- `tools/gate_imui_workstream_source.py` now tracks the GradientEditor stop model split and rejects
+  model read/sort policy from drifting back into the root composite owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the stop model owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor gradient_editor --no-fail-fast`: pass (1 passed, 227
+  skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor GradientEditor Stops Group Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `GradientEditor` Stops group/add-stop/empty-state assembly moved out of the

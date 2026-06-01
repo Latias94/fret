@@ -336,6 +336,14 @@ Last updated: 2026-06-01
       to `composites/gradient_editor/stops_group.rs`. The source gate prevents Stops group,
       add-stop button, row mounting, and empty-state text policy from drifting back into the root
       composite owner.
+- [x] Split editor `GradientEditor` stop model read/sort preparation into a private child owner
+      without changing paint-invalidation model reads, transparent color fallback, preview stop
+      clamping, preview stop sorting, stop-row sorting, preview drag stop-model collection, preview
+      assembly, Stops group assembly, angle row behavior, or public gradient editor options.
+      Result: `composites/gradient_editor.rs` keeps keyed element composition and final preview /
+      angle / Stops group / root assembly while delegating stop model reads and derived row data to
+      `composites/gradient_editor/stops_model.rs`. The source gate prevents model read/sort
+      policy from drifting back into the root composite owner.
 - [x] Split editor `InspectorPanel` options/default and search-assist option records into a
       private child owner without changing public `InspectorPanelOptions` or
       `InspectorPanelSearchAssistOptions` import paths, layout defaults, enabled/title/test-id

@@ -10,7 +10,7 @@
 use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
-use fret_core::{Axis, Color, Edges, Px};
+use fret_core::{Axis, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, SpacingLength};
 use fret_ui::{ElementContext, Invalidation, UiHost};
@@ -22,6 +22,7 @@ mod options;
 mod preview;
 mod stops;
 mod stops_group;
+mod stops_model;
 #[cfg(test)]
 mod tests;
 
@@ -29,8 +30,9 @@ use angle::gradient_angle_row;
 pub use options::{
     GradientEditorOptions, GradientStopBinding, OnGradientAction, OnGradientStopAction,
 };
-use preview::{GradientPreviewState, PreviewStop, gradient_preview_canvas};
+use preview::{GradientPreviewState, gradient_preview_canvas};
 use stops_group::{GradientStopsGroupOptions, gradient_stops_group};
+use stops_model::{GradientStopModelRows, read_gradient_stop_model_rows};
 
 #[derive(Clone)]
 pub struct GradientEditor {
@@ -115,24 +117,11 @@ impl GradientEditor {
             .or_else(|| derived_test_id(options.test_id.as_ref(), "add-stop"));
         let angle_test_id = derived_test_id(options.test_id.as_ref(), "angle");
 
-        let mut preview_stops: Vec<PreviewStop> = Vec::new();
-        let mut stop_rows: Vec<(f64, GradientStopBinding)> = Vec::new();
-        for stop in stops.iter() {
-            let pos = cx
-                .get_model_copied(&stop.position, Invalidation::Paint)
-                .unwrap_or(0.0);
-            let color = cx
-                .get_model_copied(&stop.color, Invalidation::Paint)
-                .unwrap_or(Color::TRANSPARENT);
-            preview_stops.push(PreviewStop {
-                id: stop.id,
-                position: (pos as f32).clamp(0.0, 1.0),
-                color,
-            });
-            stop_rows.push((pos, stop.clone()));
-        }
-        preview_stops.sort_by(|a, b| a.position.total_cmp(&b.position));
-        stop_rows.sort_by(|a, b| a.0.total_cmp(&b.0));
+        let GradientStopModelRows {
+            preview_stops,
+            stop_rows,
+            stop_models,
+        } = read_gradient_stop_model_rows(cx, &stops);
 
         let preview_h = Px(options.preview_height.0.max(1.0));
         let active_stop = preview_state
@@ -147,11 +136,7 @@ impl GradientEditor {
             preview_h,
             active_stop,
             preview_state.clone(),
-            stops
-                .iter()
-                .map(|s| (s.id, s.position.clone()))
-                .collect::<Vec<_>>()
-                .into(),
+            stop_models,
         );
         if let Some(test_id) = preview_test_id.as_ref() {
             preview = preview.test_id(test_id.clone());
