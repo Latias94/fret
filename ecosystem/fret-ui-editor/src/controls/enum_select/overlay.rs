@@ -15,19 +15,19 @@ use fret_ui_kit::primitives::{combobox as kit_combobox, popper};
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::controls::MiniSearchBox;
-use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::popup_list::{
     editor_popup_list_row_gap, editor_popup_side_offset, editor_popup_window_margin,
 };
 use crate::primitives::popup_surface::EditorPopupSurfaceChrome;
-use crate::primitives::readout::editor_popup_empty_text_props;
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 use super::{EnumSelectItem, EnumSelectOptions, row};
 
+mod empty;
 mod filter;
 mod reveal;
 
+use empty::enum_select_empty_row;
 use filter::filter_enum_select_items;
 use reveal::{enum_select_viewport_test_id, reveal_selected_row_if_needed};
 
@@ -227,13 +227,9 @@ pub(super) fn request_overlay<H: UiHost>(
                                         },
                                         move |cx| {
                                             if filtered.is_empty() {
-                                                let theme = Theme::global(&*cx.app);
-                                                return vec![cx.text_props(
-                                                    editor_popup_empty_text_props(
-                                                        Arc::from("No matches"),
-                                                        editor_muted_foreground(theme),
-                                                        density.row_height,
-                                                    ),
+                                                return vec![enum_select_empty_row(
+                                                    cx,
+                                                    density.row_height,
                                                 )];
                                             }
 

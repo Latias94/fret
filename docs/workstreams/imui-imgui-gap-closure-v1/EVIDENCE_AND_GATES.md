@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor EnumSelect Overlay Empty Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `EnumSelect` overlay empty-state rendering moved out of
+`controls/enum_select/overlay.rs` into a private `controls/enum_select/overlay/empty.rs` owner
+without changing empty-filter label text, muted popup empty-text styling, row-height routing,
+overlay request assembly, popup/list layout, search field routing, row routing, selected-row
+reveal, close-focus policy, dismiss behavior, or public `EnumSelect` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` keeps overlay request assembly,
+  popup/list layout, search field routing, row routing, selected-row reveal, close-focus policy,
+  and dismiss behavior.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay/empty.rs` owns the `No matches`
+  popup readout text, muted foreground resolution, and row-height routing.
+- `tools/gate_imui_workstream_source.py` now tracks the empty owner and rejects empty-state
+  rendering policy from drifting back into the overlay request owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new empty owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor enum_select --no-fail-fast`: pass (10 passed, 218 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor TextAssistField Empty-Label Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor text-assist inline empty-label rendering moved out of

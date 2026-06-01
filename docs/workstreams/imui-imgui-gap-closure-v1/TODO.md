@@ -100,6 +100,14 @@ Last updated: 2026-06-01
       `controls/enum_select/overlay/filter.rs` owns query normalization and label/value filtering
       with focused filter tests. The source gate prevents filtering policy from drifting back into
       the overlay request owner.
+- [x] Split editor `EnumSelect` overlay empty-state rendering into a private child owner without
+      changing empty-filter label text, muted popup empty-text styling, row-height routing, overlay
+      request assembly, popup/list layout, search field routing, row routing, selected-row reveal,
+      close-focus policy, dismiss behavior, or public `EnumSelect` options.
+      Result: `controls/enum_select/overlay.rs` keeps overlay request/layout/reveal orchestration.
+      `controls/enum_select/overlay/empty.rs` owns empty result text construction, muted foreground
+      resolution, and row-height routing. The source gate prevents empty-state rendering policy
+      from drifting back into the overlay request owner.
 - [x] Split `fret-ui-kit::imui` debug-draw stroke visibility/path-style projection into a private
       child owner without changing `DebugDrawStrokeStyle` fields, builders, default values,
       invalid dash/miter guards, `is_visible(...)`, `path_style(...)`, or public debug-draw option

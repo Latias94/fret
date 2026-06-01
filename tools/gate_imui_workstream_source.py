@@ -35830,8 +35830,10 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs"),
             required=[
+                "mod empty;",
                 "mod filter;",
                 "mod reveal;",
+                "use empty::enum_select_empty_row;",
                 "use filter::filter_enum_select_items;",
                 "use reveal::{enum_select_viewport_test_id, reveal_selected_row_if_needed};",
                 "mod tests;",
@@ -35839,7 +35841,7 @@ def main() -> None:
                 "filter_enum_select_items(items.as_ref(), filter_text.as_ref())",
                 "reveal_selected_row_if_needed(",
                 "row::enum_select_row(",
-                "editor_popup_empty_text_props(",
+                "enum_select_empty_row(",
                 "fn enum_select_close_auto_focus_policy",
             ],
             forbidden=[
@@ -35854,9 +35856,33 @@ def main() -> None:
                 "fn rect_visible_within_viewport_y",
                 "to_lowercase().contains",
                 "collect::<Vec<_>>().into()",
+                "editor_popup_empty_text_props(",
+                "editor_muted_foreground(",
                 "enum_select_close_focus_policy_matches_trigger_owned_combobox",
                 "enum_select_viewport_test_id_suffixes_list_test_id",
                 "rect_visible_within_viewport_y_matches_nearest_visibility_contract",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/enum_select/overlay/empty.rs"),
+            required=[
+                "pub(in crate::controls::enum_select::overlay) fn enum_select_empty_row",
+                "row_height: Px",
+                "Theme::global(&*cx.app)",
+                "editor_popup_empty_text_props(",
+                "Arc::from(\"No matches\")",
+                "editor_muted_foreground(theme)",
+            ],
+            forbidden=[
+                "pub(super) fn request_overlay",
+                "OverlayRequest",
+                "OverlayController",
+                "MiniSearchBox",
+                "ScrollHandle",
+                "row::enum_select_row(",
+                "filter_enum_select_items",
+                "reveal_selected_row_if_needed",
+                "fn enum_select_close_auto_focus_policy",
             ],
         ),
         SourceCheck(
