@@ -102,12 +102,19 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     autocomplete_inside_dialog_escape_closes_inner_popover_before_modal_dialog}` plus diag scripts
     `ui-gallery-material3-dialog-select-nested-overlay.json` and
     `ui-gallery-material3-autocomplete-dialog-nested-overlay.json`.
+- 2026-06-01 Field-overlay composition inside ModalBottomSheet:
+  - The BottomSheet gallery now renders real `TextField`, `Select`, and `Autocomplete` controls with
+    caller-owned full-width sheet content layout, stable field/listbox/item anchors, and a diag gate
+    that catches zero-width/hit-test regressions before interaction.
+  - Gates: `material3_overlay_interactions::field_overlays_inside_modal_bottom_sheet_close_before_sheet`
+    plus `ui-gallery-material3-bottom-sheet-fields-nested-overlays.json`.
 
 ## Next Recommended Focus
 
 1. Finish Tabs residuals only if panel presence becomes a real app need:
    `force_mount` content, presence motion, and overflow/scroll affordance polish.
-2. Broaden gallery/diag coverage for field overlays inside `ModalBottomSheet`, then Search + Menu
-   and navigation routed-content compositions through `material3-composition-hardening-v1.md`.
-3. Start a second-pass polish lane for cross-component compositions: Search + Menu, field overlays
-   inside Dialog/BottomSheet, and navigation surfaces with routed panel content.
+2. Add Search + Menu composition gates: `SearchBar` / `SearchView` next to Material
+   `DropdownMenu`, with focus, outside-dismiss, and overlay ordering evidence.
+3. Add navigation routed-content gates for `NavigationBar`, `NavigationRail`, and
+   `NavigationDrawer`: selected state, visible panel content, focus movement, and route/content
+   `test_id` anchors.

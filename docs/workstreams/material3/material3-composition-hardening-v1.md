@@ -113,5 +113,67 @@ Proof:
 
 Residual risk:
 
-- `TextField` / `Autocomplete` inside `ModalBottomSheet` still need composition gates.
+- Search + menu and navigation + routed content are not covered by this batch.
+
+## Batch 3: Field Overlays Inside ModalBottomSheet
+
+Truth:
+
+- `TextField`, `Select`, and `Autocomplete` inside a modal bottom sheet must receive a definite,
+  hit-testable width from the sheet content composition.
+- A nested `Select` popover inside `ModalBottomSheet` must paint above the bottom-sheet modal layer.
+- Pressing `Escape` while the nested `Select` popover is open must close the `Select` first, keep
+  the sheet open, and restore focus to the `Select` trigger.
+- A nested `Autocomplete` listbox inside the sheet must keep input focus, close before the sheet on
+  `Escape`, and leave the sheet open until the next modal dismiss.
+- A final `Escape` must close the `ModalBottomSheet` and restore focus to the opener.
+
+Artifacts:
+
+- Regression test:
+  `ecosystem/fret-ui-material3/tests/material3_overlay_interactions.rs`
+  (`field_overlays_inside_modal_bottom_sheet_close_before_sheet`)
+- Gallery repro:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/bottom_sheet.rs`
+  (`ui-gallery-material3-bottom-sheet-text-field`,
+  `ui-gallery-material3-bottom-sheet-select`,
+  `ui-gallery-material3-bottom-sheet-autocomplete`)
+- Diag script:
+  `tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-bottom-sheet-fields-nested-overlays.json`
+
+Wiring:
+
+- The BottomSheet gallery snippet now renders real `TextField`, `Select`, and `Autocomplete`
+  controls inside the modal sheet.
+- The sheet content wrapper owns the page/container width negotiation with
+  `w_full().min_w_0()`; this follows the Material default-style ownership rule because upstream
+  width negotiation is caller/container-owned, not an intrinsic field recipe default.
+- No component-specific overlay policy was required: the existing `fret-ui-kit` modal/popover
+  arbitration covers bottom-sheet modal layers after the gallery composition exposes valid bounds.
+- Local Compose reference: `ModalBottomSheetExample.kt` contains a text field inside a modal sheet,
+  while `ModalBottomSheet.kt` models the sheet as a dialog-like modal surface with scrim, dismiss,
+  max-width, and content inset policy.
+
+Proof:
+
+- The first diag attempt exposed the composition bug: `TextField` and `Autocomplete` had zero-width
+  semantics bounds inside the gallery sheet, so `click_stable` timed out.
+- The diag script now asserts non-zero field bounds before interaction, types into the
+  `TextField`, opens/closes nested `Select` and `Autocomplete` overlays with `Escape`, checks focus
+  restoration/retention, and finally closes the sheet.
+- Validation:
+  - `cargo fmt -p fret-ui-gallery -p fret-ui-material3`
+  - `python -m json.tool tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-bottom-sheet-fields-nested-overlays.json > $null`
+  - `cargo check -p fret-ui-gallery --features gallery-material3`
+  - `cargo test -p fret-ui-material3 --features diagnostics --test material3_overlay_interactions field_overlays_inside_modal_bottom_sheet_close_before_sheet -- --exact`
+  - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-bottom-sheet-fields-nested-overlays.json --dir target/fret-diag-material3-bottom-sheet-fields-nested-overlays --session-auto --timeout-ms 360000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3`
+    produced a passed script result in
+    `target/fret-diag-material3-bottom-sheet-fields-nested-overlays/sessions/1780277052217-238272/script.result.json`
+    with `run_id=1780277446904`; the wrapper process timed out after the pass while no cargo/fret
+    process remained.
+
+Residual risk:
+
+- The gate covers field editing, overlay stacking/dismiss, focus, and basic hit-testing. It does not
+  prove real mobile IME/window-inset behavior yet.
 - Search + menu and navigation + routed content are not covered by this batch.

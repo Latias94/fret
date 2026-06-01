@@ -1303,6 +1303,374 @@ fn autocomplete_inside_dialog_escape_closes_inner_popover_before_modal_dialog() 
 }
 
 #[test]
+fn field_overlays_inside_modal_bottom_sheet_close_before_sheet() {
+    use fret_ui::element::{FlexProps, Length, SpacingLength};
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{
+        Autocomplete, AutocompleteItem, Button, ModalBottomSheet, Select, SelectItem, TextField,
+        TextFieldVariant,
+    };
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(720.0), Px(560.0)),
+    );
+
+    let sheet_open = app.models_mut().insert(false);
+    let text_value = app.models_mut().insert(String::new());
+    let select_value = app.models_mut().insert(Some(Arc::<str>::from("beta")));
+    let autocomplete_query = app.models_mut().insert(String::new());
+    let autocomplete_value = app.models_mut().insert(Some(Arc::<str>::from("beta")));
+
+    let select_items: Arc<[SelectItem]> = vec![
+        SelectItem::new("alpha", "Alpha").test_id("sheet-select-alpha"),
+        SelectItem::new("beta", "Beta").test_id("sheet-select-beta"),
+        SelectItem::new("gamma", "Gamma").test_id("sheet-select-gamma"),
+    ]
+    .into();
+    let autocomplete_items: Arc<[AutocompleteItem]> = vec![
+        AutocompleteItem::new("alpha", "Alpha"),
+        AutocompleteItem::new("beta", "Beta"),
+        AutocompleteItem::new("gamma", "Gamma"),
+    ]
+    .into();
+
+    let sheet_open_for_render = sheet_open.clone();
+    let text_value_for_render = text_value.clone();
+    let select_value_for_render = select_value.clone();
+    let autocomplete_query_for_render = autocomplete_query.clone();
+    let autocomplete_value_for_render = autocomplete_value.clone();
+    let select_items_for_render = select_items.clone();
+    let autocomplete_items_for_render = autocomplete_items.clone();
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let sheet_open = sheet_open_for_render.clone();
+            let text_value = text_value_for_render.clone();
+            let select_value = select_value_for_render.clone();
+            let autocomplete_query = autocomplete_query_for_render.clone();
+            let autocomplete_value = autocomplete_value_for_render.clone();
+            let select_items = select_items_for_render.clone();
+            let autocomplete_items = autocomplete_items_for_render.clone();
+
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let sheet = ModalBottomSheet::new(sheet_open.clone())
+                    .test_id("sheet")
+                    .into_element(
+                        cx,
+                        |cx| {
+                            let trigger = Button::new("Open sheet")
+                                .test_id("sheet-trigger")
+                                .into_element(cx);
+                            with_padding(cx, Px(24.0), trigger)
+                        },
+                        move |cx| {
+                            let mut column = FlexProps::default();
+                            column.direction = fret_core::Axis::Vertical;
+                            column.gap = SpacingLength::Px(Px(16.0));
+                            column.layout.size.width = Length::Fill;
+
+                            let text_value = text_value.clone();
+                            let select_value = select_value.clone();
+                            let autocomplete_query = autocomplete_query.clone();
+                            let autocomplete_value = autocomplete_value.clone();
+                            let select_items = select_items.clone();
+                            let autocomplete_items = autocomplete_items.clone();
+
+                            vec![cx.flex(column, move |cx| {
+                                vec![
+                                    TextField::new(text_value.clone())
+                                        .variant(TextFieldVariant::Outlined)
+                                        .label("Project name")
+                                        .placeholder("Type a name")
+                                        .a11y_label("Sheet project name")
+                                        .test_id("sheet-text-field")
+                                        .into_element(cx),
+                                    Select::new(select_value.clone())
+                                        .label("Project")
+                                        .placeholder("Pick one")
+                                        .items(select_items.clone())
+                                        .a11y_label("Sheet Select")
+                                        .test_id("sheet-select")
+                                        .into_element(cx),
+                                    Autocomplete::new(autocomplete_query.clone())
+                                        .selected_value(autocomplete_value.clone())
+                                        .label("Assignee")
+                                        .placeholder("Type to filter")
+                                        .items(autocomplete_items.clone())
+                                        .a11y_label("Sheet Autocomplete")
+                                        .test_id("sheet-autocomplete")
+                                        .into_element(cx),
+                                ]
+                            })]
+                        },
+                    );
+                vec![sheet]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger_node = semantics_node_id_by_test_id(&ui, "sheet-trigger")
+        .expect("expected sheet trigger before opening");
+    ui.set_focus(Some(trigger_node));
+    let _ = app.models_mut().update(&sheet_open, |open| *open = true);
+
+    for _ in 0..16 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+        if semantics_node_id_by_test_id(&ui, "sheet.sheet").is_some() {
+            break;
+        }
+    }
+    assert!(
+        semantics_node_id_by_test_id(&ui, "sheet.sheet").is_some(),
+        "expected ModalBottomSheet sheet surface"
+    );
+
+    let text_node =
+        semantics_node_id_by_test_id(&ui, "sheet-text-field").expect("expected sheet TextField");
+    ui.set_focus(Some(text_node));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::TextInput("Project Apollo".to_string()),
+    );
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    assert_eq!(
+        app.models().get_cloned(&text_value).as_deref(),
+        Some("Project Apollo"),
+        "expected TextField input inside ModalBottomSheet to update its model"
+    );
+
+    let select_node =
+        semantics_node_id_by_test_id(&ui, "sheet-select").expect("expected Select inside sheet");
+    ui.set_focus(Some(select_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    let mut saw_select_popover = false;
+    for _ in 0..32 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        let visible_open: Vec<_> = stack
+            .stack
+            .iter()
+            .filter(|entry| entry.open && entry.visible)
+            .map(|entry| entry.kind)
+            .collect();
+        if visible_open.contains(&OverlayStackEntryKind::Modal)
+            && visible_open.contains(&OverlayStackEntryKind::Popover)
+        {
+            assert_eq!(
+                visible_open.last().copied(),
+                Some(OverlayStackEntryKind::Popover),
+                "expected the Select popover to be above the bottom sheet modal layer"
+            );
+            saw_select_popover = true;
+            break;
+        }
+    }
+    assert!(saw_select_popover, "expected Select popover above sheet");
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Escape));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Escape));
+
+    let mut select_popover_closed = false;
+    for _ in 0..60 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        select_popover_closed = !stack
+            .stack
+            .iter()
+            .any(|entry| entry.kind == OverlayStackEntryKind::Popover && entry.visible);
+        if select_popover_closed {
+            break;
+        }
+    }
+    assert!(
+        select_popover_closed,
+        "expected first Escape to close the Select popover"
+    );
+    assert_eq!(
+        app.models().get_copied(&sheet_open),
+        Some(true),
+        "expected Select Escape to leave the bottom sheet open"
+    );
+    let select_node_after_close =
+        semantics_node_id_by_test_id(&ui, "sheet-select").expect("expected Select after close");
+    assert_eq!(
+        ui.focus(),
+        Some(select_node_after_close),
+        "expected focus to restore to Select trigger inside ModalBottomSheet"
+    );
+
+    let autocomplete_node = semantics_node_id_by_test_id(&ui, "sheet-autocomplete")
+        .expect("expected Autocomplete inside sheet");
+    ui.set_focus(Some(autocomplete_node));
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    let mut saw_autocomplete_popover = false;
+    for _ in 0..32 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        let visible_open: Vec<_> = stack
+            .stack
+            .iter()
+            .filter(|entry| entry.open && entry.visible)
+            .map(|entry| entry.kind)
+            .collect();
+        if visible_open.contains(&OverlayStackEntryKind::Modal)
+            && visible_open.contains(&OverlayStackEntryKind::Popover)
+        {
+            assert_eq!(
+                visible_open.last().copied(),
+                Some(OverlayStackEntryKind::Popover),
+                "expected the Autocomplete popover to be above the bottom sheet modal layer"
+            );
+            saw_autocomplete_popover = true;
+            break;
+        }
+    }
+    assert!(
+        saw_autocomplete_popover,
+        "expected Autocomplete popover above sheet"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Escape));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Escape));
+
+    let mut autocomplete_popover_closed = false;
+    for _ in 0..60 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        autocomplete_popover_closed = !stack
+            .stack
+            .iter()
+            .any(|entry| entry.kind == OverlayStackEntryKind::Popover && entry.visible);
+        if autocomplete_popover_closed {
+            break;
+        }
+    }
+    assert!(
+        autocomplete_popover_closed,
+        "expected Escape to close the Autocomplete popover"
+    );
+    assert_eq!(
+        app.models().get_copied(&sheet_open),
+        Some(true),
+        "expected Autocomplete Escape to leave the bottom sheet open"
+    );
+    let autocomplete_node_after_close = semantics_node_id_by_test_id(&ui, "sheet-autocomplete")
+        .expect("expected Autocomplete after close");
+    assert_eq!(
+        ui.focus(),
+        Some(autocomplete_node_after_close),
+        "expected focus to remain on Autocomplete input inside ModalBottomSheet"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Escape));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Escape));
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        false,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    assert_eq!(
+        app.models().get_copied(&sheet_open),
+        Some(false),
+        "expected final Escape to close the ModalBottomSheet"
+    );
+    assert_eq!(
+        ui.focus(),
+        Some(trigger_node),
+        "expected ModalBottomSheet to restore focus to the opener"
+    );
+}
+
+#[test]
 fn dialog_scrim_dismisses_without_activating_underlay() {
     use fret_ui_material3::{Button, Dialog, DialogAction};
 
