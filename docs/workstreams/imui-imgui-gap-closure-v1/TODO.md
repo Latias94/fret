@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `DragValue` keyed element composition into a private child owner without
+      changing public constructors/builders, callsite/id-source keying, model reads, duplicate
+      chrome affix suppression, test-id derivation, scrub/input owner routing, hidden input
+      mounting, or public `DragValue` options.
+      Result: `controls/drag_value.rs` now keeps the public control API, keying wrapper, module
+      declarations, and `DragValueOptions` re-export. `controls/drag_value/element.rs` owns keyed
+      state lookup, current value reads, mode/scrub revision reads, affix/test-id derivation,
+      scrub/input owner routing, and final mounted composition. The source gate prevents element
+      orchestration from drifting back into the root control.
 - [x] Split editor `AxisDragValue` typing key handling into a private element child owner without
       changing typed commit/cancel behavior, parse/validate/constraint handling, invalid-number
       reporting, draft/error sync, focus restore to scrub, scrub revision bumping, outcome routing,

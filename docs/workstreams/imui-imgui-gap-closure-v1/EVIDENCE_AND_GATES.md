@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor DragValue Element Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `DragValue` keyed element composition moved out of the root control owner
+into a private `controls/drag_value/element.rs` owner without changing public constructors/builders,
+callsite/id-source keying, model reads, duplicate chrome affix suppression, test-id derivation,
+scrub/input owner routing, hidden input mounting, or public `DragValue` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/drag_value.rs` keeps the public control API,
+  callsite/id-source keying wrapper, module declarations, and `DragValueOptions` re-export.
+- `ecosystem/fret-ui-editor/src/controls/drag_value/element.rs` owns keyed state lookup, current
+  value reads, mode/scrub revision reads, duplicate chrome affix suppression, test-id derivation,
+  scrub/input owner routing, hidden input mounting, and final mounted composition.
+- `tools/gate_imui_workstream_source.py` now tracks the element split and rejects element
+  orchestration from drifting back into the drag-value root owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the drag-value element owner
+  file.
+- `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md` includes the new
+  element owner in its cross-workstream evidence anchor list.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor drag_value --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor DragValue Scrub-Element Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `DragValue` scrub element assembly moved out of the root control owner into

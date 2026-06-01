@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor DragValue element owner-split result:
+`ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps the public control API, callsite /
+id-source keying wrapper, module declarations, and `DragValueOptions` re-export while delegating
+keyed element composition to `controls/drag_value/element.rs`. The private element owner contains
+state lookup, current value reads, mode/scrub revision reads, duplicate chrome affix suppression,
+test-id derivation, scrub/input owner routing, hidden input mounting, and final mounted
+composition. Public `DragValue` constructors/builders, keying behavior, options, and scrub/typing
+semantics remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor DragValue scrub-element owner-split result:
 `ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps keyed control orchestration and
 scrub/input owner composition while delegating `DragValueCore` scrub assembly to

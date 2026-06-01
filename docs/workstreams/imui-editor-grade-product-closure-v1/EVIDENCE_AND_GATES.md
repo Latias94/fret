@@ -229,6 +229,7 @@ DevTools full clippy is now a current maintenance gate for the P2 diagnostics/de
 - `ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs`
 - `ecosystem/fret-ui-editor/src/imui.rs`
 - `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
+- `ecosystem/fret-ui-editor/src/controls/drag_value/element.rs`
 - `ecosystem/fret-ui-editor/src/controls/drag_value/options.rs`
 - `ecosystem/fret-ui-editor/src/controls/drag_value/scrub_element.rs`
 - `ecosystem/fret-ui-editor/src/controls/drag_value/typing.rs`
