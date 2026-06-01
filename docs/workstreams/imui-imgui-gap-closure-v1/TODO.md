@@ -3097,6 +3097,13 @@ Last updated: 2026-06-02
       `dispatch/rounded_commands.rs` owns rounded image/region routing,
       `dispatch/svg_commands.rs` owns SVG image/mask-icon routing, and
       `dispatch/non_media.rs` keeps the exhaustive non-media no-op guard.
+- [x] Split IMUI debug-draw residual shape paint dispatch out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes.rs` into a private residual
+      owner without changing path-command routing, filled-rect paint, vertex-color rect paint,
+      triangle mesh paint, image triangle mesh paint, text paint, or non-shape no-op behavior.
+      Result: `paint_shapes.rs` now keeps order/key setup plus path-vs-residual dispatch, while
+      `paint_shapes/residual.rs` owns filled rect, mesh/image-mesh, text, and exhaustive no-op
+      routing for commands already handled elsewhere.
 - [x] Split IMUI debug-draw pressable element behavior out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element.rs` into a private owner module
       without changing noninteractive canvas output, pressable canvas wrapping, keyboard activation

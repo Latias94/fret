@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 IMUI debug-draw residual shape paint owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes.rs` now keeps draw-order/key setup
+and path-vs-residual dispatch while delegating filled-rect, vertex-color rect, triangle mesh,
+image-triangle mesh, text paint, and exhaustive no-op residual routing to
+`paint_shapes/residual.rs`. Path command routing, media paint dispatch, clip balancing, draw-list
+recording, and public debug-draw summaries remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the new root/residual boundary.
+
 2026-06-02 IMUI begin-menu active-trigger child owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger.rs`
 now keeps guard/orchestration and the reconcile re-export while delegating current-trigger

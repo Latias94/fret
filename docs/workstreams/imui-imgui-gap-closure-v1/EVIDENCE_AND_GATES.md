@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-06-02
 
+## IMUI Debug-Draw Residual Shape Paint Owner-Split Evidence - 2026-06-02
+
+Claim verified: IMUI debug-draw residual shape paint dispatch moved out of
+`debug_draw_controls/paint_shapes.rs` into private `paint_shapes/residual.rs` without changing
+path-command routing, filled-rect paint, vertex-color rect paint, triangle mesh paint, image
+triangle mesh paint, text paint, or non-shape no-op behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes.rs` keeps draw-order/key setup,
+  path-command dispatch, and the stable `paint_debug_draw_shape_command(...)` entry point.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/residual.rs` owns filled rect,
+  multi-color rect, triangle mesh, image triangle mesh, text paint, and exhaustive no-op routing for
+  commands painted elsewhere.
+- `tools/gate_imui_workstream_source.py` now tracks the residual owner and rejects residual paint
+  bodies drifting back into the root shape dispatcher.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new residual owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast`: pass, 42 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Begin-Menu Active-Trigger Child Owner-Split Evidence - 2026-06-02
 
 Claim verified: IMUI begin-menu active-trigger readback and activation writes moved out of
