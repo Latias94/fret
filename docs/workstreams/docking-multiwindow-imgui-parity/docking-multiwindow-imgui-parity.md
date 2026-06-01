@@ -57,6 +57,10 @@ Platform note:
   (moves created-window completion, drag-source remapping, and registry registration into a
   private runtime child owner without changing create/cancel/fallback behavior or the Wayland
   acceptance boundary)
+- Latest docking runtime before-close owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M28_DOCKING_RUNTIME_BEFORE_CLOSE_OWNER_SPLIT_2026-06-02.md`
+  (moves DockFloating OS close merge-back policy into a private runtime child owner without
+  changing create/cancel/fallback/window-created behavior or the Wayland acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
@@ -293,6 +297,8 @@ Current policy (Wayland):
   `docs/workstreams/docking-multiwindow-imgui-parity/M22_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-31.md`.
 - Latest docking runtime window-created owner split:
   `docs/workstreams/docking-multiwindow-imgui-parity/M27_DOCKING_RUNTIME_WINDOW_CREATED_OWNER_SPLIT_2026-06-02.md`.
+- Latest docking runtime before-close owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M28_DOCKING_RUNTIME_BEFORE_CLOSE_OWNER_SPLIT_2026-06-02.md`.
 
 ## Capabilities (contract) — windowing quality signals (v1)
 
