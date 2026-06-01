@@ -160,6 +160,16 @@ Last updated: 2026-06-01
       TextInputProps assembly, joined chrome, invalid state, test-id routing, input mounting, and
       focus id reads. The source gate prevents typing input props from drifting back into the root
       element owner.
+- [x] Split editor `TransformEdit` section-control Vec3 assembly into a private element child owner
+      without changing section presentation formats/parses/chrome affixes, per-section
+      id-source/test-id derivation, linked-scale test-id derivation, axis outcome routing,
+      linked-scale sync, Column/Row layout selection, or public `TransformEdit` options.
+      Result: `controls/transform_edit/element.rs` keeps linked-scale model/sync orchestration,
+      layout variant selection, section row/column mounting, and root test-id decoration.
+      `controls/transform_edit/element/section_control.rs` owns Vec3Edit construction,
+      per-section presentation projection, id/test-id routing, validation forwarding, and axis
+      outcome mapping. The source gate prevents Vec3 section-control policy from drifting back into
+      the element layout owner.
 - [x] Split editor `VecEdit` options/default records into a private child owner without changing
       public `VecEditOptions` / `VecEditLayoutVariant` import paths, layout defaults, auto-stack
       defaults, id-source/test-id fields, Vec2/Vec3/Vec4 constructors, or layout/axis assembly.

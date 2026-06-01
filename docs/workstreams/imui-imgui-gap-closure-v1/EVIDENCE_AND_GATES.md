@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor TransformEdit Section-Control Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `TransformEdit` section-control Vec3 assembly moved out of
+`controls/transform_edit/element.rs` into private
+`controls/transform_edit/element/section_control.rs` without changing section presentation
+formats/parses/chrome affixes, per-section id-source/test-id derivation, linked-scale test-id
+derivation, validation forwarding, transform-axis outcome routing, linked-scale sync, Column/Row
+layout selection, section row/column chrome, or public `TransformEdit` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/transform_edit/element.rs` keeps linked-scale model/sync
+  orchestration, layout variant selection, section row/column mounting, and root test-id
+  decoration.
+- `ecosystem/fret-ui-editor/src/controls/transform_edit/element/section_control.rs` owns
+  Vec3Edit construction, per-section presentation projection, id/test-id routing, validation
+  forwarding, link-scale test-id derivation, and axis outcome mapping.
+- `tools/gate_imui_workstream_source.py` now tracks the section-control owner and rejects Vec3
+  section-control policy from drifting back into the element layout owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new section-control
+  owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor transform_edit --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor AxisDragValue Typing-Input Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `AxisDragValue` typing TextInput assembly moved out of

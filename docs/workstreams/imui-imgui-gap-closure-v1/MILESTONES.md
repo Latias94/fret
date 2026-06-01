@@ -161,6 +161,16 @@ chrome, text style routing, test-id routing, input mounting, input id capture, a
 Public AxisDragValue options, typing key behavior, focus handoff, scrub mounting, and typing frame
 behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor TransformEdit section-control owner-split result:
+`ecosystem/fret-ui-editor/src/controls/transform_edit/element.rs` now keeps linked-scale
+model/sync orchestration, Column/Row layout selection, section row/column mounting, and root
+test-id decoration while delegating Vec3 section-control construction to
+`controls/transform_edit/element/section_control.rs`. The private section-control owner contains
+per-section presentation projection, id-source/test-id routing, validation forwarding, link-scale
+test-id derivation, and transform-axis outcome mapping. Public TransformEdit options,
+section presentation formats/parses/chrome affixes, linked-scale sync, and layout behavior remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor VecEdit options owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps the public Vec2/Vec3/Vec4 control hub,
 constructors, builder methods, keyed entrypoints, presentation adoption, and axis exports while
