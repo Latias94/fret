@@ -1,13 +1,33 @@
 # Material 3 Composition Hardening v1
 
-Status: Active
+Status: Complete (medium goal)
 Owner: Codex goal `Material3 cross-component composition hardening`
 Started: 2026-06-01
+Completed: 2026-06-01
 
 This lane hardens Material 3 components in real compositions instead of auditing only isolated
 recipes. The target bar is shadcn-like completeness in application flows: stable automation anchors,
 predictable focus restoration, overlay/dismiss arbitration, semantics, RTL/layout-direction behavior,
 motion, and gallery/diag evidence.
+
+## Closeout
+
+This medium goal is complete for the targeted composition set:
+
+- Field overlays inside modal surfaces are covered by Dialog and ModalBottomSheet tests plus gallery
+  diag scripts.
+- Search + Menu sibling popovers are covered by a real gallery composition, focus/dismiss test, and
+  diag script.
+- Navigation Bar/Rail/Drawer routed content is covered by caller-owned route panels, shared-route
+  tests, and diag script.
+- The completion audit found and fixed a real infrastructure propagation bug: `NavigationBar`
+  resolved RTL keyboard movement but did not provide Material layout direction to its subtree, so
+  physical destination order stayed LTR under RTL.
+
+Open follow-ups are intentionally outside this medium goal and listed in the residual sections
+below: modal drawer routed content, full app-router proof for ADR 0230 route hooks, drawer slot
+mirroring under RTL, SearchView edge collision/full-screen composition, and real mobile IME/inset
+behavior for bottom-sheet fields.
 
 ## Scope
 
