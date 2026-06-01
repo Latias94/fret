@@ -4001,6 +4001,14 @@ Last updated: 2026-06-01
       models, menubar open-menu synchronization, active trigger state writes, open-request
       resolution, disabled-popup cleanup, and render-state recording. `menu.rs` now keeps public
       flow orchestration plus trigger and popup mounting.
+- [x] Split IMUI begin-menu open-request popup bridge out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` into a private child owner
+      without changing menubar open-request resolution, active-trigger synchronization, trigger-rect
+      popup opening, popup body mounting, disabled-popup cleanup, or `DisclosureResponse`
+      open/toggled semantics.
+      Result: `menu_family_controls/menu/open.rs` owns resolve-open-request, menubar active-trigger
+      activation, and `ui.open_popup_at(...)` dispatch. `menu.rs` keeps trigger mounting, popup body
+      mounting, disabled cleanup routing, and final response assembly.
 - [x] Split IMUI begin-menu state capture/read helpers out of
       `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state.rs` into a private owner
       module without changing row/popup/was-open model identity, render-state recording, or menubar

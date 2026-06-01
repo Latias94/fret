@@ -3,8 +3,11 @@ use std::sync::Arc;
 use fret_ui::UiHost;
 
 use crate::imui::{BeginMenuOptions, DisclosureResponse, ImUiFacade, UiWriterImUiFacadeExt};
+use open::open_begin_menu_popup_if_requested;
 
 use super::menu_state;
+
+mod open;
 
 pub(in crate::imui) fn begin_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -54,17 +57,14 @@ pub(in crate::imui) fn begin_menu_with_options<H: UiHost, W: UiWriterImUiFacadeE
         menu_state::toggle_menu_on_trigger_click(ui, id, &menu_state);
     }
 
-    let open_requested = menu_state::resolve_open_requested(ui, id, &menu_state, open_menu_before);
-
-    menu_state::activate_menubar_trigger_if_requested(
+    open_begin_menu_popup_if_requested(
         ui,
-        open_requested,
+        id,
         &menu_state,
+        open_menu_before,
         trigger.id(),
+        trigger.rect(),
     );
-    if open_requested && let Some(anchor) = trigger.rect() {
-        ui.open_popup_at(id, anchor);
-    }
 
     let popup_opened = super::super::popup_overlay::begin_popup_menu_with_options(
         ui,

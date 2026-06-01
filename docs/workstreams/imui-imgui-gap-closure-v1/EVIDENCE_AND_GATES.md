@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-01
 
+## IMUI Begin-Menu Open-Request Bridge Owner-Split Evidence - 2026-06-01
+
+Claim verified: IMUI begin-menu open-request bridging moved out of
+`menu_family_controls/menu.rs` into private `menu/open.rs` without changing menubar open-request
+resolution, active-trigger synchronization, trigger-rect popup opening, popup body mounting,
+disabled-popup cleanup, or `DisclosureResponse` open/toggled semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` keeps trigger mounting, popup body
+  mounting, disabled cleanup routing, render-state capture, and final `DisclosureResponse`
+  assembly.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu/open.rs` owns open-request resolution,
+  menubar active-trigger activation, and `ui.open_popup_at(...)` dispatch from the trigger rect.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state.rs` re-exports
+  `BeginMenuState` privately for the new child owner without widening the public IMUI facade.
+- `tools/gate_imui_workstream_source.py` now tracks the open bridge owner and rejects
+  open-request/popup-open bridge policy from drifting back into the root menu owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new open owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_family_controls::tests --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Floating-Area Drag-State Commit Owner-Split Evidence - 2026-06-01
 
 Claim verified: IMUI floating-area drag-state commit and final placement readback moved out of

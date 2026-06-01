@@ -723,6 +723,7 @@
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_bar.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/policy_state.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu/open.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/open_policy.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/popup.rs",

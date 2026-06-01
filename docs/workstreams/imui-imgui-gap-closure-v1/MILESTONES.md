@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 IMUI begin-menu open-request bridge owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` now keeps trigger mounting, popup body
+mounting, disabled cleanup routing, and final `DisclosureResponse` assembly while delegating
+open-request resolution bridging to `menu_family_controls/menu/open.rs`. The private open owner
+contains resolve-open-request, menubar active-trigger activation, and trigger-rect
+`ui.open_popup_at(...)` dispatch. Menubar hover/open behavior, popup body mounting, disabled-popup
+cleanup, and public IMUI menu response semantics remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 IMUI floating-area drag-state commit owner-split result:
 `ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state.rs` now keeps drag snapshot
 discovery, scale-factor lookup, prepared output assembly, and final-state re-export routing while
