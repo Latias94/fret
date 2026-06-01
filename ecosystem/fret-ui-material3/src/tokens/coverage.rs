@@ -19,6 +19,15 @@ pub(crate) struct MaterialTokenUse {
 }
 
 pub(crate) fn literal_md_token_uses() -> Vec<MaterialTokenUse> {
+    let mut uses = manifest_literal_md_token_uses();
+    uses.extend(
+        expanded_template_token_uses().expect("material token templates must expand for coverage"),
+    );
+    sort_and_dedup_token_uses(&mut uses);
+    uses
+}
+
+fn manifest_literal_md_token_uses() -> Vec<MaterialTokenUse> {
     let mut uses = Vec::new();
     for source in load_manifest().sources {
         uses.extend(source.tokens.into_iter().map(|key| MaterialTokenUse {
@@ -26,9 +35,39 @@ pub(crate) fn literal_md_token_uses() -> Vec<MaterialTokenUse> {
             key,
         }));
     }
+    uses
+}
+
+fn expanded_template_token_uses() -> Result<Vec<MaterialTokenUse>, String> {
+    let crate_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let scan = usage::scan_audited_sources(crate_dir)?;
+    let mut uses = Vec::new();
+
+    for source in scan.sources {
+        for template in source.literals.templates {
+            let expansion =
+                usage::expand_key_templates(crate_dir, &BTreeSet::from([template.clone()]));
+            if !expansion.unexpanded.is_empty() {
+                return Err(format!(
+                    "{}: unexpanded material token template {template}",
+                    source.source.path
+                ));
+            }
+
+            let source_label = format!("{} template {template}", source.source.path);
+            uses.extend(expansion.expanded.into_iter().map(|key| MaterialTokenUse {
+                source: source_label.clone(),
+                key,
+            }));
+        }
+    }
+
+    Ok(uses)
+}
+
+fn sort_and_dedup_token_uses(uses: &mut Vec<MaterialTokenUse>) {
     uses.sort_unstable_by(|a, b| a.key.cmp(&b.key).then_with(|| a.source.cmp(&b.source)));
     uses.dedup_by(|a, b| a.key == b.key);
-    uses
 }
 
 pub(crate) fn token_resolves(theme: &Theme, key: &str) -> bool {
@@ -190,5 +229,22 @@ fn validate_sorted_unique_tokens(source: &MaterialTokenSource, errors: &mut Vec<
                 source.path, pair[0], pair[1]
             ));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn literal_md_token_uses_include_expanded_templates() {
+        let uses = literal_md_token_uses();
+
+        assert!(uses.iter().any(|token_use| {
+            token_use.key == "md.comp.outlined-segmented-button.selected.hover.label-text.color"
+                && token_use
+                    .source
+                    .contains("src/tokens/segmented_button.rs template")
+        }));
     }
 }
