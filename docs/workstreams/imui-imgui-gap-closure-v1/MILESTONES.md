@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor TextField escape-clear owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/element.rs` now keeps TextInput/TextArea
+assembly, buffered key routing, focus-selection sync, blur handling, and clear-button composition
+while delegating unbuffered multiline Escape-clear key capture to
+`controls/text_field/element/escape_clear.rs`. The private escape-clear owner preserves
+clear-on-Escape behavior and redraw requests with a focused key-classification test. Single-line
+cancel command routing, buffered commit/cancel handling, clear-button behavior, and public
+`TextField` options remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor EnumSelect trigger owner-split result:
 `ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps public control construction,
 model reads, trigger-key registration, and overlay routing while delegating trigger pressable and

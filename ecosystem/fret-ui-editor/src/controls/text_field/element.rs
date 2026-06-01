@@ -1,7 +1,6 @@
 use std::panic::Location;
-use std::sync::Arc;
 
-use fret_core::{KeyCode, Px, TextStyle};
+use fret_core::{Px, TextStyle};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextAreaProps, TextInputProps};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
@@ -21,12 +20,14 @@ use crate::primitives::text_entry::{
 
 mod buffered_keys;
 mod clear_button;
+mod escape_clear;
 
 use buffered_keys::{
     TextFieldBufferedKeyHandlerArgs, TextFieldBufferedKeyMode,
     install_buffered_text_field_key_handler,
 };
 use clear_button::{TextFieldClearButtonArgs, text_field_clear_button_segments};
+use escape_clear::install_text_field_escape_clear_handler;
 
 impl TextField {
     pub fn new(model: Model<String>) -> Self {
@@ -252,17 +253,10 @@ impl TextField {
                         );
                     }
                     if !buffered && matches!(cancel_behavior, EditorTextCancelBehavior::Clear) {
-                        let model_for_escape = model_for_input.clone();
-                        cx.key_add_on_key_down_capture_for(
+                        install_text_field_escape_clear_handler(
+                            cx,
                             area_id,
-                            Arc::new(move |host, action_cx, down| {
-                                if down.key != KeyCode::Escape {
-                                    return false;
-                                }
-                                let _ = host.models_mut().update(&model_for_escape, |s| s.clear());
-                                host.request_redraw(action_cx.window);
-                                true
-                            }),
+                            model_for_input.clone(),
                         );
                     }
 

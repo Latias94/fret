@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `TextField` unbuffered multiline Escape-clear key handling into a private
+      element child owner without changing clear-on-Escape behavior, redraw requests, multiline vs
+      single-line cancel routing, buffered commit/cancel key handling, clear-button behavior,
+      focus-selection sync, blur handling, or public `TextField` options.
+      Result: `controls/text_field/element.rs` keeps TextInput/TextArea assembly, buffered key
+      routing, focus sync, blur handling, and clear-button composition.
+      `controls/text_field/element/escape_clear.rs` owns the unbuffered multiline Escape-clear
+      key capture and key classification test. The source gate prevents Escape-clear policy from
+      drifting back into the element assembly owner.
 - [x] Split editor `EnumSelect` trigger pressable/visual assembly into a private child owner
       without changing trigger min-height fallback, a11y combobox state, focus ring geometry,
       activate toggle behavior, trigger press open-change reason, text/caret layout, caret icon

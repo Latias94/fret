@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor TextField Escape-Clear Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `TextField` unbuffered multiline Escape-clear key handling moved out of
+`controls/text_field/element.rs` into a private `controls/text_field/element/escape_clear.rs`
+owner without changing clear-on-Escape behavior, redraw requests, multiline vs single-line cancel
+routing, buffered commit/cancel key handling, clear-button behavior, focus-selection sync, blur
+handling, or public `TextField` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_field/element.rs` keeps TextInput/TextArea assembly,
+  buffered key routing, focus-selection sync, blur handling, and clear-button composition.
+- `ecosystem/fret-ui-editor/src/controls/text_field/element/escape_clear.rs` owns the unbuffered
+  multiline Escape-clear key capture and model clearing/redraw behavior.
+- `ecosystem/fret-ui-editor/src/controls/text_field/element/escape_clear/tests.rs` covers that the
+  helper handles Escape and ignores Enter.
+- `tools/gate_imui_workstream_source.py` now tracks the escape-clear owner and rejects Escape-clear
+  policy from drifting back into the element assembly owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new escape-clear owner
+  files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor text_field --no-fail-fast`: pass (17 passed, 211 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor EnumSelect Trigger Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `EnumSelect` trigger pressable/visual assembly moved out of
