@@ -91,6 +91,14 @@ Last updated: 2026-06-01
       `controls/text_field/element/buffered_keys.rs` owns buffered single-line/multiline
       commit/cancel key routing. The source gate prevents key policy from drifting back into the
       element assembly owner.
+- [x] Split editor `GradientEditor` stop-row assembly into a private child owner without changing
+      stop sorting, row identity/test-id derivation, position/color editors, remove action routing,
+      row layout, empty-state text role, preview behavior, or public gradient editor options.
+      Result: `composites/gradient_editor.rs` keeps public composition, preview/angle/stops group
+      orchestration, add-stop behavior, and empty-state text role helper.
+      `composites/gradient_editor/stops.rs` owns stop-row PropertyRow assembly, position DragValue,
+      ColorEdit, remove button, and row/field test-id derivation. The source gate prevents stop-row
+      policy from drifting back into the root composite owner.
 - [x] Split editor `InspectorPanel` options/default and search-assist option records into a
       private child owner without changing public `InspectorPanelOptions` or
       `InspectorPanelSearchAssistOptions` import paths, layout defaults, enabled/title/test-id

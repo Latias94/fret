@@ -48,6 +48,15 @@ routing. Text input/area composition, blur behavior, clear-button behavior, draf
 binding, and public TextField options remain unchanged, and `tools/gate_imui_workstream_source.py`
 freezes the split.
 
+2026-06-01 editor GradientEditor stop-row owner-split result:
+`ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps public composition,
+preview/angle/stops group orchestration, add-stop behavior, and empty-state text role helper. The
+private `composites/gradient_editor/stops.rs` owner contains stop-row PropertyRow assembly,
+position DragValue, ColorEdit, remove button, and row/field test-id derivation. Stop sorting, row
+identity/test-id derivation, position/color editor wiring, remove action routing, row layout,
+empty-state text role, preview behavior, and public gradient editor options remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor InspectorPanel options owner-split result:
 `ecosystem/fret-ui-editor/src/composites/inspector_panel.rs` now keeps public cx/control records,
 builder methods, and child-owner routing while re-exporting options. The private

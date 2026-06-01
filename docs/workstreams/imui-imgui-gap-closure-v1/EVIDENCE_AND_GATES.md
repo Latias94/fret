@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor GradientEditor Stop-Row Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `GradientEditor` stop-row assembly moved out of the root composite owner into
+a private `composites/gradient_editor/stops.rs` owner without changing stop sorting,
+row identity/test-id derivation, position/color editors, remove action routing, row layout,
+empty-state text role, preview behavior, add-stop behavior, or public gradient editor options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` keeps public composition,
+  preview/angle/stops group orchestration, add-stop behavior, and empty-state text role helper.
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor/stops.rs` owns stop-row PropertyRow
+  assembly, position DragValue, ColorEdit, remove button, and row/field test-id derivation.
+- `tools/gate_imui_workstream_source.py` now tracks the stop-row split and rejects stop-row policy
+  from drifting back into the root composite owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the stop-row owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor gradient_editor --no-fail-fast`: pass (1 passed, 221
+  skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor TextField Buffered-Key Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `TextField` buffered key handling moved out of the element assembly owner
