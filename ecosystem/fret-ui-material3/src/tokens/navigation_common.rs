@@ -119,19 +119,14 @@ pub(crate) fn bar_active_indicator_color(theme: &Theme) -> Color {
     )
 }
 
-pub(crate) fn bar_active_indicator_radius(theme: &Theme) -> Px {
-    nav_metric_chain(
-        theme,
+pub(crate) fn bar_active_indicator_shape(theme: &Theme) -> Corners {
+    MaterialTokenResolver::new(theme).corners_chain_or(
         &[
             "md.comp.navigation-bar.active-indicator.shape",
             "md.sys.shape.corner.full",
         ],
-        DEFAULT_BAR_ACTIVE_INDICATOR_RADIUS,
+        Corners::all(DEFAULT_BAR_ACTIVE_INDICATOR_RADIUS),
     )
-}
-
-pub(crate) fn bar_active_indicator_shape(theme: &Theme) -> Corners {
-    Corners::all(bar_active_indicator_radius(theme))
 }
 
 pub(crate) fn bar_state_layer_opacity(
@@ -313,19 +308,14 @@ pub(crate) fn rail_active_indicator_color(theme: &Theme) -> Color {
     )
 }
 
-pub(crate) fn rail_active_indicator_radius(theme: &Theme) -> Px {
-    nav_metric_chain(
-        theme,
+pub(crate) fn rail_active_indicator_shape(theme: &Theme) -> Corners {
+    MaterialTokenResolver::new(theme).corners_chain_or(
         &[
             "md.comp.navigation-rail.active-indicator.shape",
             "md.sys.shape.corner.full",
         ],
-        DEFAULT_RAIL_ACTIVE_INDICATOR_RADIUS,
+        Corners::all(DEFAULT_RAIL_ACTIVE_INDICATOR_RADIUS),
     )
-}
-
-pub(crate) fn rail_active_indicator_shape(theme: &Theme) -> Corners {
-    Corners::all(rail_active_indicator_radius(theme))
 }
 
 pub(crate) fn rail_state_layer_opacity(
@@ -490,19 +480,14 @@ pub(crate) fn drawer_active_indicator_height(theme: &Theme) -> Px {
     )
 }
 
-pub(crate) fn drawer_active_indicator_radius(theme: &Theme) -> Px {
-    nav_metric_chain(
-        theme,
+pub(crate) fn drawer_active_indicator_shape(theme: &Theme) -> Corners {
+    MaterialTokenResolver::new(theme).corners_chain_or(
         &[
             "md.comp.navigation-drawer.active-indicator.shape",
             "md.sys.shape.corner.full",
         ],
-        DEFAULT_DRAWER_ACTIVE_INDICATOR_RADIUS,
+        Corners::all(DEFAULT_DRAWER_ACTIVE_INDICATOR_RADIUS),
     )
-}
-
-pub(crate) fn drawer_active_indicator_shape(theme: &Theme) -> Corners {
-    Corners::all(drawer_active_indicator_radius(theme))
 }
 
 pub(crate) fn drawer_active_indicator_color(theme: &Theme) -> Color {
@@ -812,11 +797,76 @@ mod tests {
         );
         let (_app, theme) = theme_with_patch(patch);
 
-        assert_eq!(bar_active_indicator_radius(&theme), Px(44.0));
+        assert_eq!(bar_active_indicator_shape(&theme), Corners::all(Px(44.0)));
         assert_eq!(rail_item_height(&theme), Px(72.0));
         assert_eq!(
             drawer_container_elevation(&theme, NavigationDrawerVariant::Modal),
             Px(7.0)
+        );
+    }
+
+    #[test]
+    fn navigation_active_indicator_shapes_prefer_structured_corners() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert(
+            "md.comp.navigation-bar.active-indicator.shape".to_string(),
+            44.0,
+        );
+        patch.corners.insert(
+            "md.comp.navigation-bar.active-indicator.shape".to_string(),
+            Corners {
+                top_left: Px(2.0),
+                top_right: Px(4.0),
+                bottom_right: Px(6.0),
+                bottom_left: Px(8.0),
+            },
+        );
+        patch.corners.insert(
+            "md.comp.navigation-rail.active-indicator.shape".to_string(),
+            Corners {
+                top_left: Px(10.0),
+                top_right: Px(12.0),
+                bottom_right: Px(14.0),
+                bottom_left: Px(16.0),
+            },
+        );
+        patch.corners.insert(
+            "md.comp.navigation-drawer.active-indicator.shape".to_string(),
+            Corners {
+                top_left: Px(18.0),
+                top_right: Px(20.0),
+                bottom_right: Px(22.0),
+                bottom_left: Px(24.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            bar_active_indicator_shape(&theme),
+            Corners {
+                top_left: Px(2.0),
+                top_right: Px(4.0),
+                bottom_right: Px(6.0),
+                bottom_left: Px(8.0),
+            }
+        );
+        assert_eq!(
+            rail_active_indicator_shape(&theme),
+            Corners {
+                top_left: Px(10.0),
+                top_right: Px(12.0),
+                bottom_right: Px(14.0),
+                bottom_left: Px(16.0),
+            }
+        );
+        assert_eq!(
+            drawer_active_indicator_shape(&theme),
+            Corners {
+                top_left: Px(18.0),
+                top_right: Px(20.0),
+                bottom_right: Px(22.0),
+                bottom_left: Px(24.0),
+            }
         );
     }
 

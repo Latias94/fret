@@ -181,8 +181,8 @@ pub(crate) fn container_elevation(theme: &Theme, variant: TopAppBarVariant, scro
 }
 
 pub(crate) fn container_shape(theme: &Theme, variant: TopAppBarVariant) -> Corners {
-    let r = top_app_bar_metric(theme, container_shape_key(variant), Px(0.0));
-    Corners::all(r)
+    MaterialTokenResolver::new(theme)
+        .corners_chain_or(&[container_shape_key(variant)], Corners::all(Px(0.0)))
 }
 
 pub(crate) fn headline_color(theme: &Theme, variant: TopAppBarVariant) -> Color {
@@ -284,6 +284,34 @@ mod tests {
         assert_eq!(
             container_shape(&theme, TopAppBarVariant::Small),
             Corners::all(Px(8.0))
+        );
+    }
+
+    #[test]
+    fn top_app_bar_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.top-app-bar.small.container.shape".to_string(), 8.0);
+        patch.corners.insert(
+            "md.comp.top-app-bar.small.container.shape".to_string(),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(3.0),
+                bottom_right: Px(5.0),
+                bottom_left: Px(7.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_shape(&theme, TopAppBarVariant::Small),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(3.0),
+                bottom_right: Px(5.0),
+                bottom_left: Px(7.0),
+            }
         );
     }
 }
