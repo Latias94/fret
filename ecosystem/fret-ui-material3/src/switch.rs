@@ -29,7 +29,7 @@ use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable_with_ripple_bounds,
-    material_pressable_indication_config,
+    material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
@@ -508,8 +508,8 @@ impl Switch {
 
                             let ripple_base_opacity =
                                 switch_tokens::pressed_state_layer_opacity(theme, selected);
-                            let config = material_pressable_indication_config(
-                                theme,
+                            let config = material_pressable_indication_config_in_scope(
+                                &*cx,
                                 Some(Px(size.state_layer.0 * 0.5)),
                             );
 

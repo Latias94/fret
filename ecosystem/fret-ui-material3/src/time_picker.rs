@@ -36,7 +36,7 @@ use time::Time;
 use crate::button::{Button, ButtonVariant};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::modal_motion::material_modal_panel_transform;
@@ -1706,7 +1706,7 @@ fn time_selector_field<H: UiHost>(
                         theme,
                         PressableInteraction::Pressed,
                     );
-                    let config = material_pressable_indication_config(theme, None);
+                    let config = material_pressable_indication_config_in_scope(&*cx, None);
                     let label_style = time_tokens::time_selector_label_text_style(theme);
 
                     (
@@ -2757,7 +2757,7 @@ fn time_input_period_item<H: UiHost>(
                             theme,
                             PressableInteraction::Pressed,
                         );
-                    let config = material_pressable_indication_config(theme, None);
+                    let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                     let background = selected.then_some(
                         time_input_tokens::period_selector_selected_container_color(theme),
@@ -3006,7 +3006,7 @@ fn period_item<H: UiHost>(
                         theme,
                         PressableInteraction::Pressed,
                     );
-                    let config = material_pressable_indication_config(theme, None);
+                    let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                     let background = selected
                         .then_some(time_tokens::period_selector_selected_container_color(theme));

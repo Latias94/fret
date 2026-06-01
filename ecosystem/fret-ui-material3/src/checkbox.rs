@@ -31,7 +31,7 @@ use fret_ui_kit::{
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{
@@ -408,8 +408,8 @@ impl Checkbox {
 
                             let ripple_base_opacity =
                                 checkbox_tokens::pressed_state_layer_opacity(theme, selected);
-                            let config = material_pressable_indication_config(
-                                theme,
+                            let config = material_pressable_indication_config_in_scope(
+                                &*cx,
                                 Some(Px(size.state_layer.0 * 0.5)),
                             );
                             let mark_spring = material_motion_spring_in_scope(

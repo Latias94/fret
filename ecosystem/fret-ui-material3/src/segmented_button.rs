@@ -29,7 +29,7 @@ use crate::foundation::context::material_layout_direction_in_scope;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{
@@ -518,7 +518,7 @@ impl SegmentedButtonSegment {
                             let ripple_base_opacity =
                                 segmented_tokens::pressed_state_layer_opacity(theme);
                             let indication_config =
-                                material_pressable_indication_config(theme, None);
+                                material_pressable_indication_config_in_scope(&*cx, None);
 
                             let icon_size = segmented_tokens::icon_size(theme);
                             let label_style = theme

@@ -36,7 +36,8 @@ use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable,
-    material_ink_layer_for_pressable_with_ripple_bounds, material_pressable_indication_config,
+    material_ink_layer_for_pressable_with_ripple_bounds,
+    material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::pressable_interaction;
 use crate::foundation::interactive_size::{
@@ -432,7 +433,7 @@ impl InputChip {
                             let ripple_base_opacity =
                                 input_chip_tokens::pressed_state_layer_opacity(theme, selected);
                             let indication_config =
-                                material_pressable_indication_config(theme, None);
+                                material_pressable_indication_config_in_scope(&*cx, None);
 
                             let background = if selected {
                                 let bg_default = input_chip_tokens::selected_container_background(
@@ -858,7 +859,8 @@ fn trailing_icon_touch_target_overlay<H: UiHost>(
                             input_chip_tokens::state_layer_opacity(theme, selected, interaction);
                         let ripple_base_opacity =
                             input_chip_tokens::pressed_state_layer_opacity(theme, selected);
-                        let indication_config = material_pressable_indication_config(theme, None);
+                        let indication_config =
+                            material_pressable_indication_config_in_scope(&*cx, None);
                         (
                             state_layer_color,
                             state_layer_target,
