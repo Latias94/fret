@@ -21,3 +21,10 @@ pub(crate) fn collision_padding(theme: &Theme) -> Edges {
     let _ = theme;
     Edges::all(Px(8.0))
 }
+
+pub(crate) fn max_height(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.menu.container.max-height")
+        .or_else(|| theme.metric_by_key("component.dropdown_menu.max_height"))
+        .unwrap_or(Px(320.0))
+}

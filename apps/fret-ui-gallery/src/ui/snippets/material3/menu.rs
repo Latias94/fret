@@ -105,71 +105,83 @@ pub fn render(
         },
         move |_cx| {
             vec![
-                material3::MenuEntry::Label(
-                    material3::MenuLabel::new("Edit")
-                        .test_id("ui-gallery-material3-menu-label-edit"),
-                ),
-                material3::MenuEntry::Item(
-                    material3::MenuItem::new("Cut")
-                        .leading_icon(ids::ui::SLASH)
-                        .shortcut("Ctrl+X")
-                        .test_id("ui-gallery-material3-menu-item-cut")
-                        .on_select(on_select(
-                            "material3.menu.cut",
-                            last_action_for_entries.clone(),
-                        )),
-                ),
-                material3::MenuEntry::Item(
-                    material3::MenuItem::new("Copy")
-                        .leading_icon(ids::ui::COPY)
-                        .shortcut("Ctrl+C")
-                        .test_id("ui-gallery-material3-menu-item-copy")
-                        .on_select(on_select(
-                            "material3.menu.copy",
-                            last_action_for_entries.clone(),
-                        )),
-                ),
-                material3::MenuEntry::Item(
-                    material3::MenuItem::new("Paste")
-                        .supporting_text("Clipboard is empty")
-                        .shortcut("Ctrl+V")
-                        .test_id("ui-gallery-material3-menu-item-paste")
-                        .disabled(true),
+                material3::MenuEntry::Group(
+                    material3::MenuGroup::new(vec![
+                        material3::MenuEntry::Label(
+                            material3::MenuLabel::new("Edit")
+                                .test_id("ui-gallery-material3-menu-label-edit"),
+                        ),
+                        material3::MenuEntry::Item(
+                            material3::MenuItem::new("Cut")
+                                .leading_icon(ids::ui::SLASH)
+                                .shortcut("Ctrl+X")
+                                .test_id("ui-gallery-material3-menu-item-cut")
+                                .on_select(on_select(
+                                    "material3.menu.cut",
+                                    last_action_for_entries.clone(),
+                                )),
+                        ),
+                        material3::MenuEntry::Item(
+                            material3::MenuItem::new("Copy")
+                                .leading_icon(ids::ui::COPY)
+                                .shortcut("Ctrl+C")
+                                .test_id("ui-gallery-material3-menu-item-copy")
+                                .on_select(on_select(
+                                    "material3.menu.copy",
+                                    last_action_for_entries.clone(),
+                                )),
+                        ),
+                        material3::MenuEntry::Item(
+                            material3::MenuItem::new("Paste")
+                                .supporting_text("Clipboard is empty")
+                                .shortcut("Ctrl+V")
+                                .test_id("ui-gallery-material3-menu-item-paste")
+                                .disabled(true),
+                        ),
+                    ])
+                    .a11y_label("Edit actions")
+                    .test_id("ui-gallery-material3-menu-group-edit"),
                 ),
                 material3::MenuEntry::Separator,
-                material3::MenuEntry::Label(
-                    material3::MenuLabel::new("View")
-                        .test_id("ui-gallery-material3-menu-label-view"),
-                ),
-                material3::MenuEntry::Item(
-                    material3::MenuItem::checkbox(show_toolbar_for_entries.clone(), "Show toolbar")
-                        .supporting_text("Keep editor tools visible")
-                        .shortcut("Ctrl+B")
-                        .test_id("ui-gallery-material3-menu-item-toolbar")
-                        .on_select(on_select(
-                            "material3.menu.toolbar",
-                            last_action_for_entries.clone(),
-                        )),
-                ),
-                material3::MenuEntry::Item(
-                    material3::MenuItem::radio(
-                        density_for_entries.clone(),
-                        "comfortable",
-                        "Comfortable density",
-                    )
-                    .test_id("ui-gallery-material3-menu-item-density-comfortable")
-                    .on_select(on_select(
-                        "material3.menu.density.comfortable",
-                        last_action_for_entries.clone(),
-                    )),
-                ),
-                material3::MenuEntry::Item(
-                    material3::MenuItem::radio(density_for_entries, "compact", "Compact density")
-                        .test_id("ui-gallery-material3-menu-item-density-compact")
-                        .on_select(on_select(
-                            "material3.menu.density.compact",
-                            last_action_for_entries.clone(),
-                        )),
+                material3::MenuEntry::Group(
+                    material3::MenuGroup::new(vec![
+                        material3::MenuEntry::Label(
+                            material3::MenuLabel::new("View")
+                                .test_id("ui-gallery-material3-menu-label-view"),
+                        ),
+                        material3::MenuEntry::Item(
+                            material3::MenuItem::checkbox(show_toolbar_for_entries.clone(), "Show toolbar")
+                                .supporting_text("Keep editor tools visible")
+                                .shortcut("Ctrl+B")
+                                .test_id("ui-gallery-material3-menu-item-toolbar")
+                                .on_select(on_select(
+                                    "material3.menu.toolbar",
+                                    last_action_for_entries.clone(),
+                                )),
+                        ),
+                        material3::MenuEntry::Item(
+                            material3::MenuItem::radio(
+                                density_for_entries.clone(),
+                                "comfortable",
+                                "Comfortable density",
+                            )
+                            .test_id("ui-gallery-material3-menu-item-density-comfortable")
+                            .on_select(on_select(
+                                "material3.menu.density.comfortable",
+                                last_action_for_entries.clone(),
+                            )),
+                        ),
+                        material3::MenuEntry::Item(
+                            material3::MenuItem::radio(density_for_entries, "compact", "Compact density")
+                                .test_id("ui-gallery-material3-menu-item-density-compact")
+                                .on_select(on_select(
+                                    "material3.menu.density.compact",
+                                    last_action_for_entries.clone(),
+                                )),
+                        ),
+                    ])
+                    .a11y_label("View options")
+                    .test_id("ui-gallery-material3-menu-group-view"),
                 ),
                 material3::MenuEntry::Separator,
                 material3::MenuEntry::Item(

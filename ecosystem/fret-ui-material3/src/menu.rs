@@ -234,6 +234,7 @@ impl MenuStyle {
 pub enum MenuEntry {
     Item(MenuItem),
     Label(MenuLabel),
+    Group(MenuGroup),
     Separator,
 }
 
@@ -251,6 +252,38 @@ impl MenuLabel {
             a11y_label: None,
             test_id: None,
         }
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct MenuGroup {
+    pub(crate) entries: Vec<MenuEntry>,
+    a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+}
+
+impl MenuGroup {
+    pub fn new(entries: impl IntoIterator<Item = MenuEntry>) -> Self {
+        Self {
+            entries: entries.into_iter().collect(),
+            a11y_label: None,
+            test_id: None,
+        }
+    }
+
+    pub fn entries(mut self, entries: impl IntoIterator<Item = MenuEntry>) -> Self {
+        self.entries = entries.into_iter().collect();
+        self
     }
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
@@ -608,18 +641,9 @@ impl Menu {
 
             let items = entries;
 
-            let mut disabled: Vec<bool> = Vec::with_capacity(items.len());
-            let mut typeahead_items: Vec<Arc<str>> = Vec::with_capacity(items.len());
-            for entry in items.iter() {
-                if let MenuEntry::Item(item) = entry {
-                    disabled.push(item.disabled);
-                    typeahead_items.push(
-                        item.a11y_label
-                            .clone()
-                            .unwrap_or_else(|| item.label.clone()),
-                    );
-                }
-            }
+            let mut disabled: Vec<bool> = Vec::new();
+            let mut typeahead_items: Vec<Arc<str>> = Vec::new();
+            collect_menu_roving_metadata(&items, &mut disabled, &mut typeahead_items);
 
             let count = disabled.len();
             let roving_disabled: Arc<[bool]> = Arc::from(vec![false; count]);
@@ -733,38 +757,16 @@ impl Menu {
                                     30,
                                 );
 
-                                let mut out: Vec<AnyElement> = Vec::with_capacity(items.len());
                                 let mut item_idx = 0usize;
-                                for entry in items.iter() {
-                                    match entry {
-                                        MenuEntry::Separator => {
-                                            out.push(menu_separator(cx));
-                                        }
-                                        MenuEntry::Label(label) => {
-                                            out.push(material_menu_label(
-                                                cx,
-                                                label.clone(),
-                                                item_layout,
-                                                style.clone(),
-                                            ));
-                                        }
-                                        MenuEntry::Item(it) => {
-                                            let tab_stop = item_idx == 0;
-                                            out.push(material_menu_item(
-                                                cx,
-                                                it.clone(),
-                                                item_layout,
-                                                style.clone(),
-                                                tab_stop,
-                                                item_idx,
-                                                count,
-                                                initial_focus_id_out.clone(),
-                                            ));
-                                            item_idx += 1;
-                                        }
-                                    }
-                                }
-                                out
+                                render_menu_entries(
+                                    cx,
+                                    &items,
+                                    item_layout,
+                                    style.clone(),
+                                    &mut item_idx,
+                                    count,
+                                    initial_focus_id_out.clone(),
+                                )
                             }));
                             children
                         },
@@ -773,6 +775,82 @@ impl Menu {
             })
         })
     }
+}
+
+fn collect_menu_roving_metadata(
+    entries: &[MenuEntry],
+    disabled: &mut Vec<bool>,
+    typeahead_items: &mut Vec<Arc<str>>,
+) {
+    for entry in entries {
+        match entry {
+            MenuEntry::Item(item) => {
+                disabled.push(item.disabled);
+                typeahead_items.push(
+                    item.a11y_label
+                        .clone()
+                        .unwrap_or_else(|| item.label.clone()),
+                );
+            }
+            MenuEntry::Group(group) => {
+                collect_menu_roving_metadata(&group.entries, disabled, typeahead_items);
+            }
+            MenuEntry::Label(_) | MenuEntry::Separator => {}
+        }
+    }
+}
+
+fn render_menu_entries<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    entries: &[MenuEntry],
+    item_layout: MenuItemLayout,
+    style: Arc<MenuStyle>,
+    item_idx: &mut usize,
+    item_count: usize,
+    initial_focus_id_out: Rc<std::cell::Cell<Option<GlobalElementId>>>,
+) -> Vec<AnyElement> {
+    let mut out: Vec<AnyElement> = Vec::with_capacity(entries.len());
+    for entry in entries {
+        match entry {
+            MenuEntry::Separator => {
+                out.push(menu_separator(cx));
+            }
+            MenuEntry::Label(label) => {
+                out.push(material_menu_label(
+                    cx,
+                    label.clone(),
+                    item_layout,
+                    style.clone(),
+                ));
+            }
+            MenuEntry::Group(group) => {
+                out.push(material_menu_group(
+                    cx,
+                    group.clone(),
+                    item_layout,
+                    style.clone(),
+                    item_idx,
+                    item_count,
+                    initial_focus_id_out.clone(),
+                ));
+            }
+            MenuEntry::Item(it) => {
+                let tab_stop = *item_idx == 0;
+                out.push(material_menu_item(
+                    cx,
+                    it.clone(),
+                    item_layout,
+                    style.clone(),
+                    tab_stop,
+                    *item_idx,
+                    item_count,
+                    initial_focus_id_out.clone(),
+                ));
+                *item_idx += 1;
+            }
+        }
+    }
+    out
 }
 
 fn absolute_fill_test_id_marker<H: UiHost>(
@@ -817,6 +895,42 @@ fn menu_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     props.layout.margin.top = fret_ui::element::MarginEdge::Px(Px(4.0));
     props.layout.margin.bottom = fret_ui::element::MarginEdge::Px(Px(4.0));
     cx.container(props, |_cx| vec![])
+}
+
+fn material_menu_group<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    group: MenuGroup,
+    layout: MenuItemLayout,
+    style: Arc<MenuStyle>,
+    item_idx: &mut usize,
+    item_count: usize,
+    initial_focus_id_out: Rc<std::cell::Cell<Option<GlobalElementId>>>,
+) -> AnyElement {
+    let children = render_menu_entries(
+        cx,
+        &group.entries,
+        layout,
+        style,
+        item_idx,
+        item_count,
+        initial_focus_id_out,
+    );
+
+    let mut group_layout = fret_ui::element::LayoutStyle::default();
+    group_layout.size.width = Length::Auto;
+    group_layout.size.min_width = Some(Length::Px(layout.min_width));
+    group_layout.size.max_width = Some(Length::Px(layout.max_width));
+
+    cx.semantics(
+        SemanticsProps {
+            role: SemanticsRole::Group,
+            label: group.a11y_label,
+            test_id: group.test_id,
+            layout: group_layout,
+            ..Default::default()
+        },
+        move |_cx| children,
+    )
 }
 
 fn material_menu_label<H: UiHost>(

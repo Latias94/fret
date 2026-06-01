@@ -13,9 +13,10 @@ use std::sync::OnceLock;
 use fret_core::{Edges, Px, Rect, Size};
 use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
-use fret_ui::element::{AnyElement, Overflow};
+use fret_ui::element::{AnyElement, LayoutStyle, Length, Overflow, ScrollAxis, ScrollProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
+use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::overlay;
@@ -26,6 +27,7 @@ use fret_ui_kit::{OverlayController, OverlayPresence, WidgetStateProperty};
 
 use crate::foundation::context::material_layout_direction_in_scope;
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
+use crate::foundation::test_id::part_test_id;
 use crate::menu::{Menu, MenuEntry, MenuStyle};
 use crate::motion::ms_to_frames;
 use crate::tokens::dropdown_menu as dropdown_menu_tokens;
@@ -62,6 +64,7 @@ pub struct DropdownMenu {
     side_offset: Px,
     window_margin: Px,
     min_width: Px,
+    max_height: Option<Px>,
     close_on_select: bool,
     on_dismiss_request: Option<OnDismissRequest>,
     a11y_label: Option<Arc<str>>,
@@ -78,6 +81,7 @@ impl std::fmt::Debug for DropdownMenu {
             .field("side_offset", &self.side_offset)
             .field("window_margin", &self.window_margin)
             .field("min_width", &self.min_width)
+            .field("max_height", &self.max_height)
             .field("close_on_select", &self.close_on_select)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .finish()
@@ -94,6 +98,7 @@ impl DropdownMenu {
             side_offset: Px(4.0),
             window_margin: Px(0.0),
             min_width: menu_tokens::ITEM_MIN_WIDTH_FALLBACK,
+            max_height: None,
             close_on_select: true,
             on_dismiss_request: None,
             a11y_label: None,
@@ -152,6 +157,11 @@ impl DropdownMenu {
 
     pub fn min_width(mut self, min_width: Px) -> Self {
         self.min_width = min_width;
+        self
+    }
+
+    pub fn max_height(mut self, max_height: Px) -> Self {
+        self.max_height = Some(max_height);
         self
     }
 
@@ -226,6 +236,7 @@ impl DropdownMenu {
                     divider_height,
                     divider_margin,
                     collision_padding,
+                    default_max_height,
                 ) = {
                     let theme = Theme::global(&*cx.app);
                     (
@@ -238,6 +249,7 @@ impl DropdownMenu {
                         menu_tokens::divider_height(theme),
                         dropdown_menu_tokens::divider_margin_total(theme),
                         dropdown_menu_tokens::collision_padding(theme),
+                        dropdown_menu_tokens::max_height(theme),
                     )
                 };
 
@@ -246,10 +258,15 @@ impl DropdownMenu {
                     menu_entries = wrap_close_on_select(menu_entries, self.open.clone());
                 }
 
+                let max_height = self
+                    .max_height
+                    .unwrap_or(default_max_height)
+                    .min(Px(outer.size.height.0.max(1.0)));
                 let estimated = estimated_menu_panel_size(
                     anchor,
                     self.min_width.max(menu_item_min_width),
                     menu_item_max_width,
+                    max_height,
                     &menu_entries,
                     menu_item_height,
                     menu_item_two_line_height,
@@ -304,7 +321,9 @@ impl DropdownMenu {
                 });
 
                 let test_id = self.test_id.clone().unwrap_or(default_test_id);
+                let viewport_test_id = part_test_id(&test_id, "viewport");
                 let menu_width = layout.rect.size.width;
+                let menu_height = layout.rect.size.height;
                 let menu_style = self
                     .menu_style
                     .clone()
@@ -318,17 +337,36 @@ impl DropdownMenu {
                     Overflow::Visible,
                     move |cx| {
                         cx.provide(direction, |cx| {
-                            vec![
-                                Menu::new()
-                                    .a11y_label(a11y_label)
-                                    .test_id(test_id)
-                                    .entries(menu_entries)
-                                    .style(menu_style)
-                                    .into_element_with_initial_focus_id(
-                                        cx,
-                                        initial_focus_id_for_menu,
-                                    ),
-                            ]
+                            let scroll_handle =
+                                cx.slot_state(ScrollHandle::default, |h| h.clone());
+                            let mut scroll_layout = LayoutStyle::default();
+                            scroll_layout.size.width = Length::Fill;
+                            scroll_layout.size.height = Length::Px(menu_height);
+                            scroll_layout.overflow = Overflow::Clip;
+
+                            let mut viewport = cx.scroll(
+                                ScrollProps {
+                                    layout: scroll_layout,
+                                    axis: ScrollAxis::Y,
+                                    scroll_handle: Some(scroll_handle),
+                                    ..Default::default()
+                                },
+                                move |cx| {
+                                    vec![
+                                        Menu::new()
+                                            .a11y_label(a11y_label)
+                                            .test_id(test_id)
+                                            .entries(menu_entries)
+                                            .style(menu_style)
+                                            .into_element_with_initial_focus_id(
+                                                cx,
+                                                initial_focus_id_for_menu,
+                                            ),
+                                    ]
+                                },
+                            );
+                            viewport = viewport.test_id(viewport_test_id);
+                            vec![viewport]
                         })
                     },
                 );
@@ -387,6 +425,10 @@ fn wrap_close_on_select(entries: Vec<MenuEntry>, open: Model<bool>) -> Vec<MenuE
                 MenuEntry::Item(item)
             }
             MenuEntry::Label(label) => MenuEntry::Label(label),
+            MenuEntry::Group(mut group) => {
+                group.entries = wrap_close_on_select(group.entries, open.clone());
+                MenuEntry::Group(group)
+            }
         })
         .collect()
 }
@@ -395,6 +437,7 @@ fn estimated_menu_panel_size(
     anchor: Rect,
     min_width: Px,
     max_width: Px,
+    max_height: Px,
     entries: &[MenuEntry],
     item_height: Px,
     two_line_item_height: Px,
@@ -415,6 +458,16 @@ fn estimated_menu_panel_size(
                 h += height.0.max(0.0);
             }
             MenuEntry::Label(_) => h += section_label_height.0.max(0.0),
+            MenuEntry::Group(group) => {
+                h += estimated_menu_entries_height(
+                    &group.entries,
+                    item_height,
+                    two_line_item_height,
+                    section_label_height,
+                    divider_height,
+                    divider_margin_total,
+                );
+            }
             MenuEntry::Separator => {
                 h += divider_height.0.max(0.0) + divider_margin_total.0.max(0.0)
             }
@@ -423,7 +476,46 @@ fn estimated_menu_panel_size(
 
     let max_width = max_width.0.max(min_width.0).max(0.0);
     let w = anchor.size.width.0.max(min_width.0).min(max_width).max(0.0);
+    let h = h.min(max_height.0.max(1.0));
     Size::new(Px(w), Px(h.max(1.0)))
+}
+
+fn estimated_menu_entries_height(
+    entries: &[MenuEntry],
+    item_height: Px,
+    two_line_item_height: Px,
+    section_label_height: Px,
+    divider_height: Px,
+    divider_margin_total: Px,
+) -> f32 {
+    let mut h = 0.0;
+    for e in entries {
+        match e {
+            MenuEntry::Item(item) => {
+                let height = if item.has_supporting_text() {
+                    two_line_item_height
+                } else {
+                    item_height
+                };
+                h += height.0.max(0.0);
+            }
+            MenuEntry::Label(_) => h += section_label_height.0.max(0.0),
+            MenuEntry::Group(group) => {
+                h += estimated_menu_entries_height(
+                    &group.entries,
+                    item_height,
+                    two_line_item_height,
+                    section_label_height,
+                    divider_height,
+                    divider_margin_total,
+                );
+            }
+            MenuEntry::Separator => {
+                h += divider_height.0.max(0.0) + divider_margin_total.0.max(0.0)
+            }
+        }
+    }
+    h
 }
 
 #[cfg(test)]
@@ -515,6 +607,7 @@ mod tests {
             wide_anchor,
             Px(112.0),
             Px(280.0),
+            Px(1000.0),
             &entries,
             Px(48.0),
             Px(64.0),
@@ -530,6 +623,7 @@ mod tests {
             narrow_anchor,
             Px(112.0),
             Px(280.0),
+            Px(1000.0),
             &entries,
             Px(48.0),
             Px(64.0),
