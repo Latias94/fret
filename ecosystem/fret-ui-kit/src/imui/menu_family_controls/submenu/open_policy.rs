@@ -6,6 +6,10 @@ use crate::imui::{ResponseExt, UiWriterImUiFacadeExt, popup_overlay::ImUiPopupMe
 
 use super::super::submenu_state;
 
+mod read;
+
+use read::read_open_submenu;
+
 pub(super) struct SubmenuOpenPolicyInput<'a> {
     pub(super) id: &'a str,
     pub(super) enabled: bool,
@@ -68,18 +72,4 @@ pub(super) fn reconcile_submenu_after_trigger<H: UiHost, W: UiWriterImUiFacadeEx
     } else if should_open && let Some(anchor) = input.trigger.rect() {
         ui.open_popup_at(input.id, anchor);
     }
-}
-
-fn read_open_submenu<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
-    ui: &mut W,
-    policy: &ImUiPopupMenuPolicyState,
-) -> Option<Arc<str>> {
-    ui.with_cx_mut(|cx| {
-        cx.read_model(
-            &policy.submenu_models.open_value,
-            fret_ui::Invalidation::Paint,
-            |_app, value| value.clone(),
-        )
-        .unwrap_or(None)
-    })
 }

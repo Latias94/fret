@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-06-02
 
+## IMUI Begin-Submenu Open-Policy Read Owner-Split Evidence - 2026-06-02
+
+Claim verified: IMUI begin-submenu open-policy readback moved out of
+`menu_family_controls/submenu/open_policy.rs` into private `submenu/open_policy/read.rs` without
+changing clicked-trigger submenu-state reconciliation, stale-open cleanup, popup close/open
+anchoring, or begin-submenu response semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/open_policy.rs` keeps
+  clicked-trigger reconciliation, stale close cleanup, and popup close/open dispatch.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/open_policy/read.rs` owns submenu
+  `open_value` readback through `Invalidation::Paint`.
+- `tools/gate_imui_workstream_source.py` now tracks the read owner and rejects model readback from
+  drifting back into the root open-policy owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new read owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_family_controls::tests --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Debug-Draw Residual Shape Paint Owner-Split Evidence - 2026-06-02
 
 Claim verified: IMUI debug-draw residual shape paint dispatch moved out of

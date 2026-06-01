@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 IMUI begin-submenu open-policy read owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/open_policy.rs` now keeps
+clicked-trigger reconciliation, stale close cleanup, and popup close/open dispatch while delegating
+submenu `open_value` readback to `submenu/open_policy/read.rs`. Submenu hover/shortcut behavior,
+sibling switching, popup anchoring, and begin-submenu response semantics remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the read owner boundary.
+
 2026-06-02 IMUI debug-draw residual shape paint owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes.rs` now keeps draw-order/key setup
 and path-vs-residual dispatch while delegating filled-rect, vertex-color rect, triangle mesh,

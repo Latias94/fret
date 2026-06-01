@@ -728,6 +728,7 @@
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger/read.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/open_policy.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/open_policy/read.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/popup.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/state.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/trigger.rs",
