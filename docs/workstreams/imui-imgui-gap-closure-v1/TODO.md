@@ -58,6 +58,15 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `AxisDragValue` typing key handling into a private element child owner without
+      changing typed commit/cancel behavior, parse/validate/constraint handling, invalid-number
+      reporting, draft/error sync, focus restore to scrub, scrub revision bumping, outcome routing,
+      or public AxisDragValue options.
+      Result: `controls/axis_drag_value/element.rs` keeps keyed scrub/typing orchestration,
+      mounted text input props, focus handoff, and frame assembly. The private
+      `controls/axis_drag_value/element/typing_keys.rs` owner contains replace-on-focus key
+      handling plus Enter commit and Escape cancel policy. The source gate prevents key policy from
+      drifting back into the root element owner.
 - [x] Split editor `InspectorPanel` options/default and search-assist option records into a
       private child owner without changing public `InspectorPanelOptions` or
       `InspectorPanelSearchAssistOptions` import paths, layout defaults, enabled/title/test-id

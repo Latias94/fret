@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor AxisDragValue typing-key owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps keyed scrub/typing
+orchestration, mounted text input props, focus handoff, scrub frame assembly, and typing frame
+routing. The private `controls/axis_drag_value/element/typing_keys.rs` owner contains
+replace-on-focus key handling plus Enter commit and Escape cancel policy, including parse/validate,
+constraint application, invalid-number reporting, draft/error sync, focus restore to scrub, scrub
+revision bumping, and outcome routing. Public AxisDragValue options and scrub/typing frame behavior
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor InspectorPanel options owner-split result:
 `ecosystem/fret-ui-editor/src/composites/inspector_panel.rs` now keeps public cx/control records,
 builder methods, and child-owner routing while re-exporting options. The private

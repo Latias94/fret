@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor AxisDragValue Typing-Key Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `AxisDragValue` typing key handling moved out of the root element owner into
+a private `controls/axis_drag_value/element/typing_keys.rs` owner without changing typed
+commit/cancel behavior, parse/validate/constraint handling, invalid-number reporting, draft/error
+sync, focus restore to scrub, scrub revision bumping, outcome routing, or public AxisDragValue
+options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` keeps keyed scrub/typing
+  orchestration, mounted text input props, focus handoff, scrub frame assembly, and typing frame
+  routing.
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element/typing_keys.rs` owns
+  replace-on-focus key handling plus Enter commit and Escape cancel policy.
+- `tools/gate_imui_workstream_source.py` now tracks the typing-key split and rejects key policy
+  from drifting back into the root element owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the typing-key owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor axis_drag_value --no-fail-fast`: pass (5 passed, 217
+  skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor InspectorPanel Options Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `InspectorPanel` options/default and search-assist option records moved out

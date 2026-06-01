@@ -1,9 +1,7 @@
 use std::sync::{Arc, Mutex};
 
-use fret_core::{KeyCode, SemanticsInvalid};
-use fret_ui::action::{
-    ActionCx, PointerDownCx, PressablePointerDownResult, UiActionHost, UiFocusActionHost,
-};
+use fret_core::SemanticsInvalid;
+use fret_ui::action::{ActionCx, PointerDownCx, PressablePointerDownResult, UiActionHost};
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextInputProps};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ChromeRefinement;
@@ -13,12 +11,11 @@ use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
     NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
-    clear_numeric_error_when_draft_changes, handle_numeric_text_entry_replace_key,
-    numeric_text_entry_focus_state, sync_numeric_text_entry_focus,
-    sync_numeric_text_entry_focus_handoff,
+    clear_numeric_error_when_draft_changes, numeric_text_entry_focus_state,
+    sync_numeric_text_entry_focus, sync_numeric_text_entry_focus_handoff,
 };
 use crate::primitives::style::EditorStyle;
-use crate::primitives::{DragValueCore, DragValueCoreOptions, constrain_numeric_value};
+use crate::primitives::{DragValueCore, DragValueCoreOptions};
 
 use super::AxisDragValue;
 use super::ids::axis_drag_value_test_ids;
@@ -29,9 +26,11 @@ use super::session::{draft_model, emit_axis_drag_value_outcome, error_model, hid
 
 mod scrub;
 mod typing;
+mod typing_keys;
 
 use scrub::{AxisDragValueScrubFrameArgs, axis_drag_value_scrub_frame};
 use typing::{AxisDragValueTypingFrameArgs, axis_drag_value_typing_field};
+use typing_keys::{AxisDragValueTypingKeyHandlerArgs, axis_drag_value_add_typing_key_handler};
 
 impl<T> AxisDragValue<T>
 where
@@ -227,17 +226,6 @@ where
             hidden_layout(self.options.layout)
         };
 
-        let parse = self.parse.clone();
-        let format = self.format.clone();
-        let validate = self.validate.clone();
-        let constraints = self.options.constraints;
-        let model_for_commit = self.model.clone();
-        let state_for_input = state.clone();
-        let on_outcome_for_keys = on_outcome.clone();
-        let focus_state_for_keys = focus_state.clone();
-        let error_for_keys = error.clone();
-        let draft_for_keys = draft.clone();
-        let last_draft_text_for_keys = last_draft_text.clone();
         let has_error = cx
             .get_model_cloned(&error, Invalidation::Paint)
             .unwrap_or(None)
@@ -299,116 +287,22 @@ where
             *last = value_text.as_ref().to_string();
         }
 
-        cx.key_add_on_key_down_capture_for(
-            input_id,
-            Arc::new(
-                move |host: &mut dyn UiFocusActionHost, action_cx: ActionCx, down| {
-                    if let Some(consumed) = handle_numeric_text_entry_replace_key(
-                        host,
-                        action_cx,
-                        down,
-                        &focus_state_for_keys,
-                        &draft_for_keys,
-                        &error_for_keys,
-                    ) && consumed
-                    {
-                        return true;
-                    }
-
-                    match down.key {
-                        KeyCode::Enter | KeyCode::NumpadEnter => {
-                            let text = host
-                                .models_mut()
-                                .read(&draft_for_keys, |s| s.clone())
-                                .unwrap_or_default();
-                            if let Some(v) = (parse)(&text) {
-                                let v = constrain_numeric_value(constraints, v);
-                                if let Some(validate) = validate.as_ref()
-                                    && let Some(msg) = validate(v)
-                                {
-                                    let _ = host
-                                        .models_mut()
-                                        .update(&error_for_keys, |e| *e = Some(msg));
-                                    let mut last = last_draft_text_for_keys
-                                        .lock()
-                                        .unwrap_or_else(|e| e.into_inner());
-                                    *last = text;
-                                    host.request_redraw(action_cx.window);
-                                    return true;
-                                }
-
-                                let _ = host.models_mut().update(&model_for_commit, |m| *m = v);
-                                let formatted = (format)(v);
-                                let _ = host.models_mut().update(&draft_for_keys, |s| {
-                                    *s = formatted.as_ref().to_string()
-                                });
-                                let _ = host.models_mut().update(&error_for_keys, |e| *e = None);
-                                let mut last = last_draft_text_for_keys
-                                    .lock()
-                                    .unwrap_or_else(|e| e.into_inner());
-                                *last = formatted.as_ref().to_string();
-
-                                let mut st =
-                                    state_for_input.lock().unwrap_or_else(|e| e.into_inner());
-                                st.mode = AxisDragValueMode::Scrub;
-                                st.scrub_revision = st.scrub_revision.wrapping_add(1);
-                                if let Some(scrub_id) = st.scrub_id {
-                                    host.request_focus(scrub_id);
-                                }
-                                emit_axis_drag_value_outcome(
-                                    host,
-                                    action_cx,
-                                    on_outcome_for_keys.as_ref(),
-                                    AxisDragValueOutcome::Committed,
-                                );
-                                host.request_redraw(action_cx.window);
-                                true
-                            } else {
-                                let _ = host.models_mut().update(&error_for_keys, |e| {
-                                    *e = Some(Arc::from("Invalid number"))
-                                });
-                                let mut last = last_draft_text_for_keys
-                                    .lock()
-                                    .unwrap_or_else(|e| e.into_inner());
-                                *last = text;
-                                host.request_redraw(action_cx.window);
-                                true
-                            }
-                        }
-                        KeyCode::Escape => {
-                            let current = host
-                                .models_mut()
-                                .get_copied(&model_for_commit)
-                                .unwrap_or_default();
-                            let formatted = (format)(current);
-                            let _ = host
-                                .models_mut()
-                                .update(&draft_for_keys, |s| *s = formatted.as_ref().to_string());
-                            let _ = host.models_mut().update(&error_for_keys, |e| *e = None);
-                            let mut last = last_draft_text_for_keys
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner());
-                            *last = formatted.as_ref().to_string();
-
-                            let mut st = state_for_input.lock().unwrap_or_else(|e| e.into_inner());
-                            st.mode = AxisDragValueMode::Scrub;
-                            st.scrub_revision = st.scrub_revision.wrapping_add(1);
-                            if let Some(scrub_id) = st.scrub_id {
-                                host.request_focus(scrub_id);
-                            }
-                            emit_axis_drag_value_outcome(
-                                host,
-                                action_cx,
-                                on_outcome_for_keys.as_ref(),
-                                AxisDragValueOutcome::Canceled,
-                            );
-                            host.request_redraw(action_cx.window);
-                            true
-                        }
-                        _ => false,
-                    }
-                },
-            ),
+        axis_drag_value_add_typing_key_handler(
+            cx,
+            AxisDragValueTypingKeyHandlerArgs {
+                input_id,
+                focus_state: focus_state.clone(),
+                draft: draft.clone(),
+                error: error.clone(),
+                last_draft_text: last_draft_text.clone(),
+                state: state.clone(),
+                model: self.model.clone(),
+                parse: self.parse.clone(),
+                format: self.format.clone(),
+                validate: self.validate.clone(),
+                constraints: self.options.constraints,
+                on_outcome: on_outcome.clone(),
+            },
         );
 
         clear_numeric_error_when_draft_changes(cx, is_focused, &draft, &error, &last_draft_text);
