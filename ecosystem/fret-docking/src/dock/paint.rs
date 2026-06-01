@@ -5,7 +5,7 @@
 use super::hit_test::{tab_close_rect, tab_scroll_for_node};
 use super::layout::{drop_zone_rect, split_tab_bar};
 use super::prelude_core::*;
-use super::split_geometry::{self, SplitHandle};
+use super::split_geometry;
 use super::tab_bar_geometry::TabBarGeometry;
 use super::tab_bar_geometry::dock_tab_width_for_title;
 use super::tab_overflow::{
@@ -16,10 +16,14 @@ use super::tab_overflow::{
 
 mod drop_hints;
 mod floating_chrome;
+mod split_handle;
 mod viewport_surface;
 
 pub(super) use drop_hints::paint_drop_hints;
 pub(super) use floating_chrome::{FloatingChromePaintInput, paint_floating_chrome_inputs};
+pub(super) use split_handle::{
+    SplitHandlePaintInput, paint_split_handle_inputs, split_handle_paint_inputs,
+};
 pub(super) use viewport_surface::{
     ViewportSurfacePaintInput, paint_viewport_surface_inputs, viewport_surface_paint_inputs,
 };
@@ -621,88 +625,6 @@ pub(super) fn paint_tab_detail_inputs(
             tab_overflow_svg,
             scene,
         );
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(super) struct SplitHandlePaintInput {
-    node: DockNodeId,
-    axis: fret_core::Axis,
-    bounds: Rect,
-    children_len: usize,
-    fractions: Vec<f32>,
-}
-
-pub(super) fn split_handle_paint_inputs(
-    graph: &DockGraph,
-    layout: &std::collections::HashMap<DockNodeId, Rect>,
-) -> Vec<SplitHandlePaintInput> {
-    let mut inputs = Vec::new();
-    for (&node, &bounds) in layout.iter() {
-        let Some(DockNode::Split {
-            axis,
-            children,
-            fractions,
-        }) = graph.node(node)
-        else {
-            continue;
-        };
-        if children.len() < 2 {
-            continue;
-        }
-        inputs.push(SplitHandlePaintInput {
-            node,
-            axis: *axis,
-            bounds,
-            children_len: children.len(),
-            fractions: fractions.clone(),
-        });
-    }
-    inputs
-}
-
-pub(super) fn paint_split_handle_inputs(
-    theme: fret_ui::ThemeSnapshot,
-    inputs: &[SplitHandlePaintInput],
-    active: Option<DockNodeId>,
-    split_handle_gap: Px,
-    split_handle_hit_thickness: Px,
-    scale_factor: f32,
-    scene: &mut Scene,
-) {
-    for input in inputs {
-        let computed = split_geometry::compute_layout(
-            input.axis,
-            input.bounds,
-            input.children_len,
-            &input.fractions,
-            split_handle_gap,
-            split_handle_hit_thickness,
-            &[],
-        );
-
-        let background = if active == Some(input.node) {
-            theme.color_token("ring")
-        } else {
-            theme.color_token("border")
-        };
-
-        let handle = SplitHandle {
-            axis: input.axis,
-            paint_device_px: 1.0,
-        };
-        for center in computed.handle_centers {
-            handle.paint(
-                scene,
-                // Keep split handle under component focus rings (typically DrawOrder(1)),
-                // while still painting above panel backgrounds (DrawOrder(0)).
-                fret_core::DrawOrder(0),
-                input.bounds,
-                center,
-                scale_factor,
-                background,
-            );
-        }
     }
 }
 
