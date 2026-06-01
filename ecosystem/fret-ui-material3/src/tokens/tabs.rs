@@ -23,6 +23,14 @@ pub(crate) fn component_prefix(kind: NavigationTabKind) -> &'static str {
     }
 }
 
+fn tab_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
+fn tab_metric_chain(theme: &Theme, keys: &[&'static str], fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_chain(keys, fallback)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum TabInteraction {
     Default,
@@ -32,15 +40,11 @@ pub(crate) enum TabInteraction {
 }
 
 pub(crate) fn container_height_for(theme: &Theme, kind: NavigationTabKind) -> Px {
-    theme
-        .metric_by_key(container_height_key(kind))
-        .unwrap_or(Px(48.0))
+    tab_metric(theme, container_height_key(kind), Px(48.0))
 }
 
 pub(crate) fn stacked_container_height_for(theme: &Theme, kind: NavigationTabKind) -> Px {
-    theme
-        .metric_by_key(stacked_container_height_key(kind))
-        .unwrap_or(Px(72.0))
+    tab_metric(theme, stacked_container_height_key(kind), Px(72.0))
 }
 
 pub(crate) fn container_background_for(theme: &Theme, kind: NavigationTabKind) -> Color {
@@ -49,22 +53,27 @@ pub(crate) fn container_background_for(theme: &Theme, kind: NavigationTabKind) -
 }
 
 pub(crate) fn active_indicator_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.primary-navigation-tab.active-indicator.height")
-        .unwrap_or(Px(3.0))
+    tab_metric(
+        theme,
+        "md.comp.primary-navigation-tab.active-indicator.height",
+        Px(3.0),
+    )
 }
 
 pub(crate) fn active_indicator_min_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.primary-navigation-tab.active-indicator.min-width")
-        .unwrap_or(Px(24.0))
+    tab_metric(
+        theme,
+        "md.comp.primary-navigation-tab.active-indicator.min-width",
+        Px(24.0),
+    )
 }
 
 pub(crate) fn divider_height_for(theme: &Theme, kind: NavigationTabKind) -> Px {
-    theme
-        .metric_by_key(divider_height_key(kind))
-        .or_else(|| theme.metric_by_key("md.comp.divider.thickness"))
-        .unwrap_or(Px(1.0))
+    tab_metric_chain(
+        theme,
+        &[divider_height_key(kind), "md.comp.divider.thickness"],
+        Px(1.0),
+    )
 }
 
 pub(crate) fn divider_color_for(theme: &Theme, kind: NavigationTabKind) -> Color {
@@ -92,15 +101,11 @@ pub(crate) fn stacked_icon_label_gap() -> Px {
 }
 
 pub(crate) fn scrollable_edge_padding_for(theme: &Theme, kind: NavigationTabKind) -> Px {
-    theme
-        .metric_by_key(scrollable_edge_padding_key(kind))
-        .unwrap_or(Px(52.0))
+    tab_metric(theme, scrollable_edge_padding_key(kind), Px(52.0))
 }
 
 pub(crate) fn scrollable_min_tab_width_for(theme: &Theme, kind: NavigationTabKind) -> Px {
-    theme
-        .metric_by_key(scrollable_min_tab_width_key(kind))
-        .unwrap_or(Px(90.0))
+    tab_metric(theme, scrollable_min_tab_width_key(kind), Px(90.0))
 }
 
 pub(crate) fn active_indicator_color(theme: &Theme) -> Color {
@@ -111,7 +116,7 @@ pub(crate) fn active_indicator_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn icon_size_for(theme: &Theme, kind: NavigationTabKind) -> Px {
-    theme.metric_by_key(icon_size_key(kind)).unwrap_or(Px(24.0))
+    tab_metric(theme, icon_size_key(kind), Px(24.0))
 }
 
 pub(crate) fn icon_color_for(
@@ -535,5 +540,99 @@ fn state_layer_opacity_key(
         (NavigationTabKind::Secondary, false, TabInteraction::Default) => {
             "md.comp.secondary-navigation-tab.inactive.hover.state-layer.opacity"
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn tab_metrics_default_to_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+        let kind = NavigationTabKind::Primary;
+
+        assert_eq!(container_height_for(theme, kind), Px(48.0));
+        assert_eq!(stacked_container_height_for(theme, kind), Px(72.0));
+        assert_eq!(active_indicator_height(theme), Px(3.0));
+        assert_eq!(active_indicator_min_width(theme), Px(24.0));
+        assert_eq!(divider_height_for(theme, kind), Px(1.0));
+        assert_eq!(scrollable_edge_padding_for(theme, kind), Px(52.0));
+        assert_eq!(scrollable_min_tab_width_for(theme, kind), Px(90.0));
+        assert_eq!(icon_size_for(theme, kind), Px(24.0));
+    }
+
+    #[test]
+    fn tab_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert(
+            "md.comp.primary-navigation-tab.container.height".to_string(),
+            50.0,
+        );
+        patch.metrics.insert(
+            "md.comp.primary-navigation-tab.with-stacked-icon-and-label-text.container.height"
+                .to_string(),
+            74.0,
+        );
+        patch.metrics.insert(
+            "md.comp.primary-navigation-tab.active-indicator.height".to_string(),
+            4.0,
+        );
+        patch.metrics.insert(
+            "md.comp.primary-navigation-tab.active-indicator.min-width".to_string(),
+            28.0,
+        );
+        patch.metrics.insert(
+            "md.comp.primary-navigation-tab.divider.height".to_string(),
+            2.0,
+        );
+        patch.metrics.insert(
+            "md.comp.primary-navigation-tab.scrollable.edge-padding".to_string(),
+            56.0,
+        );
+        patch.metrics.insert(
+            "md.comp.primary-navigation-tab.scrollable.min-tab-width".to_string(),
+            96.0,
+        );
+        patch.metrics.insert(
+            "md.comp.primary-navigation-tab.with-icon.icon.size".to_string(),
+            26.0,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+        let kind = NavigationTabKind::Primary;
+
+        assert_eq!(container_height_for(&theme, kind), Px(50.0));
+        assert_eq!(stacked_container_height_for(&theme, kind), Px(74.0));
+        assert_eq!(active_indicator_height(&theme), Px(4.0));
+        assert_eq!(active_indicator_min_width(&theme), Px(28.0));
+        assert_eq!(divider_height_for(&theme, kind), Px(2.0));
+        assert_eq!(scrollable_edge_padding_for(&theme, kind), Px(56.0));
+        assert_eq!(scrollable_min_tab_width_for(&theme, kind), Px(96.0));
+        assert_eq!(icon_size_for(&theme, kind), Px(26.0));
+    }
+
+    #[test]
+    fn tab_divider_height_uses_divider_fallback() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.divider.thickness".to_string(), 1.5);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            divider_height_for(&theme, NavigationTabKind::Secondary),
+            Px(1.5)
+        );
     }
 }
