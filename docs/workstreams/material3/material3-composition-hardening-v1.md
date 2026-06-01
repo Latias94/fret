@@ -301,5 +301,51 @@ Residual risk:
 - `ModalNavigationDrawer` focus trap/restore is already covered, but modal drawer routed content is
   not part of this batch.
 - This is a component-composition route model, not a full app-router proof for ADR 0230 route hooks.
-- RTL/adaptive breakpoint routed-content combinations remain follow-up polish rather than this
-  batch's proof target.
+- Adaptive breakpoint routed-content combinations remain follow-up polish rather than this batch's
+  proof target.
+
+## Batch 6: NavigationBar RTL Layout Direction
+
+Truth:
+
+- `NavigationBar` must resolve the Material theme's default layout direction and provide it to its
+  child layout subtree.
+- In RTL, the first logical navigation destination must render to the physical right of the second
+  destination.
+- RTL keyboard navigation must keep Material logical behavior: `ArrowLeft` moves forward to the
+  next logical destination and selection follows focus.
+- The fix belongs in Material ecosystem/foundation direction propagation, not in core layout or
+  per-item bespoke positioning.
+
+Artifacts:
+
+- Component fix:
+  `ecosystem/fret-ui-material3/src/navigation_bar.rs`
+- Regression tests:
+  `ecosystem/fret-ui-material3/tests/navigation_state.rs`
+  (`navigation_bar_rtl_theme_direction_mirrors_physical_destination_order`,
+  `navigation_bar_rtl_arrow_left_moves_to_next_logical_destination`)
+
+Wiring:
+
+- `NavigationBar` now follows the same foundation pattern as `Tabs`: read the theme default layout
+  direction and wrap the component subtree in `with_material_resolved_layout_direction`.
+- The existing roving focus policy remains component-owned; no new core or kit direction mechanism
+  was required.
+- The red test proved the distinction between behavior and layout: RTL keyboard movement already
+  moved logically, but physical destination order stayed LTR until the Material layout direction
+  provider was added.
+
+Proof:
+
+- Validation:
+  - `cargo fmt -p fret-ui-material3`
+  - `cargo test -p fret-ui-material3 --features diagnostics --test navigation_state navigation_bar_rtl`
+  - `cargo test -p fret-ui-material3 --features diagnostics --test navigation_state`
+
+Residual risk:
+
+- `NavigationRail` is vertical, so this batch does not assert a horizontal destination-order mirror
+  for it.
+- `NavigationDrawer` leading/trailing icon/text slot mirroring under RTL remains a focused visual
+  polish follow-up if drawer-heavy RTL app surfaces need it.

@@ -5,8 +5,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    AppWindowId, Paint, Point, Px, Rect, Scene, SceneOp, SemanticsNode, SemanticsOrientation,
-    SemanticsRole, Size, UiServices,
+    AppWindowId, KeyCode, Paint, Point, Px, Rect, Scene, SceneOp, SemanticsNode,
+    SemanticsOrientation, SemanticsRole, Size, UiServices,
 };
 use fret_runtime::{Model, ModelHost, PlatformCapabilities};
 use fret_ui::UiTree;
@@ -15,9 +15,10 @@ use fret_ui_material3::{NavigationBar, NavigationBarItem, NavigationRail, Naviga
 
 mod support;
 
+use support::events::key_down;
 use support::host::{FakeUiServices, TestHost};
 use support::layout::with_padding;
-use support::theme::apply_material_theme;
+use support::theme::{apply_material_theme, apply_material_theme_rtl};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -306,6 +307,47 @@ fn navigation_bar_uses_material_item_gap_and_active_indicator_geometry() {
         rect_center_y(indicator),
         rect_center_y(icon),
         "navigation bar active indicator center y",
+    );
+}
+
+#[test]
+fn navigation_bar_rtl_arrow_left_moves_to_next_logical_destination() {
+    let (mut app, window, mut services, mut ui) = harness();
+    apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+    let selected = app.models_mut().insert(Arc::<str>::from("search"));
+
+    render_navigation_bar(&mut ui, &mut app, &mut services, window, selected.clone());
+
+    let search = semantics_node(&ui, "m3-nav-search").id;
+    let settings = semantics_node(&ui, "m3-nav-settings").id;
+    ui.set_focus(Some(search));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowLeft));
+
+    assert_eq!(
+        ui.focus(),
+        Some(settings),
+        "expected RTL ArrowLeft to move forward to the next logical navigation destination"
+    );
+    assert_eq!(
+        app.models().get_cloned(&selected).as_deref(),
+        Some("settings")
+    );
+}
+
+#[test]
+fn navigation_bar_rtl_theme_direction_mirrors_physical_destination_order() {
+    let (mut app, window, mut services, mut ui) = harness();
+    apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+    let selected = app.models_mut().insert(Arc::<str>::from("search"));
+
+    render_navigation_bar(&mut ui, &mut app, &mut services, window, selected);
+
+    let search = visual_bounds_by_test_id(&ui, &app, window, "m3-nav-search");
+    let settings = visual_bounds_by_test_id(&ui, &app, window, "m3-nav-settings");
+
+    assert!(
+        search.origin.x.0 > settings.origin.x.0,
+        "expected RTL navigation bar to place the first logical destination to the physical right of the second destination, search={search:?}, settings={settings:?}"
     );
 }
 
