@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor NumericInput Affix Segment Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `NumericInput` prefix/suffix affix segment rendering moved out of
+`controls/numeric_input/element.rs` into private `controls/numeric_input/element/affix.rs` without
+changing prefix/suffix duplicate suppression, segment order, muted text color, density/frame
+padding and text-px routing, prefix/suffix test-id routing, a11y labels, trailing error icon
+composition, text-entry mounting, or public `NumericInput` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` keeps joined field/frame
+  orchestration, input owner invocation, error owner invocation, and outer layout while delegating
+  prefix/suffix segment chrome to the private affix owner.
+- `ecosystem/fret-ui-editor/src/controls/numeric_input/element/affix.rs` owns muted foreground
+  resolution, `editor_text_segment(...)` mounting, frame text-px/padding routing, test-id stamping,
+  and a11y label decoration.
+- `tools/gate_imui_workstream_source.py` now tracks the affix owner and rejects affix segment
+  policy from drifting back into the root element owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new affix owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor numeric_input --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor NumericInput Text-Entry Mounting Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `NumericInput` text-input mounting, focus sync, key handler installation,

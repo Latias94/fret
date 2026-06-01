@@ -553,6 +553,14 @@ Last updated: 2026-06-01
       and error owner invocation while delegating text input mounting, focus/key wiring, and
       draft/error sync to `controls/numeric_input/element/input.rs`. The source gate prevents
       input-mount behavior from drifting back into the root element owner.
+- [x] Split editor `NumericInput` affix segment rendering into a private element child owner
+      without changing prefix/suffix duplicate suppression, segment order, muted text color,
+      density/frame padding and text-px routing, prefix/suffix test-id routing, a11y labels,
+      trailing error icon composition, text-entry mounting, or public `NumericInput` options.
+      Result: `controls/numeric_input/element.rs` keeps joined field/frame orchestration, input
+      owner invocation, and error owner invocation while delegating prefix/suffix segment chrome to
+      `controls/numeric_input/element/affix.rs`. The source gate prevents affix segment policy from
+      drifting back into the root element owner.
 - [x] Split editor color-edit tooltip panel rendering into a private child owner without changing
       tooltip open gating, anchored placement, dismissal routing, hover-preview content, color
       tooltip line formatting, preview fill routing, tooltip readout text role, tooltip semantics,

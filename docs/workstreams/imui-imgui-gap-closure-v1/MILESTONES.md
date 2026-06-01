@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor NumericInput affix segment owner-split result:
+`ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` now keeps joined field/frame
+orchestration, input owner invocation, and error owner invocation while delegating prefix/suffix
+segment chrome to private `controls/numeric_input/element/affix.rs`. The affix owner contains muted
+text color resolution, frame text-px/padding usage, prefix/suffix test-id routing, and a11y label
+stamping. Prefix/suffix duplicate suppression, segment order, trailing error icon composition,
+text-entry mounting, and public `NumericInput` options remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor NumericInput text-entry mounting owner-split result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` now keeps keyed field/frame
 assembly, affix routing, and error owner invocation while delegating TextInput props construction,

@@ -8,18 +8,19 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ChromeRefinement;
 
 use crate::primitives::chrome::resolve_editor_text_field_style;
-use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::input_group::{
     EditorInputGroupFrameOverrides, derived_test_id,
-    editor_joined_input_frame_segments_with_overrides, editor_text_segment,
+    editor_joined_input_frame_segments_with_overrides,
 };
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::numeric_text_entry_focus_state;
 use crate::primitives::style::EditorStyle;
 
+mod affix;
 mod error;
 mod input;
 
+use affix::numeric_input_affix_segment;
 use error::{numeric_input_inline_error, numeric_input_trailing_error_icon};
 use input::{NumericInputTextEntryArgs, numeric_input_text_entry};
 
@@ -118,22 +119,15 @@ where
             }
         },
         move |cx| {
-            let theme = Theme::global(&*cx.app);
-            let affix_color = editor_muted_foreground(theme);
             let mut segments = Vec::new();
 
-            if let Some(prefix) = prefix.clone() {
-                let mut segment = editor_text_segment(
-                    cx,
-                    density,
-                    frame_chrome.text_px,
-                    prefix.clone(),
-                    affix_color,
-                    frame_chrome.padding,
-                );
-                if let Some(test_id) = prefix_test_id.as_ref() {
-                    segment = segment.test_id(test_id.clone()).a11y_label(prefix);
-                }
+            if let Some(segment) = numeric_input_affix_segment(
+                cx,
+                density,
+                frame_chrome,
+                prefix.clone(),
+                prefix_test_id.clone(),
+            ) {
                 segments.push(segment);
             }
             segments
@@ -167,23 +161,14 @@ where
         },
         move |cx| {
             let mut segments = Vec::new();
-            let affix_color = {
-                let theme = Theme::global(&*cx.app);
-                editor_muted_foreground(theme)
-            };
 
-            if let Some(suffix) = suffix.clone() {
-                let mut segment = editor_text_segment(
-                    cx,
-                    density,
-                    frame_chrome.text_px,
-                    suffix.clone(),
-                    affix_color,
-                    frame_chrome.padding,
-                );
-                if let Some(test_id) = suffix_test_id.as_ref() {
-                    segment = segment.test_id(test_id.clone()).a11y_label(suffix);
-                }
+            if let Some(segment) = numeric_input_affix_segment(
+                cx,
+                density,
+                frame_chrome,
+                suffix.clone(),
+                suffix_test_id.clone(),
+            ) {
                 segments.push(segment);
             }
 
