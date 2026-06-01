@@ -308,6 +308,16 @@ Last updated: 2026-06-01
       `composites/gradient_editor/stops.rs` owns stop-row PropertyRow assembly, position DragValue,
       ColorEdit, remove button, and row/field test-id derivation. The source gate prevents stop-row
       policy from drifting back into the root composite owner.
+- [x] Split editor `GradientEditor` public options/action/binding records into a private child
+      owner without changing public re-export paths, layout defaults, enabled/preview/angle
+      defaults, preview/stops/add-stop test-id fields, stop binding model fields, add/remove action
+      callback types, preview behavior, stop-row ordering, add-stop gating, or empty-state text
+      role behavior.
+      Result: `composites/gradient_editor.rs` keeps keyed element composition, preview/angle/stops
+      group orchestration, add-stop behavior, and empty-state text role helper while re-exporting
+      options. `composites/gradient_editor/options.rs` owns public option/action/binding records
+      and defaults. The source gate prevents options/default policy from drifting back into the
+      root composite owner.
 - [x] Split editor `InspectorPanel` options/default and search-assist option records into a
       private child owner without changing public `InspectorPanelOptions` or
       `InspectorPanelSearchAssistOptions` import paths, layout defaults, enabled/title/test-id

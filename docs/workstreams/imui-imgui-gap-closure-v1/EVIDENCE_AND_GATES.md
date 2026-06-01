@@ -1330,6 +1330,38 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Editor GradientEditor Options Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `GradientEditor` public options/action/binding records moved out of the root
+composite owner into a private `composites/gradient_editor/options.rs` owner without changing
+public re-export paths, layout defaults, enabled/preview/angle defaults, preview/stops/add-stop
+test-id fields, stop binding model fields, add/remove action callback types, preview behavior,
+stop-row ordering, add-stop gating, or empty-state text role behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` keeps keyed element composition,
+  preview/angle/stops group orchestration, add-stop behavior, and empty-state text role helper while
+  re-exporting option/action/binding records.
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor/options.rs` owns public
+  option/action/binding records and defaults.
+- `tools/gate_imui_workstream_source.py` now tracks the GradientEditor options split and rejects
+  options/default policy from drifting back into the root composite owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the options owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor gradient_editor --no-fail-fast`: pass (1 passed, 227
+  skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor PropertyGroup Header Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `PropertyGroup` header pressable assembly moved out of the group element

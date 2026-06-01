@@ -13,10 +13,7 @@ use std::sync::{Arc, Mutex};
 use fret_core::scene::MAX_STOPS;
 use fret_core::{Axis, Color, Edges, Px};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, UiActionHost};
-use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacingLength,
-};
+use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, SpacingLength};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use super::property_row::PropertyRowOptions;
@@ -29,66 +26,17 @@ use crate::primitives::input_group::derived_test_id;
 use crate::primitives::readout::editor_empty_state_text_props;
 use crate::primitives::{EditorDensity, NumericPresentation};
 
+mod options;
 mod preview;
 mod stops;
 #[cfg(test)]
 mod tests;
 
+pub use options::{
+    GradientEditorOptions, GradientStopBinding, OnGradientAction, OnGradientStopAction,
+};
 use preview::{GradientPreviewState, PreviewStop, gradient_preview_canvas};
 use stops::gradient_stop_row;
-
-pub type OnGradientStopAction =
-    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, fret_ui::ItemKey) + 'static>;
-
-pub type OnGradientAction = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static>;
-
-#[derive(Debug, Clone)]
-pub struct GradientEditorOptions {
-    pub layout: LayoutStyle,
-    pub enabled: bool,
-    pub preview_height: Px,
-    pub show_angle: bool,
-    pub enable_preview_drag: bool,
-    pub a11y_label: Option<Arc<str>>,
-    pub id_source: Option<Arc<str>>,
-    pub test_id: Option<Arc<str>>,
-    pub preview_test_id: Option<Arc<str>>,
-    pub stops_test_id: Option<Arc<str>>,
-    pub add_stop_test_id: Option<Arc<str>>,
-}
-
-impl Default for GradientEditorOptions {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Auto,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            enabled: true,
-            preview_height: Px(22.0),
-            show_angle: true,
-            enable_preview_drag: true,
-            a11y_label: None,
-            id_source: None,
-            test_id: None,
-            preview_test_id: None,
-            stops_test_id: None,
-            add_stop_test_id: None,
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct GradientStopBinding {
-    pub id: fret_ui::ItemKey,
-    pub position: Model<f64>,
-    pub color: Model<Color>,
-    pub remove: Option<OnGradientStopAction>,
-}
 
 #[derive(Clone)]
 pub struct GradientEditor {

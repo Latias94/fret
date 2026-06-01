@@ -368,6 +368,16 @@ identity/test-id derivation, position/color editor wiring, remove action routing
 empty-state text role, preview behavior, and public gradient editor options remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor GradientEditor options owner-split result:
+`ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps keyed element composition,
+preview/angle/stops group orchestration, add-stop behavior, and empty-state text role helper while
+re-exporting options. The private `composites/gradient_editor/options.rs` owner contains public
+option/action/binding records and defaults. Public re-export paths, layout defaults,
+enabled/preview/angle defaults, preview/stops/add-stop test-id fields, stop binding model fields,
+add/remove action callback types, preview behavior, stop-row ordering, add-stop gating, and
+empty-state text role behavior remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split.
+
 2026-06-01 editor InspectorPanel search owner-split result:
 `ecosystem/fret-ui-editor/src/composites/inspector_panel/element.rs` now keeps panel
 metrics/header/content/root assembly and delegates search field construction to the private
