@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor TextAssistField Option-Row Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor text-assist suggestion option-row assembly moved out of
+`controls/text_assist_field/panel.rs` into a private `controls/text_assist_field/panel/row.rs`
+owner without changing visible-match listbox semantics, active/disabled row palette, option
+activation, item test-id derivation, listbox option a11y fields, scroll threshold, popup surface
+chrome, or rendered panel handoff.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field/panel.rs` keeps listbox semantics,
+  scroll wrapping, popup surface chrome, and `RenderedTextAssistPanel` packaging.
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field/panel/row.rs` owns suggestion row
+  pressable props, activation commit wiring, active/disabled row palette selection, item test-id
+  derivation, listbox option a11y fields, and row text rendering.
+- `tools/gate_imui_workstream_source.py` now tracks the row owner and rejects row pressable/palette
+  policy from drifting back into the panel surface owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new row owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor text_assist --no-fail-fast`: pass (4 passed, 224 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor TextField Escape-Clear Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `TextField` unbuffered multiline Escape-clear key handling moved out of

@@ -6,25 +6,25 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
-use fret_ui::action::{ActivateReason, OnActivate};
 use fret_ui::element::{
-    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow, PressableA11y,
-    PressableProps, ScrollAxis, ScrollProps, SizeStyle,
+    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow, ScrollAxis,
+    ScrollProps, SizeStyle,
 };
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 use fret_ui_kit::headless::text_assist::TextAssistController;
 
+mod row;
+
 use super::{
     OnTextAssistFieldAccept, RenderedTextAssistPanel, TextAssistFieldOptions,
-    TextAssistFieldSurface, accept_text_assist_match, text_assist_max_content_height,
+    TextAssistFieldSurface, text_assist_max_content_height,
 };
 use crate::primitives::popup_list::{
-    EditorPopupListRowState, editor_popup_list_content_height, editor_popup_list_row_gap,
-    editor_popup_list_row_palette, editor_popup_list_row_radius, editor_popup_list_surface_padding,
+    editor_popup_list_content_height, editor_popup_list_row_gap, editor_popup_list_surface_padding,
 };
 use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
-use crate::primitives::readout::editor_popup_list_row_text_props;
 use crate::primitives::style::EditorStyle;
+use row::{TextAssistOptionRowInput, text_assist_option_row};
 
 pub(super) fn render_text_assist_panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -67,6 +67,7 @@ pub(super) fn render_text_assist_panel<H: UiHost>(
         .or_else(|| options.list_test_id.clone());
 
     let mut option_elements = Vec::new();
+    let total = controller.visible().len();
     let option_rows: Vec<_> = controller
         .visible()
         .iter()
@@ -75,91 +76,24 @@ pub(super) fn render_text_assist_panel<H: UiHost>(
             let is_active = controller
                 .active_item_id()
                 .is_some_and(|active| active == &entry.item_id);
-            let option_test_id = item_test_id_prefix
-                .as_ref()
-                .map(|prefix| Arc::<str>::from(format!("{prefix}.item.{}", entry.item_id)));
-            let query_model = query_model.clone();
-            let dismissed_query_model = dismissed_query_model.clone();
-            let active_item_id_model = active_item_id_model.clone();
-            let on_accept = on_accept.clone();
-            let active = entry.clone();
-            let row = cx.pressable(
-                PressableProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Px(density.row_height),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    enabled: !entry.disabled,
-                    focusable: false,
-                    a11y: PressableA11y {
-                        role: Some(SemanticsRole::ListBoxOption),
-                        label: Some(entry.label.clone()),
-                        test_id: option_test_id.clone(),
-                        selected: is_active,
-                        pos_in_set: Some((idx as u32) + 1),
-                        set_size: Some(controller.visible().len() as u32),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                move |cx, st| {
-                    let on_activate: OnActivate =
-                        Arc::new(move |host, action_cx, _reason: ActivateReason| {
-                            accept_text_assist_match(
-                                host,
-                                action_cx,
-                                &query_model,
-                                &dismissed_query_model,
-                                &active_item_id_model,
-                                active.clone(),
-                                on_accept.as_ref(),
-                            );
-                        });
-                    cx.pressable_add_on_activate(on_activate);
 
-                    let hovered = st.hovered || st.hovered_raw;
-                    let row_palette = {
-                        let theme = Theme::global(&*cx.app);
-                        editor_popup_list_row_palette(
-                            theme,
-                            hovered,
-                            EditorPopupListRowState {
-                                active: is_active,
-                                disabled: entry.disabled,
-                            },
-                        )
-                    };
-
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            padding: Edges::symmetric(density.padding_x, Px(0.0)).into(),
-                            background: row_palette.bg,
-                            corner_radii: Corners::all(editor_popup_list_row_radius()),
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            vec![cx.text_props(editor_popup_list_row_text_props(
-                                entry.label.clone(),
-                                row_palette.fg,
-                                density.row_height,
-                            ))]
-                        },
-                    )]
+            let (row, option_id) = text_assist_option_row(
+                cx,
+                TextAssistOptionRowInput {
+                    index: idx,
+                    total,
+                    entry: entry.clone(),
+                    is_active,
+                    item_test_id_prefix: item_test_id_prefix.clone(),
+                    row_height: density.row_height,
+                    padding_x: density.padding_x,
+                    query_model: query_model.clone(),
+                    dismissed_query_model: dismissed_query_model.clone(),
+                    active_item_id_model: active_item_id_model.clone(),
+                    on_accept: on_accept.clone(),
                 },
             );
-            option_elements.push(row.id);
+            option_elements.push(option_id);
             row
         })
         .collect();

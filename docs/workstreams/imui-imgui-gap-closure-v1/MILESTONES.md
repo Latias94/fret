@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor TextAssistField option-row owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field/panel.rs` now keeps listbox semantics,
+scroll wrapping, popup surface chrome, and rendered panel packaging while delegating suggestion
+option-row assembly to `controls/text_assist_field/panel/row.rs`. The private row owner contains
+pressable props, option activation commit wiring, active/disabled row palette selection,
+item test-id derivation, listbox option a11y fields, and row text rendering. Visible-match
+semantics, scroll threshold, popup chrome, and `RenderedTextAssistPanel` handoff remain unchanged,
+and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor TextField escape-clear owner-split result:
 `ecosystem/fret-ui-editor/src/controls/text_field/element.rs` now keeps TextInput/TextArea
 assembly, buffered key routing, focus-selection sync, blur handling, and clear-button composition

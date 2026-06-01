@@ -872,6 +872,14 @@ Last updated: 2026-06-01
       Result: `controls/text_assist_field.rs` keeps input/key orchestration and accept flow.
       `controls/text_assist_field/panel.rs` owns suggestion panel content, option rows, scroll
       wrapping, listbox semantics, popup chrome, and rendered panel packaging.
+- [x] Split editor text-assist suggestion option-row assembly into a private panel child owner
+      without changing visible-match listbox semantics, active/disabled row palette, option
+      activation, item test-id derivation, listbox option a11y fields, scroll threshold, popup
+      surface chrome, or rendered panel handoff.
+      Result: `controls/text_assist_field/panel.rs` keeps listbox semantics, scroll wrapping,
+      popup chrome, and rendered panel packaging. `controls/text_assist_field/panel/row.rs` owns
+      suggestion row pressable props, option activation, active/disabled row palette, item test-id
+      derivation, and row text rendering.
 - [x] Split editor text-assist field root helper regressions into a private test owner without
       changing inline empty-label gating, anchored-overlay default content height, accept commit
       flow, key handling, panel routing, or overlay routing.
