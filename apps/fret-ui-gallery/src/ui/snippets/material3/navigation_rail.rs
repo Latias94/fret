@@ -6,9 +6,42 @@ use std::sync::Arc;
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons::ids;
-use fret_ui::element::{ContainerProps, LayoutStyle, Length};
+use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
+
+fn route_panel(cx: &mut AppComponentCx<'_>, route: &str) -> AnyElement {
+    let (route_id, title, body) = match route {
+        "settings" => (
+            "settings",
+            "Settings",
+            "Administrative preferences and account controls.",
+        ),
+        "play" => (
+            "play",
+            "Play",
+            "Media controls, playback status, and queue.",
+        ),
+        _ => (
+            "search",
+            "Search",
+            "Search results, shortcuts, and recent destinations.",
+        ),
+    };
+
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text(title).test_id(format!(
+                "ui-gallery-material3-navigation-rail-route-panel-{route_id}"
+            )),
+            cx.text(body),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N2)
+    .test_id("ui-gallery-material3-navigation-rail-route-panel")
+    .into_element(cx)
+}
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let rail = material3::NavigationRail::uncontrolled(cx, "search");
@@ -54,6 +87,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         vec![
             cx.text("Material 3 Navigation Rail: roving focus + state layer + bounded ripple."),
             container,
+            route_panel(cx, current.as_ref()),
             cx.text(format!("value={}", current.as_ref())),
         ]
     })

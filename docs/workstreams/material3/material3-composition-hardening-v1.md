@@ -240,3 +240,66 @@ Residual risk:
 - Edge-collision behavior when a `SearchView` is opened at the bottom of a viewport should get its
   own focused follow-up if it becomes a product requirement.
 - Navigation routed-content composition is still pending.
+
+## Batch 5: Navigation Surfaces With Routed Content
+
+Truth:
+
+- `NavigationBar`, `NavigationRail`, and `NavigationDrawer` must be usable as destination selectors
+  for caller-owned routed content, not just isolated value demos.
+- Changing the active destination through any navigation surface must update the shared route model
+  and remount the active content panel while unmounting stale route panels.
+- Selected semantics must stay synchronized across all visible surfaces that share the same route
+  model.
+- Focus must remain on the destination item that changed the route after keyboard or pointer
+  activation.
+- Gallery snippets must expose stable automation anchors for the route panel root and active route
+  content.
+
+Artifacts:
+
+- Gallery repros:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/navigation_bar.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/material3/navigation_rail.rs`, and
+  `apps/fret-ui-gallery/src/ui/snippets/material3/navigation_drawer.rs`
+- Regression test:
+  `ecosystem/fret-ui-material3/tests/material3_navigation_interactions.rs`
+  (`navigation_surfaces_drive_routed_panel_content`)
+- Diag script:
+  `tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-routed-content.json`
+
+Wiring:
+
+- Route panels remain caller-owned composition. No route/router policy was added to Material
+  components and no core mechanism changed.
+- The three navigation surfaces continue to own destination chrome, roving focus, selected
+  semantics, and Material state-layer/indicator behavior.
+- The gallery now renders real route content panels with stable ids:
+  `ui-gallery-material3-navigation-{bar,rail,drawer}-route-panel` and
+  `...-route-panel-{search,settings,play|more}`.
+- The regression test intentionally shares one route model across Bar, Rail, and Drawer to prove
+  selected-state synchronization and content replacement across surfaces.
+
+Proof:
+
+- The targeted test verifies initial search content, Bar keyboard route change to settings, Rail
+  keyboard route change to play, Drawer keyboard route change back to settings, selected semantics
+  on every surface, focus retention, and stale-panel unmounting.
+- The diag script navigates the real gallery pages and verifies route-panel existence, selected
+  semantics, stale-panel removal, and pointer focus after Bar/Rail/Drawer destination clicks.
+- Validation:
+  - `cargo fmt -p fret-ui-gallery -p fret-ui-material3`
+  - `python -m json.tool tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-routed-content.json`
+  - `cargo check -p fret-ui-gallery --features gallery-material3`
+  - `cargo test -p fret-ui-material3 --features diagnostics --test material3_navigation_interactions navigation_surfaces_drive_routed_panel_content -- --exact`
+  - `.\target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-routed-content.json --dir target/fret-diag-material3-navigation-routed-content --session-auto --timeout-ms 360000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3`
+    passed with `run_id=1780283281280`; session:
+    `target/fret-diag-material3-navigation-routed-content/sessions/1780282957399-225632`.
+
+Residual risk:
+
+- `ModalNavigationDrawer` focus trap/restore is already covered, but modal drawer routed content is
+  not part of this batch.
+- This is a component-composition route model, not a full app-router proof for ADR 0230 route hooks.
+- RTL/adaptive breakpoint routed-content combinations remain follow-up polish rather than this
+  batch's proof target.

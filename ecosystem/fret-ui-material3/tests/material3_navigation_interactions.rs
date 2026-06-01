@@ -10,10 +10,43 @@ mod support;
 use support::events::{key_down, key_up};
 use support::goldens::run_overlay_frame;
 use support::host::{FakeUiServices, TestHost};
-use support::layout::with_padding;
+use support::layout::{semantics_node_id_by_test_id, with_padding};
 use support::theme::apply_material_theme;
 
 // NavigationBar, NavigationRail, and NavigationDrawer interaction regressions.
+
+fn semantics_node_exists(ui: &UiTree<TestHost>, test_id: &str) -> bool {
+    semantics_node_id_by_test_id(ui, test_id).is_some()
+}
+
+fn semantics_node_selected(ui: &UiTree<TestHost>, test_id: &str) -> bool {
+    ui.semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.test_id.as_deref() == Some(test_id))
+                .map(|node| node.flags.selected)
+        })
+        .unwrap_or_else(|| panic!("expected semantics node for test_id {test_id}"))
+}
+
+fn assert_route_panel(ui: &UiTree<TestHost>, active: &str, inactive: &[&str]) {
+    assert!(
+        semantics_node_exists(ui, "nav-routes-panel"),
+        "expected routed content panel root"
+    );
+    assert!(
+        semantics_node_exists(ui, &format!("nav-routes-panel-{active}")),
+        "expected routed content panel for {active}"
+    );
+    for route in inactive {
+        assert!(
+            !semantics_node_exists(ui, &format!("nav-routes-panel-{route}")),
+            "expected inactive route panel {route} to be unmounted"
+        );
+    }
+}
 
 #[test]
 fn navigation_bar_roving_skips_disabled_and_updates_model() {
@@ -1262,6 +1295,214 @@ fn navigation_drawer_roving_single_enabled_item_does_not_move_under_no_loop() {
         selected.as_ref(),
         "settings",
         "expected selection to remain on the only enabled destination",
+    );
+}
+
+#[test]
+fn navigation_surfaces_drive_routed_panel_content() {
+    use fret_core::Axis;
+    use fret_icons::ids;
+    use fret_ui::Invalidation;
+    use fret_ui::element::{ContainerProps, FlexProps, Length, SpacingLength};
+    use fret_ui_material3::{
+        NavigationBar, NavigationBarItem, NavigationDrawer, NavigationDrawerItem, NavigationRail,
+        NavigationRailItem,
+    };
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(900.0), Px(520.0)),
+    );
+
+    let route: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("search"));
+    let route_for_render = route.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let route = route_for_render.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let selected_route = cx
+                    .get_model_cloned(&route, Invalidation::Layout)
+                    .unwrap_or_else(|| Arc::<str>::from("search"));
+
+                let bar = NavigationBar::new(route.clone())
+                    .a11y_label("Material routed navigation bar")
+                    .test_id("nav-routes-bar")
+                    .items(vec![
+                        NavigationBarItem::new("search", "Search", ids::ui::SEARCH)
+                            .test_id("nav-routes-bar-search"),
+                        NavigationBarItem::new("settings", "Settings", ids::ui::SETTINGS)
+                            .test_id("nav-routes-bar-settings"),
+                        NavigationBarItem::new("play", "Play", ids::ui::PLAY)
+                            .test_id("nav-routes-bar-play"),
+                    ])
+                    .into_element(cx);
+
+                let rail = NavigationRail::new(route.clone())
+                    .a11y_label("Material routed navigation rail")
+                    .test_id("nav-routes-rail")
+                    .items(vec![
+                        NavigationRailItem::new("search", "Search", ids::ui::SEARCH)
+                            .test_id("nav-routes-rail-search"),
+                        NavigationRailItem::new("settings", "Settings", ids::ui::SETTINGS)
+                            .test_id("nav-routes-rail-settings"),
+                        NavigationRailItem::new("play", "Play", ids::ui::PLAY)
+                            .test_id("nav-routes-rail-play"),
+                    ])
+                    .into_element(cx);
+
+                let drawer = NavigationDrawer::new(route.clone())
+                    .a11y_label("Material routed navigation drawer")
+                    .test_id("nav-routes-drawer")
+                    .items(vec![
+                        NavigationDrawerItem::new("search", "Search", ids::ui::SEARCH)
+                            .test_id("nav-routes-drawer-search"),
+                        NavigationDrawerItem::new("settings", "Settings", ids::ui::SETTINGS)
+                            .badge_label("2")
+                            .test_id("nav-routes-drawer-settings"),
+                        NavigationDrawerItem::new("play", "Play", ids::ui::PLAY)
+                            .badge_label("99+")
+                            .test_id("nav-routes-drawer-play"),
+                    ])
+                    .into_element(cx);
+
+                let route_id = match selected_route.as_ref() {
+                    "settings" => "settings",
+                    "play" => "play",
+                    _ => "search",
+                };
+                let route_text = match route_id {
+                    "settings" => "Settings route content",
+                    "play" => "Play route content",
+                    _ => "Search route content",
+                };
+                let route_leaf = cx
+                    .text(route_text)
+                    .test_id(format!("nav-routes-panel-{route_id}"));
+                let panel = cx
+                    .container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(260.0));
+                                layout.size.height = Length::Px(Px(180.0));
+                                layout
+                            },
+                            ..Default::default()
+                        },
+                        move |_cx| vec![route_leaf],
+                    )
+                    .test_id("nav-routes-panel");
+
+                let row = {
+                    let mut props = FlexProps::default();
+                    props.direction = Axis::Horizontal;
+                    props.gap = SpacingLength::Px(Px(16.0));
+                    props.layout.size.width = Length::Fill;
+                    props.layout.size.height = Length::Px(Px(280.0));
+                    cx.flex(props, move |_cx| vec![rail, drawer, panel])
+                };
+
+                let stack = {
+                    let mut props = FlexProps::default();
+                    props.direction = Axis::Vertical;
+                    props.gap = SpacingLength::Px(Px(16.0));
+                    props.layout.size.width = Length::Fill;
+                    cx.flex(props, move |_cx| vec![bar, row])
+                };
+
+                vec![with_padding(cx, Px(24.0), stack)]
+            })
+        };
+
+    let render_frame =
+        |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let root = render(ui, app, services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+        };
+
+    render_frame(&mut ui, &mut app, &mut services);
+
+    assert_route_panel(&ui, "search", &["settings", "play"]);
+    assert!(semantics_node_selected(&ui, "nav-routes-bar-search"));
+    assert!(semantics_node_selected(&ui, "nav-routes-rail-search"));
+    assert!(semantics_node_selected(&ui, "nav-routes-drawer-search"));
+
+    let bar_search = semantics_node_id_by_test_id(&ui, "nav-routes-bar-search")
+        .expect("expected routed NavigationBar search item");
+    ui.set_focus(Some(bar_search));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+    render_frame(&mut ui, &mut app, &mut services);
+
+    assert_eq!(
+        app.models().get_cloned(&route).as_deref(),
+        Some("settings"),
+        "expected NavigationBar focus movement to update the shared route model"
+    );
+    assert_route_panel(&ui, "settings", &["search", "play"]);
+    assert!(semantics_node_selected(&ui, "nav-routes-bar-settings"));
+    assert!(semantics_node_selected(&ui, "nav-routes-rail-settings"));
+    assert!(semantics_node_selected(&ui, "nav-routes-drawer-settings"));
+    assert_eq!(
+        ui.focus(),
+        semantics_node_id_by_test_id(&ui, "nav-routes-bar-settings"),
+        "expected focus to stay on the active NavigationBar destination"
+    );
+
+    let rail_settings = semantics_node_id_by_test_id(&ui, "nav-routes-rail-settings")
+        .expect("expected routed NavigationRail settings item");
+    ui.set_focus(Some(rail_settings));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+    render_frame(&mut ui, &mut app, &mut services);
+
+    assert_eq!(
+        app.models().get_cloned(&route).as_deref(),
+        Some("play"),
+        "expected NavigationRail focus movement to update the shared route model"
+    );
+    assert_route_panel(&ui, "play", &["search", "settings"]);
+    assert!(semantics_node_selected(&ui, "nav-routes-bar-play"));
+    assert!(semantics_node_selected(&ui, "nav-routes-rail-play"));
+    assert!(semantics_node_selected(&ui, "nav-routes-drawer-play"));
+    assert_eq!(
+        ui.focus(),
+        semantics_node_id_by_test_id(&ui, "nav-routes-rail-play"),
+        "expected focus to stay on the active NavigationRail destination"
+    );
+
+    let drawer_play = semantics_node_id_by_test_id(&ui, "nav-routes-drawer-play")
+        .expect("expected routed NavigationDrawer play item");
+    ui.set_focus(Some(drawer_play));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowUp));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowUp));
+    render_frame(&mut ui, &mut app, &mut services);
+
+    assert_eq!(
+        app.models().get_cloned(&route).as_deref(),
+        Some("settings"),
+        "expected NavigationDrawer focus movement to update the shared route model"
+    );
+    assert_route_panel(&ui, "settings", &["search", "play"]);
+    assert!(semantics_node_selected(&ui, "nav-routes-bar-settings"));
+    assert!(semantics_node_selected(&ui, "nav-routes-rail-settings"));
+    assert!(semantics_node_selected(&ui, "nav-routes-drawer-settings"));
+    assert_eq!(
+        ui.focus(),
+        semantics_node_id_by_test_id(&ui, "nav-routes-drawer-settings"),
+        "expected focus to stay on the active NavigationDrawer destination"
     );
 }
 

@@ -116,13 +116,20 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     overlay dismissal, menu role, first-item focus, and `Escape` focus restore.
   - Gates: `material3_overlay_interactions::search_view_and_dropdown_menu_arbitrate_sibling_popovers`
     plus `ui-gallery-material3-search-menu-sibling-popovers.json`.
+- 2026-06-01 Navigation routed-content composition:
+  - `NavigationBar`, `NavigationRail`, and `NavigationDrawer` gallery snippets now render
+    caller-owned route panels with stable route-panel and active-route anchors.
+  - A shared-route regression test proves Bar/Rail/Drawer selected semantics stay synchronized
+    across one route model and that stale route panels unmount as destinations change.
+  - Gates: `material3_navigation_interactions::navigation_surfaces_drive_routed_panel_content`
+    plus `ui-gallery-material3-navigation-routed-content.json`.
 
 ## Next Recommended Focus
 
 1. Finish Tabs residuals only if panel presence becomes a real app need:
    `force_mount` content, presence motion, and overflow/scroll affordance polish.
-2. Add navigation routed-content gates for `NavigationBar`, `NavigationRail`, and
-   `NavigationDrawer`: selected state, visible panel content, focus movement, and route/content
-   `test_id` anchors.
+2. Add modal-drawer routed-content coverage if product surfaces need route switching inside
+   `ModalNavigationDrawer`, including close-after-selection policy if that becomes a Material app
+   requirement.
 3. Add focused SearchView edge/collision coverage if product surfaces place search near viewport
    bottoms, including full-screen `SearchView` + menu composition if needed.
