@@ -416,6 +416,15 @@ Each TODO is labeled:
         TTL pruning before graph mutation.
       - Focused cancellation regressions, source gate, JSON shape, catalog, and diff checks passed
         locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking runtime window-created owner split keeps created-window completion out
+      of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M27_DOCKING_RUNTIME_WINDOW_CREATED_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/runtime/window_created.rs` owns
+        `complete_for_create_request(...)`, cancel-and-close handling, panel/tabs window graph
+        update, active drag source/current window remap, invalidation, and DockFloating registry
+        registration.
+      - Focused window-created/drag remap regressions, source gate, JSON shape, catalog, and diff
+        checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

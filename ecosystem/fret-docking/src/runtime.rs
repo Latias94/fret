@@ -8,9 +8,7 @@
 //! - complete the float by updating the graph once the OS window exists
 
 use fret_core::{AppWindowId, DockOp};
-use fret_runtime::{
-    CreateWindowKind, CreateWindowRequest, Effect, PlatformCapabilities, UiHost, WindowRequest,
-};
+use fret_runtime::{CreateWindowRequest, Effect, PlatformCapabilities, UiHost, WindowRequest};
 
 use crate::DockManager;
 use crate::dock::{DockPanelDragPayload, DockTabsDragPayload};
@@ -18,13 +16,14 @@ use crate::invalidation::DockInvalidationService;
 
 mod in_window;
 mod tear_off;
+mod window_created;
 
 use in_window::default_in_window_float_rect;
 pub use in_window::recenter_in_window_floatings;
 pub(crate) use tear_off::is_dock_floating_os_window;
 use tear_off::{
-    DockFloatingOsWindowRegistry, DockTearOffCompletion, DockTearOffKind, DockTearOffMachine,
-    dock_tear_off_supported, push_dock_floating_window_create,
+    DockFloatingOsWindowRegistry, DockTearOffKind, DockTearOffMachine, dock_tear_off_supported,
+    push_dock_floating_window_create,
 };
 
 fn invalidate_windows<H: UiHost>(app: &mut H, windows: impl IntoIterator<Item = AppWindowId>) {
@@ -345,91 +344,7 @@ pub fn handle_dock_window_created<H: UiHost>(
     request: &CreateWindowRequest,
     new_window: AppWindowId,
 ) -> bool {
-    let now = app.tick_id();
-    let (completion, pending) = app
-        .with_global_mut(DockTearOffMachine::default, |machine, _app| {
-            machine.complete_for_create_request(request, now)
-        });
-    if matches!(completion, DockTearOffCompletion::CancelAndCloseWindow) {
-        if std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some_and(|v| !v.is_empty()) {
-            tracing::info!(
-                new_window = ?new_window,
-                request_kind = ?request.kind,
-                "dock tear-off: cancel and close newly created window"
-            );
-        }
-        app.push_effect(Effect::Window(WindowRequest::Close(new_window)));
-        return true;
-    }
-
-    let CreateWindowKind::DockFloating {
-        source_window,
-        panel,
-    } = &request.kind
-    else {
-        return false;
-    };
-
-    if app.global::<DockManager>().is_none() {
-        if std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some_and(|v| !v.is_empty()) {
-            tracing::info!(
-                new_window = ?new_window,
-                request_kind = ?request.kind,
-                "dock tear-off: missing DockManager; closing newly created window"
-            );
-        }
-        app.push_effect(Effect::Window(WindowRequest::Close(new_window)));
-        return true;
-    }
-
-    let kind = pending
-        .as_ref()
-        .map(|p| p.kind)
-        .unwrap_or(DockTearOffKind::Panel);
-    let handled = app.with_global_mut(DockManager::default, |dock, app| {
-        let changed = match kind {
-            DockTearOffKind::Panel => {
-                dock.graph
-                    .float_panel_to_window(*source_window, panel.clone(), new_window)
-            }
-            DockTearOffKind::Tabs { source_tabs } => {
-                dock.graph
-                    .float_tabs_to_window(*source_window, source_tabs, new_window)
-            }
-        };
-        if !changed {
-            return false;
-        }
-
-        let drag_kind = match kind {
-            DockTearOffKind::Panel => fret_runtime::DRAG_KIND_DOCK_PANEL,
-            DockTearOffKind::Tabs { .. } => fret_runtime::DRAG_KIND_DOCK_TABS,
-        };
-        let pointer_id_hint = pending.as_ref().and_then(|p| p.pointer_id);
-        let pointer_id = pointer_id_hint.or_else(|| {
-            app.find_drag_pointer_id(|d| d.kind == drag_kind && d.source_window == *source_window)
-        });
-        if let Some(pointer_id) = pointer_id
-            && let Some(drag) = app.drag_mut(pointer_id)
-            && drag.kind == drag_kind
-        {
-            drag.source_window = new_window;
-            drag.current_window = new_window;
-        }
-
-        dock.clear_viewport_layout_for_window(*source_window);
-        dock.clear_viewport_layout_for_window(new_window);
-        invalidate_windows(app, [*source_window, new_window]);
-        true
-    });
-
-    if handled {
-        app.with_global_mut(DockFloatingOsWindowRegistry::default, |reg, _app| {
-            reg.register(new_window);
-        });
-    }
-
-    handled
+    window_created::handle_dock_window_created(app, request, new_window)
 }
 
 /// Merge a closing floating dock window back into a target window.
@@ -480,6 +395,7 @@ mod tests {
     use super::*;
     use crate::test_host::TestHost;
     use fret_core::{DockNode, DropZone, PanelKey};
+    use fret_runtime::CreateWindowKind;
     use slotmap::KeyData;
 
     #[test]
