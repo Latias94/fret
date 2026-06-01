@@ -40,7 +40,7 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::modal_motion::material_modal_panel_transform;
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::foundation::strings::{
     material_time_picker_cancel_label, material_time_picker_confirm_label,
     material_time_picker_dismiss_label, material_time_picker_hour_selection_label,
@@ -1985,8 +1985,8 @@ fn time_picker_clock_dial<H: UiHost>(
     let (spatial, effects) = {
         let theme = Theme::global(&*cx.app);
         (
-            sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultSpatial),
-            sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultEffects),
+            material_motion_spring_in_scope(&*cx, theme, MaterialMotionRole::ModalPanelSpatial),
+            material_motion_spring_in_scope(&*cx, theme, MaterialMotionRole::ModalPanelEffects),
         )
     };
     let now_frame = cx.frame_id.0;

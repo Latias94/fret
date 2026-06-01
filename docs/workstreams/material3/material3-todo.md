@@ -384,6 +384,7 @@ These files are primarily *shared policy primitives*, not one-off component layo
 - [x] Implement a MotionScheme mapping for the 6 canonical specs (standard) and expose it via the
   tree-local Material context override.
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/motion_scheme.rs`,
+    `ecosystem/fret-ui-material3/src/foundation/motion_roles.rs`,
     `ecosystem/fret-ui-material3/src/foundation/context.rs`
 - [x] Add a design variant selection mechanism (Standard vs Expressive) for component `.expressive.*`
   token variants (global default + subtree override).
@@ -405,6 +406,7 @@ These files are primarily *shared policy primitives*, not one-off component layo
     and we can revisit once another ecosystem (or core animation infra) needs first-class springs.
   - Evidence: `ecosystem/fret-ui-material3/src/motion.rs` (`SpringSpec`),
     `ecosystem/fret-ui-material3/src/foundation/motion_scheme.rs` (`sys_spring_in_scope`),
+    `ecosystem/fret-ui-material3/src/foundation/motion_roles.rs` (semantic Material motion roles),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (Expressive spring fallback tokens under
     `md.sys.fret.material.motion.spring.*`).
 - [x] Introduce typed token modules per component to reduce raw string key usage and centralize

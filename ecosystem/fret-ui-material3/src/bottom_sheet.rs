@@ -22,7 +22,7 @@ use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{absolute_region_layout, diagnostic_anchor, part_test_id};
 use crate::motion::{self, SpringAnimator};
@@ -594,8 +594,8 @@ fn drive_modal_bottom_sheet_motion<H: UiHost>(
     let (sheet_spec, scrim_spec) = {
         let theme = Theme::global(&*cx.app);
         (
-            sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultSpatial),
-            sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultEffects),
+            material_motion_spring_in_scope(&*cx, theme, MaterialMotionRole::ModalPanelSpatial),
+            material_motion_spring_in_scope(&*cx, theme, MaterialMotionRole::ModalPanelEffects),
         )
     };
 

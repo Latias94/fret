@@ -33,7 +33,7 @@ use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::foundation::context::material_layout_direction_in_scope;
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::part_test_id;
@@ -587,7 +587,7 @@ fn autocomplete_into_element<H: UiHost>(
         let (chevron_progress, chevron_want_frames) = if autocomplete.show_trailing_dropdown_icon {
             let spatial = {
                 let theme = Theme::global(&*cx.app);
-                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial)
+                material_motion_spring_in_scope(&*cx, theme, MaterialMotionRole::DropdownChevron)
             };
             cx.slot_state(AutocompleteChevronRuntime::default, |rt| {
                 if !rt.anim.is_initialized() {

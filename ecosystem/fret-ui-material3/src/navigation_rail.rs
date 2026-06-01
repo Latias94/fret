@@ -34,7 +34,7 @@ use crate::foundation::indication::{
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::foundation::test_id::part_test_id;
 use crate::tokens::navigation_rail as rail_tokens;
 use crate::{Badge, BadgePlacement, BadgeValue};
@@ -714,7 +714,11 @@ fn navigation_rail_active_indicator<H: UiHost>(
             let item_gap = rail_tokens::vertical_padding(theme);
             let indicator_color = rail_tokens::active_indicator_color(theme);
             let corner_radii = rail_tokens::active_indicator_shape(theme);
-            let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+            let spring = material_motion_spring_in_scope(
+                &*cx,
+                theme,
+                MaterialMotionRole::SelectionIndicator,
+            );
             (
                 indicator_w,
                 indicator_h,

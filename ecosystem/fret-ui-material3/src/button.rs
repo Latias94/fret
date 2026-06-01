@@ -37,7 +37,7 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::surface::material_surface_style;
 use crate::motion::{SpringAnimator, SpringSpec};
@@ -246,8 +246,11 @@ impl Button {
                     let theme = Theme::global(&*cx.app);
                     let base_radius = button_shape_radius(theme, self.size);
                     let pressed_radius = button_pressed_shape_radius(theme, self.size);
-                    let scheme_spring =
-                        sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultEffects);
+                    let scheme_spring = material_motion_spring_in_scope(
+                        &*cx,
+                        theme,
+                        MaterialMotionRole::ButtonPressedShape,
+                    );
                     let corner_spring = button_pressed_corner_spring(scheme_spring);
                     let size_tokens = button_size_tokens(theme, self.size);
                     let label_style = button_label_style(theme, self.size);
@@ -972,7 +975,8 @@ mod tests {
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds(), "m3-button", |cx| {
             let theme = Theme::global(&*cx.app);
-            let expected = sys_spring_in_scope(cx, theme, MotionSchemeKey::DefaultEffects);
+            let expected =
+                material_motion_spring_in_scope(cx, theme, MaterialMotionRole::ButtonPressedShape);
             let actual = button_pressed_corner_spring(expected);
 
             assert_eq!(actual, expected);

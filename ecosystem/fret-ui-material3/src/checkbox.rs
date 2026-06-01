@@ -37,7 +37,7 @@ use crate::foundation::interaction::{PressableInteraction, pressable_interaction
 use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
 };
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::optional_part_test_id;
 use crate::motion::SpringAnimator;
@@ -412,8 +412,11 @@ impl Checkbox {
                                 theme,
                                 Some(Px(size.state_layer.0 * 0.5)),
                             );
-                            let mark_spring =
-                                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultSpatial);
+                            let mark_spring = material_motion_spring_in_scope(
+                                &*cx,
+                                theme,
+                                MaterialMotionRole::CheckboxMark,
+                            );
 
                             (
                                 chrome,

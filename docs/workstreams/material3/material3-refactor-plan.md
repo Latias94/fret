@@ -183,6 +183,9 @@ Current progress:
 - Material Web v30 `md.sys.motion.spring.*` tokens are imported into `ThemeConfig.numbers`.
 - `fret-ui-material3` provides a small `SpringAnimator` in `crate::motion` and a `foundation::motion_scheme`
   token reader for the 6 canonical specs.
+- `foundation::motion_roles` maps Material recipe semantics (field chrome, overlay scale/opacity,
+  search expand/collapse, selection indicators, pressed shapes, and modal panels) onto those
+  canonical specs. Recipes now ask for semantic roles instead of importing raw `MotionSchemeKey`s.
 - `Button` and `IconButton` pressed shape now uses the spring path (corner radius morph), which acts as a
   conformance probe for MotionScheme plumbing.
 - `Tabs` active indicator now animates via the same spring substrate (x/width/height) using a single

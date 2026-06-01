@@ -41,7 +41,7 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::part_test_id;
 use crate::tokens::tabs as tabs_tokens;
@@ -1497,7 +1497,11 @@ fn tab_list_indicator<H: UiHost>(
             };
 
             let corner_radii = tabs_tokens::active_indicator_shape_for(theme, token_kind);
-            let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+            let spring = material_motion_spring_in_scope(
+                &*cx,
+                theme,
+                MaterialMotionRole::SelectionIndicator,
+            );
 
             (
                 target_x,

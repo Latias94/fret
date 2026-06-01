@@ -42,14 +42,16 @@ use crate::foundation::field::{
     material_field_active_indicator_layer, material_field_floating_label,
     material_field_supporting_text,
 };
-use crate::foundation::field_motion::{FieldMotionTargets, field_input_phase, field_motion_frame};
+use crate::foundation::field_motion::{
+    FieldMotionTargets, field_input_phase, field_motion_frame, field_motion_springs_in_scope,
+};
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::logical_edges::horizontal_logical_edges;
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::surface::material_surface_style;
@@ -842,9 +844,8 @@ fn select_trigger_element<H: UiHost>(
             focus_opacity,
             ripple_base_opacity,
             ripple_config,
-            spatial,
-            fast_effects,
-            slow_effects,
+            field_springs,
+            chevron_spring,
             placeholder_color,
             input_text_style_fallback,
         ) = {
@@ -932,9 +933,9 @@ fn select_trigger_element<H: UiHost>(
             let ripple_base_opacity = pressed_opacity;
             let ripple_config = material_pressable_indication_config(theme, None);
 
-            let spatial = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
-            let fast_effects = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastEffects);
-            let slow_effects = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::SlowEffects);
+            let field_springs = field_motion_springs_in_scope(&*cx, theme);
+            let chevron_spring =
+                material_motion_spring_in_scope(&*cx, theme, MaterialMotionRole::DropdownChevron);
 
             let placeholder_color =
                 select_tokens::placeholder_color(theme, variant, !enabled, error);
@@ -956,9 +957,8 @@ fn select_trigger_element<H: UiHost>(
                 focus_opacity,
                 ripple_base_opacity,
                 ripple_config,
-                spatial,
-                fast_effects,
-                slow_effects,
+                field_springs,
+                chevron_spring,
                 placeholder_color,
                 input_text_style_fallback,
             )
@@ -1053,9 +1053,7 @@ fn select_trigger_element<H: UiHost>(
                         placeholder_target_opacity,
                         border: target_border,
                         border_color: target_border_color,
-                        spatial,
-                        fast_effects,
-                        slow_effects,
+                        springs: field_springs,
                     },
                 );
                 let float_progress = motion.float_progress.clamp(0.0, 1.0);
@@ -1067,8 +1065,11 @@ fn select_trigger_element<H: UiHost>(
                             rt.anim.reset(now_frame, if open { 1.0 } else { 0.0 });
                         } else if rt.target_open != open {
                             rt.target_open = open;
-                            rt.anim
-                                .set_target(now_frame, if open { 1.0 } else { 0.0 }, spatial);
+                            rt.anim.set_target(
+                                now_frame,
+                                if open { 1.0 } else { 0.0 },
+                                chevron_spring,
+                            );
                         }
                         rt.anim.advance(now_frame);
                         (rt.anim.value(), rt.anim.is_active())

@@ -35,7 +35,7 @@ use crate::foundation::interaction::{PressableInteraction, pressable_interaction
 use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, minimum_interactive_size,
 };
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::{
     absolute_region_layout, diagnostic_anchor, optional_part_test_id,
@@ -899,8 +899,11 @@ impl Radio {
                                 Some(Px(size.state_layer.0 * 0.5)),
                             );
 
-                            let dot_spring =
-                                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+                            let dot_spring = material_motion_spring_in_scope(
+                                &*cx,
+                                theme,
+                                MaterialMotionRole::RadioDot,
+                            );
 
                             let ripple_base_opacity =
                                 radio_tokens::pressed_state_layer_opacity(theme, checked);

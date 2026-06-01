@@ -35,7 +35,9 @@ use crate::foundation::field::{
     material_field_active_indicator_layer, material_field_floating_label,
     material_field_icon_adjusted_padding, material_field_supporting_text,
 };
-use crate::foundation::field_motion::{FieldMotionTargets, field_input_phase, field_motion_frame};
+use crate::foundation::field_motion::{
+    FieldMotionTargets, field_input_phase, field_motion_frame, field_motion_springs_in_scope,
+};
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -43,7 +45,6 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interactive_size::minimum_interactive_size;
 use crate::foundation::logical_edges::{set_inset_inline_end, set_inset_inline_start};
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::part_test_id;
 use crate::tokens::autocomplete as autocomplete_tokens;
@@ -834,20 +835,9 @@ impl TextField {
                                         TextFieldVariant::Filled => Px(0.0),
                                     };
 
-                                    let spatial = sys_spring_in_scope(
+                                    let springs = field_motion_springs_in_scope(
                                         &*cx,
                                         Theme::global(&*cx.app),
-                                        MotionSchemeKey::FastSpatial,
-                                    );
-                                    let fast_effects = sys_spring_in_scope(
-                                        &*cx,
-                                        Theme::global(&*cx.app),
-                                        MotionSchemeKey::FastEffects,
-                                    );
-                                    let slow_effects = sys_spring_in_scope(
-                                        &*cx,
-                                        Theme::global(&*cx.app),
-                                        MotionSchemeKey::SlowEffects,
                                     );
                                     let motion = field_motion_frame(
                                         cx,
@@ -858,9 +848,7 @@ impl TextField {
                                             placeholder_target_opacity,
                                             border: chrome.border,
                                             border_color: chrome.border_color,
-                                            spatial,
-                                            fast_effects,
-                                            slow_effects,
+                                            springs,
                                         },
                                     );
                                     float_progress = motion.float_progress.clamp(0.0, 1.0);
@@ -932,7 +920,7 @@ impl TextField {
                                     states =
                                         text_field_widget_states(cx, hovered, focused, disabled);
 
-                                    let (mut chrome, spatial, fast_effects, slow_effects) = {
+                                    let (mut chrome, springs) = {
                                         let theme = Theme::global(&*cx.app);
                                         let mut chrome = match token_namespace {
                                             TextFieldTokenNamespace::TextField => {
@@ -963,23 +951,9 @@ impl TextField {
                                             &mut chrome,
                                         );
 
-                                        let spatial = sys_spring_in_scope(
-                                            &*cx,
-                                            theme,
-                                            MotionSchemeKey::FastSpatial,
-                                        );
-                                        let fast_effects = sys_spring_in_scope(
-                                            &*cx,
-                                            theme,
-                                            MotionSchemeKey::FastEffects,
-                                        );
-                                        let slow_effects = sys_spring_in_scope(
-                                            &*cx,
-                                            theme,
-                                            MotionSchemeKey::SlowEffects,
-                                        );
+                                        let springs = field_motion_springs_in_scope(&*cx, theme);
 
-                                        (chrome, spatial, fast_effects, slow_effects)
+                                        (chrome, springs)
                                     };
 
                                     let (
@@ -1046,9 +1020,7 @@ impl TextField {
                                             placeholder_target_opacity,
                                             border: chrome.border,
                                             border_color: chrome.border_color,
-                                            spatial,
-                                            fast_effects,
-                                            slow_effects,
+                                            springs,
                                         },
                                     );
                                     float_progress = motion.float_progress.clamp(0.0, 1.0);

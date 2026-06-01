@@ -109,6 +109,12 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     share `foundation::style_overrides::merge_style_override_slots!`.
   - This keeps ADR 0220 shallow right-biased merge semantics in one local Module while preserving
     each recipe's public Style Interface and builder methods.
+- 2026-06-01 Motion role locality:
+  - `foundation::motion_roles` now owns Material semantic role -> `MotionSchemeKey` mapping for
+    field chrome, overlay scale/opacity, search expand/collapse, selection indicators, pressed
+    shapes, dropdown chevrons, and modal panels.
+  - Recipe/foundation callers use `material_motion_spring_in_scope` or field motion springs, so raw
+    spring-key selection is localized to Material motion foundation Modules.
 - 2026-05-31 Tabs panel ownership:
   - `TabPanel`, `.panel/.panels`, active tabpanel semantics, `labelled_by` relation to the selected
     tab, derived tab `controls`, and gallery snippet content panels.

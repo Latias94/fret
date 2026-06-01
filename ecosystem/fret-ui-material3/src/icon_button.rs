@@ -36,7 +36,7 @@ use crate::foundation::interaction::{PressableInteraction, pressable_interaction
 use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
 };
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::optional_part_test_id;
 use crate::motion::{SpringAnimator, SpringSpec};
@@ -225,8 +225,11 @@ impl IconButton {
                 let (shapes, corner_spring, size_tokens) = {
                     let theme = Theme::global(&*cx.app);
                     let shapes = resolved_icon_toggle_button_shapes(&*cx, theme, self.toggle, None);
-                    let scheme_spring =
-                        sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+                    let scheme_spring = material_motion_spring_in_scope(
+                        &*cx,
+                        theme,
+                        MaterialMotionRole::IconButtonPressedShape,
+                    );
                     let corner_spring = icon_button_pressed_corner_spring(theme, scheme_spring);
                     let size_tokens = icon_button_size_tokens(theme, self.size);
                     (shapes, corner_spring, size_tokens)
@@ -555,8 +558,11 @@ impl IconToggleButton {
                 let (shapes, corner_spring, size_tokens) = {
                     let theme = Theme::global(&*cx.app);
                     let shapes = resolved_icon_toggle_button_shapes(&*cx, theme, true, self.shapes);
-                    let scheme_spring =
-                        sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+                    let scheme_spring = material_motion_spring_in_scope(
+                        &*cx,
+                        theme,
+                        MaterialMotionRole::IconButtonPressedShape,
+                    );
                     let corner_spring = icon_button_pressed_corner_spring(theme, scheme_spring);
                     let size_tokens = icon_button_size_tokens(theme, self.size);
                     (shapes, corner_spring, size_tokens)

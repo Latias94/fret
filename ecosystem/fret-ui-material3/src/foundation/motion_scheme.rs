@@ -16,7 +16,7 @@ use crate::motion::SpringSpec;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MotionSchemeKey {
+pub(crate) enum MotionSchemeKey {
     DefaultSpatial,
     FastSpatial,
     SlowSpatial,
@@ -103,7 +103,7 @@ fn sys_spring_for_scheme(
     }
 }
 
-pub fn sys_spring_in_scope<H: fret_ui::UiHost>(
+pub(crate) fn sys_spring_in_scope<H: fret_ui::UiHost>(
     cx: &fret_ui::elements::ElementContext<'_, H>,
     theme: &Theme,
     key: MotionSchemeKey,
