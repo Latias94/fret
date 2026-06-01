@@ -67,6 +67,14 @@ Last updated: 2026-06-01
       `controls/text_field/element/escape_clear.rs` owns the unbuffered multiline Escape-clear
       key capture and key classification test. The source gate prevents Escape-clear policy from
       drifting back into the element assembly owner.
+- [x] Split editor `TextField` focus-selection value detection into a private element child owner
+      without changing select-all-on-focus behavior, buffered draft vs model value precedence,
+      single-line/multiline focus sync, timer dispatch, buffered commit/cancel key handling,
+      clear-button behavior, blur handling, or public `TextField` options.
+      Result: `controls/text_field/element.rs` keeps TextInput/TextArea assembly and delegates
+      text-present detection plus shared focus-selection sync to
+      `controls/text_field/element/focus.rs`. The source gate prevents focus-selection value
+      detection from drifting back into the element assembly owner.
 - [x] Split editor `EnumSelect` trigger pressable/visual assembly into a private child owner
       without changing trigger min-height fallback, a11y combobox state, focus ring geometry,
       activate toggle behavior, trigger press open-change reason, text/caret layout, caret icon

@@ -14,13 +14,12 @@ use crate::primitives::chrome::{
 };
 use crate::primitives::input_group::editor_joined_input_frame;
 use crate::primitives::style::EditorStyle;
-use crate::primitives::text_entry::{
-    EditorTextCancelBehavior, editor_text_entry_focus_state, sync_editor_text_entry_focus_selection,
-};
+use crate::primitives::text_entry::{EditorTextCancelBehavior, editor_text_entry_focus_state};
 
 mod buffered_keys;
 mod clear_button;
 mod escape_clear;
+mod focus;
 
 use buffered_keys::{
     TextFieldBufferedKeyHandlerArgs, TextFieldBufferedKeyMode,
@@ -28,6 +27,7 @@ use buffered_keys::{
 };
 use clear_button::{TextFieldClearButtonArgs, text_field_clear_button_segments};
 use escape_clear::install_text_field_escape_clear_handler;
+use focus::{TextFieldFocusSelectionArgs, sync_text_field_focus_selection};
 
 impl TextField {
     pub fn new(model: Model<String>) -> Self {
@@ -225,20 +225,16 @@ impl TextField {
                         );
                     }
 
-                    let has_value = if let Some(draft) = draft_for_input.as_ref() {
-                        cx.read_model_ref(draft, Invalidation::Paint, |s| !s.is_empty())
-                            .unwrap_or(false)
-                    } else {
-                        cx.read_model_ref(&model_for_input, Invalidation::Paint, |s| !s.is_empty())
-                            .unwrap_or(false)
-                    };
-                    sync_editor_text_entry_focus_selection(
+                    sync_text_field_focus_selection(
                         cx,
-                        &focus_state,
-                        area_id,
-                        is_focused,
-                        has_value,
-                        selection_behavior,
+                        TextFieldFocusSelectionArgs {
+                            focus_state: &focus_state,
+                            entry_id: area_id,
+                            is_focused,
+                            model: &model_for_input,
+                            draft: draft_for_input.as_ref(),
+                            selection_behavior,
+                        },
                     );
                     if let (Some(draft), Some(buffered_state)) =
                         (draft_for_input.as_ref(), buffered_state_for_input.as_ref())
@@ -346,20 +342,16 @@ impl TextField {
                         );
                     }
 
-                    let has_value = if let Some(draft) = draft_for_input.as_ref() {
-                        cx.read_model_ref(draft, Invalidation::Paint, |s| !s.is_empty())
-                            .unwrap_or(false)
-                    } else {
-                        cx.read_model_ref(&model_for_input, Invalidation::Paint, |s| !s.is_empty())
-                            .unwrap_or(false)
-                    };
-                    sync_editor_text_entry_focus_selection(
+                    sync_text_field_focus_selection(
                         cx,
-                        &focus_state,
-                        input_id,
-                        is_focused,
-                        has_value,
-                        selection_behavior,
+                        TextFieldFocusSelectionArgs {
+                            focus_state: &focus_state,
+                            entry_id: input_id,
+                            is_focused,
+                            model: &model_for_input,
+                            draft: draft_for_input.as_ref(),
+                            selection_behavior,
+                        },
                     );
                     if let (Some(draft), Some(buffered_state)) =
                         (draft_for_input.as_ref(), buffered_state_for_input.as_ref())

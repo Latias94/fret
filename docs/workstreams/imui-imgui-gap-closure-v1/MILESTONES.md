@@ -47,6 +47,15 @@ clear-on-Escape behavior and redraw requests with a focused key-classification t
 cancel command routing, buffered commit/cancel handling, clear-button behavior, and public
 `TextField` options remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor TextField focus-selection owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/element.rs` now keeps TextInput/TextArea
+assembly, buffered key routing, blur handling, and clear-button composition while delegating
+text-present detection plus shared focus-selection sync to `controls/text_field/element/focus.rs`.
+The private focus owner contains buffered draft vs model value precedence and the call into shared
+editor text-entry focus-selection policy. Select-all-on-focus behavior, timer dispatch,
+single-line/multiline focus sync, buffered behavior, and public `TextField` options remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor EnumSelect trigger owner-split result:
 `ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps public control construction,
 model reads, trigger-key registration, and overlay routing while delegating trigger pressable and

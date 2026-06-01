@@ -1183,6 +1183,7 @@
     "ecosystem/fret-ui-editor/src/controls/text_field/element/clear_button.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/element/escape_clear.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/element/escape_clear/tests.rs",
+    "ecosystem/fret-ui-editor/src/controls/text_field/element/focus.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/buffered/controller.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/buffered/tests.rs",

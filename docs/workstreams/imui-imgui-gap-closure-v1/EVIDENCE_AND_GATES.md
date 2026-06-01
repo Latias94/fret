@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor TextField Focus-Selection Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `TextField` focus-selection value detection moved out of
+`controls/text_field/element.rs` into a private `controls/text_field/element/focus.rs` owner
+without changing select-all-on-focus behavior, buffered draft vs model value precedence,
+single-line/multiline focus sync, timer dispatch, buffered commit/cancel key handling,
+clear-button behavior, blur handling, or public `TextField` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_field/element.rs` keeps TextInput/TextArea assembly,
+  buffered key routing, blur handling, clear-button composition, and focus owner callsites.
+- `ecosystem/fret-ui-editor/src/controls/text_field/element/focus.rs` owns text-present detection
+  across buffered draft vs model values and calls the shared editor text-entry focus-selection
+  helper.
+- `tools/gate_imui_workstream_source.py` now tracks the focus owner and rejects direct
+  focus-selection value detection from drifting back into the element assembly owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new focus owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor text_field --no-fail-fast`: pass (17 passed, 211 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor EnumSelect Overlay List Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `EnumSelect` overlay list viewport and reveal orchestration moved out of
