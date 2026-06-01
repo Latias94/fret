@@ -31,7 +31,7 @@ pub(crate) fn time_input_field_container_height(theme: &Theme) -> Px {
 pub(crate) fn time_input_field_container_shape(theme: &Theme) -> Corners {
     let key = token_key("time-input-field.container.shape");
     shape::corners_or_metric(theme, &key)
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.small"))
+        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.small"))
         .unwrap_or(Corners::all(Px(8.0)))
 }
 

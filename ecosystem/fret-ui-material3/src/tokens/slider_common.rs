@@ -310,7 +310,7 @@ pub(crate) fn handle_color(theme: &Theme, enabled: bool, interaction: SliderInte
 
 pub(crate) fn track_shape(theme: &Theme) -> Corners {
     shape::corners_or_metric(theme, "md.comp.slider.active.track.shape")
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
+        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.full"))
         .unwrap_or(DEFAULT_FULL_SHAPE)
 }
 
@@ -351,7 +351,7 @@ pub(crate) fn handle_width(theme: &Theme, enabled: bool, interaction: SliderInte
 
 pub(crate) fn handle_shape(theme: &Theme) -> Corners {
     shape::corners_or_metric(theme, "md.comp.slider.handle.shape")
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
+        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.full"))
         .unwrap_or(DEFAULT_FULL_SHAPE)
 }
 

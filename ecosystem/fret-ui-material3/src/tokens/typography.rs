@@ -12,12 +12,33 @@ pub(crate) fn text_style(
     source_key: &str,
     intent: TextIntent,
 ) -> TextStyle {
+    let tokens = MaterialTokenResolver::new(theme);
     let style = primary_key
-        .and_then(|key| theme.text_style_by_key(key))
-        .or_else(|| theme.text_style_by_key(source_key))
+        .and_then(|key| tokens.text_style_value(key))
+        .or_else(|| tokens.text_style_value(source_key))
         .unwrap_or_default();
 
     typography::with_intent(style, intent)
+}
+
+pub(crate) fn text_style_chain(theme: &Theme, keys: &[&str], intent: TextIntent) -> TextStyle {
+    text_style_chain_optional(theme, keys, intent).unwrap_or_default()
+}
+
+pub(crate) fn text_style_chain_optional(
+    theme: &Theme,
+    keys: &[&str],
+    intent: TextIntent,
+) -> Option<TextStyle> {
+    MaterialTokenResolver::new(theme)
+        .text_style_chain(keys)
+        .map(|style| typography::with_intent(style, intent))
+}
+
+pub(crate) fn text_style_value(theme: &Theme, key: &str, intent: TextIntent) -> Option<TextStyle> {
+    MaterialTokenResolver::new(theme)
+        .text_style_value(key)
+        .map(|style| typography::with_intent(style, intent))
 }
 
 pub(crate) fn text_style_with_weight(

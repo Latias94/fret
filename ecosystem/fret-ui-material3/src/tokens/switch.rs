@@ -129,7 +129,7 @@ pub(crate) fn icon_color(
 
 fn shape_or_full(theme: &Theme, key: &str) -> Corners {
     shape::corners_or_metric(theme, key)
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
+        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.full"))
         .unwrap_or_else(|| Corners::all(Px(9999.0)))
 }
 

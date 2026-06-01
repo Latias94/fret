@@ -5,16 +5,8 @@ use fret_ui::Theme;
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
 
-pub(crate) fn uniform_corners_from_metric(theme: &Theme, key: &str) -> Option<Corners> {
-    MaterialTokenResolver::new(theme)
-        .metric_value(key)
-        .map(Corners::all)
-}
-
 pub(crate) fn corners_or_metric(theme: &Theme, key: &str) -> Option<Corners> {
-    theme
-        .corners_by_key(key)
-        .or_else(|| uniform_corners_from_metric(theme, key))
+    MaterialTokenResolver::new(theme).corners_value(key)
 }
 
 #[cfg(test)]

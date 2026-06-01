@@ -53,7 +53,7 @@ pub(crate) fn container_elevation(theme: &Theme, component_prefix: &str) -> Px {
 pub(crate) fn container_shape(theme: &Theme, component_prefix: &str) -> Corners {
     let key = token_key(component_prefix, "container.shape");
     shape::corners_or_metric(theme, &key)
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-large"))
+        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.extra-large"))
         .unwrap_or(DEFAULT_CONTAINER_SHAPE)
 }
 
@@ -216,7 +216,7 @@ pub(crate) fn time_selector_container_height(theme: &Theme, component_prefix: &s
 pub(crate) fn time_selector_shape(theme: &Theme, component_prefix: &str) -> Corners {
     let key = token_key(component_prefix, "time-selector.container.shape");
     shape::corners_or_metric(theme, &key)
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.small"))
+        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.small"))
         .unwrap_or(DEFAULT_TIME_SELECTOR_CONTAINER_SHAPE)
 }
 
@@ -406,7 +406,7 @@ pub(crate) fn period_selector_state_layer_opacity(
 fn full_shape_or_token(theme: &Theme, component_prefix: &str, suffix: &str) -> Corners {
     let key = token_key(component_prefix, suffix);
     shape::corners_or_metric(theme, &key)
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
+        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.full"))
         .unwrap_or(DEFAULT_FULL_SHAPE)
 }
 

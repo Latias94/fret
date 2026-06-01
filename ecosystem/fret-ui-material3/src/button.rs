@@ -22,7 +22,7 @@ use fret_ui::{Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
-use fret_ui_kit::typography::{self, TextIntent};
+use fret_ui_kit::typography::TextIntent;
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
@@ -42,6 +42,7 @@ use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::surface::material_surface_style;
 use crate::motion::{SpringAnimator, SpringSpec};
 use crate::tokens::button::{self as button_tokens, ButtonSizeTokens};
+use crate::tokens::typography as material_typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ButtonVariant {
@@ -618,13 +619,15 @@ fn button_label_text_key(size: ButtonSize) -> &'static str {
 }
 
 fn button_label_style(theme: &Theme, size: ButtonSize) -> fret_core::TextStyle {
-    let style = theme
-        .text_style_by_key(button_label_text_key(size))
-        .or_else(|| theme.text_style_by_key("md.comp.button.label-text"))
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.label-large"))
-        .or_else(|| theme.text_style_by_key("text_style.button"))
-        .unwrap_or_default();
-    typography::with_intent(style, TextIntent::Control)
+    material_typography::text_style_chain(
+        theme,
+        &[
+            button_label_text_key(size),
+            "md.comp.button.label-text",
+            "md.sys.typescale.label-large",
+        ],
+        TextIntent::Control,
+    )
 }
 
 fn button_pressed_corner_spring(scheme: SpringSpec) -> SpringSpec {

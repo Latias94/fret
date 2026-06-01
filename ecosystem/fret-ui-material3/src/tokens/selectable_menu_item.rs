@@ -7,6 +7,7 @@
 use fret_core::{Color, Corners, Px};
 use fret_ui::Theme;
 
+use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::tokens::list as list_tokens;
 
 pub(crate) fn outer_horizontal_padding(_theme: &Theme) -> Px {
@@ -26,16 +27,23 @@ pub(crate) fn icon_text_gap(_theme: &Theme) -> Px {
 }
 
 pub(crate) fn container_shape(theme: &Theme, selected: bool) -> Corners {
+    let tokens = MaterialTokenResolver::new(theme);
     if selected {
-        theme
-            .corners_by_key("md.comp.menu.list-item.selected.container.shape")
-            .or_else(|| theme.corners_by_key("md.sys.shape.corner.medium"))
-            .unwrap_or_else(|| Corners::all(Px(12.0)))
+        tokens.corners_chain_or(
+            &[
+                "md.comp.menu.list-item.selected.container.shape",
+                "md.sys.shape.corner.medium",
+            ],
+            Corners::all(Px(12.0)),
+        )
     } else {
-        theme
-            .corners_by_key("md.comp.menu.list-item.container.shape")
-            .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
-            .unwrap_or_else(|| Corners::all(Px(4.0)))
+        tokens.corners_chain_or(
+            &[
+                "md.comp.menu.list-item.container.shape",
+                "md.sys.shape.corner.extra-small",
+            ],
+            Corners::all(Px(4.0)),
+        )
     }
 }
 

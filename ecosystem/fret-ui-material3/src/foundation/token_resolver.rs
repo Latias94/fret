@@ -1,4 +1,4 @@
-use fret_core::{Color, Px};
+use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::{Theme, theme::CubicBezier};
 
 pub(crate) fn alpha_mul(mut color: Color, multiplier: f32) -> Color {
@@ -272,6 +272,46 @@ impl<'a> MaterialTokenResolver<'a> {
             .unwrap_or(fallback)
     }
 
+    pub fn corners_value(&self, key: &str) -> Option<Corners> {
+        debug_assert!(
+            key.starts_with("md."),
+            "expected md.* corners token key, got: {key}"
+        );
+        self.theme
+            .corners_by_key(key)
+            .or_else(|| self.theme.metric_by_key(key).map(Corners::all))
+    }
+
+    pub fn corners_chain(&self, keys: &[&str]) -> Option<Corners> {
+        debug_assert!(!keys.is_empty(), "expected at least one md.* key");
+        debug_assert!(
+            keys.iter().all(|key| key.starts_with("md.")),
+            "expected md.* corners token keys, got: {keys:?}"
+        );
+        keys.iter().find_map(|key| self.corners_value(key))
+    }
+
+    pub fn corners_chain_or(&self, keys: &[&str], fallback: Corners) -> Corners {
+        self.corners_chain(keys).unwrap_or(fallback)
+    }
+
+    pub fn text_style_value(&self, key: &str) -> Option<TextStyle> {
+        debug_assert!(
+            key.starts_with("md."),
+            "expected md.* text style token key, got: {key}"
+        );
+        self.theme.text_style_by_key(key)
+    }
+
+    pub fn text_style_chain(&self, keys: &[&str]) -> Option<TextStyle> {
+        debug_assert!(!keys.is_empty(), "expected at least one md.* key");
+        debug_assert!(
+            keys.iter().all(|key| key.starts_with("md.")),
+            "expected md.* text style token keys, got: {keys:?}"
+        );
+        keys.iter().find_map(|key| self.text_style_value(key))
+    }
+
     pub fn color_comp_or_sys_with_opacity(
         &self,
         comp_key: &str,
@@ -469,6 +509,50 @@ mod tests {
         assert_eq!(
             tokens.metric_optional(Some("md.comp.test.missing"), Px(4.0)),
             Px(4.0)
+        );
+    }
+
+    #[test]
+    fn corners_value_prefers_structured_corners_over_metric_fallback() {
+        let mut app = App::new();
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert("md.comp.test.shape".to_string(), 12.0);
+        patch.corners.insert(
+            "md.comp.test.shape".to_string(),
+            Corners {
+                top_left: Px(2.0),
+                top_right: Px(4.0),
+                bottom_right: Px(6.0),
+                bottom_left: Px(8.0),
+            },
+        );
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app);
+
+        let tokens = MaterialTokenResolver::new(theme);
+        assert_eq!(
+            tokens.corners_value("md.comp.test.shape"),
+            Some(Corners {
+                top_left: Px(2.0),
+                top_right: Px(4.0),
+                bottom_right: Px(6.0),
+                bottom_left: Px(8.0),
+            })
+        );
+    }
+
+    #[test]
+    fn corners_value_maps_uniform_metric_to_corners() {
+        let mut app = App::new();
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert("md.comp.test.shape".to_string(), 14.0);
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app);
+
+        let tokens = MaterialTokenResolver::new(theme);
+        assert_eq!(
+            tokens.corners_value("md.comp.test.shape"),
+            Some(Corners::all(Px(14.0)))
         );
     }
 }

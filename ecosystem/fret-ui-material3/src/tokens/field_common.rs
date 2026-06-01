@@ -260,7 +260,7 @@ pub(crate) fn placeholder_color(theme: &Theme, prefix: &str, state: FieldState) 
 
 fn outlined_container_shape(theme: &Theme, prefix: &str) -> Corners {
     shape::corners_or_metric(theme, &field_key(prefix, "container.shape"))
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
+        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.extra-small"))
         .unwrap_or_else(|| Corners::all(DEFAULT_CONTAINER_SHAPE))
 }
 
@@ -268,7 +268,7 @@ fn filled_container_shape(theme: &Theme, prefix: &str) -> Corners {
     if let Some(corners) = shape::corners_or_metric(theme, &field_key(prefix, "container.shape")) {
         return corners;
     }
-    if let Some(corners) = theme.corners_by_key("md.sys.shape.corner.extra-small.top") {
+    if let Some(corners) = shape::corners_or_metric(theme, "md.sys.shape.corner.extra-small.top") {
         return corners;
     }
 

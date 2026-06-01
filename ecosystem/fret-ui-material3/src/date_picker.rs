@@ -20,7 +20,7 @@ use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::headless::calendar::{CalendarMonth, month_grid};
 use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
-use fret_ui_kit::typography::{self, TextIntent};
+use fret_ui_kit::typography::TextIntent;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 use time::{Date, OffsetDateTime, Weekday};
 
@@ -42,6 +42,7 @@ use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion;
 use crate::tokens::date_picker as date_tokens;
 use crate::tokens::date_picker::DatePickerTokenVariant;
+use crate::tokens::typography as material_typography;
 
 fn default_date_picker_test_id() -> Arc<str> {
     static ID: OnceLock<Arc<str>> = OnceLock::new();
@@ -477,14 +478,19 @@ impl DatePickerDialog {
             let underlay_el = underlay(cx);
 
             if presence.present {
-                let scrim_base = {
+                let (scrim_base, scrim_opacity) = {
                     let theme = Theme::global(&*cx.app);
-                    theme.color_token("md.sys.color.scrim")
+                    let tokens = MaterialTokenResolver::new(theme);
+                    (
+                        tokens.color_sys("md.sys.color.scrim"),
+                        tokens
+                            .number_sys(
+                                "md.sys.fret.material.date-picker.modal.scrim.opacity",
+                                self.scrim_opacity,
+                            )
+                            .clamp(0.0, 1.0),
+                    )
                 };
-                let scrim_opacity = Theme::global(&*cx.app)
-                    .number_by_key("md.sys.fret.material.date-picker.modal.scrim.opacity")
-                    .unwrap_or(self.scrim_opacity)
-                    .clamp(0.0, 1.0);
                 let scrim_alpha = (scrim_base.a * scrim_opacity * transition.progress)
                     .clamp(0.0, 1.0);
                 let scrim_color = with_alpha(scrim_base, scrim_alpha);
@@ -947,11 +953,15 @@ fn month_nav_header<H: UiHost>(
     let title_el = {
         let (style, color) = {
             let theme = Theme::global(&*cx.app);
-            let style = theme
-                .text_style_by_key("md.sys.typescale.title-large")
-                .or_else(|| theme.text_style_by_key("md.sys.typescale.title-medium"));
-            let style = style.map(|style| typography::with_intent(style, TextIntent::Control));
-            let color = theme.color_token("md.sys.color.on-surface");
+            let style = material_typography::text_style_chain_optional(
+                theme,
+                &[
+                    "md.sys.typescale.title-large",
+                    "md.sys.typescale.title-medium",
+                ],
+                TextIntent::Control,
+            );
+            let color = MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface");
             (style, color)
         };
 

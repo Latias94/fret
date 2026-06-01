@@ -48,6 +48,7 @@ use crate::foundation::interactive_size::minimum_interactive_size;
 use crate::foundation::logical_edges::{set_inset_inline_end, set_inset_inline_start};
 use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::part_test_id;
+use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::tokens::autocomplete as autocomplete_tokens;
 use crate::tokens::text_field as text_field_tokens;
 
@@ -1503,7 +1504,9 @@ fn text_field_label<H: UiHost>(
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
         let style = floating_label::material_floating_label_text_style(theme, progress)
-            .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"))
+            .or_else(|| {
+                MaterialTokenResolver::new(theme).text_style_value("md.sys.typescale.body-large")
+            })
             .map(|style| typography::with_intent(style, TextIntent::Control));
 
         let color = resolve_override_slot_with(

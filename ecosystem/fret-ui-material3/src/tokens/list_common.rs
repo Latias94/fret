@@ -85,13 +85,11 @@ pub(crate) fn item_container_shape_with_variant(
         )
     };
 
+    let tokens = MaterialTokenResolver::new(theme);
     if expressive {
-        theme
-            .corners_by_key(expressive_key)
-            .or_else(|| theme.corners_by_key(standard_key))
-            .unwrap_or(fallback)
+        tokens.corners_chain_or(&[expressive_key, standard_key], fallback)
     } else {
-        theme.corners_by_key(standard_key).unwrap_or(fallback)
+        tokens.corners_chain_or(&[standard_key], fallback)
     }
 }
 
@@ -135,8 +133,8 @@ pub(crate) fn item_container_shape_for_interaction(
         }
     };
 
-    theme
-        .corners_by_key(key)
+    MaterialTokenResolver::new(theme)
+        .corners_value(key)
         .unwrap_or_else(|| item_container_shape_with_variant(theme, selected, true))
 }
 
@@ -219,15 +217,15 @@ pub(crate) fn trailing_icon_size_with_variant(theme: &Theme, expressive: bool) -
 }
 
 pub(crate) fn supporting_text_style(theme: &Theme, _selected: bool) -> Option<TextStyle> {
-    theme.text_style_by_key("md.sys.typescale.body-medium")
+    MaterialTokenResolver::new(theme).text_style_value("md.sys.typescale.body-medium")
 }
 
 pub(crate) fn trailing_supporting_text_style(theme: &Theme, _selected: bool) -> Option<TextStyle> {
-    theme.text_style_by_key("md.sys.typescale.label-small")
+    MaterialTokenResolver::new(theme).text_style_value("md.sys.typescale.label-small")
 }
 
 pub(crate) fn overline_text_style(theme: &Theme, _selected: bool) -> Option<TextStyle> {
-    theme.text_style_by_key("md.sys.typescale.label-small")
+    MaterialTokenResolver::new(theme).text_style_value("md.sys.typescale.label-small")
 }
 
 pub(crate) fn label_text_style(theme: &Theme, _selected: bool) -> TextStyle {

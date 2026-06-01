@@ -22,7 +22,7 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
 use fret_ui_kit::primitives::direction as direction_prim;
-use fret_ui_kit::typography::{self, TextIntent};
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::context::material_layout_direction_in_scope;
@@ -37,6 +37,7 @@ use crate::foundation::interactive_size::{
 };
 use crate::foundation::test_id::optional_part_test_id;
 use crate::tokens::segmented_button as segmented_tokens;
+use crate::tokens::typography as material_typography;
 
 #[derive(Debug, Clone)]
 pub struct SegmentedButtonItem {
@@ -521,12 +522,12 @@ impl SegmentedButtonSegment {
                                 material_pressable_indication_config_in_scope(&*cx, None);
 
                             let icon_size = segmented_tokens::icon_size(theme);
-                            let label_style = theme
-                                .text_style_by_key("md.comp.outlined-segmented-button.label-text")
-                                .or_else(|| theme.text_style_by_key("md.sys.typescale.label-large"))
-                                .unwrap_or_default();
-                            let label_style =
-                                typography::with_intent(label_style, TextIntent::Control);
+                            let label_style = material_typography::text_style(
+                                theme,
+                                Some("md.comp.outlined-segmented-button.label-text"),
+                                "md.sys.typescale.label-large",
+                                TextIntent::Control,
+                            );
 
                             (
                                 container_height,

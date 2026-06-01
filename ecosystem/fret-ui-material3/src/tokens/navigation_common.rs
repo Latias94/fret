@@ -444,9 +444,8 @@ pub(crate) fn drawer_item_horizontal_padding(theme: &Theme) -> Px {
 }
 
 pub(crate) fn drawer_container_shape(theme: &Theme) -> Corners {
-    theme
-        .corners_by_key("md.comp.navigation-drawer.container.shape")
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-large"))
+    shape::corners_or_metric(theme, "md.comp.navigation-drawer.container.shape")
+        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.extra-large"))
         .unwrap_or_else(|| Corners::all(DEFAULT_DRAWER_CONTAINER_RADIUS))
 }
 

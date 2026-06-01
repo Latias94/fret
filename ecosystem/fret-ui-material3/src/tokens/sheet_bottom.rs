@@ -40,15 +40,18 @@ pub(crate) fn modal_scrim_opacity(theme: &Theme, fallback: f32) -> f32 {
 }
 
 pub(crate) fn docked_container_shape(theme: &Theme) -> Corners {
-    theme
-        .corners_by_key("md.comp.sheet.bottom.docked.container.shape")
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-large.top"))
-        .unwrap_or(Corners {
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[
+            "md.comp.sheet.bottom.docked.container.shape",
+            "md.sys.shape.corner.extra-large.top",
+        ],
+        Corners {
             top_left: Px(28.0),
             top_right: Px(28.0),
             bottom_right: Px(0.0),
             bottom_left: Px(0.0),
-        })
+        },
+    )
 }
 
 pub(crate) fn docked_modal_elevation(theme: &Theme) -> Px {
