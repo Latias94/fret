@@ -10,6 +10,10 @@ use fret_ui_kit::typography::TextIntent;
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::tokens::typography;
 
+fn tooltip_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
 pub(crate) fn plain_container_background(theme: &Theme) -> Color {
     MaterialTokenResolver::new(theme).color_comp_or_sys(
         "md.comp.plain-tooltip.container.color",
@@ -35,9 +39,7 @@ pub(crate) fn plain_supporting_text_style(theme: &Theme) -> TextStyle {
 }
 
 pub(crate) fn plain_container_shape_radius(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.plain-tooltip.container.shape")
-        .unwrap_or(Px(4.0))
+    tooltip_metric(theme, "md.comp.plain-tooltip.container.shape", Px(4.0))
 }
 
 pub(crate) fn plain_container_padding(theme: &Theme) -> Edges {
@@ -85,15 +87,11 @@ pub(crate) fn rich_container_shadow_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn rich_container_elevation(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.rich-tooltip.container.elevation")
-        .unwrap_or(Px(3.0))
+    tooltip_metric(theme, "md.comp.rich-tooltip.container.elevation", Px(3.0))
 }
 
 pub(crate) fn rich_container_shape_radius(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.rich-tooltip.container.shape")
-        .unwrap_or(Px(12.0))
+    tooltip_metric(theme, "md.comp.rich-tooltip.container.shape", Px(12.0))
 }
 
 pub(crate) fn rich_container_padding(theme: &Theme, has_title: bool) -> Edges {
@@ -180,4 +178,48 @@ pub(crate) fn shadow_color(theme: &Theme) -> Color {
 
 pub(crate) fn close_duration_ms(theme: &Theme) -> u32 {
     MaterialTokenResolver::new(theme).duration_ms_sys("md.sys.motion.duration.short1", 50)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn tooltip_metrics_default_to_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(plain_container_shape_radius(theme), Px(4.0));
+        assert_eq!(rich_container_elevation(theme), Px(3.0));
+        assert_eq!(rich_container_shape_radius(theme), Px(12.0));
+    }
+
+    #[test]
+    fn tooltip_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.plain-tooltip.container.shape".to_string(), 6.0);
+        patch
+            .metrics
+            .insert("md.comp.rich-tooltip.container.elevation".to_string(), 4.0);
+        patch
+            .metrics
+            .insert("md.comp.rich-tooltip.container.shape".to_string(), 14.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(plain_container_shape_radius(&theme), Px(6.0));
+        assert_eq!(rich_container_elevation(&theme), Px(4.0));
+        assert_eq!(rich_container_shape_radius(&theme), Px(14.0));
+    }
 }

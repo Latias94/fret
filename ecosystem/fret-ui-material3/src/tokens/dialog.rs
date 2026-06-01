@@ -35,18 +35,27 @@ pub(crate) fn container_background(theme: &Theme) -> Color {
     )
 }
 
+fn dialog_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
+fn dialog_metric_chain(theme: &Theme, keys: &[&'static str], fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_chain(keys, fallback)
+}
+
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
-    theme
-        .metric_by_key("md.comp.dialog.container.shape")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.extra-large"))
-        .map(Corners::all)
-        .unwrap_or_else(|| Corners::all(Px(28.0)))
+    Corners::all(dialog_metric_chain(
+        theme,
+        &[
+            "md.comp.dialog.container.shape",
+            "md.sys.shape.corner.extra-large",
+        ],
+        Px(28.0),
+    ))
 }
 
 pub(crate) fn container_elevation(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.dialog.container.elevation")
-        .unwrap_or(Px(0.0))
+    dialog_metric(theme, "md.comp.dialog.container.elevation", Px(0.0))
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
@@ -222,5 +231,55 @@ fn material_state_layer_interaction(
         DialogActionInteraction::Hovered => MaterialStateLayerInteraction::Hovered,
         DialogActionInteraction::Focused => MaterialStateLayerInteraction::Focused,
         DialogActionInteraction::Default => MaterialStateLayerInteraction::Hovered,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn dialog_metrics_default_to_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(container_shape(theme), Corners::all(Px(28.0)));
+        assert_eq!(container_elevation(theme), Px(0.0));
+    }
+
+    #[test]
+    fn dialog_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.dialog.container.shape".to_string(), 24.0);
+        patch
+            .metrics
+            .insert("md.comp.dialog.container.elevation".to_string(), 2.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(container_shape(&theme), Corners::all(Px(24.0)));
+        assert_eq!(container_elevation(&theme), Px(2.0));
+    }
+
+    #[test]
+    fn dialog_shape_uses_system_fallback() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.sys.shape.corner.extra-large".to_string(), 26.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(container_shape(&theme), Corners::all(Px(26.0)));
     }
 }
