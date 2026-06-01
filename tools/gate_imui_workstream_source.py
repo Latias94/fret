@@ -18,6 +18,7 @@ class SourceCheck:
     path: Path
     required: list[str]
     forbidden: list[str]
+    extra_paths: tuple[Path, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -83,7 +84,9 @@ def read_source(path: Path) -> str:
 
 
 def check_source(check: SourceCheck, failures: list[str]) -> None:
-    source = read_source(check.path)
+    source = "\n".join(
+        [read_source(check.path), *(read_source(path) for path in check.extra_paths)]
+    )
     for marker in check.required:
         if marker not in source:
             failures.append(f"{check.path.as_posix()}: missing {marker}")
@@ -47733,6 +47736,7 @@ def main() -> None:
                 "CAMPAIGN_ID = \"devtools-first-open-smoke\"",
                 "SCRIPT_PATH = \"tools/diag-scripts/tooling/todo/todo-baseline.json\"",
                 "DEVTOOLS_GUI_SOURCE = \"apps/fret-devtools/src/native.rs\"",
+                "DEVTOOLS_GUI_TEST_SOURCE = \"apps/fret-devtools/src/native/tests.rs\"",
                 "DEVTOOLS_GUI_WORKFLOW_RUN_SOURCE = \"apps/fret-devtools/src/workflow_run.rs\"",
                 "DEVTOOLS_GUI_DEMO_METRICS_DEBUG_SOURCE = \"apps/fret-devtools/src/demo_metrics_debug.rs\"",
                 "\"diag\",",
@@ -47956,6 +47960,7 @@ def main() -> None:
                 "devtools_gate_profiles_v1,",
                 "mod followup;",
                 "mod workflow_run;",
+                "#[cfg(test)]\n#[path = \"native/tests.rs\"]\nmod tests;",
                 'const CMD_WORKFLOW_RUN_SELECTED: &str = "fret.devtools.workflow.run_selected"',
                 'const CMD_COPY_WORKFLOW_RESULT_PATH: &str = "fret.devtools.workflow.copy_result_path"',
                 'const CMD_COPY_WORKFLOW_RESULT_JSON: &str = "fret.devtools.workflow.copy_result_json"',
@@ -48264,9 +48269,11 @@ def main() -> None:
                 "file_url_from_path_projects_workflow_artifact_paths",
             ],
             forbidden=[
+                "mod tests {",
                 "fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String>",
                 "fn devtools_demo_metrics_debug_lines_with_state(",
             ],
+            extra_paths=(Path("apps/fret-devtools/src/native/tests.rs"),),
         ),
         SourceCheck(
             Path("apps/fret-devtools/src/ws.rs"),
@@ -51348,6 +51355,7 @@ def main() -> None:
                 "DEVTOOLS_MCP_DOC = \"docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md\"",
                 "DEMO_METRICS_DEBUG_ACTION_METADATA_DOC = (",
                 "DEVTOOLS_GUI_SOURCE = \"apps/fret-devtools/src/native.rs\"",
+                "DEVTOOLS_GUI_TEST_SOURCE = \"apps/fret-devtools/src/native/tests.rs\"",
                 "DEVTOOLS_GUI_DEMO_METRICS_DEBUG_SOURCE = \"apps/fret-devtools/src/demo_metrics_debug.rs\"",
                 "DEVTOOLS_MCP_SOURCE = \"apps/fret-devtools-mcp/src/native.rs\"",
                 "REPO_PREFLIGHT_COMMAND = \"cargo run -p fretboard-dev -- diag doctor campaigns\"",

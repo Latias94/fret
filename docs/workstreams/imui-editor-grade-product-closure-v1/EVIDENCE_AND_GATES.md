@@ -2,6 +2,34 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## DevTools native regression test owner split - 2026-06-02
+
+This maintenance slice keeps the DevTools GUI source file reviewable while preserving the existing
+first-open, recent-evidence, workflow-run, and Demo/Metrics/Debug proof pressure:
+
+- `apps/fret-devtools/src/native.rs` now keeps only the bin-root GUI shell and an explicit
+  `#[path = "native/tests.rs"]` test module hook.
+- `apps/fret-devtools/src/native/tests.rs` owns the former inline regression tests for first-open
+  evidence, recent evidence, workflow handoff, file URL projection, regression summary drilldown,
+  and Demo/Metrics/Debug route projection.
+- The IMUI source gate now treats `native/tests.rs` as the additional DevTools native test owner
+  instead of forcing all test markers to stay in the main GUI source file.
+- The DevTools first-open and product-chain gates now include the split test source in their
+  combined source validation, so route/runtime markers and regression-test markers still drift
+  together.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `cargo check -p fret-devtools` - passed.
+- `cargo nextest run -p fret-devtools --no-fail-fast` - passed, 92 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## DevTools Demo/Metrics/Debug workflow artifact load handoff - 2026-06-02
 
 This refresh keeps perf workflow artifact handoff close to the Demo/Metrics/Debug workflow controls:

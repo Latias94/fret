@@ -32,6 +32,7 @@ DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC = (
 )
 DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC = "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md"
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
+DEVTOOLS_GUI_TEST_SOURCE = "apps/fret-devtools/src/native/tests.rs"
 DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
 DEVTOOLS_GUI_SEMANTICS_SOURCE = "apps/fret-devtools/src/semantics.rs"
 DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
@@ -474,6 +475,7 @@ def _validate_devtools_gui_first_open_source(
     name = "fret-devtools gui first-open source"
     print(f"[diag-gate-imui-p2-devtools] {name}")
     path = cwd / DEVTOOLS_GUI_SOURCE
+    tests_path = cwd / DEVTOOLS_GUI_TEST_SOURCE
     ws_path = cwd / DEVTOOLS_GUI_WS_SOURCE
     semantics_path = cwd / DEVTOOLS_GUI_SEMANTICS_SOURCE
     gate_run_path = cwd / DEVTOOLS_GUI_GATE_RUN_SOURCE
@@ -490,6 +492,7 @@ def _validate_devtools_gui_first_open_source(
             "step.start",
             name=name,
             path=str(path),
+            tests_path=str(tests_path),
             ws_path=str(ws_path),
             semantics_path=str(semantics_path),
             gate_run_path=str(gate_run_path),
@@ -504,6 +507,7 @@ def _validate_devtools_gui_first_open_source(
         )
     try:
         source = path.read_text(encoding="utf-8")
+        test_source = tests_path.read_text(encoding="utf-8")
         ws_source = ws_path.read_text(encoding="utf-8")
         semantics_source = semantics_path.read_text(encoding="utf-8")
         gate_run_source = gate_run_path.read_text(encoding="utf-8")
@@ -522,6 +526,7 @@ def _validate_devtools_gui_first_open_source(
     source = "\n".join(
         [
             source,
+            test_source,
             ws_source,
             semantics_source,
             gate_run_source,

@@ -124,6 +124,7 @@ DEMO_METRICS_DEBUG_ACTION_METADATA = {
     },
 }
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
+DEVTOOLS_GUI_TEST_SOURCE = "apps/fret-devtools/src/native/tests.rs"
 DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
 DEVTOOLS_GUI_SEMANTICS_SOURCE = "apps/fret-devtools/src/semantics.rs"
 DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
@@ -490,6 +491,7 @@ def _validate_tool_apps_json(payload: dict) -> None:
 def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     name = "devtools gui product workflow source"
     path = repo_root / DEVTOOLS_GUI_SOURCE
+    tests_path = repo_root / DEVTOOLS_GUI_TEST_SOURCE
     ws_path = repo_root / DEVTOOLS_GUI_WS_SOURCE
     semantics_path = repo_root / DEVTOOLS_GUI_SEMANTICS_SOURCE
     gate_run_path = repo_root / DEVTOOLS_GUI_GATE_RUN_SOURCE
@@ -502,6 +504,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     print(f"[diag-gate-imui-product-chain] {name}", flush=True)
     try:
         source = path.read_text(encoding="utf-8")
+        test_source = tests_path.read_text(encoding="utf-8")
         ws_source = ws_path.read_text(encoding="utf-8")
         semantics_source = semantics_path.read_text(encoding="utf-8")
         gate_run_source = gate_run_path.read_text(encoding="utf-8")
@@ -516,6 +519,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     source = "\n".join(
         [
             source,
+            test_source,
             ws_source,
             semantics_source,
             gate_run_source,
