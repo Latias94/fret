@@ -25569,3 +25569,26 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI active-trigger install owner split:
+
+- Claim: shared active-trigger installation orchestration moved from
+  `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs` into
+  `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/install.rs` without changing pointer/key
+  hook clearing, active/lifecycle/context model lookup, keyboard context-menu handling, pointer
+  handler installation, or response population boundaries.
+- Evidence anchors: `active_trigger_behavior.rs` declares `mod install;`, keeps
+  `install_active_trigger_behavior(...)` and `populate_active_trigger_response(...)`, and delegates
+  installation to `install::install_active_trigger_behavior(...)`; `install.rs` owns pressable/key
+  hook clearing, model lookup, keyboard context-menu key handler wiring, pointer handler wiring, and
+  `ActiveTriggerBehavior` assembly; keyboard, pointer, response, and type owners remain separate;
+  the source gate rejects install details drifting back into the root active-trigger hub.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit --features imui`.
+- Passed: `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-imui right_click_sets_context_menu_requested_true_once shift_f10_sets_context_menu_requested_true_once --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

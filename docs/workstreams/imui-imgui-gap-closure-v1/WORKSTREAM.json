@@ -921,6 +921,7 @@
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/models/window.rs",
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/pressable_response.rs",
     "ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs",
+    "ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/install.rs",
     "ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/pointer.rs",
     "ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/response.rs",

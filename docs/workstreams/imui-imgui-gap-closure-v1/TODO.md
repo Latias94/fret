@@ -5929,3 +5929,10 @@ opening the slice.
       Result: `ecosystem/fret-ui-kit/src/imui/image_item_controls/entry.rs` owns the inner
       pressable element body. `image_item_controls.rs` keeps only the public helper and
       `push_id(("image-item", id), ...)` scope.
+- [x] Split shared active-trigger install orchestration out of
+      `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs` into a private install owner
+      without changing pointer/key hook clearing, active/lifecycle/context model lookup, keyboard
+      context-menu handling, pointer handler installation, or response population boundaries.
+      Result: `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/install.rs` owns active
+      trigger installation. `active_trigger_behavior.rs` keeps the stable install/populate entry
+      points and delegates installation to the owner.

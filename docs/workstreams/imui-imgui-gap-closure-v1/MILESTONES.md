@@ -5214,3 +5214,9 @@ signature and forwards to the entry owner.
 body for image items/buttons: enabled/focusable derivation, pressable props, behavior installation,
 chrome, image props, element insertion, and `ResponseExt` return. `image_item_controls.rs` keeps
 the stable `push_id(("image-item", id), ...)` wrapper.
+
+2026-06-01 active-trigger install owner split result:
+`ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/install.rs` now owns hook clearing,
+active/lifecycle/context model lookup, context-menu key handling, pointer handler installation, and
+`ActiveTriggerBehavior` assembly. `active_trigger_behavior.rs` keeps the stable install and
+response-population entry points.
