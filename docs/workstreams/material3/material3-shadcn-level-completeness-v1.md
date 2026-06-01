@@ -95,9 +95,13 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
   - v30 injection now keeps generated Material Web tokens in `tokens::material_web_v30` and Fret
     overlay/backfill policy in `tokens::v30_overlay`, so future source alignment can review each
     Module independently.
+  - `tokens::v30_overlay_metadata` now classifies intentional non-Material-Web overlay/backfill
+    keys by origin, letting `material3_token_audit -- --check` fail only on unclassified drift
+    instead of relying on a maintainer-tool allowlist.
   - Gates: `--lib::material3_token_usage_manifest_matches_literal_md_sources`,
     `--lib::material3_literal_md_tokens_resolve_in_v30_theme`,
     `material3_token_audit -- --no-material-missing --limit 5`,
+    `material3_token_audit -- --check --no-material-missing --limit 5`,
     `material3_token_audit -- --check-usage-manifest`, and
     `minimum_touch_target::navigable_material_rows_enforce_minimum_touch_target_at_runtime`.
 - 2026-05-31 Tabs panel ownership:

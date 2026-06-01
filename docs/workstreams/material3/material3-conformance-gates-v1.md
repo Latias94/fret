@@ -37,6 +37,10 @@ shadcn-level completeness work exposed two shallow test surfaces.
 - v30 token injection now separates the generated Material Web baseline (`tokens::material_web_v30`)
   from the curated Fret overlay Module (`tokens::v30_overlay`) that owns Fret markers, aliases,
   defaults, and hand-authored backfills.
+- `tokens::v30_overlay_metadata` now owns the classification of non-Material-Web overlay/backfill
+  keys. `material3_token_audit` reuses that metadata instead of keeping a local allowlist, and
+  fails `--check` when a used key is neither present in Material Web v30 sassvars nor classified by
+  the overlay metadata Module.
 
 ## Proof
 
@@ -45,6 +49,7 @@ shadcn-level completeness work exposed two shallow test surfaces.
 - `cargo test -p fret-ui-material3 --features diagnostics --lib material3_token_usage_manifest_matches_literal_md_sources`
 - `cargo test -p fret-ui-material3 --features diagnostics --lib material3_literal_md_tokens_resolve_in_v30_theme`
 - `cargo run -p fret-ui-material3 --bin material3_token_audit -- --no-material-missing --limit 5`
+- `cargo run -p fret-ui-material3 --bin material3_token_audit -- --check --no-material-missing --limit 5`
 - `cargo run -p fret-ui-material3 --bin material3_token_audit -- --check-usage-manifest`
 
 ## Residual Risk

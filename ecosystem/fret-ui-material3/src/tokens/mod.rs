@@ -7,6 +7,8 @@ pub mod v30;
 
 #[doc(hidden)]
 pub mod usage;
+#[doc(hidden)]
+pub mod v30_overlay_metadata;
 
 #[cfg(test)]
 pub(crate) mod coverage;

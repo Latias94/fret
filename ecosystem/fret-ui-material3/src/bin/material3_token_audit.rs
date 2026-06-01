@@ -13,23 +13,9 @@ use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use fret_ui_material3::tokens::{usage, v30};
+use fret_ui_material3::tokens::{usage, v30, v30_overlay_metadata};
 
 const TOKEN_USAGE_MANIFEST_PATH: &str = "tests/fixtures/material3_token_usage_manifest_v1.json";
-
-fn allowlisted_non_material_web_tokens() -> BTreeSet<&'static str> {
-    BTreeSet::from([
-        // Fret-specific: enforced minimum touch target policy.
-        "md.sys.layout.minimum-touch-target.size",
-        // Fret-specific: layout direction marker (0 = LTR, 1 = RTL).
-        "md.sys.fret.layout.is-rtl",
-        // Fret-specific: opt into using expressive component token variants when configured.
-        "md.sys.fret.material.is-expressive",
-        // Fret-specific escape hatch: allow overriding shadow color without forking the elevation logic.
-        // Defaults to `md.sys.color.shadow`.
-        "md.comp.dialog.container.shadow-color",
-    ])
-}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse(env::args().skip(1).collect::<Vec<_>>())?;
@@ -100,6 +86,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .difference(&used_expanded)
         .cloned()
         .collect::<BTreeSet<_>>();
+    let missing_overlay_metadata_injection = v30_overlay_metadata::EXACT_TOKEN_METADATA
+        .iter()
+        .map(|meta| meta.key.to_string())
+        .filter(|key| !injected.contains(key))
+        .collect::<BTreeSet<_>>();
 
     let mut check_failures: Vec<String> = Vec::new();
     if args.check {
@@ -113,6 +104,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             check_failures.push(format!(
                 "missing injected keys: {}",
                 missing_injection.len()
+            ));
+        }
+        if !missing_overlay_metadata_injection.is_empty() {
+            check_failures.push(format!(
+                "overlay metadata keys missing injection: {}",
+                missing_overlay_metadata_injection.len()
             ));
         }
     }
@@ -132,6 +129,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("- used keys (total): {}", used_expanded.len());
     println!("- injected keys (exact): {}", injected.len());
     println!("- missing injected keys: {}", missing_injection.len());
+    println!(
+        "- overlay metadata keys missing injection: {}",
+        missing_overlay_metadata_injection.len()
+    );
     println!("- unused injected keys: {}", unused_injection.len());
     println!();
 
@@ -155,13 +156,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!();
     }
 
+    if !missing_overlay_metadata_injection.is_empty() {
+        println!("Overlay metadata keys missing from v30 token injection:");
+        print_grouped(&missing_overlay_metadata_injection, args.limit);
+        println!();
+    }
+
     if args.show_unused && !unused_injection.is_empty() {
         println!("Unused injected keys (present in v30 injection but not referenced by code):");
         print_grouped(&unused_injection, args.limit);
         println!();
     }
 
-    let mut unknown_vs_material_web: BTreeSet<String> = BTreeSet::new();
+    let mut unclassified_vs_material_web: BTreeSet<String> = BTreeSet::new();
     if let Some(material_web_dir) = resolve_material_web_dir(&workspace_root, args.material_web_dir)
     {
         let sassvars_dir = material_web_dir
@@ -177,17 +184,43 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("- keys: {}", material_web.len());
             println!();
 
-            let allowlisted = allowlisted_non_material_web_tokens();
-            unknown_vs_material_web = used_expanded
-                .difference(&material_web)
-                .filter(|k| {
-                    !allowlisted.contains(k.as_str()) && !k.starts_with("md.sys.fret.material.")
-                })
-                .cloned()
-                .collect::<BTreeSet<_>>();
-            if !unknown_vs_material_web.is_empty() {
-                println!("Unknown keys (used by code but not found in material-web v30 sassvars):");
-                print_grouped(&unknown_vs_material_web, args.limit);
+            let mut classified_overlay: BTreeMap<
+                v30_overlay_metadata::MaterialOverlayTokenOrigin,
+                BTreeSet<String>,
+            > = BTreeMap::new();
+            for key in used_expanded.difference(&material_web) {
+                if let Some(meta) = v30_overlay_metadata::metadata_for_key(key) {
+                    classified_overlay
+                        .entry(meta.origin())
+                        .or_default()
+                        .insert(key.clone());
+                } else {
+                    unclassified_vs_material_web.insert(key.clone());
+                }
+            }
+
+            let classified_overlay_count = classified_overlay
+                .values()
+                .map(BTreeSet::len)
+                .sum::<usize>();
+            println!(
+                "Known overlay/backfill keys not in Material Web v30 sassvars: {classified_overlay_count}"
+            );
+            if !classified_overlay.is_empty() {
+                for (origin, keys) in classified_overlay {
+                    println!("- {}: {}", origin.as_str(), keys.len());
+                }
+            }
+            println!(
+                "- unclassified non-Material-Web keys: {}",
+                unclassified_vs_material_web.len()
+            );
+            println!();
+            if !unclassified_vs_material_web.is_empty() {
+                println!(
+                    "Unclassified keys (used by code but not found in material-web v30 sassvars):"
+                );
+                print_grouped(&unclassified_vs_material_web, args.limit);
                 println!();
             }
 
@@ -247,10 +280,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    if args.check && !unknown_vs_material_web.is_empty() {
+    if args.check && !unclassified_vs_material_web.is_empty() {
         check_failures.push(format!(
-            "unknown keys vs material-web: {}",
-            unknown_vs_material_web.len()
+            "unclassified keys vs material-web: {}",
+            unclassified_vs_material_web.len()
         ));
     }
 
