@@ -41,7 +41,6 @@ pub(crate) mod navigation_common;
 pub(crate) mod navigation_drawer;
 pub(crate) mod navigation_rail;
 pub(crate) mod progress_indicator;
-pub(crate) mod progress_indicator_common;
 pub(crate) mod radio;
 pub(crate) mod search_bar;
 pub(crate) mod search_view;
