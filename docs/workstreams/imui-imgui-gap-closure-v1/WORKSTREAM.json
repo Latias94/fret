@@ -1184,6 +1184,8 @@
     "ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/buffered/controller.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/buffered/tests.rs",
+    "ecosystem/fret-ui-editor/src/controls/checkbox.rs",
+    "ecosystem/fret-ui-editor/src/controls/checkbox/options.rs",
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs",
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/options.rs",

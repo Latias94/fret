@@ -100,6 +100,14 @@ Last updated: 2026-06-01
       reads, buffered draft/model clearing, buffered-state reset, and single-line/multiline clear
       segment selection. The source gate prevents clear-button policy from drifting back into the
       element assembly owner.
+- [x] Split editor `Checkbox` options/default records into a private child owner without changing
+      public `CheckboxOptions` import paths, auto layout defaults, enabled/focusable defaults,
+      a11y/test-id fields, bool/optional-bool model behavior, tri-state chrome, token fallback, or
+      pressable activation behavior.
+      Result: `controls/checkbox.rs` keeps model reads, tri-state behavior, chrome resolution,
+      pressable activation, indicator mounting, and chrome regression routing while re-exporting
+      `CheckboxOptions`. `controls/checkbox/options.rs` owns option fields and defaults. The
+      source gate prevents options/default policy from drifting back into the checkbox owner.
 - [x] Split editor `GradientEditor` stop-row assembly into a private child owner without changing
       stop sorting, row identity/test-id derivation, position/color editors, remove action routing,
       row layout, empty-state text role, preview behavior, or public gradient editor options.

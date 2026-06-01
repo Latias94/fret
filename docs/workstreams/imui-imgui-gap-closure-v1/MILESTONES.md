@@ -56,6 +56,15 @@ single-line/multiline clear segment selection. Clear-button visibility, draft/mo
 buffered session reset, single-line vs multiline clear button chrome, a11y label, test-id routing,
 and redraw behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor Checkbox options owner-split result:
+`ecosystem/fret-ui-editor/src/controls/checkbox.rs` now keeps model reads, tri-state behavior,
+chrome resolution, pressable activation, indicator mounting, and chrome regression routing while
+re-exporting `CheckboxOptions`. The private `controls/checkbox/options.rs` owner contains option
+fields and defaults. Public `CheckboxOptions` import paths, auto layout defaults,
+enabled/focusable defaults, a11y/test-id fields, bool/optional-bool model behavior, tri-state
+chrome, token fallback, and pressable activation behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor PropertyRow trailing-slot owner-split result:
 `ecosystem/fret-ui-editor/src/composites/property_row/element.rs` now keeps row/column layout,
 value-slot marking, reset/action visibility decisions, and reset/action child routing while

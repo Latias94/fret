@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor Checkbox Options Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `Checkbox` options/default records moved out of the root control owner into
+a private `controls/checkbox/options.rs` owner without changing public `CheckboxOptions` import
+paths, auto layout defaults, enabled/focusable defaults, a11y/test-id fields, bool/optional-bool
+model behavior, tri-state chrome, token fallback, or pressable activation behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/checkbox.rs` keeps model reads, tri-state behavior, chrome
+  resolution, pressable activation, indicator mounting, and chrome regression routing while
+  re-exporting `CheckboxOptions`.
+- `ecosystem/fret-ui-editor/src/controls/checkbox/options.rs` owns option fields and defaults.
+- `tools/gate_imui_workstream_source.py` now tracks the options split and rejects options/default
+  policy from drifting back into the checkbox owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the checkbox root and
+  options owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor checkbox --no-fail-fast`: pass (1 passed, 221 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor PropertyGroup Options Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `PropertyGroup` options/default records moved out of the root group owner
