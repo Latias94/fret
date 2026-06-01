@@ -5190,3 +5190,9 @@ entry wiring.
 `ecosystem/fret-ui-kit/src/imui/separator_text_controls/element.rs` now owns section-label element
 construction: text-role label chrome, trailing border rule, row layout, and test-id decoration.
 `separator_text_controls.rs` keeps visible-label identity parsing and facade insertion only.
+
+2026-06-01 menubar root element owner split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_bar.rs` now owns the named menubar
+element, local policy models, trigger-row registry clearing, child hosting, row layout, and
+`SemanticsRole::MenuBar`. `menu_family_controls.rs` keeps only module routing plus begin-menu/
+submenu exports.

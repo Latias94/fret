@@ -25473,3 +25473,26 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI menubar root element owner split:
+
+- Claim: menu-bar root element assembly moved from
+  `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs` into
+  `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_bar.rs` without changing menubar
+  policy-state creation, trigger-row registry reset, hosted child focus forwarding, menu-bar
+  semantics, or begin-menu/submenu boundaries.
+- Evidence anchors: `menu_family_controls.rs` declares `mod menu_bar;`, re-exports
+  `menu_bar::menu_bar_element`, and keeps begin-menu/submenu exports; `menu_bar.rs` owns
+  `open_menu`, trigger-row active/registry models, close-auto-focus suppression model, registry
+  clearing, `build_imui_children_with_focus(...)`, row layout, and `SemanticsRole::MenuBar`; the
+  source gate rejects those menubar root details drifting back into the root menu-family hub.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit --features imui`.
+- Passed: `cargo nextest run -p fret-ui-kit --features imui --lib menu_family_controls::tests --no-fail-fast`.
+- Passed:
+  `cargo nextest run -p fret-imui menu_bar_helper_arranges_triggers_horizontally_and_stamps_menubar_semantics child_region_helper_can_host_menu_bar_and_popup_menu --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

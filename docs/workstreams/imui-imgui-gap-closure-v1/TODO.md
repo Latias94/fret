@@ -5901,3 +5901,10 @@ opening the slice.
       element construction, border-theme lookup, row layout, and test-id decoration.
       `separator_text_controls.rs` keeps only the IMUI helper entry, visible-label parsing, and
       `ui.add(...)` insertion.
+- [x] Split IMUI menu-bar root element assembly out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs` into a private menubar owner without
+      changing menubar policy-state creation, trigger-row registry reset, hosted child focus
+      forwarding, menu-bar semantics, or begin-menu/submenu boundaries.
+      Result: `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_bar.rs` owns the named
+      menubar element, local policy models, registry clearing, child hosting, and row semantics.
+      `menu_family_controls.rs` keeps only module routing plus begin-menu/submenu exports.
