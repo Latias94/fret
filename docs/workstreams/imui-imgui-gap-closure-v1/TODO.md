@@ -74,6 +74,14 @@ Last updated: 2026-06-01
       options types. `controls/vec_edit/options.rs` owns option fields, layout variant, and default
       values. The source gate prevents options/default policy from drifting back into the control
       hub.
+- [x] Split editor `EnumSelect` options/default records into a private child owner without
+      changing public `EnumSelectOptions` import paths, layout defaults, placeholder/none labels,
+      max-list-height/test-id fields, keyed state identity, trigger composition, open-key policy, or
+      overlay routing.
+      Result: `controls/enum_select.rs` keeps the item record, control hub, trigger/open-key
+      orchestration, and overlay request routing while re-exporting options.
+      `controls/enum_select/options.rs` owns option fields and defaults. The source gate prevents
+      options/default policy from drifting back into the root control owner.
 - [x] Split editor `InspectorPanel` options/default and search-assist option records into a
       private child owner without changing public `InspectorPanelOptions` or
       `InspectorPanelSearchAssistOptions` import paths, layout defaults, enabled/title/test-id

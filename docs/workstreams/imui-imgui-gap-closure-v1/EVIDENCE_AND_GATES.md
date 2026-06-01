@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor EnumSelect Options Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `EnumSelect` option records moved out of the root control owner into a
+private `controls/enum_select/options.rs` owner without changing public `EnumSelectOptions` import
+paths, layout defaults, placeholder/none labels, max-list-height/test-id fields, keyed state
+identity, trigger composition, open-key policy, or overlay routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/enum_select.rs` keeps the item record, control hub,
+  trigger/open-key orchestration, and overlay request routing while re-exporting
+  `EnumSelectOptions`.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/options.rs` owns public option fields and
+  defaults.
+- `tools/gate_imui_workstream_source.py` now tracks the EnumSelect options split and rejects
+  options/default policy from drifting back into the root control owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the options owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor enum_select --no-fail-fast`: pass (5 passed, 217 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass after narrowing the options-owner forbidden
+  marker to avoid matching `EnumSelectOptions`.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor VecEdit Options Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `VecEdit` option records and layout variant moved out of the public control

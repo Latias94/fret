@@ -30,6 +30,14 @@ Public import paths, default layout/auto-stack/gap/id/test-id behavior, Vec2/Vec
 constructors, and layout/axis assembly remain unchanged, and `tools/gate_imui_workstream_source.py`
 freezes the split.
 
+2026-06-01 editor EnumSelect options owner-split result:
+`ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps the item record, control hub,
+trigger/open-key orchestration, and overlay request routing while re-exporting
+`EnumSelectOptions`. The private `controls/enum_select/options.rs` owner contains public option
+fields and defaults. Public import paths, default layout, placeholder/none labels, max-list-height
+and diagnostics fields, keyed state identity, trigger composition, open-key policy, and overlay
+routing remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor InspectorPanel options owner-split result:
 `ecosystem/fret-ui-editor/src/composites/inspector_panel.rs` now keeps public cx/control records,
 builder methods, and child-owner routing while re-exporting options. The private
