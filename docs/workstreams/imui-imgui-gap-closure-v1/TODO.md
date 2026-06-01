@@ -170,6 +170,17 @@ Last updated: 2026-06-01
       per-section presentation projection, id/test-id routing, validation forwarding, and axis
       outcome mapping. The source gate prevents Vec3 section-control policy from drifting back into
       the element layout owner.
+- [x] Split editor `TextField` text-entry props assembly into a private element child owner without
+      changing single-line/multiline selection, joined field frame mounting, buffered
+      session/key/blur routing, focus-selection sync, clear-button behavior, Escape-clear behavior,
+      assistive semantics, password mode, submit/cancel command forwarding, stable multiline
+      line-box policy, or public `TextField` options.
+      Result: `controls/text_field/element.rs` keeps keyed construction, joined frame assembly,
+      buffered session orchestration, focus/blur/key handlers, clear-button composition, and entry
+      mounting. `controls/text_field/element/entry_props.rs` owns TextInput/TextArea props,
+      joined chrome, field style resolution, assistive semantics, command forwarding, and
+      multiline min-height/stable line-box policy. The source gate prevents text-entry props
+      policy from drifting back into the element assembly owner.
 - [x] Split editor `VecEdit` options/default records into a private child owner without changing
       public `VecEditOptions` / `VecEditLayoutVariant` import paths, layout defaults, auto-stack
       defaults, id-source/test-id fields, Vec2/Vec3/Vec4 constructors, or layout/axis assembly.

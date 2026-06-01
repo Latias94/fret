@@ -1,23 +1,17 @@
 use std::panic::Location;
 
-use fret_core::{Px, TextStyle};
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextAreaProps, TextInputProps};
+use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::ChromeRefinement;
-use fret_ui_kit::typography;
 
-use super::{OnTextFieldOutcome, TextField, TextFieldMode, TextFieldOptions, buffered};
-use crate::primitives::chrome::{
-    joined_text_area_style, joined_text_input_style, resolve_editor_text_area_field_style,
-    resolve_editor_text_field_style,
-};
+use super::{OnTextFieldOutcome, TextField, TextFieldOptions, buffered};
 use crate::primitives::input_group::editor_joined_input_frame;
 use crate::primitives::style::EditorStyle;
 use crate::primitives::text_entry::{EditorTextCancelBehavior, editor_text_entry_focus_state};
 
 mod buffered_keys;
 mod clear_button;
+mod entry_props;
 mod escape_clear;
 mod focus;
 
@@ -26,6 +20,9 @@ use buffered_keys::{
     install_buffered_text_field_key_handler,
 };
 use clear_button::{TextFieldClearButtonArgs, text_field_clear_button_segments};
+use entry_props::{
+    TextFieldAreaPropsArgs, TextFieldInputPropsArgs, text_field_area_props, text_field_input_props,
+};
 use escape_clear::install_text_field_escape_clear_handler;
 use focus::{TextFieldFocusSelectionArgs, sync_text_field_focus_selection};
 
@@ -141,49 +138,24 @@ impl TextField {
             None,
             move |cx| {
                 if multiline {
-                    let (chrome, text_style) = {
-                        let theme = Theme::global(&*cx.app);
-                        resolve_editor_text_area_field_style(
-                            theme,
-                            size,
-                            &ChromeRefinement::default(),
-                        )
-                    };
-                    let text_style = if stable_line_boxes {
-                        let theme = Theme::global(&*cx.app);
-                        typography::text_area_control_text_style_scaled(
-                            theme,
-                            fret_core::FontId::ui(),
-                            text_style.size,
-                        )
-                    } else {
-                        text_style
-                    };
-
                     let input_model = draft_for_input
                         .clone()
                         .unwrap_or_else(|| model_for_input.clone());
-                    let mut props = TextAreaProps::new(input_model);
-                    props.layout = LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
+                    let theme = Theme::global(&*cx.app);
+                    let props = text_field_area_props(
+                        theme,
+                        TextFieldAreaPropsArgs {
+                            input_model,
+                            size,
+                            density,
+                            enabled: enabled_for_paint,
+                            focusable,
+                            a11y_label: a11y_label.clone(),
+                            test_id: test_id.clone(),
+                            stable_line_boxes,
+                            min_height,
                         },
-                        ..Default::default()
-                    };
-                    props.enabled = enabled_for_paint;
-                    props.focusable = focusable;
-                    props.a11y_label = a11y_label.clone();
-                    props.test_id = test_id.clone();
-
-                    props.chrome = joined_text_area_style(chrome);
-                    props.text_style = text_style;
-                    props.min_height = min_height.unwrap_or_else(|| {
-                        let baseline = Px(80.0);
-                        let dense = Px(density.row_height.0 * 3.0);
-                        Px(baseline.0.max(dense.0))
-                    });
+                    );
 
                     let area = cx.text_area(props);
                     if let Some(out) = input_id_out.as_ref() {
@@ -258,46 +230,28 @@ impl TextField {
 
                     area
                 } else {
-                    let (chrome, text_style) = {
-                        let theme = Theme::global(&*cx.app);
-                        resolve_editor_text_field_style(theme, size, &ChromeRefinement::default())
-                    };
-
                     let input_model = draft_for_input
                         .clone()
                         .unwrap_or_else(|| model_for_input.clone());
-                    let mut props = TextInputProps::new(input_model);
-                    props.layout = LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            min_height: Some(Length::Px(density.row_height)),
-                            ..Default::default()
+                    let theme = Theme::global(&*cx.app);
+                    let props = text_field_input_props(
+                        theme,
+                        TextFieldInputPropsArgs {
+                            input_model,
+                            size,
+                            density,
+                            enabled: enabled_for_paint,
+                            focusable,
+                            placeholder: placeholder.clone(),
+                            a11y_label: a11y_label.clone(),
+                            test_id: test_id.clone(),
+                            mode,
+                            assistive_semantics,
+                            buffered,
+                            submit_command: submit_command_for_input.clone(),
+                            cancel_behavior,
                         },
-                        ..Default::default()
-                    };
-                    props.enabled = enabled_for_paint;
-                    props.focusable = focusable;
-                    props.placeholder = placeholder.clone();
-                    props.a11y_label = a11y_label.clone();
-                    props.test_id = test_id.clone();
-                    props.obscure_text = matches!(mode, TextFieldMode::Password);
-                    props.active_descendant = assistive_semantics.active_descendant;
-                    props.active_descendant_element = assistive_semantics.active_descendant_element;
-                    props.controls_element = assistive_semantics.controls_element;
-                    props.expanded = assistive_semantics.expanded;
-                    if !buffered {
-                        props.submit_command = submit_command_for_input.clone();
-                    }
-                    if !buffered && matches!(cancel_behavior, EditorTextCancelBehavior::Clear) {
-                        props.cancel_command = Some("text.clear".into());
-                    }
-
-                    props.chrome = joined_text_input_style(chrome);
-                    props.text_style = typography::as_control_text(TextStyle {
-                        line_height: Some(density.row_height),
-                        ..text_style
-                    });
+                    );
 
                     let input = cx.text_input(props);
                     if let Some(out) = input_id_out.as_ref() {

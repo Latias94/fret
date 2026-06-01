@@ -171,6 +171,16 @@ test-id derivation, and transform-axis outcome mapping. Public TransformEdit opt
 section presentation formats/parses/chrome affixes, linked-scale sync, and layout behavior remain
 unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor TextField entry-props owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/element.rs` now keeps keyed construction, joined
+frame assembly, buffered session orchestration, focus/blur/key handlers, clear-button composition,
+and entry mounting while delegating TextInput/TextArea props construction to
+`controls/text_field/element/entry_props.rs`. The private entry-props owner contains joined chrome,
+field style resolution, single-line assistive semantics, password mode, submit/cancel command
+forwarding, and multiline min-height/stable line-box policy. Public TextField options,
+single-line/multiline routing, buffered behavior, focus selection, clear behavior, and mounted entry
+IDs remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor VecEdit options owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps the public Vec2/Vec3/Vec4 control hub,
 constructors, builder methods, keyed entrypoints, presentation adoption, and axis exports while

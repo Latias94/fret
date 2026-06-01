@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor TextField Entry-Props Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `TextField` TextInput/TextArea props assembly moved out of
+`controls/text_field/element.rs` into private `controls/text_field/element/entry_props.rs`
+without changing single-line/multiline selection, joined field frame mounting, buffered
+session/key/blur routing, focus-selection sync, clear-button behavior, Escape-clear behavior,
+assistive semantics, password mode, submit/cancel command forwarding, stable multiline line-box
+policy, mounted input id reporting, or public `TextField` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_field/element.rs` keeps keyed construction, joined
+  frame assembly, buffered session orchestration, focus/blur/key handlers, clear-button
+  composition, and entry mounting.
+- `ecosystem/fret-ui-editor/src/controls/text_field/element/entry_props.rs` owns TextInput/TextArea
+  props assembly, joined chrome, field style resolution, assistive semantics, command forwarding,
+  password mode, and multiline min-height/stable line-box policy.
+- `tools/gate_imui_workstream_source.py` now tracks the entry-props owner and rejects text-entry
+  props policy from drifting back into the element assembly owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new entry-props owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor text_field --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor TransformEdit Section-Control Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `TransformEdit` section-control Vec3 assembly moved out of
