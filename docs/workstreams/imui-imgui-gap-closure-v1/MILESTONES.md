@@ -65,6 +65,15 @@ enabled/focusable defaults, a11y/test-id fields, bool/optional-bool model behavi
 chrome, token fallback, and pressable activation behavior remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor Checkbox chrome owner-split result:
+`ecosystem/fret-ui-editor/src/controls/checkbox.rs` now keeps model reads, a11y, pressable
+activation, indicator mounting, and root control assembly while delegating token fallback chrome to
+`controls/checkbox/chrome.rs`. The private chrome owner contains resolved chrome colors, editor
+token precedence, generic palette fallback, and the chrome token regression. Bool/optional-bool
+model behavior, tri-state indicator selection, focus-ring geometry, a11y/test-id routing, checked
+foreground/background semantics, and pressable activation behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor PropertyRow trailing-slot owner-split result:
 `ecosystem/fret-ui-editor/src/composites/property_row/element.rs` now keeps row/column layout,
 value-slot marking, reset/action visibility decisions, and reset/action child routing while
