@@ -152,6 +152,15 @@ constraint application, invalid-number reporting, draft/error sync, focus restor
 revision bumping, and outcome routing. Public AxisDragValue options and scrub/typing frame behavior
 remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor AxisDragValue typing-input owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps scrub/typing
+orchestration, focus handoff, typing key handling, error clearing, and frame routing while
+delegating TextInput props and mount to `controls/axis_drag_value/element/input.rs`. The private
+input owner contains hidden/active enabled and focusable gating, invalid a11y state, joined input
+chrome, text style routing, test-id routing, input mounting, input id capture, and focus reads.
+Public AxisDragValue options, typing key behavior, focus handoff, scrub mounting, and typing frame
+behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor VecEdit options owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps the public Vec2/Vec3/Vec4 control hub,
 constructors, builder methods, keyed entrypoints, presentation adoption, and axis exports while

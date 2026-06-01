@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor AxisDragValue Typing-Input Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `AxisDragValue` typing TextInput assembly moved out of
+`controls/axis_drag_value/element.rs` into a private `controls/axis_drag_value/element/input.rs`
+owner without changing hidden/active typing layout, enabled/focusable gating, invalid a11y state,
+joined input chrome, text style, input id/focus reads, focus handoff, typing key handling, scrub
+mounting, or public AxisDragValue options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` keeps scrub/typing
+  orchestration, focus handoff, typing key handling, error clearing, and frame routing.
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element/input.rs` owns TextInputProps
+  assembly, joined chrome, invalid a11y state, typing test-id routing, input mounting, input id
+  capture, and focus reads.
+- `tools/gate_imui_workstream_source.py` now tracks the input owner and rejects typing input props
+  from drifting back into the root element owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new input owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor axis_drag_value --no-fail-fast`: pass (5 passed, 223 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor TextField Focus-Selection Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `TextField` focus-selection value detection moved out of

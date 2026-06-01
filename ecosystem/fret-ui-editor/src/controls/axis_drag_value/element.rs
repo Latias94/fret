@@ -1,12 +1,11 @@
 use std::sync::{Arc, Mutex};
 
-use fret_core::SemanticsInvalid;
 use fret_ui::action::{ActionCx, PointerDownCx, PressablePointerDownResult, UiActionHost};
-use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextInputProps};
+use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ChromeRefinement;
 
-use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
+use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
@@ -24,10 +23,12 @@ use super::model::{
 };
 use super::session::{draft_model, emit_axis_drag_value_outcome, error_model, hidden_layout};
 
+mod input;
 mod scrub;
 mod typing;
 mod typing_keys;
 
+use input::{AxisDragValueTypingInputArgs, axis_drag_value_typing_input};
 use scrub::{AxisDragValueScrubFrameArgs, axis_drag_value_scrub_frame};
 use typing::{AxisDragValueTypingFrameArgs, axis_drag_value_typing_field};
 use typing_keys::{AxisDragValueTypingKeyHandlerArgs, axis_drag_value_add_typing_key_handler};
@@ -231,27 +232,23 @@ where
             .unwrap_or(None)
             .is_some();
 
-        let mut props = TextInputProps::new(draft.clone());
-        props.layout = LayoutStyle {
-            size: SizeStyle {
-                width: Length::Fill,
-                height: Length::Auto,
-                min_height: Some(Length::Px(density.row_height)),
-                ..Default::default()
+        let typing_input = axis_drag_value_typing_input(
+            cx,
+            AxisDragValueTypingInputArgs {
+                draft: draft.clone(),
+                density,
+                input_chrome,
+                text_style: text_style.clone(),
+                enabled: self.options.enabled,
+                focusable: self.options.focusable,
+                typing,
+                typing_input_test_id: typing_input_test_id.clone(),
+                has_error,
             },
-            ..Default::default()
-        };
-        props.enabled = self.options.enabled && typing;
-        props.focusable = self.options.focusable && typing;
-        props.test_id = typing_input_test_id.clone();
-        props.a11y_invalid = has_error.then_some(SemanticsInvalid::True);
-
-        props.chrome = joined_text_input_style(input_chrome);
-        props.text_style = text_style.clone();
-
-        let input = cx.text_input(props);
-        let input_id = input.id;
-        let is_focused = cx.is_focused_element(input_id);
+        );
+        let input = typing_input.input;
+        let input_id = typing_input.input_id;
+        let is_focused = typing_input.is_focused;
 
         // Drive mode transitions from focus: if the user clicks away after the input actually
         // became focused, return to scrub mode.

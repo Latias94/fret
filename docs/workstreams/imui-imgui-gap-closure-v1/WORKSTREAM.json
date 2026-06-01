@@ -1274,6 +1274,7 @@
     "ecosystem/fret-ui-editor/src/controls/drag_value/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs",
+    "ecosystem/fret-ui-editor/src/controls/axis_drag_value/element/input.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value/element/scrub.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value/element/typing.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value/element/typing_keys.rs",

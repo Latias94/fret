@@ -151,6 +151,15 @@ Last updated: 2026-06-01
       `controls/axis_drag_value/element/typing_keys.rs` owner contains replace-on-focus key
       handling plus Enter commit and Escape cancel policy. The source gate prevents key policy from
       drifting back into the root element owner.
+- [x] Split editor `AxisDragValue` typing TextInput assembly into a private element child owner
+      without changing hidden/active typing layout, enabled/focusable gating, invalid a11y state,
+      joined input chrome, text style, input id/focus reads, focus handoff, typing key handling,
+      scrub mounting, or public AxisDragValue options.
+      Result: `controls/axis_drag_value/element.rs` keeps scrub/typing orchestration, focus
+      handoff, key handling, and frame routing. `controls/axis_drag_value/element/input.rs` owns
+      TextInputProps assembly, joined chrome, invalid state, test-id routing, input mounting, and
+      focus id reads. The source gate prevents typing input props from drifting back into the root
+      element owner.
 - [x] Split editor `VecEdit` options/default records into a private child owner without changing
       public `VecEditOptions` / `VecEditLayoutVariant` import paths, layout defaults, auto-stack
       defaults, id-source/test-id fields, Vec2/Vec3/Vec4 constructors, or layout/axis assembly.
