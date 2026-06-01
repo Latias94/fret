@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 IMUI table-column visibility mutation owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/overrides.rs` now keeps construction
+and read-side override queries while delegating `set_visible`, `show`, `hide`, `toggle`, `remove`,
+and `clear` to private `table_column_visibility/state/mutation.rs`. Empty-id filtering,
+last-entry-wins behavior, snapshot restoration, table-column application, and public
+`ImUiTableColumnVisibilityState` methods remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 IMUI input-text picker input-root child owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input.rs` now keeps input-root request/result
 shapes, text input mounting, and fill-width root container construction while delegating

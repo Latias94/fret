@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## IMUI Table-Column Visibility Mutation Owner-Split Evidence - 2026-06-01
+
+Claim verified: IMUI table-column visibility override mutation moved out of
+`table_column_visibility/state/overrides.rs` into private `state/mutation.rs` without changing
+public state constructors/accessors, empty-id filtering, last-entry-wins behavior,
+show/hide/toggle/remove/clear semantics, snapshot restoration, table-column application, or
+`fret-imui` facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/overrides.rs` keeps
+  `ImUiTableColumnVisibilityState::new(...)`, `is_empty`, `len`, `visibility_for`, and `is_visible`.
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/mutation.rs` owns `set_visible`,
+  `show`, `hide`, `toggle`, `remove`, and `clear`, including empty-id filtering and
+  last-entry-wins replacement.
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state.rs` remains the opaque storage
+  owner and now routes the mutation child owner.
+- `tools/gate_imui_workstream_source.py` now tracks the mutation owner and rejects mutation bodies
+  from drifting back into the read-side override owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new mutation owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_column_visibility_helpers_compile table_column_visibility_state_applies_runtime_visibility_by_column_id --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui table_column_visibility --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Text Picker Input-Root Child Owner-Split Evidence - 2026-06-01
 
 Claim verified: IMUI input-text picker input-root assistive semantics and focused-input keyboard

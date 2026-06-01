@@ -2729,9 +2729,17 @@ Last updated: 2026-06-01
       filtering, last-entry-wins behavior, snapshot roundtrips, table-column visibility application,
       or opaque state storage.
       Result: `table_column_visibility/state.rs` now owns only the state/override storage shape and
-      public snapshot re-export. `state/overrides.rs` owns runtime override mutation/query,
+      public snapshot re-export. `state/overrides.rs` owns runtime override construction/query,
       `state/snapshot_io.rs` owns snapshot conversion/restoration, and `state/columns.rs` owns
-      `TableColumn` application.
+      `TableColumn` application. A 2026-06-01 follow-up below moved mutation into a child owner.
+- [x] Split IMUI table-column visibility override mutation out of
+      `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/overrides.rs` into a private
+      mutation owner without changing public state constructors/accessors, empty-id filtering,
+      last-entry-wins behavior, show/hide/toggle/remove/clear semantics, snapshot restoration, or
+      table-column visibility application.
+      Result: `table_column_visibility/state/mutation.rs` owns `set_visible`, `show`, `hide`,
+      `toggle`, `remove`, and `clear`; `state/overrides.rs` now owns only construction plus
+      read-side override queries.
 - [x] Split IMUI table-column visibility regression tests into private state and menu owners
       without changing runtime override, snapshot roundtrip, last-entry-wins, stable menu-column id,
       visible label, or test-id suffix assertions.
