@@ -19,16 +19,16 @@ pub(crate) struct CarouselItemOutline {
     pub color: Color,
 }
 
+fn carousel_metric(theme: &Theme, key: impl AsRef<str>, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key.as_ref()), fallback)
+}
+
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
-    theme
-        .metric_by_key(&format!("{COMPONENT_PREFIX}.container.shape"))
-        .map(Corners::all)
-        .or_else(|| {
-            theme
-                .metric_by_key("md.sys.shape.corner.extra-large")
-                .map(Corners::all)
-        })
-        .unwrap_or_else(|| Corners::all(Px(28.0)))
+    let component_key = format!("{COMPONENT_PREFIX}.container.shape");
+    Corners::all(MaterialTokenResolver::new(theme).metric_chain(
+        &[component_key.as_str(), "md.sys.shape.corner.extra-large"],
+        Px(28.0),
+    ))
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
@@ -78,7 +78,7 @@ pub(crate) fn container_elevation(
         format!("{COMPONENT_PREFIX}.container.elevation")
     };
 
-    theme.metric_by_key(&key).unwrap_or(Px(0.0))
+    carousel_metric(theme, key, Px(0.0))
 }
 
 pub(crate) fn state_layer_color(theme: &Theme, interaction: Option<PressableInteraction>) -> Color {
@@ -133,9 +133,11 @@ pub(crate) fn outline(
         return None;
     }
 
-    let width = theme
-        .metric_by_key(&format!("{WITH_OUTLINE_PREFIX}.outline.width"))
-        .unwrap_or(Px(1.0));
+    let width = carousel_metric(
+        theme,
+        format!("{WITH_OUTLINE_PREFIX}.outline.width"),
+        Px(1.0),
+    );
 
     let (color_key, opacity_key) = if disabled {
         (
@@ -178,5 +180,75 @@ fn material_state_layer_interaction(
         PressableInteraction::Hovered => MaterialStateLayerInteraction::Hovered,
         PressableInteraction::Focused => MaterialStateLayerInteraction::Focused,
         PressableInteraction::Pressed => MaterialStateLayerInteraction::Pressed,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn carousel_item_metrics_default_to_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(container_shape(theme), Corners::all(Px(28.0)));
+        assert_eq!(container_elevation(theme, false, None), Px(0.0));
+        assert_eq!(
+            outline(theme, true, false, None)
+                .expect("outlined carousel item has outline")
+                .width,
+            Px(1.0)
+        );
+    }
+
+    #[test]
+    fn carousel_item_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.carousel-item.container.shape".to_string(), 24.0);
+        patch.metrics.insert(
+            "md.comp.carousel-item.hover.container.elevation".to_string(),
+            4.0,
+        );
+        patch.metrics.insert(
+            "md.comp.carousel-item.with-outline.outline.width".to_string(),
+            2.0,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(container_shape(&theme), Corners::all(Px(24.0)));
+        assert_eq!(
+            container_elevation(&theme, false, Some(PressableInteraction::Hovered)),
+            Px(4.0)
+        );
+        assert_eq!(
+            outline(&theme, true, false, None)
+                .expect("outlined carousel item has outline")
+                .width,
+            Px(2.0)
+        );
+    }
+
+    #[test]
+    fn carousel_item_shape_uses_system_fallback() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.sys.shape.corner.extra-large".to_string(), 26.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(container_shape(&theme), Corners::all(Px(26.0)));
     }
 }

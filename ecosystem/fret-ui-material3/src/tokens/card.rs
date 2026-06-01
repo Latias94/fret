@@ -30,16 +30,16 @@ pub(crate) fn component_prefix(variant: CardVariant) -> &'static str {
     }
 }
 
+fn card_metric(theme: &Theme, key: impl AsRef<str>, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key.as_ref()), fallback)
+}
+
 pub(crate) fn container_shape(theme: &Theme, variant: CardVariant) -> Corners {
-    theme
-        .metric_by_key(&format!("{}.container.shape", component_prefix(variant)))
-        .map(Corners::all)
-        .or_else(|| {
-            theme
-                .metric_by_key("md.sys.shape.corner.medium")
-                .map(Corners::all)
-        })
-        .unwrap_or_else(|| Corners::all(Px(12.0)))
+    let component_key = format!("{}.container.shape", component_prefix(variant));
+    Corners::all(MaterialTokenResolver::new(theme).metric_chain(
+        &[component_key.as_str(), "md.sys.shape.corner.medium"],
+        Px(12.0),
+    ))
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme, variant: CardVariant) -> Color {
@@ -78,9 +78,11 @@ pub(crate) fn container_elevation(
     let prefix = component_prefix(variant);
 
     if !enabled {
-        return theme
-            .metric_by_key(&format!("{prefix}.disabled.container.elevation"))
-            .unwrap_or(Px(0.0));
+        return card_metric(
+            theme,
+            format!("{prefix}.disabled.container.elevation"),
+            Px(0.0),
+        );
     }
 
     let key = match interaction {
@@ -90,9 +92,7 @@ pub(crate) fn container_elevation(
         None => "container.elevation",
     };
 
-    theme
-        .metric_by_key(&format!("{prefix}.{key}"))
-        .unwrap_or(Px(0.0))
+    card_metric(theme, format!("{prefix}.{key}"), Px(0.0))
 }
 
 pub(crate) fn outline(
@@ -106,9 +106,7 @@ pub(crate) fn outline(
     }
 
     let prefix = OUTLINED_COMPONENT_PREFIX;
-    let width = theme
-        .metric_by_key(&format!("{prefix}.outline.width"))
-        .unwrap_or(Px(1.0));
+    let width = card_metric(theme, format!("{prefix}.outline.width"), Px(1.0));
 
     if !enabled {
         let tokens = MaterialTokenResolver::new(theme);
@@ -195,5 +193,91 @@ fn material_state_layer_interaction(
         Some(PressableInteraction::Focused) => Some(MaterialStateLayerInteraction::Focused),
         Some(PressableInteraction::Hovered) => Some(MaterialStateLayerInteraction::Hovered),
         None => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn card_metrics_default_to_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(
+            container_shape(theme, CardVariant::Filled),
+            Corners::all(Px(12.0))
+        );
+        assert_eq!(
+            container_elevation(theme, CardVariant::Elevated, true, None),
+            Px(0.0)
+        );
+        assert_eq!(
+            outline(theme, CardVariant::Outlined, true, None)
+                .expect("outlined card has outline")
+                .width,
+            Px(1.0)
+        );
+    }
+
+    #[test]
+    fn card_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.filled-card.container.shape".to_string(), 14.0);
+        patch.metrics.insert(
+            "md.comp.elevated-card.hover.container.elevation".to_string(),
+            5.0,
+        );
+        patch
+            .metrics
+            .insert("md.comp.outlined-card.outline.width".to_string(), 2.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_shape(&theme, CardVariant::Filled),
+            Corners::all(Px(14.0))
+        );
+        assert_eq!(
+            container_elevation(
+                &theme,
+                CardVariant::Elevated,
+                true,
+                Some(PressableInteraction::Hovered),
+            ),
+            Px(5.0)
+        );
+        assert_eq!(
+            outline(&theme, CardVariant::Outlined, true, None)
+                .expect("outlined card has outline")
+                .width,
+            Px(2.0)
+        );
+    }
+
+    #[test]
+    fn card_shape_uses_system_fallback() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.sys.shape.corner.medium".to_string(), 10.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_shape(&theme, CardVariant::Filled),
+            Corners::all(Px(10.0))
+        );
     }
 }
