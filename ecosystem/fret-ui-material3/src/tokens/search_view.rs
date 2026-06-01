@@ -13,10 +13,6 @@ fn search_view_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
     MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
 }
 
-fn search_view_metric_chain(theme: &Theme, keys: &[&'static str], fallback: Px) -> Px {
-    MaterialTokenResolver::new(theme).metric_chain(keys, fallback)
-}
-
 pub(crate) fn container_color(theme: &Theme) -> Color {
     MaterialTokenResolver::new(theme).color_comp_or_sys(
         "md.comp.search-view.container.color",
@@ -42,15 +38,13 @@ pub(crate) fn divider_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn docked_container_shape(theme: &Theme) -> Corners {
-    let r = search_view_metric_chain(
-        theme,
+    MaterialTokenResolver::new(theme).corners_chain_or(
         &[
             "md.comp.search-view.docked.container.shape",
             "md.sys.shape.corner.extra-large",
         ],
-        Px(28.0),
-    );
-    Corners::all(r)
+        Corners::all(Px(28.0)),
+    )
 }
 
 pub(crate) fn header_leading_icon_color(theme: &Theme) -> Color {
@@ -144,5 +138,34 @@ mod tests {
         let (_app, theme) = theme_with_patch(patch);
 
         assert_eq!(docked_container_shape(&theme), Corners::all(Px(26.0)));
+    }
+
+    #[test]
+    fn search_view_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert(
+            "md.comp.search-view.docked.container.shape".to_string(),
+            18.0,
+        );
+        patch.corners.insert(
+            "md.comp.search-view.docked.container.shape".to_string(),
+            Corners {
+                top_left: Px(20.0),
+                top_right: Px(22.0),
+                bottom_right: Px(24.0),
+                bottom_left: Px(26.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            docked_container_shape(&theme),
+            Corners {
+                top_left: Px(20.0),
+                top_right: Px(22.0),
+                bottom_right: Px(24.0),
+                bottom_left: Px(26.0),
+            }
+        );
     }
 }

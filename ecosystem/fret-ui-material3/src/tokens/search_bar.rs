@@ -13,10 +13,6 @@ fn search_bar_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
     MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
 }
 
-fn search_bar_metric_chain(theme: &Theme, keys: &[&'static str], fallback: Px) -> Px {
-    MaterialTokenResolver::new(theme).metric_chain(keys, fallback)
-}
-
 pub(crate) fn container_height(theme: &Theme) -> Px {
     search_bar_metric(theme, "md.comp.search-bar.container.height", Px(56.0))
 }
@@ -38,15 +34,13 @@ pub(crate) fn container_max_width(theme: &Theme) -> Px {
 }
 
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
-    let r = search_bar_metric_chain(
-        theme,
+    MaterialTokenResolver::new(theme).corners_chain_or(
         &[
             "md.comp.search-bar.container.shape",
             "md.sys.shape.corner.full",
         ],
-        Px(9999.0),
-    );
-    Corners::all(r)
+        Corners::all(Px(9999.0)),
+    )
 }
 
 pub(crate) fn container_color(theme: &Theme) -> Color {
@@ -205,5 +199,33 @@ mod tests {
         let (_app, theme) = theme_with_patch(patch);
 
         assert_eq!(container_shape(&theme), Corners::all(Px(24.0)));
+    }
+
+    #[test]
+    fn search_bar_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.search-bar.container.shape".to_string(), 30.0);
+        patch.corners.insert(
+            "md.comp.search-bar.container.shape".to_string(),
+            Corners {
+                top_left: Px(10.0),
+                top_right: Px(12.0),
+                bottom_right: Px(14.0),
+                bottom_left: Px(16.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_shape(&theme),
+            Corners {
+                top_left: Px(10.0),
+                top_right: Px(12.0),
+                bottom_right: Px(14.0),
+                bottom_left: Px(16.0),
+            }
+        );
     }
 }
