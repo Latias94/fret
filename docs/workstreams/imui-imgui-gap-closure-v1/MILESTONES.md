@@ -5106,3 +5106,9 @@ before checkpointing. The image-items slice was completed before the `main` chec
 surface. `ecosystem/fret-ui-kit/src/imui.rs` remains the module hub and shared internal-import owner
 and republishes the same public surface through `pub use exports::*;`. This keeps downstream import
 paths stable while removing public API catalog churn from the root implementation hub.
+
+2026-06-01 combo popup state owner split result:
+`ecosystem/fret-ui-kit/src/imui/combo_controls/state.rs` now owns popup open-state reads,
+trigger-driven open/close transitions, disabled popup cleanup, toggled detection, and trigger
+response flag mutation. `combo_controls.rs` keeps the higher-level combo flow: label identity,
+trigger option wiring, popup body composition, and final `ComboResponse` assembly.

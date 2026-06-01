@@ -25139,3 +25139,28 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI combo popup state owner split:
+
+- Claim: combo popup state orchestration moved from
+  `ecosystem/fret-ui-kit/src/imui/combo_controls.rs` into
+  `ecosystem/fret-ui-kit/src/imui/combo_controls/state.rs` without changing trigger rendering,
+  popup composition, disabled cleanup, toggled detection, or public `ComboResponse` behavior.
+- Evidence anchors: `combo_controls.rs` now declares `mod state;` and delegates enabled checks,
+  open-state reads, trigger open/close transitions, disabled popup closure, toggled detection, and
+  trigger response flag mutation to `state.rs`; `combo_controls/trigger.rs` still owns trigger
+  chrome/behavior wiring; `tools/gate_imui_workstream_source.py` rejects popup state logic drifting
+  back into `combo_controls.rs`.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_combo_smoke --no-fail-fast`
+  (2 tests passed).
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+- Broader exploratory lib-filter not used as acceptance evidence:
+  `cargo nextest run -p fret-ui-kit --features imui --lib combo_trigger --no-fail-fast` exited
+  during `cargo test --no-run` with code `-1` and no Rust diagnostics after compiling the package.

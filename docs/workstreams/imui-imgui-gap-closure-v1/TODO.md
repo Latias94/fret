@@ -5790,3 +5790,11 @@ opening the slice.
       `imui.rs` stays a private module hub plus shared internal imports and only republishes
       `exports::*`; the source gate rejects the old public re-export blocks from drifting back into
       the root hub.
+- [x] Split IMUI combo popup state orchestration out of
+      `ecosystem/fret-ui-kit/src/imui/combo_controls.rs` into a private state owner without
+      changing combo trigger rendering, popup body composition, disabled popup closure, open/toggled
+      response semantics, or public `ComboResponse` behavior.
+      Result: `ecosystem/fret-ui-kit/src/imui/combo_controls/state.rs` owns enabled checks, popup
+      open reads, trigger-driven open/close transitions, disabled popup cleanup, toggled detection,
+      and trigger response flag mutation. `combo_controls.rs` keeps label identity parsing, trigger
+      option wiring, popup body mounting, and final response assembly.

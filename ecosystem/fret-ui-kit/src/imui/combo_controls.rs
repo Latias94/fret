@@ -1,5 +1,6 @@
 //! Immediate-mode combo helpers.
 
+mod state;
 mod trigger;
 
 use std::sync::Arc;
@@ -19,14 +20,8 @@ pub(super) fn combo_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
 ) -> ComboResponse {
     let parts = parse_label_identity(label.as_ref());
     let label = Arc::<str>::from(parts.visible);
-    let enabled = options.enabled && ui.with_cx_mut(|cx| !super::imui_is_disabled(cx));
-    let popup_open = ui.popup_open_model(id);
-    let open_before = ui.with_cx_mut(|cx| {
-        cx.read_model(&popup_open, fret_ui::Invalidation::Paint, |_app, value| {
-            *value
-        })
-        .unwrap_or(false)
-    });
+    let enabled = state::combo_enabled(ui, options.enabled);
+    let open_before = state::combo_popup_open(ui, id);
     let trigger_options = trigger::ComboTriggerOptions {
         enabled,
         focusable: options.focusable,
@@ -40,13 +35,7 @@ pub(super) fn combo_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
 
     let mut trigger = trigger::combo_trigger(ui, id, label, preview, trigger_options);
 
-    if enabled && trigger.clicked() {
-        if open_before {
-            ui.close_popup(id);
-        } else if let Some(anchor) = trigger.rect() {
-            ui.open_popup_at(id, anchor);
-        }
-    }
+    state::toggle_popup_from_trigger(ui, id, enabled, open_before, &trigger);
 
     let popup_opened = super::popup_overlay::begin_popup_menu_with_options(
         ui,
@@ -56,22 +45,11 @@ pub(super) fn combo_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
         false,
         f,
     );
-    if !enabled && popup_opened {
-        ui.close_popup(id);
-    }
+    state::close_disabled_popup(ui, id, enabled, popup_opened);
 
-    let open_after = ui.with_cx_mut(|cx| {
-        cx.read_model(&popup_open, fret_ui::Invalidation::Paint, |_app, value| {
-            *value
-        })
-        .unwrap_or(false)
-    });
-    let toggled = trigger.id().is_some_and(|element_id| {
-        ui.with_cx_mut(|cx| super::model_value_changed_for(cx, element_id, open_after))
-    });
-    trigger.set_activated(toggled && open_after);
-    trigger.set_deactivated(toggled && !open_after);
-    trigger.set_deactivated_after_edit(false);
+    let open_after = state::combo_popup_open(ui, id);
+    let toggled = state::combo_toggled(ui, &trigger, open_after);
+    state::apply_trigger_open_response(&mut trigger, toggled, open_after);
 
     ComboResponse {
         trigger,
