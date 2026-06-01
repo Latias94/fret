@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor VecEdit Options Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `VecEdit` option records and layout variant moved out of the public control
+hub into a private `controls/vec_edit/options.rs` owner without changing public `VecEditOptions` /
+`VecEditLayoutVariant` import paths, layout defaults, auto-stack defaults, gap defaults,
+id-source/test-id fields, Vec2/Vec3/Vec4 constructors, presentation adoption, or layout/axis
+assembly.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/vec_edit.rs` keeps the public Vec2/Vec3/Vec4 control hub,
+  constructors, builder methods, keyed entrypoints, presentation adoption, and axis exports while
+  re-exporting `VecEditOptions` and `VecEditLayoutVariant`.
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/options.rs` owns public option fields, layout
+  variant, and defaults.
+- `tools/gate_imui_workstream_source.py` now tracks the VecEdit options split and rejects
+  options/default policy from drifting back into the control hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the options owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor vec_edit --no-fail-fast`: pass (4 passed, 218 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor AxisDragValue Typing-Key Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `AxisDragValue` typing key handling moved out of the root element owner into

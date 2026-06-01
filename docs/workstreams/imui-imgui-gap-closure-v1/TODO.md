@@ -67,6 +67,13 @@ Last updated: 2026-06-01
       `controls/axis_drag_value/element/typing_keys.rs` owner contains replace-on-focus key
       handling plus Enter commit and Escape cancel policy. The source gate prevents key policy from
       drifting back into the root element owner.
+- [x] Split editor `VecEdit` options/default records into a private child owner without changing
+      public `VecEditOptions` / `VecEditLayoutVariant` import paths, layout defaults, auto-stack
+      defaults, id-source/test-id fields, Vec2/Vec3/Vec4 constructors, or layout/axis assembly.
+      Result: `controls/vec_edit.rs` keeps the public Vec2/Vec3/Vec4 control hub and re-exports the
+      options types. `controls/vec_edit/options.rs` owns option fields, layout variant, and default
+      values. The source gate prevents options/default policy from drifting back into the control
+      hub.
 - [x] Split editor `InspectorPanel` options/default and search-assist option records into a
       private child owner without changing public `InspectorPanelOptions` or
       `InspectorPanelSearchAssistOptions` import paths, layout defaults, enabled/title/test-id

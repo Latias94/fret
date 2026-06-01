@@ -21,6 +21,15 @@ constraint application, invalid-number reporting, draft/error sync, focus restor
 revision bumping, and outcome routing. Public AxisDragValue options and scrub/typing frame behavior
 remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor VecEdit options owner-split result:
+`ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps the public Vec2/Vec3/Vec4 control hub,
+constructors, builder methods, keyed entrypoints, presentation adoption, and axis exports while
+re-exporting `VecEditOptions` and `VecEditLayoutVariant`. The private
+`controls/vec_edit/options.rs` owner contains public option fields, layout variant, and defaults.
+Public import paths, default layout/auto-stack/gap/id/test-id behavior, Vec2/Vec3/Vec4
+constructors, and layout/axis assembly remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split.
+
 2026-06-01 editor InspectorPanel options owner-split result:
 `ecosystem/fret-ui-editor/src/composites/inspector_panel.rs` now keeps public cx/control records,
 builder methods, and child-owner routing while re-exporting options. The private

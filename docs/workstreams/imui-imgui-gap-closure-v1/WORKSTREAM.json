@@ -1293,6 +1293,7 @@
     "ecosystem/fret-ui-editor/src/controls/vec_edit/axis.rs",
     "ecosystem/fret-ui-editor/src/controls/vec_edit/layout.rs",
     "ecosystem/fret-ui-editor/src/controls/vec_edit/layout/tests.rs",
+    "ecosystem/fret-ui-editor/src/controls/vec_edit/options.rs",
     "ecosystem/fret-ui-editor/src/controls/transform_edit.rs",
     "ecosystem/fret-ui-editor/src/controls/transform_edit/element.rs",
     "ecosystem/fret-ui-editor/src/controls/transform_edit/sections.rs",
