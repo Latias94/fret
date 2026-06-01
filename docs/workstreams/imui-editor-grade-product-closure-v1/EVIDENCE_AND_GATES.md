@@ -2,6 +2,31 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## VecEdit model owner split - 2026-06-02
+
+This refresh keeps editor controls in `fret-ui-editor` while reducing the remaining VecEdit root
+file ownership:
+
+- `ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now owns only VecEdit child-module wiring and
+  the stable public re-exports for axis, model, and options types.
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now owns `Vec2Edit`, `Vec3Edit`,
+  `Vec4Edit`, their constructors, `NumericPresentation` adapters, builder methods, caller-keyed
+  `into_element(...)` entrypoints, and the presentation adoption test.
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/element.rs` remains the keyed element assembly
+  handoff, while `axis.rs`, `layout.rs`, and `options.rs` keep their existing owners.
+- `tools/gate_imui_workstream_source.py` now rejects VecEdit public model definitions and
+  presentation tests from drifting back into the root module.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-editor` - passed.
+- `cargo check -p fret-ui-editor --features imui` - passed.
+- `cargo nextest run -p fret-ui-editor --features imui vec_edit --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## DevTools Demo/Metrics/Debug action metadata owner split - 2026-05-31
 
 This refresh keeps the Demo/Metrics/Debug route productized while reducing the size and ownership
