@@ -24,13 +24,13 @@ pub(crate) struct RadioSizeTokens {
     pub(crate) state_layer: Px,
 }
 
+fn radio_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
 pub(crate) fn size_tokens(theme: &Theme) -> RadioSizeTokens {
-    let icon = theme
-        .metric_by_key("md.comp.radio-button.icon.size")
-        .unwrap_or(Px(20.0));
-    let state_layer = theme
-        .metric_by_key("md.comp.radio-button.state-layer.size")
-        .unwrap_or(Px(40.0));
+    let icon = radio_metric(theme, "md.comp.radio-button.icon.size", Px(20.0));
+    let state_layer = radio_metric(theme, "md.comp.radio-button.state-layer.size", Px(40.0));
     RadioSizeTokens { icon, state_layer }
 }
 
@@ -173,5 +173,46 @@ fn icon_color_key(checked: bool, interaction: RadioInteraction) -> &'static str 
         (false, RadioInteraction::Hovered) => "md.comp.radio-button.unselected.hover.icon.color",
         (false, RadioInteraction::Focused) => "md.comp.radio-button.unselected.focus.icon.color",
         (false, RadioInteraction::Pressed) => "md.comp.radio-button.unselected.pressed.icon.color",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn radio_size_defaults_match_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+        let size = size_tokens(theme);
+
+        assert_eq!(size.icon, Px(20.0));
+        assert_eq!(size.state_layer, Px(40.0));
+    }
+
+    #[test]
+    fn radio_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.radio-button.icon.size".to_string(), 22.0);
+        patch
+            .metrics
+            .insert("md.comp.radio-button.state-layer.size".to_string(), 44.0);
+        let (_app, theme) = theme_with_patch(patch);
+        let size = size_tokens(&theme);
+
+        assert_eq!(size.icon, Px(22.0));
+        assert_eq!(size.state_layer, Px(44.0));
     }
 }
