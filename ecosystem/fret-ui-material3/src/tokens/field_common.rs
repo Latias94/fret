@@ -71,10 +71,16 @@ impl FieldTokenSet {
     }
 }
 
+fn field_metric(theme: &Theme, key: impl AsRef<str>, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key.as_ref()), fallback)
+}
+
 pub(crate) fn container_height(theme: &Theme, prefix: &str) -> Px {
-    theme
-        .metric_by_key(&field_key(prefix, "container.height"))
-        .unwrap_or(DEFAULT_CONTAINER_HEIGHT)
+    field_metric(
+        theme,
+        field_key(prefix, "container.height"),
+        DEFAULT_CONTAINER_HEIGHT,
+    )
 }
 
 pub(crate) fn container_shape(theme: &Theme, prefix: &str, variant: FieldVariant) -> Corners {
@@ -85,9 +91,11 @@ pub(crate) fn container_shape(theme: &Theme, prefix: &str, variant: FieldVariant
 }
 
 pub(crate) fn icon_size(theme: &Theme, prefix: &str, role: FieldIconRole) -> Px {
-    theme
-        .metric_by_key(&field_key(prefix, role.size_suffix()))
-        .unwrap_or(DEFAULT_ICON_SIZE)
+    field_metric(
+        theme,
+        field_key(prefix, role.size_suffix()),
+        DEFAULT_ICON_SIZE,
+    )
 }
 
 pub(crate) fn role_color_with_opacity(
@@ -134,9 +142,11 @@ pub(crate) fn hover_state_layer(theme: &Theme, prefix: &str, error: bool) -> (Co
 }
 
 pub(crate) fn outline(theme: &Theme, prefix: &str, state: FieldState) -> (Px, Color, f32) {
-    let width = theme
-        .metric_by_key(&field_key(prefix, outline_width_suffix(state)))
-        .unwrap_or_else(|| outline_width_default(state));
+    let width = field_metric(
+        theme,
+        field_key(prefix, outline_width_suffix(state)),
+        outline_width_default(state),
+    );
     let (color_key, opacity_key) = state_role_color_keys(prefix, "outline", state);
     let (color, opacity) = MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
         &color_key,
@@ -153,9 +163,11 @@ pub(crate) fn active_indicator(
     state: FieldState,
     sys_fallback: &str,
 ) -> (Px, Color, f32) {
-    let height = theme
-        .metric_by_key(&field_key(prefix, active_indicator_height_suffix(state)))
-        .unwrap_or_else(|| active_indicator_height_default(state));
+    let height = field_metric(
+        theme,
+        field_key(prefix, active_indicator_height_suffix(state)),
+        active_indicator_height_default(state),
+    );
     let (color_key, opacity_key) = state_role_color_keys(prefix, "active-indicator", state);
     let (color, opacity) = MaterialTokenResolver::new(theme).color_comp_or_sys_with_opacity(
         &color_key,
@@ -260,9 +272,11 @@ fn filled_container_shape(theme: &Theme, prefix: &str) -> Corners {
         return corners;
     }
 
-    let r = theme
-        .metric_by_key("md.sys.shape.corner.extra-small")
-        .unwrap_or(DEFAULT_CONTAINER_SHAPE);
+    let r = field_metric(
+        theme,
+        "md.sys.shape.corner.extra-small",
+        DEFAULT_CONTAINER_SHAPE,
+    );
     Corners {
         top_left: r,
         top_right: r,
@@ -478,6 +492,14 @@ mod tests {
             "md.comp.outlined-test-field.leading-icon.size".to_string(),
             20.0,
         );
+        patch.metrics.insert(
+            "md.comp.outlined-test-field.focus.outline.width".to_string(),
+            3.0,
+        );
+        patch.metrics.insert(
+            "md.comp.filled-test-field.focus.active-indicator.height".to_string(),
+            4.0,
+        );
         let (_app, theme) = theme_with_patch(patch);
 
         assert_eq!(
@@ -491,6 +513,25 @@ mod tests {
                 FieldIconRole::Leading
             ),
             Px(20.0)
+        );
+        assert_eq!(
+            outline(
+                &theme,
+                "md.comp.outlined-test-field",
+                FieldState::new(false, false, false, true),
+            )
+            .0,
+            Px(3.0)
+        );
+        assert_eq!(
+            active_indicator(
+                &theme,
+                "md.comp.filled-test-field",
+                FieldState::new(false, false, false, true),
+                "md.sys.color.primary",
+            )
+            .0,
+            Px(4.0)
         );
     }
 
