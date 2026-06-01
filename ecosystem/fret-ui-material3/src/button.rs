@@ -836,21 +836,7 @@ fn button_outline(
         return None;
     }
     let width = size_tokens.outlined_outline_width;
-
-    let mut color = if enabled {
-        theme
-            .color_by_key("md.comp.button.outlined.outline.color")
-            .or_else(|| theme.color_by_key("md.sys.color.outline-variant"))
-            .or_else(|| theme.color_by_key("md.sys.color.outline"))
-    } else {
-        theme
-            .color_by_key("md.comp.button.outlined.disabled.outline.color")
-            .or_else(|| theme.color_by_key("md.sys.color.outline-variant"))
-            .or_else(|| theme.color_by_key("md.sys.color.outline"))
-    }
-    .unwrap_or_else(|| theme.color_token("md.sys.color.outline"));
-
-    color.a = 1.0;
+    let color = button_tokens::outlined_outline_color(theme, enabled);
     Some(ButtonOutline { width, color })
 }
 
@@ -960,6 +946,27 @@ mod tests {
                 Some(button_tokens::ButtonInteraction::Pressed),
             ),
             Px(0.0)
+        );
+    }
+
+    #[test]
+    fn outlined_button_outline_uses_typed_token_accessor() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+        let size_tokens = button_size_tokens(theme, ButtonSize::Small);
+
+        let enabled = button_outline(theme, ButtonVariant::Outlined, true, size_tokens)
+            .expect("outlined buttons produce an outline");
+        let disabled = button_outline(theme, ButtonVariant::Outlined, false, size_tokens)
+            .expect("outlined buttons produce a disabled outline");
+
+        assert_eq!(
+            enabled.color,
+            button_tokens::outlined_outline_color(theme, true)
+        );
+        assert_eq!(
+            disabled.color,
+            button_tokens::outlined_outline_color(theme, false)
         );
     }
 

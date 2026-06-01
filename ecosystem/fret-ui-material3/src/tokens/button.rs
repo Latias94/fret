@@ -151,6 +151,23 @@ pub(crate) fn pressed_state_layer_opacity(theme: &Theme, variant: ButtonVariant)
     state_layer_opacity(theme, variant, ButtonInteraction::Pressed)
 }
 
+pub(crate) fn outlined_outline_color(theme: &Theme, enabled: bool) -> Color {
+    let tokens = MaterialTokenResolver::new(theme);
+    let color = if enabled {
+        tokens.color_comp_or_sys_chain(
+            "md.comp.button.outlined.outline.color",
+            &["md.sys.color.outline-variant", "md.sys.color.outline"],
+        )
+    } else {
+        tokens.color_comp_or_sys_chain(
+            "md.comp.button.outlined.disabled.outline.color",
+            &["md.sys.color.outline-variant", "md.sys.color.outline"],
+        )
+    };
+
+    Color { a: 1.0, ..color }
+}
+
 fn disabled_label_opacity(theme: &Theme, variant: ButtonVariant) -> f32 {
     MaterialTokenResolver::new(theme)
         .number_optional(Some(disabled_label_opacity_key(variant)), 0.38)

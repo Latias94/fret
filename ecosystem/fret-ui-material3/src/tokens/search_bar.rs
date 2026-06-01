@@ -6,7 +6,7 @@ use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
 use fret_ui_kit::typography::TextIntent;
 
-use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::foundation::token_resolver::{MaterialTokenResolver, alpha_mul};
 use crate::tokens::typography;
 
 pub(crate) fn container_height(theme: &Theme) -> Px {
@@ -118,4 +118,13 @@ pub(crate) fn pressed_state_layer_opacity(theme: &Theme) -> f32 {
         "md.sys.state.pressed.state-layer-opacity",
         0.1,
     )
+}
+
+pub(crate) fn selection_color(theme: &Theme) -> Color {
+    let primary = MaterialTokenResolver::new(theme).color_sys("md.sys.color.primary");
+    alpha_mul(primary, 0.35)
+}
+
+pub(crate) fn caret_color(theme: &Theme) -> Color {
+    MaterialTokenResolver::new(theme).color_sys("md.sys.color.primary")
 }

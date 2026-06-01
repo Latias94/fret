@@ -724,11 +724,6 @@ fn search_bar_text_input_chrome(
     style_override: &SearchBarStyle,
     states: WidgetStates,
 ) -> fret_ui::TextInputStyle {
-    fn alpha_mul(mut c: Color, mul: f32) -> Color {
-        c.a = (c.a * mul).clamp(0.0, 1.0);
-        c
-    }
-
     let mut style = fret_ui::TextInputStyle::default();
     style.padding = Edges::all(Px(0.0));
     style.border = Edges::all(Px(0.0));
@@ -769,13 +764,8 @@ fn search_bar_text_input_chrome(
             }
         });
 
-    style.selection_color = theme
-        .color_by_key("md.sys.color.primary")
-        .map(|c| alpha_mul(c, 0.35))
-        .unwrap_or(style.selection_color);
-    style.caret_color = theme
-        .color_by_key("md.sys.color.primary")
-        .unwrap_or(style.caret_color);
+    style.selection_color = search_bar_tokens::selection_color(theme);
+    style.caret_color = search_bar_tokens::caret_color(theme);
     style.preedit_color = style.caret_color;
     style.preedit_underline_color = style.preedit_color;
 
