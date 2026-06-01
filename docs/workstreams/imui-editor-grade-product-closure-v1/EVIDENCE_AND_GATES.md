@@ -2,6 +2,29 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## DevTools Demo/Metrics/Debug workflow artifact load handoff - 2026-06-02
+
+This refresh keeps perf workflow artifact handoff close to the Demo/Metrics/Debug workflow controls:
+
+- `apps/fret-devtools/src/demo_metrics_debug.rs` now reuses the existing
+  `Load workflow regression summary` and `Load workflow regression index` commands from the
+  always-visible Demo/Metrics/Debug panel.
+- The guide projection now emits `workflow artifact action` rows that show whether the selected
+  workflow result has regression summary/index artifacts ready to load.
+- The implementation still relies on the existing selected workflow result helpers and Regression
+  Workspace loaders in `apps/fret-devtools/src/native.rs`; no artifact parser or runner fork was
+  added to the Demo/Metrics/Debug owner.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `cargo check -p fret-devtools` - passed.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_workflow_lines_surface_runtime_readiness_and_status demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle devtools_workflow_commands_mark_suite_ws_missing_without_session devtools_workflow_commands_include_selected_session_for_suite_ws --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+
 ## DevTools Demo/Metrics/Debug workflow result handoff - 2026-06-02
 
 This refresh keeps workflow execution and result handoff in the same always-visible

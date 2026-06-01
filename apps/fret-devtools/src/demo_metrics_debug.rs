@@ -13,7 +13,10 @@ use super::{
 use super::{
     CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS, CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW,
     CMD_RUN_DEMO_METRICS_DEBUG_PERF_WORKFLOW, CMD_COPY_WORKFLOW_RESULT_PATH,
+    CMD_LOAD_WORKFLOW_REGRESSION_INDEX, CMD_LOAD_WORKFLOW_REGRESSION_SUMMARY,
     CMD_OPEN_WORKFLOW_RESULT_JSON, State, devtools_workflow_commands_from_state, diag_section,
+    selected_workflow_run_regression_index_path_from_state,
+    selected_workflow_run_regression_summary_path_from_state,
 };
 use fret_app::{App, CommandId};
 use fret_ui::element::AnyElement;
@@ -215,6 +218,30 @@ pub(crate) fn demo_metrics_debug_workflow_result_action_lines(
     ]
 }
 
+pub(crate) fn demo_metrics_debug_workflow_artifact_action_lines(
+    regression_summary_available: bool,
+    regression_index_available: bool,
+) -> Vec<String> {
+    let summary_reason = if regression_summary_available {
+        "workflow regression summary available"
+    } else {
+        "wait for workflow regression summary artifact"
+    };
+    let index_reason = if regression_index_available {
+        "workflow regression index available"
+    } else {
+        "wait for workflow regression index artifact"
+    };
+    vec![
+        format!(
+            "workflow artifact action: load regression summary | command={CMD_LOAD_WORKFLOW_REGRESSION_SUMMARY} | enabled={regression_summary_available} | reason={summary_reason}"
+        ),
+        format!(
+            "workflow artifact action: load regression index | command={CMD_LOAD_WORKFLOW_REGRESSION_INDEX} | enabled={regression_index_available} | reason={index_reason}"
+        ),
+    ]
+}
+
 #[cfg(test)]
 pub(crate) fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
     devtools_demo_metrics_debug_lines_with_state(artifacts_root, 0)
@@ -231,6 +258,8 @@ pub(crate) fn devtools_demo_metrics_debug_lines_with_state(
         false,
         false,
         false,
+        false,
+        false,
         None,
         None,
     )
@@ -242,6 +271,8 @@ fn devtools_demo_metrics_debug_lines_with_runtime_state(
     workflow_run_in_flight: bool,
     perf_workflow_runnable: bool,
     workflow_result_available: bool,
+    regression_summary_available: bool,
+    regression_index_available: bool,
     last_result_path: Option<&str>,
     last_error: Option<&str>,
 ) -> Vec<String> {
@@ -292,6 +323,10 @@ fn devtools_demo_metrics_debug_lines_with_runtime_state(
     lines.extend(demo_metrics_debug_workflow_result_action_lines(
         workflow_result_available,
     ));
+    lines.extend(demo_metrics_debug_workflow_artifact_action_lines(
+        regression_summary_available,
+        regression_index_available,
+    ));
     lines.extend([
         format!("demo editor workbench: {DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND}"),
         format!("demo editor proof supporting: {DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND}"),
@@ -340,6 +375,10 @@ pub(crate) fn devtools_demo_metrics_debug_panel(
     let workflow_result_available = workflow_run_last_result_path
         .as_deref()
         .is_some_and(|value| !value.trim().is_empty());
+    let regression_summary_available =
+        selected_workflow_run_regression_summary_path_from_state(cx.app, st).is_some();
+    let regression_index_available =
+        selected_workflow_run_regression_index_path_from_state(cx.app, st).is_some();
     let perf_workflow_runnable = devtools_workflow_commands_from_state(cx.app, st)
         .into_iter()
         .find(|command| command.id == DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID)
@@ -350,6 +389,8 @@ pub(crate) fn devtools_demo_metrics_debug_panel(
         workflow_run_in_flight,
         perf_workflow_runnable,
         workflow_result_available,
+        regression_summary_available,
+        regression_index_available,
         workflow_run_last_result_path.as_deref(),
         workflow_run_last_error.as_deref(),
     ) {
@@ -360,6 +401,8 @@ pub(crate) fn devtools_demo_metrics_debug_panel(
         workflow_run_in_flight,
         perf_workflow_runnable,
         workflow_result_available,
+        regression_summary_available,
+        regression_index_available,
     ));
     diag_section(
         cx,
@@ -374,6 +417,8 @@ fn devtools_demo_metrics_debug_action_row(
     workflow_run_in_flight: bool,
     perf_workflow_runnable: bool,
     workflow_result_available: bool,
+    regression_summary_available: bool,
+    regression_index_available: bool,
 ) -> AnyElement {
     let mut actions = vec![
         shadcn::Button::new("Copy Demo/Metrics/Debug actions")
@@ -404,6 +449,18 @@ fn devtools_demo_metrics_debug_action_row(
             .size(shadcn::ButtonSize::Sm)
             .disabled(!workflow_result_available)
             .on_click(CMD_OPEN_WORKFLOW_RESULT_JSON)
+            .into_element(cx),
+        shadcn::Button::new("Load workflow regression summary")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Sm)
+            .disabled(!regression_summary_available)
+            .on_click(CMD_LOAD_WORKFLOW_REGRESSION_SUMMARY)
+            .into_element(cx),
+        shadcn::Button::new("Load workflow regression index")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Sm)
+            .disabled(!regression_index_available)
+            .on_click(CMD_LOAD_WORKFLOW_REGRESSION_INDEX)
             .into_element(cx),
     ];
     actions.extend(DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS.iter().map(|action| {
