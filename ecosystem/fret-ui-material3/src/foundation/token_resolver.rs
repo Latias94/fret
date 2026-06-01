@@ -362,6 +362,9 @@ fn fallback_color_for_sys(sys_key: &str) -> Color {
         "md.sys.color.surface-container-low" => Color::from_srgb_hex_rgb(0x21_21_24),
         "md.sys.color.surface-container-high" => Color::from_srgb_hex_rgb(0x2e_2e_31),
         "md.sys.color.surface-container-highest" => Color::from_srgb_hex_rgb(0x33_33_36),
+        "md.sys.color.surface-tint" | "md.sys.color.surface-tint-color" => {
+            Color::from_srgb_hex_rgb(0x67_50_a4)
+        }
         "md.sys.color.on-surface" => Color::from_srgb_hex_rgb(0xff_ff_ff),
         "md.sys.color.on-surface-variant" => Color::from_srgb_hex_rgb(0xbf_bf_c7),
         "md.sys.color.inverse-surface" => Color::from_srgb_hex_rgb(0xe6_e1_e5),

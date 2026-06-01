@@ -37,14 +37,12 @@ pub fn apply_surface_tint(background: Color, surface_tint: Color, elevation: Px)
 /// This matches Compose Material 3 `Surface`: tonal elevation is only applied when the surface's
 /// base color equals `ColorScheme.surface`.
 pub fn apply_surface_tint_if_surface(theme: &Theme, background: Color, elevation: Px) -> Color {
-    let Some(surface) = theme.color_by_key("md.sys.color.surface") else {
-        return background;
-    };
+    let tokens = MaterialTokenResolver::new(theme);
+    let surface = tokens.color_sys("md.sys.color.surface");
     if !colors_close(background, surface) {
         return background;
     }
 
-    let tokens = MaterialTokenResolver::new(theme);
     let surface_tint = tokens.color_sys("md.sys.color.surface-tint");
     apply_surface_tint(background, surface_tint, elevation)
 }
@@ -350,4 +348,40 @@ fn colors_close(a: Color, b: Color) -> bool {
         && (a.g - b.g).abs() <= eps
         && (a.b - b.b).abs() <= eps
         && (a.a - b.a).abs() <= eps
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn surface_tint_only_applies_to_surface_color() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .colors
+            .insert("md.sys.color.surface".to_string(), "#101010".to_string());
+        patch.colors.insert(
+            "md.sys.color.surface-tint".to_string(),
+            "#ff0000".to_string(),
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        let surface = Color::from_srgb_hex_rgb(0x10_10_10);
+        let non_surface = Color::from_srgb_hex_rgb(0x20_20_20);
+        let tinted = apply_surface_tint_if_surface(&theme, surface, Px(1.0));
+        let untouched = apply_surface_tint_if_surface(&theme, non_surface, Px(1.0));
+
+        assert_ne!(tinted, surface);
+        assert_eq!(untouched, non_surface);
+    }
 }
