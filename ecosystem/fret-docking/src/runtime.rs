@@ -8,12 +8,13 @@
 //! - complete the float by updating the graph once the OS window exists
 
 use fret_core::{AppWindowId, DockOp};
-use fret_runtime::{CreateWindowRequest, Effect, PlatformCapabilities, UiHost, WindowRequest};
+use fret_runtime::{CreateWindowRequest, PlatformCapabilities, UiHost};
 
 use crate::DockManager;
 use crate::dock::{DockPanelDragPayload, DockTabsDragPayload};
 use crate::invalidation::DockInvalidationService;
 
+mod auto_close;
 mod before_close;
 mod in_window;
 mod tear_off;
@@ -23,8 +24,7 @@ use in_window::default_in_window_float_rect;
 pub use in_window::recenter_in_window_floatings;
 pub(crate) use tear_off::is_dock_floating_os_window;
 use tear_off::{
-    DockFloatingOsWindowRegistry, DockTearOffKind, DockTearOffMachine, dock_tear_off_supported,
-    push_dock_floating_window_create,
+    DockTearOffKind, DockTearOffMachine, dock_tear_off_supported, push_dock_floating_window_create,
 };
 
 fn invalidate_windows<H: UiHost>(app: &mut H, windows: impl IntoIterator<Item = AppWindowId>) {
@@ -200,26 +200,8 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                     }
                 }
 
-                if let Some(reg) = app.global::<DockFloatingOsWindowRegistry>() {
-                    // Close-on-empty is a stable UX expectation in editor-grade docking (ImGui-style).
-                    // Scan all known dock-owned floating OS windows rather than trying to keep an
-                    // exhaustive list of which DockOps might have emptied a particular window.
-                    if tearoff_log {
-                        for window in reg.windows() {
-                            let panel_count = dock.graph.collect_panels_in_window(window).len();
-                            tracing::info!(
-                                window = ?window,
-                                panel_count,
-                                "dock tear-off: scan dock-floating window panels"
-                            );
-                        }
-                    }
-                    for window in reg.windows() {
-                        if dock.graph.collect_panels_in_window(window).is_empty() {
-                            windows_to_auto_close.push(window);
-                        }
-                    }
-                }
+                windows_to_auto_close =
+                    auto_close::collect_empty_dock_floating_windows(app, dock, tearoff_log);
 
                 match &op {
                     DockOp::MovePanel {
@@ -316,21 +298,7 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 true
             });
 
-            if handled && !windows_to_auto_close.is_empty() {
-                for window in windows_to_auto_close {
-                    if std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some_and(|v| !v.is_empty()) {
-                        tracing::info!(
-                            window = ?window,
-                            op = ?op,
-                            "dock tear-off: auto-close empty DockFloating window"
-                        );
-                    }
-                    app.with_global_mut(DockFloatingOsWindowRegistry::default, |reg, _app| {
-                        reg.remove(window);
-                    });
-                    app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                }
-            }
+            auto_close::close_empty_dock_floating_windows(app, &op, windows_to_auto_close);
 
             handled
         }
@@ -367,7 +335,7 @@ mod tests {
     use super::*;
     use crate::test_host::TestHost;
     use fret_core::{DockNode, DropZone, PanelKey};
-    use fret_runtime::CreateWindowKind;
+    use fret_runtime::{CreateWindowKind, Effect, WindowRequest};
     use slotmap::KeyData;
 
     #[test]

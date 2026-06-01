@@ -432,6 +432,13 @@ Each TODO is labeled:
         layout cleanup, and target invalidation.
       - Focused before-close regression, source gate, JSON shape, catalog, and diff checks passed
         locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking runtime auto-close owner split keeps empty DockFloating close effects out of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M29_DOCKING_RUNTIME_AUTO_CLOSE_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/runtime/auto_close.rs` owns DockFloating registry scanning,
+        empty-window detection, close logging, registry removal, and `WindowRequest::Close`
+        emission for dock-owned floating OS windows.
+      - Focused empty-window auto-close regression, source gate, JSON shape, catalog, and diff
+        checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
