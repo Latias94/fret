@@ -326,6 +326,16 @@ Last updated: 2026-06-01
       preview/stops/add-stop orchestration, and empty-state text role helper while delegating angle
       row construction to `composites/gradient_editor/angle.rs`. The source gate prevents angle row
       PropertyRow/DragValue policy from drifting back into the root composite owner.
+- [x] Split editor `GradientEditor` Stops group/add-stop/empty-state assembly into a private child
+      owner without changing stop-row sorting, stops group test-id propagation, add-stop max-stop
+      gating, add-stop action routing, PropertyGrid row-option forwarding, stop-row mounting,
+      empty-state text role behavior, preview behavior, angle row behavior, or public gradient
+      editor options.
+      Result: `composites/gradient_editor.rs` keeps keyed element composition, model reads,
+      preview assembly, angle row routing, and root layout while delegating Stops group construction
+      to `composites/gradient_editor/stops_group.rs`. The source gate prevents Stops group,
+      add-stop button, row mounting, and empty-state text policy from drifting back into the root
+      composite owner.
 - [x] Split editor `InspectorPanel` options/default and search-assist option records into a
       private child owner without changing public `InspectorPanelOptions` or
       `InspectorPanelSearchAssistOptions` import paths, layout defaults, enabled/title/test-id

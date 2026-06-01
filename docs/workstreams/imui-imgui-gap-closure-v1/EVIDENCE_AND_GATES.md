@@ -1330,6 +1330,42 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Editor GradientEditor Stops Group Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `GradientEditor` Stops group/add-stop/empty-state assembly moved out of the
+root composite owner into a private `composites/gradient_editor/stops_group.rs` owner without
+changing stop-row sorting, stops group test-id propagation, add-stop max-stop gating, add-stop
+action routing, PropertyGrid row-option forwarding, stop-row mounting, empty-state text role
+behavior, preview behavior, angle row behavior, or public gradient editor options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` keeps keyed element composition,
+  model reads, preview assembly, angle row routing, and root layout while delegating Stops group
+  construction.
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor/stops_group.rs` owns Stops PropertyGroup
+  assembly, add-stop button/action routing, max-stop gating, PropertyGrid row mounting, stop-row
+  forwarding, group test-id propagation, and empty-state text role helper.
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor/tests.rs` imports the empty-state text
+  helper from the Stops group owner.
+- `tools/gate_imui_workstream_source.py` now tracks the GradientEditor Stops group split and
+  rejects Stops group/add-stop/row-mounting/empty-state policy from drifting back into the root
+  composite owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the Stops group owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor gradient_editor --no-fail-fast`: pass (1 passed, 227
+  skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor GradientEditor Angle Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `GradientEditor` angle row assembly moved out of the root composite owner

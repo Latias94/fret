@@ -387,6 +387,15 @@ role, DragValue degrees presentation, preview behavior, stop-row ordering, add-s
 public gradient editor options remain unchanged, and `tools/gate_imui_workstream_source.py`
 freezes the split.
 
+2026-06-01 editor GradientEditor Stops group owner-split result:
+`ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps keyed element composition,
+model reads, preview assembly, angle row routing, and root layout while delegating Stops group
+construction to the private `composites/gradient_editor/stops_group.rs` owner. Stop-row sorting,
+stops group test-id propagation, add-stop max-stop gating, add-stop action routing, PropertyGrid
+row-option forwarding, stop-row mounting, empty-state text role behavior, preview behavior, angle
+row behavior, and public gradient editor options remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor InspectorPanel search owner-split result:
 `ecosystem/fret-ui-editor/src/composites/inspector_panel/element.rs` now keeps panel
 metrics/header/content/root assembly and delegates search field construction to the private

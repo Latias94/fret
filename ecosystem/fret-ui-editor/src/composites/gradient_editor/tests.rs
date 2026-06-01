@@ -1,4 +1,4 @@
-use super::gradient_editor_empty_state_text;
+use super::stops_group::gradient_editor_empty_state_text;
 use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, Size, TextOverflow, TextWrap};
 use fret_ui::element::{ElementKind, Length};

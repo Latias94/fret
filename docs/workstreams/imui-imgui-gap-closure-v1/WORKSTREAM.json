@@ -1165,6 +1165,7 @@
     "ecosystem/fret-ui-editor/src/composites/gradient_editor/options.rs",
     "ecosystem/fret-ui-editor/src/composites/gradient_editor/preview.rs",
     "ecosystem/fret-ui-editor/src/composites/gradient_editor/stops.rs",
+    "ecosystem/fret-ui-editor/src/composites/gradient_editor/stops_group.rs",
     "ecosystem/fret-ui-editor/src/composites/gradient_editor/tests.rs",
     "ecosystem/fret-ui-editor/src/composites/property_group.rs",
     "ecosystem/fret-ui-editor/src/composites/property_group/element.rs",
