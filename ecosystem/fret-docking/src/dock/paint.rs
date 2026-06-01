@@ -5,19 +5,21 @@
 use super::hit_test::{tab_close_rect, tab_scroll_for_node};
 use super::layout::split_tab_bar;
 use super::prelude_core::*;
-use super::tab_bar_geometry::{TabBarGeometry, dock_tab_width_for_title};
+use super::tab_bar_geometry::TabBarGeometry;
 use super::tab_overflow::{
     TabOverflowMenuState, overflow_menu_close_rect, overflow_menu_max_scroll,
     overflow_menu_row_count, overflow_menu_row_height, overflow_menu_row_rect,
     tab_overflow_button_rect, tab_overflow_menu_rect, tab_strip_rect_with_overflow_button,
 };
 
+mod drag_ghost;
 mod drop_hints;
 mod drop_overlay;
 mod floating_chrome;
 mod split_handle;
 mod viewport_surface;
 
+pub(super) use drag_ghost::{DockDragGhostPaint, paint_drag_payload_ghost};
 pub(super) use drop_hints::paint_drop_hints;
 pub(super) use drop_overlay::{
     ComplexDropOverlayPaintInput, complex_drop_overlay_paint_inputs,
@@ -56,12 +58,6 @@ fn tab_title_clip_rect(
             tab_rect.size.height,
         ),
     }
-}
-
-pub(super) struct DockDragGhostPaint {
-    pub(super) position: Point,
-    pub(super) grab_offset: Point,
-    pub(super) title: PreparedTabTitle,
 }
 
 #[derive(Debug, Clone)]
@@ -629,59 +625,6 @@ pub(super) fn paint_tab_detail_inputs(
             scene,
         );
     }
-}
-
-pub(super) fn paint_drag_payload_ghost(
-    theme: fret_ui::ThemeSnapshot,
-    ghost: Option<&DockDragGhostPaint>,
-    close_glyph_present: bool,
-    scene: &mut Scene,
-) {
-    let Some(ghost) = ghost else {
-        return;
-    };
-
-    let width = dock_tab_width_for_title(
-        theme.clone(),
-        ghost.title.metrics.size.width,
-        close_glyph_present,
-    );
-    let rect = Rect::new(
-        Point::new(
-            Px(ghost.position.x.0 - ghost.grab_offset.x.0),
-            Px(ghost.position.y.0 - ghost.grab_offset.y.0),
-        ),
-        Size::new(width, DOCK_TAB_H),
-    );
-
-    let card = theme.color_token("card");
-    let border = theme.color_token("border");
-    let fg = theme.color_token("foreground");
-    let radius_sm = theme.metric_token("metric.radius.sm");
-    let clip = tab_title_clip_rect(theme.clone(), rect, close_glyph_present);
-
-    scene.push(SceneOp::Quad {
-        order: fret_core::DrawOrder(10_020),
-        rect,
-        background: fret_core::Paint::Solid(Color { a: 0.94, ..card }).into(),
-        border: Edges::all(Px(1.0)),
-        border_paint: fret_core::Paint::Solid(Color { a: 0.88, ..border }).into(),
-        corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
-    });
-
-    let inner_y =
-        rect.origin.y.0 + ((rect.size.height.0 - ghost.title.metrics.size.height.0) * 0.5);
-    let text_y = Px(inner_y + ghost.title.metrics.baseline.0);
-    scene.push(SceneOp::PushClipRect { rect: clip });
-    scene.push(SceneOp::Text {
-        order: fret_core::DrawOrder(10_021),
-        origin: Point::new(clip.origin.x, text_y),
-        text: ghost.title.blob,
-        paint: (Color { a: 0.96, ..fg }).into(),
-        outline: None,
-        shadow: None,
-    });
-    scene.push(SceneOp::PopClip);
 }
 
 pub(super) fn paint_basic_drop_overlay(
