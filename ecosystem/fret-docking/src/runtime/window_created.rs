@@ -3,7 +3,7 @@ use fret_runtime::{CreateWindowKind, CreateWindowRequest, Effect, UiHost, Window
 
 use crate::DockManager;
 
-use super::invalidate_windows;
+use super::layout_invalidation::invalidate_windows;
 use super::tear_off::{
     DockFloatingOsWindowRegistry, DockTearOffCompletion, DockTearOffKind, DockTearOffMachine,
 };

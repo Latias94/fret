@@ -446,6 +446,15 @@ Each TODO is labeled:
         pending request registration, and DockFloating create-request trigger policy.
       - Focused request/create/fallback/idempotence regressions, source gate, JSON shape, catalog,
         and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking runtime layout invalidation owner split keeps DockOp post-mutation
+      viewport cleanup out of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M31_DOCKING_RUNTIME_LAYOUT_INVALIDATION_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/runtime/layout_invalidation.rs` owns per-op viewport layout
+        cleanup, `DockInvalidationService::bump_windows(...)`, and whole-graph invalidation for
+        tab/split fraction changes.
+      - Focused request/fallback/window-created/before-close/auto-close regressions, source gate,
+        JSON shape, catalog, and diff checks passed locally without recording Wayland compositor
+        acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

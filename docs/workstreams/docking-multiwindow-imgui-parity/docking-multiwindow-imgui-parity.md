@@ -69,6 +69,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M30_DOCKING_RUNTIME_REQUEST_OWNER_SPLIT_2026-06-02.md`
   (moves DockFloating request-to-new-window capability fallback, pending correlation, and create
   request trigger policy into a private runtime child owner without changing public hook behavior)
+- Latest docking runtime layout invalidation owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M31_DOCKING_RUNTIME_LAYOUT_INVALIDATION_OWNER_SPLIT_2026-06-02.md`
+  (moves DockOp post-mutation viewport cleanup and invalidation into a private runtime child owner
+  without changing graph mutation or the Wayland acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
@@ -311,6 +315,8 @@ Current policy (Wayland):
   `docs/workstreams/docking-multiwindow-imgui-parity/M29_DOCKING_RUNTIME_AUTO_CLOSE_OWNER_SPLIT_2026-06-02.md`.
 - Latest docking runtime request owner split:
   `docs/workstreams/docking-multiwindow-imgui-parity/M30_DOCKING_RUNTIME_REQUEST_OWNER_SPLIT_2026-06-02.md`.
+- Latest docking runtime layout invalidation owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M31_DOCKING_RUNTIME_LAYOUT_INVALIDATION_OWNER_SPLIT_2026-06-02.md`.
 
 ## Capabilities (contract) — windowing quality signals (v1)
 

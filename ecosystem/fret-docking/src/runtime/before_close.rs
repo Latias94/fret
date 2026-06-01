@@ -3,7 +3,7 @@ use fret_runtime::UiHost;
 
 use crate::DockManager;
 
-use super::invalidate_windows;
+use super::layout_invalidation::invalidate_windows;
 use super::tear_off::DockFloatingOsWindowRegistry;
 
 pub(super) fn handle_dock_before_close_window<H: UiHost>(

@@ -11,11 +11,11 @@ use fret_core::{AppWindowId, DockOp};
 use fret_runtime::{CreateWindowRequest, UiHost};
 
 use crate::DockManager;
-use crate::invalidation::DockInvalidationService;
 
 mod auto_close;
 mod before_close;
 mod in_window;
+mod layout_invalidation;
 mod request;
 mod tear_off;
 mod window_created;
@@ -23,10 +23,6 @@ mod window_created;
 pub use in_window::recenter_in_window_floatings;
 use tear_off::DockTearOffMachine;
 pub(crate) use tear_off::is_dock_floating_os_window;
-
-fn invalidate_windows<H: UiHost>(app: &mut H, windows: impl IntoIterator<Item = AppWindowId>) {
-    DockInvalidationService::bump_windows(app, windows);
-}
 
 /// Request docking layout invalidation for the provided windows.
 ///
@@ -36,7 +32,7 @@ pub fn request_dock_invalidation<H: UiHost>(
     app: &mut H,
     windows: impl IntoIterator<Item = AppWindowId>,
 ) {
-    invalidate_windows(app, windows);
+    layout_invalidation::invalidate_windows(app, windows);
 }
 
 /// Handle a docking transaction emitted by the UI layer.
@@ -104,98 +100,7 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 windows_to_auto_close =
                     auto_close::collect_empty_dock_floating_windows(app, dock, tearoff_log);
 
-                match &op {
-                    DockOp::MovePanel {
-                        source_window,
-                        target_window,
-                        ..
-                    } => {
-                        dock.clear_viewport_layout_for_window(*source_window);
-                        dock.clear_viewport_layout_for_window(*target_window);
-                        invalidate_windows(app, [*source_window, *target_window]);
-                    }
-                    DockOp::MovePanelToEmptyDockSpace {
-                        source_window,
-                        target_window,
-                        ..
-                    } => {
-                        dock.clear_viewport_layout_for_window(*source_window);
-                        dock.clear_viewport_layout_for_window(*target_window);
-                        invalidate_windows(app, [*source_window, *target_window]);
-                    }
-                    DockOp::MoveTabs {
-                        source_window,
-                        target_window,
-                        ..
-                    } => {
-                        dock.clear_viewport_layout_for_window(*source_window);
-                        dock.clear_viewport_layout_for_window(*target_window);
-                        invalidate_windows(app, [*source_window, *target_window]);
-                    }
-                    DockOp::MoveTabsToEmptyDockSpace {
-                        source_window,
-                        target_window,
-                        ..
-                    } => {
-                        dock.clear_viewport_layout_for_window(*source_window);
-                        dock.clear_viewport_layout_for_window(*target_window);
-                        invalidate_windows(app, [*source_window, *target_window]);
-                    }
-                    DockOp::FloatPanelToWindow {
-                        source_window,
-                        new_window,
-                        ..
-                    } => {
-                        dock.clear_viewport_layout_for_window(*source_window);
-                        dock.clear_viewport_layout_for_window(*new_window);
-                        invalidate_windows(app, [*source_window, *new_window]);
-                    }
-                    DockOp::FloatPanelInWindow {
-                        source_window,
-                        target_window,
-                        ..
-                    } => {
-                        dock.clear_viewport_layout_for_window(*source_window);
-                        dock.clear_viewport_layout_for_window(*target_window);
-                        invalidate_windows(app, [*source_window, *target_window]);
-                    }
-                    DockOp::FloatTabsInWindow {
-                        source_window,
-                        target_window,
-                        ..
-                    } => {
-                        dock.clear_viewport_layout_for_window(*source_window);
-                        dock.clear_viewport_layout_for_window(*target_window);
-                        invalidate_windows(app, [*source_window, *target_window]);
-                    }
-                    DockOp::SetFloatingRect { window, .. }
-                    | DockOp::RaiseFloating { window, .. }
-                    | DockOp::MergeFloatingInto { window, .. } => {
-                        dock.clear_viewport_layout_for_window(*window);
-                        invalidate_windows(app, [*window]);
-                    }
-                    DockOp::MergeWindowInto {
-                        source_window,
-                        target_window,
-                        ..
-                    } => {
-                        dock.clear_viewport_layout_for_window(*source_window);
-                        dock.clear_viewport_layout_for_window(*target_window);
-                        invalidate_windows(app, [*source_window, *target_window]);
-                    }
-                    DockOp::ClosePanel { window, .. } => {
-                        dock.clear_viewport_layout_for_window(*window);
-                        invalidate_windows(app, [*window]);
-                    }
-                    DockOp::SetActiveTab { .. }
-                    | DockOp::SetSplitFractions { .. }
-                    | DockOp::SetSplitFractionsMany { .. }
-                    | DockOp::SetSplitFractionTwo { .. } => {
-                        invalidate_windows(app, dock.graph.windows());
-                    }
-                    DockOp::RequestFloatPanelToNewWindow { .. }
-                    | DockOp::RequestFloatTabsToNewWindow { .. } => unreachable!(),
-                }
+                layout_invalidation::invalidate_after_dock_op(app, dock, &op);
                 true
             });
 
