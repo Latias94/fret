@@ -8,7 +8,8 @@ use std::path::Path;
 use serde::Deserialize;
 
 const ROOT_SOURCE_EXCLUDES: &[&str] = &["lib.rs"];
-const FOUNDATION_SOURCE_EXCLUDES: &[&str] = &["motion_roles.rs", "style_overrides.rs"];
+const FOUNDATION_SOURCE_EXCLUDES: &[&str] =
+    &["field_overlay.rs", "motion_roles.rs", "style_overrides.rs"];
 const TOKEN_SOURCE_EXCLUDES: &[&str] = &[
     "coverage.rs",
     "material_web_v30.rs",

@@ -12,7 +12,7 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, KeyCode, LayoutDirection, Point, Px, SemanticsRole, Size, SvgFit,
+    Axis, Color, Corners, Edges, KeyCode, LayoutDirection, Point, Px, SemanticsRole, SvgFit,
     TextOverflow, TextWrap,
 };
 use fret_icons::{IconId, ids};
@@ -23,10 +23,8 @@ use fret_ui::element::{
     SemanticsProps, SvgIconProps, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
-use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::{ElementContextThemeExt as _, controllable_state};
-use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{ColorRef, OverlayController, OverlayPresence};
@@ -44,6 +42,11 @@ use crate::foundation::field::{
 };
 use crate::foundation::field_motion::{
     FieldMotionTargets, field_input_phase, field_motion_frame, field_motion_springs_in_scope,
+};
+use crate::foundation::field_overlay::{
+    MATERIAL_FIELD_OVERLAY_WIDTH_FLOOR, MaterialFieldOverlayAlign, MaterialFieldOverlayWidth,
+    material_field_overlay_layout, material_field_overlay_listbox_size,
+    material_field_overlay_placement, material_field_overlay_scale_transform,
 };
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
@@ -126,6 +129,13 @@ pub enum SelectMenuAlign {
     #[default]
     Start,
     End,
+}
+
+fn select_menu_align_to_field_overlay_align(align: SelectMenuAlign) -> MaterialFieldOverlayAlign {
+    match align {
+        SelectMenuAlign::Start => MaterialFieldOverlayAlign::Start,
+        SelectMenuAlign::End => MaterialFieldOverlayAlign::End,
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -331,7 +341,7 @@ impl Select {
             variant: SelectVariant::default(),
             menu_align: SelectMenuAlign::default(),
             match_anchor_width: true,
-            menu_width_floor: Px(210.0),
+            menu_width_floor: MATERIAL_FIELD_OVERLAY_WIDTH_FLOOR,
             typeahead_delay_ms: 200,
             disabled: false,
             leading_icon: None,
@@ -607,35 +617,26 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
                 let theme = Theme::global(&*cx.app);
                 select_tokens::menu_list_item_height(theme, variant)
             };
-            let menu_vertical_padding = Px(8.0);
             let select_width = anchor.size.width;
-            let desired_width = if match_anchor_width {
-                select_width
+            let width = if match_anchor_width {
+                MaterialFieldOverlayWidth::MatchAnchor
             } else {
                 let estimate = estimate_select_menu_content_width(&*cx, variant, &items);
-                resolve_select_menu_width(select_width, estimate, menu_width_floor)
+                MaterialFieldOverlayWidth::Content {
+                    estimated_content_width: estimate,
+                    floor: menu_width_floor,
+                }
             };
-            let desired_height =
-                Px((item_height.0 * (items.len().max(1) as f32)) + menu_vertical_padding.0 * 2.0);
-            let desired = Size::new(desired_width, desired_height);
 
-            let placement = popper::PopperContentPlacement::new(
+            let desired =
+                material_field_overlay_listbox_size(select_width, item_height, items.len(), width);
+
+            let placement = material_field_overlay_placement(
                 layout_direction,
-                Side::Bottom,
-                match menu_align {
-                    SelectMenuAlign::Start => Align::Start,
-                    SelectMenuAlign::End => Align::End,
-                },
-                Px(4.0),
-            )
-            .with_collision_padding(Edges {
-                left: Px(8.0),
-                right: Px(8.0),
-                top: Px(48.0),
-                bottom: Px(48.0),
-            });
+                select_menu_align_to_field_overlay_align(menu_align),
+            );
 
-            let layout = popper::popper_content_layout_sized(outer, anchor, desired, placement);
+            let layout = material_field_overlay_layout(outer, anchor, desired, placement);
 
             let initial_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
             let initial_focus_id_for_list = initial_focus_id.clone();
@@ -673,12 +674,7 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
             );
 
             let opacity = motion.alpha;
-            let scale = motion.scale;
-            let origin = popper::popper_content_transform_origin(&layout, anchor, None);
-            let origin_inv = fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0));
-            let transform = fret_core::Transform2D::translation(origin)
-                * fret_core::Transform2D::scale_uniform(scale)
-                * fret_core::Transform2D::translation(origin_inv);
+            let transform = material_field_overlay_scale_transform(&layout, anchor, motion.scale);
             let overlay_root =
                 fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
                     cx,
@@ -1538,14 +1534,6 @@ fn select_item_typeahead_text(item: &SelectItem) -> Arc<str> {
         .unwrap_or_else(|| item.label.clone())
 }
 
-fn resolve_select_menu_width(select_width: Px, estimate: Px, floor: Px) -> Px {
-    // Match Material Web behavior:
-    // - Menu min-width tracks the select width.
-    // - If unclamped, allow the menu to grow to fit content.
-    // We additionally apply a small floor for ergonomics (configurable by the caller).
-    Px(select_width.0.max(estimate.0).max(floor.0))
-}
-
 fn estimate_select_menu_content_width<H: UiHost>(
     cx: &ElementContext<'_, H>,
     variant: SelectVariant,
@@ -1701,31 +1689,6 @@ mod item_text_tests {
             )
             .as_ref(),
             "Typeahead"
-        );
-    }
-
-    #[test]
-    fn select_menu_width_floor_only_applies_when_unclamped() {
-        let floor = Px(210.0);
-        let select_width = Px(120.0);
-        let estimate = Px(160.0);
-        assert_eq!(
-            super::resolve_select_menu_width(select_width, estimate, floor).0,
-            210.0
-        );
-
-        let select_width = Px(320.0);
-        let estimate = Px(240.0);
-        assert_eq!(
-            super::resolve_select_menu_width(select_width, estimate, floor).0,
-            320.0
-        );
-
-        let select_width = Px(320.0);
-        let estimate = Px(480.0);
-        assert_eq!(
-            super::resolve_select_menu_width(select_width, estimate, floor).0,
-            480.0
         );
     }
 

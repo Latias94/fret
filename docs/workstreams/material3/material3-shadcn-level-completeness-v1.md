@@ -115,6 +115,11 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     shapes, dropdown chevrons, and modal panels.
   - Recipe/foundation callers use `material_motion_spring_in_scope` or field motion springs, so raw
     spring-key selection is localized to Material motion foundation Modules.
+- 2026-06-01 Field overlay geometry locality:
+  - `foundation::field_overlay` centralizes field-family listbox/popup sizing, Material collision
+    padding, anchor/content width policy, placement gap, and popper transform-origin scaling.
+  - `Select` and `Autocomplete` now keep recipe-specific listbox content while sharing the overlay
+    geometry Interface, giving future field-family work one place to adjust Material popup policy.
 - 2026-05-31 Tabs panel ownership:
   - `TabPanel`, `.panel/.panels`, active tabpanel semantics, `labelled_by` relation to the selected
     tab, derived tab `controls`, and gallery snippet content panels.
