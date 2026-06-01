@@ -28,17 +28,27 @@ pub(crate) enum MenuItemInteraction {
     Pressed,
 }
 
+fn menu_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
+fn menu_metric_chain(theme: &Theme, keys: &[&'static str], fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_chain(keys, fallback)
+}
+
 pub(crate) fn list_item_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.menu.list-item.container.height")
-        .unwrap_or(Px(48.0))
+    menu_metric(theme, "md.comp.menu.list-item.container.height", Px(48.0))
 }
 
 pub(crate) fn list_item_two_line_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.menu.list-item.two-line-container.height")
-        .or_else(|| theme.metric_by_key("md.comp.menu.list-item.supporting-text.container.height"))
-        .unwrap_or(ITEM_TWO_LINE_HEIGHT_FALLBACK)
+    menu_metric_chain(
+        theme,
+        &[
+            "md.comp.menu.list-item.two-line-container.height",
+            "md.comp.menu.list-item.supporting-text.container.height",
+        ],
+        ITEM_TWO_LINE_HEIGHT_FALLBACK,
+    )
 }
 
 pub(crate) fn list_item_height_for_supporting(theme: &Theme, has_supporting_text: bool) -> Px {
@@ -50,47 +60,65 @@ pub(crate) fn list_item_height_for_supporting(theme: &Theme, has_supporting_text
 }
 
 pub(crate) fn item_min_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.menu.list-item.container.min-width")
-        .unwrap_or(ITEM_MIN_WIDTH_FALLBACK)
+    menu_metric(
+        theme,
+        "md.comp.menu.list-item.container.min-width",
+        ITEM_MIN_WIDTH_FALLBACK,
+    )
 }
 
 pub(crate) fn item_max_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.menu.list-item.container.max-width")
-        .unwrap_or(ITEM_MAX_WIDTH_FALLBACK)
+    menu_metric(
+        theme,
+        "md.comp.menu.list-item.container.max-width",
+        ITEM_MAX_WIDTH_FALLBACK,
+    )
 }
 
 pub(crate) fn container_vertical_padding(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.menu.container.vertical-padding")
-        .unwrap_or(CONTAINER_VERTICAL_PADDING_FALLBACK)
+    menu_metric(
+        theme,
+        "md.comp.menu.container.vertical-padding",
+        CONTAINER_VERTICAL_PADDING_FALLBACK,
+    )
 }
 
 pub(crate) fn item_horizontal_padding(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.menu.list-item.content.horizontal-padding")
-        .unwrap_or(ITEM_HORIZONTAL_PADDING_FALLBACK)
+    menu_metric(
+        theme,
+        "md.comp.menu.list-item.content.horizontal-padding",
+        ITEM_HORIZONTAL_PADDING_FALLBACK,
+    )
 }
 
 pub(crate) fn item_slot_gap(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.menu.list-item.content.gap")
-        .or_else(|| theme.metric_by_key("md.comp.menu.list-item.leading-icon.trailing-space"))
-        .unwrap_or(ITEM_SLOT_GAP_FALLBACK)
+    menu_metric_chain(
+        theme,
+        &[
+            "md.comp.menu.list-item.content.gap",
+            "md.comp.menu.list-item.leading-icon.trailing-space",
+        ],
+        ITEM_SLOT_GAP_FALLBACK,
+    )
 }
 
 pub(crate) fn item_icon_size(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.menu.list-item.icon.size")
-        .or_else(|| theme.metric_by_key("md.comp.menu.list-item.leading-icon.size"))
-        .unwrap_or(ITEM_ICON_SIZE_FALLBACK)
+    menu_metric_chain(
+        theme,
+        &[
+            "md.comp.menu.list-item.icon.size",
+            "md.comp.menu.list-item.leading-icon.size",
+        ],
+        ITEM_ICON_SIZE_FALLBACK,
+    )
 }
 
 pub(crate) fn section_label_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.menu.section-label.container.height")
-        .unwrap_or(SECTION_LABEL_HEIGHT_FALLBACK)
+    menu_metric(
+        theme,
+        "md.comp.menu.section-label.container.height",
+        SECTION_LABEL_HEIGHT_FALLBACK,
+    )
 }
 
 pub(crate) fn item_label_text_style(theme: &Theme) -> TextStyle {
@@ -141,9 +169,7 @@ pub(crate) fn container_background(theme: &Theme) -> Color {
 }
 
 pub(crate) fn container_elevation(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.menu.container.elevation")
-        .unwrap_or(Px(0.0))
+    menu_metric(theme, "md.comp.menu.container.elevation", Px(0.0))
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
@@ -152,17 +178,18 @@ pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
-    theme
-        .metric_by_key("md.comp.menu.container.shape")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.extra-small"))
-        .map(Corners::all)
-        .unwrap_or_else(|| Corners::all(Px(4.0)))
+    Corners::all(menu_metric_chain(
+        theme,
+        &[
+            "md.comp.menu.container.shape",
+            "md.sys.shape.corner.extra-small",
+        ],
+        Px(4.0),
+    ))
 }
 
 pub(crate) fn divider_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.menu.divider.height")
-        .unwrap_or(Px(1.0))
+    menu_metric(theme, "md.comp.menu.divider.height", Px(1.0))
 }
 
 pub(crate) fn divider_color(theme: &Theme) -> Color {
@@ -282,4 +309,43 @@ fn item_content_color(
         color = alpha_mul(color, opacity);
     }
     color
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn menu_metric_chains_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert(
+            "md.comp.menu.list-item.supporting-text.container.height".to_string(),
+            72.0,
+        );
+        patch.metrics.insert(
+            "md.comp.menu.list-item.leading-icon.trailing-space".to_string(),
+            16.0,
+        );
+        patch
+            .metrics
+            .insert("md.comp.menu.list-item.leading-icon.size".to_string(), 28.0);
+        patch
+            .metrics
+            .insert("md.sys.shape.corner.extra-small".to_string(), 6.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(list_item_two_line_height(&theme), Px(72.0));
+        assert_eq!(item_slot_gap(&theme), Px(16.0));
+        assert_eq!(item_icon_size(&theme), Px(28.0));
+        assert_eq!(container_shape(&theme), Corners::all(Px(6.0)));
+    }
 }
