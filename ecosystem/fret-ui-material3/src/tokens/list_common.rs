@@ -34,22 +34,36 @@ pub(crate) enum ListItemInteraction {
     Pressed,
 }
 
+fn list_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
+fn list_metric_chain(theme: &Theme, keys: &[&'static str], fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_chain(keys, fallback)
+}
+
 pub(crate) fn one_line_container_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.one-line.container.height")
-        .unwrap_or(DEFAULT_ONE_LINE_CONTAINER_HEIGHT)
+    list_metric(
+        theme,
+        "md.comp.list.list-item.one-line.container.height",
+        DEFAULT_ONE_LINE_CONTAINER_HEIGHT,
+    )
 }
 
 pub(crate) fn two_line_container_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.two-line.container.height")
-        .unwrap_or(DEFAULT_TWO_LINE_CONTAINER_HEIGHT)
+    list_metric(
+        theme,
+        "md.comp.list.list-item.two-line.container.height",
+        DEFAULT_TWO_LINE_CONTAINER_HEIGHT,
+    )
 }
 
 pub(crate) fn three_line_container_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.three-line.container.height")
-        .unwrap_or(DEFAULT_THREE_LINE_CONTAINER_HEIGHT)
+    list_metric(
+        theme,
+        "md.comp.list.list-item.three-line.container.height",
+        DEFAULT_THREE_LINE_CONTAINER_HEIGHT,
+    )
 }
 
 pub(crate) fn item_container_shape_with_variant(
@@ -127,58 +141,80 @@ pub(crate) fn item_container_shape_for_interaction(
 }
 
 pub(crate) fn item_between_space(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.between-space")
-        .unwrap_or(DEFAULT_ITEM_BETWEEN_SPACE)
+    list_metric(
+        theme,
+        "md.comp.list.list-item.between-space",
+        DEFAULT_ITEM_BETWEEN_SPACE,
+    )
 }
 
 pub(crate) fn item_leading_space(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.leading-space")
-        .unwrap_or(DEFAULT_ITEM_EDGE_SPACE)
+    list_metric(
+        theme,
+        "md.comp.list.list-item.leading-space",
+        DEFAULT_ITEM_EDGE_SPACE,
+    )
 }
 
 pub(crate) fn item_trailing_space(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.trailing-space")
-        .unwrap_or(DEFAULT_ITEM_EDGE_SPACE)
+    list_metric(
+        theme,
+        "md.comp.list.list-item.trailing-space",
+        DEFAULT_ITEM_EDGE_SPACE,
+    )
 }
 
 pub(crate) fn item_top_space(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.top-space")
-        .unwrap_or(DEFAULT_ITEM_VERTICAL_SPACE)
+    list_metric(
+        theme,
+        "md.comp.list.list-item.top-space",
+        DEFAULT_ITEM_VERTICAL_SPACE,
+    )
 }
 
 pub(crate) fn item_bottom_space(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.bottom-space")
-        .unwrap_or(DEFAULT_ITEM_VERTICAL_SPACE)
+    list_metric(
+        theme,
+        "md.comp.list.list-item.bottom-space",
+        DEFAULT_ITEM_VERTICAL_SPACE,
+    )
 }
 
 pub(crate) fn leading_icon_size_with_variant(theme: &Theme, expressive: bool) -> Px {
     if expressive {
-        theme
-            .metric_by_key("md.comp.list.list-item.leading-icon.expressive.size")
-            .or_else(|| theme.metric_by_key("md.comp.list.list-item.leading-icon.size"))
-            .unwrap_or(DEFAULT_ICON_SIZE)
+        list_metric_chain(
+            theme,
+            &[
+                "md.comp.list.list-item.leading-icon.expressive.size",
+                "md.comp.list.list-item.leading-icon.size",
+            ],
+            DEFAULT_ICON_SIZE,
+        )
     } else {
-        theme
-            .metric_by_key("md.comp.list.list-item.leading-icon.size")
-            .unwrap_or(DEFAULT_ICON_SIZE)
+        list_metric(
+            theme,
+            "md.comp.list.list-item.leading-icon.size",
+            DEFAULT_ICON_SIZE,
+        )
     }
 }
 
 pub(crate) fn trailing_icon_size_with_variant(theme: &Theme, expressive: bool) -> Px {
     if expressive {
-        theme
-            .metric_by_key("md.comp.list.list-item.trailing-icon.expressive.size")
-            .or_else(|| theme.metric_by_key("md.comp.list.list-item.trailing-icon.size"))
-            .unwrap_or(DEFAULT_ICON_SIZE)
+        list_metric_chain(
+            theme,
+            &[
+                "md.comp.list.list-item.trailing-icon.expressive.size",
+                "md.comp.list.list-item.trailing-icon.size",
+            ],
+            DEFAULT_ICON_SIZE,
+        )
     } else {
-        theme
-            .metric_by_key("md.comp.list.list-item.trailing-icon.size")
-            .unwrap_or(DEFAULT_ICON_SIZE)
+        list_metric(
+            theme,
+            "md.comp.list.list-item.trailing-icon.size",
+            DEFAULT_ICON_SIZE,
+        )
     }
 }
 
@@ -461,9 +497,16 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_ui::Theme;
+    use fret_ui::{Theme, theme::ThemeConfig};
 
     use crate::tokens::v30::{TypographyOptions, theme_config};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
 
     #[test]
     fn list_size_and_spacing_defaults_match_material_matrix() {
@@ -484,6 +527,36 @@ mod tests {
         assert_eq!(item_bottom_space(theme), Px(10.0));
         assert_eq!(leading_icon_size_with_variant(theme, false), Px(24.0));
         assert_eq!(trailing_icon_size_with_variant(theme, false), Px(24.0));
+    }
+
+    #[test]
+    fn list_metric_chains_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert(
+            "md.comp.list.list-item.one-line.container.height".to_string(),
+            60.0,
+        );
+        patch
+            .metrics
+            .insert("md.comp.list.list-item.leading-space".to_string(), 20.0);
+        patch
+            .metrics
+            .insert("md.comp.list.list-item.leading-icon.size".to_string(), 28.0);
+        patch.metrics.insert(
+            "md.comp.list.list-item.trailing-icon.size".to_string(),
+            30.0,
+        );
+        patch.metrics.insert(
+            "md.comp.list.list-item.trailing-icon.expressive.size".to_string(),
+            36.0,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(one_line_container_height(&theme), Px(60.0));
+        assert_eq!(item_leading_space(&theme), Px(20.0));
+        assert_eq!(leading_icon_size_with_variant(&theme, true), Px(28.0));
+        assert_eq!(trailing_icon_size_with_variant(&theme, false), Px(30.0));
+        assert_eq!(trailing_icon_size_with_variant(&theme, true), Px(36.0));
     }
 
     #[test]
