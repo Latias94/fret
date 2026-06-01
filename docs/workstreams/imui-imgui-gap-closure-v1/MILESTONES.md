@@ -48,6 +48,14 @@ routing. Text input/area composition, blur behavior, clear-button behavior, draf
 binding, and public TextField options remain unchanged, and `tools/gate_imui_workstream_source.py`
 freezes the split.
 
+2026-06-01 editor TextField clear-button owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/element.rs` now keeps input/textarea assembly and
+delegates clear affordance construction. The private `controls/text_field/element/clear_button.rs`
+owner contains clear visibility reads, buffered draft/model clearing, buffered-state reset, and
+single-line/multiline clear segment selection. Clear-button visibility, draft/model clearing,
+buffered session reset, single-line vs multiline clear button chrome, a11y label, test-id routing,
+and redraw behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor GradientEditor stop-row owner-split result:
 `ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps public composition,
 preview/angle/stops group orchestration, add-stop behavior, and empty-state text role helper. The

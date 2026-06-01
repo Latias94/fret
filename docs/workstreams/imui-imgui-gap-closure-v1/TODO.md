@@ -91,6 +91,15 @@ Last updated: 2026-06-01
       `controls/text_field/element/buffered_keys.rs` owns buffered single-line/multiline
       commit/cancel key routing. The source gate prevents key policy from drifting back into the
       element assembly owner.
+- [x] Split editor `TextField` clear-button trailing segment into a private element child owner
+      without changing clear-button visibility, draft/model clearing, buffered session reset,
+      single-line vs multiline clear button chrome, a11y label, test-id routing, or redraw
+      behavior.
+      Result: `controls/text_field/element.rs` keeps input/textarea assembly and delegates clear
+      affordance construction. `controls/text_field/element/clear_button.rs` owns clear visibility
+      reads, buffered draft/model clearing, buffered-state reset, and single-line/multiline clear
+      segment selection. The source gate prevents clear-button policy from drifting back into the
+      element assembly owner.
 - [x] Split editor `GradientEditor` stop-row assembly into a private child owner without changing
       stop sorting, row identity/test-id derivation, position/color editors, remove action routing,
       row layout, empty-state text role, preview behavior, or public gradient editor options.

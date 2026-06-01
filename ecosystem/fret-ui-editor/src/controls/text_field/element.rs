@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use fret_core::{KeyCode, Px, TextStyle};
 use fret_runtime::Model;
-use fret_ui::action::{ActivateReason, OnActivate};
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextAreaProps, TextInputProps};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ChromeRefinement;
@@ -14,20 +13,20 @@ use crate::primitives::chrome::{
     joined_text_area_style, joined_text_input_style, resolve_editor_text_area_field_style,
     resolve_editor_text_field_style,
 };
-use crate::primitives::input_group::{
-    editor_clear_button_segment, editor_clear_button_segment_multiline, editor_joined_input_frame,
-};
+use crate::primitives::input_group::editor_joined_input_frame;
 use crate::primitives::style::EditorStyle;
 use crate::primitives::text_entry::{
     EditorTextCancelBehavior, editor_text_entry_focus_state, sync_editor_text_entry_focus_selection,
 };
 
 mod buffered_keys;
+mod clear_button;
 
 use buffered_keys::{
     TextFieldBufferedKeyHandlerArgs, TextFieldBufferedKeyMode,
     install_buffered_text_field_key_handler,
 };
+use clear_button::{TextFieldClearButtonArgs, text_field_clear_button_segments};
 
 impl TextField {
     pub fn new(model: Model<String>) -> Self {
@@ -384,56 +383,20 @@ impl TextField {
                 }
             },
             move |cx| {
-                let has_value = if let Some(draft) = draft_for_trailing.as_ref() {
-                    cx.read_model_ref(draft, Invalidation::Layout, |s| !s.is_empty())
-                        .unwrap_or(false)
-                } else {
-                    cx.read_model_ref(&model_for_trailing, Invalidation::Layout, |s| !s.is_empty())
-                        .unwrap_or(false)
-                };
-                if !(clear_button && has_value && enabled_for_paint) {
-                    return Vec::new();
-                }
-
-                let model_for_clear = model_for_trailing.clone();
-                let on_activate: OnActivate = if let (Some(draft), Some(buffered_state)) = (
-                    draft_for_trailing.clone(),
-                    buffered_state_for_trailing.clone(),
-                ) {
-                    Arc::new(move |host, action_cx, _reason: ActivateReason| {
-                        let _ = host.models_mut().update(&draft, |s| s.clear());
-                        let _ = host.models_mut().update(&model_for_clear, |s| s.clear());
-                        let mut state = buffered_state.lock().unwrap_or_else(|e| e.into_inner());
-                        buffered::clear_buffered_text_field_state(&mut state);
-                        host.request_redraw(action_cx.window);
-                    })
-                } else {
-                    Arc::new(move |host, action_cx, _reason: ActivateReason| {
-                        let _ = host.models_mut().update(&model_for_clear, |s| s.clear());
-                        host.request_redraw(action_cx.window);
-                    })
-                };
-
-                if multiline {
-                    vec![editor_clear_button_segment_multiline(
-                        cx,
+                text_field_clear_button_segments(
+                    cx,
+                    TextFieldClearButtonArgs {
                         density,
                         frame_chrome,
-                        enabled_for_paint,
-                        Arc::from("Clear text"),
-                        clear_test_id.clone(),
-                        on_activate,
-                    )]
-                } else {
-                    vec![editor_clear_button_segment(
-                        cx,
-                        density,
-                        enabled_for_paint,
-                        Arc::from("Clear text"),
-                        clear_test_id.clone(),
-                        on_activate,
-                    )]
-                }
+                        enabled: enabled_for_paint,
+                        multiline,
+                        clear_button,
+                        clear_test_id: clear_test_id.clone(),
+                        model: model_for_trailing.clone(),
+                        draft: draft_for_trailing.clone(),
+                        buffered_state: buffered_state_for_trailing.clone(),
+                    },
+                )
             },
         );
 

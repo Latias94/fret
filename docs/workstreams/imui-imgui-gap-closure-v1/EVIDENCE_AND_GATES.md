@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor TextField Clear-Button Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `TextField` clear-button trailing segment moved out of the element assembly
+owner into a private `controls/text_field/element/clear_button.rs` owner without changing
+clear-button visibility, draft/model clearing, buffered session reset, single-line vs multiline
+clear button chrome, a11y label, test-id routing, or redraw behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_field/element.rs` keeps input/textarea assembly and
+  delegates clear affordance construction.
+- `ecosystem/fret-ui-editor/src/controls/text_field/element/clear_button.rs` owns clear visibility
+  reads, buffered draft/model clearing, buffered-state reset, and single-line/multiline clear
+  segment selection.
+- `tools/gate_imui_workstream_source.py` now tracks the clear-button split and rejects clear-button
+  policy from drifting back into the element assembly owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the clear-button owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor text_field --no-fail-fast`: pass (16 passed, 206 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor GradientEditor Stop-Row Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `GradientEditor` stop-row assembly moved out of the root composite owner into

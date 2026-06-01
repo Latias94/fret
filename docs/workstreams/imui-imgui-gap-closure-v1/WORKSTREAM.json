@@ -1177,6 +1177,7 @@
     "ecosystem/fret-ui-editor/src/controls/text_field.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/element.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/element/buffered_keys.rs",
+    "ecosystem/fret-ui-editor/src/controls/text_field/element/clear_button.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/buffered/controller.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/buffered/tests.rs",
