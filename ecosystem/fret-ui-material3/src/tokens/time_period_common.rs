@@ -13,10 +13,18 @@ const DEFAULT_PERIOD_SELECTOR_CONTAINER_SHAPE: Px = Px(8.0);
 const DEFAULT_PERIOD_SELECTOR_OUTLINE_WIDTH: Px = Px(1.0);
 const DEFAULT_PERIOD_SELECTOR_STATE_LAYER_OPACITY: f32 = 0.0;
 
+fn period_metric(theme: &Theme, component_prefix: &str, suffix: &str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme)
+        .metric_optional(Some(&token_key(component_prefix, suffix)), fallback)
+}
+
 pub(crate) fn container_width(theme: &Theme, component_prefix: &str, suffix: &str) -> Px {
-    theme
-        .metric_by_key(&token_key(component_prefix, suffix))
-        .unwrap_or(DEFAULT_PERIOD_SELECTOR_CONTAINER_WIDTH)
+    period_metric(
+        theme,
+        component_prefix,
+        suffix,
+        DEFAULT_PERIOD_SELECTOR_CONTAINER_WIDTH,
+    )
 }
 
 pub(crate) fn container_height(
@@ -25,9 +33,7 @@ pub(crate) fn container_height(
     suffix: &str,
     fallback: Px,
 ) -> Px {
-    theme
-        .metric_by_key(&token_key(component_prefix, suffix))
-        .unwrap_or(fallback)
+    period_metric(theme, component_prefix, suffix, fallback)
 }
 
 pub(crate) fn container_shape(theme: &Theme, component_prefix: &str) -> Corners {
@@ -38,12 +44,12 @@ pub(crate) fn container_shape(theme: &Theme, component_prefix: &str) -> Corners 
 }
 
 pub(crate) fn outline_width(theme: &Theme, component_prefix: &str) -> Px {
-    theme
-        .metric_by_key(&token_key(
-            component_prefix,
-            "period-selector.outline.width",
-        ))
-        .unwrap_or(DEFAULT_PERIOD_SELECTOR_OUTLINE_WIDTH)
+    period_metric(
+        theme,
+        component_prefix,
+        "period-selector.outline.width",
+        DEFAULT_PERIOD_SELECTOR_OUTLINE_WIDTH,
+    )
 }
 
 pub(crate) fn outline_color(theme: &Theme, component_prefix: &str) -> Color {

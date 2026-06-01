@@ -23,22 +23,29 @@ fn token_key(variant: DatePickerTokenVariant, suffix: &str) -> String {
     }
 }
 
+fn date_picker_metric(
+    theme: &Theme,
+    variant: DatePickerTokenVariant,
+    suffix: &str,
+    fallback: Px,
+) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(&token_key(variant, suffix)), fallback)
+}
+
+fn material_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
 pub(crate) fn container_width(theme: &Theme, variant: DatePickerTokenVariant) -> Px {
-    theme
-        .metric_by_key(&token_key(variant, "container.width"))
-        .unwrap_or(Px(360.0))
+    date_picker_metric(theme, variant, "container.width", Px(360.0))
 }
 
 pub(crate) fn container_height(theme: &Theme, variant: DatePickerTokenVariant) -> Px {
-    theme
-        .metric_by_key(&token_key(variant, "container.height"))
-        .unwrap_or(Px(456.0))
+    date_picker_metric(theme, variant, "container.height", Px(456.0))
 }
 
 pub(crate) fn container_elevation(theme: &Theme, variant: DatePickerTokenVariant) -> Px {
-    theme
-        .metric_by_key(&token_key(variant, "container.elevation"))
-        .unwrap_or(Px(3.0))
+    date_picker_metric(theme, variant, "container.elevation", Px(3.0))
 }
 
 pub(crate) fn container_shape(theme: &Theme, variant: DatePickerTokenVariant) -> Corners {
@@ -75,9 +82,11 @@ pub(crate) fn weekdays_label_text_color(theme: &Theme, variant: DatePickerTokenV
 }
 
 pub(crate) fn calendar_horizontal_padding(theme: &Theme, _variant: DatePickerTokenVariant) -> Px {
-    theme
-        .metric_by_key("md.sys.fret.material.date-picker.calendar.horizontal-padding")
-        .unwrap_or(Px(12.0))
+    material_metric(
+        theme,
+        "md.sys.fret.material.date-picker.calendar.horizontal-padding",
+        Px(12.0),
+    )
 }
 
 pub(crate) fn header_headline_style(theme: &Theme) -> TextStyle {
@@ -97,15 +106,11 @@ pub(crate) fn header_headline_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn date_cell_width(theme: &Theme, variant: DatePickerTokenVariant) -> Px {
-    theme
-        .metric_by_key(&token_key(variant, "date.container.width"))
-        .unwrap_or(Px(40.0))
+    date_picker_metric(theme, variant, "date.container.width", Px(40.0))
 }
 
 pub(crate) fn date_cell_height(theme: &Theme, variant: DatePickerTokenVariant) -> Px {
-    theme
-        .metric_by_key(&token_key(variant, "date.container.height"))
-        .unwrap_or(Px(40.0))
+    date_picker_metric(theme, variant, "date.container.height", Px(40.0))
 }
 
 pub(crate) fn date_cell_shape(theme: &Theme, variant: DatePickerTokenVariant) -> Corners {
@@ -116,9 +121,12 @@ pub(crate) fn date_cell_shape(theme: &Theme, variant: DatePickerTokenVariant) ->
 }
 
 pub(crate) fn date_today_outline_width(theme: &Theme, variant: DatePickerTokenVariant) -> Px {
-    theme
-        .metric_by_key(&token_key(variant, "date.today.container.outline.width"))
-        .unwrap_or(Px(1.0))
+    date_picker_metric(
+        theme,
+        variant,
+        "date.today.container.outline.width",
+        Px(1.0),
+    )
 }
 
 pub(crate) fn date_today_outline_color(theme: &Theme, variant: DatePickerTokenVariant) -> Color {
@@ -175,4 +183,89 @@ pub(crate) fn date_outside_month_opacity(theme: &Theme, variant: DatePickerToken
         )),
         0.38,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn date_picker_metrics_keep_material_defaults() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(
+            container_width(theme, DatePickerTokenVariant::Docked),
+            Px(360.0)
+        );
+        assert_eq!(
+            container_height(theme, DatePickerTokenVariant::Modal),
+            Px(456.0)
+        );
+        assert_eq!(
+            container_elevation(theme, DatePickerTokenVariant::Docked),
+            Px(3.0)
+        );
+        assert_eq!(
+            calendar_horizontal_padding(theme, DatePickerTokenVariant::Docked),
+            Px(12.0)
+        );
+        assert_eq!(
+            date_cell_width(theme, DatePickerTokenVariant::Modal),
+            Px(40.0)
+        );
+        assert_eq!(
+            date_today_outline_width(theme, DatePickerTokenVariant::Docked),
+            Px(1.0)
+        );
+    }
+
+    #[test]
+    fn date_picker_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert(
+            "md.comp.date-picker.docked.container.width".to_string(),
+            380.0,
+        );
+        patch.metrics.insert(
+            "md.comp.date-picker.modal.container.elevation".to_string(),
+            6.0,
+        );
+        patch.metrics.insert(
+            "md.comp.date-picker.modal.date.container.height".to_string(),
+            44.0,
+        );
+        patch.metrics.insert(
+            "md.sys.fret.material.date-picker.calendar.horizontal-padding".to_string(),
+            16.0,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_width(&theme, DatePickerTokenVariant::Docked),
+            Px(380.0)
+        );
+        assert_eq!(
+            container_elevation(&theme, DatePickerTokenVariant::Modal),
+            Px(6.0)
+        );
+        assert_eq!(
+            date_cell_height(&theme, DatePickerTokenVariant::Modal),
+            Px(44.0)
+        );
+        assert_eq!(
+            calendar_horizontal_padding(&theme, DatePickerTokenVariant::Docked),
+            Px(16.0)
+        );
+    }
 }

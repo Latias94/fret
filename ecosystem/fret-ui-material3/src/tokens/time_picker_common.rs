@@ -32,10 +32,22 @@ pub(crate) fn container_color(theme: &Theme, component_prefix: &str) -> Color {
     )
 }
 
+fn time_picker_metric(theme: &Theme, component_prefix: &str, suffix: &str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme)
+        .metric_optional(Some(&token_key(component_prefix, suffix)), fallback)
+}
+
+fn material_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
 pub(crate) fn container_elevation(theme: &Theme, component_prefix: &str) -> Px {
-    theme
-        .metric_by_key(&token_key(component_prefix, "container.elevation"))
-        .unwrap_or(DEFAULT_CONTAINER_ELEVATION)
+    time_picker_metric(
+        theme,
+        component_prefix,
+        "container.elevation",
+        DEFAULT_CONTAINER_ELEVATION,
+    )
 }
 
 pub(crate) fn container_shape(theme: &Theme, component_prefix: &str) -> Corners {
@@ -62,9 +74,12 @@ pub(crate) fn headline_color(theme: &Theme, component_prefix: &str) -> Color {
 }
 
 pub(crate) fn clock_dial_size(theme: &Theme, component_prefix: &str) -> Px {
-    theme
-        .metric_by_key(&token_key(component_prefix, "clock-dial.container.size"))
-        .unwrap_or(DEFAULT_CLOCK_DIAL_SIZE)
+    time_picker_metric(
+        theme,
+        component_prefix,
+        "clock-dial.container.size",
+        DEFAULT_CLOCK_DIAL_SIZE,
+    )
 }
 
 pub(crate) fn clock_dial_background(theme: &Theme, component_prefix: &str) -> Color {
@@ -108,12 +123,12 @@ pub(crate) fn clock_dial_label_text_color(
 }
 
 pub(crate) fn clock_dial_handle_size(theme: &Theme, component_prefix: &str) -> Px {
-    theme
-        .metric_by_key(&token_key(
-            component_prefix,
-            "clock-dial.selector.handle.container.size",
-        ))
-        .unwrap_or(DEFAULT_CLOCK_DIAL_HANDLE_SIZE)
+    time_picker_metric(
+        theme,
+        component_prefix,
+        "clock-dial.selector.handle.container.size",
+        DEFAULT_CLOCK_DIAL_HANDLE_SIZE,
+    )
 }
 
 pub(crate) fn clock_dial_handle_color(theme: &Theme, component_prefix: &str) -> Color {
@@ -135,12 +150,12 @@ pub(crate) fn clock_dial_handle_shape(theme: &Theme, component_prefix: &str) -> 
 }
 
 pub(crate) fn clock_dial_selector_center_size(theme: &Theme, component_prefix: &str) -> Px {
-    theme
-        .metric_by_key(&token_key(
-            component_prefix,
-            "clock-dial.selector.center.container.size",
-        ))
-        .unwrap_or(DEFAULT_CLOCK_DIAL_SELECTOR_CENTER_SIZE)
+    time_picker_metric(
+        theme,
+        component_prefix,
+        "clock-dial.selector.center.container.size",
+        DEFAULT_CLOCK_DIAL_SELECTOR_CENTER_SIZE,
+    )
 }
 
 pub(crate) fn clock_dial_selector_center_color(theme: &Theme, component_prefix: &str) -> Color {
@@ -162,12 +177,12 @@ pub(crate) fn clock_dial_selector_center_shape(theme: &Theme, component_prefix: 
 }
 
 pub(crate) fn clock_dial_selector_track_width(theme: &Theme, component_prefix: &str) -> Px {
-    theme
-        .metric_by_key(&token_key(
-            component_prefix,
-            "clock-dial.selector.track.container.width",
-        ))
-        .unwrap_or(DEFAULT_CLOCK_DIAL_SELECTOR_TRACK_WIDTH)
+    time_picker_metric(
+        theme,
+        component_prefix,
+        "clock-dial.selector.track.container.width",
+        DEFAULT_CLOCK_DIAL_SELECTOR_TRACK_WIDTH,
+    )
 }
 
 pub(crate) fn clock_dial_selector_track_color(theme: &Theme, component_prefix: &str) -> Color {
@@ -181,21 +196,21 @@ pub(crate) fn clock_dial_selector_track_color(theme: &Theme, component_prefix: &
 }
 
 pub(crate) fn time_selector_container_width(theme: &Theme, component_prefix: &str) -> Px {
-    theme
-        .metric_by_key(&token_key(
-            component_prefix,
-            "time-selector.container.width",
-        ))
-        .unwrap_or(DEFAULT_TIME_SELECTOR_CONTAINER_WIDTH)
+    time_picker_metric(
+        theme,
+        component_prefix,
+        "time-selector.container.width",
+        DEFAULT_TIME_SELECTOR_CONTAINER_WIDTH,
+    )
 }
 
 pub(crate) fn time_selector_container_height(theme: &Theme, component_prefix: &str) -> Px {
-    theme
-        .metric_by_key(&token_key(
-            component_prefix,
-            "time-selector.container.height",
-        ))
-        .unwrap_or(DEFAULT_TIME_SELECTOR_CONTAINER_HEIGHT)
+    time_picker_metric(
+        theme,
+        component_prefix,
+        "time-selector.container.height",
+        DEFAULT_TIME_SELECTOR_CONTAINER_HEIGHT,
+    )
 }
 
 pub(crate) fn time_selector_shape(theme: &Theme, component_prefix: &str) -> Corners {
@@ -253,9 +268,11 @@ pub(crate) fn time_selector_separator_color(theme: &Theme, component_prefix: &st
 }
 
 pub(crate) fn display_separator_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.sys.fret.material.time-picker.display-separator.width")
-        .unwrap_or(DEFAULT_DISPLAY_SEPARATOR_WIDTH)
+    material_metric(
+        theme,
+        "md.sys.fret.material.time-picker.display-separator.width",
+        DEFAULT_DISPLAY_SEPARATOR_WIDTH,
+    )
 }
 
 pub(crate) fn time_selector_label_color(
@@ -469,11 +486,27 @@ mod tests {
             300.0,
         );
         patch.metrics.insert(
+            "md.comp.test-time-picker.container.elevation".to_string(),
+            5.0,
+        );
+        patch.metrics.insert(
+            "md.comp.test-time-picker.time-selector.container.width".to_string(),
+            112.0,
+        );
+        patch.metrics.insert(
+            "md.comp.test-time-picker.time-selector.container.height".to_string(),
+            84.0,
+        );
+        patch.metrics.insert(
             "md.sys.fret.material.time-picker.display-separator.width".to_string(),
             32.0,
         );
         let (_app, theme) = theme_with_patch(patch);
 
+        assert_eq!(
+            container_elevation(&theme, "md.comp.test-time-picker"),
+            Px(5.0)
+        );
         assert_eq!(
             clock_dial_size(&theme, "md.comp.test-time-picker"),
             Px(300.0)
@@ -492,11 +525,11 @@ mod tests {
         );
         assert_eq!(
             time_selector_container_width(&theme, "md.comp.test-time-picker"),
-            Px(96.0)
+            Px(112.0)
         );
         assert_eq!(
             time_selector_container_height(&theme, "md.comp.test-time-picker"),
-            Px(80.0)
+            Px(84.0)
         );
         assert_eq!(display_separator_width(&theme), Px(32.0));
     }

@@ -16,16 +16,16 @@ fn token_key(suffix: &str) -> String {
     format!("{COMPONENT_PREFIX}.{suffix}")
 }
 
+fn time_input_metric(theme: &Theme, suffix: &str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(&token_key(suffix)), fallback)
+}
+
 pub(crate) fn time_input_field_container_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key(&token_key("time-input-field.container.width"))
-        .unwrap_or(Px(96.0))
+    time_input_metric(theme, "time-input-field.container.width", Px(96.0))
 }
 
 pub(crate) fn time_input_field_container_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key(&token_key("time-input-field.container.height"))
-        .unwrap_or(Px(72.0))
+    time_input_metric(theme, "time-input-field.container.height", Px(72.0))
 }
 
 pub(crate) fn time_input_field_container_shape(theme: &Theme) -> Corners {
@@ -62,9 +62,7 @@ pub(crate) fn time_input_field_container_color(theme: &Theme, focused: bool, err
 }
 
 pub(crate) fn time_input_field_focus_outline_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key(&token_key("time-input-field.focus.outline.width"))
-        .unwrap_or(Px(2.0))
+    time_input_metric(theme, "time-input-field.focus.outline.width", Px(2.0))
 }
 
 pub(crate) fn time_input_field_focus_outline_color(theme: &Theme, error: bool) -> Color {
@@ -231,4 +229,51 @@ pub(crate) fn period_selector_state_layer_opacity(
     interaction: PressableInteraction,
 ) -> f32 {
     time_period_common::state_layer_opacity(theme, COMPONENT_PREFIX, interaction)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn time_input_metrics_keep_material_defaults() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(time_input_field_container_width(theme), Px(96.0));
+        assert_eq!(time_input_field_container_height(theme), Px(72.0));
+        assert_eq!(time_input_field_focus_outline_width(theme), Px(2.0));
+    }
+
+    #[test]
+    fn time_input_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert(
+            "md.comp.time-input.time-input-field.container.width".to_string(),
+            108.0,
+        );
+        patch.metrics.insert(
+            "md.comp.time-input.time-input-field.container.height".to_string(),
+            76.0,
+        );
+        patch.metrics.insert(
+            "md.comp.time-input.time-input-field.focus.outline.width".to_string(),
+            3.0,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(time_input_field_container_width(&theme), Px(108.0));
+        assert_eq!(time_input_field_container_height(&theme), Px(76.0));
+        assert_eq!(time_input_field_focus_outline_width(&theme), Px(3.0));
+    }
 }
