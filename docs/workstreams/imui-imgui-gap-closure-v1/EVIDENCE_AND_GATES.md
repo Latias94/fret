@@ -25521,3 +25521,26 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI combo entry owner split:
+
+- Claim: direct combo popup/trigger orchestration moved from
+  `ecosystem/fret-ui-kit/src/imui/combo_controls.rs` into
+  `ecosystem/fret-ui-kit/src/imui/combo_controls/entry.rs` without changing label identity parsing,
+  enabled/open state reads, trigger options, popup mounting, disabled-popup cleanup, or
+  `ComboResponse` open/toggled semantics.
+- Evidence anchors: `combo_controls.rs` declares `mod entry;`, keeps the facade-facing
+  `combo_with_options(...)` signature, and delegates to `entry::combo_with_options(...)`;
+  `entry.rs` owns visible-label parsing, state reads, `ComboTriggerOptions`, popup mounting through
+  `popup_overlay::begin_popup_menu_with_options(...)`, disabled cleanup, toggled detection, trigger
+  response mutation, and final `ComboResponse` assembly; the source gate rejects direct combo flow
+  details drifting back into the root combo hub.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit --features imui`.
+- Passed: `cargo nextest run -p fret-ui-kit --features imui --test imui_combo_smoke --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-imui combo_popup_escape_closes_and_restores_trigger_focus combo_lifecycle_tracks_open_session_edges combo_activate_shortcut_is_scoped_to_focused_trigger --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

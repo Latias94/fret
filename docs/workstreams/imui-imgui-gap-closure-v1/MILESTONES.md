@@ -5202,3 +5202,9 @@ submenu exports.
 pointer-region layout and resizable fill/shrink behavior, while
 `floating_window_title_bar_props/close_button.rs` owns close-button a11y/test-id wiring and fixed
 20px sizing. `floating_window_title_bar_props.rs` keeps title-row props plus private re-exports.
+
+2026-06-01 combo entry owner split result:
+`ecosystem/fret-ui-kit/src/imui/combo_controls/entry.rs` now owns the direct combo flow: visible
+label parsing, enabled/open reads, trigger option construction, popup mounting, disabled cleanup,
+and `ComboResponse` open/toggled assembly. `combo_controls.rs` keeps the facade-facing helper
+signature and forwards to the entry owner.

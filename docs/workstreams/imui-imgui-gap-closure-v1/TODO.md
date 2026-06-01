@@ -5915,3 +5915,10 @@ opening the slice.
       Result: `floating_window_title_bar_props/drag_surface.rs` owns pointer-region layout and
       resizable flex behavior; `floating_window_title_bar_props/close_button.rs` owns close-button
       a11y and fixed sizing. The root props file keeps only row props plus private re-exports.
+- [x] Split IMUI combo popup/trigger orchestration out of
+      `ecosystem/fret-ui-kit/src/imui/combo_controls.rs` into a private entry owner without
+      changing label identity parsing, enabled/open state reads, trigger options, popup mounting,
+      disabled-popup cleanup, or `ComboResponse` open/toggled semantics.
+      Result: `ecosystem/fret-ui-kit/src/imui/combo_controls/entry.rs` owns the direct combo
+      trigger/popup/response flow. `combo_controls.rs` keeps the facade-facing helper signature and
+      delegates to the entry owner.
