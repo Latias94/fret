@@ -886,6 +886,12 @@ Last updated: 2026-06-01
       Result: `controls/text_assist_field.rs` keeps input/key orchestration, accept flow, helper
       policy, and test-owner routing. `controls/text_assist_field/tests.rs` owns root helper
       coverage.
+- [x] Split editor text-assist accept commit flow into a private child owner without changing query
+      model writes, dismissed-query sync, active item-id updates, user accept callback dispatch,
+      redraw requests, root key handling, panel row activation, or public TextAssistField options.
+      Result: `controls/text_assist_field.rs` keeps input/key orchestration, panel routing, and
+      helper policy. `controls/text_assist_field/accept.rs` owns match acceptance model writes,
+      callback dispatch, and redraw requests for both keyboard acceptance and row activation.
 - [x] Split editor-owned property-row reset affordance handling into a private child owner without
       changing row layout, value-slot growth, reset keying, glyph render, accessibility label, or
       property chrome semantics.

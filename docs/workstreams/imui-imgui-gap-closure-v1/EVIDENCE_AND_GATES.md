@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor TextAssistField Accept Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor text-assist match acceptance moved out of
+`controls/text_assist_field.rs` into a private `controls/text_assist_field/accept.rs` owner without
+changing query model writes, dismissed-query sync, active item-id updates, user accept callback
+dispatch, redraw requests, root key handling, panel row activation, overlay routing, or public
+`TextAssistField` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` keeps input/key orchestration,
+  panel routing, inline empty-label helper policy, and max-height helper policy.
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field/accept.rs` owns shared match acceptance
+  model writes, callback dispatch, and redraw requests.
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field/panel/row.rs` now routes row activation
+  through the accept owner instead of reaching back into the root control module.
+- `tools/gate_imui_workstream_source.py` now tracks the accept owner and rejects accept/model-write
+  policy from drifting back into the root control, model owner, overlay owner, or row owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new accept owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor text_assist --no-fail-fast`: pass (4 passed, 224 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor TextAssistField Option-Row Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor text-assist suggestion option-row assembly moved out of

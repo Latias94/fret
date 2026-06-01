@@ -11,6 +11,7 @@
 //! - input-owned focus with `active_descendant`,
 //! - default accept wiring that commits the chosen label back into the bound query model.
 
+mod accept;
 mod model;
 mod overlay;
 mod panel;
@@ -24,14 +25,14 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Edges, Px};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, UiActionHost, UiFocusActionHost};
+use fret_ui::action::UiFocusActionHost;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
 };
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::headless::text_assist::{
-    TextAssistItem, TextAssistMatch, active_match_index, controller_with_active_item_id,
+    TextAssistItem, active_match_index, controller_with_active_item_id,
     input_owned_text_assist_expanded, input_owned_text_assist_key_handler,
     input_owned_text_assist_semantics,
 };
@@ -41,6 +42,7 @@ use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::popup_list::editor_popup_list_default_max_content_height;
 use crate::primitives::readout::editor_popup_empty_text_props;
 use crate::primitives::style::EditorStyle;
+use accept::accept_text_assist_match;
 
 use model::RenderedTextAssistPanel;
 pub use model::{OnTextAssistFieldAccept, TextAssistFieldOptions, TextAssistFieldSurface};
@@ -322,31 +324,4 @@ fn text_assist_max_content_height(
         matches!(surface, TextAssistFieldSurface::AnchoredOverlay)
             .then(|| editor_popup_list_default_max_content_height(row_height))
     })
-}
-
-fn accept_text_assist_match(
-    host: &mut dyn UiActionHost,
-    action_cx: ActionCx,
-    query_model: &Model<String>,
-    dismissed_query_model: &Model<String>,
-    active_item_id_model: &Model<Option<Arc<str>>>,
-    active: TextAssistMatch,
-    on_accept: Option<&OnTextAssistFieldAccept>,
-) {
-    let next_query = active.label.as_ref().to_string();
-    let _ = host.models_mut().update(query_model, |value| {
-        value.clear();
-        value.push_str(&next_query);
-    });
-    let _ = host.models_mut().update(dismissed_query_model, |value| {
-        value.clear();
-        value.push_str(&next_query);
-    });
-    let _ = host.models_mut().update(active_item_id_model, |value| {
-        *value = Some(active.item_id.clone())
-    });
-    if let Some(on_accept) = on_accept {
-        on_accept(host, action_cx, active);
-    }
-    host.request_redraw(action_cx.window);
 }

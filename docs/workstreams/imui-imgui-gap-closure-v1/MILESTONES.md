@@ -21,6 +21,15 @@ item test-id derivation, listbox option a11y fields, and row text rendering. Vis
 semantics, scroll threshold, popup chrome, and `RenderedTextAssistPanel` handoff remain unchanged,
 and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor TextAssistField accept owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now keeps input/key orchestration,
+panel routing, inline empty-label helper policy, and max-height helper policy while delegating
+match acceptance to `controls/text_assist_field/accept.rs`. The private accept owner contains
+query model writes, dismissed-query sync, active item-id updates, user accept callback dispatch,
+and redraw requests shared by keyboard acceptance and suggestion row activation. Public
+`TextAssistField` options, root key handling, panel row activation, and overlay routing remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor TextField escape-clear owner-split result:
 `ecosystem/fret-ui-editor/src/controls/text_field/element.rs` now keeps TextInput/TextArea
 assembly, buffered key routing, focus-selection sync, blur handling, and clear-button composition

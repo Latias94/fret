@@ -11,7 +11,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 use fret_ui_kit::headless::text_assist::TextAssistMatch;
 
-use super::super::{OnTextAssistFieldAccept, accept_text_assist_match};
+use super::super::{OnTextAssistFieldAccept, accept::accept_text_assist_match};
 use crate::primitives::popup_list::{
     EditorPopupListRowState, editor_popup_list_row_palette, editor_popup_list_row_radius,
 };
