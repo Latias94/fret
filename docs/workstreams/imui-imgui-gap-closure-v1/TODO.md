@@ -127,6 +127,14 @@ Last updated: 2026-06-01
       search/search-assist element selection, content mounting, and root panel chrome. The source
       gate prevents element assembly and search fallback policy from drifting back into the root
       composite owner.
+- [x] Split editor `PropertyGroup` options/default records into a private child owner without
+      changing public `PropertyGroupOptions` import paths, layout defaults, collapsed model/default
+      behavior, enabled/collapsible defaults, header/content test-id fields, header rendering,
+      content mounting, or toggle callback routing.
+      Result: `composites/property_group.rs` keeps the public group control, collapse/toggle
+      behavior, header/content/root assembly, and re-exports `PropertyGroupOptions`.
+      `composites/property_group/options.rs` owns option fields and defaults. The source gate
+      prevents options/default policy from drifting back into the group owner.
 - [x] Split editor `PropertyRow` row/column element assembly into a private child owner without
       changing public constructors/builders, explicit id-source keying, label helper behavior,
       layout resolution, auto row/column switching, value-slot overflow semantics, reset slot

@@ -102,6 +102,15 @@ trimming/lowercase matching, title text-role behavior, search assist fallback, h
 test-id propagation, panel chrome token fallback, and `into_element_in(...)` routing remain
 unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor PropertyGroup options owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_group.rs` now keeps the public group control,
+collapse/toggle behavior, header/content/root assembly, and re-exports `PropertyGroupOptions`.
+The private `composites/property_group/options.rs` owner contains option fields and defaults.
+Public `PropertyGroupOptions` import paths, layout defaults, collapsed model/default behavior,
+enabled/collapsible defaults, header/content test-id fields, header rendering, content mounting,
+and toggle callback routing remain unchanged, and `tools/gate_imui_workstream_source.py` freezes
+the split.
+
 2026-06-01 editor PropertyRow element owner-split result:
 `ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the public composite, label
 helper, keying/identity wrapper, and public re-exports. The private

@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor PropertyGroup Options Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `PropertyGroup` options/default records moved out of the root group owner
+into a private `composites/property_group/options.rs` owner without changing public
+`PropertyGroupOptions` import paths, layout defaults, collapsed model/default behavior,
+enabled/collapsible defaults, header/content test-id fields, header rendering, content mounting, or
+toggle callback routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/property_group.rs` keeps the public group control,
+  collapse/toggle behavior, header/content/root assembly, and re-exports `PropertyGroupOptions`.
+- `ecosystem/fret-ui-editor/src/composites/property_group/options.rs` owns option fields and
+  defaults.
+- `tools/gate_imui_workstream_source.py` now tracks the options split and rejects options/default
+  policy from drifting back into the group owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the property-group options
+  owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor property_group --no-fail-fast`: pass (1 passed, 221
+  skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor PropertyGrid Test Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `PropertyGrid` wrapping-layout regression coverage moved out of the root
