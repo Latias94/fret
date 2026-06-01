@@ -9,13 +9,198 @@ use fret_ui_kit::typography::TextIntent;
 
 use crate::fab::{FabSize, FabVariant};
 use crate::foundation::token_resolver::{MaterialTokenResolver, alpha_mul};
-use crate::tokens::{fab_common, typography};
+use crate::tokens::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum FabInteraction {
     Hovered,
     Focused,
     Pressed,
+}
+
+mod defaults {
+    use fret_core::Px;
+
+    use crate::fab::FabSize;
+
+    pub(super) fn disabled_container_opacity() -> f32 {
+        0.12
+    }
+
+    pub(super) fn disabled_content_opacity() -> f32 {
+        0.38
+    }
+
+    pub(super) fn disabled_container_elevation() -> Px {
+        Px(0.0)
+    }
+
+    pub(super) fn icon_container_size(size: FabSize) -> Px {
+        match size {
+            FabSize::Small => Px(40.0),
+            FabSize::Regular => Px(56.0),
+            FabSize::Medium => Px(80.0),
+            FabSize::Large => Px(96.0),
+        }
+    }
+
+    pub(super) fn icon_size(size: FabSize) -> Px {
+        match size {
+            FabSize::Small | FabSize::Regular => Px(24.0),
+            FabSize::Medium => Px(28.0),
+            FabSize::Large => Px(36.0),
+        }
+    }
+
+    pub(super) fn icon_container_shape_system_key(size: FabSize) -> &'static str {
+        match size {
+            FabSize::Small => "md.sys.shape.corner.medium",
+            FabSize::Regular => "md.sys.shape.corner.large",
+            FabSize::Medium => "md.sys.shape.corner.large-increased",
+            FabSize::Large => "md.sys.shape.corner.extra-large",
+        }
+    }
+
+    pub(super) fn icon_container_shape_radius(size: FabSize) -> Px {
+        match size {
+            FabSize::Small => Px(12.0),
+            FabSize::Regular => Px(16.0),
+            FabSize::Medium => Px(20.0),
+            FabSize::Large => Px(28.0),
+        }
+    }
+
+    pub(super) fn extended_container_height(size: FabSize) -> Px {
+        match size {
+            FabSize::Small | FabSize::Regular => Px(56.0),
+            FabSize::Medium => Px(80.0),
+            FabSize::Large => Px(96.0),
+        }
+    }
+
+    pub(super) fn extended_min_width(size: FabSize, resolved_height: Px) -> Px {
+        match size {
+            FabSize::Regular => Px(80.0),
+            FabSize::Small | FabSize::Medium | FabSize::Large => resolved_height,
+        }
+    }
+
+    pub(super) fn extended_icon_size(size: FabSize) -> Px {
+        icon_size(size)
+    }
+
+    pub(super) fn extended_container_shape_system_key(size: FabSize) -> &'static str {
+        match size {
+            FabSize::Small | FabSize::Regular => "md.sys.shape.corner.large",
+            FabSize::Medium => "md.sys.shape.corner.large-increased",
+            FabSize::Large => "md.sys.shape.corner.extra-large",
+        }
+    }
+
+    pub(super) fn extended_container_shape_radius(size: FabSize) -> Px {
+        match size {
+            FabSize::Small | FabSize::Regular => Px(16.0),
+            FabSize::Medium => Px(20.0),
+            FabSize::Large => Px(28.0),
+        }
+    }
+
+    pub(super) fn extended_leading_space(size: FabSize) -> Px {
+        match size {
+            FabSize::Small | FabSize::Regular => Px(16.0),
+            FabSize::Medium => Px(26.0),
+            FabSize::Large => Px(28.0),
+        }
+    }
+
+    pub(super) fn extended_trailing_space(size: FabSize) -> Px {
+        match size {
+            FabSize::Regular => Px(20.0),
+            FabSize::Small => Px(16.0),
+            FabSize::Medium => Px(26.0),
+            FabSize::Large => Px(28.0),
+        }
+    }
+
+    pub(super) fn extended_icon_label_space(size: FabSize) -> Px {
+        match size {
+            FabSize::Small => Px(8.0),
+            FabSize::Regular | FabSize::Medium => Px(12.0),
+            FabSize::Large => Px(16.0),
+        }
+    }
+
+    pub(super) fn extended_label_text_source(size: FabSize) -> &'static str {
+        match size {
+            FabSize::Small => "md.sys.typescale.title-medium",
+            FabSize::Regular => "md.comp.extended-fab.label-text",
+            FabSize::Medium => "md.sys.typescale.title-large",
+            FabSize::Large => "md.sys.typescale.headline-small",
+        }
+    }
+
+    pub(super) fn hovered_state_layer_opacity() -> f32 {
+        0.08
+    }
+
+    pub(super) fn focused_state_layer_opacity() -> f32 {
+        0.1
+    }
+
+    pub(super) fn pressed_state_layer_opacity() -> f32 {
+        0.1
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn icon_fab_size_defaults_match_material_matrix() {
+            assert_eq!(icon_container_size(FabSize::Small), Px(40.0));
+            assert_eq!(icon_container_size(FabSize::Regular), Px(56.0));
+            assert_eq!(icon_container_size(FabSize::Medium), Px(80.0));
+            assert_eq!(icon_container_size(FabSize::Large), Px(96.0));
+
+            assert_eq!(icon_size(FabSize::Small), Px(24.0));
+            assert_eq!(icon_size(FabSize::Regular), Px(24.0));
+            assert_eq!(icon_size(FabSize::Medium), Px(28.0));
+            assert_eq!(icon_size(FabSize::Large), Px(36.0));
+        }
+
+        #[test]
+        fn shape_defaults_keep_size_specific_system_fallbacks() {
+            assert_eq!(
+                icon_container_shape_system_key(FabSize::Small),
+                "md.sys.shape.corner.medium"
+            );
+            assert_eq!(icon_container_shape_radius(FabSize::Small), Px(12.0));
+            assert_eq!(
+                extended_container_shape_system_key(FabSize::Medium),
+                "md.sys.shape.corner.large-increased"
+            );
+            assert_eq!(extended_container_shape_radius(FabSize::Large), Px(28.0));
+        }
+
+        #[test]
+        fn extended_fab_spacing_defaults_match_material_matrix() {
+            assert_eq!(extended_container_height(FabSize::Regular), Px(56.0));
+            assert_eq!(extended_min_width(FabSize::Regular, Px(72.0)), Px(80.0));
+            assert_eq!(extended_min_width(FabSize::Small, Px(56.0)), Px(56.0));
+            assert_eq!(extended_leading_space(FabSize::Medium), Px(26.0));
+            assert_eq!(extended_trailing_space(FabSize::Regular), Px(20.0));
+            assert_eq!(extended_icon_label_space(FabSize::Large), Px(16.0));
+        }
+
+        #[test]
+        fn opacity_defaults_match_material_state_matrix() {
+            assert_eq!(disabled_container_opacity(), 0.12);
+            assert_eq!(disabled_content_opacity(), 0.38);
+            assert_eq!(hovered_state_layer_opacity(), 0.08);
+            assert_eq!(focused_state_layer_opacity(), 0.1);
+            assert_eq!(pressed_state_layer_opacity(), 0.1);
+        }
+    }
 }
 
 fn fab_metric(theme: &Theme, key: impl AsRef<str>, fallback: Px) -> Px {
@@ -26,7 +211,7 @@ pub(crate) fn container_size(theme: &Theme, size: FabSize) -> Px {
     fab_metric(
         theme,
         format!("{}.container.height", size_prefix(size)),
-        fab_common::icon_container_size(size),
+        defaults::icon_container_size(size),
     )
 }
 
@@ -34,7 +219,7 @@ pub(crate) fn icon_size(theme: &Theme, size: FabSize) -> Px {
     fab_metric(
         theme,
         format!("{}.icon.size", size_prefix(size)),
-        fab_common::icon_size(size),
+        defaults::icon_size(size),
     )
 }
 
@@ -43,9 +228,9 @@ pub(crate) fn container_shape(theme: &Theme, size: FabSize) -> Corners {
     MaterialTokenResolver::new(theme).corners_chain_or(
         &[
             key.as_str(),
-            fab_common::icon_container_shape_system_key(size),
+            defaults::icon_container_shape_system_key(size),
         ],
-        Corners::all(fab_common::icon_container_shape_radius(size)),
+        Corners::all(defaults::icon_container_shape_radius(size)),
     )
 }
 
@@ -53,7 +238,7 @@ pub(crate) fn extended_container_height(theme: &Theme, size: FabSize) -> Px {
     fab_metric(
         theme,
         format!("{}.container.height", extended_size_prefix(size)),
-        fab_common::extended_container_height(size),
+        defaults::extended_container_height(size),
     )
 }
 
@@ -61,7 +246,7 @@ pub(crate) fn extended_min_width(theme: &Theme, size: FabSize) -> Px {
     fab_metric(
         theme,
         format!("{}.container.width", extended_size_prefix(size)),
-        fab_common::extended_min_width(size, extended_container_height(theme, size)),
+        defaults::extended_min_width(size, extended_container_height(theme, size)),
     )
 }
 
@@ -69,7 +254,7 @@ pub(crate) fn extended_icon_size(theme: &Theme, size: FabSize) -> Px {
     fab_metric(
         theme,
         format!("{}.icon.size", extended_size_prefix(size)),
-        fab_common::extended_icon_size(size),
+        defaults::extended_icon_size(size),
     )
 }
 
@@ -78,9 +263,9 @@ pub(crate) fn extended_container_shape(theme: &Theme, size: FabSize) -> Corners 
     MaterialTokenResolver::new(theme).corners_chain_or(
         &[
             key.as_str(),
-            fab_common::extended_container_shape_system_key(size),
+            defaults::extended_container_shape_system_key(size),
         ],
-        Corners::all(fab_common::extended_container_shape_radius(size)),
+        Corners::all(defaults::extended_container_shape_radius(size)),
     )
 }
 
@@ -88,7 +273,7 @@ pub(crate) fn extended_leading_space(theme: &Theme, size: FabSize, has_icon: boo
     let leading = fab_metric(
         theme,
         format!("{}.leading-space", extended_size_prefix(size)),
-        fab_common::extended_leading_space(size),
+        defaults::extended_leading_space(size),
     );
     let trailing = extended_trailing_space(theme, size);
     if has_icon { leading } else { trailing }
@@ -98,7 +283,7 @@ pub(crate) fn extended_trailing_space(theme: &Theme, size: FabSize) -> Px {
     fab_metric(
         theme,
         format!("{}.trailing-space", extended_size_prefix(size)),
-        fab_common::extended_trailing_space(size),
+        defaults::extended_trailing_space(size),
     )
 }
 
@@ -106,7 +291,7 @@ pub(crate) fn extended_icon_label_space(theme: &Theme, size: FabSize) -> Px {
     fab_metric(
         theme,
         format!("{}.icon-label-space", extended_size_prefix(size)),
-        fab_common::extended_icon_label_space(size),
+        defaults::extended_icon_label_space(size),
     )
 }
 
@@ -126,7 +311,7 @@ pub(crate) fn container_background(
 
     if !enabled {
         let mut c = tokens.color_sys("md.sys.color.on-surface");
-        c.a *= fab_common::disabled_container_opacity();
+        c.a *= defaults::disabled_container_opacity();
         return c;
     }
 
@@ -155,7 +340,7 @@ pub(crate) fn container_elevation(
     interaction: Option<FabInteraction>,
 ) -> Px {
     if !enabled {
-        return fab_common::disabled_container_elevation();
+        return defaults::disabled_container_elevation();
     }
 
     let prefix = if extended {
@@ -198,7 +383,7 @@ pub(crate) fn container_elevation(
         }
     }
 
-    fab_common::disabled_container_elevation()
+    defaults::disabled_container_elevation()
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme, extended: bool, variant: FabVariant) -> Color {
@@ -234,7 +419,7 @@ pub(crate) fn icon_color(
     let mut color = tokens.color_comp_chain_or_sys(&comp_refs, "md.sys.color.on-surface");
 
     if !enabled {
-        color = alpha_mul(color, fab_common::disabled_content_opacity());
+        color = alpha_mul(color, defaults::disabled_content_opacity());
     }
 
     color
@@ -254,7 +439,7 @@ pub(crate) fn label_color(
     let mut color = tokens.color_comp_chain_or_sys(&comp_refs, "md.sys.color.on-surface");
 
     if !enabled {
-        color = alpha_mul(color, fab_common::disabled_content_opacity());
+        color = alpha_mul(color, defaults::disabled_content_opacity());
     }
 
     color
@@ -267,7 +452,7 @@ pub(crate) fn extended_label_text_style(
 ) -> TextStyle {
     typography::text_style_with_weight(
         theme,
-        Some(fab_common::extended_label_text_source(size)),
+        Some(defaults::extended_label_text_source(size)),
         "md.sys.typescale.label-large",
         Some(extended_label_text_weight_key(variant)),
         TextIntent::Control,
@@ -314,19 +499,19 @@ pub(crate) fn state_layer_opacity(
             format!("{prefix}.hovered.state-layer.opacity"),
             format!("{prefix}.hover.state-layer.opacity"),
             "md.sys.state.hover.state-layer-opacity",
-            fab_common::hovered_state_layer_opacity(),
+            defaults::hovered_state_layer_opacity(),
         ),
         FabInteraction::Focused => (
             format!("{prefix}.focused.state-layer.opacity"),
             format!("{prefix}.focus.state-layer.opacity"),
             "md.sys.state.focus.state-layer-opacity",
-            fab_common::focused_state_layer_opacity(),
+            defaults::focused_state_layer_opacity(),
         ),
         FabInteraction::Pressed => (
             format!("{prefix}.pressed.state-layer.opacity"),
             String::new(),
             "md.sys.state.pressed.state-layer-opacity",
-            fab_common::pressed_state_layer_opacity(),
+            defaults::pressed_state_layer_opacity(),
         ),
     };
 
@@ -343,7 +528,7 @@ pub(crate) fn state_layer_opacity(
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme) -> f32 {
     MaterialTokenResolver::new(theme).number_sys(
         "md.sys.state.pressed.state-layer-opacity",
-        fab_common::pressed_state_layer_opacity(),
+        defaults::pressed_state_layer_opacity(),
     )
 }
 
