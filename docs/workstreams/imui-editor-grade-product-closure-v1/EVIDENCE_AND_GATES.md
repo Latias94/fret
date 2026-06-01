@@ -4350,6 +4350,39 @@ for `unstable-retained-bridge` check-cfg and `current_effective_opacity` dead co
 `git diff --check` reported only the pre-existing line-ending warnings for `Cargo.lock` and
 `apps/fret-examples/src/lib.rs`.
 
+## IMUI editor proof collection geometry owner split - 2026-06-02
+
+Scope: keep the canonical editor proof collection surface app-owned while splitting pure
+collection geometry, layout, drag-rect, and primary-wheel zoom math out of the large
+`collection.rs` render/command owner.
+
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs` now owns collection grid
+  fallback constants, layout metrics, drag-rect normalization, rect intersection, local rect
+  projection, primary-wheel zoom anchoring, and the focused geometry test floor.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` keeps collection assets, models,
+  render assembly, command package behavior, inline rename, context menu, drag/drop, and drop
+  status wiring.
+- `tools/gate_imui_workstream_source.py` now rejects the geometry helper bodies and geometry tests
+  returning to the parent collection module while source-checking the split geometry owner.
+- This remains a demo-local proof-surface refactor: no public `fret-imui`, `fret-ui-kit::imui`,
+  `fret-ui-editor`, docking, runner, or diagnostics API changed.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-examples
+cargo check -p fret-examples
+cargo nextest run -p fret-examples proof_collection --no-fail-fast
+cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. `cargo check -p fret-examples` reported only the existing unrelated
+`fret-plot` / `fret-chart` dead-code warnings.
+
 ## Fresh resume verification for closed 2026-05-25 IMUI slices - 2026-05-25
 
 Scope: after context recovery, re-check the current worktree evidence for the seven new closed
