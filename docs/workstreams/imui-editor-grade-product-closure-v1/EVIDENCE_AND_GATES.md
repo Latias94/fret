@@ -2,6 +2,32 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## ColorEdit element owner split - 2026-06-02
+
+This refresh keeps editor color picking policy in `fret-ui-editor` while reducing the remaining
+ColorEdit root file ownership:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit.rs` now owns only child-module wiring, public
+  re-exports, and shared color-edit constants used by child modules.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/element.rs` now owns `ColorEdit`, constructor
+  and options builder methods, caller-keyed `into_element(...)`, root input/swatch assembly,
+  drag-drop delivery, popup/tooltip/copy overlay requests, and final layout handoff.
+- Existing focused owners remain unchanged: `input.rs` owns hex input, `swatch.rs` owns swatch
+  behavior, `layout.rs` owns root layout, `state.rs` owns popup/draft/error models, and `popup/*`
+  owns popup content.
+- `tools/gate_imui_workstream_source.py` now rejects ColorEdit public element definitions and
+  element assembly bodies from drifting back into the root module.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-editor` - passed.
+- `cargo check -p fret-ui-editor --features imui` - passed.
+- `cargo nextest run -p fret-ui-editor --features imui color_edit --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## TransformEdit model owner split - 2026-06-02
 
 This refresh keeps transform editing policy in `fret-ui-editor` while reducing the remaining

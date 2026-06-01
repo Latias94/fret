@@ -10,9 +10,10 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
 use super::drag_drop::ColorDragDropStore;
+use super::state::{draft_model, error_model};
 use super::{
     ColorEditAlphaPreview, ColorEditDragDropOptions, ColorEditPaletteEntry, ColorEditPopupOptions,
-    ColorEditPopupRuntimeOptions, OnColorEditPaletteSlotDrop, draft_model, error_model,
+    ColorEditPopupRuntimeOptions, OnColorEditPaletteSlotDrop,
 };
 
 mod body;

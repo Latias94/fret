@@ -2,6 +2,7 @@
 
 const IMUI_RS: &str = include_str!("../src/imui.rs");
 const COLOR_EDIT_RS: &str = include_str!("../src/controls/color_edit.rs");
+const COLOR_EDIT_ELEMENT_RS: &str = include_str!("../src/controls/color_edit/element.rs");
 const COLOR_EDIT_INPUT_RS: &str = include_str!("../src/controls/color_edit/input.rs");
 const COLOR_EDIT_POPUP_COPY_RS: &str = include_str!("../src/controls/color_edit/popup/copy.rs");
 const COLOR_EDIT_POPUP_COPY_ENTRIES_RS: &str =
@@ -87,17 +88,22 @@ fn count_occurrences(haystack: &str, needle: &str) -> usize {
 
 #[test]
 fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
+    assert!(COLOR_EDIT_RS.contains("mod element;"));
+    assert!(COLOR_EDIT_RS.contains("pub use self::element::ColorEdit;"));
     assert!(COLOR_EDIT_RS.contains("mod input;"));
-    assert!(COLOR_EDIT_RS.contains("use self::input::{"));
     assert!(COLOR_EDIT_RS.contains("mod layout;"));
-    assert!(COLOR_EDIT_RS.contains("use self::layout::{"));
     assert!(COLOR_EDIT_RS.contains("mod options;"));
     assert!(COLOR_EDIT_RS.contains("pub use self::options::{"));
     assert!(COLOR_EDIT_RS.contains("mod records;"));
     assert!(COLOR_EDIT_RS.contains("pub use self::records::{"));
     assert!(COLOR_EDIT_RS.contains("mod state;"));
     assert!(COLOR_EDIT_RS.contains("mod swatch;"));
-    assert!(COLOR_EDIT_RS.contains("use self::swatch::{"));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("pub struct ColorEdit"));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("fn into_element_keyed"));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("color_hex_input("));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("color_swatch("));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("request_popup_overlay("));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("color_edit_root_layout("));
     assert!(COLOR_EDIT_OPTIONS_RS.contains("pub struct ColorEditOptions"));
     assert!(COLOR_EDIT_OPTIONS_RS.contains("mod popup;"));
     assert!(COLOR_EDIT_OPTIONS_RS.contains("pub use popup::{"));
@@ -147,8 +153,8 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_SWATCH_CONTEXT_MENU_RS.contains("key_on_key_down_for"));
     assert!(COLOR_EDIT_SWATCH_CONTEXT_MENU_RS.contains("KeyCode::ContextMenu"));
     assert!(COLOR_EDIT_SWATCH_RS.contains("color_preview_stack"));
-    assert!(COLOR_EDIT_RS.contains("ColorEditDeliveredDropArgs"));
-    assert!(COLOR_EDIT_RS.contains("apply_delivered_color_drop("));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("ColorEditDeliveredDropArgs"));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("apply_delivered_color_drop("));
     assert!(COLOR_EDIT_RECORDS_RS.contains("const COLOR_PRESETS:"));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("mod slot;"));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("use self::slot::preset_swatch;"));
