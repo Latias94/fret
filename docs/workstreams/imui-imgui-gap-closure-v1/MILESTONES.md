@@ -83,6 +83,15 @@ mutation, and redraw request behavior. Public bool vs optional-bool constructors
 focus-ring geometry, chrome resolution, and indicator mounting remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor Checkbox indicator owner-split result:
+`ecosystem/fret-ui-editor/src/controls/checkbox.rs` now keeps a11y, pressable props, root control
+assembly, and visual-state calculation while delegating indicator container/icon mounting to
+`controls/checkbox/indicator.rs`. The private indicator owner contains tri-state icon selection,
+checked/indeterminate/unchecked icon mounting, box size/radius, border width, centered icon layout,
+and icon color routing. A11y routing, focus-ring geometry, model behavior, chrome resolution, and
+pressable activation behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes
+the split.
+
 2026-06-01 editor PropertyRow trailing-slot owner-split result:
 `ecosystem/fret-ui-editor/src/composites/property_row/element.rs` now keeps row/column layout,
 value-slot marking, reset/action visibility decisions, and reset/action child routing while

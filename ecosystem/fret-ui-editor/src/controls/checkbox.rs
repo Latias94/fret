@@ -4,24 +4,22 @@
 //! can override tokens without pulling in a full design system dependency.
 
 mod chrome;
+mod indicator;
 mod model;
 mod options;
 
-use fret_core::{Axis, Corners, Edges, Point, Px, Rect, Size};
+use fret_core::{Corners, Point, Px, Rect, Size};
 use fret_runtime::Model;
-use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableProps, RingPlacement, RingStyle, SizeStyle, SpacingLength,
-};
+use fret_ui::element::{AnyElement, Length, PressableProps, RingPlacement, RingStyle};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::checked_state::CheckedState;
-use fret_ui_kit::ColorRef;
 use fret_ui_kit::primitives::checkbox::checkbox_a11y;
 
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use chrome::resolve_checkbox_chrome;
+use indicator::checkbox_indicator_element;
 use model::{CheckboxModel, checkbox_checked_state, checkbox_on_activate};
 
 pub use options::CheckboxOptions;
@@ -74,14 +72,6 @@ impl Checkbox {
         let chrome = resolve_checkbox_chrome(theme, frame_chrome.bg);
 
         let checked_state = checkbox_checked_state(cx, &self.model);
-
-        let icon_id = match checked_state {
-            CheckedState::Checked => Some(fret_icons::ids::ui::CHECK),
-            CheckedState::Indeterminate => Some(fret_icons::ids::ui::MINUS),
-            CheckedState::Unchecked => None,
-        };
-
-        let icon_px = Px((checkbox_size.0 - 4.0).max(8.0));
 
         let mut layout = self.options.layout;
         if layout.size.width == Length::Auto {
@@ -149,74 +139,13 @@ impl Checkbox {
                     checked_state != CheckedState::Unchecked,
                 );
 
-                let box_el = cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Px(checkbox_size),
-                                height: Length::Px(checkbox_size),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        background: Some(visuals.bg),
-                        border: Edges::all(frame_chrome.border_width),
-                        border_color: Some(visuals.border),
-                        corner_radii: Corners::all(checkbox_radius),
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        let Some(icon) = icon_id else {
-                            return vec![];
-                        };
-
-                        vec![cx.flex(
-                            FlexProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                direction: Axis::Horizontal,
-                                gap: SpacingLength::Px(Px(0.0)),
-                                padding: Edges::all(Px(0.0)).into(),
-                                justify: MainAlign::Center,
-                                align: CrossAlign::Center,
-                                wrap: false,
-                            },
-                            move |cx| {
-                                vec![fret_ui_kit::declarative::icon::icon_with(
-                                    cx,
-                                    icon,
-                                    Some(icon_px),
-                                    Some(ColorRef::Color(visuals.icon)),
-                                )]
-                            },
-                        )]
-                    },
-                );
-
-                vec![cx.flex(
-                    FlexProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Fill,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        direction: Axis::Horizontal,
-                        gap: SpacingLength::Px(Px(0.0)),
-                        padding: Edges::all(Px(0.0)).into(),
-                        justify: MainAlign::Center,
-                        align: CrossAlign::Center,
-                        wrap: false,
-                    },
-                    move |_cx| vec![box_el],
+                vec![checkbox_indicator_element(
+                    cx,
+                    checked_state,
+                    visuals,
+                    checkbox_size,
+                    checkbox_radius,
+                    frame_chrome.border_width,
                 )]
             },
         );

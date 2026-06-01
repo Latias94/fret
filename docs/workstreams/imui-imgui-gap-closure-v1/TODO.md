@@ -125,6 +125,14 @@ Last updated: 2026-06-01
       control assembly while delegating checked-state reads and activation toggling to
       `controls/checkbox/model.rs`. The source gate prevents model/toggle policy from drifting
       back into the checkbox owner.
+- [x] Split editor `Checkbox` indicator box and icon assembly into a private child owner without
+      changing tri-state icon selection, checked/indeterminate/unchecked visuals, box size/radius,
+      border width, centered icon layout, icon color, a11y routing, focus-ring geometry, model
+      behavior, chrome resolution, or pressable activation behavior.
+      Result: `controls/checkbox.rs` keeps a11y, pressable props, root control assembly, and
+      visual-state calculation while delegating indicator container/icon mounting to
+      `controls/checkbox/indicator.rs`. The source gate prevents indicator assembly from drifting
+      back into the checkbox owner.
 - [x] Split editor `GradientEditor` stop-row assembly into a private child owner without changing
       stop sorting, row identity/test-id derivation, position/color editors, remove action routing,
       row layout, empty-state text role, preview behavior, or public gradient editor options.
