@@ -24,13 +24,25 @@ pub(crate) enum IconButtonInteraction {
     Pressed,
 }
 
+fn icon_button_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
+fn icon_button_metric_chain(theme: &Theme, keys: &[&'static str], fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_chain(keys, fallback)
+}
+
 pub(crate) fn selected_container_shape_radius(theme: &Theme) -> f32 {
-    theme
-        .metric_by_key("md.comp.icon-button.selected.container.shape.round")
-        .or_else(|| theme.metric_by_key("md.comp.icon-button.container.shape.round"))
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
-        .unwrap_or(Px(9999.0))
-        .0
+    icon_button_metric_chain(
+        theme,
+        &[
+            "md.comp.icon-button.selected.container.shape.round",
+            "md.comp.icon-button.container.shape.round",
+            "md.sys.shape.corner.full",
+        ],
+        Px(9999.0),
+    )
+    .0
 }
 
 pub(crate) fn icon_color(
@@ -207,19 +219,27 @@ fn material_state_layer_interaction(
 }
 
 pub(crate) fn container_shape_radius(theme: &Theme) -> f32 {
-    theme
-        .metric_by_key("md.comp.icon-button.container.shape.round")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
-        .unwrap_or(Px(9999.0))
-        .0
+    icon_button_metric_chain(
+        theme,
+        &[
+            "md.comp.icon-button.container.shape.round",
+            "md.sys.shape.corner.full",
+        ],
+        Px(9999.0),
+    )
+    .0
 }
 
 pub(crate) fn pressed_container_shape_radius(theme: &Theme) -> f32 {
-    theme
-        .metric_by_key("md.comp.icon-button.pressed.container.shape")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.small"))
-        .unwrap_or(Px(8.0))
-        .0
+    icon_button_metric_chain(
+        theme,
+        &[
+            "md.comp.icon-button.pressed.container.shape",
+            "md.sys.shape.corner.small",
+        ],
+        Px(8.0),
+    )
+    .0
 }
 
 pub(crate) fn pressed_container_corner_spring(
@@ -243,31 +263,37 @@ pub(crate) fn pressed_container_corner_spring(
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct IconButtonSizeTokens {
-    pub container: Px,
-    pub pad_left: Px,
-    pub pad_right: Px,
-    pub icon_size: Px,
-    pub outline_width: Px,
+    pub(crate) container: Px,
+    pub(crate) pad_left: Px,
+    pub(crate) pad_right: Px,
+    pub(crate) icon_size: Px,
+    pub(crate) outline_width: Px,
 }
 
 pub(crate) fn size_tokens(theme: &Theme, size: IconButtonSize) -> IconButtonSizeTokens {
     match size {
         IconButtonSize::Small => IconButtonSizeTokens {
-            container: theme
-                .metric_by_key("md.comp.icon-button.small.container.height")
-                .unwrap_or(Px(40.0)),
-            pad_left: theme
-                .metric_by_key("md.comp.icon-button.small.default.leading-space")
-                .unwrap_or(Px(8.0)),
-            pad_right: theme
-                .metric_by_key("md.comp.icon-button.small.default.trailing-space")
-                .unwrap_or(Px(8.0)),
-            icon_size: theme
-                .metric_by_key("md.comp.icon-button.small.icon.size")
-                .unwrap_or(Px(24.0)),
-            outline_width: theme
-                .metric_by_key("md.comp.icon-button.small.outlined.outline.width")
-                .unwrap_or(Px(1.0)),
+            container: icon_button_metric(
+                theme,
+                "md.comp.icon-button.small.container.height",
+                Px(40.0),
+            ),
+            pad_left: icon_button_metric(
+                theme,
+                "md.comp.icon-button.small.default.leading-space",
+                Px(8.0),
+            ),
+            pad_right: icon_button_metric(
+                theme,
+                "md.comp.icon-button.small.default.trailing-space",
+                Px(8.0),
+            ),
+            icon_size: icon_button_metric(theme, "md.comp.icon-button.small.icon.size", Px(24.0)),
+            outline_width: icon_button_metric(
+                theme,
+                "md.comp.icon-button.small.outlined.outline.width",
+                Px(1.0),
+            ),
         },
     }
 }
@@ -664,5 +690,74 @@ fn disabled_icon_opacity_key(variant: IconButtonVariant) -> &'static str {
         IconButtonVariant::Filled => "md.comp.icon-button.filled.disabled.icon.opacity",
         IconButtonVariant::Tonal => "md.comp.icon-button.tonal.disabled.icon.opacity",
         IconButtonVariant::Outlined => "md.comp.icon-button.outlined.disabled.icon.opacity",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn icon_button_size_defaults_match_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+        let size = size_tokens(theme, IconButtonSize::Small);
+
+        assert_eq!(size.container, Px(40.0));
+        assert_eq!(size.pad_left, Px(8.0));
+        assert_eq!(size.pad_right, Px(8.0));
+        assert_eq!(size.icon_size, Px(24.0));
+        assert_eq!(size.outline_width, Px(1.0));
+    }
+
+    #[test]
+    fn icon_button_metric_chains_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert(
+            "md.comp.icon-button.small.container.height".to_string(),
+            44.0,
+        );
+        patch.metrics.insert(
+            "md.comp.icon-button.small.default.leading-space".to_string(),
+            10.0,
+        );
+        patch
+            .metrics
+            .insert("md.comp.icon-button.small.icon.size".to_string(), 22.0);
+        patch.metrics.insert(
+            "md.comp.icon-button.small.outlined.outline.width".to_string(),
+            2.0,
+        );
+        patch
+            .metrics
+            .insert("md.sys.shape.corner.full".to_string(), 40.0);
+        patch.metrics.insert(
+            "md.comp.icon-button.pressed.container.shape".to_string(),
+            12.0,
+        );
+        patch.metrics.insert(
+            "md.comp.icon-button.selected.container.shape.round".to_string(),
+            36.0,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+        let size = size_tokens(&theme, IconButtonSize::Small);
+
+        assert_eq!(size.container, Px(44.0));
+        assert_eq!(size.pad_left, Px(10.0));
+        assert_eq!(size.icon_size, Px(22.0));
+        assert_eq!(size.outline_width, Px(2.0));
+        assert_eq!(container_shape_radius(&theme), 40.0);
+        assert_eq!(pressed_container_shape_radius(&theme), 12.0);
+        assert_eq!(selected_container_shape_radius(&theme), 36.0);
     }
 }

@@ -40,7 +40,7 @@ use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring
 use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::optional_part_test_id;
 use crate::motion::{SpringAnimator, SpringSpec};
-use crate::tokens::icon_button as icon_button_tokens;
+use crate::tokens::icon_button::{self as icon_button_tokens, IconButtonSizeTokens};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum IconButtonVariant {
@@ -230,8 +230,9 @@ impl IconButton {
                         theme,
                         MaterialMotionRole::IconButtonPressedShape,
                     );
-                    let corner_spring = icon_button_pressed_corner_spring(theme, scheme_spring);
-                    let size_tokens = icon_button_size_tokens(theme, self.size);
+                    let corner_spring =
+                        icon_button_tokens::pressed_container_corner_spring(theme, scheme_spring);
+                    let size_tokens = icon_button_tokens::size_tokens(theme, self.size);
                     (shapes, corner_spring, size_tokens)
                 };
 
@@ -563,8 +564,9 @@ impl IconToggleButton {
                         theme,
                         MaterialMotionRole::IconButtonPressedShape,
                     );
-                    let corner_spring = icon_button_pressed_corner_spring(theme, scheme_spring);
-                    let size_tokens = icon_button_size_tokens(theme, self.size);
+                    let corner_spring =
+                        icon_button_tokens::pressed_container_corner_spring(theme, scheme_spring);
+                    let size_tokens = icon_button_tokens::size_tokens(theme, self.size);
                     (shapes, corner_spring, size_tokens)
                 };
 
@@ -733,22 +735,6 @@ struct IconButtonCornerRuntime {
     spring: SpringAnimator,
 }
 
-fn icon_button_shape_radius(theme: &Theme) -> f32 {
-    icon_button_tokens::container_shape_radius(theme)
-}
-
-fn icon_button_selected_shape_radius(theme: &Theme) -> f32 {
-    icon_button_tokens::selected_container_shape_radius(theme)
-}
-
-fn icon_button_pressed_shape_radius(theme: &Theme) -> f32 {
-    icon_button_tokens::pressed_container_shape_radius(theme)
-}
-
-fn icon_button_pressed_corner_spring(theme: &Theme, scheme_fallback: SpringSpec) -> SpringSpec {
-    icon_button_tokens::pressed_container_corner_spring(theme, scheme_fallback)
-}
-
 fn resolved_icon_toggle_button_shapes<H: UiHost>(
     cx: &ElementContext<'_, H>,
     theme: &Theme,
@@ -759,13 +745,13 @@ fn resolved_icon_toggle_button_shapes<H: UiHost>(
         return shapes;
     }
 
-    let base = Px(icon_button_shape_radius(theme));
-    let pressed = Px(icon_button_pressed_shape_radius(theme));
+    let base = Px(icon_button_tokens::container_shape_radius(theme));
+    let pressed = Px(icon_button_tokens::pressed_container_shape_radius(theme));
 
     let expressive = resolved_design_variant(cx, theme_default_design_variant(theme))
         == MaterialDesignVariant::Expressive;
     let checked = if toggle && expressive {
-        Px(icon_button_selected_shape_radius(theme))
+        Px(icon_button_tokens::selected_container_shape_radius(theme))
     } else {
         base
     };
@@ -793,26 +779,6 @@ fn animated_icon_button_corner_radii<H: UiHost>(
         rt.spring.advance(now_frame);
         (Corners::all(Px(rt.spring.value())), rt.spring.is_active())
     })
-}
-
-#[derive(Debug, Clone, Copy)]
-struct IconButtonSizeTokens {
-    container: Px,
-    pad_left: Px,
-    pad_right: Px,
-    icon_size: Px,
-    outline_width: Px,
-}
-
-fn icon_button_size_tokens(theme: &Theme, size: IconButtonSize) -> IconButtonSizeTokens {
-    let t = icon_button_tokens::size_tokens(theme, size);
-    IconButtonSizeTokens {
-        container: t.container,
-        pad_left: t.pad_left,
-        pad_right: t.pad_right,
-        icon_size: t.icon_size,
-        outline_width: t.outline_width,
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
