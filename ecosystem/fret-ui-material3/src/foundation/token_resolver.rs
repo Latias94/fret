@@ -364,6 +364,16 @@ impl<'a> MaterialTokenResolver<'a> {
         self.state_layer_opacity(comp_key, interaction.into())
     }
 
+    pub fn pressable_state_layer_opacity_or(
+        &self,
+        comp_key: &str,
+        interaction: PressableInteraction,
+        fallback: f32,
+    ) -> f32 {
+        let interaction = MaterialStateLayerInteraction::from(interaction);
+        self.number_comp_or_sys(comp_key, interaction.sys_opacity_key(), fallback)
+    }
+
     pub fn disabled_state_layer_opacity(&self) -> f32 {
         self.number_sys("md.sys.state.disabled.state-layer-opacity", 0.38)
     }
@@ -517,6 +527,46 @@ mod tests {
                 PressableInteraction::Pressed,
             ),
             0.26
+        );
+    }
+
+    #[test]
+    fn pressable_state_layer_opacity_or_keeps_explicit_default() {
+        let mut app = App::new();
+        let mut patch = ThemeConfig::default();
+        patch
+            .numbers
+            .insert("md.sys.state.hover.state-layer-opacity".to_string(), 0.14);
+        patch
+            .numbers
+            .insert("md.comp.test.focus.state-layer.opacity".to_string(), 0.22);
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app);
+
+        let tokens = MaterialTokenResolver::new(theme);
+        assert_eq!(
+            tokens.pressable_state_layer_opacity_or(
+                "md.comp.test.hover.state-layer.opacity",
+                PressableInteraction::Hovered,
+                0.0,
+            ),
+            0.14
+        );
+        assert_eq!(
+            tokens.pressable_state_layer_opacity_or(
+                "md.comp.test.focus.state-layer.opacity",
+                PressableInteraction::Focused,
+                0.0,
+            ),
+            0.22
+        );
+        assert_eq!(
+            tokens.pressable_state_layer_opacity_or(
+                "md.comp.test.pressed.state-layer.opacity",
+                PressableInteraction::Pressed,
+                0.0,
+            ),
+            0.0
         );
     }
 

@@ -283,11 +283,14 @@ pub(crate) fn time_selector_label_color(
     selected: bool,
     interaction: Option<PressableInteraction>,
 ) -> Color {
+    let suffix = time_period_common::selected_interaction_suffix(
+        "time-selector",
+        selected,
+        interaction,
+        "label-text.color",
+    );
     MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &token_key(
-            component_prefix,
-            time_selector_label_color_suffix(selected, interaction),
-        ),
+        &token_key(component_prefix, &suffix),
         if selected {
             "md.sys.color.on-primary-container"
         } else {
@@ -302,11 +305,14 @@ pub(crate) fn time_selector_state_layer_color(
     selected: bool,
     interaction: PressableInteraction,
 ) -> Color {
+    let suffix = time_period_common::selected_interaction_suffix(
+        "time-selector",
+        selected,
+        Some(interaction),
+        "state-layer.color",
+    );
     MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &token_key(
-            component_prefix,
-            time_selector_state_layer_color_suffix(selected, interaction),
-        ),
+        &token_key(component_prefix, &suffix),
         "md.sys.color.on-surface",
     )
 }
@@ -316,24 +322,12 @@ pub(crate) fn time_selector_state_layer_opacity(
     component_prefix: &str,
     interaction: PressableInteraction,
 ) -> f32 {
-    let (suffix, fallback) = match interaction {
-        PressableInteraction::Focused => (
-            "time-selector.focus.state-layer.opacity",
-            "md.sys.state.focus.state-layer-opacity",
-        ),
-        PressableInteraction::Hovered => (
-            "time-selector.hover.state-layer.opacity",
-            "md.sys.state.hover.state-layer-opacity",
-        ),
-        PressableInteraction::Pressed => (
-            "time-selector.pressed.state-layer.opacity",
-            "md.sys.state.pressed.state-layer-opacity",
-        ),
-    };
+    let suffix =
+        time_period_common::interaction_suffix("time-selector", interaction, "state-layer.opacity");
     MaterialTokenResolver::new(theme)
-        .number_comp_or_sys(
-            &token_key(component_prefix, suffix),
-            fallback,
+        .pressable_state_layer_opacity_or(
+            &token_key(component_prefix, &suffix),
+            interaction,
             DEFAULT_TIME_SELECTOR_STATE_LAYER_OPACITY,
         )
         .clamp(0.0, 1.0)
@@ -415,54 +409,6 @@ fn full_shape_or_token(theme: &Theme, component_prefix: &str, suffix: &str) -> C
 
 fn token_key(component_prefix: &str, suffix: &str) -> String {
     format!("{component_prefix}.{suffix}")
-}
-
-fn time_selector_label_color_suffix(
-    selected: bool,
-    interaction: Option<PressableInteraction>,
-) -> &'static str {
-    match (selected, interaction) {
-        (true, Some(PressableInteraction::Focused)) => {
-            "time-selector.selected.focus.label-text.color"
-        }
-        (true, Some(PressableInteraction::Hovered)) => {
-            "time-selector.selected.hover.label-text.color"
-        }
-        (true, Some(PressableInteraction::Pressed)) => {
-            "time-selector.selected.pressed.label-text.color"
-        }
-        (true, None) => "time-selector.selected.label-text.color",
-        (false, Some(PressableInteraction::Focused)) => {
-            "time-selector.unselected.focus.label-text.color"
-        }
-        (false, Some(PressableInteraction::Hovered)) => {
-            "time-selector.unselected.hover.label-text.color"
-        }
-        (false, Some(PressableInteraction::Pressed)) => {
-            "time-selector.unselected.pressed.label-text.color"
-        }
-        (false, None) => "time-selector.unselected.label-text.color",
-    }
-}
-
-fn time_selector_state_layer_color_suffix(
-    selected: bool,
-    interaction: PressableInteraction,
-) -> &'static str {
-    match (selected, interaction) {
-        (true, PressableInteraction::Focused) => "time-selector.selected.focus.state-layer.color",
-        (true, PressableInteraction::Hovered) => "time-selector.selected.hover.state-layer.color",
-        (true, PressableInteraction::Pressed) => "time-selector.selected.pressed.state-layer.color",
-        (false, PressableInteraction::Focused) => {
-            "time-selector.unselected.focus.state-layer.color"
-        }
-        (false, PressableInteraction::Hovered) => {
-            "time-selector.unselected.hover.state-layer.color"
-        }
-        (false, PressableInteraction::Pressed) => {
-            "time-selector.unselected.pressed.state-layer.color"
-        }
-    }
 }
 
 #[cfg(test)]

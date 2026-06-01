@@ -82,9 +82,10 @@ pub(crate) fn label_color(
     selected: bool,
     interaction: Option<PressableInteraction>,
 ) -> Color {
-    let suffix = label_color_suffix(selected, interaction);
+    let suffix =
+        selected_interaction_suffix("period-selector", selected, interaction, "label-text.color");
     MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &token_key(component_prefix, suffix),
+        &token_key(component_prefix, &suffix),
         if selected {
             "md.sys.color.on-tertiary-container"
         } else {
@@ -99,9 +100,14 @@ pub(crate) fn state_layer_color(
     selected: bool,
     interaction: PressableInteraction,
 ) -> Color {
-    let suffix = state_layer_color_suffix(selected, interaction);
+    let suffix = selected_interaction_suffix(
+        "period-selector",
+        selected,
+        Some(interaction),
+        "state-layer.color",
+    );
     MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &token_key(component_prefix, suffix),
+        &token_key(component_prefix, &suffix),
         if selected {
             "md.sys.color.on-tertiary-container"
         } else {
@@ -115,24 +121,11 @@ pub(crate) fn state_layer_opacity(
     component_prefix: &str,
     interaction: PressableInteraction,
 ) -> f32 {
-    let (suffix, fallback) = match interaction {
-        PressableInteraction::Focused => (
-            "period-selector.focus.state-layer.opacity",
-            "md.sys.state.focus.state-layer-opacity",
-        ),
-        PressableInteraction::Hovered => (
-            "period-selector.hover.state-layer.opacity",
-            "md.sys.state.hover.state-layer-opacity",
-        ),
-        PressableInteraction::Pressed => (
-            "period-selector.pressed.state-layer.opacity",
-            "md.sys.state.pressed.state-layer-opacity",
-        ),
-    };
+    let suffix = interaction_suffix("period-selector", interaction, "state-layer.opacity");
     MaterialTokenResolver::new(theme)
-        .number_comp_or_sys(
-            &token_key(component_prefix, suffix),
-            fallback,
+        .pressable_state_layer_opacity_or(
+            &token_key(component_prefix, &suffix),
+            interaction,
             DEFAULT_PERIOD_SELECTOR_STATE_LAYER_OPACITY,
         )
         .clamp(0.0, 1.0)
@@ -142,48 +135,31 @@ fn token_key(component_prefix: &str, suffix: &str) -> String {
     format!("{component_prefix}.{suffix}")
 }
 
-fn label_color_suffix(selected: bool, interaction: Option<PressableInteraction>) -> &'static str {
-    match (selected, interaction) {
-        (true, Some(PressableInteraction::Focused)) => {
-            "period-selector.selected.focus.label-text.color"
-        }
-        (true, Some(PressableInteraction::Hovered)) => {
-            "period-selector.selected.hover.label-text.color"
-        }
-        (true, Some(PressableInteraction::Pressed)) => {
-            "period-selector.selected.pressed.label-text.color"
-        }
-        (true, None) => "period-selector.selected.label-text.color",
-        (false, Some(PressableInteraction::Focused)) => {
-            "period-selector.unselected.focus.label-text.color"
-        }
-        (false, Some(PressableInteraction::Hovered)) => {
-            "period-selector.unselected.hover.label-text.color"
-        }
-        (false, Some(PressableInteraction::Pressed)) => {
-            "period-selector.unselected.pressed.label-text.color"
-        }
-        (false, None) => "period-selector.unselected.label-text.color",
+pub(crate) fn selected_interaction_suffix(
+    selector_prefix: &str,
+    selected: bool,
+    interaction: Option<PressableInteraction>,
+    role_suffix: &str,
+) -> String {
+    let selected_state = if selected { "selected" } else { "unselected" };
+    match interaction {
+        Some(interaction) => format!(
+            "{selector_prefix}.{selected_state}.{}.{role_suffix}",
+            interaction.token_state()
+        ),
+        None => format!("{selector_prefix}.{selected_state}.{role_suffix}"),
     }
 }
 
-fn state_layer_color_suffix(selected: bool, interaction: PressableInteraction) -> &'static str {
-    match (selected, interaction) {
-        (true, PressableInteraction::Focused) => "period-selector.selected.focus.state-layer.color",
-        (true, PressableInteraction::Hovered) => "period-selector.selected.hover.state-layer.color",
-        (true, PressableInteraction::Pressed) => {
-            "period-selector.selected.pressed.state-layer.color"
-        }
-        (false, PressableInteraction::Focused) => {
-            "period-selector.unselected.focus.state-layer.color"
-        }
-        (false, PressableInteraction::Hovered) => {
-            "period-selector.unselected.hover.state-layer.color"
-        }
-        (false, PressableInteraction::Pressed) => {
-            "period-selector.unselected.pressed.state-layer.color"
-        }
-    }
+pub(crate) fn interaction_suffix(
+    selector_prefix: &str,
+    interaction: PressableInteraction,
+    role_suffix: &str,
+) -> String {
+    format!(
+        "{selector_prefix}.{}.{role_suffix}",
+        interaction.token_state()
+    )
 }
 
 #[cfg(test)]
@@ -231,6 +207,40 @@ mod tests {
                 Px(72.0),
             ),
             Px(74.0)
+        );
+    }
+
+    #[test]
+    fn time_family_interaction_suffixes_build_selected_paths() {
+        assert_eq!(
+            selected_interaction_suffix(
+                "period-selector",
+                true,
+                Some(PressableInteraction::Hovered),
+                "label-text.color",
+            ),
+            "period-selector.selected.hover.label-text.color"
+        );
+        assert_eq!(
+            selected_interaction_suffix(
+                "time-selector",
+                false,
+                Some(PressableInteraction::Pressed),
+                "state-layer.color",
+            ),
+            "time-selector.unselected.pressed.state-layer.color"
+        );
+        assert_eq!(
+            selected_interaction_suffix("time-selector", true, None, "label-text.color"),
+            "time-selector.selected.label-text.color"
+        );
+        assert_eq!(
+            interaction_suffix(
+                "period-selector",
+                PressableInteraction::Focused,
+                "state-layer.opacity",
+            ),
+            "period-selector.focus.state-layer.opacity"
         );
     }
 
