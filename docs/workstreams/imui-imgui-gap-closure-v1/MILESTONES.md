@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 kit IMUI debug-draw stroke-style owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/stroke.rs` now keeps the public
+`DebugDrawStrokeStyle` record, builders, defaults, invalid dash/miter guards, and method names
+while delegating visibility/path-style projection to `options/stroke/style.rs`. The private style
+owner contains the V1 `PathStyle::Stroke` fast path and explicit `StrokeV2` policy projection.
+Public debug-draw option exports, stroke defaults, and tests remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor DragValue element owner-split result:
 `ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps the public control API, callsite /
 id-source keying wrapper, module declarations, and `DragValueOptions` re-export while delegating

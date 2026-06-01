@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Kit IMUI Debug-Draw Stroke Style Owner-Split Evidence - 2026-06-01
+
+Claim verified: `fret-ui-kit::imui` debug-draw stroke visibility/path-style projection moved out
+of `options/stroke.rs` into a private `options/stroke/style.rs` owner without changing
+`DebugDrawStrokeStyle` fields, builders, default values, invalid dash/miter guards,
+`is_visible(...)`, `path_style(...)`, or public debug-draw option exports.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/stroke.rs` keeps the public
+  `DebugDrawStrokeStyle` record, builders, defaults, invalid dash/miter guards, `From<Px>`, and
+  existing method names.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/stroke/style.rs` owns the internal
+  visibility test and V1/V2 `PathStyle` projection.
+- `tools/gate_imui_workstream_source.py` now tracks the split and rejects direct `StrokeV2`
+  projection policy from drifting back into the stroke option record owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new stroke style owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui debug_draw_stroke_style --no-fail-fast`: pass
+  (2 passed, 752 skipped) after one timeout during the initial compile wait; the same command was
+  rerun with a longer timeout and passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor DragValue Element Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `DragValue` keyed element composition moved out of the root control owner

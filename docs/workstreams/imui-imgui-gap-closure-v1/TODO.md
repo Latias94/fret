@@ -58,6 +58,14 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split `fret-ui-kit::imui` debug-draw stroke visibility/path-style projection into a private
+      child owner without changing `DebugDrawStrokeStyle` fields, builders, default values,
+      invalid dash/miter guards, `is_visible(...)`, `path_style(...)`, or public debug-draw option
+      exports.
+      Result: `debug_draw_controls/options/stroke.rs` keeps the public stroke style record,
+      builders, defaults, and method names. `debug_draw_controls/options/stroke/style.rs` owns the
+      internal visibility test and V1/V2 path-style projection. The source gate prevents `StrokeV2`
+      projection policy from drifting back into the option record owner.
 - [x] Split editor `DragValue` keyed element composition into a private child owner without
       changing public constructors/builders, callsite/id-source keying, model reads, duplicate
       chrome affix suppression, test-id derivation, scrub/input owner routing, hidden input
