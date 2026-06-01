@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor VecEdit element assembly owner-split result:
+`ecosystem/fret-ui-editor/src/controls/vec_edit/element.rs` now keeps Vec2/Vec3/Vec4 keyed
+entrypoints and maps concrete axis fields to axis descriptors while delegating shared element
+assembly to `controls/vec_edit/element/assembly.rs`. The private assembly owner contains layout
+plan resolution, per-axis id/test-id derivation, axis color mapping, root flex chrome, axis group
+mounting, numeric format/parse/validate forwarding, outcome forwarding, and root test-id
+decoration. Public Vec2/Vec3/Vec4 constructors/builders, options, axis reset behavior, and layout
+semantics remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor TextField buffered actions owner-split result:
 `ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs` now keeps buffered state, focus
 transition planning, draft model allocation, model-to-draft sync, focus/timer orchestration, blur

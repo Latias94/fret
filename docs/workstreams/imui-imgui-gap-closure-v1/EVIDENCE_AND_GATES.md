@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor VecEdit Element Assembly Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `VecEdit` keyed element assembly moved out of
+`controls/vec_edit/element.rs` into private `controls/vec_edit/element/assembly.rs` without
+changing Vec2/Vec3/Vec4 keyed entrypoints, axis ordering, id-source/test-id derivation, auto layout
+resolution, row/column flex chrome, axis color routing, axis reset routing, numeric
+format/parse/validate forwarding, axis outcome forwarding, or root test-id mounting.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/element.rs` keeps Vec2/Vec3/Vec4 keyed
+  entrypoints and maps each concrete control's models/resets into ordered axis descriptors.
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/element/assembly.rs` owns layout plan resolution,
+  per-axis id/test-id derivation, axis color mapping, root flex chrome, axis group mounting,
+  numeric format/parse/validate forwarding, outcome forwarding, and root test-id decoration.
+- `tools/gate_imui_workstream_source.py` now tracks the assembly owner and rejects layout/axis
+  assembly policy from drifting back into the keyed Vec2/Vec3/Vec4 entrypoint owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new assembly owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor vec_edit --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor TextField Buffered Actions Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `TextField` buffered commit/cancel action finalizers moved out of

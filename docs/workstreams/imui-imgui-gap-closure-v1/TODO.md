@@ -231,6 +231,16 @@ Last updated: 2026-06-01
       options types. `controls/vec_edit/options.rs` owns option fields, layout variant, and default
       values. The source gate prevents options/default policy from drifting back into the control
       hub.
+- [x] Split editor `VecEdit` keyed element assembly into a private element child owner without
+      changing Vec2/Vec3/Vec4 keyed entrypoints, axis ordering, id-source/test-id derivation, auto
+      layout resolution, row/column flex chrome, axis color routing, axis reset routing, numeric
+      format/parse/validate forwarding, axis outcome forwarding, or root test-id mounting.
+      Result: `controls/vec_edit/element.rs` now maps Vec2/Vec3/Vec4 fields to axis descriptors
+      and delegates shared layout/axis assembly to `controls/vec_edit/element/assembly.rs`. The
+      private assembly owner resolves the layout plan, derives per-axis ids/test ids, maps axis
+      colors, builds root flex chrome, mounts axis groups, and preserves root test-id decoration.
+      The source gate prevents layout/axis assembly policy from drifting back into the keyed
+      Vec2/Vec3/Vec4 entrypoint owner.
 - [x] Split editor `EnumSelect` options/default records into a private child owner without
       changing public `EnumSelectOptions` import paths, layout defaults, placeholder/none labels,
       max-list-height/test-id fields, keyed state identity, trigger composition, open-key policy, or
