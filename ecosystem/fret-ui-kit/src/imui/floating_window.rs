@@ -11,6 +11,7 @@ use super::{
 };
 
 mod closed;
+mod state;
 
 pub(super) fn floating_window_show<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -36,13 +37,8 @@ pub(super) fn floating_window_show_with_options<H: UiHost, W: UiWriterImUiFacade
     let resize = options.resize;
     let behavior = options.behavior;
 
-    if let Some(open) = open.as_ref() {
-        let is_open = ui
-            .with_cx_mut(|cx| cx.read_model(open, fret_ui::Invalidation::Paint, |_app, v| *v))
-            .unwrap_or(false);
-        if !is_open {
-            return closed::closed_floating_window_response(initial_position, initial_size);
-        }
+    if !state::floating_window_is_open(ui, open.as_ref()) {
+        return closed::closed_floating_window_response(initial_position, initial_size);
     }
 
     let chrome = Rc::new(Cell::new(super::FloatingWindowChromeResponse::default()));
@@ -75,10 +71,5 @@ pub(super) fn floating_window_show_with_options<H: UiHost, W: UiWriterImUiFacade
     );
 
     let chrome = chrome.get();
-    FloatingWindowResponse {
-        area,
-        size: chrome.size,
-        resizing: chrome.resizing,
-        collapsed: chrome.collapsed,
-    }
+    state::floating_window_response(area, chrome)
 }

@@ -5798,3 +5798,10 @@ opening the slice.
       open reads, trigger-driven open/close transitions, disabled popup cleanup, toggled detection,
       and trigger response flag mutation. `combo_controls.rs` keeps label identity parsing, trigger
       option wiring, popup body mounting, and final response assembly.
+- [x] Split IMUI floating-window open-state and response assembly out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window.rs` into a private state owner without
+      changing closed-window behavior, floating-area wiring, on-area window rendering, or public
+      `FloatingWindowResponse` accessors.
+      Result: `ecosystem/fret-ui-kit/src/imui/floating_window/state.rs` owns optional open-model
+      reads and chrome-to-response assembly. `floating_window.rs` keeps option destructuring,
+      closed-window routing, floating-area options, and render-in-area composition.

@@ -25164,3 +25164,26 @@ Focused gates:
 - Broader exploratory lib-filter not used as acceptance evidence:
   `cargo nextest run -p fret-ui-kit --features imui --lib combo_trigger --no-fail-fast` exited
   during `cargo test --no-run` with code `-1` and no Rust diagnostics after compiling the package.
+
+2026-06-01 IMUI floating-window state owner split:
+
+- Claim: optional open-model reads and chrome-to-public-response assembly moved from
+  `ecosystem/fret-ui-kit/src/imui/floating_window.rs` into
+  `ecosystem/fret-ui-kit/src/imui/floating_window/state.rs` without changing closed-window sentinel
+  behavior, floating-area options, render-in-area wiring, or public `FloatingWindowResponse`
+  behavior.
+- Evidence anchors: `floating_window.rs` now declares `mod state;`, delegates open checks through
+  `state::floating_window_is_open(...)`, and delegates final response construction through
+  `state::floating_window_response(...)`; `floating_window/closed.rs` still owns the closed
+  response sentinel; `tools/gate_imui_workstream_source.py` rejects open-model reads and response
+  struct literals drifting back into the root window wiring file.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke --no-fail-fast`
+  (3 tests passed).
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

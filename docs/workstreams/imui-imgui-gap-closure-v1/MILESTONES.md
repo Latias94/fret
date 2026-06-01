@@ -5112,3 +5112,9 @@ paths stable while removing public API catalog churn from the root implementatio
 trigger-driven open/close transitions, disabled popup cleanup, toggled detection, and trigger
 response flag mutation. `combo_controls.rs` keeps the higher-level combo flow: label identity,
 trigger option wiring, popup body composition, and final `ComboResponse` assembly.
+
+2026-06-01 floating-window state owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window/state.rs` now owns optional open-model reads and
+chrome-to-`FloatingWindowResponse` assembly. `floating_window.rs` keeps floating-area setup,
+closed-window routing, and render-in-area wiring, while `floating_window/closed.rs` remains the
+closed response sentinel owner.
