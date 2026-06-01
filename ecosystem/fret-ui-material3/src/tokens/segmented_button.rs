@@ -19,29 +19,47 @@ pub(crate) enum SegmentedButtonInteraction {
     Pressed,
 }
 
+fn segmented_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
+fn segmented_metric_chain(theme: &Theme, keys: &[&'static str], fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_chain(keys, fallback)
+}
+
 pub(crate) fn container_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.outlined-segmented-button.container.height")
-        .unwrap_or(Px(40.0))
+    segmented_metric(
+        theme,
+        "md.comp.outlined-segmented-button.container.height",
+        Px(40.0),
+    )
 }
 
 pub(crate) fn outline_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.outlined-segmented-button.outline.width")
-        .unwrap_or(Px(1.0))
+    segmented_metric(
+        theme,
+        "md.comp.outlined-segmented-button.outline.width",
+        Px(1.0),
+    )
 }
 
 pub(crate) fn shape_radius(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.outlined-segmented-button.shape")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
-        .unwrap_or(Px(9999.0))
+    segmented_metric_chain(
+        theme,
+        &[
+            "md.comp.outlined-segmented-button.shape",
+            "md.sys.shape.corner.full",
+        ],
+        Px(9999.0),
+    )
 }
 
 pub(crate) fn icon_size(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.outlined-segmented-button.with-icon.icon.size")
-        .unwrap_or(Px(18.0))
+    segmented_metric(
+        theme,
+        "md.comp.outlined-segmented-button.with-icon.icon.size",
+        Px(18.0),
+    )
 }
 
 pub(crate) fn container_background(theme: &Theme, selected: bool) -> Option<Color> {
@@ -215,5 +233,57 @@ fn state_layer_opacity_key(interaction: SegmentedButtonInteraction) -> &'static 
         SegmentedButtonInteraction::Pressed => {
             "md.comp.outlined-segmented-button.pressed.state-layer.opacity"
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn segmented_button_metrics_default_to_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(container_height(theme), Px(40.0));
+        assert_eq!(outline_width(theme), Px(1.0));
+        assert_eq!(shape_radius(theme), Px(9999.0));
+        assert_eq!(icon_size(theme), Px(18.0));
+    }
+
+    #[test]
+    fn segmented_button_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert(
+            "md.comp.outlined-segmented-button.container.height".to_string(),
+            44.0,
+        );
+        patch.metrics.insert(
+            "md.comp.outlined-segmented-button.outline.width".to_string(),
+            2.0,
+        );
+        patch
+            .metrics
+            .insert("md.sys.shape.corner.full".to_string(), 32.0);
+        patch.metrics.insert(
+            "md.comp.outlined-segmented-button.with-icon.icon.size".to_string(),
+            20.0,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(container_height(&theme), Px(44.0));
+        assert_eq!(outline_width(&theme), Px(2.0));
+        assert_eq!(shape_radius(&theme), Px(32.0));
+        assert_eq!(icon_size(&theme), Px(20.0));
     }
 }
