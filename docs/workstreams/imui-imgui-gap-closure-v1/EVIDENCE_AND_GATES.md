@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor PropertyRow Trailing-Slot Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `PropertyRow` trailing reset/action fixed-width slot wrapper moved out of
+the element assembly owner into a private `composites/property_row/slot.rs` owner without changing
+row/column layout, reset/action visibility, fixed slot width, minimum row height, clip overflow,
+end alignment, reset element routing, action element mounting, value-slot overflow semantics, or
+test-id propagation.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/property_row/element.rs` keeps row/column layout,
+  value-slot marking, reset/action visibility decisions, and reset/action child routing.
+- `ecosystem/fret-ui-editor/src/composites/property_row/slot.rs` owns the fixed trailing slot
+  chrome shared by reset and action affordances.
+- `tools/gate_imui_workstream_source.py` now tracks the trailing-slot split and rejects fixed
+  trailing-slot wrapper policy from drifting back into the element assembly owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the trailing-slot owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor property_row --no-fail-fast`: pass (10 passed, 212
+  skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor TextField Clear-Button Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `TextField` clear-button trailing segment moved out of the element assembly

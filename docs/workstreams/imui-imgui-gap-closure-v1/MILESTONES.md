@@ -56,6 +56,15 @@ single-line/multiline clear segment selection. Clear-button visibility, draft/mo
 buffered session reset, single-line vs multiline clear button chrome, a11y label, test-id routing,
 and redraw behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor PropertyRow trailing-slot owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_row/element.rs` now keeps row/column layout,
+value-slot marking, reset/action visibility decisions, and reset/action child routing while
+delegating the fixed-width trailing slot wrapper to `composites/property_row/slot.rs`. The private
+slot owner contains shared reset/action slot chrome: fixed width, min row height, clip overflow,
+zero gap/padding, horizontal end alignment, and center cross-axis alignment. Row/column layout,
+reset/action visibility, reset element routing, action mounting, value-slot overflow semantics, and
+test-id propagation remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor GradientEditor stop-row owner-split result:
 `ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps public composition,
 preview/angle/stops group orchestration, add-stop behavior, and empty-state text role helper. The

@@ -10,6 +10,7 @@ use super::layout::{
     resolve_property_row_layout_variant,
 };
 use super::reset;
+use super::slot::property_row_trailing_slot;
 use super::{PropertyRowLayoutVariant, PropertyRowOptions, PropertyRowReset};
 
 #[cfg(test)]
@@ -165,32 +166,10 @@ where
 
                         if has_reset_slot {
                             let reset_for_slot = reset.clone();
-                            out.push(cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Px(reset_slot_w),
-                                            height: Length::Auto,
-                                            min_height: Some(Length::Px(density.row_height)),
-                                            ..Default::default()
-                                        },
-                                        flex: FlexItemStyle {
-                                            order: 0,
-                                            grow: 0.0,
-                                            shrink: 0.0,
-                                            basis: Length::Px(reset_slot_w),
-                                            align_self: None,
-                                        },
-                                        overflow: Overflow::Clip,
-                                        ..Default::default()
-                                    },
-                                    direction: Axis::Horizontal,
-                                    gap: SpacingLength::Px(Px(0.0)),
-                                    padding: Edges::all(Px(0.0)).into(),
-                                    justify: MainAlign::End,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
-                                },
+                            out.push(property_row_trailing_slot(
+                                cx,
+                                reset_slot_w,
+                                density.row_height,
                                 move |cx| {
                                     reset::property_row_reset_element(
                                         cx,
@@ -205,32 +184,10 @@ where
                         }
 
                         if let Some(action_el) = actions_el {
-                            out.push(cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Px(status_slot_w),
-                                            height: Length::Auto,
-                                            min_height: Some(Length::Px(density.row_height)),
-                                            ..Default::default()
-                                        },
-                                        flex: FlexItemStyle {
-                                            order: 0,
-                                            grow: 0.0,
-                                            shrink: 0.0,
-                                            basis: Length::Px(status_slot_w),
-                                            align_self: None,
-                                        },
-                                        overflow: Overflow::Clip,
-                                        ..Default::default()
-                                    },
-                                    direction: Axis::Horizontal,
-                                    gap: SpacingLength::Px(Px(0.0)),
-                                    padding: Edges::all(Px(0.0)).into(),
-                                    justify: MainAlign::End,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
-                                },
+                            out.push(property_row_trailing_slot(
+                                cx,
+                                status_slot_w,
+                                density.row_height,
                                 move |_cx| vec![action_el],
                             ));
                         }
@@ -305,32 +262,10 @@ where
 
                             if has_reset_slot {
                                 let reset_for_slot = reset.clone();
-                                out.push(cx.flex(
-                                    FlexProps {
-                                        layout: LayoutStyle {
-                                            size: SizeStyle {
-                                                width: Length::Px(reset_slot_w),
-                                                height: Length::Auto,
-                                                min_height: Some(Length::Px(density.row_height)),
-                                                ..Default::default()
-                                            },
-                                            flex: FlexItemStyle {
-                                                order: 0,
-                                                grow: 0.0,
-                                                shrink: 0.0,
-                                                basis: Length::Px(reset_slot_w),
-                                                align_self: None,
-                                            },
-                                            overflow: Overflow::Clip,
-                                            ..Default::default()
-                                        },
-                                        direction: Axis::Horizontal,
-                                        gap: SpacingLength::Px(Px(0.0)),
-                                        padding: Edges::all(Px(0.0)).into(),
-                                        justify: MainAlign::End,
-                                        align: CrossAlign::Center,
-                                        wrap: false,
-                                    },
+                                out.push(property_row_trailing_slot(
+                                    cx,
+                                    reset_slot_w,
+                                    density.row_height,
                                     move |cx| {
                                         reset::property_row_reset_element(
                                             cx,
@@ -345,32 +280,10 @@ where
                             }
 
                             if let Some(action_el) = actions_el {
-                                out.push(cx.flex(
-                                    FlexProps {
-                                        layout: LayoutStyle {
-                                            size: SizeStyle {
-                                                width: Length::Px(status_slot_w),
-                                                height: Length::Auto,
-                                                min_height: Some(Length::Px(density.row_height)),
-                                                ..Default::default()
-                                            },
-                                            flex: FlexItemStyle {
-                                                order: 0,
-                                                grow: 0.0,
-                                                shrink: 0.0,
-                                                basis: Length::Px(status_slot_w),
-                                                align_self: None,
-                                            },
-                                            overflow: Overflow::Clip,
-                                            ..Default::default()
-                                        },
-                                        direction: Axis::Horizontal,
-                                        gap: SpacingLength::Px(Px(0.0)),
-                                        padding: Edges::all(Px(0.0)).into(),
-                                        justify: MainAlign::End,
-                                        align: CrossAlign::Center,
-                                        wrap: false,
-                                    },
+                                out.push(property_row_trailing_slot(
+                                    cx,
+                                    status_slot_w,
+                                    density.row_height,
                                     move |_cx| vec![action_el],
                                 ));
                             }

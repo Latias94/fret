@@ -3,6 +3,7 @@ mod element;
 mod layout;
 mod options;
 mod reset;
+mod slot;
 
 use std::sync::Arc;
 
