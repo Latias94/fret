@@ -26,19 +26,19 @@ pub(crate) struct CheckboxSizeTokens {
     pub(crate) container_corner: Px,
 }
 
+fn checkbox_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
+fn checkbox_metric_chain(theme: &Theme, keys: &[&'static str], fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_chain(keys, fallback)
+}
+
 pub(crate) fn size_tokens(theme: &Theme) -> CheckboxSizeTokens {
-    let container = theme
-        .metric_by_key("md.comp.checkbox.container.size")
-        .unwrap_or(Px(18.0));
-    let icon = theme
-        .metric_by_key("md.comp.checkbox.icon.size")
-        .unwrap_or(container);
-    let state_layer = theme
-        .metric_by_key("md.comp.checkbox.state-layer.size")
-        .unwrap_or(Px(40.0));
-    let container_corner = theme
-        .metric_by_key("md.comp.checkbox.container.shape")
-        .unwrap_or(Px(2.0));
+    let container = checkbox_metric(theme, "md.comp.checkbox.container.size", Px(18.0));
+    let icon = checkbox_metric(theme, "md.comp.checkbox.icon.size", container);
+    let state_layer = checkbox_metric(theme, "md.comp.checkbox.state-layer.size", Px(40.0));
+    let container_corner = checkbox_metric(theme, "md.comp.checkbox.container.shape", Px(2.0));
 
     CheckboxSizeTokens {
         container,
@@ -228,14 +228,20 @@ pub(crate) fn chrome(
         );
 
         let outline_width = if enabled {
-            theme
-                .metric_by_key(selected_outline_width_key(interaction))
-                .or_else(|| theme.metric_by_key("md.comp.checkbox.selected.outline.width"))
-                .unwrap_or(Px(0.0))
+            checkbox_metric_chain(
+                theme,
+                &[
+                    selected_outline_width_key(interaction),
+                    "md.comp.checkbox.selected.outline.width",
+                ],
+                Px(0.0),
+            )
         } else {
-            theme
-                .metric_by_key("md.comp.checkbox.selected.disabled.container.outline.width")
-                .unwrap_or(Px(0.0))
+            checkbox_metric(
+                theme,
+                "md.comp.checkbox.selected.disabled.container.outline.width",
+                Px(0.0),
+            )
         };
 
         if !enabled {
@@ -271,14 +277,20 @@ pub(crate) fn chrome(
         }
     } else {
         let outline_width = if enabled {
-            theme
-                .metric_by_key(unselected_outline_width_key(interaction))
-                .or_else(|| theme.metric_by_key("md.comp.checkbox.unselected.outline.width"))
-                .unwrap_or(Px(2.0))
+            checkbox_metric_chain(
+                theme,
+                &[
+                    unselected_outline_width_key(interaction),
+                    "md.comp.checkbox.unselected.outline.width",
+                ],
+                Px(2.0),
+            )
         } else {
-            theme
-                .metric_by_key("md.comp.checkbox.unselected.disabled.outline.width")
-                .unwrap_or(Px(2.0))
+            checkbox_metric(
+                theme,
+                "md.comp.checkbox.unselected.disabled.outline.width",
+                Px(2.0),
+            )
         };
 
         let outline_color = if enabled {
@@ -309,5 +321,77 @@ pub(crate) fn chrome(
             outline_color,
             icon_color,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn checkbox_size_defaults_match_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+        let size = size_tokens(theme);
+
+        assert_eq!(size.container, Px(18.0));
+        assert_eq!(size.icon, Px(18.0));
+        assert_eq!(size.state_layer, Px(40.0));
+        assert_eq!(size.container_corner, Px(2.0));
+    }
+
+    #[test]
+    fn checkbox_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.checkbox.container.size".to_string(), 20.0);
+        patch
+            .metrics
+            .insert("md.comp.checkbox.state-layer.size".to_string(), 44.0);
+        patch
+            .metrics
+            .insert("md.comp.checkbox.container.shape".to_string(), 3.0);
+        patch.metrics.insert(
+            "md.comp.checkbox.selected.hover.outline.width".to_string(),
+            1.5,
+        );
+        patch
+            .metrics
+            .insert("md.comp.checkbox.unselected.outline.width".to_string(), 3.0);
+        patch.metrics.insert(
+            "md.comp.checkbox.unselected.disabled.outline.width".to_string(),
+            4.0,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        let size = size_tokens(&theme);
+        assert_eq!(size.container, Px(20.0));
+        assert_eq!(size.icon, Px(20.0));
+        assert_eq!(size.state_layer, Px(44.0));
+        assert_eq!(size.container_corner, Px(3.0));
+
+        assert_eq!(
+            chrome(&theme, true, true, CheckboxInteraction::Hovered).outline_width,
+            Px(1.5)
+        );
+        assert_eq!(
+            chrome(&theme, false, true, CheckboxInteraction::Hovered).outline_width,
+            Px(3.0)
+        );
+        assert_eq!(
+            chrome(&theme, false, false, CheckboxInteraction::None).outline_width,
+            Px(4.0)
+        );
     }
 }
