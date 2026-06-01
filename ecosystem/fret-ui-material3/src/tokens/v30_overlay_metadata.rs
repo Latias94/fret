@@ -677,6 +677,7 @@ mod tests {
     use std::collections::BTreeSet;
 
     use super::*;
+    use crate::tokens::v30::{ColorSchemeOptions, TypographyOptions, theme_config_with_colors};
 
     #[test]
     fn exact_overlay_metadata_keys_are_unique() {
@@ -710,5 +711,25 @@ mod tests {
             panic!("expected exact overlay metadata");
         };
         assert_eq!(meta.origin, Origin::FretMaterialPolicy);
+    }
+
+    #[test]
+    fn exact_overlay_metadata_keys_are_injected_by_v30_theme_config() {
+        let cfg =
+            theme_config_with_colors(TypographyOptions::default(), ColorSchemeOptions::default());
+
+        for meta in EXACT_TOKEN_METADATA {
+            assert!(
+                cfg.colors.contains_key(meta.key)
+                    || cfg.metrics.contains_key(meta.key)
+                    || cfg.corners.contains_key(meta.key)
+                    || cfg.numbers.contains_key(meta.key)
+                    || cfg.durations_ms.contains_key(meta.key)
+                    || cfg.easings.contains_key(meta.key)
+                    || cfg.text_styles.contains_key(meta.key),
+                "overlay metadata key is not injected into v30 ThemeConfig: {}",
+                meta.key
+            );
+        }
     }
 }
