@@ -73,6 +73,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M31_DOCKING_RUNTIME_LAYOUT_INVALIDATION_OWNER_SPLIT_2026-06-02.md`
   (moves DockOp post-mutation viewport cleanup and invalidation into a private runtime child owner
   without changing graph mutation or the Wayland acceptance boundary)
+- Latest docking runtime test owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M32_DOCKING_RUNTIME_TEST_OWNER_SPLIT_2026-06-02.md`
+  (moves focused runtime regression coverage into a private runtime child owner without changing
+  runtime behavior or the Wayland acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
@@ -317,6 +321,8 @@ Current policy (Wayland):
   `docs/workstreams/docking-multiwindow-imgui-parity/M30_DOCKING_RUNTIME_REQUEST_OWNER_SPLIT_2026-06-02.md`.
 - Latest docking runtime layout invalidation owner split:
   `docs/workstreams/docking-multiwindow-imgui-parity/M31_DOCKING_RUNTIME_LAYOUT_INVALIDATION_OWNER_SPLIT_2026-06-02.md`.
+- Latest docking runtime test owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M32_DOCKING_RUNTIME_TEST_OWNER_SPLIT_2026-06-02.md`.
 
 ## Capabilities (contract) — windowing quality signals (v1)
 

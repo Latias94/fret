@@ -455,6 +455,13 @@ Each TODO is labeled:
       - Focused request/fallback/window-created/before-close/auto-close regressions, source gate,
         JSON shape, catalog, and diff checks passed locally without recording Wayland compositor
         acceptance.
+    - [x] 2026-06-02 docking runtime test owner split keeps focused regression bodies out of the
+      runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M32_DOCKING_RUNTIME_TEST_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/runtime/tests.rs` owns the request/fallback/window-created/
+        before-close/auto-close regressions that were previously inline in `runtime.rs`.
+      - Focused runtime regressions, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
