@@ -289,6 +289,13 @@ impl<'a> MaterialTokenResolver<'a> {
         )
     }
 
+    pub fn system_state_layer_opacity(&self, interaction: MaterialStateLayerInteraction) -> f32 {
+        self.number_sys(
+            interaction.sys_opacity_key(),
+            interaction.fallback_opacity(),
+        )
+    }
+
     pub fn disabled_state_layer_opacity(&self) -> f32 {
         self.number_sys("md.sys.state.disabled.state-layer-opacity", 0.38)
     }
@@ -409,6 +416,27 @@ mod tests {
         assert_eq!(
             MaterialStateLayerInteraction::Pressed.fallback_opacity(),
             0.1
+        );
+    }
+
+    #[test]
+    fn system_state_layer_opacity_uses_theme_then_material_defaults() {
+        let mut app = App::new();
+        let mut patch = ThemeConfig::default();
+        patch
+            .numbers
+            .insert("md.sys.state.pressed.state-layer-opacity".to_string(), 0.24);
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app);
+
+        let tokens = MaterialTokenResolver::new(theme);
+        assert_eq!(
+            tokens.system_state_layer_opacity(MaterialStateLayerInteraction::Pressed),
+            0.24
+        );
+        assert_eq!(
+            tokens.system_state_layer_opacity(MaterialStateLayerInteraction::Hovered),
+            0.08
         );
     }
 

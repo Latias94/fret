@@ -51,7 +51,8 @@ use crate::foundation::field_overlay::{
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
+    RippleClip, material_focus_state_layer_opacity, material_ink_layer_for_pressable,
+    material_pressable_indication_config_in_scope, material_pressed_state_layer_opacity,
 };
 use crate::foundation::logical_edges::horizontal_logical_edges;
 use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
@@ -919,12 +920,8 @@ fn select_trigger_element<H: UiHost>(
             let container_height = select_tokens::container_height(theme, variant);
 
             let hover_state_layer = select_tokens::hover_state_layer(theme, variant, error);
-            let pressed_opacity = theme
-                .number_by_key("md.sys.state.pressed.state-layer-opacity")
-                .unwrap_or(0.1);
-            let focus_opacity = theme
-                .number_by_key("md.sys.state.focus.state-layer-opacity")
-                .unwrap_or(0.1);
+            let pressed_opacity = material_pressed_state_layer_opacity(theme);
+            let focus_opacity = material_focus_state_layer_opacity(theme);
             let ripple_base_opacity = pressed_opacity;
             let ripple_config = material_pressable_indication_config_in_scope(&*cx, None);
 

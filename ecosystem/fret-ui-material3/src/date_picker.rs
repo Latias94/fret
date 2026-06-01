@@ -25,6 +25,7 @@ use fret_ui_kit::{OverlayController, OverlayPresence};
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{Button, ButtonVariant};
+use crate::foundation::indication::material_disabled_state_layer_opacity;
 use crate::foundation::interactive_size::{centered_fill, minimum_interactive_size};
 use crate::foundation::modal_motion::material_modal_panel_transform;
 use crate::foundation::strings::{
@@ -1120,9 +1121,7 @@ fn dates_grid<H: UiHost>(
             date_tokens::date_today_outline_width(theme, token_variant),
             date_tokens::date_today_outline_color(theme, token_variant),
             date_tokens::date_outside_month_opacity(theme, token_variant),
-            theme
-                .number_by_key("md.sys.state.disabled.state-layer-opacity")
-                .unwrap_or(0.38),
+            material_disabled_state_layer_opacity(theme),
         )
     };
 
