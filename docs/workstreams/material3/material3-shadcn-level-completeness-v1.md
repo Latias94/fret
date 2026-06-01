@@ -66,6 +66,16 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
   - Gates:
     `menu_state::{dropdown_menu_submenu_opens_on_arrow_right_and_arrow_left_restores_trigger_focus,
     dropdown_menu_submenu_uses_rtl_inline_end_key_and_clamps_long_content}`.
+- 2026-06-01 Conformance gate deepening:
+  - The old crate-root minimum touch target source scan was replaced by a rendered Headless Surface
+    gate that verifies Tabs, NavigationBar, NavigationRail, NavigationDrawer, Menu, and List row
+    semantic bounds meet the Material 48dp touch target policy.
+  - Literal Material token coverage is now owned by `tokens::coverage`, keeping source inventory and
+    extraction locality in the token layer instead of `lib.rs`.
+  - v30 injection gained the missing button/menu/search/date Material/Fret-specific token aliases
+    used by recipe token modules.
+  - Gates: `--lib::material3_literal_md_tokens_resolve_in_v30_theme` and
+    `minimum_touch_target::navigable_material_rows_enforce_minimum_touch_target_at_runtime`.
 - 2026-05-31 Tabs panel ownership:
   - `TabPanel`, `.panel/.panels`, active tabpanel semantics, `labelled_by` relation to the selected
     tab, derived tab `controls`, and gallery snippet content panels.

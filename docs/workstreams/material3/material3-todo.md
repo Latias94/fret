@@ -138,7 +138,8 @@ These files are primarily *shared policy primitives*, not one-off component layo
   - Decision: keep as Material foundation policy for now (tree-local + token-driven), not core.
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/interactive_size.rs`,
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`md.sys.layout.minimum-touch-target.size`),
-    tests in `ecosystem/fret-ui-material3/src/lib.rs` (`material3_components_apply_minimum_touch_target_policy`).
+    tests in `ecosystem/fret-ui-material3/tests/minimum_touch_target.rs`
+    (`navigable_material_rows_enforce_minimum_touch_target_at_runtime`).
 - [x] Decide whether we need a core pixel-snapping policy hook for non-1.0 scale factors (radio/checkbox drift class).
   - Decision: add an explicit, opt-in snapping hook at the container paint boundary, and use it
     in Material 3 controls that are sensitive to fractional pixel drift.
@@ -476,7 +477,8 @@ These files are primarily *shared policy primitives*, not one-off component layo
     `ecosystem/fret-ui-material3/src/navigation_bar.rs`,
     `ecosystem/fret-ui-material3/src/navigation_rail.rs`,
     `ecosystem/fret-ui-material3/src/navigation_drawer.rs`,
-    tests in `ecosystem/fret-ui-material3/src/lib.rs` (`material3_components_apply_minimum_touch_target_policy`),
+    tests in `ecosystem/fret-ui-material3/tests/minimum_touch_target.rs`
+    (`navigable_material_rows_enforce_minimum_touch_target_at_runtime`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_touch_targets`),
     Compose reference: `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/InteractiveComponentSize.kt`.
 - [x] Ripple policy (pointer-origin + fallback-to-center) wired to mechanism primitive.

@@ -5,6 +5,9 @@
 
 pub mod v30;
 
+#[cfg(test)]
+pub(crate) mod coverage;
+
 pub(crate) mod autocomplete;
 pub(crate) mod badge;
 pub(crate) mod button;

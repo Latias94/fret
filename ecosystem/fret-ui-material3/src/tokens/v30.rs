@@ -349,8 +349,27 @@ fn inject_comp_menu_text_styles(cfg: &mut ThemeConfig) {
         return;
     };
 
-    cfg.text_styles
-        .insert("md.comp.menu.list-item.label-text".to_string(), label_large);
+    cfg.text_styles.insert(
+        "md.comp.menu.list-item.label-text".to_string(),
+        label_large.clone(),
+    );
+    cfg.text_styles.insert(
+        "md.comp.menu.list-item.trailing-text".to_string(),
+        label_large,
+    );
+
+    if let Some(body_medium) = cfg.text_styles.get("md.sys.typescale.body-medium").cloned() {
+        cfg.text_styles.insert(
+            "md.comp.menu.list-item.supporting-text".to_string(),
+            body_medium,
+        );
+    }
+    if let Some(label_small) = cfg.text_styles.get("md.sys.typescale.label-small").cloned() {
+        cfg.text_styles.insert(
+            "md.comp.menu.section-label.label-text".to_string(),
+            label_small,
+        );
+    }
 }
 
 fn inject_comp_primary_navigation_tab_text_styles(cfg: &mut ThemeConfig) {
@@ -847,6 +866,23 @@ fn insert_color(cfg: &mut ThemeConfig, key: &str, argb: Argb) {
 
 fn inject_comp_button_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_button_scalars(cfg);
+
+    // Material Web omits explicit zero-elevation scalars for non-elevated button variants.
+    // Fret keeps variant-shaped keys so token callers do not need to know that omission.
+    for key in [
+        "md.comp.button.outlined.container.elevation",
+        "md.comp.button.outlined.disabled.container.elevation",
+        "md.comp.button.outlined.focused.container.elevation",
+        "md.comp.button.outlined.hovered.container.elevation",
+        "md.comp.button.outlined.pressed.container.elevation",
+        "md.comp.button.text.container.elevation",
+        "md.comp.button.text.disabled.container.elevation",
+        "md.comp.button.text.focused.container.elevation",
+        "md.comp.button.text.hovered.container.elevation",
+        "md.comp.button.text.pressed.container.elevation",
+    ] {
+        cfg.metrics.entry(key.to_string()).or_insert(0.0);
+    }
 }
 
 fn inject_comp_badge_scalars(cfg: &mut ThemeConfig) {
@@ -867,6 +903,9 @@ fn inject_comp_outlined_segmented_button_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_date_picker_docked_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_date_picker_docked_scalars(cfg);
+    cfg.metrics
+        .entry("md.sys.fret.material.date-picker.calendar.horizontal-padding".to_string())
+        .or_insert(12.0);
 }
 
 fn inject_comp_date_picker_modal_scalars(cfg: &mut ThemeConfig) {
@@ -1064,6 +1103,11 @@ fn inject_comp_button_colors_from_sys(cfg: &mut ThemeConfig) {
     );
     copy_color(
         cfg,
+        "md.comp.button.outlined.disabled.container.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
         "md.comp.button.outlined.disabled.outline.color",
         "md.sys.color.outline-variant",
     );
@@ -1094,6 +1138,13 @@ fn inject_comp_button_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.sys.color.on-surface",
     );
     material_web_v30::inject_comp_button_colors_from_sys(cfg);
+
+    for key in [
+        "md.comp.button.outlined.container.shadow-color",
+        "md.comp.button.text.container.shadow-color",
+    ] {
+        copy_color(cfg, key, "md.sys.color.shadow");
+    }
 }
 
 fn inject_comp_icon_button_scalars(cfg: &mut ThemeConfig) {
@@ -1995,6 +2046,43 @@ fn inject_comp_navigation_rail_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_menu_scalars(cfg);
+
+    for (key, value) in [
+        ("md.comp.menu.container.max-height", 320.0),
+        ("md.comp.menu.container.vertical-padding", 8.0),
+        ("md.comp.menu.list-item.container.max-width", 280.0),
+        ("md.comp.menu.list-item.container.min-width", 112.0),
+        ("md.comp.menu.list-item.content.gap", 12.0),
+        ("md.comp.menu.list-item.content.horizontal-padding", 12.0),
+        ("md.comp.menu.list-item.icon.size", 24.0),
+        ("md.comp.menu.list-item.leading-icon.size", 24.0),
+        ("md.comp.menu.list-item.leading-icon.trailing-space", 12.0),
+        (
+            "md.comp.menu.list-item.supporting-text.container.height",
+            64.0,
+        ),
+        ("md.comp.menu.list-item.two-line-container.height", 64.0),
+        ("md.comp.menu.section-label.container.height", 32.0),
+    ] {
+        cfg.metrics.entry(key.to_string()).or_insert(value);
+    }
+
+    for (key, value) in [
+        ("md.comp.menu.list-item.disabled.leading-icon.opacity", 0.38),
+        (
+            "md.comp.menu.list-item.disabled.supporting-text.opacity",
+            0.38,
+        ),
+        (
+            "md.comp.menu.list-item.disabled.trailing-text.opacity",
+            0.38,
+        ),
+        ("md.comp.menu.list-item.supporting-text.weight", 400.0),
+        ("md.comp.menu.list-item.trailing-text.weight", 500.0),
+        ("md.comp.menu.section-label.label-text.weight", 500.0),
+    ] {
+        cfg.numbers.entry(key.to_string()).or_insert(value);
+    }
 }
 
 fn inject_comp_list_scalars(cfg: &mut ThemeConfig) {
@@ -2241,6 +2329,12 @@ fn inject_comp_snackbar_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_search_bar_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_search_bar_scalars(cfg);
+    cfg.metrics
+        .entry("md.sys.fret.material.search-bar.container.min-width".to_string())
+        .or_insert(360.0);
+    cfg.metrics
+        .entry("md.sys.fret.material.search-bar.container.max-width".to_string())
+        .or_insert(720.0);
 }
 
 fn inject_comp_search_view_scalars(cfg: &mut ThemeConfig) {
@@ -3286,6 +3380,17 @@ fn inject_comp_menu_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.menu.list-item.disabled.label-text.color",
         "md.sys.color.on-surface",
     );
+    for key in [
+        "md.comp.menu.list-item.icon.color",
+        "md.comp.menu.list-item.leading-icon.color",
+        "md.comp.menu.list-item.shortcut.color",
+        "md.comp.menu.list-item.supporting-text.color",
+        "md.comp.menu.list-item.trailing-icon.color",
+        "md.comp.menu.list-item.trailing-text.color",
+        "md.comp.menu.section-label.label-text.color",
+    ] {
+        copy_color(cfg, key, "md.sys.color.on-surface-variant");
+    }
 
     copy_color(
         cfg,
