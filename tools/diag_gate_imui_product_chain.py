@@ -647,6 +647,8 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "st: &State",
         "Copy Demo/Metrics/Debug actions",
         "Run docking workflow",
+        "Run perf workflow",
+        "requires=selected-session",
         "docking campaign validate: {DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND}",
         "docking policy-skip local: {DEVTOOLS_DOCKING_POLICY_SKIP_COMMAND}",
         "Gate Commands",

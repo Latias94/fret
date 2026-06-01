@@ -2,6 +2,31 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## DevTools Demo/Metrics/Debug perf workflow run entry - 2026-06-02
+
+This refresh extends the Demo/Metrics/Debug route from docking workflow execution to the existing
+perf-docking workflow surface:
+
+- `apps/fret-devtools/src/demo_metrics_debug.rs` now surfaces a `Run perf workflow` button and a
+  `workflow handoff` line for `perf-docking-suite-ws`.
+- The button is disabled when a workflow is already in flight or when no selected session makes the
+  perf workflow runnable.
+- `apps/fret-devtools/src/native.rs` routes
+  `fret.devtools.demo_metrics_debug.run_perf_workflow` through the same
+  `workflow_run::start_workflow_run(...)` path as the Workflow Runs panel.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `cargo check -p fret-devtools` - passed.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle devtools_workflow_commands_mark_suite_ws_missing_without_session devtools_workflow_commands_include_selected_session_for_suite_ws --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## DevTools Demo/Metrics/Debug docking workflow run entry - 2026-06-02
 
 This refresh moves the Demo/Metrics/Debug route from copy-only diagnostics toward an executable

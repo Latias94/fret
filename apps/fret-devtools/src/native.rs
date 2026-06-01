@@ -234,6 +234,8 @@ const CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS: &str =
     "fret.devtools.demo_metrics_debug.copy_actions";
 const CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW: &str =
     "fret.devtools.demo_metrics_debug.run_docking_workflow";
+const CMD_RUN_DEMO_METRICS_DEBUG_PERF_WORKFLOW: &str =
+    "fret.devtools.demo_metrics_debug.run_perf_workflow";
 
 #[derive(Clone)]
 struct DevtoolsConfig {
@@ -7080,6 +7082,27 @@ fn on_command(
             }
             app.request_redraw(window);
         }
+        CMD_RUN_DEMO_METRICS_DEBUG_PERF_WORKFLOW => {
+            let Some(command) =
+                workflow_run_command_by_id_from_state(app, st, DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID)
+            else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "demo metrics debug workflow refused (missing perf docking workflow)",
+                );
+                app.request_redraw(window);
+                return;
+            };
+            if let Err(err) = workflow_run::start_workflow_run(app, st, command) {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    &format!("demo metrics debug perf workflow refused: {err}"),
+                );
+            }
+            app.request_redraw(window);
+        }
         CMD_INSPECT_ENABLE | CMD_INSPECT_DISABLE => {
             if !ws::require_session_selected(app, st) {
                 app.request_redraw(window);
@@ -12005,6 +12028,9 @@ mod tests {
             "workflow handoff: validate docking campaign | workflow_id=campaign-validate-imui-p3-multiwindow | run_command=fret.devtools.demo_metrics_debug.run_docking_workflow"
         ));
         assert!(text.contains(
+            "workflow handoff: run perf docking suite | workflow_id=perf-docking-suite-ws | run_command=fret.devtools.demo_metrics_debug.run_perf_workflow | requires=selected-session"
+        ));
+        assert!(text.contains(
             "command palette: deferred until DevTools has a shared command palette contract"
         ));
         assert!(text.contains(
@@ -12104,6 +12130,10 @@ mod tests {
         assert_eq!(
             CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW,
             "fret.devtools.demo_metrics_debug.run_docking_workflow"
+        );
+        assert_eq!(
+            CMD_RUN_DEMO_METRICS_DEBUG_PERF_WORKFLOW,
+            "fret.devtools.demo_metrics_debug.run_perf_workflow"
         );
         let metadata = demo_metrics_debug_action_metadata_lines();
         assert!(metadata.contains(&"action metadata: open workbench | id=open_workbench | category=demo | primary=true | requires_bundle=false".to_string()));

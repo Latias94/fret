@@ -8,10 +8,11 @@ use super::{
     DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND, DEVTOOLS_DOCKING_POLICY_SKIP_COMMAND,
     DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND, DEVTOOLS_METRICS_MEMORY_COMMAND,
     DEVTOOLS_METRICS_STATS_COMMAND, DEVTOOLS_WORKFLOW_IMUI_P3_VALIDATE_ID,
-    IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND,
+    DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID, IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND,
 };
 use super::{
-    CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS, CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW, State,
+    CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS, CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW,
+    CMD_RUN_DEMO_METRICS_DEBUG_PERF_WORKFLOW, State, devtools_workflow_commands_from_state,
     diag_section,
 };
 use fret_app::{App, CommandId};
@@ -179,6 +180,9 @@ pub(crate) fn devtools_demo_metrics_debug_lines_with_state(
         format!(
             "workflow handoff: validate docking campaign | workflow_id={DEVTOOLS_WORKFLOW_IMUI_P3_VALIDATE_ID} | run_command={CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW}"
         ),
+        format!(
+            "workflow handoff: run perf docking suite | workflow_id={DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID} | run_command={CMD_RUN_DEMO_METRICS_DEBUG_PERF_WORKFLOW} | requires=selected-session"
+        ),
         "command palette: deferred until DevTools has a shared command palette contract".to_string(),
         format!("action: open workbench -> {DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND}"),
         format!("action: run product discovery -> {IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND}"),
@@ -243,6 +247,10 @@ fn devtools_demo_metrics_debug_action_row(
         .models()
         .read(&st.workflow_run_in_flight, |v| *v)
         .unwrap_or(false);
+    let perf_workflow_runnable = devtools_workflow_commands_from_state(cx.app, st)
+        .into_iter()
+        .find(|command| command.id == DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID)
+        .is_some_and(|command| command.is_runnable());
     let mut actions = vec![
         shadcn::Button::new("Copy Demo/Metrics/Debug actions")
             .variant(shadcn::ButtonVariant::Outline)
@@ -254,6 +262,12 @@ fn devtools_demo_metrics_debug_action_row(
             .size(shadcn::ButtonSize::Sm)
             .disabled(workflow_run_in_flight)
             .on_click(CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW)
+            .into_element(cx),
+        shadcn::Button::new("Run perf workflow")
+            .variant(shadcn::ButtonVariant::Secondary)
+            .size(shadcn::ButtonSize::Sm)
+            .disabled(workflow_run_in_flight || !perf_workflow_runnable)
+            .on_click(CMD_RUN_DEMO_METRICS_DEBUG_PERF_WORKFLOW)
             .into_element(cx),
     ];
     actions.extend(DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS.iter().map(|action| {
