@@ -9,7 +9,6 @@ use fret_ui::Theme;
 use crate::foundation::token_resolver::{
     MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
 };
-use crate::tokens::shape;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SwitchInteraction {
@@ -128,8 +127,8 @@ pub(crate) fn icon_color(
 }
 
 fn shape_or_full(theme: &Theme, key: &str) -> Corners {
-    shape::corners_or_metric(theme, key)
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.full"))
+    MaterialTokenResolver::new(theme)
+        .corners_chain(&[key, "md.sys.shape.corner.full"])
         .unwrap_or_else(|| Corners::all(Px(9999.0)))
 }
 

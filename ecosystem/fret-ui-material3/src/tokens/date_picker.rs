@@ -7,7 +7,7 @@ use fret_ui::Theme;
 use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
-use crate::tokens::{shape, typography};
+use crate::tokens::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(crate) enum DatePickerTokenVariant {
@@ -50,9 +50,10 @@ pub(crate) fn container_elevation(theme: &Theme, variant: DatePickerTokenVariant
 
 pub(crate) fn container_shape(theme: &Theme, variant: DatePickerTokenVariant) -> Corners {
     let key = token_key(variant, "container.shape");
-    shape::corners_or_metric(theme, &key)
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.large"))
-        .unwrap_or(Corners::all(Px(16.0)))
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[key.as_str(), "md.sys.shape.corner.large"],
+        Corners::all(Px(16.0)),
+    )
 }
 
 pub(crate) fn container_color(theme: &Theme, variant: DatePickerTokenVariant) -> Color {
@@ -115,9 +116,10 @@ pub(crate) fn date_cell_height(theme: &Theme, variant: DatePickerTokenVariant) -
 
 pub(crate) fn date_cell_shape(theme: &Theme, variant: DatePickerTokenVariant) -> Corners {
     let key = token_key(variant, "date.container.shape");
-    shape::corners_or_metric(theme, &key)
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.full"))
-        .unwrap_or(Corners::all(Px(9999.0)))
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[key.as_str(), "md.sys.shape.corner.full"],
+        Corners::all(Px(9999.0)),
+    )
 }
 
 pub(crate) fn date_today_outline_width(theme: &Theme, variant: DatePickerTokenVariant) -> Px {

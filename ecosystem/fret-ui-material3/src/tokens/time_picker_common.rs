@@ -9,7 +9,7 @@ use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::interaction::PressableInteraction;
 use crate::foundation::token_resolver::MaterialTokenResolver;
-use crate::tokens::{shape, time_period_common, typography};
+use crate::tokens::{time_period_common, typography};
 
 const DEFAULT_CONTAINER_ELEVATION: Px = Px(3.0);
 const DEFAULT_CONTAINER_SHAPE: Corners = Corners::all(Px(28.0));
@@ -52,9 +52,10 @@ pub(crate) fn container_elevation(theme: &Theme, component_prefix: &str) -> Px {
 
 pub(crate) fn container_shape(theme: &Theme, component_prefix: &str) -> Corners {
     let key = token_key(component_prefix, "container.shape");
-    shape::corners_or_metric(theme, &key)
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.extra-large"))
-        .unwrap_or(DEFAULT_CONTAINER_SHAPE)
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[key.as_str(), "md.sys.shape.corner.extra-large"],
+        DEFAULT_CONTAINER_SHAPE,
+    )
 }
 
 pub(crate) fn headline_style(theme: &Theme, component_prefix: &str) -> TextStyle {
@@ -215,9 +216,10 @@ pub(crate) fn time_selector_container_height(theme: &Theme, component_prefix: &s
 
 pub(crate) fn time_selector_shape(theme: &Theme, component_prefix: &str) -> Corners {
     let key = token_key(component_prefix, "time-selector.container.shape");
-    shape::corners_or_metric(theme, &key)
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.small"))
-        .unwrap_or(DEFAULT_TIME_SELECTOR_CONTAINER_SHAPE)
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[key.as_str(), "md.sys.shape.corner.small"],
+        DEFAULT_TIME_SELECTOR_CONTAINER_SHAPE,
+    )
 }
 
 pub(crate) fn time_selector_container_color(
@@ -405,9 +407,10 @@ pub(crate) fn period_selector_state_layer_opacity(
 
 fn full_shape_or_token(theme: &Theme, component_prefix: &str, suffix: &str) -> Corners {
     let key = token_key(component_prefix, suffix);
-    shape::corners_or_metric(theme, &key)
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.full"))
-        .unwrap_or(DEFAULT_FULL_SHAPE)
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[key.as_str(), "md.sys.shape.corner.full"],
+        DEFAULT_FULL_SHAPE,
+    )
 }
 
 fn token_key(component_prefix: &str, suffix: &str) -> String {

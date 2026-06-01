@@ -9,7 +9,6 @@ use fret_core::{Color, Corners, Px};
 use fret_ui::Theme;
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
-use crate::tokens::shape;
 
 const DEFAULT_FULL_SHAPE: Corners = Corners::all(Px(9999.0));
 const DEFAULT_LINEAR_HEIGHT: Px = Px(4.0);
@@ -42,15 +41,23 @@ pub(crate) fn four_color_palette(theme: &Theme) -> [Color; 4] {
 }
 
 pub(crate) fn track_shape(theme: &Theme) -> Corners {
-    shape::corners_or_metric(theme, "md.comp.progress-indicator.track.shape")
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.full"))
-        .unwrap_or(DEFAULT_FULL_SHAPE)
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[
+            "md.comp.progress-indicator.track.shape",
+            "md.sys.shape.corner.full",
+        ],
+        DEFAULT_FULL_SHAPE,
+    )
 }
 
 pub(crate) fn active_shape(theme: &Theme) -> Corners {
-    shape::corners_or_metric(theme, "md.comp.progress-indicator.active-indicator.shape")
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.full"))
-        .unwrap_or(DEFAULT_FULL_SHAPE)
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[
+            "md.comp.progress-indicator.active-indicator.shape",
+            "md.sys.shape.corner.full",
+        ],
+        DEFAULT_FULL_SHAPE,
+    )
 }
 
 pub(crate) fn linear_height(theme: &Theme) -> Px {

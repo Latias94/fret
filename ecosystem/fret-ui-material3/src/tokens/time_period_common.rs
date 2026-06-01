@@ -6,7 +6,7 @@ use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::interaction::PressableInteraction;
 use crate::foundation::token_resolver::MaterialTokenResolver;
-use crate::tokens::{shape, typography};
+use crate::tokens::typography;
 
 const DEFAULT_PERIOD_SELECTOR_CONTAINER_WIDTH: Px = Px(52.0);
 const DEFAULT_PERIOD_SELECTOR_CONTAINER_SHAPE: Px = Px(8.0);
@@ -38,9 +38,10 @@ pub(crate) fn container_height(
 
 pub(crate) fn container_shape(theme: &Theme, component_prefix: &str) -> Corners {
     let key = token_key(component_prefix, "period-selector.container.shape");
-    shape::corners_or_metric(theme, &key)
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.small"))
-        .unwrap_or(Corners::all(DEFAULT_PERIOD_SELECTOR_CONTAINER_SHAPE))
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[key.as_str(), "md.sys.shape.corner.small"],
+        Corners::all(DEFAULT_PERIOD_SELECTOR_CONTAINER_SHAPE),
+    )
 }
 
 pub(crate) fn outline_width(theme: &Theme, component_prefix: &str) -> Px {

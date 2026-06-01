@@ -8,7 +8,7 @@ use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::interaction::PressableInteraction;
 use crate::foundation::token_resolver::MaterialTokenResolver;
-use crate::tokens::{shape, time_period_common, typography};
+use crate::tokens::{time_period_common, typography};
 
 pub(crate) const COMPONENT_PREFIX: &str = "md.comp.time-input";
 
@@ -30,9 +30,10 @@ pub(crate) fn time_input_field_container_height(theme: &Theme) -> Px {
 
 pub(crate) fn time_input_field_container_shape(theme: &Theme) -> Corners {
     let key = token_key("time-input-field.container.shape");
-    shape::corners_or_metric(theme, &key)
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.small"))
-        .unwrap_or(Corners::all(Px(8.0)))
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[key.as_str(), "md.sys.shape.corner.small"],
+        Corners::all(Px(8.0)),
+    )
 }
 
 pub(crate) fn time_input_field_container_color(theme: &Theme, focused: bool, error: bool) -> Color {

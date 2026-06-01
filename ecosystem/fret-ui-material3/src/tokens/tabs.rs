@@ -8,7 +8,7 @@ use fret_ui::Theme;
 use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::{MaterialStateLayerInteraction, MaterialTokenResolver};
-use crate::tokens::{shape, typography};
+use crate::tokens::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum NavigationTabKind {
@@ -136,16 +136,14 @@ pub(crate) fn active_indicator_shape_for(theme: &Theme, kind: NavigationTabKind)
         return Corners::all(Px(0.0));
     }
 
-    shape::corners_or_metric(
-        theme,
-        "md.comp.primary-navigation-tab.active-indicator.shape",
-    )
-    .unwrap_or(Corners {
-        top_left: Px(3.0),
-        top_right: Px(3.0),
-        bottom_right: Px(0.0),
-        bottom_left: Px(0.0),
-    })
+    MaterialTokenResolver::new(theme)
+        .corners_value("md.comp.primary-navigation-tab.active-indicator.shape")
+        .unwrap_or(Corners {
+            top_left: Px(3.0),
+            top_right: Px(3.0),
+            bottom_right: Px(0.0),
+            bottom_left: Px(0.0),
+        })
 }
 
 pub(crate) fn indicator_matches_content(kind: NavigationTabKind) -> bool {

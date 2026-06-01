@@ -10,7 +10,7 @@ use fret_ui_kit::typography::TextIntent;
 use crate::foundation::token_resolver::{
     MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
 };
-use crate::tokens::{shape, typography};
+use crate::tokens::typography;
 
 const DEFAULT_STATE_LAYER_SIZE: Px = Px(40.0);
 const DEFAULT_VALUE_INDICATOR_BOTTOM_SPACE: Px = Px(12.0);
@@ -119,7 +119,8 @@ pub(crate) fn tick_mark_size(theme: &Theme) -> Px {
 }
 
 pub(crate) fn tick_mark_shape(theme: &Theme) -> Corners {
-    shape::corners_or_metric(theme, "md.comp.slider.with-tick-marks.container.shape")
+    MaterialTokenResolver::new(theme)
+        .corners_value("md.comp.slider.with-tick-marks.container.shape")
         .unwrap_or(DEFAULT_FULL_SHAPE)
 }
 
@@ -166,7 +167,8 @@ pub(crate) fn stop_indicator_size(theme: &Theme) -> Px {
 }
 
 pub(crate) fn stop_indicator_shape(theme: &Theme) -> Corners {
-    shape::corners_or_metric(theme, "md.comp.slider.stop-indicator.shape")
+    MaterialTokenResolver::new(theme)
+        .corners_value("md.comp.slider.stop-indicator.shape")
         .unwrap_or(DEFAULT_FULL_SHAPE)
 }
 
@@ -309,9 +311,13 @@ pub(crate) fn handle_color(theme: &Theme, enabled: bool, interaction: SliderInte
 }
 
 pub(crate) fn track_shape(theme: &Theme) -> Corners {
-    shape::corners_or_metric(theme, "md.comp.slider.active.track.shape")
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.full"))
-        .unwrap_or(DEFAULT_FULL_SHAPE)
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[
+            "md.comp.slider.active.track.shape",
+            "md.sys.shape.corner.full",
+        ],
+        DEFAULT_FULL_SHAPE,
+    )
 }
 
 pub(crate) fn handle_height(theme: &Theme) -> Px {
@@ -350,9 +356,10 @@ pub(crate) fn handle_width(theme: &Theme, enabled: bool, interaction: SliderInte
 }
 
 pub(crate) fn handle_shape(theme: &Theme) -> Corners {
-    shape::corners_or_metric(theme, "md.comp.slider.handle.shape")
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.full"))
-        .unwrap_or(DEFAULT_FULL_SHAPE)
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &["md.comp.slider.handle.shape", "md.sys.shape.corner.full"],
+        DEFAULT_FULL_SHAPE,
+    )
 }
 
 fn material_state_layer_interaction(

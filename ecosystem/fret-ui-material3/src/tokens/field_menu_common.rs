@@ -6,7 +6,7 @@ use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::tokens::{
-    field_common::FieldVariant, selectable_menu_item as selectable_item_tokens, shape,
+    field_common::FieldVariant, selectable_menu_item as selectable_item_tokens,
     typography as material_typography,
 };
 
@@ -103,9 +103,11 @@ pub(crate) fn container_shape(
     tokens: FieldMenuTokenSet,
     variant: FieldVariant,
 ) -> Corners {
-    shape::corners_or_metric(theme, &tokens.key(variant, "container.shape"))
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.extra-small"))
-        .unwrap_or_else(|| Corners::all(DEFAULT_CONTAINER_SHAPE))
+    let key = tokens.key(variant, "container.shape");
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[key.as_str(), "md.sys.shape.corner.extra-small"],
+        Corners::all(DEFAULT_CONTAINER_SHAPE),
+    )
 }
 
 pub(crate) fn list_item_height(

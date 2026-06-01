@@ -6,7 +6,7 @@ use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::{MaterialStateLayerInteraction, MaterialTokenResolver};
 use crate::navigation_drawer::NavigationDrawerVariant;
-use crate::tokens::{shape, typography};
+use crate::tokens::typography;
 
 const DEFAULT_BAR_CONTAINER_HEIGHT: Px = Px(80.0);
 const DEFAULT_BAR_CONTAINER_ELEVATION: Px = Px(0.0);
@@ -83,9 +83,13 @@ pub(crate) fn bar_container_shadow_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn bar_container_shape(theme: &Theme) -> Corners {
-    shape::corners_or_metric(theme, "md.comp.navigation-bar.container.shape")
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.none"))
-        .unwrap_or(Corners::all(DEFAULT_BAR_CONTAINER_RADIUS))
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[
+            "md.comp.navigation-bar.container.shape",
+            "md.sys.shape.corner.none",
+        ],
+        Corners::all(DEFAULT_BAR_CONTAINER_RADIUS),
+    )
 }
 
 pub(crate) fn bar_active_indicator_width(theme: &Theme) -> Px {
@@ -272,9 +276,13 @@ pub(crate) fn rail_container_background(theme: &Theme) -> Color {
 }
 
 pub(crate) fn rail_container_shape(theme: &Theme) -> Corners {
-    shape::corners_or_metric(theme, "md.comp.navigation-rail.container.shape")
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.none"))
-        .unwrap_or(Corners::all(DEFAULT_RAIL_CONTAINER_RADIUS))
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[
+            "md.comp.navigation-rail.container.shape",
+            "md.sys.shape.corner.none",
+        ],
+        Corners::all(DEFAULT_RAIL_CONTAINER_RADIUS),
+    )
 }
 
 pub(crate) fn rail_active_indicator_width(theme: &Theme) -> Px {
@@ -434,9 +442,13 @@ pub(crate) fn drawer_item_horizontal_padding(theme: &Theme) -> Px {
 }
 
 pub(crate) fn drawer_container_shape(theme: &Theme) -> Corners {
-    shape::corners_or_metric(theme, "md.comp.navigation-drawer.container.shape")
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.extra-large"))
-        .unwrap_or_else(|| Corners::all(DEFAULT_DRAWER_CONTAINER_RADIUS))
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[
+            "md.comp.navigation-drawer.container.shape",
+            "md.sys.shape.corner.extra-large",
+        ],
+        Corners::all(DEFAULT_DRAWER_CONTAINER_RADIUS),
+    )
 }
 
 pub(crate) fn drawer_container_background(

@@ -4,7 +4,6 @@ use fret_core::{Color, Corners, Edges, Px};
 use fret_ui::{TextInputStyle, Theme};
 
 use crate::foundation::token_resolver::{MaterialTokenResolver, alpha_mul, blend_over};
-use crate::tokens::shape;
 
 const DEFAULT_CONTAINER_HEIGHT: Px = Px(56.0);
 const DEFAULT_CONTAINER_SHAPE: Px = Px(4.0);
@@ -259,16 +258,20 @@ pub(crate) fn placeholder_color(theme: &Theme, prefix: &str, state: FieldState) 
 }
 
 fn outlined_container_shape(theme: &Theme, prefix: &str) -> Corners {
-    shape::corners_or_metric(theme, &field_key(prefix, "container.shape"))
-        .or_else(|| shape::corners_or_metric(theme, "md.sys.shape.corner.extra-small"))
-        .unwrap_or_else(|| Corners::all(DEFAULT_CONTAINER_SHAPE))
+    let key = field_key(prefix, "container.shape");
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[key.as_str(), "md.sys.shape.corner.extra-small"],
+        Corners::all(DEFAULT_CONTAINER_SHAPE),
+    )
 }
 
 fn filled_container_shape(theme: &Theme, prefix: &str) -> Corners {
-    if let Some(corners) = shape::corners_or_metric(theme, &field_key(prefix, "container.shape")) {
+    let tokens = MaterialTokenResolver::new(theme);
+    let key = field_key(prefix, "container.shape");
+    if let Some(corners) = tokens.corners_value(&key) {
         return corners;
     }
-    if let Some(corners) = shape::corners_or_metric(theme, "md.sys.shape.corner.extra-small.top") {
+    if let Some(corners) = tokens.corners_value("md.sys.shape.corner.extra-small.top") {
         return corners;
     }
 

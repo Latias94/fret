@@ -48,7 +48,6 @@ pub(crate) mod search_view;
 pub(crate) mod segmented_button;
 pub(crate) mod select;
 pub(crate) mod selectable_menu_item;
-pub(crate) mod shape;
 pub(crate) mod sheet_bottom;
 pub(crate) mod slider;
 pub(crate) mod slider_common;
