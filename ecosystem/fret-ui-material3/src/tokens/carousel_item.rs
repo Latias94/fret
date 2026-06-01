@@ -25,10 +25,10 @@ fn carousel_metric(theme: &Theme, key: impl AsRef<str>, fallback: Px) -> Px {
 
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
     let component_key = format!("{COMPONENT_PREFIX}.container.shape");
-    Corners::all(MaterialTokenResolver::new(theme).metric_chain(
+    MaterialTokenResolver::new(theme).corners_chain_or(
         &[component_key.as_str(), "md.sys.shape.corner.extra-large"],
-        Px(28.0),
-    ))
+        Corners::all(Px(28.0)),
+    )
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
@@ -250,5 +250,33 @@ mod tests {
         let (_app, theme) = theme_with_patch(patch);
 
         assert_eq!(container_shape(&theme), Corners::all(Px(26.0)));
+    }
+
+    #[test]
+    fn carousel_item_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.carousel-item.container.shape".to_string(), 24.0);
+        patch.corners.insert(
+            "md.comp.carousel-item.container.shape".to_string(),
+            Corners {
+                top_left: Px(6.0),
+                top_right: Px(8.0),
+                bottom_right: Px(10.0),
+                bottom_left: Px(12.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_shape(&theme),
+            Corners {
+                top_left: Px(6.0),
+                top_right: Px(8.0),
+                bottom_right: Px(10.0),
+                bottom_left: Px(12.0),
+            }
+        );
     }
 }

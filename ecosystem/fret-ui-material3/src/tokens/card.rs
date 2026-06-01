@@ -36,10 +36,10 @@ fn card_metric(theme: &Theme, key: impl AsRef<str>, fallback: Px) -> Px {
 
 pub(crate) fn container_shape(theme: &Theme, variant: CardVariant) -> Corners {
     let component_key = format!("{}.container.shape", component_prefix(variant));
-    Corners::all(MaterialTokenResolver::new(theme).metric_chain(
+    MaterialTokenResolver::new(theme).corners_chain_or(
         &[component_key.as_str(), "md.sys.shape.corner.medium"],
-        Px(12.0),
-    ))
+        Corners::all(Px(12.0)),
+    )
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme, variant: CardVariant) -> Color {
@@ -278,6 +278,34 @@ mod tests {
         assert_eq!(
             container_shape(&theme, CardVariant::Filled),
             Corners::all(Px(10.0))
+        );
+    }
+
+    #[test]
+    fn card_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.filled-card.container.shape".to_string(), 14.0);
+        patch.corners.insert(
+            "md.comp.filled-card.container.shape".to_string(),
+            Corners {
+                top_left: Px(2.0),
+                top_right: Px(4.0),
+                bottom_right: Px(6.0),
+                bottom_left: Px(8.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_shape(&theme, CardVariant::Filled),
+            Corners {
+                top_left: Px(2.0),
+                top_right: Px(4.0),
+                bottom_right: Px(6.0),
+                bottom_left: Px(8.0),
+            }
         );
     }
 }

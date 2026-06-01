@@ -13,10 +13,6 @@ fn badge_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
     MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
 }
 
-fn badge_metric_chain(theme: &Theme, keys: &[&'static str], fallback: Px) -> Px {
-    MaterialTokenResolver::new(theme).metric_chain(keys, fallback)
-}
-
 pub(crate) fn dot_size(theme: &Theme) -> Px {
     badge_metric(theme, "md.comp.badge.size", Px(6.0))
 }
@@ -52,21 +48,17 @@ pub(crate) fn large_label_text_style(theme: &Theme) -> TextStyle {
 }
 
 pub(crate) fn shape(theme: &Theme) -> Corners {
-    let r = badge_metric_chain(
-        theme,
+    MaterialTokenResolver::new(theme).corners_chain_or(
         &["md.comp.badge.shape", "md.sys.shape.corner.full"],
-        Px(9999.0),
-    );
-    Corners::all(r)
+        Corners::all(Px(9999.0)),
+    )
 }
 
 pub(crate) fn large_shape(theme: &Theme) -> Corners {
-    let r = badge_metric_chain(
-        theme,
+    MaterialTokenResolver::new(theme).corners_chain_or(
         &["md.comp.badge.large.shape", "md.sys.shape.corner.full"],
-        Px(9999.0),
-    );
-    Corners::all(r)
+        Corners::all(Px(9999.0)),
+    )
 }
 
 #[cfg(test)]
@@ -113,5 +105,33 @@ mod tests {
         assert_eq!(large_size(&theme), Px(18.0));
         assert_eq!(shape(&theme), Corners::all(Px(40.0)));
         assert_eq!(large_shape(&theme), Corners::all(Px(9.0)));
+    }
+
+    #[test]
+    fn badge_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.badge.shape".to_string(), 40.0);
+        patch.corners.insert(
+            "md.comp.badge.shape".to_string(),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            shape(&theme),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            }
+        );
     }
 }

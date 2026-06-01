@@ -178,14 +178,13 @@ pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
-    Corners::all(menu_metric_chain(
-        theme,
+    MaterialTokenResolver::new(theme).corners_chain_or(
         &[
             "md.comp.menu.container.shape",
             "md.sys.shape.corner.extra-small",
         ],
-        Px(4.0),
-    ))
+        Corners::all(Px(4.0)),
+    )
 }
 
 pub(crate) fn divider_height(theme: &Theme) -> Px {
@@ -347,5 +346,33 @@ mod tests {
         assert_eq!(item_slot_gap(&theme), Px(16.0));
         assert_eq!(item_icon_size(&theme), Px(28.0));
         assert_eq!(container_shape(&theme), Corners::all(Px(6.0)));
+    }
+
+    #[test]
+    fn menu_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.menu.container.shape".to_string(), 4.0);
+        patch.corners.insert(
+            "md.comp.menu.container.shape".to_string(),
+            Corners {
+                top_left: Px(3.0),
+                top_right: Px(5.0),
+                bottom_right: Px(7.0),
+                bottom_left: Px(9.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_shape(&theme),
+            Corners {
+                top_left: Px(3.0),
+                top_right: Px(5.0),
+                bottom_right: Px(7.0),
+                bottom_left: Px(9.0),
+            }
+        );
     }
 }

@@ -51,10 +51,10 @@ pub(crate) fn container_height(theme: &Theme, component_prefix: &str) -> Px {
 
 pub(crate) fn container_shape(theme: &Theme, component_prefix: &str) -> Corners {
     let component_key = format!("{component_prefix}.container.shape");
-    Corners::all(MaterialTokenResolver::new(theme).metric_chain(
+    MaterialTokenResolver::new(theme).corners_chain_or(
         &[component_key.as_str(), "md.sys.shape.corner.small"],
-        DEFAULT_CONTAINER_SHAPE,
-    ))
+        Corners::all(DEFAULT_CONTAINER_SHAPE),
+    )
 }
 
 pub(crate) fn icon_size(theme: &Theme, key: &str) -> Px {
@@ -317,6 +317,34 @@ mod tests {
         assert_eq!(
             container_shape(&theme, "md.comp.test-chip"),
             Corners::all(Px(12.0))
+        );
+    }
+
+    #[test]
+    fn shared_chip_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.test-chip.container.shape".to_string(), 8.0);
+        patch.corners.insert(
+            "md.comp.test-chip.container.shape".to_string(),
+            Corners {
+                top_left: Px(2.0),
+                top_right: Px(3.0),
+                bottom_right: Px(4.0),
+                bottom_left: Px(5.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_shape(&theme, "md.comp.test-chip"),
+            Corners {
+                top_left: Px(2.0),
+                top_right: Px(3.0),
+                bottom_right: Px(4.0),
+                bottom_left: Px(5.0),
+            }
         );
     }
 
