@@ -44,7 +44,6 @@ pub mod suggestion_chip;
 pub mod switch;
 pub mod tabs;
 pub mod text_field;
-pub mod theme;
 pub mod time_picker;
 pub mod tokens;
 pub mod tooltip;
