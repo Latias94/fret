@@ -1915,9 +1915,7 @@ fn actual_tooltip_color(theme: &Theme, variant: &str, role: &str) -> Color {
 
 fn actual_tooltip_metric(theme: &Theme, variant: &str, role: &str) -> Px {
     match (variant, role) {
-        ("plain", "container_shape") => tooltip::plain_container_shape_radius(theme),
         ("plain", "container_max_width") => tooltip::plain_container_max_width(theme),
-        ("rich", "container_shape") => tooltip::rich_container_shape_radius(theme),
         ("rich", "container_max_width") => tooltip::rich_container_max_width(theme),
         ("rich", "container_elevation") => tooltip::rich_container_elevation(theme),
         (_, "container_min_width") => tooltip::container_min_width(theme),
@@ -1927,9 +1925,10 @@ fn actual_tooltip_metric(theme: &Theme, variant: &str, role: &str) -> Px {
 }
 
 fn actual_tooltip_corners(theme: &Theme, variant: &str, role: &str) -> Corners {
-    match role {
-        "container_shape" => Corners::all(actual_tooltip_metric(theme, variant, role)),
-        other => panic!("unsupported tooltip corners role {other}"),
+    match (variant, role) {
+        ("plain", "container_shape") => tooltip::plain_container_shape(theme),
+        ("rich", "container_shape") => tooltip::rich_container_shape(theme),
+        _ => panic!("unsupported tooltip corners role {variant}:{role}"),
     }
 }
 

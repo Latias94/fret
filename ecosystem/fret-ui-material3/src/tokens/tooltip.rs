@@ -38,11 +38,6 @@ pub(crate) fn plain_supporting_text_style(theme: &Theme) -> TextStyle {
     )
 }
 
-#[cfg(test)]
-pub(crate) fn plain_container_shape_radius(theme: &Theme) -> Px {
-    tooltip_metric(theme, "md.comp.plain-tooltip.container.shape", Px(4.0))
-}
-
 pub(crate) fn plain_container_shape(theme: &Theme) -> Corners {
     MaterialTokenResolver::new(theme).corners_chain_or(
         &["md.comp.plain-tooltip.container.shape"],
@@ -96,11 +91,6 @@ pub(crate) fn rich_container_shadow_color(theme: &Theme) -> Color {
 
 pub(crate) fn rich_container_elevation(theme: &Theme) -> Px {
     tooltip_metric(theme, "md.comp.rich-tooltip.container.elevation", Px(3.0))
-}
-
-#[cfg(test)]
-pub(crate) fn rich_container_shape_radius(theme: &Theme) -> Px {
-    tooltip_metric(theme, "md.comp.rich-tooltip.container.shape", Px(12.0))
 }
 
 pub(crate) fn rich_container_shape(theme: &Theme) -> Corners {
@@ -215,9 +205,9 @@ mod tests {
         let app = App::new();
         let theme = Theme::global(&app);
 
-        assert_eq!(plain_container_shape_radius(theme), Px(4.0));
+        assert_eq!(plain_container_shape(theme), Corners::all(Px(4.0)));
         assert_eq!(rich_container_elevation(theme), Px(3.0));
-        assert_eq!(rich_container_shape_radius(theme), Px(12.0));
+        assert_eq!(rich_container_shape(theme), Corners::all(Px(12.0)));
     }
 
     #[test]
@@ -234,9 +224,9 @@ mod tests {
             .insert("md.comp.rich-tooltip.container.shape".to_string(), 14.0);
         let (_app, theme) = theme_with_patch(patch);
 
-        assert_eq!(plain_container_shape_radius(&theme), Px(6.0));
+        assert_eq!(plain_container_shape(&theme), Corners::all(Px(6.0)));
         assert_eq!(rich_container_elevation(&theme), Px(4.0));
-        assert_eq!(rich_container_shape_radius(&theme), Px(14.0));
+        assert_eq!(rich_container_shape(&theme), Corners::all(Px(14.0)));
     }
 
     #[test]
