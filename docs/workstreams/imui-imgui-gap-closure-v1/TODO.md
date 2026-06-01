@@ -327,6 +327,15 @@ Last updated: 2026-06-01
       search/search-assist element selection, content mounting, and root panel chrome. The source
       gate prevents element assembly and search fallback policy from drifting back into the root
       composite owner.
+- [x] Split editor `InspectorPanel` search field fallback/assist routing into a private element
+      child owner without changing search query trimming/lowercase matching, header visibility,
+      enabled/focusable routing, clear-button test ids, `MiniSearchBox` fallback, `TextAssistField`
+      anchored overlay routing, search assist list/empty/key/test/max-height forwarding, or public
+      `InspectorPanel` options.
+      Result: `composites/inspector_panel/element.rs` keeps panel metrics/header/content/root
+      assembly and delegates search field construction to
+      `composites/inspector_panel/element/search.rs`. The source gate prevents search
+      fallback/assist policy from drifting back into the panel element owner.
 - [x] Split editor `PropertyGroup` options/default records into a private child owner without
       changing public `PropertyGroupOptions` import paths, layout defaults, collapsed model/default
       behavior, enabled/collapsible defaults, header/content test-id fields, header rendering,

@@ -1330,6 +1330,37 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Editor InspectorPanel Search Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `InspectorPanel` search field fallback/assist routing moved out of the panel
+element owner into a private `composites/inspector_panel/element/search.rs` owner without changing
+search query trimming/lowercase matching, header visibility, enabled/focusable routing,
+clear-button test ids, `MiniSearchBox` fallback, `TextAssistField` anchored overlay routing, search
+assist list/empty/key/test/max-height forwarding, or public `InspectorPanel` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/inspector_panel/element.rs` keeps panel
+  metrics/header/content/root assembly and delegates search field construction.
+- `ecosystem/fret-ui-editor/src/composites/inspector_panel/element/search.rs` owns search
+  fallback/assist routing, `MiniSearchBox` fallback, `TextAssistField` anchored overlay policy, and
+  clear/test-id forwarding.
+- `tools/gate_imui_workstream_source.py` now tracks the InspectorPanel search split and rejects
+  search fallback/assist policy from drifting back into the panel element owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the search owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor inspector_panel --no-fail-fast`: pass (2 passed, 226
+  skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor InspectorPanel Options Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `InspectorPanel` options/default and search-assist option records moved out

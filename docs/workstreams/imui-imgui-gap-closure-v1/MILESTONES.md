@@ -368,6 +368,15 @@ identity/test-id derivation, position/color editor wiring, remove action routing
 empty-state text role, preview behavior, and public gradient editor options remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor InspectorPanel search owner-split result:
+`ecosystem/fret-ui-editor/src/composites/inspector_panel/element.rs` now keeps panel
+metrics/header/content/root assembly and delegates search field construction to the private
+`composites/inspector_panel/element/search.rs` owner. Search query trimming/lowercase matching,
+header visibility, enabled/focusable routing, clear-button test ids, `MiniSearchBox` fallback,
+`TextAssistField` anchored overlay routing, search assist list/empty/key/test/max-height
+forwarding, and public `InspectorPanel` options remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor InspectorPanel options owner-split result:
 `ecosystem/fret-ui-editor/src/composites/inspector_panel.rs` now keeps public cx/control records,
 builder methods, and child-owner routing while re-exporting options. The private
