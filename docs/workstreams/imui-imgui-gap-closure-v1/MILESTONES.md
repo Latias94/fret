@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor InspectorPanel options owner-split result:
+`ecosystem/fret-ui-editor/src/composites/inspector_panel.rs` now keeps public cx/control records,
+builder methods, and child-owner routing while re-exporting options. The private
+`composites/inspector_panel/options.rs` owner contains public option records and defaults. Public
+`InspectorPanelOptions` and `InspectorPanelSearchAssistOptions` import paths, layout defaults,
+enabled/title/test-id defaults, search assist option fields, search fallback behavior, and panel
+assembly behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor InspectorPanel element owner-split result:
 `ecosystem/fret-ui-editor/src/composites/inspector_panel.rs` now keeps public options/cx/control
 records, builder methods, and `into_element_in(...)` routing. The private

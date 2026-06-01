@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor InspectorPanel Options Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `InspectorPanel` options/default and search-assist option records moved out
+of the root composite owner into a private `composites/inspector_panel/options.rs` owner without
+changing public `InspectorPanelOptions` or `InspectorPanelSearchAssistOptions` import paths, layout
+defaults, enabled/title/test-id defaults, search assist option fields, search fallback behavior, or
+panel assembly behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/inspector_panel.rs` keeps public cx/control records,
+  builder methods, and child-owner routing while re-exporting options.
+- `ecosystem/fret-ui-editor/src/composites/inspector_panel/options.rs` owns public option records
+  and defaults.
+- `tools/gate_imui_workstream_source.py` now tracks the InspectorPanel options split and rejects
+  options/default policy from drifting back into the root composite or element assembly owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the options owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor
+  inspector_panel_title_stays_single_line_when_header_is_narrow
+  editor_inspector_panel_title_text_is_single_line_and_shrinkable --no-fail-fast`: pass (2
+  passed, 220 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor InspectorPanel Element Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `InspectorPanel` header/search/content/root element assembly moved out of

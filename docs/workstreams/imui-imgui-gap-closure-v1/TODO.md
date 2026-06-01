@@ -58,6 +58,14 @@ Last updated: 2026-06-01
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `InspectorPanel` options/default and search-assist option records into a
+      private child owner without changing public `InspectorPanelOptions` or
+      `InspectorPanelSearchAssistOptions` import paths, layout defaults, enabled/title/test-id
+      defaults, search assist option fields, search fallback behavior, or panel assembly behavior.
+      Result: `composites/inspector_panel.rs` now keeps public cx/control records, builder methods,
+      and child-owner routing while re-exporting options. `composites/inspector_panel/options.rs`
+      owns public option records and defaults. The source gate prevents options/default policy from
+      drifting back into the root composite or element assembly owner.
 - [x] Split editor `InspectorPanel` header/search/content/root element assembly into a private
       child owner without changing public constructors/builders, `InspectorPanelCx` accessor
       shape, query trimming/lowercase matching, title text-role behavior, search assist fallback,
