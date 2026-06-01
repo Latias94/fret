@@ -76,6 +76,18 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     used by recipe token modules.
   - Gates: `--lib::material3_literal_md_tokens_resolve_in_v30_theme` and
     `minimum_touch_target::navigable_material_rows_enforce_minimum_touch_target_at_runtime`.
+- 2026-06-01 Token manifest and fixture hardening:
+  - `material3_token_usage_manifest_v1.json` is now the structured source of truth for literal
+    Material token usage across 121 recipe/foundation/interaction/token-module sources.
+  - `tokens::coverage` validates manifest drift against source text, then resolves manifest tokens
+    against v30; source scanning is no longer the coverage source of truth.
+  - `minimum_touch_target` now consumes `material3_touch_target_cases_v1.json`, keeping future
+    Material 48dp conformance additions case-only when they share the same harness.
+  - v30 injection gained the real menu shape, navigation sizing, and time-picker separator aliases
+    exposed by the wider manifest.
+  - Gates: `--lib::material3_token_usage_manifest_matches_literal_md_sources`,
+    `--lib::material3_literal_md_tokens_resolve_in_v30_theme`, and
+    `minimum_touch_target::navigable_material_rows_enforce_minimum_touch_target_at_runtime`.
 - 2026-05-31 Tabs panel ownership:
   - `TabPanel`, `.panel/.panels`, active tabpanel semantics, `labelled_by` relation to the selected
     tab, derived tab `controls`, and gallery snippet content panels.

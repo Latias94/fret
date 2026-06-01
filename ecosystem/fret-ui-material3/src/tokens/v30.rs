@@ -917,6 +917,9 @@ fn inject_comp_date_picker_modal_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_time_picker_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_time_picker_scalars(cfg);
+    cfg.metrics
+        .entry("md.sys.fret.material.time-picker.display-separator.width".to_string())
+        .or_insert(24.0);
     cfg.numbers
         .entry("md.sys.fret.material.time-picker.scrim.opacity".to_string())
         .or_insert(0.32);
@@ -2034,6 +2037,12 @@ fn inject_comp_secondary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_navigation_bar_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_navigation_bar_scalars(cfg);
+    for (key, value) in [
+        ("md.comp.navigation-bar.active-indicator.top-offset", 12.0),
+        ("md.comp.navigation-bar.item.gap", 8.0),
+    ] {
+        cfg.metrics.entry(key.to_string()).or_insert(value);
+    }
 }
 
 fn inject_comp_navigation_drawer_scalars(cfg: &mut ThemeConfig) {
@@ -2042,6 +2051,12 @@ fn inject_comp_navigation_drawer_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_navigation_rail_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_navigation_rail_scalars(cfg);
+    for (key, value) in [
+        ("md.comp.navigation-rail.item.width", 80.0),
+        ("md.comp.navigation-rail.item.height", 56.0),
+    ] {
+        cfg.metrics.entry(key.to_string()).or_insert(value);
+    }
 }
 
 fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
@@ -2083,6 +2098,13 @@ fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
     ] {
         cfg.numbers.entry(key.to_string()).or_insert(value);
     }
+
+    cfg.corners
+        .entry("md.comp.menu.list-item.container.shape".to_string())
+        .or_insert(Corners::all(Px(4.0)));
+    cfg.corners
+        .entry("md.comp.menu.list-item.selected.container.shape".to_string())
+        .or_insert(Corners::all(Px(12.0)));
 }
 
 fn inject_comp_list_scalars(cfg: &mut ThemeConfig) {

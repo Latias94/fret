@@ -367,6 +367,12 @@ mod tests {
     }
 
     #[test]
+    fn material3_token_usage_manifest_matches_literal_md_sources() {
+        crate::tokens::coverage::validate_manifest_against_sources()
+            .expect("material token usage manifest must match literal md.* source uses");
+    }
+
+    #[test]
     fn material3_literal_md_tokens_resolve_in_v30_theme() {
         let cfg =
             theme_config_with_colors(TypographyOptions::default(), ColorSchemeOptions::default());
@@ -377,7 +383,7 @@ mod tests {
 
         let missing: Vec<_> = crate::tokens::coverage::literal_md_token_uses()
             .into_iter()
-            .filter(|token_use| !crate::tokens::coverage::token_resolves(theme, token_use.key))
+            .filter(|token_use| !crate::tokens::coverage::token_resolves(theme, &token_use.key))
             .collect();
         assert!(
             missing.is_empty(),

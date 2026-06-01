@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "suite": "material3-touch-target-cases-v1",
+  "notes": "Fixture-driven runtime conformance cases for Material minimum 48dp touch targets.",
+  "cases": [
+    {
+      "id": "tabs-scrollable-primary",
+      "surface": "tabs",
+      "target_test_id": "m3-touch-tab-alpha",
+      "expected": { "min_width": 48.0, "min_height": 48.0 }
+    },
+    {
+      "id": "navigation-bar-destination",
+      "surface": "navigation_bar",
+      "target_test_id": "m3-touch-nav-bar-search",
+      "expected": { "min_width": 48.0, "min_height": 48.0 }
+    },
+    {
+      "id": "navigation-rail-destination",
+      "surface": "navigation_rail",
+      "target_test_id": "m3-touch-nav-rail-search",
+      "expected": { "min_width": 48.0, "min_height": 48.0 }
+    },
+    {
+      "id": "navigation-drawer-destination",
+      "surface": "navigation_drawer",
+      "target_test_id": "m3-touch-drawer-inbox",
+      "expected": { "min_width": 48.0, "min_height": 48.0 }
+    },
+    {
+      "id": "menu-list-item",
+      "surface": "menu",
+      "target_test_id": "m3-touch-menu-alpha",
+      "expected": { "min_width": 48.0, "min_height": 48.0 }
+    },
+    {
+      "id": "list-one-line-item",
+      "surface": "list",
+      "target_test_id": "m3-touch-list-alpha",
+      "expected": { "min_width": 48.0, "min_height": 48.0 }
+    }
+  ]
+}

@@ -138,6 +138,7 @@ These files are primarily *shared policy primitives*, not one-off component layo
   - Decision: keep as Material foundation policy for now (tree-local + token-driven), not core.
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/interactive_size.rs`,
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`md.sys.layout.minimum-touch-target.size`),
+    `ecosystem/fret-ui-material3/tests/fixtures/material3_touch_target_cases_v1.json`,
     tests in `ecosystem/fret-ui-material3/tests/minimum_touch_target.rs`
     (`navigable_material_rows_enforce_minimum_touch_target_at_runtime`).
 - [x] Decide whether we need a core pixel-snapping policy hook for non-1.0 scale factors (radio/checkbox drift class).
@@ -403,6 +404,13 @@ These files are primarily *shared policy primitives*, not one-off component layo
     `md.sys.fret.material.motion.spring.*`).
 - [x] Introduce typed token modules per component to reduce raw string key usage and centralize
   derived token math (disabled alpha, state-layer alpha selection).
+  - [x] Structured token usage manifest drives literal `md.*` coverage and keeps source scanning as
+    a drift guard instead of the coverage source of truth.
+    - Evidence: `ecosystem/fret-ui-material3/tests/fixtures/material3_token_usage_manifest_v1.json`,
+      `ecosystem/fret-ui-material3/src/tokens/coverage.rs`,
+      `ecosystem/fret-ui-material3/src/lib.rs`
+      (`material3_token_usage_manifest_matches_literal_md_sources`,
+      `material3_literal_md_tokens_resolve_in_v30_theme`).
   - [x] IconButton token keys + fallbacks centralized.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/icon_button.rs`,
       `ecosystem/fret-ui-material3/src/icon_button.rs`.
@@ -477,6 +485,7 @@ These files are primarily *shared policy primitives*, not one-off component layo
     `ecosystem/fret-ui-material3/src/navigation_bar.rs`,
     `ecosystem/fret-ui-material3/src/navigation_rail.rs`,
     `ecosystem/fret-ui-material3/src/navigation_drawer.rs`,
+    `ecosystem/fret-ui-material3/tests/fixtures/material3_touch_target_cases_v1.json`,
     tests in `ecosystem/fret-ui-material3/tests/minimum_touch_target.rs`
     (`navigable_material_rows_enforce_minimum_touch_target_at_runtime`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_touch_targets`),
