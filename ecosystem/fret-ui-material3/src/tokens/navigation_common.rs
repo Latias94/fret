@@ -44,10 +44,20 @@ pub(crate) enum NavigationItemInteraction {
     Pressed,
 }
 
+fn nav_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
+fn nav_metric_chain(theme: &Theme, keys: &[&'static str], fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_chain(keys, fallback)
+}
+
 pub(crate) fn bar_container_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-bar.container.height")
-        .unwrap_or(DEFAULT_BAR_CONTAINER_HEIGHT)
+    nav_metric(
+        theme,
+        "md.comp.navigation-bar.container.height",
+        DEFAULT_BAR_CONTAINER_HEIGHT,
+    )
 }
 
 pub(crate) fn bar_container_background(theme: &Theme) -> Color {
@@ -58,9 +68,11 @@ pub(crate) fn bar_container_background(theme: &Theme) -> Color {
 }
 
 pub(crate) fn bar_container_elevation(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-bar.container.elevation")
-        .unwrap_or(DEFAULT_BAR_CONTAINER_ELEVATION)
+    nav_metric(
+        theme,
+        "md.comp.navigation-bar.container.elevation",
+        DEFAULT_BAR_CONTAINER_ELEVATION,
+    )
 }
 
 pub(crate) fn bar_container_shadow_color(theme: &Theme) -> Color {
@@ -77,21 +89,27 @@ pub(crate) fn bar_container_shape(theme: &Theme) -> Corners {
 }
 
 pub(crate) fn bar_active_indicator_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-bar.active-indicator.width")
-        .unwrap_or(DEFAULT_BAR_ACTIVE_INDICATOR_WIDTH)
+    nav_metric(
+        theme,
+        "md.comp.navigation-bar.active-indicator.width",
+        DEFAULT_BAR_ACTIVE_INDICATOR_WIDTH,
+    )
 }
 
 pub(crate) fn bar_active_indicator_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-bar.active-indicator.height")
-        .unwrap_or(DEFAULT_BAR_ACTIVE_INDICATOR_HEIGHT)
+    nav_metric(
+        theme,
+        "md.comp.navigation-bar.active-indicator.height",
+        DEFAULT_BAR_ACTIVE_INDICATOR_HEIGHT,
+    )
 }
 
 pub(crate) fn bar_active_indicator_top_offset(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-bar.active-indicator.top-offset")
-        .unwrap_or(DEFAULT_BAR_ACTIVE_INDICATOR_TOP_OFFSET)
+    nav_metric(
+        theme,
+        "md.comp.navigation-bar.active-indicator.top-offset",
+        DEFAULT_BAR_ACTIVE_INDICATOR_TOP_OFFSET,
+    )
 }
 
 pub(crate) fn bar_active_indicator_color(theme: &Theme) -> Color {
@@ -102,10 +120,14 @@ pub(crate) fn bar_active_indicator_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn bar_active_indicator_radius(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-bar.active-indicator.shape")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
-        .unwrap_or(DEFAULT_BAR_ACTIVE_INDICATOR_RADIUS)
+    nav_metric_chain(
+        theme,
+        &[
+            "md.comp.navigation-bar.active-indicator.shape",
+            "md.sys.shape.corner.full",
+        ],
+        DEFAULT_BAR_ACTIVE_INDICATOR_RADIUS,
+    )
 }
 
 pub(crate) fn bar_active_indicator_shape(theme: &Theme) -> Corners {
@@ -197,40 +219,54 @@ pub(crate) fn bar_label_text_style(theme: &Theme, active: bool) -> TextStyle {
 }
 
 pub(crate) fn bar_icon_size(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-bar.icon.size")
-        .unwrap_or(DEFAULT_BAR_ICON_SIZE)
+    nav_metric(
+        theme,
+        "md.comp.navigation-bar.icon.size",
+        DEFAULT_BAR_ICON_SIZE,
+    )
 }
 
 pub(crate) fn bar_item_gap(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-bar.item.gap")
-        .unwrap_or(DEFAULT_BAR_ITEM_GAP)
+    nav_metric(
+        theme,
+        "md.comp.navigation-bar.item.gap",
+        DEFAULT_BAR_ITEM_GAP,
+    )
 }
 
 pub(crate) fn rail_container_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-rail.container.width")
-        .unwrap_or(DEFAULT_RAIL_CONTAINER_WIDTH)
+    nav_metric(
+        theme,
+        "md.comp.navigation-rail.container.width",
+        DEFAULT_RAIL_CONTAINER_WIDTH,
+    )
 }
 
 pub(crate) fn rail_item_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-rail.item.width")
-        .unwrap_or_else(|| rail_container_width(theme))
+    nav_metric(
+        theme,
+        "md.comp.navigation-rail.item.width",
+        rail_container_width(theme),
+    )
 }
 
 pub(crate) fn rail_item_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-rail.item.height")
-        .or_else(|| theme.metric_by_key("md.comp.navigation-rail.active-indicator.width"))
-        .unwrap_or(DEFAULT_RAIL_ITEM_HEIGHT)
+    nav_metric_chain(
+        theme,
+        &[
+            "md.comp.navigation-rail.item.height",
+            "md.comp.navigation-rail.active-indicator.width",
+        ],
+        DEFAULT_RAIL_ITEM_HEIGHT,
+    )
 }
 
 pub(crate) fn rail_vertical_padding(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-rail.vertical-padding")
-        .unwrap_or(DEFAULT_RAIL_VERTICAL_PADDING)
+    nav_metric(
+        theme,
+        "md.comp.navigation-rail.vertical-padding",
+        DEFAULT_RAIL_VERTICAL_PADDING,
+    )
 }
 
 pub(crate) fn rail_container_background(theme: &Theme) -> Color {
@@ -247,20 +283,26 @@ pub(crate) fn rail_container_shape(theme: &Theme) -> Corners {
 }
 
 pub(crate) fn rail_active_indicator_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-rail.active-indicator.width")
-        .unwrap_or(DEFAULT_RAIL_ACTIVE_INDICATOR_WIDTH)
+    nav_metric(
+        theme,
+        "md.comp.navigation-rail.active-indicator.width",
+        DEFAULT_RAIL_ACTIVE_INDICATOR_WIDTH,
+    )
 }
 
 pub(crate) fn rail_active_indicator_height(theme: &Theme, has_label: bool) -> Px {
     if has_label {
-        theme
-            .metric_by_key("md.comp.navigation-rail.active-indicator.height")
-            .unwrap_or(DEFAULT_RAIL_ACTIVE_INDICATOR_HEIGHT)
+        nav_metric(
+            theme,
+            "md.comp.navigation-rail.active-indicator.height",
+            DEFAULT_RAIL_ACTIVE_INDICATOR_HEIGHT,
+        )
     } else {
-        theme
-            .metric_by_key("md.comp.navigation-rail.no-label.active-indicator.height")
-            .unwrap_or(DEFAULT_RAIL_NO_LABEL_ACTIVE_INDICATOR_HEIGHT)
+        nav_metric(
+            theme,
+            "md.comp.navigation-rail.no-label.active-indicator.height",
+            DEFAULT_RAIL_NO_LABEL_ACTIVE_INDICATOR_HEIGHT,
+        )
     }
 }
 
@@ -272,10 +314,14 @@ pub(crate) fn rail_active_indicator_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn rail_active_indicator_radius(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-rail.active-indicator.shape")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
-        .unwrap_or(DEFAULT_RAIL_ACTIVE_INDICATOR_RADIUS)
+    nav_metric_chain(
+        theme,
+        &[
+            "md.comp.navigation-rail.active-indicator.shape",
+            "md.sys.shape.corner.full",
+        ],
+        DEFAULT_RAIL_ACTIVE_INDICATOR_RADIUS,
+    )
 }
 
 pub(crate) fn rail_active_indicator_shape(theme: &Theme) -> Corners {
@@ -368,21 +414,27 @@ pub(crate) fn rail_label_text_style(theme: &Theme, active: bool) -> TextStyle {
 }
 
 pub(crate) fn rail_icon_size(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-rail.icon.size")
-        .unwrap_or(DEFAULT_RAIL_ICON_SIZE)
+    nav_metric(
+        theme,
+        "md.comp.navigation-rail.icon.size",
+        DEFAULT_RAIL_ICON_SIZE,
+    )
 }
 
 pub(crate) fn drawer_container_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-drawer.container.width")
-        .unwrap_or(DEFAULT_DRAWER_CONTAINER_WIDTH)
+    nav_metric(
+        theme,
+        "md.comp.navigation-drawer.container.width",
+        DEFAULT_DRAWER_CONTAINER_WIDTH,
+    )
 }
 
 pub(crate) fn drawer_active_indicator_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-drawer.active-indicator.width")
-        .unwrap_or(DEFAULT_DRAWER_ACTIVE_INDICATOR_WIDTH)
+    nav_metric(
+        theme,
+        "md.comp.navigation-drawer.active-indicator.width",
+        DEFAULT_DRAWER_ACTIVE_INDICATOR_WIDTH,
+    )
 }
 
 pub(crate) fn drawer_item_horizontal_padding(theme: &Theme) -> Px {
@@ -418,26 +470,36 @@ pub(crate) fn drawer_container_background(
 
 pub(crate) fn drawer_container_elevation(theme: &Theme, variant: NavigationDrawerVariant) -> Px {
     match variant {
-        NavigationDrawerVariant::Standard => theme
-            .metric_by_key("md.comp.navigation-drawer.standard.container.elevation")
-            .unwrap_or(Px(0.0)),
-        NavigationDrawerVariant::Modal => theme
-            .metric_by_key("md.comp.navigation-drawer.modal.container.elevation")
-            .unwrap_or(Px(1.0)),
+        NavigationDrawerVariant::Standard => nav_metric(
+            theme,
+            "md.comp.navigation-drawer.standard.container.elevation",
+            Px(0.0),
+        ),
+        NavigationDrawerVariant::Modal => nav_metric(
+            theme,
+            "md.comp.navigation-drawer.modal.container.elevation",
+            Px(1.0),
+        ),
     }
 }
 
 pub(crate) fn drawer_active_indicator_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-drawer.active-indicator.height")
-        .unwrap_or(DEFAULT_DRAWER_ACTIVE_INDICATOR_HEIGHT)
+    nav_metric(
+        theme,
+        "md.comp.navigation-drawer.active-indicator.height",
+        DEFAULT_DRAWER_ACTIVE_INDICATOR_HEIGHT,
+    )
 }
 
 pub(crate) fn drawer_active_indicator_radius(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-drawer.active-indicator.shape")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
-        .unwrap_or(DEFAULT_DRAWER_ACTIVE_INDICATOR_RADIUS)
+    nav_metric_chain(
+        theme,
+        &[
+            "md.comp.navigation-drawer.active-indicator.shape",
+            "md.sys.shape.corner.full",
+        ],
+        DEFAULT_DRAWER_ACTIVE_INDICATOR_RADIUS,
+    )
 }
 
 pub(crate) fn drawer_active_indicator_shape(theme: &Theme) -> Corners {
@@ -579,9 +641,11 @@ pub(crate) fn drawer_large_badge_label_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn drawer_icon_size(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.navigation-drawer.icon.size")
-        .unwrap_or(DEFAULT_DRAWER_ICON_SIZE)
+    nav_metric(
+        theme,
+        "md.comp.navigation-drawer.icon.size",
+        DEFAULT_DRAWER_ICON_SIZE,
+    )
 }
 
 fn state_layer_opacity_token(
@@ -731,6 +795,30 @@ mod tests {
             Corners::all(Px(9999.0))
         );
         assert_eq!(drawer_scrim_opacity(&theme), 0.4);
+    }
+
+    #[test]
+    fn navigation_metric_chains_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.sys.shape.corner.full".to_string(), 44.0);
+        patch.metrics.insert(
+            "md.comp.navigation-rail.active-indicator.width".to_string(),
+            72.0,
+        );
+        patch.metrics.insert(
+            "md.comp.navigation-drawer.modal.container.elevation".to_string(),
+            7.0,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(bar_active_indicator_radius(&theme), Px(44.0));
+        assert_eq!(rail_item_height(&theme), Px(72.0));
+        assert_eq!(
+            drawer_container_elevation(&theme, NavigationDrawerVariant::Modal),
+            Px(7.0)
+        );
     }
 
     #[test]
