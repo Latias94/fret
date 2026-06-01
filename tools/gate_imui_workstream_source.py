@@ -11959,6 +11959,40 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-plot/src/declarative.rs"),
+            required=[
+                "mod props;",
+                "pub use props::{",
+                "LinePlotPanelProps",
+                "fn plot_panel<H: UiHost + 'static>",
+                "fn paint_line_plot_panel(",
+            ],
+            forbidden=[
+                "pub struct LinePlotPanelProps",
+                "impl LinePlotPanelProps",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-plot/src/declarative/props.rs"),
+            required=[
+                "//! Public plot panel props and builder methods.",
+                "pub struct LinePlotPanelProps",
+                "pub struct ErrorBarsPlotPanelProps",
+                "pub struct HistogramPlotPanelProps",
+                "pub struct BarsPlotPanelProps",
+                "pub struct CandlestickPlotPanelProps",
+                "pub struct HeatmapPlotPanelProps",
+                "pub struct Histogram2DPlotPanelProps",
+                "pub struct AreaPlotPanelProps",
+                "pub struct ShadedPlotPanelProps",
+                "pub struct StemsPlotPanelProps",
+                "impl LinePlotPanelProps",
+                "impl StemsPlotPanelProps",
+                "style.heatmap_show_colorbar = true;",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-plot/src/imui.rs"),
             required=[
                 "//! Immediate-mode (`UiWriter`) adapters for `fret-plot`.",
@@ -50600,6 +50634,12 @@ def main() -> None:
         SourceCheck(
             Path("docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md"),
             required=[
+                "Fret Plot declarative props owner split - 2026-06-02",
+                "ecosystem/fret-plot/src/declarative/props.rs",
+                "public `*PlotPanelProps` types",
+                "builder methods for line, error-bars",
+                "keeps the retained-canvas-free optional IMUI plot adapter declarative-only",
+                "cargo nextest run -p fret-plot --lib imui_adapter_stays_opt_in_and_declarative_only line_chart_builder_stays_model_only_on_default_surface --no-fail-fast",
                 "DevTools Demo/Metrics/Debug line projection owner split - 2026-06-02",
                 "apps/fret-devtools/src/demo_metrics_debug.rs",
                 "selected-bundle readiness projection",

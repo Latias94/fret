@@ -2,6 +2,31 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative props owner split - 2026-06-02
+
+This refresh keeps the retained-canvas-free optional IMUI plot adapter declarative-only while
+reducing the remaining `fret-plot` declarative implementation file:
+
+- `ecosystem/fret-plot/src/declarative/props.rs` now owns the public `*PlotPanelProps` types and
+  builder methods for line, error-bars, histogram, bars, candlestick, heatmap, histogram2d, area,
+  shaded, and stems plot panels.
+- `ecosystem/fret-plot/src/declarative.rs` keeps the private normalized panel model, public panel
+  entrypoints, retained-free canvas painting, event handling, readout, and test coverage.
+- `ecosystem/fret-plot/src/imui.rs` remains a thin optional `UiWriter` adapter over the
+  declarative panel entrypoints, so plot ergonomics do not move into `fret-imui` or
+  `fret-ui-kit::imui`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot` - passed with existing dead-code warnings in `plot/view.rs`.
+- `cargo check -p fret-plot --features imui` - passed with the same existing warnings.
+- `cargo nextest run -p fret-plot --lib imui_adapter_stays_opt_in_and_declarative_only line_chart_builder_stays_model_only_on_default_surface --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## DevTools Demo/Metrics/Debug line projection owner split - 2026-06-02
 
 This refresh keeps the Dear ImGui-style Demo/Metrics/Debug route productized in DevTools while
