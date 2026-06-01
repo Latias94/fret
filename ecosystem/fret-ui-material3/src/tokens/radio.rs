@@ -3,7 +3,7 @@
 //! This module centralizes token key mapping and fallback chains so radio visuals remain stable
 //! and drift-resistant during refactors.
 
-use fret_core::{Color, Px};
+use fret_core::{Color, Corners, Px};
 use fret_ui::Theme;
 
 use crate::foundation::token_resolver::{
@@ -32,6 +32,16 @@ pub(crate) fn size_tokens(theme: &Theme) -> RadioSizeTokens {
     let icon = radio_metric(theme, "md.comp.radio-button.icon.size", Px(20.0));
     let state_layer = radio_metric(theme, "md.comp.radio-button.state-layer.size", Px(40.0));
     RadioSizeTokens { icon, state_layer }
+}
+
+pub(crate) fn state_layer_shape(theme: &Theme) -> Corners {
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[
+            "md.comp.radio-button.state-layer.shape",
+            "md.sys.shape.corner.full",
+        ],
+        Corners::all(Px(9999.0)),
+    )
 }
 
 pub(crate) fn state_layer_target_opacity(
@@ -214,5 +224,33 @@ mod tests {
 
         assert_eq!(size.icon, Px(22.0));
         assert_eq!(size.state_layer, Px(44.0));
+    }
+
+    #[test]
+    fn radio_state_layer_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.radio-button.state-layer.shape".to_string(), 40.0);
+        patch.corners.insert(
+            "md.comp.radio-button.state-layer.shape".to_string(),
+            Corners {
+                top_left: Px(5.0),
+                top_right: Px(6.0),
+                bottom_right: Px(7.0),
+                bottom_left: Px(8.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            state_layer_shape(&theme),
+            Corners {
+                top_left: Px(5.0),
+                top_right: Px(6.0),
+                bottom_right: Px(7.0),
+                bottom_left: Px(8.0),
+            }
+        );
     }
 }

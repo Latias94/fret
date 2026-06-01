@@ -3,7 +3,7 @@
 //! This module centralizes token key mapping and fallback chains so checkbox visuals remain stable
 //! and drift-resistant during refactors.
 
-use fret_core::{Color, Px};
+use fret_core::{Color, Corners, Px};
 use fret_ui::Theme;
 
 use crate::foundation::token_resolver::{
@@ -46,6 +46,16 @@ pub(crate) fn size_tokens(theme: &Theme) -> CheckboxSizeTokens {
         state_layer,
         container_corner,
     }
+}
+
+pub(crate) fn state_layer_shape(theme: &Theme) -> Corners {
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[
+            "md.comp.checkbox.state-layer.shape",
+            "md.sys.shape.corner.full",
+        ],
+        Corners::all(Px(9999.0)),
+    )
 }
 
 fn state_layer_opacity_key(selected: bool, interaction: CheckboxInteraction) -> &'static str {
@@ -392,6 +402,34 @@ mod tests {
         assert_eq!(
             chrome(&theme, false, false, CheckboxInteraction::None).outline_width,
             Px(4.0)
+        );
+    }
+
+    #[test]
+    fn checkbox_state_layer_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.checkbox.state-layer.shape".to_string(), 40.0);
+        patch.corners.insert(
+            "md.comp.checkbox.state-layer.shape".to_string(),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            state_layer_shape(&theme),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            }
         );
     }
 }

@@ -719,9 +719,7 @@ impl Radio {
             let (size, min_touch_target, corner_radii, focus_ring) = {
                 let theme = Theme::global(&*cx.app);
                 let size = radio_tokens::size_tokens(theme);
-                let corner_radii = theme
-                    .corners_by_key("md.sys.shape.corner.full")
-                    .unwrap_or_else(|| Corners::all(Px(9999.0)));
+                let corner_radii = radio_tokens::state_layer_shape(theme);
                 let focus_ring =
                     material_focus_ring_for_component(theme, "md.comp.radio-button", corner_radii);
                 let min_touch_target = minimum_interactive_size(theme);

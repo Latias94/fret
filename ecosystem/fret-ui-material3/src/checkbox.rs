@@ -292,9 +292,7 @@ impl Checkbox {
 
                 let (corner_radii, layout, focus_ring) = {
                     let theme = Theme::global(&*cx.app);
-                    let corner_radii = theme
-                        .corners_by_key("md.sys.shape.corner.full")
-                        .unwrap_or_else(|| Corners::all(Px(9999.0)));
+                    let corner_radii = checkbox_tokens::state_layer_shape(theme);
 
                     let mut layout = fret_ui::element::LayoutStyle::default();
                     layout.overflow = Overflow::Visible;
