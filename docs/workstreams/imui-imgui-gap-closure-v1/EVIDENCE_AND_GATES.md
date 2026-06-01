@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor Checkbox Model Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `Checkbox` model state reads and activation toggling moved out of the root
+control owner into a private `controls/checkbox/model.rs` owner without changing bool vs
+optional-bool model constructors, tri-state mapping, paint invalidation reads, disabled activation
+guard, optional-bool toggle progression, redraw request behavior, a11y routing, focus-ring
+geometry, chrome resolution, or indicator mounting.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/checkbox.rs` keeps a11y, pressable props, indicator
+  mounting, and root control assembly.
+- `ecosystem/fret-ui-editor/src/controls/checkbox/model.rs` owns bool/optional-bool model variants,
+  checked-state reads, optional-bool tri-state mapping, disabled activation guard, toggle mutation,
+  and redraw request behavior.
+- `tools/gate_imui_workstream_source.py` now tracks the model split and rejects model/toggle policy
+  from drifting back into the checkbox owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the checkbox model owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor checkbox --no-fail-fast`: pass (1 passed, 221 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Checkbox Chrome Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `Checkbox` token fallback chrome resolution and regression coverage moved

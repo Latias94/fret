@@ -116,6 +116,15 @@ Last updated: 2026-06-01
       mounting, and root control assembly while delegating token fallback chrome to
       `controls/checkbox/chrome.rs`. The source gate prevents chrome policy and its regression
       fixture from drifting back into the checkbox owner.
+- [x] Split editor `Checkbox` model state reads and activation toggling into a private child owner
+      without changing bool vs optional-bool model constructors, tri-state mapping, paint
+      invalidation reads, disabled activation guard, optional-bool toggle progression, redraw
+      request behavior, a11y routing, focus-ring geometry, chrome resolution, or indicator
+      mounting.
+      Result: `controls/checkbox.rs` keeps a11y, pressable props, indicator mounting, and root
+      control assembly while delegating checked-state reads and activation toggling to
+      `controls/checkbox/model.rs`. The source gate prevents model/toggle policy from drifting
+      back into the checkbox owner.
 - [x] Split editor `GradientEditor` stop-row assembly into a private child owner without changing
       stop sorting, row identity/test-id derivation, position/color editors, remove action routing,
       row layout, empty-state text role, preview behavior, or public gradient editor options.

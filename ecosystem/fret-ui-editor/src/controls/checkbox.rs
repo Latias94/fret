@@ -4,21 +4,16 @@
 //! can override tokens without pulling in a full design system dependency.
 
 mod chrome;
+mod model;
 mod options;
-
-use std::sync::Arc;
 
 use fret_core::{Axis, Corners, Edges, Point, Px, Rect, Size};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, OnActivate};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableProps, RingPlacement, RingStyle, SizeStyle, SpacingLength,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_headless::boolean_control::{
-    checkbox_checked_state_from_optional_bool, checkbox_toggle_optional_bool,
-};
+use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::checked_state::CheckedState;
 use fret_ui_kit::ColorRef;
 use fret_ui_kit::primitives::checkbox::checkbox_a11y;
@@ -27,14 +22,9 @@ use crate::primitives::EditorTokenKeys;
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use chrome::resolve_checkbox_chrome;
+use model::{CheckboxModel, checkbox_checked_state, checkbox_on_activate};
 
 pub use options::CheckboxOptions;
-
-#[derive(Debug, Clone)]
-enum CheckboxModel {
-    Bool(Model<bool>),
-    OptionalBool(Model<Option<bool>>),
-}
 
 #[derive(Clone)]
 pub struct Checkbox {
@@ -83,24 +73,7 @@ impl Checkbox {
 
         let chrome = resolve_checkbox_chrome(theme, frame_chrome.bg);
 
-        let checked_state = match &self.model {
-            CheckboxModel::Bool(model) => {
-                let v = cx
-                    .get_model_copied(model, Invalidation::Paint)
-                    .unwrap_or(false);
-                if v {
-                    CheckedState::Checked
-                } else {
-                    CheckedState::Unchecked
-                }
-            }
-            CheckboxModel::OptionalBool(model) => {
-                let v = cx
-                    .get_model_cloned(model, Invalidation::Paint)
-                    .unwrap_or(None);
-                checkbox_checked_state_from_optional_bool(v)
-            }
-        };
+        let checked_state = checkbox_checked_state(cx, &self.model);
 
         let icon_id = match checked_state {
             CheckedState::Checked => Some(fret_icons::ids::ui::CHECK),
@@ -136,24 +109,7 @@ impl Checkbox {
 
         let a11y = checkbox_a11y(self.options.a11y_label.clone(), checked_state);
 
-        let (model_for_activate, enabled_for_activate) = (self.model.clone(), self.options.enabled);
-        let on_activate: OnActivate = Arc::new(move |host, action_cx: ActionCx, _reason| {
-            if !enabled_for_activate {
-                return;
-            }
-
-            match &model_for_activate {
-                CheckboxModel::Bool(model) => {
-                    let _ = host.models_mut().update(model, |v| *v = !*v);
-                }
-                CheckboxModel::OptionalBool(model) => {
-                    let _ = host
-                        .models_mut()
-                        .update(model, |v| *v = checkbox_toggle_optional_bool(*v));
-                }
-            }
-            host.request_redraw(action_cx.window);
-        });
+        let on_activate = checkbox_on_activate(self.model.clone(), self.options.enabled);
 
         let enabled_for_paint = self.options.enabled;
         let mut el = cx.pressable(
