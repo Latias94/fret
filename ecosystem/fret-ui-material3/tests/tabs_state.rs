@@ -145,6 +145,49 @@ fn render_tabs_with_panels(
     ui.layout_all(app, services, bounds(), 1.0);
 }
 
+fn render_tabs_with_force_mounted_panels(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+) {
+    let root =
+        fret_ui::declarative::render_root(ui, app, services, window, bounds(), "root", |cx| {
+            let tabs = Tabs::new(selected)
+                .a11y_label("Material tabs")
+                .test_id("m3-tabs")
+                .items(vec![
+                    TabItem::new("a", "A").test_id("m3-tab-a"),
+                    TabItem::new("b", "B").test_id("m3-tab-b"),
+                    TabItem::new("disabled", "Disabled")
+                        .disabled(true)
+                        .test_id("m3-tab-disabled"),
+                ])
+                .panels(vec![
+                    TabPanel::new(
+                        "a",
+                        [cx.text("A panel")
+                            .test_id("m3-tab-panel-a-force-mounted-child")],
+                    )
+                    .test_id("m3-tab-panel-a")
+                    .force_mount(true),
+                    TabPanel::new(
+                        "b",
+                        [cx.text("B panel")
+                            .test_id("m3-tab-panel-b-force-mounted-child")],
+                    )
+                    .test_id("m3-tab-panel-b")
+                    .force_mount(true),
+                ])
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), tabs)]
+        });
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(app, services, bounds(), 1.0);
+}
+
 fn paint(ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices) -> Scene {
     let mut scene = Scene::default();
     ui.paint_all(app, services, bounds(), &mut scene, 1.0);
@@ -323,6 +366,26 @@ fn semantics_node<'a>(ui: &'a UiTree<TestHost>, test_id: &str) -> &'a SemanticsN
         .unwrap_or_else(|| panic!("expected semantics node for test_id {test_id}"))
 }
 
+fn semantics_node_exists(ui: &UiTree<TestHost>, test_id: &str) -> bool {
+    ui.semantics_snapshot().is_some_and(|snapshot| {
+        snapshot
+            .nodes
+            .iter()
+            .any(|node| node.test_id.as_deref() == Some(test_id))
+    })
+}
+
+fn live_test_id_exists(
+    ui: &UiTree<TestHost>,
+    app: &TestHost,
+    window: AppWindowId,
+    test_id: &str,
+) -> bool {
+    fret_ui::declarative::live_test_id_matches_for_window(app, window, test_id)
+        .into_iter()
+        .any(|m| ui.debug_node_bounds(m.node).is_some())
+}
+
 fn visual_bounds_by_test_id(
     ui: &UiTree<TestHost>,
     app: &TestHost,
@@ -462,6 +525,53 @@ fn tabs_render_active_tab_panel_semantics_and_relations() {
     assert_eq!(panel.label.as_deref(), Some("B"));
     assert!(panel.labelled_by.contains(&b.id));
     assert!(b.controls.contains(&panel.id));
+}
+
+#[test]
+fn tabs_force_mounted_panels_stay_mounted_but_only_active_panel_is_semantic() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    render_tabs_with_force_mounted_panels(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        selected.clone(),
+    );
+
+    let a = semantics_node(&ui, "m3-tab-a");
+    let a_panel = semantics_node(&ui, "m3-tab-panel-a");
+    assert_eq!(a_panel.role, SemanticsRole::TabPanel);
+    assert_eq!(a_panel.label.as_deref(), Some("A"));
+    assert!(a_panel.labelled_by.contains(&a.id));
+    assert!(a.controls.contains(&a_panel.id));
+    assert!(
+        !semantics_node_exists(&ui, "m3-tab-panel-b"),
+        "inactive force-mounted Material tabpanel should stay out of semantics"
+    );
+    assert!(
+        live_test_id_exists(&ui, &app, window, "m3-tab-panel-b-force-mounted-child"),
+        "inactive force-mounted Material tabpanel child should stay mounted"
+    );
+
+    app.models_mut()
+        .update(&selected, |value| *value = Arc::<str>::from("b"))
+        .expect("selected model should update");
+    render_tabs_with_force_mounted_panels(&mut ui, &mut app, &mut services, window, selected);
+
+    let b = semantics_node(&ui, "m3-tab-b");
+    let b_panel = semantics_node(&ui, "m3-tab-panel-b");
+    assert_eq!(b_panel.role, SemanticsRole::TabPanel);
+    assert_eq!(b_panel.label.as_deref(), Some("B"));
+    assert!(b_panel.labelled_by.contains(&b.id));
+    assert!(b.controls.contains(&b_panel.id));
+    assert!(
+        !semantics_node_exists(&ui, "m3-tab-panel-a"),
+        "previously active force-mounted Material tabpanel should leave semantics after selection changes"
+    );
+    assert!(
+        live_test_id_exists(&ui, &app, window, "m3-tab-panel-a-force-mounted-child"),
+        "previously active force-mounted Material tabpanel child should remain mounted"
+    );
 }
 
 #[test]

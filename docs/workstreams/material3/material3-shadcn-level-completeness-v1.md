@@ -28,7 +28,7 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 | Checkbox / Radio / Switch | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Choice controls share `WidgetStates::SELECTED` and Material indication. |
 | Slider / RangeSlider | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Keep future work focused on higher-density examples and AT validation. |
 | SegmentedButton | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Single and multi-select are covered. |
-| Tabs | Strong | Strong | Strong | Strong | Strong | Strong | Strong | 2026-05-31: gained active `TabPanel` content API, panel semantics, label relation, and content `test_id`. Residuals: optional force-mount/presence panels and richer overflow polish. |
+| Tabs | Strong | Strong | Strong | Strong | Strong | Strong | Strong | 2026-06-01: gained force-mounted `TabPanel` content while keeping inactive panels out of semantics. Residuals: presence motion and richer overflow polish only if a concrete app gate needs them. |
 | Menu / DropdownMenu | Strong | Strong | Strong | Strong | Strong | Strong | Strong | 2026-05-31: gained labels, rich slots, checkbox/radio items, two-line rows, and close-on-select coverage. Residuals: grouped API, submenus, long-menu scroll affordances. |
 | Select / ExposedDropdown / Autocomplete | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Motion gates cover Select, Autocomplete, and ExposedDropdown chevron + overlay open/close fade/scale. |
 | TextField | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Floating-label and token work are mature; keep extending field-family compositions. |
@@ -50,6 +50,16 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
   - `TabPanel`, `.panel/.panels`, active tabpanel semantics, `labelled_by` relation to the selected
     tab, derived tab `controls`, and gallery snippet content panels.
   - Gates: `tabs_state`, tabs automation-surface test, clippy, layering.
+- 2026-06-01 Tabs force-mounted panel presence:
+  - `TabPanel::force_mount(true)` keeps inactive panel subtrees mounted for retained state while
+    routing visibility/interactivity through the existing `fret-ui-kit` Tabs primitive and
+    `fret-ui` interactivity gate.
+  - Material now renders every active or force-mounted panel, writes explicit panel `test_id`s to
+    the `TabPanel` semantics node itself, and preserves the default inactive-unmounted behavior.
+  - Scrollable Tabs were audited against the current gates; edge padding, minimum tab width, and
+    indicator geometry remain covered, with no new core scroll mechanism introduced in this batch.
+  - Gates: `tabs_state::tabs_force_mounted_panels_stay_mounted_but_only_active_panel_is_semantic`
+    plus the existing scrollable primary/secondary metric tests.
 - 2026-06-01 Snackbar style/API hardening:
   - `SnackbarStyle` now follows ADR 0220 for container/supporting/action/close colors plus
     container shape, padding, and single/two-line heights.
@@ -165,7 +175,7 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 
 ## Next Recommended Focus
 
-1. Finish Tabs residuals only if panel presence becomes a real app need:
-   `force_mount` content, presence motion, and overflow/scroll affordance polish.
+1. Add Tabs presence motion or richer scroll affordances only after a concrete product gate proves
+   the current force-mounted presence contract or scrollable metric coverage is insufficient.
 2. Extend real-device/mobile IME and inset proof for overlay-heavy Material flows if mobile search
    and bottom-sheet surfaces become product priorities.

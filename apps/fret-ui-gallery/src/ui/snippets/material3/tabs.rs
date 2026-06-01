@@ -36,16 +36,22 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .panels(vec![
                 material3::TabPanel::new(
                     "overview",
-                    [cx.text("Overview panel: selected tab content owns TabPanel semantics.")],
+                    [
+                        cx.text("Overview panel: selected tab content owns TabPanel semantics.")
+                            .test_id("ui-gallery-material3-tabs-panel-overview-child"),
+                    ],
                 )
-                .test_id("ui-gallery-material3-tabs-panel-overview"),
+                .test_id("ui-gallery-material3-tabs-panel-overview")
+                .force_mount(true),
                 material3::TabPanel::new(
                     "settings",
                     [cx.text(
                         "Settings panel: active content follows the Material tabs value model.",
-                    )],
+                    )
+                    .test_id("ui-gallery-material3-tabs-panel-settings-child")],
                 )
-                .test_id("ui-gallery-material3-tabs-panel-settings"),
+                .test_id("ui-gallery-material3-tabs-panel-settings")
+                .force_mount(true),
             ])
             .into_element(cx);
 

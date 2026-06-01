@@ -69,6 +69,13 @@ impl TabPartTestIds {
     }
 }
 
+#[derive(Debug, Clone)]
+struct TabPanelItemMetadata {
+    value: Arc<str>,
+    label: Arc<str>,
+    tab_index: usize,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TabIconPlacement {
     Leading,
@@ -149,6 +156,7 @@ pub struct TabPanel {
     children: Vec<AnyElement>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
+    force_mount: bool,
 }
 
 impl TabPanel {
@@ -158,6 +166,7 @@ impl TabPanel {
             children: children.into_iter().collect(),
             a11y_label: None,
             test_id: None,
+            force_mount: false,
         }
     }
 
@@ -168,6 +177,15 @@ impl TabPanel {
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
+        self
+    }
+
+    /// Keep this panel subtree mounted while it is inactive.
+    ///
+    /// Inactive force-mounted panels are not present or interactive; the subtree remains available
+    /// for retained local state and presence-style composition.
+    pub fn force_mount(mut self, force_mount: bool) -> Self {
+        self.force_mount = force_mount;
         self
     }
 }
@@ -388,12 +406,17 @@ impl Tabs {
                     let selected_idx = items
                         .iter()
                         .position(|it| it.value.as_ref() == selected_value.as_ref());
-                    let selected_label = selected_idx
-                        .and_then(|idx| items.get(idx))
-                        .map(|it| it.label.clone());
-                    let active_panel = panels
-                        .into_iter()
-                        .find(|panel| panel.value.as_ref() == selected_value.as_ref());
+                    let panel_item_metadata: Arc<[TabPanelItemMetadata]> = Arc::from(
+                        items
+                            .iter()
+                            .enumerate()
+                            .map(|(idx, it)| TabPanelItemMetadata {
+                                value: it.value.clone(),
+                                label: it.label.clone(),
+                                tab_index: idx,
+                            })
+                            .collect::<Vec<_>>(),
+                    );
                     let has_stacked_tabs = items.iter().any(TabItem::uses_stacked_icon);
 
                     let tab_stop = items
@@ -420,10 +443,8 @@ impl Tabs {
                         .as_ref()
                         .map(|ids| ids.active_indicator.clone());
                     let divider_test_id = part_test_ids.as_ref().map(|ids| ids.divider.clone());
-                    let active_panel_test_id = active_panel
-                        .as_ref()
-                        .and_then(|panel| panel.test_id.clone())
-                        .or_else(|| test_id.as_ref().map(|id| part_test_id(id, "panel")));
+                    let default_active_panel_test_id =
+                        test_id.as_ref().map(|id| part_test_id(id, "panel"));
 
                     let container_states = if disabled {
                         WidgetStates::DISABLED
@@ -470,8 +491,10 @@ impl Tabs {
                         disabled: disabled_items.clone(),
                     };
 
-                    let selected_tab_element: Cell<Option<u64>> = Cell::new(None);
-                    let selected_tab_element = &selected_tab_element;
+                    let tab_element_ids = (0..items.len())
+                        .map(|_| Cell::new(None))
+                        .collect::<Vec<_>>();
+                    let tab_element_ids = &tab_element_ids;
 
                     let tab_list = cx.semantics(sem, move |cx| {
                         vec![cx.container(
@@ -619,7 +642,7 @@ impl Tabs {
                                                 container_height,
                                                 selected_idx.is_some_and(|t| t == idx),
                                                 &style,
-                                                Some(selected_tab_element),
+                                                tab_element_ids.get(idx),
                                             )
                                         })
                                         .collect::<Vec<_>>()
@@ -643,18 +666,38 @@ impl Tabs {
                         )]
                     });
 
-                    let Some(active_panel) = active_panel else {
-                        return tab_list;
-                    };
+                    let panel_elements = panels
+                        .into_iter()
+                        .filter_map(|panel| {
+                            let active = panel.value.as_ref() == selected_value.as_ref();
+                            let item_meta = panel_item_metadata
+                                .iter()
+                                .find(|meta| meta.value.as_ref() == panel.value.as_ref());
+                            let fallback_label = item_meta.map(|meta| meta.label.clone());
+                            let labelled_by_element = item_meta
+                                .and_then(|meta| tab_element_ids.get(meta.tab_index))
+                                .and_then(Cell::get);
+                            let test_id = panel.test_id.clone().or_else(|| {
+                                active
+                                    .then(|| default_active_panel_test_id.clone())
+                                    .flatten()
+                            });
 
-                    let panel = material_tab_panel(
-                        cx,
-                        active_panel,
-                        selected_label,
-                        selected_tab_element.get(),
-                        active_panel_test_id,
-                        content_fill_remaining,
-                    );
+                            material_tab_panel(
+                                cx,
+                                panel,
+                                active,
+                                fallback_label,
+                                labelled_by_element,
+                                test_id,
+                                content_fill_remaining,
+                            )
+                        })
+                        .collect::<Vec<_>>();
+
+                    if panel_elements.is_empty() {
+                        return tab_list;
+                    }
 
                     let mut root = FlexProps::default();
                     root.layout.size.width = Length::Fill;
@@ -665,7 +708,12 @@ impl Tabs {
                     root.gap = Px(0.0).into();
                     root.padding = Edges::all(Px(0.0)).into();
 
-                    cx.flex(root, move |_cx| vec![tab_list, panel])
+                    cx.flex(root, move |_cx| {
+                        let mut children = Vec::with_capacity(1 + panel_elements.len());
+                        children.push(tab_list);
+                        children.extend(panel_elements);
+                        children
+                    })
                 },
             )
         })
@@ -686,7 +734,7 @@ fn material_tab<H: UiHost>(
     height: Px,
     selected: bool,
     style_override: &TabsStyle,
-    selected_tab_element: Option<&Cell<Option<u64>>>,
+    tab_element: Option<&Cell<Option<u64>>>,
 ) -> AnyElement {
     let value = item.value.clone();
     let label = item.label.clone();
@@ -696,8 +744,8 @@ fn material_tab<H: UiHost>(
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !disabled_group && !item.disabled;
-        if selected && let Some(selected_tab_element) = selected_tab_element {
-            selected_tab_element.set(Some(pressable_id.0));
+        if let Some(tab_element) = tab_element {
+            tab_element.set(Some(pressable_id.0));
         }
 
         cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
@@ -956,37 +1004,29 @@ fn material_tab<H: UiHost>(
 fn material_tab_panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     panel: TabPanel,
-    selected_label: Option<Arc<str>>,
+    active: bool,
+    fallback_label: Option<Arc<str>>,
     labelled_by_element: Option<u64>,
     test_id: Option<Arc<str>>,
     content_fill_remaining: bool,
-) -> AnyElement {
+) -> Option<AnyElement> {
     let TabPanel {
         children,
         a11y_label,
+        force_mount,
         ..
     } = panel;
-    let label = a11y_label.or(selected_label);
+    let label = a11y_label.or(fallback_label);
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.min_width = Some(Length::Px(Px(0.0)));
     layout.flex.grow = if content_fill_remaining { 1.0 } else { 0.0 };
     layout.flex.shrink = 1.0;
 
-    let mut panel = tabs_prim::tab_panel_with_gate(
-        cx,
-        true,
-        false,
-        layout,
-        label,
-        labelled_by_element,
-        move |_cx| children,
-    )
-    .expect("active Material tab panel should render a subtree");
-    if let Some(test_id) = test_id {
-        panel = panel.test_id(test_id);
-    }
-    panel
+    let mut semantics = tabs_prim::tab_panel_semantics_props(layout, label, labelled_by_element);
+    semantics.test_id = test_id;
+
+    tabs_prim::tab_panel_with_gate_props(cx, active, force_mount, semantics, move |_cx| children)
 }
 
 fn tab_content<H: UiHost>(
