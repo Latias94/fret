@@ -9,6 +9,7 @@ use fret_ui::Theme;
 use crate::foundation::token_resolver::{
     MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
 };
+use crate::tokens::shape;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SwitchInteraction {
@@ -25,13 +26,83 @@ pub(crate) struct SwitchChrome {
     pub(crate) handle_color: Color,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SwitchSizeTokens {
+    pub(crate) state_layer: Px,
+    pub(crate) track_width: Px,
+    pub(crate) track_height: Px,
+    pub(crate) track_outline_width: Px,
+    pub(crate) selected_handle_width: Px,
+    pub(crate) selected_handle_height: Px,
+    pub(crate) unselected_handle_width: Px,
+    pub(crate) unselected_handle_height: Px,
+    pub(crate) pressed_handle_width: Px,
+    pub(crate) pressed_handle_height: Px,
+    pub(crate) with_icon_handle_width: Px,
+    pub(crate) with_icon_handle_height: Px,
+    pub(crate) track_y_offset: Px,
+}
+
+fn switch_metric(theme: &Theme, key: &str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
+pub(crate) fn size_tokens(theme: &Theme) -> SwitchSizeTokens {
+    let state_layer = switch_metric(theme, "md.comp.switch.state-layer.size", Px(40.0));
+    let track_width = switch_metric(theme, "md.comp.switch.track.width", Px(52.0));
+    let track_height = switch_metric(theme, "md.comp.switch.track.height", Px(32.0));
+    let track_outline_width = switch_metric(theme, "md.comp.switch.track.outline.width", Px(2.0));
+
+    let selected_handle_width =
+        switch_metric(theme, "md.comp.switch.selected.handle.width", Px(24.0));
+    let selected_handle_height =
+        switch_metric(theme, "md.comp.switch.selected.handle.height", Px(24.0));
+    let unselected_handle_width =
+        switch_metric(theme, "md.comp.switch.unselected.handle.width", Px(16.0));
+    let unselected_handle_height =
+        switch_metric(theme, "md.comp.switch.unselected.handle.height", Px(16.0));
+    let pressed_handle_width =
+        switch_metric(theme, "md.comp.switch.pressed.handle.width", Px(28.0));
+    let pressed_handle_height =
+        switch_metric(theme, "md.comp.switch.pressed.handle.height", Px(28.0));
+
+    let with_icon_handle_width = switch_metric(
+        theme,
+        "md.comp.switch.with-icon.handle.width",
+        selected_handle_width,
+    );
+    let with_icon_handle_height = switch_metric(
+        theme,
+        "md.comp.switch.with-icon.handle.height",
+        selected_handle_height,
+    );
+
+    let track_y_offset = Px(((state_layer.0 - track_height.0) * 0.5).max(0.0));
+
+    SwitchSizeTokens {
+        state_layer,
+        track_width,
+        track_height,
+        track_outline_width,
+        selected_handle_width,
+        selected_handle_height,
+        unselected_handle_width,
+        unselected_handle_height,
+        pressed_handle_width,
+        pressed_handle_height,
+        with_icon_handle_width,
+        with_icon_handle_height,
+        track_y_offset,
+    }
+}
+
 pub(crate) fn icon_size(theme: &Theme, selected: bool) -> Px {
     let key = if selected {
         "md.comp.switch.selected.icon.size"
     } else {
         "md.comp.switch.unselected.icon.size"
     };
-    theme.metric_by_key(key).unwrap_or(Px(16.0))
+    switch_metric(theme, key, Px(16.0))
 }
 
 pub(crate) fn icon_color(
@@ -57,9 +128,7 @@ pub(crate) fn icon_color(
 }
 
 fn shape_or_full(theme: &Theme, key: &str) -> Corners {
-    theme
-        .corners_by_key(key)
-        .or_else(|| theme.metric_by_key(key).map(Corners::all))
+    shape::corners_or_metric(theme, key)
         .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
         .unwrap_or_else(|| Corners::all(Px(9999.0)))
 }
@@ -324,5 +393,74 @@ fn track_outline_color_key(interaction: SwitchInteraction) -> &'static str {
         SwitchInteraction::Hovered => "md.comp.switch.unselected.hover.track.outline.color",
         SwitchInteraction::Focused => "md.comp.switch.unselected.focus.track.outline.color",
         SwitchInteraction::Pressed => "md.comp.switch.unselected.pressed.track.outline.color",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn switch_size_defaults_match_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+        let size = size_tokens(theme);
+
+        assert_eq!(size.state_layer, Px(40.0));
+        assert_eq!(size.track_width, Px(52.0));
+        assert_eq!(size.track_height, Px(32.0));
+        assert_eq!(size.track_outline_width, Px(2.0));
+        assert_eq!(size.selected_handle_width, Px(24.0));
+        assert_eq!(size.selected_handle_height, Px(24.0));
+        assert_eq!(size.unselected_handle_width, Px(16.0));
+        assert_eq!(size.unselected_handle_height, Px(16.0));
+        assert_eq!(size.pressed_handle_width, Px(28.0));
+        assert_eq!(size.pressed_handle_height, Px(28.0));
+        assert_eq!(size.with_icon_handle_width, Px(24.0));
+        assert_eq!(size.with_icon_handle_height, Px(24.0));
+        assert_eq!(size.track_y_offset, Px(4.0));
+    }
+
+    #[test]
+    fn switch_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.switch.state-layer.size".to_string(), 44.0);
+        patch
+            .metrics
+            .insert("md.comp.switch.track.width".to_string(), 60.0);
+        patch
+            .metrics
+            .insert("md.comp.switch.track.height".to_string(), 34.0);
+        patch
+            .metrics
+            .insert("md.comp.switch.selected.handle.height".to_string(), 26.0);
+        patch
+            .metrics
+            .insert("md.comp.switch.with-icon.handle.width".to_string(), 30.0);
+        patch
+            .metrics
+            .insert("md.comp.switch.selected.icon.size".to_string(), 18.0);
+        let (_app, theme) = theme_with_patch(patch);
+        let size = size_tokens(&theme);
+
+        assert_eq!(size.state_layer, Px(44.0));
+        assert_eq!(size.track_width, Px(60.0));
+        assert_eq!(size.track_height, Px(34.0));
+        assert_eq!(size.track_y_offset, Px(5.0));
+        assert_eq!(size.with_icon_handle_width, Px(30.0));
+        assert_eq!(size.with_icon_handle_height, Px(26.0));
+        assert_eq!(icon_size(&theme, true), Px(18.0));
     }
 }
