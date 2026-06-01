@@ -5869,3 +5869,11 @@ opening the slice.
       clipped-body assembly, input blocker mounting, and resize-stack delegation.
       `floating_window_shell.rs` keeps frame palette resolution, frame props, and outer container
       mounting.
+- [x] Split IMUI floating-window show-with-options orchestration out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window.rs` into a private entry owner without
+      changing default forwarding, open-model short-circuit behavior, floating-area options,
+      chrome capture, in-area rendering, or final `FloatingWindowResponse` assembly.
+      Result: `ecosystem/fret-ui-kit/src/imui/floating_window/entry.rs` owns option destructuring,
+      open checks, floating-area mounting, chrome capture, and in-area render dispatch.
+      `floating_window.rs` keeps the facade-facing public helper pair and delegates the options
+      path to the entry owner.

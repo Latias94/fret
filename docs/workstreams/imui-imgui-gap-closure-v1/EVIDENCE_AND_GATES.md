@@ -25380,3 +25380,29 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI floating-window entry owner split:
+
+- Claim: floating-window show-with-options orchestration moved from
+  `ecosystem/fret-ui-kit/src/imui/floating_window.rs` into
+  `ecosystem/fret-ui-kit/src/imui/floating_window/entry.rs` without changing default forwarding,
+  open-model short-circuit behavior, floating-area options, chrome capture, in-area rendering, or
+  final `FloatingWindowResponse` assembly.
+- Evidence anchors: `floating_window.rs` declares `mod entry;`, keeps the facade-facing
+  `floating_window_show(...)` and `floating_window_show_with_options(...)` helpers, and delegates
+  the options path to `entry::floating_window_show_with_options(...)`; `entry.rs` owns option
+  destructuring, open checks, floating-area mounting, chrome capture, and in-area render dispatch;
+  `state.rs` and `closed.rs` remain the response/open/closed sentinel owners; the source gate
+  rejects show-with-options orchestration drifting back into the root floating-window hub.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit --features imui`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_floating_window_options_smoke --no-fail-fast`
+  (3 tests passed).
+- Passed: `cargo nextest run -p fret-imui floating_window --no-fail-fast` (17 tests passed,
+  169 skipped).
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

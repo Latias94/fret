@@ -5167,3 +5167,9 @@ and chrome response return.
 `ecosystem/fret-ui-kit/src/imui/floating_window_shell/body.rs` now owns title/body/clipped-body
 assembly, input blocker mounting, and resize-stack delegation. `floating_window_shell.rs` keeps
 frame palette resolution, frame props, and the outer frame container.
+
+2026-06-01 floating-window entry owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window/entry.rs` now owns show-with-options
+orchestration: option destructuring, open checks, floating-area mounting, chrome capture, in-area
+render dispatch, and final response assembly delegation. `floating_window.rs` keeps the
+facade-facing helper pair only.
