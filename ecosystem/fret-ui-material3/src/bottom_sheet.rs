@@ -551,18 +551,8 @@ fn drive_modal_bottom_sheet_motion<H: UiHost>(
     if open_duration_ms.is_some() || close_duration_ms.is_some() || easing_key.is_some() {
         let (default_duration_ms, bezier) = {
             let theme = Theme::global(&*cx.app);
-            let default_duration_ms = theme
-                .duration_ms_by_key("md.sys.motion.duration.medium2")
-                .unwrap_or(300);
-            let easing_key = easing_key.unwrap_or("md.sys.motion.easing.emphasized");
-            let bezier = theme
-                .easing_by_key(easing_key)
-                .unwrap_or(fret_ui::theme::CubicBezier {
-                    x1: 0.0,
-                    y1: 0.0,
-                    x2: 1.0,
-                    y2: 1.0,
-                });
+            let default_duration_ms = sheet_tokens::modal_motion_duration_ms(theme);
+            let bezier = sheet_tokens::modal_motion_easing(theme, easing_key);
             (default_duration_ms, bezier)
         };
 
