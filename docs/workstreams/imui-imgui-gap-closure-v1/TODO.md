@@ -318,6 +318,14 @@ Last updated: 2026-06-01
       options. `composites/gradient_editor/options.rs` owns public option/action/binding records
       and defaults. The source gate prevents options/default policy from drifting back into the
       root composite owner.
+- [x] Split editor `GradientEditor` angle row assembly into a private child owner without changing
+      `show_angle` gating, angle model routing, derived angle test id, PropertyRow slot width
+      overrides, Angle label text role, DragValue degrees presentation, preview behavior, stop-row
+      ordering, add-stop gating, or public gradient editor options.
+      Result: `composites/gradient_editor.rs` keeps keyed element composition,
+      preview/stops/add-stop orchestration, and empty-state text role helper while delegating angle
+      row construction to `composites/gradient_editor/angle.rs`. The source gate prevents angle row
+      PropertyRow/DragValue policy from drifting back into the root composite owner.
 - [x] Split editor `InspectorPanel` options/default and search-assist option records into a
       private child owner without changing public `InspectorPanelOptions` or
       `InspectorPanelSearchAssistOptions` import paths, layout defaults, enabled/title/test-id

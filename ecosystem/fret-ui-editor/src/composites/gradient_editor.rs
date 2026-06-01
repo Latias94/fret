@@ -16,22 +16,20 @@ use fret_runtime::Model;
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, SpacingLength};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
-use super::property_row::PropertyRowOptions;
-use super::property_row::property_row_label_text;
-use super::{PropertyGrid, PropertyGroup, PropertyRow};
-use crate::controls::{
-    DragValue, DragValueOptions, IconButton, IconButtonOptions, OnIconButtonActivate,
-};
+use super::{PropertyGrid, PropertyGroup};
+use crate::controls::{IconButton, IconButtonOptions, OnIconButtonActivate};
+use crate::primitives::EditorDensity;
 use crate::primitives::input_group::derived_test_id;
 use crate::primitives::readout::editor_empty_state_text_props;
-use crate::primitives::{EditorDensity, NumericPresentation};
 
+mod angle;
 mod options;
 mod preview;
 mod stops;
 #[cfg(test)]
 mod tests;
 
+use angle::gradient_angle_row;
 pub use options::{
     GradientEditorOptions, GradientStopBinding, OnGradientAction, OnGradientStopAction,
 };
@@ -169,27 +167,7 @@ impl GradientEditor {
         let angle_row = (options.show_angle)
             .then_some(angle_degrees.clone())
             .flatten()
-            .map(|m| {
-                PropertyRow::new()
-                    .options(PropertyRowOptions {
-                        reset_slot_width: Some(Px(0.0)),
-                        status_slot_width: Some(Px(0.0)),
-                        ..Default::default()
-                    })
-                    .into_element(
-                        cx,
-                        |cx| property_row_label_text(cx, "Angle"),
-                        |cx| {
-                            DragValue::from_presentation(m, NumericPresentation::<f64>::degrees(0))
-                                .options(DragValueOptions {
-                                    test_id: angle_test_id.clone(),
-                                    ..Default::default()
-                                })
-                                .into_element(cx)
-                        },
-                        |_cx| None,
-                    )
-            });
+            .map(|m| gradient_angle_row(cx, m, angle_test_id.clone()));
 
         let enabled = options.enabled;
         let can_add_stop = enabled && (stops.len() < MAX_STOPS);

@@ -1330,6 +1330,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Editor GradientEditor Angle Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `GradientEditor` angle row assembly moved out of the root composite owner
+into a private `composites/gradient_editor/angle.rs` owner without changing `show_angle` gating,
+angle model routing, derived angle test id, PropertyRow slot width overrides, Angle label text
+role, DragValue degrees presentation, preview behavior, stop-row ordering, add-stop gating, or
+public gradient editor options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` keeps keyed element composition,
+  preview/stops/add-stop orchestration, and empty-state text role helper while delegating angle row
+  construction.
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor/angle.rs` owns Angle PropertyRow
+  assembly, slot width overrides, label text role, DragValue degrees presentation, and angle test-id
+  routing.
+- `tools/gate_imui_workstream_source.py` now tracks the GradientEditor angle split and rejects
+  angle row PropertyRow/DragValue policy from drifting back into the root composite owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the angle owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor gradient_editor --no-fail-fast`: pass (1 passed, 227
+  skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor GradientEditor Options Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `GradientEditor` public options/action/binding records moved out of the root
