@@ -2,6 +2,33 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## TextAssistField element owner split - 2026-06-02
+
+This refresh keeps editor completion policy in `fret-ui-editor` while reducing another root control
+module:
+
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now owns child-module wiring, public
+  re-exports, and the narrow helper functions shared by element/panel/tests.
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field/element.rs` now owns
+  `TextAssistField`, constructor/options/accept builders, caller-keyed `into_element(...)`, input
+  assist semantics, input-owned key policy, inline/anchored overlay handoff, and final root layout.
+- Existing owners remain unchanged: `model.rs` owns options/records, `panel.rs` owns listbox
+  rendering, `overlay.rs` owns anchored overlay placement/dismissal, `empty.rs` owns empty state,
+  and `accept.rs` owns accept mutation.
+- `tools/gate_imui_workstream_source.py` now rejects the public element definition and assembly body
+  from drifting back into the root module.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-editor` - passed.
+- `cargo check -p fret-ui-editor --features imui` - passed.
+- `cargo nextest run -p fret-ui-editor --features imui text_assist --no-fail-fast` - passed.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## ColorEdit element owner split - 2026-06-02
 
 This refresh keeps editor color picking policy in `fret-ui-editor` while reducing the remaining

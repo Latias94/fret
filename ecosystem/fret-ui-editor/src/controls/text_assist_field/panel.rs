@@ -15,9 +15,10 @@ use fret_ui_kit::headless::text_assist::TextAssistController;
 
 mod row;
 
+use super::model::RenderedTextAssistPanel;
 use super::{
-    OnTextAssistFieldAccept, RenderedTextAssistPanel, TextAssistFieldOptions,
-    TextAssistFieldSurface, text_assist_max_content_height,
+    OnTextAssistFieldAccept, TextAssistFieldOptions, TextAssistFieldSurface,
+    text_assist_max_content_height,
 };
 use crate::primitives::popup_list::{
     editor_popup_list_content_height, editor_popup_list_row_gap, editor_popup_list_surface_padding,

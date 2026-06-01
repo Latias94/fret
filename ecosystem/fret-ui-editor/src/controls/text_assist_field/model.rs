@@ -8,7 +8,7 @@ use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::AnyElement;
 use fret_ui_kit::headless::text_assist::{InputOwnedTextAssistKeyOptions, TextAssistMatch};
 
-use super::TextFieldOptions;
+use crate::controls::TextFieldOptions;
 
 #[cfg(test)]
 mod tests;

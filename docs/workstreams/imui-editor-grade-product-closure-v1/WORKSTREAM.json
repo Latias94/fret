@@ -695,6 +695,8 @@
     "ecosystem/fret-ui-editor/src/controls/drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/slider.rs",
+    "ecosystem/fret-ui-editor/src/controls/text_assist_field.rs",
+    "ecosystem/fret-ui-editor/src/controls/text_assist_field/element.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/element.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/drag_drop.rs",
