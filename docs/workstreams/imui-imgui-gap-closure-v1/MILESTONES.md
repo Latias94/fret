@@ -89,6 +89,15 @@ The private empty owner contains the `No matches` popup readout text, muted fore
 and row-height routing. Public `EnumSelect` options, filtered row behavior, overlay chrome, and
 reveal behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor EnumSelect overlay-list owner-split result:
+`ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` now keeps overlay request assembly,
+anchored panel chrome, search box routing, close-focus policy, and dismiss behavior while
+delegating scroll/list viewport orchestration to `controls/enum_select/overlay/list.rs`. The
+private list owner contains row collection, empty-state routing, scroll handle wiring, viewport
+test-id propagation, selected-row capture, and reveal dispatch. Public `EnumSelect` options,
+filtered ordering, row behavior, popup/search layout, and selected-row reveal timing remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 kit IMUI debug-draw stroke-style owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/stroke.rs` now keeps the public
 `DebugDrawStrokeStyle` record, builders, defaults, invalid dash/miter guards, and method names

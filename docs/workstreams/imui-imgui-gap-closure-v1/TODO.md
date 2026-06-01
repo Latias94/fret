@@ -108,6 +108,15 @@ Last updated: 2026-06-01
       `controls/enum_select/overlay/empty.rs` owns empty result text construction, muted foreground
       resolution, and row-height routing. The source gate prevents empty-state rendering policy
       from drifting back into the overlay request owner.
+- [x] Split editor `EnumSelect` overlay list viewport and reveal orchestration into a private child
+      owner without changing filtered item ordering, row routing, empty-state routing, scroll
+      handle usage, viewport test-id propagation, selected-row reveal timing, popup/search layout,
+      close-focus policy, dismiss behavior, or public `EnumSelect` options.
+      Result: `controls/enum_select/overlay.rs` keeps overlay request, anchored panel, search box,
+      close-focus, and dismiss orchestration. `controls/enum_select/overlay/list.rs` owns the
+      scroll viewport, row collection, empty-state branch, selected-row capture, and reveal call.
+      The source gate prevents scroll/list/reveal policy from drifting back into the overlay
+      request owner.
 - [x] Split `fret-ui-kit::imui` debug-draw stroke visibility/path-style projection into a private
       child owner without changing `DebugDrawStrokeStyle` fields, builders, default values,
       invalid dash/miter guards, `is_visible(...)`, `path_style(...)`, or public debug-draw option

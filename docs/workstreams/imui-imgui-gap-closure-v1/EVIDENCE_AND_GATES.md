@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor EnumSelect Overlay List Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `EnumSelect` overlay list viewport and reveal orchestration moved out of
+`controls/enum_select/overlay.rs` into a private `controls/enum_select/overlay/list.rs` owner
+without changing filtered item ordering, row routing, empty-state routing, scroll handle usage,
+viewport test-id propagation, selected-row reveal timing, popup/search layout, close-focus policy,
+dismiss behavior, or public `EnumSelect` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` keeps overlay request assembly,
+  anchored panel chrome, search box routing, close-focus policy, and dismiss behavior.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay/list.rs` owns scroll viewport
+  assembly, row collection, empty-state routing, selected-row capture, viewport test-id mounting,
+  and selected-row reveal dispatch.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay/empty.rs`,
+  `controls/enum_select/overlay/reveal.rs`, and `controls/enum_select/row.rs` remain the lower
+  policy owners consumed by the list viewport owner.
+- `tools/gate_imui_workstream_source.py` now tracks the list owner and rejects scroll/list/reveal
+  policy from drifting back into the overlay request owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new list owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor enum_select --no-fail-fast`: pass (10 passed, 218 skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor EnumSelect Overlay Empty Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `EnumSelect` overlay empty-state rendering moved out of

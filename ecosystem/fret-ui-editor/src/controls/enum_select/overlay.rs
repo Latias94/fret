@@ -5,7 +5,7 @@ use fret_runtime::Model;
 use fret_ui::action::ActionCx;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    ScrollAxis, ScrollProps, SizeStyle, SpacingLength,
+    SizeStyle, SpacingLength,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -15,21 +15,20 @@ use fret_ui_kit::primitives::{combobox as kit_combobox, popper};
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::controls::MiniSearchBox;
-use crate::primitives::popup_list::{
-    editor_popup_list_row_gap, editor_popup_side_offset, editor_popup_window_margin,
-};
+use crate::primitives::popup_list::{editor_popup_side_offset, editor_popup_window_margin};
 use crate::primitives::popup_surface::EditorPopupSurfaceChrome;
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
-use super::{EnumSelectItem, EnumSelectOptions, row};
+use super::{EnumSelectItem, EnumSelectOptions};
 
 mod empty;
 mod filter;
+mod list;
 mod reveal;
 
-use empty::enum_select_empty_row;
 use filter::filter_enum_select_items;
-use reveal::{enum_select_viewport_test_id, reveal_selected_row_if_needed};
+use list::{EnumSelectListViewportInput, enum_select_list_viewport};
+use reveal::enum_select_viewport_test_id;
 
 #[cfg(test)]
 mod tests;
@@ -187,115 +186,23 @@ pub(super) fn request_overlay<H: UiHost>(
                             }
                             out.push(search);
 
-                            let scroll_handle_for_list = scroll_handle.clone();
-                            let pending_selected_reveal_for_list = pending_selected_reveal.clone();
-                            let selected_row_element_out = Arc::new(Mutex::new(None));
-                            let selected_row_element_out_for_rows =
-                                selected_row_element_out.clone();
-                            let scroll = cx.scroll(
-                                ScrollProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Fill,
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    axis: ScrollAxis::Y,
-                                    scroll_handle: Some(scroll_handle.clone()),
-                                    ..Default::default()
+                            out.push(enum_select_list_viewport(
+                                cx,
+                                EnumSelectListViewportInput {
+                                    filtered: filtered.clone(),
+                                    max_height: max_h,
+                                    density,
+                                    list_viewport_test_id: list_viewport_test_id.clone(),
+                                    item_test_id_prefix: item_test_id_prefix.clone(),
+                                    model: model_for_list.clone(),
+                                    open: open_for_list.clone(),
+                                    query: query_for_list.clone(),
+                                    open_change_reason: open_change_reason_for_list.clone(),
+                                    scroll_handle: scroll_handle.clone(),
+                                    pending_selected_reveal: pending_selected_reveal.clone(),
+                                    should_reveal_selected,
                                 },
-                                move |cx| {
-                                    let filtered = filtered.clone();
-                                    vec![cx.flex(
-                                        FlexProps {
-                                            layout: LayoutStyle {
-                                                size: SizeStyle {
-                                                    width: Length::Fill,
-                                                    height: Length::Auto,
-                                                    ..Default::default()
-                                                },
-                                                ..Default::default()
-                                            },
-                                            direction: Axis::Vertical,
-                                            gap: editor_popup_list_row_gap().into(),
-                                            padding: Edges::all(Px(0.0)).into(),
-                                            justify: MainAlign::Start,
-                                            align: CrossAlign::Stretch,
-                                            wrap: false,
-                                        },
-                                        move |cx| {
-                                            if filtered.is_empty() {
-                                                return vec![enum_select_empty_row(
-                                                    cx,
-                                                    density.row_height,
-                                                )];
-                                            }
-
-                                            let item_test_id_prefix = item_test_id_prefix.clone();
-                                            let mut rows = Vec::with_capacity(filtered.len());
-                                            for (idx, it) in filtered.iter().enumerate() {
-                                                let (row, row_id, row_selected) =
-                                                    row::enum_select_row(
-                                                        cx,
-                                                        idx,
-                                                        filtered.len(),
-                                                        model_for_list.clone(),
-                                                        open_for_list.clone(),
-                                                        query_for_list.clone(),
-                                                        open_change_reason_for_list.clone(),
-                                                        it.clone(),
-                                                        density,
-                                                        item_test_id_prefix.clone(),
-                                                    );
-                                                if row_selected {
-                                                    *selected_row_element_out_for_rows
-                                                        .lock()
-                                                        .unwrap_or_else(|e| e.into_inner()) =
-                                                        Some(row_id);
-                                                }
-                                                rows.push(row);
-                                            }
-                                            rows
-                                        },
-                                    )]
-                                },
-                            );
-                            let viewport = cx.container(
-                                ContainerProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Px(max_h),
-                                            ..Default::default()
-                                        },
-                                        overflow: Overflow::Clip,
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                move |_cx| vec![scroll],
-                            );
-                            let viewport = if let Some(test_id) = list_viewport_test_id.as_ref() {
-                                viewport.test_id(test_id.clone())
-                            } else {
-                                viewport
-                            };
-                            let viewport_id = viewport.id;
-                            if should_reveal_selected {
-                                let selected_row_element = *selected_row_element_out
-                                    .lock()
-                                    .unwrap_or_else(|e| e.into_inner());
-                                reveal_selected_row_if_needed(
-                                    cx,
-                                    &scroll_handle_for_list,
-                                    viewport_id,
-                                    selected_row_element,
-                                    &pending_selected_reveal_for_list,
-                                );
-                            }
-                            out.push(viewport);
+                            ));
                             out
                         },
                     )]
