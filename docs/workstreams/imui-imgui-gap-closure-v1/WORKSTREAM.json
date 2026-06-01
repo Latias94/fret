@@ -995,6 +995,7 @@
     "ecosystem/fret-ui-kit/src/imui/floating_window_title_bar/tests.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_title_bar_props.rs",
     "ecosystem/fret-ui-kit/src/imui/child_region.rs",
+    "ecosystem/fret-ui-kit/src/imui/child_region/entry.rs",
     "ecosystem/fret-ui-kit/src/imui/child_region/resize.rs",
     "ecosystem/fret-ui-kit/src/imui/child_region/resize/axis.rs",
     "ecosystem/fret-ui-kit/src/imui/child_region/resize/handle.rs",

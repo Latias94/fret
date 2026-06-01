@@ -5846,3 +5846,10 @@ opening the slice.
       owns `SemanticsRole::ListBox`, optional label, and multiselectable flag
       construction. `list_box_controls.rs` now keeps only keyed wrapper orchestration and
       `ListBoxOptions` destructuring.
+- [x] Split IMUI child-region keyed body orchestration out of
+      `ecosystem/fret-ui-kit/src/imui/child_region.rs` into a private entry owner without changing
+      keyed identity, scroll layout selection, resize-vs-scroll root test-id routing, child focus
+      forwarding, resize stack integration, or `ChildRegionResponse` population.
+      Result: `ecosystem/fret-ui-kit/src/imui/child_region/entry.rs` owns resize detection,
+      scroll input assembly, response initialization, and resize-stack selection. `child_region.rs`
+      now keeps only the facade-facing keyed wrapper and owner module declarations.

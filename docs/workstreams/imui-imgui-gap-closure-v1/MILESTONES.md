@@ -5150,3 +5150,9 @@ composition, hosted child focus forwarding, content/root/viewport test-id wiring
 application, and final semantics attachment. `list_box_controls/semantics.rs` owns ListBox role,
 label, and multiselectable semantics construction. `list_box_controls.rs` keeps keyed identity and
 `ListBoxOptions` destructuring only.
+
+2026-06-01 child-region entry owner split result:
+`ecosystem/fret-ui-kit/src/imui/child_region/entry.rs` now owns child-region keyed body
+orchestration: resize detection, scroll layout choice, scroll input assembly, resize-vs-scroll root
+test-id routing, response initialization, and resize-stack selection. `child_region.rs` keeps the
+facade-facing keyed wrapper only.

@@ -25304,3 +25304,28 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-01 IMUI child-region entry owner split:
+
+- Claim: child-region keyed body orchestration moved from
+  `ecosystem/fret-ui-kit/src/imui/child_region.rs` into
+  `ecosystem/fret-ui-kit/src/imui/child_region/entry.rs` without changing keyed identity, scroll
+  layout selection, resize-vs-scroll root test-id routing, child focus forwarding, resize stack
+  integration, or `ChildRegionResponse` population.
+- Evidence anchors: `child_region.rs` declares `mod entry;` and delegates the keyed body to
+  `entry::child_region_keyed_element(...)`; `entry.rs` owns resize detection, scroll input
+  assembly, `ChildRegionResponse::empty()`, and resize-stack selection; `scroll.rs` remains the
+  child host and framed scroll owner; `resize_stack.rs` remains the resize handle/stack owner; the
+  source gate rejects keyed body orchestration drifting back into `child_region.rs`.
+- Passed: `cargo fmt -p fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit --features imui`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_child_region_smoke --no-fail-fast`
+  (3 tests passed).
+- Passed: `cargo nextest run -p fret-imui child_region --no-fail-fast` (6 tests passed,
+  180 skipped).
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
