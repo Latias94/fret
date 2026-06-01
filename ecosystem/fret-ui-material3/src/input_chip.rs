@@ -45,6 +45,7 @@ use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, enforce_minimum_interactive_size, minimum_interactive_size,
 };
 use crate::foundation::logical_edges::{horizontal_logical_edges, set_inset_inline_end};
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::optional_part_test_id;
 use crate::tokens::input_chip as input_chip_tokens;
 
@@ -92,26 +93,19 @@ impl InputChipStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.container_background.is_some() {
-            self.container_background = other.container_background;
-        }
-        if other.outline_color.is_some() {
-            self.outline_color = other.outline_color;
-        }
-        if other.label_color.is_some() {
-            self.label_color = other.label_color;
-        }
-        if other.leading_icon_color.is_some() {
-            self.leading_icon_color = other.leading_icon_color;
-        }
-        if other.trailing_icon_color.is_some() {
-            self.trailing_icon_color = other.trailing_icon_color;
-        }
-        if other.state_layer_color.is_some() {
-            self.state_layer_color = other.state_layer_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                outline_color,
+                label_color,
+                leading_icon_color,
+                trailing_icon_color,
+                state_layer_color,
+            ]
+        )
     }
 }
 

@@ -24,13 +24,14 @@ use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{
     ColorRef, OverlayController, OverlayPresence, OverrideSlot, WidgetStateProperty, WidgetStates,
-    merge_override_slot, resolve_override_slot_with,
+    resolve_override_slot_with,
 };
 
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::modal_motion::material_modal_panel_transform;
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{optional_chrome_part_test_id, part_test_id};
 use crate::motion;
@@ -78,26 +79,18 @@ impl DialogStyle {
     }
 
     pub fn merged(self, other: Self) -> Self {
-        Self {
-            scrim_color: merge_override_slot(self.scrim_color, other.scrim_color),
-            container_background: merge_override_slot(
-                self.container_background,
-                other.container_background,
-            ),
-            container_corner_radii: merge_override_slot(
-                self.container_corner_radii,
-                other.container_corner_radii,
-            ),
-            container_elevation: merge_override_slot(
-                self.container_elevation,
-                other.container_elevation,
-            ),
-            headline_color: merge_override_slot(self.headline_color, other.headline_color),
-            supporting_text_color: merge_override_slot(
-                self.supporting_text_color,
-                other.supporting_text_color,
-            ),
-        }
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                scrim_color,
+                container_background,
+                container_corner_radii,
+                container_elevation,
+                headline_color,
+                supporting_text_color,
+            ]
+        )
     }
 }
 

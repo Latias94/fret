@@ -29,6 +29,7 @@ pub mod motion_scheme;
 pub mod overlay_motion;
 pub mod search_motion;
 pub mod strings;
+pub mod style_overrides;
 pub mod surface;
 pub mod test_id;
 pub mod token_resolver;

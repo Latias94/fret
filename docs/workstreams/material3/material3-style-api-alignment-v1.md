@@ -143,6 +143,8 @@ Add small, design-system-agnostic helpers (prefer `fret-ui-kit`) to reduce per-c
 
 - [x] `resolve_override_slot*` helpers in `fret-ui-kit` (including computed-default variants `resolve_override_slot_with` / `resolve_override_slot_opt_with`).
 - [x] `merge_override_slot(self.field, other.field)` helper to standardize right-biased merge.
+- [x] `foundation::style_overrides::merge_style_override_slots!` keeps Material 3 recipe
+  `merged()` implementations on one local Adapter while preserving each public `*Style` Interface.
 
 ### M3SA-100 — Define minimal `*Style` slot vocab for Material 3 controls
 

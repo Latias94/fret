@@ -27,7 +27,7 @@ use fret_ui::{Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::primitives::menu as menu_primitive;
 use fret_ui_kit::{
-    ColorRef, OverrideSlot, WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot,
+    ColorRef, OverrideSlot, WidgetState, WidgetStateProperty, WidgetStates,
     resolve_override_slot_with,
 };
 
@@ -36,6 +36,7 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{
     optional_chrome_part_test_id, optional_part_test_id, part_test_id,
@@ -187,56 +188,27 @@ impl MenuStyle {
     }
 
     pub fn merged(self, other: Self) -> Self {
-        Self {
-            container_background: merge_override_slot(
-                self.container_background,
-                other.container_background,
-            ),
-            container_corner_radii: merge_override_slot(
-                self.container_corner_radii,
-                other.container_corner_radii,
-            ),
-            container_elevation: merge_override_slot(
-                self.container_elevation,
-                other.container_elevation,
-            ),
-            item_min_width: merge_override_slot(self.item_min_width, other.item_min_width),
-            item_max_width: merge_override_slot(self.item_max_width, other.item_max_width),
-            item_label_color: merge_override_slot(self.item_label_color, other.item_label_color),
-            item_icon_color: merge_override_slot(self.item_icon_color, other.item_icon_color),
-            item_supporting_text_color: merge_override_slot(
-                self.item_supporting_text_color,
-                other.item_supporting_text_color,
-            ),
-            item_trailing_text_color: merge_override_slot(
-                self.item_trailing_text_color,
-                other.item_trailing_text_color,
-            ),
-            item_state_layer_color: merge_override_slot(
-                self.item_state_layer_color,
-                other.item_state_layer_color,
-            ),
-            section_label_color: merge_override_slot(
-                self.section_label_color,
-                other.section_label_color,
-            ),
-            item_label_text_style: merge_override_slot(
-                self.item_label_text_style,
-                other.item_label_text_style,
-            ),
-            item_supporting_text_style: merge_override_slot(
-                self.item_supporting_text_style,
-                other.item_supporting_text_style,
-            ),
-            item_trailing_text_style: merge_override_slot(
-                self.item_trailing_text_style,
-                other.item_trailing_text_style,
-            ),
-            section_label_text_style: merge_override_slot(
-                self.section_label_text_style,
-                other.section_label_text_style,
-            ),
-        }
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                container_corner_radii,
+                container_elevation,
+                item_min_width,
+                item_max_width,
+                item_label_color,
+                item_icon_color,
+                item_supporting_text_color,
+                item_trailing_text_color,
+                item_state_layer_color,
+                section_label_color,
+                item_label_text_style,
+                item_supporting_text_style,
+                item_trailing_text_style,
+                section_label_text_style,
+            ]
+        )
     }
 }
 

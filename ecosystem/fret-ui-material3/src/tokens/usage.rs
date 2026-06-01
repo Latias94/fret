@@ -8,6 +8,7 @@ use std::path::Path;
 use serde::Deserialize;
 
 const ROOT_SOURCE_EXCLUDES: &[&str] = &["lib.rs"];
+const FOUNDATION_SOURCE_EXCLUDES: &[&str] = &["style_overrides.rs"];
 const TOKEN_SOURCE_EXCLUDES: &[&str] = &[
     "coverage.rs",
     "material_web_v30.rs",
@@ -94,7 +95,7 @@ pub fn discover_audited_sources(crate_dir: &Path) -> Result<Vec<MaterialTokenSou
             path,
         });
     }
-    for path in collect_rs_files(crate_dir, "src/foundation", &[])? {
+    for path in collect_rs_files(crate_dir, "src/foundation", FOUNDATION_SOURCE_EXCLUDES)? {
         sources.push(MaterialTokenSource {
             id: source_id_from_path(&path),
             layer: expected_source_layer(&path),

@@ -37,6 +37,7 @@ use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
 };
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::optional_part_test_id;
 use crate::motion::{SpringAnimator, SpringSpec};
 use crate::tokens::icon_button as icon_button_tokens;
@@ -88,20 +89,17 @@ impl IconButtonStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.container_background.is_some() {
-            self.container_background = other.container_background;
-        }
-        if other.icon_color.is_some() {
-            self.icon_color = other.icon_color;
-        }
-        if other.outline_color.is_some() {
-            self.outline_color = other.outline_color;
-        }
-        if other.state_layer_color.is_some() {
-            self.state_layer_color = other.state_layer_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                icon_color,
+                outline_color,
+                state_layer_color,
+            ]
+        )
     }
 }
 

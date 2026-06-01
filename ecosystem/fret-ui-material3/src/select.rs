@@ -31,8 +31,8 @@ use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{ColorRef, OverlayController, OverlayPresence};
 use fret_ui_kit::{
-    OverrideSlot, WidgetStateProperty, WidgetStates, merge_override_slot,
-    resolve_override_slot_opt_with, resolve_override_slot_with,
+    OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
+    resolve_override_slot_with,
 };
 
 use crate::foundation::arc_str::empty_arc_str;
@@ -51,6 +51,7 @@ use crate::foundation::indication::{
 use crate::foundation::logical_edges::horizontal_logical_edges;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{chrome_part_test_id, part_test_id};
 use crate::motion::{SpringAnimator, ms_to_frames};
@@ -275,25 +276,22 @@ impl SelectStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        self.container_background =
-            merge_override_slot(self.container_background, other.container_background);
-        self.outline_color = merge_override_slot(self.outline_color, other.outline_color);
-        self.active_indicator_color =
-            merge_override_slot(self.active_indicator_color, other.active_indicator_color);
-        self.text_color = merge_override_slot(self.text_color, other.text_color);
-        self.label_color = merge_override_slot(self.label_color, other.label_color);
-        self.supporting_text_color =
-            merge_override_slot(self.supporting_text_color, other.supporting_text_color);
-        self.leading_icon_color =
-            merge_override_slot(self.leading_icon_color, other.leading_icon_color);
-        self.trailing_icon_color =
-            merge_override_slot(self.trailing_icon_color, other.trailing_icon_color);
-        self.menu_selected_container_color = merge_override_slot(
-            self.menu_selected_container_color,
-            other.menu_selected_container_color,
-        );
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                outline_color,
+                active_indicator_color,
+                text_color,
+                label_color,
+                supporting_text_color,
+                leading_icon_color,
+                trailing_icon_color,
+                menu_selected_container_color,
+            ]
+        )
     }
 }
 

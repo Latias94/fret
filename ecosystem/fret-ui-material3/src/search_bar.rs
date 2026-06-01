@@ -17,7 +17,7 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, SvgSource, Theme, UiHost};
 use fret_ui_kit::{
-    ColorRef, OverrideSlot, WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot,
+    ColorRef, OverrideSlot, WidgetState, WidgetStateProperty, WidgetStates,
     resolve_override_slot_with,
 };
 
@@ -30,6 +30,7 @@ use crate::foundation::indication::{
 use crate::foundation::strings::{
     material_search_bar_search_label, material_search_bar_suggestions_available_label,
 };
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::part_test_id;
 use crate::tokens::search_bar as search_bar_tokens;
 use crate::tokens::search_view as search_view_tokens;
@@ -208,46 +209,26 @@ impl SearchBarStyle {
     }
 
     pub fn merged(self, other: Self) -> Self {
-        Self {
-            container_background: merge_override_slot(
-                self.container_background,
-                other.container_background,
-            ),
-            container_elevation: merge_override_slot(
-                self.container_elevation,
-                other.container_elevation,
-            ),
-            container_corner_radii: merge_override_slot(
-                self.container_corner_radii,
-                other.container_corner_radii,
-            ),
-            container_height: merge_override_slot(self.container_height, other.container_height),
-            container_min_width: merge_override_slot(
-                self.container_min_width,
-                other.container_min_width,
-            ),
-            container_max_width: merge_override_slot(
-                self.container_max_width,
-                other.container_max_width,
-            ),
-            content_padding: merge_override_slot(self.content_padding, other.content_padding),
-            content_gap: merge_override_slot(self.content_gap, other.content_gap),
-            input_text_color: merge_override_slot(self.input_text_color, other.input_text_color),
-            supporting_text_color: merge_override_slot(
-                self.supporting_text_color,
-                other.supporting_text_color,
-            ),
-            input_text_style: merge_override_slot(self.input_text_style, other.input_text_style),
-            leading_icon_color: merge_override_slot(
-                self.leading_icon_color,
-                other.leading_icon_color,
-            ),
-            trailing_icon_color: merge_override_slot(
-                self.trailing_icon_color,
-                other.trailing_icon_color,
-            ),
-            state_layer_color: merge_override_slot(self.state_layer_color, other.state_layer_color),
-        }
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                container_elevation,
+                container_corner_radii,
+                container_height,
+                container_min_width,
+                container_max_width,
+                content_padding,
+                content_gap,
+                input_text_color,
+                supporting_text_color,
+                input_text_style,
+                leading_icon_color,
+                trailing_icon_color,
+                state_layer_color,
+            ]
+        )
     }
 }
 

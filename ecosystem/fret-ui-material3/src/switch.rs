@@ -33,6 +33,7 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::{chrome_part_test_id, part_test_id};
 use crate::tokens::switch as switch_tokens;
 
@@ -123,20 +124,12 @@ impl SwitchStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.track_color.is_some() {
-            self.track_color = other.track_color;
-        }
-        if other.handle_color.is_some() {
-            self.handle_color = other.handle_color;
-        }
-        if other.outline_color.is_some() {
-            self.outline_color = other.outline_color;
-        }
-        if other.state_layer_color.is_some() {
-            self.state_layer_color = other.state_layer_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [track_color, handle_color, outline_color, state_layer_color,]
+        )
     }
 }
 

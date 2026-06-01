@@ -20,7 +20,7 @@ use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{
     ColorRef, OverlayController, OverlayPresence, OverrideSlot, WidgetStateProperty, WidgetStates,
-    merge_override_slot, resolve_override_slot_with,
+    resolve_override_slot_with,
 };
 
 use crate::foundation::context::material_layout_direction_in_scope;
@@ -28,6 +28,7 @@ use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::search_motion::{
     SearchMotionKind, drive_search_motion, search_full_screen_geometry_transform,
 };
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::part_test_id;
 use crate::search_bar::SearchBarHeaderTokens;
 use crate::tokens::{dropdown_menu as dropdown_menu_tokens, search_view as search_view_tokens};
@@ -131,28 +132,20 @@ impl SearchViewStyle {
         self
     }
 
-    pub fn merged(self, other: Self) -> Self {
-        Self {
-            header_style: self.header_style.merged(other.header_style),
-            container_background: merge_override_slot(
-                self.container_background,
-                other.container_background,
-            ),
-            container_elevation: merge_override_slot(
-                self.container_elevation,
-                other.container_elevation,
-            ),
-            docked_container_corner_radii: merge_override_slot(
-                self.docked_container_corner_radii,
-                other.docked_container_corner_radii,
-            ),
-            divider_color: merge_override_slot(self.divider_color, other.divider_color),
-            full_screen_header_container_height: merge_override_slot(
-                self.full_screen_header_container_height,
-                other.full_screen_header_container_height,
-            ),
-            body_padding: merge_override_slot(self.body_padding, other.body_padding),
-        }
+    pub fn merged(mut self, other: Self) -> Self {
+        self.header_style = self.header_style.merged(other.header_style);
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                container_elevation,
+                docked_container_corner_radii,
+                divider_color,
+                full_screen_header_container_height,
+                body_padding,
+            ]
+        )
     }
 }
 

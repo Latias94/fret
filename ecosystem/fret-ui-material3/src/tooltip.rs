@@ -26,11 +26,12 @@ use fret_ui_kit::primitives::tooltip as tooltip_prim;
 use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::{
     ColorRef, OverlayPresence, OverrideSlot, WidgetStateProperty, WidgetStates,
-    merge_override_slot, resolve_override_slot_with,
+    resolve_override_slot_with,
 };
 
 use crate::foundation::context::material_layout_direction_in_scope;
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::part_test_id;
 use crate::motion::ms_to_frames;
@@ -433,94 +434,35 @@ impl TooltipStyle {
     }
 
     pub fn merged(self, other: Self) -> Self {
-        Self {
-            plain_container_background: merge_override_slot(
-                self.plain_container_background,
-                other.plain_container_background,
-            ),
-            plain_supporting_text_color: merge_override_slot(
-                self.plain_supporting_text_color,
-                other.plain_supporting_text_color,
-            ),
-            plain_supporting_text_style: merge_override_slot(
-                self.plain_supporting_text_style,
-                other.plain_supporting_text_style,
-            ),
-            plain_container_corner_radius: merge_override_slot(
-                self.plain_container_corner_radius,
-                other.plain_container_corner_radius,
-            ),
-            plain_container_padding: merge_override_slot(
-                self.plain_container_padding,
-                other.plain_container_padding,
-            ),
-            plain_container_max_width: merge_override_slot(
-                self.plain_container_max_width,
-                other.plain_container_max_width,
-            ),
-            rich_container_background: merge_override_slot(
-                self.rich_container_background,
-                other.rich_container_background,
-            ),
-            rich_container_elevation: merge_override_slot(
-                self.rich_container_elevation,
-                other.rich_container_elevation,
-            ),
-            rich_container_shadow_color: merge_override_slot(
-                self.rich_container_shadow_color,
-                other.rich_container_shadow_color,
-            ),
-            rich_title_color: merge_override_slot(self.rich_title_color, other.rich_title_color),
-            rich_supporting_text_color: merge_override_slot(
-                self.rich_supporting_text_color,
-                other.rich_supporting_text_color,
-            ),
-            rich_action_label_color: merge_override_slot(
-                self.rich_action_label_color,
-                other.rich_action_label_color,
-            ),
-            rich_title_text_style: merge_override_slot(
-                self.rich_title_text_style,
-                other.rich_title_text_style,
-            ),
-            rich_supporting_text_style: merge_override_slot(
-                self.rich_supporting_text_style,
-                other.rich_supporting_text_style,
-            ),
-            rich_action_label_text_style: merge_override_slot(
-                self.rich_action_label_text_style,
-                other.rich_action_label_text_style,
-            ),
-            rich_container_corner_radius: merge_override_slot(
-                self.rich_container_corner_radius,
-                other.rich_container_corner_radius,
-            ),
-            rich_container_padding: merge_override_slot(
-                self.rich_container_padding,
-                other.rich_container_padding,
-            ),
-            rich_container_max_width: merge_override_slot(
-                self.rich_container_max_width,
-                other.rich_container_max_width,
-            ),
-            rich_text_gap: merge_override_slot(self.rich_text_gap, other.rich_text_gap),
-            rich_action_min_height: merge_override_slot(
-                self.rich_action_min_height,
-                other.rich_action_min_height,
-            ),
-            rich_action_bottom_padding: merge_override_slot(
-                self.rich_action_bottom_padding,
-                other.rich_action_bottom_padding,
-            ),
-            container_min_width: merge_override_slot(
-                self.container_min_width,
-                other.container_min_width,
-            ),
-            container_min_height: merge_override_slot(
-                self.container_min_height,
-                other.container_min_height,
-            ),
-        }
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                plain_container_background,
+                plain_supporting_text_color,
+                plain_supporting_text_style,
+                plain_container_corner_radius,
+                plain_container_padding,
+                plain_container_max_width,
+                rich_container_background,
+                rich_container_elevation,
+                rich_container_shadow_color,
+                rich_title_color,
+                rich_supporting_text_color,
+                rich_action_label_color,
+                rich_title_text_style,
+                rich_supporting_text_style,
+                rich_action_label_text_style,
+                rich_container_corner_radius,
+                rich_container_padding,
+                rich_container_max_width,
+                rich_text_gap,
+                rich_action_min_height,
+                rich_action_bottom_padding,
+                container_min_width,
+                container_min_height,
+            ]
+        )
     }
 }
 

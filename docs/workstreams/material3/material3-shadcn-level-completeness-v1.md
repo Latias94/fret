@@ -104,6 +104,11 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     `material3_token_audit -- --check --no-material-missing --limit 5`,
     `material3_token_audit -- --check-usage-manifest`, and
     `minimum_touch_target::navigable_material_rows_enforce_minimum_touch_target_at_runtime`.
+- 2026-06-01 Style merge implementation hardening:
+  - Public Material `*Style` surfaces remain per-recipe, but their `merged()` implementations now
+    share `foundation::style_overrides::merge_style_override_slots!`.
+  - This keeps ADR 0220 shallow right-biased merge semantics in one local Module while preserving
+    each recipe's public Style Interface and builder methods.
 - 2026-05-31 Tabs panel ownership:
   - `TabPanel`, `.panel/.panels`, active tabpanel semantics, `labelled_by` relation to the selected
     tab, derived tab `controls`, and gallery snippet content panels.

@@ -42,6 +42,7 @@ use crate::foundation::indication::{
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::part_test_id;
 use crate::tokens::tabs as tabs_tokens;
 
@@ -222,20 +223,17 @@ impl TabsStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.container_background.is_some() {
-            self.container_background = other.container_background;
-        }
-        if other.label_color.is_some() {
-            self.label_color = other.label_color;
-        }
-        if other.state_layer_color.is_some() {
-            self.state_layer_color = other.state_layer_color;
-        }
-        if other.active_indicator_color.is_some() {
-            self.active_indicator_color = other.active_indicator_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                label_color,
+                state_layer_color,
+                active_indicator_color,
+            ]
+        )
     }
 }
 

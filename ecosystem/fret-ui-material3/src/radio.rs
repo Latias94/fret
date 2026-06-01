@@ -36,6 +36,7 @@ use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, minimum_interactive_size,
 };
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::{
     absolute_region_layout, diagnostic_anchor, optional_part_test_id,
 };
@@ -548,14 +549,8 @@ impl RadioStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.icon_color.is_some() {
-            self.icon_color = other.icon_color;
-        }
-        if other.state_layer_color.is_some() {
-            self.state_layer_color = other.state_layer_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(self, other, [icon_color, state_layer_color])
     }
 }
 

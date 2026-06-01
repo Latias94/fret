@@ -44,6 +44,7 @@ use crate::foundation::indication::{
 use crate::foundation::interactive_size::minimum_interactive_size;
 use crate::foundation::logical_edges::{set_inset_inline_end, set_inset_inline_start};
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::part_test_id;
 use crate::tokens::autocomplete as autocomplete_tokens;
 use crate::tokens::text_field as text_field_tokens;
@@ -119,29 +120,20 @@ impl TextFieldStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.container_background.is_some() {
-            self.container_background = other.container_background;
-        }
-        if other.outline_color.is_some() {
-            self.outline_color = other.outline_color;
-        }
-        if other.text_color.is_some() {
-            self.text_color = other.text_color;
-        }
-        if other.placeholder_color.is_some() {
-            self.placeholder_color = other.placeholder_color;
-        }
-        if other.caret_color.is_some() {
-            self.caret_color = other.caret_color;
-        }
-        if other.label_color.is_some() {
-            self.label_color = other.label_color;
-        }
-        if other.supporting_text_color.is_some() {
-            self.supporting_text_color = other.supporting_text_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                outline_color,
+                text_color,
+                placeholder_color,
+                caret_color,
+                label_color,
+                supporting_text_color,
+            ]
+        )
     }
 }
 

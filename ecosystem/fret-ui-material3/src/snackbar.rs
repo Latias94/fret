@@ -20,9 +20,10 @@ use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::{
     ColorRef, OverlayController, OverlayRequest, OverrideSlot, ToastAction, ToastButtonStyle,
     ToastId, ToastLayerStyle, ToastOffset, ToastPosition, ToastRequest, ToastStore, ToastTextStyle,
-    WidgetStateProperty, WidgetStates, merge_override_slot, resolve_override_slot_with,
+    WidgetStateProperty, WidgetStates, resolve_override_slot_with,
 };
 
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::motion::ms_to_frames;
 use crate::tokens::snackbar as snackbar_tokens;
 
@@ -95,42 +96,22 @@ impl SnackbarStyle {
     }
 
     pub fn merged(self, other: Self) -> Self {
-        Self {
-            container_background: merge_override_slot(
-                self.container_background,
-                other.container_background,
-            ),
-            supporting_text_color: merge_override_slot(
-                self.supporting_text_color,
-                other.supporting_text_color,
-            ),
-            action_label_color: merge_override_slot(
-                self.action_label_color,
-                other.action_label_color,
-            ),
-            action_state_layer_color: merge_override_slot(
-                self.action_state_layer_color,
-                other.action_state_layer_color,
-            ),
-            close_icon_color: merge_override_slot(self.close_icon_color, other.close_icon_color),
-            close_state_layer_color: merge_override_slot(
-                self.close_state_layer_color,
-                other.close_state_layer_color,
-            ),
-            container_corner_radius: merge_override_slot(
-                self.container_corner_radius,
-                other.container_corner_radius,
-            ),
-            container_padding: merge_override_slot(self.container_padding, other.container_padding),
-            single_line_min_height: merge_override_slot(
-                self.single_line_min_height,
-                other.single_line_min_height,
-            ),
-            two_line_min_height: merge_override_slot(
-                self.two_line_min_height,
-                other.two_line_min_height,
-            ),
-        }
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                supporting_text_color,
+                action_label_color,
+                action_state_layer_color,
+                close_icon_color,
+                close_state_layer_color,
+                container_corner_radius,
+                container_padding,
+                single_line_min_height,
+                two_line_min_height,
+            ]
+        )
     }
 }
 

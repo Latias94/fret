@@ -38,6 +38,7 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::surface::material_surface_style;
 use crate::motion::{SpringAnimator, SpringSpec};
 use crate::tokens::button as button_tokens;
@@ -100,23 +101,18 @@ impl ButtonStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.container_background.is_some() {
-            self.container_background = other.container_background;
-        }
-        if other.container_elevation.is_some() {
-            self.container_elevation = other.container_elevation;
-        }
-        if other.label_color.is_some() {
-            self.label_color = other.label_color;
-        }
-        if other.outline_color.is_some() {
-            self.outline_color = other.outline_color;
-        }
-        if other.state_layer_color.is_some() {
-            self.state_layer_color = other.state_layer_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                container_elevation,
+                label_color,
+                outline_color,
+                state_layer_color,
+            ]
+        )
     }
 }
 

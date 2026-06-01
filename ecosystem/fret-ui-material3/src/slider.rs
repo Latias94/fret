@@ -33,6 +33,7 @@ use fret_ui_kit::{
 use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
 use crate::foundation::indication::material_pressable_indication_config;
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::{
     absolute_region_layout, centered_absolute_region_layout, diagnostic_anchor,
     optional_part_test_id, part_test_id,
@@ -177,20 +178,17 @@ impl SliderStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.active_track_color.is_some() {
-            self.active_track_color = other.active_track_color;
-        }
-        if other.inactive_track_color.is_some() {
-            self.inactive_track_color = other.inactive_track_color;
-        }
-        if other.handle_color.is_some() {
-            self.handle_color = other.handle_color;
-        }
-        if other.state_layer_color.is_some() {
-            self.state_layer_color = other.state_layer_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                active_track_color,
+                inactive_track_color,
+                handle_color,
+                state_layer_color,
+            ]
+        )
     }
 }
 
