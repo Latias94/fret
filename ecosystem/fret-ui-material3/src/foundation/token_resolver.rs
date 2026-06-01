@@ -245,6 +245,14 @@ impl<'a> MaterialTokenResolver<'a> {
             .unwrap_or(fallback)
     }
 
+    pub fn metric_value(&self, key: &str) -> Option<Px> {
+        debug_assert!(
+            key.starts_with("md."),
+            "expected md.* metric token key, got: {key}"
+        );
+        self.theme.metric_by_key(key)
+    }
+
     pub fn metric_chain(&self, keys: &[&str], fallback: Px) -> Px {
         debug_assert!(!keys.is_empty(), "expected at least one md.* key");
         debug_assert!(

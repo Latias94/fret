@@ -21,22 +21,24 @@ use crate::foundation::token_resolver::MaterialTokenResolver;
 #[cfg(test)]
 use crate::tokens::typography;
 
+fn snackbar_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
+fn snackbar_metric_value(theme: &Theme, key: &'static str) -> Option<Px> {
+    MaterialTokenResolver::new(theme).metric_value(key)
+}
+
 pub(crate) fn icon_size(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.snackbar.icon.size")
-        .unwrap_or(Px(24.0))
+    snackbar_metric(theme, "md.comp.snackbar.icon.size", Px(24.0))
 }
 
 pub(crate) fn container_shape_radius(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.snackbar.container.shape")
-        .unwrap_or(Px(4.0))
+    snackbar_metric(theme, "md.comp.snackbar.container.shape", Px(4.0))
 }
 
 pub(crate) fn container_elevation(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.snackbar.container.elevation")
-        .unwrap_or(Px(0.0))
+    snackbar_metric(theme, "md.comp.snackbar.container.elevation", Px(0.0))
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
@@ -96,11 +98,11 @@ pub(crate) fn easing(theme: &Theme) -> Option<CubicBezier> {
 }
 
 pub(crate) fn single_line_min_height(theme: &Theme) -> Option<Px> {
-    theme.metric_by_key("md.comp.snackbar.with-single-line.container.height")
+    snackbar_metric_value(theme, "md.comp.snackbar.with-single-line.container.height")
 }
 
 pub(crate) fn two_line_min_height(theme: &Theme) -> Option<Px> {
-    theme.metric_by_key("md.comp.snackbar.with-two-lines.container.height")
+    snackbar_metric_value(theme, "md.comp.snackbar.with-two-lines.container.height")
 }
 
 pub(crate) fn host_margin(theme: &Theme) -> Px {
@@ -431,5 +433,61 @@ pub(crate) fn close_icon_button_style(theme: &Theme) -> ToastIconButtonStyle {
             bottom: Px(8.0),
         },
         radius: Px(4.0),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn snackbar_metrics_default_to_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(icon_size(theme), Px(24.0));
+        assert_eq!(container_shape_radius(theme), Px(4.0));
+        assert_eq!(container_elevation(theme), Px(0.0));
+        assert_eq!(single_line_min_height(theme), None);
+        assert_eq!(two_line_min_height(theme), None);
+    }
+
+    #[test]
+    fn snackbar_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.snackbar.icon.size".to_string(), 26.0);
+        patch
+            .metrics
+            .insert("md.comp.snackbar.container.shape".to_string(), 6.0);
+        patch
+            .metrics
+            .insert("md.comp.snackbar.container.elevation".to_string(), 3.0);
+        patch.metrics.insert(
+            "md.comp.snackbar.with-single-line.container.height".to_string(),
+            48.0,
+        );
+        patch.metrics.insert(
+            "md.comp.snackbar.with-two-lines.container.height".to_string(),
+            68.0,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(icon_size(&theme), Px(26.0));
+        assert_eq!(container_shape_radius(&theme), Px(6.0));
+        assert_eq!(container_elevation(&theme), Px(3.0));
+        assert_eq!(single_line_min_height(&theme), Some(Px(48.0)));
+        assert_eq!(two_line_min_height(&theme), Some(Px(68.0)));
     }
 }
