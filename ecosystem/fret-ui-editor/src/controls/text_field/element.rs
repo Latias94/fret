@@ -7,24 +7,17 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use super::{OnTextFieldOutcome, TextField, TextFieldOptions, buffered};
 use crate::primitives::input_group::editor_joined_input_frame;
 use crate::primitives::style::EditorStyle;
-use crate::primitives::text_entry::{EditorTextCancelBehavior, editor_text_entry_focus_state};
+use crate::primitives::text_entry::editor_text_entry_focus_state;
 
 mod buffered_keys;
 mod clear_button;
+mod entry;
 mod entry_props;
 mod escape_clear;
 mod focus;
 
-use buffered_keys::{
-    TextFieldBufferedKeyHandlerArgs, TextFieldBufferedKeyMode,
-    install_buffered_text_field_key_handler,
-};
 use clear_button::{TextFieldClearButtonArgs, text_field_clear_button_segments};
-use entry_props::{
-    TextFieldAreaPropsArgs, TextFieldInputPropsArgs, text_field_area_props, text_field_input_props,
-};
-use escape_clear::install_text_field_escape_clear_handler;
-use focus::{TextFieldFocusSelectionArgs, sync_text_field_focus_selection};
+use entry::{TextFieldEntryArgs, text_field_entry};
 
 impl TextField {
     pub fn new(model: Model<String>) -> Self {
@@ -114,16 +107,9 @@ impl TextField {
             (style.density, style.frame_chrome(size))
         };
 
-        let model_for_input = model.clone();
         let model_for_trailing = model.clone();
-        let draft_for_input = draft.clone();
         let draft_for_trailing = draft.clone();
-        let buffered_state_for_input = buffered_state.clone();
         let buffered_state_for_trailing = buffered_state.clone();
-        let draft_controller_for_input = draft_controller.clone();
-        let current_text_for_input = current_text.clone();
-        let on_outcome_for_input = on_outcome.clone();
-        let submit_command_for_input = submit_command.clone();
         if !buffered && let Some(controller) = draft_controller.as_ref() {
             controller.unbind();
         }
@@ -137,190 +123,36 @@ impl TextField {
             false,
             None,
             move |cx| {
-                if multiline {
-                    let input_model = draft_for_input
-                        .clone()
-                        .unwrap_or_else(|| model_for_input.clone());
-                    let theme = Theme::global(&*cx.app);
-                    let props = text_field_area_props(
-                        theme,
-                        TextFieldAreaPropsArgs {
-                            input_model,
-                            size,
-                            density,
-                            enabled: enabled_for_paint,
-                            focusable,
-                            a11y_label: a11y_label.clone(),
-                            test_id: test_id.clone(),
-                            stable_line_boxes,
-                            min_height,
-                        },
-                    );
-
-                    let area = cx.text_area(props);
-                    if let Some(out) = input_id_out.as_ref() {
-                        out.set(Some(area.id));
-                    }
-                    let area_id = area.id;
-                    let is_focused = cx.is_focused_element(area_id);
-                    if let (Some(draft), Some(buffered_state)) =
-                        (draft_for_input.as_ref(), buffered_state_for_input.as_ref())
-                    {
-                        buffered::sync_buffered_text_field_session(
-                            cx,
-                            area_id,
-                            is_focused,
-                            &current_text_for_input,
-                            draft,
-                            buffered_state,
-                            blur_behavior,
-                        );
-                        if let Some(controller) = draft_controller_for_input.as_ref() {
-                            controller.bind(
-                                model_for_input.clone(),
-                                draft.clone(),
-                                buffered_state.clone(),
-                                None,
-                            );
-                        }
-
-                        install_buffered_text_field_key_handler(
-                            cx,
-                            TextFieldBufferedKeyHandlerArgs {
-                                entry_id: area_id,
-                                mode: TextFieldBufferedKeyMode::Multiline,
-                                model: model_for_input.clone(),
-                                draft: draft.clone(),
-                                buffered_state: buffered_state.clone(),
-                                on_outcome: on_outcome_for_input.clone(),
-                            },
-                        );
-                    }
-
-                    sync_text_field_focus_selection(
-                        cx,
-                        TextFieldFocusSelectionArgs {
-                            focus_state: &focus_state,
-                            entry_id: area_id,
-                            is_focused,
-                            model: &model_for_input,
-                            draft: draft_for_input.as_ref(),
-                            selection_behavior,
-                        },
-                    );
-                    if let (Some(draft), Some(buffered_state)) =
-                        (draft_for_input.as_ref(), buffered_state_for_input.as_ref())
-                    {
-                        buffered::install_buffered_text_field_blur_handler(
-                            cx,
-                            area_id,
-                            model_for_input.clone(),
-                            draft.clone(),
-                            buffered_state.clone(),
-                            on_outcome_for_input.clone(),
-                        );
-                    }
-                    if !buffered && matches!(cancel_behavior, EditorTextCancelBehavior::Clear) {
-                        install_text_field_escape_clear_handler(
-                            cx,
-                            area_id,
-                            model_for_input.clone(),
-                        );
-                    }
-
-                    area
-                } else {
-                    let input_model = draft_for_input
-                        .clone()
-                        .unwrap_or_else(|| model_for_input.clone());
-                    let theme = Theme::global(&*cx.app);
-                    let props = text_field_input_props(
-                        theme,
-                        TextFieldInputPropsArgs {
-                            input_model,
-                            size,
-                            density,
-                            enabled: enabled_for_paint,
-                            focusable,
-                            placeholder: placeholder.clone(),
-                            a11y_label: a11y_label.clone(),
-                            test_id: test_id.clone(),
-                            mode,
-                            assistive_semantics,
-                            buffered,
-                            submit_command: submit_command_for_input.clone(),
-                            cancel_behavior,
-                        },
-                    );
-
-                    let input = cx.text_input(props);
-                    if let Some(out) = input_id_out.as_ref() {
-                        out.set(Some(input.id));
-                    }
-                    let input_id = input.id;
-                    let is_focused = cx.is_focused_element(input_id);
-
-                    if let (Some(draft), Some(buffered_state)) =
-                        (draft_for_input.as_ref(), buffered_state_for_input.as_ref())
-                    {
-                        buffered::sync_buffered_text_field_session(
-                            cx,
-                            input_id,
-                            is_focused,
-                            &current_text_for_input,
-                            draft,
-                            buffered_state,
-                            blur_behavior,
-                        );
-                        if let Some(controller) = draft_controller_for_input.as_ref() {
-                            controller.bind(
-                                model_for_input.clone(),
-                                draft.clone(),
-                                buffered_state.clone(),
-                                submit_command_for_input.clone(),
-                            );
-                        }
-
-                        install_buffered_text_field_key_handler(
-                            cx,
-                            TextFieldBufferedKeyHandlerArgs {
-                                entry_id: input_id,
-                                mode: TextFieldBufferedKeyMode::SingleLine {
-                                    submit_command: submit_command_for_input.clone(),
-                                },
-                                model: model_for_input.clone(),
-                                draft: draft.clone(),
-                                buffered_state: buffered_state.clone(),
-                                on_outcome: on_outcome_for_input.clone(),
-                            },
-                        );
-                    }
-
-                    sync_text_field_focus_selection(
-                        cx,
-                        TextFieldFocusSelectionArgs {
-                            focus_state: &focus_state,
-                            entry_id: input_id,
-                            is_focused,
-                            model: &model_for_input,
-                            draft: draft_for_input.as_ref(),
-                            selection_behavior,
-                        },
-                    );
-                    if let (Some(draft), Some(buffered_state)) =
-                        (draft_for_input.as_ref(), buffered_state_for_input.as_ref())
-                    {
-                        buffered::install_buffered_text_field_blur_handler(
-                            cx,
-                            input_id,
-                            model_for_input.clone(),
-                            draft.clone(),
-                            buffered_state.clone(),
-                            on_outcome_for_input.clone(),
-                        );
-                    }
-                    input
-                }
+                text_field_entry(
+                    cx,
+                    TextFieldEntryArgs {
+                        model: model.clone(),
+                        draft: draft.clone(),
+                        buffered_state: buffered_state.clone(),
+                        current_text,
+                        draft_controller,
+                        on_outcome: on_outcome.clone(),
+                        submit_command: submit_command.clone(),
+                        focus_state,
+                        size,
+                        density,
+                        enabled: enabled_for_paint,
+                        focusable,
+                        placeholder: placeholder.clone(),
+                        a11y_label: a11y_label.clone(),
+                        test_id: test_id.clone(),
+                        input_id_out: input_id_out.clone(),
+                        mode,
+                        buffered,
+                        blur_behavior,
+                        assistive_semantics,
+                        selection_behavior,
+                        cancel_behavior,
+                        multiline,
+                        stable_line_boxes,
+                        min_height,
+                    },
+                )
             },
             move |cx| {
                 text_field_clear_button_segments(

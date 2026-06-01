@@ -12,6 +12,17 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor TextField entry owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/element.rs` now keeps public construction,
+callsite/model keying, joined frame/chrome orchestration, current draft sync, clear trailing
+segments, and field id reporting while delegating entry mounting/session wiring to
+`controls/text_field/element/entry.rs`. The private entry owner contains TextInput/TextArea
+selection and mounting, input-id reporting, buffered session sync, draft-controller binding,
+buffered key routing, blur commit/cancel handling, focus-selection routing, and unbuffered
+multiline Escape-clear installation. Public `TextField` options, entry props/chrome semantics,
+clear-button behavior, and joined frame mounting remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor AxisDragValue scrub-element owner-split result:
 `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps scrub/typing
 orchestration, focus sync, typing input/key/frame routing, error clearing, and final mounted

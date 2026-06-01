@@ -181,6 +181,17 @@ Last updated: 2026-06-01
       joined chrome, field style resolution, assistive semantics, command forwarding, and
       multiline min-height/stable line-box policy. The source gate prevents text-entry props
       policy from drifting back into the element assembly owner.
+- [x] Split editor `TextField` entry mount/session wiring into a private element child owner
+      without changing single-line/multiline selection, draft model selection, buffered session
+      sync, draft-controller binding, buffered key routing, blur commit/cancel handling,
+      focus-selection sync, unbuffered multiline Escape-clear behavior, input-id reporting,
+      clear-button behavior, joined frame mounting, or public `TextField` options.
+      Result: `controls/text_field/element.rs` keeps public construction, keyed state setup,
+      joined frame/chrome orchestration, current draft sync, clear trailing segments, and field id
+      reporting. `controls/text_field/element/entry.rs` owns TextInput/TextArea mounting, input id
+      reporting, buffered session/key/blur wiring, draft-controller binding, focus-selection
+      routing, and unbuffered Escape-clear installation. The source gate prevents entry behavior
+      from drifting back into the root element owner.
 - [x] Split editor `Slider` pressable pointer interaction installation into a private element child
       owner without changing click-to-update, drag begin/move/up, missed pointer-up cleanup,
       double-click typing handoff, cursor selection, value math, focus handoff arming, slider frame

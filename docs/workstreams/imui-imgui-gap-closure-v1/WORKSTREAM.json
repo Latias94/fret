@@ -1181,6 +1181,7 @@
     "ecosystem/fret-ui-editor/src/controls/text_field/element.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/element/buffered_keys.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/element/clear_button.rs",
+    "ecosystem/fret-ui-editor/src/controls/text_field/element/entry.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/element/entry_props.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/element/escape_clear.rs",
     "ecosystem/fret-ui-editor/src/controls/text_field/element/escape_clear/tests.rs",

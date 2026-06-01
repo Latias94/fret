@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor TextField Entry Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `TextField` entry mounting and session wiring moved out of
+`controls/text_field/element.rs` into private `controls/text_field/element/entry.rs` without
+changing single-line/multiline selection, draft model selection, buffered session sync,
+draft-controller binding, buffered key routing, blur commit/cancel handling, focus-selection sync,
+unbuffered multiline Escape-clear behavior, input-id reporting, clear-button behavior, joined
+frame mounting, or public `TextField` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_field/element.rs` keeps public construction,
+  callsite/model keying, joined frame/chrome orchestration, current draft sync, clear trailing
+  segment routing, and field id reporting.
+- `ecosystem/fret-ui-editor/src/controls/text_field/element/entry.rs` owns TextInput/TextArea
+  selection and mounting, input-id reporting, buffered session sync, draft-controller binding,
+  buffered key routing, blur commit/cancel wiring, focus-selection routing, and unbuffered
+  multiline Escape-clear installation.
+- `tools/gate_imui_workstream_source.py` now tracks the entry owner and rejects entry behavior
+  from drifting back into the root element owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new entry owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor text_field --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor AxisDragValue Scrub-Element Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `AxisDragValue` scrub `DragValueCore` assembly moved out of
