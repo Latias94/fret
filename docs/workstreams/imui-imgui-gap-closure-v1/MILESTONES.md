@@ -460,6 +460,16 @@ layout resolution, auto row/column switching, value-slot overflow semantics, res
 test-id propagation, and property-row text role behavior remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-01 editor PropertyRow row branch owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_row/element.rs` now keeps layout-query /
+resolution, auto dispatch, column branch assembly, and test-id application while delegating row
+branch construction to the private `composites/property_row/element/row.rs` owner. Row/column/auto
+layout variant resolution, row label fixed slot width, single-line label line box, row value-slot
+overflow semantics, reset/action trailing slot wiring, row min-height behavior, test-id
+propagation, and public property row APIs remain unchanged. `tools/gate_imui_workstream_source.py`
+freezes the split and the value-slot overflow guard now tracks the two marked slots across root
+and row owners.
+
 2026-06-01 editor PropertyRow options owner-split result:
 `ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the public composite, label
 helper, keyed row entrypoint, row/column child assembly, value-slot marking, and reset-slot wiring

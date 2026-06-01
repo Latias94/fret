@@ -1176,6 +1176,7 @@
     "ecosystem/fret-ui-editor/src/composites/property_grid/tests.rs",
     "ecosystem/fret-ui-editor/src/composites/property_row.rs",
     "ecosystem/fret-ui-editor/src/composites/property_row/element.rs",
+    "ecosystem/fret-ui-editor/src/composites/property_row/element/row.rs",
     "ecosystem/fret-ui-editor/src/composites/property_row/layout.rs",
     "ecosystem/fret-ui-editor/src/composites/property_row/options.rs",
     "ecosystem/fret-ui-editor/src/composites/property_row/reset.rs",

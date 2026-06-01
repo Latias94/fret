@@ -265,16 +265,24 @@ def check_direct_text_props_allowlist(
 
 
 def check_property_row_value_slot_overflow(failures: list[str]) -> None:
-    path = Path("ecosystem/fret-ui-editor/src/composites/property_row/element.rs")
-    source = read_source(path)
+    paths = [
+        Path("ecosystem/fret-ui-editor/src/composites/property_row/element.rs"),
+        Path("ecosystem/fret-ui-editor/src/composites/property_row/element/row.rs"),
+    ]
     marker = "let value = mark_property_row_value_slot(cx.container("
-    starts = [match.start() for match in re.finditer(re.escape(marker), source)]
-    if len(starts) != 2:
+    matches: list[tuple[Path, str, int]] = []
+    for path in paths:
+        source = read_source(path)
+        matches.extend(
+            (path, source, match.start()) for match in re.finditer(re.escape(marker), source)
+        )
+    if len(matches) != 2:
         failures.append(
-            f"{path.as_posix()}: expected exactly two marked property-row value slots, found {len(starts)}"
+            "property-row value slots: expected exactly two marked slots across element owners, "
+            f"found {len(matches)}"
         )
 
-    for start in starts:
+    for path, source, start in matches:
         end = source.find("|cx| vec![value(cx)]", start)
         if end == -1:
             failures.append(
@@ -33766,6 +33774,8 @@ def main() -> None:
             required=[
                 "pub(crate) const PROPERTY_ROW_VALUE_SLOT",
                 "fn mark_property_row_value_slot",
+                "mod row;",
+                "use row::{PropertyRowRowElementOptions, property_row_row_element};",
                 "use super::slot::property_row_trailing_slot;",
                 "pub(super) fn property_row_element",
                 "resolve_property_row_layout(",
@@ -33776,7 +33786,8 @@ def main() -> None:
                 "mark_property_row_value_slot(cx.container(",
                 "reset::property_row_reset_element(",
                 "property_row_trailing_slot(",
-                "PropertyRowLayoutVariant::Row => cx.flex(",
+                "PropertyRowLayoutVariant::Row => property_row_row_element(",
+                "PropertyRowRowElementOptions {",
                 "PropertyRowLayoutVariant::Column =>",
                 "row.test_id(test_id.clone())",
             ],
@@ -33795,6 +33806,50 @@ def main() -> None:
                 "pub enum PropertyRowLayoutVariant",
                 "basis: Length::Px(reset_slot_w)",
                 "basis: Length::Px(status_slot_w)",
+                "width: Length::Px(label_w)",
+                "grow: 0.0",
+                "shrink: 0.0",
+                "gap: SpacingLength::Px(trailing_gap)",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/composites/property_row/element/row.rs"),
+            required=[
+                "pub(super) struct PropertyRowRowElementOptions",
+                "pub(super) fn property_row_row_element",
+                "layout: LayoutStyle",
+                "density: EditorDensity",
+                "affordance_extent: Px",
+                "label_w: Px",
+                "value_max_w: Px",
+                "has_reset_slot: bool",
+                "reset: Option<PropertyRowReset>",
+                "actions_el: Option<AnyElement>",
+                "direction: Axis::Horizontal",
+                "gap: SpacingLength::Px(gap)",
+                "width: Length::Px(label_w)",
+                "height: Length::Px(density.row_height),",
+                "max_height: Some(Length::Px(density.row_height)),",
+                "overflow: Overflow::Clip",
+                "mark_property_row_value_slot(cx.container(",
+                "max_width: Some(Length::Px(value_max_w))",
+                "reset::property_row_reset_element(",
+                "property_row_trailing_slot(",
+                "basis: Length::Px(Px(0.0))",
+            ],
+            forbidden=[
+                "pub struct PropertyRow {",
+                "impl PropertyRow",
+                "pub(crate) fn property_row_label_text",
+                "editor_property_row_label_text_props(",
+                "pub struct PropertyRowOptions",
+                "impl Default for PropertyRowOptions",
+                "pub enum PropertyRowLayoutVariant",
+                "PropertyRowLayoutVariant::Column",
+                "resolve_property_row_layout(",
+                "resolve_property_row_layout_variant(",
+                "apply_property_row_min_height(",
+                "layout_query_bounds(",
             ],
         ),
         SourceCheck(

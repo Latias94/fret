@@ -407,6 +407,14 @@ Last updated: 2026-06-01
       row/column flex assembly, layout-query usage, resolved-layout consumption, value-slot marking,
       reset/action slot mounting, and test-id application. The source gate prevents row/column
       assembly policy from drifting back into the root composite owner.
+- [x] Split editor `PropertyRow` row-layout branch assembly into a private element child owner
+      without changing row/column/auto layout variant resolution, row label fixed slot width,
+      single-line label line box, row value-slot overflow semantics, reset/action trailing slot
+      wiring, row min-height behavior, test-id propagation, or public property row APIs.
+      Result: `composites/property_row/element.rs` keeps layout-query/resolution, auto dispatch,
+      column branch assembly, and test-id application while delegating row branch construction to
+      `composites/property_row/element/row.rs`. The source gate and overflow guard now track the
+      two marked value slots across root and row owners.
 - [x] Split editor `PropertyRow` trailing reset/action slot wrapper into a private child owner
       without changing row/column layout, reset/action visibility, fixed slot width, min row height,
       clip overflow, end alignment, reset element routing, action element mounting, value-slot

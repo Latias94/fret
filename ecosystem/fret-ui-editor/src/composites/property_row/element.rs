@@ -13,6 +13,10 @@ use super::reset;
 use super::slot::property_row_trailing_slot;
 use super::{PropertyRowLayoutVariant, PropertyRowOptions, PropertyRowReset};
 
+mod row;
+
+use row::{PropertyRowRowElementOptions, property_row_row_element};
+
 #[cfg(test)]
 pub(crate) const PROPERTY_ROW_VALUE_SLOT: &str = "fret-ui-editor.property-row.value";
 
@@ -76,128 +80,25 @@ where
     };
 
     let row = match variant {
-        PropertyRowLayoutVariant::Row => cx.flex(
-            FlexProps {
+        PropertyRowLayoutVariant::Row => property_row_row_element(
+            cx,
+            PropertyRowRowElementOptions {
                 layout,
-                direction: Axis::Horizontal,
-                gap: SpacingLength::Px(gap),
-                padding: Edges::all(Px(0.0)).into(),
-                justify: MainAlign::Start,
-                align: CrossAlign::Center,
-                wrap: false,
+                density,
+                affordance_extent,
+                gap,
+                trailing_gap,
+                reset_fg,
+                label_w,
+                value_max_w,
+                status_slot_w,
+                reset_slot_w,
+                has_reset_slot,
+                reset,
+                actions_el,
             },
-            move |cx| {
-                let label = cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Px(label_w),
-                                height: Length::Px(density.row_height),
-                                min_height: Some(Length::Px(density.row_height)),
-                                max_height: Some(Length::Px(density.row_height)),
-                                ..Default::default()
-                            },
-                            flex: FlexItemStyle {
-                                order: 0,
-                                grow: 0.0,
-                                shrink: 0.0,
-                                basis: Length::Px(label_w),
-                                align_self: None,
-                            },
-                            overflow: Overflow::Clip,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    |cx| vec![label(cx)],
-                );
-
-                let body = cx.flex(
-                    FlexProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Auto,
-                                min_height: Some(Length::Px(density.row_height)),
-                                ..Default::default()
-                            },
-                            flex: FlexItemStyle {
-                                order: 0,
-                                grow: 1.0,
-                                shrink: 1.0,
-                                basis: Length::Px(Px(0.0)),
-                                align_self: None,
-                            },
-                            ..Default::default()
-                        },
-                        direction: Axis::Horizontal,
-                        gap: SpacingLength::Px(trailing_gap),
-                        padding: Edges::all(Px(0.0)).into(),
-                        justify: MainAlign::Start,
-                        align: CrossAlign::Center,
-                        wrap: false,
-                    },
-                    move |cx| {
-                        let value = mark_property_row_value_slot(cx.container(
-                            ContainerProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Auto,
-                                        min_height: Some(Length::Px(density.row_height)),
-                                        max_width: Some(Length::Px(value_max_w)),
-                                        ..Default::default()
-                                    },
-                                    flex: FlexItemStyle {
-                                        order: 0,
-                                        grow: 1.0,
-                                        shrink: 1.0,
-                                        basis: Length::Px(Px(0.0)),
-                                        align_self: None,
-                                    },
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            |cx| vec![value(cx)],
-                        ));
-
-                        let mut out = vec![value];
-
-                        if has_reset_slot {
-                            let reset_for_slot = reset.clone();
-                            out.push(property_row_trailing_slot(
-                                cx,
-                                reset_slot_w,
-                                density.row_height,
-                                move |cx| {
-                                    reset::property_row_reset_element(
-                                        cx,
-                                        reset_for_slot.clone(),
-                                        affordance_extent,
-                                        reset_fg,
-                                    )
-                                    .into_iter()
-                                    .collect::<Vec<AnyElement>>()
-                                },
-                            ));
-                        }
-
-                        if let Some(action_el) = actions_el {
-                            out.push(property_row_trailing_slot(
-                                cx,
-                                status_slot_w,
-                                density.row_height,
-                                move |_cx| vec![action_el],
-                            ));
-                        }
-
-                        out
-                    },
-                );
-
-                vec![label, body]
-            },
+            label,
+            value,
         ),
         PropertyRowLayoutVariant::Column => {
             let header_gap = trailing_gap;

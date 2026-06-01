@@ -1330,6 +1330,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Editor PropertyRow Row Branch Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `PropertyRow` row-layout branch assembly moved out of the element owner into
+a private `composites/property_row/element/row.rs` owner without changing row/column/auto layout
+variant resolution, row label fixed slot width, single-line label line box, row value-slot overflow
+semantics, reset/action trailing slot wiring, row min-height behavior, test-id propagation, or
+public property row APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/property_row/element.rs` keeps layout-query/resolution,
+  auto dispatch, column branch assembly, and test-id application while delegating row branch
+  construction.
+- `ecosystem/fret-ui-editor/src/composites/property_row/element/row.rs` owns row branch flex
+  layout, fixed label slot, value-slot marking, reset/action trailing slot mounting, and row
+  branch min-height/value max-width routing.
+- `tools/gate_imui_workstream_source.py` now tracks the PropertyRow row branch split, and the
+  value-slot overflow guard checks the two marked value slots across root and row owners.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the row branch owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor property_row --no-fail-fast`: pass (10 passed, 218
+  skipped).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor GradientEditor Stop Model Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `GradientEditor` stop model read/sort preparation moved out of the root
