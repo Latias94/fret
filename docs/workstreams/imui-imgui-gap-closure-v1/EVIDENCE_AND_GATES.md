@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-01
 
+## IMUI Text Picker Input-Root Child Owner-Split Evidence - 2026-06-01
+
+Claim verified: IMUI input-text picker input-root assistive semantics and focused-input keyboard
+handler installation moved out of `text_picker_controls/input.rs` into private child owners without
+changing ComboBox active-descendant/controls/expanded semantics, fill-width root sizing, text input
+mounting, keyboard-navigation gating, candidate forwarding, popup-open state, or completion/history
+picker behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input.rs` keeps input-root request/result
+  shapes, text input mounting, response capture, and root container construction.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input/semantics.rs` owns the ComboBox
+  assistive semantics projection for active descendant, controlled popup panel, and expanded state.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input/keyboard.rs` owns input-focused
+  keyboard handler gating, candidate forwarding, popup-open model forwarding, and repeat policy
+  forwarding.
+- `tools/gate_imui_workstream_source.py` now tracks both child owners and rejects semantics or
+  input-focused keyboard policy from drifting back into the input-root composition owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new child owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_input_text_picker_options_smoke --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor NumericInput Affix Segment Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `NumericInput` prefix/suffix affix segment rendering moved out of

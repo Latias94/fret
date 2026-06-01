@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 IMUI input-text picker input-root child owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/input.rs` now keeps input-root request/result
+shapes, text input mounting, and fill-width root container construction while delegating
+ComboBox assistive semantics to `text_picker_controls/input/semantics.rs` and focused-input keyboard
+handler gating/candidate forwarding to `text_picker_controls/input/keyboard.rs`. Completion/history
+picker behavior, popup-open state, active-descendant semantics, root sizing, keyboard navigation
+conditions, and public IMUI options/responses remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 editor NumericInput affix segment owner-split result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` now keeps joined field/frame
 orchestration, input owner invocation, and error owner invocation while delegating prefix/suffix

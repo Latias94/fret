@@ -5,9 +5,13 @@ use fret_ui::element::{AnyElement, ContainerProps, Length};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use super::super::{InputTextOptions, ResponseExt};
-use super::keyboard::{InputTextPickerKeyboardState, install_picker_keyboard_handler};
+use super::keyboard::InputTextPickerKeyboardState;
+use keyboard::{InputRootKeyboardHandlerRequest, install_input_root_keyboard_handler};
+use semantics::input_root_assistive_semantics;
 
+mod keyboard;
 mod options;
+mod semantics;
 
 pub(super) use options::prepare_text_picker_input_options;
 
@@ -35,27 +39,30 @@ pub(super) fn render_text_picker_input_root<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     request: InputTextPickerInputRootRequest<'_>,
 ) -> BuiltInputTextPickerInputRoot {
-    let assistive_semantics = super::super::text_controls::InputTextAssistiveSemantics {
-        active_descendant: None,
-        active_descendant_element: request
-            .picker_expanded
-            .then_some(request.active_element)
-            .flatten()
-            .map(|element| element.0),
-        controls_element: request
-            .picker_expanded
-            .then_some(request.popup_panel_id)
-            .flatten()
-            .map(|element| element.0),
-        expanded: Some(request.picker_expanded),
-    };
+    let InputTextPickerInputRootRequest {
+        model,
+        input_options,
+        popup_open,
+        keyboard_state,
+        visible_candidates,
+        keyboard_navigation,
+        keyboard_repeat,
+        picker_candidate_visible,
+        hide_for_exact_match,
+        picker_expanded,
+        active_element,
+        popup_panel_id,
+    } = request;
+
+    let assistive_semantics =
+        input_root_assistive_semantics(picker_expanded, active_element, popup_panel_id);
 
     let mut response = ResponseExt::default();
     let input_element =
         super::super::text_controls::input_text_model_element_with_options_and_semantics(
             cx,
-            request.model.clone(),
-            request.input_options,
+            model.clone(),
+            input_options,
             assistive_semantics,
             &mut response,
         );
@@ -65,23 +72,21 @@ pub(super) fn render_text_picker_input_root<H: UiHost>(
     props.layout.size.height = Length::Auto;
     let root = cx.container(props, |_cx| vec![input_element]);
 
-    if response.enabled()
-        && request.keyboard_navigation
-        && response.focused()
-        && request.picker_candidate_visible
-        && !request.hide_for_exact_match
-        && let Some(state) = request.keyboard_state.clone()
-    {
-        install_picker_keyboard_handler(
-            cx,
-            root.id,
-            request.model,
-            request.popup_open,
-            state,
-            request.visible_candidates.to_vec(),
-            request.keyboard_repeat,
-        );
-    }
+    install_input_root_keyboard_handler(
+        cx,
+        root.id,
+        &response,
+        InputRootKeyboardHandlerRequest {
+            model,
+            popup_open,
+            keyboard_state,
+            visible_candidates,
+            keyboard_navigation,
+            keyboard_repeat,
+            picker_candidate_visible,
+            hide_for_exact_match,
+        },
+    );
 
     BuiltInputTextPickerInputRoot { root, response }
 }

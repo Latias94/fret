@@ -3341,9 +3341,18 @@ Last updated: 2026-06-01
       without changing test-id fallback, `.input` suffix derivation, TextField-to-ComboBox role
       normalization, assistive semantics, root fill sizing, or keyboard handler installation.
       Result: `text_picker_controls/input/options.rs` owns `PreparedInputTextPickerInput` and
-      `prepare_text_picker_input_options(...)`; `input.rs` keeps input-root request/result shapes,
+      `prepare_text_picker_input_options(...)`; `input.rs` kept input-root request/result shapes,
       assistive semantics, root container construction, text input mounting, and keyboard handler
-      installation.
+      installation until the follow-up child-owner split below.
+- [x] Split IMUI input-text picker input-root assistive semantics and input-focused keyboard
+      handler installation out of `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input.rs`
+      into private child owners without changing ComboBox active-descendant/controls/expanded
+      semantics, root fill sizing, text input mounting, keyboard-navigation gating, candidate
+      forwarding, popup-open state, or completion/history picker behavior.
+      Result: `text_picker_controls/input/semantics.rs` owns the assistive semantics projection,
+      `text_picker_controls/input/keyboard.rs` owns the focused-input keyboard handler gating and
+      candidate forwarding, and `input.rs` now keeps request/result shapes plus text input/root
+      container construction.
 - [x] Split IMUI popup-store stale-generation cleanup out of
       `ecosystem/fret-ui-kit/src/imui/popup_store.rs` into a private lifecycle owner without
       changing per-window state shape, popup open/anchor drop semantics, keep-alive generation
