@@ -13,15 +13,13 @@ use super::host_frame::{DockSpaceLayoutSnapshot, panel_root_placements_for_snaps
 use super::layout::{dock_space_regions, hidden_bounds};
 use super::manager::DockManager;
 use super::paint::{
-    TabChromePaintInput, TabDetailPaintInput, complex_drop_overlay_paint_inputs,
-    paint_basic_drop_overlay, paint_complex_drop_overlay_inputs, paint_drag_payload_ghost,
-    paint_drop_hints, paint_floating_chrome_inputs, paint_split_handle_inputs,
-    paint_tab_chrome_inputs, paint_tab_detail_inputs, paint_tab_insert_preview_title,
-    paint_viewport_surface_inputs, split_handle_paint_inputs, tab_chrome_paint_inputs,
-    tab_detail_paint_inputs, viewport_surface_paint_inputs,
+    complex_drop_overlay_paint_inputs, paint_basic_drop_overlay, paint_complex_drop_overlay_inputs,
+    paint_drag_payload_ghost, paint_drop_hints, paint_floating_chrome_inputs,
+    paint_split_handle_inputs, paint_tab_chrome_inputs, paint_tab_detail_inputs,
+    paint_tab_insert_preview_title, paint_viewport_surface_inputs, split_handle_paint_inputs,
+    tab_chrome_paint_inputs, tab_detail_paint_inputs, viewport_surface_paint_inputs,
 };
 use super::services::{DockFocusRequestService, DockPanelContentService};
-use super::tab_overflow::TabOverflowMenuState;
 use super::types::DockDropTarget;
 use super::viewport::{
     ViewportCaptureState, viewport_input_from_hit, viewport_input_from_hit_clamped,
@@ -38,6 +36,7 @@ mod interaction;
 mod overflow;
 mod registry;
 mod tab_metrics;
+mod tab_paint_state;
 mod tear_off;
 
 use drag_preview::{
@@ -66,7 +65,7 @@ use geometry::{
 use interaction::{
     DeclarativeDividerDrag, DeclarativeDockInteractionService, DeclarativeFloatingDrag,
     DeclarativeFloatingHover, DeclarativePendingDockDrag, DeclarativePendingDockTabsDrag,
-    DeclarativePressedFloatingClose, DeclarativePressedTabClose, DeclarativeTabHover,
+    DeclarativePressedFloatingClose, DeclarativePressedTabClose,
 };
 use overflow::{
     declarative_handle_tab_overflow_menu_left_click, declarative_handle_tab_overflow_menu_wheel,
@@ -85,6 +84,9 @@ use tab_metrics::{
     declarative_tab_scroll_for_frame, declarative_tab_widths_for_layout,
     declarative_tab_widths_from_prepared_titles, prepare_declarative_tab_detail_paint,
     prepare_declarative_tab_title,
+};
+use tab_paint_state::{
+    apply_declarative_tab_interaction_paint_state, declarative_tab_hover_for_window,
 };
 use tear_off::clamp_declarative_floating_rect_to_bounds;
 
@@ -110,71 +112,6 @@ fn sync_declarative_viewport_layouts<H: UiHost>(
     app.with_global_mut_untracked(DockManager::default, |dock, _app| {
         dock.sync_viewport_layouts_for_window(window, viewport_layouts);
     });
-}
-
-fn declarative_tab_hover_for_window<H: UiHost>(
-    app: &H,
-    window: AppWindowId,
-) -> DeclarativeTabHover {
-    app.global::<DeclarativeDockInteractionService>()
-        .map(|service| service.tab_hover(window))
-        .unwrap_or_default()
-}
-
-fn apply_declarative_tab_interaction_paint_state(
-    frame: &DockSpaceElementFrame,
-    hover: DeclarativeTabHover,
-    menu: Option<TabOverflowMenuState>,
-    tab_chrome_inputs: &mut [TabChromePaintInput],
-    tab_detail_inputs: &mut [TabDetailPaintInput],
-) {
-    for input in tab_chrome_inputs.iter_mut() {
-        input.hovered_tab = None;
-    }
-    for input in tab_detail_inputs.iter_mut() {
-        input.hovered_tab = None;
-        input.hovered_tab_close = false;
-        input.hovered_tab_overflow_button = false;
-        input.tab_overflow_menu = None;
-    }
-
-    if let Some((tabs, index)) = hover.tab
-        && let Some(&rect) = frame.layout_all.get(&tabs)
-    {
-        for input in tab_chrome_inputs
-            .iter_mut()
-            .filter(|input| input.rect == rect)
-        {
-            input.hovered_tab = Some(index);
-        }
-        for input in tab_detail_inputs
-            .iter_mut()
-            .filter(|input| input.rect == rect)
-        {
-            input.hovered_tab = Some(index);
-            input.hovered_tab_close = hover.tab_close;
-        }
-    }
-
-    if let Some(tabs) = hover.overflow_button
-        && let Some(&rect) = frame.layout_all.get(&tabs)
-    {
-        for input in tab_detail_inputs
-            .iter_mut()
-            .filter(|input| input.rect == rect)
-        {
-            input.hovered_tab_overflow_button = true;
-        }
-    }
-
-    if let Some(menu) = menu
-        && let Some(&rect) = frame.layout_all.get(&menu.tabs)
-        && let Some(input) = tab_detail_inputs
-            .iter_mut()
-            .find(|input| input.rect == rect)
-    {
-        input.tab_overflow_menu = Some(menu);
-    }
 }
 
 /// Build a declarative dock-space host from explicit panel roots.

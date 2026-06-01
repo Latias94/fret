@@ -462,6 +462,13 @@ Each TODO is labeled:
         before-close/auto-close regressions that were previously inline in `runtime.rs`.
       - Focused runtime regressions, source gate, JSON shape, catalog, and diff checks passed
         locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking declarative tab paint-state owner split keeps tab-hover/menu paint
+      projection out of the dock-space assembly shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M33_DOCKING_DECLARATIVE_TAB_PAINT_STATE_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/dock/declarative/tab_paint_state.rs` owns tab hover lookup and
+        `TabChromePaintInput` / `TabDetailPaintInput` hover/menu state projection.
+      - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
