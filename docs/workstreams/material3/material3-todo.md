@@ -272,6 +272,11 @@ These files are primarily *shared policy primitives*, not one-off component layo
     resolver `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`.
 - [x] Provide a baseline, hand-authored v30 token preset injection (state/motion/shape/typescale subset).
   - Evidence: `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_tokens`, `theme_config`).
+- [x] Split v30 preset composition into a generated Material Web baseline plus a curated Fret
+  overlay Module.
+  - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`,
+    `ecosystem/fret-ui-material3/src/tokens/v30_overlay.rs`,
+    `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_tokens`).
 - [x] Expand token audit coverage to validate format-string templates (variant/state keys) against v30 injection.
   - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs` (`expand_key_templates`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (icon-button hovered/focused/pressed icon tokens).

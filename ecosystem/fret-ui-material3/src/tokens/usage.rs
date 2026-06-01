@@ -13,6 +13,7 @@ const TOKEN_SOURCE_EXCLUDES: &[&str] = &[
     "material_web_v30.rs",
     "usage.rs",
     "v30.rs",
+    "v30_overlay.rs",
     "visual_fixture_model.rs",
     "visual_fixtures.rs",
 ];

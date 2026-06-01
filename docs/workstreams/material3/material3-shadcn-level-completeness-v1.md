@@ -92,6 +92,9 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     Material 48dp conformance additions case-only when they share the same harness.
   - v30 injection gained the real menu shape, navigation sizing, and time-picker separator aliases
     exposed by the wider manifest.
+  - v30 injection now keeps generated Material Web tokens in `tokens::material_web_v30` and Fret
+    overlay/backfill policy in `tokens::v30_overlay`, so future source alignment can review each
+    Module independently.
   - Gates: `--lib::material3_token_usage_manifest_matches_literal_md_sources`,
     `--lib::material3_literal_md_tokens_resolve_in_v30_theme`,
     `material3_token_audit -- --no-material-missing --limit 5`,

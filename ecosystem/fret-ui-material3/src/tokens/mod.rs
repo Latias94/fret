@@ -61,6 +61,7 @@ pub(crate) mod time_picker_common;
 pub(crate) mod tooltip;
 pub(crate) mod top_app_bar;
 pub(crate) mod typography;
+pub(crate) mod v30_overlay;
 
 #[cfg(test)]
 mod visual_fixture_model;

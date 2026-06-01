@@ -34,6 +34,9 @@ shadcn-level completeness work exposed two shallow test surfaces.
   rewrites the fixture from the same Interface.
 - v30 token injection now fills the previously missing button, menu, navigation, search, date, and
   time-picker Material/Fret-specific token aliases used by recipe token modules.
+- v30 token injection now separates the generated Material Web baseline (`tokens::material_web_v30`)
+  from the curated Fret overlay Module (`tokens::v30_overlay`) that owns Fret markers, aliases,
+  defaults, and hand-authored backfills.
 
 ## Proof
 
