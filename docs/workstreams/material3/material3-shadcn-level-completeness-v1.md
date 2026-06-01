@@ -94,13 +94,20 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
   - Gates: `select_behavior::select_chevron_rotates_on_first_open_frame`,
     `autocomplete_motion::{autocomplete_popup_and_chevron_animate_on_open_close_frames,
     exposed_dropdown_popup_and_chevron_animate_on_open_close_frames}`.
+- 2026-06-01 Field-overlay composition inside Dialog:
+  - `Select` and `Autocomplete` now have dialog-nested overlay gates that prove popover-above-modal
+    stacking, first-Escape nested dismissal, focus restoration/retention inside the dialog, and
+    second-Escape modal dismissal.
+  - Gates: `material3_overlay_interactions::{select_inside_dialog_closes_inner_popover_before_modal_dialog,
+    autocomplete_inside_dialog_escape_closes_inner_popover_before_modal_dialog}` plus diag scripts
+    `ui-gallery-material3-dialog-select-nested-overlay.json` and
+    `ui-gallery-material3-autocomplete-dialog-nested-overlay.json`.
 
 ## Next Recommended Focus
 
 1. Finish Tabs residuals only if panel presence becomes a real app need:
    `force_mount` content, presence motion, and overflow/scroll affordance polish.
-2. Broaden gallery/diag coverage for now-Strong families through
-   `material3-composition-hardening-v1.md`, especially docs-path examples that prove field,
-   overlay, and navigation components together.
+2. Broaden gallery/diag coverage for field overlays inside `ModalBottomSheet`, then Search + Menu
+   and navigation routed-content compositions through `material3-composition-hardening-v1.md`.
 3. Start a second-pass polish lane for cross-component compositions: Search + Menu, field overlays
    inside Dialog/BottomSheet, and navigation surfaces with routed panel content.

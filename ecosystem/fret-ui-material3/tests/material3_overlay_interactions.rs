@@ -1086,6 +1086,223 @@ fn select_inside_dialog_closes_inner_popover_before_modal_dialog() {
 }
 
 #[test]
+fn autocomplete_inside_dialog_escape_closes_inner_popover_before_modal_dialog() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Autocomplete, AutocompleteItem, Button, Dialog, DialogAction};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(640.0), Px(480.0)),
+    );
+
+    let dialog_open = app.models_mut().insert(false);
+    let query = app.models_mut().insert(String::new());
+    let selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
+    let items: Arc<[AutocompleteItem]> = vec![
+        AutocompleteItem::new("alpha", "Alpha"),
+        AutocompleteItem::new("beta", "Beta"),
+        AutocompleteItem::new("gamma", "Gamma"),
+    ]
+    .into();
+
+    let dialog_open_for_render = dialog_open.clone();
+    let query_for_render = query.clone();
+    let selected_for_render = selected.clone();
+    let items_for_render = items.clone();
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let dialog_open = dialog_open_for_render.clone();
+            let query = query_for_render.clone();
+            let selected = selected_for_render.clone();
+            let items = items_for_render.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let dialog = Dialog::new(dialog_open.clone())
+                    .headline("Preferences")
+                    .supporting_text("The nested Autocomplete should behave like the top overlay.")
+                    .actions(vec![DialogAction::new("Done").test_id("dialog-done")])
+                    .test_id("dialog")
+                    .into_element(
+                        cx,
+                        |cx| {
+                            let trigger = Button::new("Open dialog")
+                                .test_id("dialog-trigger")
+                                .into_element(cx);
+                            with_padding(cx, Px(24.0), trigger)
+                        },
+                        move |cx| {
+                            vec![
+                                Autocomplete::new(query.clone())
+                                    .selected_value(selected.clone())
+                                    .a11y_label("Dialog Autocomplete")
+                                    .label("Project")
+                                    .placeholder("Type to filter")
+                                    .items(items.clone())
+                                    .test_id("dialog-autocomplete")
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+                vec![dialog]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger_node = semantics_node_id_by_test_id(&ui, "dialog-trigger")
+        .expect("expected dialog trigger before opening");
+    ui.set_focus(Some(trigger_node));
+    let _ = app.models_mut().update(&dialog_open, |open| *open = true);
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let input_node = semantics_node_id_by_test_id(&ui, "dialog-autocomplete")
+        .expect("expected autocomplete inside dialog");
+    ui.set_focus(Some(input_node));
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    let mut saw_nested_popover = false;
+    for _ in 0..32 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        let visible_open: Vec<_> = stack
+            .stack
+            .iter()
+            .filter(|entry| entry.open && entry.visible)
+            .map(|entry| entry.kind)
+            .collect();
+
+        if visible_open.contains(&OverlayStackEntryKind::Modal)
+            && visible_open.contains(&OverlayStackEntryKind::Popover)
+        {
+            assert_eq!(
+                visible_open.last().copied(),
+                Some(OverlayStackEntryKind::Popover),
+                "expected the nested Autocomplete popover to be above the dialog modal layer"
+            );
+            saw_nested_popover = true;
+            break;
+        }
+    }
+    assert!(
+        saw_nested_popover,
+        "expected Autocomplete popover above Dialog"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Escape));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Escape));
+
+    let mut popover_closed = false;
+    for _ in 0..60 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        popover_closed = !stack
+            .stack
+            .iter()
+            .any(|entry| entry.kind == OverlayStackEntryKind::Popover && entry.visible);
+        if popover_closed {
+            break;
+        }
+    }
+
+    assert!(
+        popover_closed,
+        "expected first Escape to close the Autocomplete popover"
+    );
+    assert_eq!(
+        app.models().get_copied(&dialog_open),
+        Some(true),
+        "expected first Escape to leave the Dialog open"
+    );
+    let input_node_after_close = semantics_node_id_by_test_id(&ui, "dialog-autocomplete")
+        .expect("expected autocomplete input after closing nested popover");
+    let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
+        ui.focus().and_then(|focused| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.id == focused)
+                .and_then(|node| node.test_id.clone())
+        })
+    });
+    assert_eq!(
+        ui.focus(),
+        Some(input_node_after_close),
+        "expected focus to remain on the Autocomplete input inside the Dialog; focused_test_id={focused_test_id:?}"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Escape));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Escape));
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        false,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    assert_eq!(
+        app.models().get_copied(&dialog_open),
+        Some(false),
+        "expected second Escape to close the Dialog"
+    );
+}
+
+#[test]
 fn dialog_scrim_dismisses_without_activating_underlay() {
     use fret_ui_material3::{Button, Dialog, DialogAction};
 

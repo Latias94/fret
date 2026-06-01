@@ -66,6 +66,52 @@ Proof:
 
 Residual risk:
 
-- `Autocomplete` inside `Dialog` and field overlays inside `ModalBottomSheet` should get equivalent
-  composition gates.
+- Field overlays inside `ModalBottomSheet` should get equivalent composition gates.
+- Search + menu and navigation + routed content are not covered by this batch.
+
+## Batch 2: Autocomplete Inside Dialog
+
+Truth:
+
+- A nested `Autocomplete` listbox inside a modal `Dialog` must paint above the dialog layer.
+- The combobox input keeps focus while the listbox is open; active option state is exposed through
+  active-descendant rather than roving focus.
+- Pressing `Escape` while the nested listbox is open must close the `Autocomplete` first and keep the
+  `Dialog` open.
+- A second `Escape` must then close the `Dialog` and restore the dialog trigger.
+
+Artifacts:
+
+- Regression test:
+  `ecosystem/fret-ui-material3/tests/material3_overlay_interactions.rs`
+  (`autocomplete_inside_dialog_escape_closes_inner_popover_before_modal_dialog`)
+- Gallery repro:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/autocomplete.rs`
+  (`ui-gallery-material3-autocomplete-dialog`)
+- Diag script:
+  `tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-autocomplete-dialog-nested-overlay.json`
+
+Wiring:
+
+- The existing Autocomplete gallery page already contains a Dialog probe with top and bottom-edge
+  Autocomplete fields.
+- No component-specific policy fix was required: the Batch 1 overlay controller changes also cover
+  combobox-style nested popovers where focus stays on the input.
+- Material recipes continue to use the shared `fret-ui-kit` overlay arbitration and Material-owned
+  combobox behavior.
+
+Proof:
+
+- The new targeted test passed without extra component or kit changes, proving the Batch 1 modal /
+  popover focus arbitration is reusable across `Select` and `Autocomplete`.
+- The diag script opens the gallery Autocomplete Dialog, filters the nested listbox, checks focus on
+  the combobox input, closes the listbox with `Escape`, checks the Dialog remains open, then closes
+  the Dialog with a second `Escape`.
+- Validation:
+  - `cargo test -p fret-ui-material3 --features diagnostics --test material3_overlay_interactions autocomplete_inside_dialog_escape_closes_inner_popover_before_modal_dialog -- --exact`
+  - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-autocomplete-dialog-nested-overlay.json --dir target/fret-diag-material3-autocomplete-dialog-nested-overlay --session-auto --timeout-ms 360000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3`
+
+Residual risk:
+
+- `TextField` / `Autocomplete` inside `ModalBottomSheet` still need composition gates.
 - Search + menu and navigation + routed content are not covered by this batch.
