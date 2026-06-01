@@ -95,17 +95,14 @@ pub(crate) fn label_color(
     }
 
     let state = if selected { "selected" } else { "unselected" };
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => format!("{state}.pressed.label-text.color"),
-        Some(PressableInteraction::Focused) => format!("{state}.focus.label-text.color"),
-        Some(PressableInteraction::Hovered) => format!("{state}.hover.label-text.color"),
-        None => format!("{state}.label-text.color"),
-    };
+    let key = chip_common::interaction_key(
+        COMPONENT_PREFIX,
+        Some(state),
+        interaction,
+        "label-text.color",
+    );
 
-    MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &format!("{COMPONENT_PREFIX}.{key}"),
-        "md.sys.color.on-surface-variant",
-    )
+    MaterialTokenResolver::new(theme).color_comp_or_sys(&key, "md.sys.color.on-surface-variant")
 }
 
 pub(crate) fn label_text_style(theme: &Theme) -> TextStyle {
@@ -157,21 +154,15 @@ pub(crate) fn leading_icon_color(
     }
 
     let state = if selected { "selected" } else { "unselected" };
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => {
-            format!("with-leading-icon.{state}.pressed.leading-icon.color")
-        }
-        Some(PressableInteraction::Focused) => {
-            format!("with-leading-icon.{state}.focus.leading-icon.color")
-        }
-        Some(PressableInteraction::Hovered) => {
-            format!("with-leading-icon.{state}.hover.leading-icon.color")
-        }
-        None => format!("with-leading-icon.{state}.leading-icon.color"),
-    };
+    let icon_state = format!("with-leading-icon.{state}");
+    let key = chip_common::interaction_key(
+        COMPONENT_PREFIX,
+        Some(icon_state.as_str()),
+        interaction,
+        "leading-icon.color",
+    );
 
-    MaterialTokenResolver::new(theme)
-        .color_comp_or_sys(&format!("{COMPONENT_PREFIX}.{key}"), "md.sys.color.primary")
+    MaterialTokenResolver::new(theme).color_comp_or_sys(&key, "md.sys.color.primary")
 }
 
 pub(crate) fn trailing_icon_color(
@@ -190,21 +181,15 @@ pub(crate) fn trailing_icon_color(
     }
 
     let state = if selected { "selected" } else { "unselected" };
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => {
-            format!("with-trailing-icon.{state}.pressed.trailing-icon.color")
-        }
-        Some(PressableInteraction::Focused) => {
-            format!("with-trailing-icon.{state}.focus.trailing-icon.color")
-        }
-        Some(PressableInteraction::Hovered) => {
-            format!("with-trailing-icon.{state}.hover.trailing-icon.color")
-        }
-        None => format!("with-trailing-icon.{state}.trailing-icon.color"),
-    };
+    let icon_state = format!("with-trailing-icon.{state}");
+    let key = chip_common::interaction_key(
+        COMPONENT_PREFIX,
+        Some(icon_state.as_str()),
+        interaction,
+        "trailing-icon.color",
+    );
 
-    MaterialTokenResolver::new(theme)
-        .color_comp_or_sys(&format!("{COMPONENT_PREFIX}.{key}"), "md.sys.color.primary")
+    MaterialTokenResolver::new(theme).color_comp_or_sys(&key, "md.sys.color.primary")
 }
 
 pub(crate) fn flat_unselected_outline(

@@ -36,16 +36,8 @@ pub(crate) fn label_color(
         );
     }
 
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => "pressed.label-text.color",
-        Some(PressableInteraction::Focused) => "focus.label-text.color",
-        Some(PressableInteraction::Hovered) => "hover.label-text.color",
-        None => "label-text.color",
-    };
-    MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &format!("{COMPONENT_PREFIX}.{key}"),
-        "md.sys.color.on-surface",
-    )
+    let key = chip_common::interaction_key(COMPONENT_PREFIX, None, interaction, "label-text.color");
+    MaterialTokenResolver::new(theme).color_comp_or_sys(&key, "md.sys.color.on-surface")
 }
 
 pub(crate) fn label_text_style(theme: &Theme) -> TextStyle {
@@ -70,29 +62,25 @@ pub(crate) fn leading_icon_color(
         );
     }
 
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => "with-icon.pressed.icon.color",
-        Some(PressableInteraction::Focused) => "with-icon.focus.icon.color",
-        Some(PressableInteraction::Hovered) => "with-icon.hover.icon.color",
-        None => "with-icon.icon.color",
-    };
+    let key = chip_common::interaction_key(
+        COMPONENT_PREFIX,
+        Some("with-icon"),
+        interaction,
+        "icon.color",
+    );
 
-    MaterialTokenResolver::new(theme)
-        .color_comp_or_sys(&format!("{COMPONENT_PREFIX}.{key}"), "md.sys.color.primary")
+    MaterialTokenResolver::new(theme).color_comp_or_sys(&key, "md.sys.color.primary")
 }
 
 pub(crate) fn state_layer_color(theme: &Theme, interaction: Option<PressableInteraction>) -> Color {
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => "pressed.state-layer.color",
-        Some(PressableInteraction::Focused) => "focus.state-layer.color",
-        Some(PressableInteraction::Hovered) => "hover.state-layer.color",
-        None => "hover.state-layer.color",
-    };
+    let key = chip_common::interaction_key(
+        COMPONENT_PREFIX,
+        None,
+        interaction.or(Some(PressableInteraction::Hovered)),
+        "state-layer.color",
+    );
 
-    MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &format!("{COMPONENT_PREFIX}.{key}"),
-        "md.sys.color.on-surface",
-    )
+    MaterialTokenResolver::new(theme).color_comp_or_sys(&key, "md.sys.color.on-surface")
 }
 
 pub(crate) fn state_layer_opacity(theme: &Theme, interaction: Option<PressableInteraction>) -> f32 {

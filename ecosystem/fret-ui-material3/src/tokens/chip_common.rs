@@ -78,18 +78,16 @@ pub(crate) fn state_layer_color(
     interaction: Option<PressableInteraction>,
     sys_key: &str,
 ) -> Color {
-    let Some(interaction_suffix) = interaction.map(PressableInteraction::token_state) else {
+    let Some(interaction) = interaction else {
         return Color::TRANSPARENT;
     };
-    MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &state_key(
-            component_prefix,
-            state_prefix,
-            interaction_suffix,
-            "state-layer.color",
-        ),
-        sys_key,
-    )
+    let key = interaction_key(
+        component_prefix,
+        state_prefix,
+        Some(interaction),
+        "state-layer.color",
+    );
+    MaterialTokenResolver::new(theme).color_comp_or_sys(&key, sys_key)
 }
 
 pub(crate) fn state_layer_opacity(
@@ -98,19 +96,17 @@ pub(crate) fn state_layer_opacity(
     state_prefix: Option<&str>,
     interaction: Option<PressableInteraction>,
 ) -> f32 {
-    let Some(interaction_suffix) = interaction.map(PressableInteraction::token_state) else {
+    let Some(interaction) = interaction else {
         return 0.0;
     };
+    let key = interaction_key(
+        component_prefix,
+        state_prefix,
+        Some(interaction),
+        "state-layer.opacity",
+    );
     MaterialTokenResolver::new(theme)
-        .number_optional(
-            Some(&state_key(
-                component_prefix,
-                state_prefix,
-                interaction_suffix,
-                "state-layer.opacity",
-            )),
-            0.0,
-        )
+        .number_optional(Some(&key), 0.0)
         .clamp(0.0, 1.0)
 }
 
@@ -119,14 +115,15 @@ pub(crate) fn pressed_state_layer_opacity(
     component_prefix: &str,
     state_prefix: Option<&str>,
 ) -> f32 {
+    let key = interaction_key(
+        component_prefix,
+        state_prefix,
+        Some(PressableInteraction::Pressed),
+        "state-layer.opacity",
+    );
     MaterialTokenResolver::new(theme)
         .number_comp_or_sys(
-            &state_key(
-                component_prefix,
-                state_prefix,
-                "pressed",
-                "state-layer.opacity",
-            ),
+            &key,
             "md.sys.state.pressed.state-layer-opacity",
             DEFAULT_PRESSED_STATE_LAYER_OPACITY,
         )
@@ -147,15 +144,14 @@ pub(crate) fn elevated_container_elevation(
         );
     }
 
-    let key = interaction
-        .map(|interaction| format!("elevated.{}.container.elevation", interaction.token_state()))
-        .unwrap_or_else(|| "elevated.container.elevation".to_string());
+    let key = interaction_key(
+        component_prefix,
+        Some("elevated"),
+        interaction,
+        "container.elevation",
+    );
 
-    chip_metric(
-        theme,
-        format!("{component_prefix}.{key}"),
-        DEFAULT_ELEVATION,
-    )
+    chip_metric(theme, key, DEFAULT_ELEVATION)
 }
 
 pub(crate) fn elevated_container_shadow_color(theme: &Theme, component_prefix: &str) -> Color {
@@ -213,17 +209,27 @@ pub(crate) struct ChipOutlineKeys {
     pub color: &'static str,
 }
 
-fn state_key(
+pub(crate) fn interaction_key(
     component_prefix: &str,
     state_prefix: Option<&str>,
-    interaction_suffix: &str,
+    interaction: Option<PressableInteraction>,
     role_suffix: &str,
 ) -> String {
-    match state_prefix {
-        Some(state_prefix) => {
-            format!("{component_prefix}.{state_prefix}.{interaction_suffix}.{role_suffix}")
+    match (state_prefix, interaction) {
+        (Some(state_prefix), Some(interaction)) => {
+            format!(
+                "{component_prefix}.{state_prefix}.{}.{role_suffix}",
+                interaction.token_state()
+            )
         }
-        None => format!("{component_prefix}.{interaction_suffix}.{role_suffix}"),
+        (Some(state_prefix), None) => format!("{component_prefix}.{state_prefix}.{role_suffix}"),
+        (None, Some(interaction)) => {
+            format!(
+                "{component_prefix}.{}.{role_suffix}",
+                interaction.token_state()
+            )
+        }
+        (None, None) => format!("{component_prefix}.{role_suffix}"),
     }
 }
 
@@ -291,6 +297,41 @@ mod tests {
             )
             .width,
             Px(2.0)
+        );
+    }
+
+    #[test]
+    fn shared_chip_interaction_key_builds_stateful_material_paths() {
+        assert_eq!(
+            interaction_key(
+                "md.comp.filter-chip",
+                Some("selected"),
+                Some(PressableInteraction::Hovered),
+                "label-text.color",
+            ),
+            "md.comp.filter-chip.selected.hover.label-text.color"
+        );
+        assert_eq!(
+            interaction_key(
+                "md.comp.input-chip",
+                Some("with-leading-icon.unselected"),
+                Some(PressableInteraction::Pressed),
+                "leading-icon.color",
+            ),
+            "md.comp.input-chip.with-leading-icon.unselected.pressed.leading-icon.color"
+        );
+        assert_eq!(
+            interaction_key(
+                "md.comp.assist-chip",
+                None,
+                Some(PressableInteraction::Focused),
+                "state-layer.color",
+            ),
+            "md.comp.assist-chip.focus.state-layer.color"
+        );
+        assert_eq!(
+            interaction_key("md.comp.assist-chip", None, None, "label-text.color"),
+            "md.comp.assist-chip.label-text.color"
         );
     }
 

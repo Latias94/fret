@@ -67,17 +67,9 @@ pub(crate) fn label_color(
         );
     }
 
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => "pressed.label-text.color",
-        Some(PressableInteraction::Focused) => "focus.label-text.color",
-        Some(PressableInteraction::Hovered) => "hover.label-text.color",
-        None => "label-text.color",
-    };
+    let key = chip_common::interaction_key(COMPONENT_PREFIX, None, interaction, "label-text.color");
 
-    MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &format!("{COMPONENT_PREFIX}.{key}"),
-        "md.sys.color.on-surface-variant",
-    )
+    MaterialTokenResolver::new(theme).color_comp_or_sys(&key, "md.sys.color.on-surface-variant")
 }
 
 pub(crate) fn label_text_style(theme: &Theme) -> TextStyle {
@@ -116,15 +108,14 @@ pub(crate) fn leading_icon_color(
         );
     }
 
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => "with-leading-icon.pressed.leading-icon.color",
-        Some(PressableInteraction::Focused) => "with-leading-icon.focus.leading-icon.color",
-        Some(PressableInteraction::Hovered) => "with-leading-icon.hover.leading-icon.color",
-        None => "with-leading-icon.leading-icon.color",
-    };
+    let key = chip_common::interaction_key(
+        COMPONENT_PREFIX,
+        Some("with-leading-icon"),
+        interaction,
+        "leading-icon.color",
+    );
 
-    MaterialTokenResolver::new(theme)
-        .color_comp_or_sys(&format!("{COMPONENT_PREFIX}.{key}"), "md.sys.color.primary")
+    MaterialTokenResolver::new(theme).color_comp_or_sys(&key, "md.sys.color.primary")
 }
 
 pub(crate) fn flat_outline(
