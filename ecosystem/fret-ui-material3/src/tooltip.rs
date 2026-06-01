@@ -70,6 +70,19 @@ fn tooltip_metric_override(
     resolve_override_slot_with(slot.as_ref(), states, |value| *value, fallback)
 }
 
+fn tooltip_corner_radii_override(
+    slot: &OverrideSlot<Px>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> Corners,
+) -> Corners {
+    resolve_override_slot_with(
+        slot.as_ref(),
+        states,
+        |value| Corners::all(*value),
+        fallback,
+    )
+}
+
 fn tooltip_edges_override(
     slot: &OverrideSlot<Edges>,
     states: WidgetStates,
@@ -1055,11 +1068,10 @@ impl PlainTooltip {
                 tooltip_color_override(theme, &style.plain_supporting_text_color, states, || {
                     tooltip_tokens::plain_supporting_text_color(theme)
                 });
-            let radius =
-                tooltip_metric_override(&style.plain_container_corner_radius, states, || {
-                    tooltip_tokens::plain_container_shape_radius(theme)
+            let corner_radii =
+                tooltip_corner_radii_override(&style.plain_container_corner_radius, states, || {
+                    tooltip_tokens::plain_container_shape(theme)
                 });
-            let corner_radii = Corners::all(radius);
             // Material Web v30 plain tooltip tokens do not include elevation; keep it flat by default.
             let elevation = Px(0.0);
             let shadow_color = tooltip_tokens::shadow_color(theme);
@@ -1382,11 +1394,10 @@ impl RichTooltip {
                 tooltip_color_override(theme, &style.rich_action_label_color, states, || {
                     tooltip_tokens::rich_action_label_color(theme)
                 });
-            let radius =
-                tooltip_metric_override(&style.rich_container_corner_radius, states, || {
-                    tooltip_tokens::rich_container_shape_radius(theme)
+            let corner_radii =
+                tooltip_corner_radii_override(&style.rich_container_corner_radius, states, || {
+                    tooltip_tokens::rich_container_shape(theme)
                 });
-            let corner_radii = Corners::all(radius);
             let elevation =
                 tooltip_metric_override(&style.rich_container_elevation, states, || {
                     tooltip_tokens::rich_container_elevation(theme)

@@ -3,7 +3,7 @@
 //! This module centralizes token key mapping and fallback chains so tooltip outcomes remain stable
 //! and drift-resistant during refactors.
 
-use fret_core::{Color, Edges, Px, TextStyle};
+use fret_core::{Color, Corners, Edges, Px, TextStyle};
 use fret_ui::Theme;
 use fret_ui_kit::typography::TextIntent;
 
@@ -38,8 +38,16 @@ pub(crate) fn plain_supporting_text_style(theme: &Theme) -> TextStyle {
     )
 }
 
+#[cfg(test)]
 pub(crate) fn plain_container_shape_radius(theme: &Theme) -> Px {
     tooltip_metric(theme, "md.comp.plain-tooltip.container.shape", Px(4.0))
+}
+
+pub(crate) fn plain_container_shape(theme: &Theme) -> Corners {
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &["md.comp.plain-tooltip.container.shape"],
+        Corners::all(Px(4.0)),
+    )
 }
 
 pub(crate) fn plain_container_padding(theme: &Theme) -> Edges {
@@ -90,8 +98,16 @@ pub(crate) fn rich_container_elevation(theme: &Theme) -> Px {
     tooltip_metric(theme, "md.comp.rich-tooltip.container.elevation", Px(3.0))
 }
 
+#[cfg(test)]
 pub(crate) fn rich_container_shape_radius(theme: &Theme) -> Px {
     tooltip_metric(theme, "md.comp.rich-tooltip.container.shape", Px(12.0))
+}
+
+pub(crate) fn rich_container_shape(theme: &Theme) -> Corners {
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &["md.comp.rich-tooltip.container.shape"],
+        Corners::all(Px(12.0)),
+    )
 }
 
 pub(crate) fn rich_container_padding(theme: &Theme, has_title: bool) -> Edges {
@@ -221,5 +237,54 @@ mod tests {
         assert_eq!(plain_container_shape_radius(&theme), Px(6.0));
         assert_eq!(rich_container_elevation(&theme), Px(4.0));
         assert_eq!(rich_container_shape_radius(&theme), Px(14.0));
+    }
+
+    #[test]
+    fn tooltip_shapes_prefer_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.plain-tooltip.container.shape".to_string(), 6.0);
+        patch.corners.insert(
+            "md.comp.plain-tooltip.container.shape".to_string(),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            },
+        );
+        patch
+            .metrics
+            .insert("md.comp.rich-tooltip.container.shape".to_string(), 14.0);
+        patch.corners.insert(
+            "md.comp.rich-tooltip.container.shape".to_string(),
+            Corners {
+                top_left: Px(5.0),
+                top_right: Px(6.0),
+                bottom_right: Px(7.0),
+                bottom_left: Px(8.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            plain_container_shape(&theme),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            }
+        );
+        assert_eq!(
+            rich_container_shape(&theme),
+            Corners {
+                top_left: Px(5.0),
+                top_right: Px(6.0),
+                bottom_right: Px(7.0),
+                bottom_left: Px(8.0),
+            }
+        );
     }
 }
