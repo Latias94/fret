@@ -33,10 +33,6 @@ pub(crate) fn icon_size(theme: &Theme) -> Px {
     snackbar_metric(theme, "md.comp.snackbar.icon.size", Px(24.0))
 }
 
-pub(crate) fn container_shape_radius(theme: &Theme) -> Px {
-    snackbar_metric(theme, "md.comp.snackbar.container.shape", Px(4.0))
-}
-
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
     MaterialTokenResolver::new(theme)
         .corners_chain_or(&["md.comp.snackbar.container.shape"], Corners::all(Px(4.0)))
@@ -461,7 +457,7 @@ mod tests {
         let theme = Theme::global(&app);
 
         assert_eq!(icon_size(theme), Px(24.0));
-        assert_eq!(container_shape_radius(theme), Px(4.0));
+        assert_eq!(container_shape(theme), Corners::all(Px(4.0)));
         assert_eq!(container_elevation(theme), Px(0.0));
         assert_eq!(single_line_min_height(theme), None);
         assert_eq!(two_line_min_height(theme), None);
@@ -490,7 +486,7 @@ mod tests {
         let (_app, theme) = theme_with_patch(patch);
 
         assert_eq!(icon_size(&theme), Px(26.0));
-        assert_eq!(container_shape_radius(&theme), Px(6.0));
+        assert_eq!(container_shape(&theme), Corners::all(Px(6.0)));
         assert_eq!(container_elevation(&theme), Px(3.0));
         assert_eq!(single_line_min_height(&theme), Some(Px(48.0)));
         assert_eq!(two_line_min_height(&theme), Some(Px(68.0)));

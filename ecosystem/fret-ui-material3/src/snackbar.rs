@@ -371,14 +371,6 @@ fn snackbar_color_override(
     )
 }
 
-fn snackbar_metric_override(
-    slot: &OverrideSlot<Px>,
-    states: WidgetStates,
-    fallback: impl FnOnce() -> Px,
-) -> Px {
-    resolve_override_slot_with(slot.as_ref(), states, |value| *value, fallback)
-}
-
 fn snackbar_corner_radii_override(
     slot: &OverrideSlot<Px>,
     states: WidgetStates,
@@ -411,9 +403,6 @@ fn snackbar_optional_metric_override(
 fn snackbar_toast_layer_style(theme: &Theme, style: &SnackbarStyle) -> ToastLayerStyle {
     let icon_size = snackbar_tokens::icon_size(theme);
     let states = WidgetStates::empty();
-    let container_radius = snackbar_metric_override(&style.container_corner_radius, states, || {
-        snackbar_tokens::container_shape_radius(theme)
-    });
     let container_corner_radii =
         snackbar_corner_radii_override(&style.container_corner_radius, states, || {
             snackbar_tokens::container_shape(theme)
@@ -467,7 +456,6 @@ fn snackbar_toast_layer_style(theme: &Theme, style: &SnackbarStyle) -> ToastLaye
         two_line_min_height: two_line_height,
         container_padding: Some(container_padding),
         container_corner_radii: Some(container_corner_radii),
-        container_radius: Some(container_radius),
         title: ToastTextStyle {
             style_key: Some("md.comp.snackbar.supporting-text".to_string()),
             color_key: Some("md.comp.snackbar.supporting-text.color".to_string()),
