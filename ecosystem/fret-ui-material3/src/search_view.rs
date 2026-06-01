@@ -733,6 +733,7 @@ impl SearchView {
                 vec![overlay_root],
             );
             request.root_name = Some(format!("material3.search_view.{}", input_id.0));
+            request.initial_focus = Some(input_id);
             request.close_on_window_focus_lost = true;
             request.close_on_window_resize = true;
             request = request.add_dismissable_branch(input_id);

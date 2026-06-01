@@ -177,3 +177,66 @@ Residual risk:
 - The gate covers field editing, overlay stacking/dismiss, focus, and basic hit-testing. It does not
   prove real mobile IME/window-inset behavior yet.
 - Search + menu and navigation + routed content are not covered by this batch.
+
+## Batch 4: SearchView + DropdownMenu Sibling Popovers
+
+Truth:
+
+- A docked `SearchView` must keep input focus after its suggestion panel opens; suggestions must not
+  steal focus just because the panel mounted.
+- The Search + Menu gallery composition must give `SearchView` a definite hit-testable width using
+  caller-owned layout constraints.
+- Typing in the open `SearchView` must update the query while suggestions remain visible.
+- Clicking the sibling Material `DropdownMenu` trigger must close the `SearchView` panel and open
+  the menu in the same interaction.
+- The menu must expose `role=menu`, move focus to its first enabled item, and restore focus to the
+  trigger on `Escape`.
+
+Artifacts:
+
+- Component fix:
+  `ecosystem/fret-ui-material3/src/search_view.rs`
+- Regression test:
+  `ecosystem/fret-ui-material3/tests/material3_overlay_interactions.rs`
+  (`search_view_and_dropdown_menu_arbitrate_sibling_popovers`)
+- Gallery repro:
+  `apps/fret-ui-gallery/src/ui/snippets/material3/menu.rs`
+  (`ui-gallery-material3-menu-search`, `ui-gallery-material3-menu-search-actions`)
+- Diag script:
+  `tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-search-menu-sibling-popovers.json`
+
+Wiring:
+
+- Docked `SearchView` now assigns its input element as the popover `initial_focus`, preserving
+  Compose-like text input focus while non-modal suggestions are present.
+- `fret-ui-kit` still owns shared overlay arbitration; `SearchView` only supplies the correct
+  Material recipe policy for this popover.
+- The Search + Menu gallery owns row width negotiation with an explicit `SearchView` width; no core
+  or recipe default width changed.
+- Material `DropdownMenu` remains menu-like and consumes initial focus once it becomes the active
+  overlay.
+
+Proof:
+
+- Early diag runs exposed two composition bugs before the final fix: the gallery `SearchView` had
+  zero-width bounds, and then the suggestion list stole focus from the input after opening.
+- The targeted test now asserts input focus after suggestion open, query editing, sibling popover
+  arbitration, menu first-item focus, and `Escape` focus restoration.
+- The diag script asserts search bounds, input focus, query text, panel existence/size, sibling
+  `SearchView` dismissal, menu role, first-item focus, and trigger restore.
+- Validation:
+  - `cargo fmt -p fret-ui-gallery -p fret-ui-material3`
+  - `python -m json.tool tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-search-menu-sibling-popovers.json`
+  - `cargo check -p fret-ui-gallery --features gallery-material3`
+  - `cargo test -p fret-ui-material3 --features diagnostics --test material3_overlay_interactions search_view_and_dropdown_menu_arbitrate_sibling_popovers -- --exact`
+  - `.\target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-search-menu-sibling-popovers.json --dir target/fret-diag-material3-search-menu-sibling-popovers --session-auto --timeout-ms 360000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3`
+    passed with `run_id=1780281469011`; session:
+    `target/fret-diag-material3-search-menu-sibling-popovers/sessions/1780281105569-228848`.
+
+Residual risk:
+
+- The gate covers docked `SearchView` + sibling `DropdownMenu`. Full-screen `SearchView` + menu is
+  not covered.
+- Edge-collision behavior when a `SearchView` is opened at the bottom of a viewport should get its
+  own focused follow-up if it becomes a product requirement.
+- Navigation routed-content composition is still pending.

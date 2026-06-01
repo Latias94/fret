@@ -108,13 +108,21 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     that catches zero-width/hit-test regressions before interaction.
   - Gates: `material3_overlay_interactions::field_overlays_inside_modal_bottom_sheet_close_before_sheet`
     plus `ui-gallery-material3-bottom-sheet-fields-nested-overlays.json`.
+- 2026-06-01 SearchView + Menu sibling overlay composition:
+  - Docked `SearchView` now keeps input focus when suggestions open by assigning input initial focus
+    to its non-modal popover request.
+  - The Menu gallery includes a Search + Menu composition with caller-owned `SearchView` width,
+    stable Search/panel/suggestion/menu anchors, and a diag gate covering query editing, sibling
+    overlay dismissal, menu role, first-item focus, and `Escape` focus restore.
+  - Gates: `material3_overlay_interactions::search_view_and_dropdown_menu_arbitrate_sibling_popovers`
+    plus `ui-gallery-material3-search-menu-sibling-popovers.json`.
 
 ## Next Recommended Focus
 
 1. Finish Tabs residuals only if panel presence becomes a real app need:
    `force_mount` content, presence motion, and overflow/scroll affordance polish.
-2. Add Search + Menu composition gates: `SearchBar` / `SearchView` next to Material
-   `DropdownMenu`, with focus, outside-dismiss, and overlay ordering evidence.
-3. Add navigation routed-content gates for `NavigationBar`, `NavigationRail`, and
+2. Add navigation routed-content gates for `NavigationBar`, `NavigationRail`, and
    `NavigationDrawer`: selected state, visible panel content, focus movement, and route/content
    `test_id` anchors.
+3. Add focused SearchView edge/collision coverage if product surfaces place search near viewport
+   bottoms, including full-screen `SearchView` + menu composition if needed.
