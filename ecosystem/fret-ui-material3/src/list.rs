@@ -29,7 +29,7 @@ use crate::foundation::context::{
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
@@ -523,7 +523,7 @@ fn list_item<H: UiHost>(
                     );
                     let ripple_base_opacity =
                         list_tokens::pressed_state_layer_opacity(theme, selected);
-                    let config = material_pressable_indication_config(theme, None);
+                    let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                     let selected_bg = selected
                         .then(|| list_tokens::selected_container_background(theme, enabled));

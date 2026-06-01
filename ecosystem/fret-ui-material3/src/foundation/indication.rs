@@ -83,6 +83,14 @@ pub fn material_pressable_indication_config(
     }
 }
 
+pub fn material_pressable_indication_config_in_scope<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    ripple_radius: Option<Px>,
+) -> IndicationConfig {
+    let theme = fret_ui::Theme::global(&*cx.app);
+    material_pressable_indication_config(theme, ripple_radius)
+}
+
 #[derive(Debug, Clone, Copy)]
 struct IndicationFrame {
     state_layer_opacity: f32,

@@ -29,7 +29,7 @@ use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable_with_ripple_bounds,
-    material_pressable_indication_config,
+    material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
@@ -471,7 +471,7 @@ fn navigation_rail_item<H: UiHost>(
         let icon_size = rail_tokens::icon_size(theme);
 
         let ripple_base_opacity = rail_tokens::pressed_state_layer_opacity(theme);
-        let config = material_pressable_indication_config(theme, None);
+        let config = material_pressable_indication_config_in_scope(&*cx, None);
 
         let label_style_active = rail_tokens::label_text_style(theme, true);
         let label_style_inactive = rail_tokens::label_text_style(theme, false);

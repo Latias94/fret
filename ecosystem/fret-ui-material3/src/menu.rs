@@ -33,7 +33,7 @@ use fret_ui_kit::{
 
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::style_overrides::merge_style_override_slots;
@@ -1620,7 +1620,7 @@ fn material_menu_item<H: UiHost>(
                     );
 
                     let ripple_base_opacity = menu_tokens::pressed_state_layer_opacity(theme);
-                    let config = material_pressable_indication_config(theme, None);
+                    let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                     let default_label_style = menu_tokens::item_label_text_style(theme);
                     let label_style = resolve_override_slot_with(

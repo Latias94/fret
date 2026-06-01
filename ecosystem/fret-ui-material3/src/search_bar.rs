@@ -25,7 +25,7 @@ use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable_with_last_down,
-    material_pressable_indication_config,
+    material_pressable_indication_config_in_scope,
 };
 use crate::foundation::strings::{
     material_search_bar_search_label, material_search_bar_suggestions_available_label,
@@ -425,7 +425,8 @@ impl SearchBar {
                     );
 
                     let ripple_base_opacity = search_bar_tokens::pressed_state_layer_opacity(theme);
-                    let indication_config = material_pressable_indication_config(theme, None);
+                    let indication_config =
+                        material_pressable_indication_config_in_scope(&*cx, None);
 
                     let input_text_style = search_bar_text_style_override(
                         &self.style.input_text_style,

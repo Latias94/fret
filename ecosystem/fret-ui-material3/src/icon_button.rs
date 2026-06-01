@@ -30,7 +30,7 @@ use crate::foundation::context::{
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{
@@ -346,7 +346,7 @@ impl IconButton {
                                     self.toggle,
                                     self.selected,
                                 );
-                            let config = material_pressable_indication_config(theme, None);
+                            let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                             (colors, state_layer_target, ripple_base_opacity, config)
                         };
@@ -679,7 +679,7 @@ impl IconToggleButton {
                                     true,
                                     checked,
                                 );
-                            let config = material_pressable_indication_config(theme, None);
+                            let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                             (colors, state_layer_target, ripple_base_opacity, config)
                         };

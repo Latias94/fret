@@ -51,7 +51,7 @@ use crate::foundation::field_overlay::{
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::logical_edges::horizontal_logical_edges;
 use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
@@ -926,7 +926,7 @@ fn select_trigger_element<H: UiHost>(
                 .number_by_key("md.sys.state.focus.state-layer-opacity")
                 .unwrap_or(0.1);
             let ripple_base_opacity = pressed_opacity;
-            let ripple_config = material_pressable_indication_config(theme, None);
+            let ripple_config = material_pressable_indication_config_in_scope(&*cx, None);
 
             let field_springs = field_motion_springs_in_scope(&*cx, theme);
             let chevron_spring =
@@ -2378,7 +2378,7 @@ fn select_list_item<H: UiHost>(
                         .number_by_key("md.sys.state.focus.state-layer-opacity")
                         .unwrap_or(0.1);
                     let ripple_base_opacity = pressed_opacity;
-                    let config = material_pressable_indication_config(theme, None);
+                    let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                     let label_color = select_tokens::menu_list_item_label_text_color(
                         theme,
