@@ -25,9 +25,10 @@ This medium goal is complete for the targeted composition set:
   physical destination order stayed LTR under RTL.
 
 Open follow-ups are intentionally outside this medium goal and listed in the residual sections
-below: modal drawer routed content, full app-router proof for ADR 0230 route hooks, drawer slot
-mirroring under RTL, SearchView edge collision/full-screen composition, and real mobile IME/inset
-behavior for bottom-sheet fields.
+below: full app-router proof for ADR 0230 route hooks, drawer slot mirroring under RTL, SearchView
+edge collision/full-screen composition, and real mobile IME/inset behavior for bottom-sheet fields.
+The modal drawer routed-content follow-up was completed later in
+`docs/workstreams/material3/material3-modal-navigation-drawer-routed-content-v1.md`.
 
 ## Scope
 
@@ -318,8 +319,8 @@ Proof:
 
 Residual risk:
 
-- `ModalNavigationDrawer` focus trap/restore is already covered, but modal drawer routed content is
-  not part of this batch.
+- `ModalNavigationDrawer` focus trap/restore is already covered; modal drawer routed content was
+  completed later in `material3-modal-navigation-drawer-routed-content-v1.md`.
 - This is a component-composition route model, not a full app-router proof for ADR 0230 route hooks.
 - Adaptive breakpoint routed-content combinations remain follow-up polish rather than this batch's
   proof target.

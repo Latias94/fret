@@ -1,0 +1,250 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-material3-modal-navigation-drawer-routed-content",
+    "required_launch_features": ["gallery-material3"],
+    "required_capabilities": ["diag.script_v2"],
+    "tags": [
+      "ui_gallery",
+      "material3",
+      "modal_navigation_drawer",
+      "routed_content",
+      "close_on_select",
+      "focus_restore"
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 15 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "material3 modal navigation drawer" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-material3-modal-navigation-drawer"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-page-material3-modal-navigation-drawer"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-modal-navigation-drawer-route-panel-search"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-material3-modal-drawer-open"
+      },
+      "button": "left",
+      "stable_frames": 4,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-modal-navigation-drawer.panel"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-modal-drawer-search"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-material3-modal-drawer-settings"
+      },
+      "button": "left",
+      "stable_frames": 4,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-modal-navigation-drawer-route-panel-settings"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-modal-navigation-drawer-route-panel-search"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-modal-navigation-drawer.panel"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-modal-drawer-open"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-material3-modal-drawer-open"
+      },
+      "button": "left",
+      "stable_frames": 4,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-modal-navigation-drawer.panel"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-modal-drawer-settings"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-material3-modal-drawer-play"
+      },
+      "button": "left",
+      "stable_frames": 4,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-modal-navigation-drawer-route-panel-play"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-modal-navigation-drawer-route-panel-settings"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-modal-navigation-drawer.panel"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-modal-drawer-open"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-material3-modal-navigation-drawer-routed-content"
+    }
+  ]
+}

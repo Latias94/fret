@@ -38,15 +38,31 @@ use crate::foundation::test_id::{
 };
 use crate::tokens::navigation_drawer as drawer_tokens;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct NavigationDrawerItem {
     value: Arc<str>,
     label: Arc<str>,
     icon: IconId,
     badge_label: Option<Arc<str>>,
     disabled: bool,
+    on_select: Option<OnActivate>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
+}
+
+impl std::fmt::Debug for NavigationDrawerItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NavigationDrawerItem")
+            .field("value", &self.value)
+            .field("label", &self.label)
+            .field("icon", &self.icon)
+            .field("badge_label", &self.badge_label)
+            .field("disabled", &self.disabled)
+            .field("on_select", &self.on_select.is_some())
+            .field("a11y_label", &self.a11y_label)
+            .field("test_id", &self.test_id)
+            .finish()
+    }
 }
 
 impl NavigationDrawerItem {
@@ -57,6 +73,7 @@ impl NavigationDrawerItem {
             icon,
             badge_label: None,
             disabled: false,
+            on_select: None,
             a11y_label: None,
             test_id: None,
         }
@@ -69,6 +86,11 @@ impl NavigationDrawerItem {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn on_select(mut self, on_select: OnActivate) -> Self {
+        self.on_select = Some(on_select);
         self
     }
 
@@ -380,6 +402,7 @@ fn navigation_drawer_item<H: UiHost>(
     let label = item.label.clone();
     let icon = item.icon.clone();
     let badge_label = item.badge_label.clone();
+    let on_select = item.on_select.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
     let chrome_test_id = optional_chrome_part_test_id(test_id.as_ref());
@@ -443,17 +466,20 @@ fn navigation_drawer_item<H: UiHost>(
         if enabled {
             let model_for_press = model.clone();
             let value_for_press = value.clone();
-            let handler: OnActivate = Arc::new(move |host, action_cx, _reason| {
+            let on_select = on_select.clone();
+            let handler: OnActivate = Arc::new(move |host, action_cx, reason| {
                 let already_selected = host
                     .models_mut()
                     .read(&model_for_press, |v| v.as_ref() == value_for_press.as_ref())
                     .ok()
                     .unwrap_or(false);
-                if already_selected {
-                    return;
+                if !already_selected {
+                    let _ = host.update_model(&model_for_press, |v| *v = value_for_press.clone());
+                    host.request_redraw(action_cx.window);
                 }
-                let _ = host.update_model(&model_for_press, |v| *v = value_for_press.clone());
-                host.request_redraw(action_cx.window);
+                if let Some(on_select) = on_select.as_ref() {
+                    on_select(host, action_cx, reason);
+                }
             });
             cx.pressable_on_activate(handler);
         }

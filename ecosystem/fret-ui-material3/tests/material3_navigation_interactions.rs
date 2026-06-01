@@ -31,21 +31,31 @@ fn semantics_node_selected(ui: &UiTree<TestHost>, test_id: &str) -> bool {
         .unwrap_or_else(|| panic!("expected semantics node for test_id {test_id}"))
 }
 
-fn assert_route_panel(ui: &UiTree<TestHost>, active: &str, inactive: &[&str]) {
+fn assert_route_panel_for(
+    ui: &UiTree<TestHost>,
+    root_test_id: &str,
+    item_prefix: &str,
+    active: &str,
+    inactive: &[&str],
+) {
     assert!(
-        semantics_node_exists(ui, "nav-routes-panel"),
-        "expected routed content panel root"
+        semantics_node_exists(ui, root_test_id),
+        "expected routed content panel root {root_test_id}"
     );
     assert!(
-        semantics_node_exists(ui, &format!("nav-routes-panel-{active}")),
+        semantics_node_exists(ui, &format!("{item_prefix}-{active}")),
         "expected routed content panel for {active}"
     );
     for route in inactive {
         assert!(
-            !semantics_node_exists(ui, &format!("nav-routes-panel-{route}")),
+            !semantics_node_exists(ui, &format!("{item_prefix}-{route}")),
             "expected inactive route panel {route} to be unmounted"
         );
     }
+}
+
+fn assert_route_panel(ui: &UiTree<TestHost>, active: &str, inactive: &[&str]) {
+    assert_route_panel_for(ui, "nav-routes-panel", "nav-routes-panel", active, inactive);
 }
 
 #[test]
@@ -1503,6 +1513,266 @@ fn navigation_surfaces_drive_routed_panel_content() {
         ui.focus(),
         semantics_node_id_by_test_id(&ui, "nav-routes-drawer-settings"),
         "expected focus to stay on the active NavigationDrawer destination"
+    );
+}
+
+#[test]
+fn modal_navigation_drawer_drives_routed_content_and_closes_on_destination_activation() {
+    use fret_core::Axis;
+    use fret_icons::ids;
+    use fret_ui::Invalidation;
+    use fret_ui::action::OnActivate;
+    use fret_ui::element::{ContainerProps, FlexProps, Length, SpacingLength};
+    use fret_ui_material3::{
+        Button, ModalNavigationDrawer, NavigationDrawer, NavigationDrawerItem,
+        NavigationDrawerVariant,
+    };
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(640.0), Px(420.0)),
+    );
+
+    let open = app.models_mut().insert(false);
+    let route = app.models_mut().insert(Arc::<str>::from("search"));
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let selected_route = cx
+                .get_model_cloned(&route, Invalidation::Layout)
+                .unwrap_or_else(|| Arc::<str>::from("search"));
+            let route_id = match selected_route.as_ref() {
+                "settings" => "settings",
+                "play" => "play",
+                _ => "search",
+            };
+            let route_text = match route_id {
+                "settings" => "Settings route content",
+                "play" => "Play route content",
+                _ => "Search route content",
+            };
+            let route_leaf = cx
+                .text(route_text)
+                .test_id(format!("modal-routes-panel-{route_id}"));
+            let route_panel = cx
+                .container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = fret_ui::element::LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(260.0));
+                            layout.size.height = Length::Px(Px(180.0));
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    move |_cx| vec![route_leaf],
+                )
+                .test_id("modal-routes-panel");
+
+            let close_on_select: OnActivate = {
+                let open = open.clone();
+                Arc::new(move |host, action_cx, _reason| {
+                    let _ = host.models_mut().update(&open, |v| *v = false);
+                    host.request_redraw(action_cx.window);
+                })
+            };
+
+            let modal = ModalNavigationDrawer::new(open.clone())
+                .test_id("modal-routes-drawer")
+                .into_element(
+                    cx,
+                    {
+                        let route = route.clone();
+                        let close_on_select = close_on_select.clone();
+                        move |cx| {
+                            NavigationDrawer::new(route)
+                                .variant(NavigationDrawerVariant::Modal)
+                                .a11y_label("Material routed modal navigation drawer")
+                                .test_id("modal-routes-drawer-content")
+                                .items(vec![
+                                    NavigationDrawerItem::new("search", "Search", ids::ui::SEARCH)
+                                        .on_select(close_on_select.clone())
+                                        .test_id("modal-routes-drawer-search"),
+                                    NavigationDrawerItem::new(
+                                        "settings",
+                                        "Settings",
+                                        ids::ui::SETTINGS,
+                                    )
+                                    .badge_label("2")
+                                    .on_select(close_on_select.clone())
+                                    .test_id("modal-routes-drawer-settings"),
+                                    NavigationDrawerItem::new("play", "Play", ids::ui::PLAY)
+                                        .badge_label("99+")
+                                        .on_select(close_on_select.clone())
+                                        .test_id("modal-routes-drawer-play"),
+                                ])
+                                .into_element(cx)
+                        }
+                    },
+                    {
+                        let open = open.clone();
+                        move |cx| {
+                            let open_drawer: OnActivate = {
+                                let open = open.clone();
+                                Arc::new(move |host, action_cx, _reason| {
+                                    let _ = host.models_mut().update(&open, |v| *v = true);
+                                    host.request_redraw(action_cx.window);
+                                })
+                            };
+                            let trigger = Button::new("Open drawer")
+                                .on_activate(open_drawer)
+                                .test_id("modal-routes-trigger")
+                                .into_element(cx);
+
+                            let stack = {
+                                let mut props = FlexProps::default();
+                                props.direction = Axis::Vertical;
+                                props.gap = SpacingLength::Px(Px(16.0));
+                                props.layout.size.width = Length::Fill;
+                                props.layout.size.height = Length::Fill;
+                                cx.flex(props, move |_cx| vec![trigger, route_panel])
+                            };
+                            with_padding(cx, Px(24.0), stack)
+                        }
+                    },
+                );
+            vec![modal]
+        })
+    };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    assert_route_panel_for(
+        &ui,
+        "modal-routes-panel",
+        "modal-routes-panel",
+        "search",
+        &["settings", "play"],
+    );
+
+    let trigger_node = semantics_node_id_by_test_id(&ui, "modal-routes-trigger")
+        .expect("expected modal routed drawer trigger");
+    ui.set_focus(Some(trigger_node));
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let snapshot = ui
+        .semantics_snapshot()
+        .expect("expected semantics snapshot with modal drawer open");
+    assert!(
+        snapshot.barrier_root.is_some(),
+        "expected modal barrier root while routed drawer is open"
+    );
+    assert!(semantics_node_selected(&ui, "modal-routes-drawer-search"));
+
+    let search = semantics_node_id_by_test_id(&ui, "modal-routes-drawer-search")
+        .expect("expected modal routed drawer search item");
+    ui.set_focus(Some(search));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    assert_eq!(
+        app.models().get_cloned(&route).as_deref(),
+        Some("settings"),
+        "expected modal NavigationDrawer roving to update the caller-owned route model"
+    );
+    assert_eq!(
+        app.models().get_copied(&open),
+        Some(true),
+        "expected roving selection to keep the modal drawer open"
+    );
+    assert!(semantics_node_selected(&ui, "modal-routes-drawer-settings"));
+    assert_eq!(
+        ui.focus(),
+        semantics_node_id_by_test_id(&ui, "modal-routes-drawer-settings"),
+        "expected focus to stay on the routed modal drawer destination after roving"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Enter));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Enter));
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    assert_eq!(
+        app.models().get_copied(&open),
+        Some(false),
+        "expected activating the selected destination to close the modal drawer"
+    );
+
+    let mut saw_barrier_cleared = false;
+    for _ in 0..60 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let snapshot = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after modal drawer close");
+        if snapshot.barrier_root.is_none() {
+            saw_barrier_cleared = true;
+            break;
+        }
+    }
+    assert!(
+        saw_barrier_cleared,
+        "expected modal routed drawer barrier to unmount after destination activation"
+    );
+    assert_eq!(
+        ui.focus(),
+        semantics_node_id_by_test_id(&ui, "modal-routes-trigger"),
+        "expected focus to restore to the drawer trigger after destination activation closes it"
+    );
+    assert_route_panel_for(
+        &ui,
+        "modal-routes-panel",
+        "modal-routes-panel",
+        "settings",
+        &["search", "play"],
     );
 }
 

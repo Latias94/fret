@@ -35,7 +35,7 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
 | Dialog / BottomSheet | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Dialog gates cover open/close fade + rise/scale; BottomSheet gates cover open/close sheet-height slide without panel fade. |
 | Tooltip | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Rich tooltips now expose an action slot that opts into hit-testable tooltip content while plain/descriptive tooltips remain click-through by default. |
 | Snackbar | Strong | Strong | Strong | Strong | Strong | Strong | Strong | 2026-06-01: gained public `SnackbarStyle`, host `.style(...)`, direct Material style adoption in the shared toast renderer, and style override paint/layout gates. Residuals: richer app-level queue policy examples. |
-| NavigationBar / Rail / Drawer | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Routed-content composition and NavigationBar RTL physical ordering are covered; continue polishing adaptive/modal-drawer examples. |
+| NavigationBar / Rail / Drawer | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Routed-content composition, modal drawer close-after-selection, and NavigationBar RTL physical ordering are covered; continue polishing adaptive/RTL drawer details. |
 | TopAppBar | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Scroll behavior policy is in Material ecosystem code; nested-scroll consumption remains a future mechanism trigger. |
 | DatePicker / TimePicker | Strong | Strong | Strong | Strong | Strong | Strong | Strong | Motion gates cover modal fade/rise/scale and TimePicker docked clock-face transitions; residuals are broader composition/demo coverage. |
 | SearchBar / SearchView | Strong | Strong | Strong | Strong | Strong | Strong | Strong | `SearchBarStyle`/`SearchViewStyle` now cover visual slots; motion gates cover hover/ripple, docked fade/height, and full-screen geometry expand/collapse. |
@@ -130,15 +130,21 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     physical destination-order mirroring.
   - Gates: `navigation_state::{navigation_bar_rtl_arrow_left_moves_to_next_logical_destination,
     navigation_bar_rtl_theme_direction_mirrors_physical_destination_order}`.
+- 2026-06-01 ModalNavigationDrawer routed-content composition:
+  - `NavigationDrawerItem::on_select(...)` exposes the caller-owned destination activation hook
+    needed to model Compose-style `selected = item; drawerState.close()` flows without baking modal
+    close policy into the drawer recipe.
+  - The ModalNavigationDrawer gallery now renders caller-owned route panels and closes the drawer on
+    explicit destination activation while preserving route selection and focus restoration.
+  - Gates:
+    `material3_navigation_interactions::modal_navigation_drawer_drives_routed_content_and_closes_on_destination_activation`
+    plus `ui-gallery-material3-modal-navigation-drawer-routed-content.json`.
 
 ## Next Recommended Focus
 
 1. Finish Tabs residuals only if panel presence becomes a real app need:
    `force_mount` content, presence motion, and overflow/scroll affordance polish.
-2. Add modal-drawer routed-content coverage if product surfaces need route switching inside
-   `ModalNavigationDrawer`, including close-after-selection policy if that becomes a Material app
-   requirement.
-3. Audit `NavigationDrawer` icon/text slot mirroring under RTL if drawer-heavy RTL app surfaces
+2. Audit `NavigationDrawer` icon/text slot mirroring under RTL if drawer-heavy RTL app surfaces
    become a priority.
-4. Add focused SearchView edge/collision coverage if product surfaces place search near viewport
+3. Add focused SearchView edge/collision coverage if product surfaces place search near viewport
    bottoms, including full-screen `SearchView` + menu composition if needed.
