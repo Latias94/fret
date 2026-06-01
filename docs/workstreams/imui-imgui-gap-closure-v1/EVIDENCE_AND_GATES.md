@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-01
 
+## Editor DragValue Typing Owner-Split Evidence - 2026-06-01
+
+Claim verified: editor `DragValue` typing input assembly moved out of the root control owner into
+a private `controls/drag_value/typing.rs` owner without changing hidden input mounting,
+constrained parse, validation, selection behavior, commit/cancel mapping, scrub focus restore,
+scrub revision bumping, outcome callback emission, redraw, scrub frame behavior, or public
+`DragValue` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/drag_value.rs` keeps keyed control orchestration, scrub
+  mode switching, `DragValueCore` wiring, live model updates, and scrub/input composition.
+- `ecosystem/fret-ui-editor/src/controls/drag_value/typing.rs` owns `NumericInput` assembly,
+  constrained parse wrapping, typing options forwarding, commit/cancel outcome mapping, focus
+  restore to scrub, scrub revision bumping, redraw, and numeric text-entry focus handoff.
+- `tools/gate_imui_workstream_source.py` now tracks the typing split and rejects typing input
+  policy from drifting back into the drag-value root owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the drag-value typing owner
+  file.
+- `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md` includes the new
+  typing owner in its cross-workstream evidence anchor list.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor drag_value --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor DragValue Options Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `DragValue` options/default records moved out of the root control owner into

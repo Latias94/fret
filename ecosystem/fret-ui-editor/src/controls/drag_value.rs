@@ -8,21 +8,16 @@
 use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
-use crate::controls::numeric_input::{
-    NumericFormatFn, NumericInput, NumericInputErrorDisplay, NumericInputOptions,
-    NumericInputOutcome, NumericParseFn, NumericValidateFn,
-};
+use crate::controls::numeric_input::{NumericFormatFn, NumericParseFn, NumericValidateFn};
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::derived_test_id;
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
     NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
-    sync_numeric_text_entry_focus_handoff,
 };
 use crate::primitives::style::EditorStyle;
 use crate::primitives::{
     DragValueCore, DragValueCoreOptions, EditSessionOutcome, NumericPresentation,
-    constrain_numeric_value,
 };
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PressablePointerDownResult, UiActionHost};
@@ -36,11 +31,13 @@ mod model;
 mod options;
 mod scrub;
 mod session;
+mod typing;
 
 use model::{DragValueMode, DragValueState};
 pub use options::DragValueOptions;
 use scrub::{DragValueScrubFrameArgs, drag_value_scrub_frame};
-use session::{drag_value_outcome_from_numeric_input, emit_drag_value_outcome, hidden_layout};
+use session::{emit_drag_value_outcome, hidden_layout};
+use typing::{DragValueTypingInputArgs, drag_value_typing_input};
 
 pub type DragValueOutcome = EditSessionOutcome;
 pub type OnDragValueOutcome =
@@ -260,68 +257,25 @@ where
             input_layout = hidden_layout(input_layout);
         }
 
-        let state_for_input = state.clone();
-        let on_outcome_for_input = on_outcome.clone();
-        let input_focus_target: Arc<Mutex<Option<fret_ui::GlobalElementId>>> =
-            Arc::new(Mutex::new(None));
-        let constraints = self.options.constraints;
-        let parse = self.parse.clone();
-        let constrained_parse: NumericParseFn<T> = Arc::new(move |text| {
-            parse(text).map(|value| constrain_numeric_value(constraints, value))
-        });
-        let input = NumericInput::new(self.model.clone(), self.format.clone(), constrained_parse)
-            .validate(self.validate.clone())
-            .focus_target(input_focus_target.clone())
-            .options(NumericInputOptions {
-                layout: input_layout,
-                enabled: typing,
-                focusable: typing,
+        let input = drag_value_typing_input(
+            cx,
+            DragValueTypingInputArgs {
+                model: self.model.clone(),
+                format: self.format.clone(),
+                parse: self.parse.clone(),
+                validate: self.validate.clone(),
+                constraints: self.options.constraints,
+                input_layout,
+                typing,
                 prefix: prefix.clone(),
                 suffix: suffix.clone(),
                 selection_behavior: self.options.selection_behavior,
-                test_id: active_typing_test_id,
-                // Avoid growing the row height when a commit-time validation error occurs.
-                // A small trailing status icon keeps the inspector layout stable.
-                error_display: NumericInputErrorDisplay::TrailingIcon,
-                ..Default::default()
-            })
-            .on_outcome(Some(Arc::new(move |host, action_cx, outcome| {
-                let mut st = state_for_input.lock().unwrap_or_else(|e| e.into_inner());
-                match outcome {
-                    NumericInputOutcome::Committed | NumericInputOutcome::Canceled => {
-                        st.mode = DragValueMode::Scrub;
-                        st.scrub_revision = st.scrub_revision.wrapping_add(1);
-                        if let Some(scrub_id) = st.scrub_id {
-                            host.request_focus(scrub_id);
-                        }
-                        emit_drag_value_outcome(
-                            host,
-                            action_cx,
-                            on_outcome_for_input.as_ref(),
-                            drag_value_outcome_from_numeric_input(outcome),
-                        );
-                        host.request_redraw(action_cx.window);
-                    }
-                }
-            })))
-            .into_element(cx);
-
-        if let Some(input_id) = input_focus_target
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .as_ref()
-            .copied()
-        {
-            let is_focused = cx.is_focused_element(input_id);
-            sync_numeric_text_entry_focus_handoff(
-                cx,
-                input.id,
-                &focus_handoff,
-                typing,
-                input_id,
-                is_focused,
-            );
-        }
+                active_typing_test_id,
+                state: state.clone(),
+                focus_handoff: focus_handoff.clone(),
+                on_outcome: on_outcome.clone(),
+            },
+        );
 
         // Render both: scrub stays mounted so focus can restore, input stays mounted so focus
         // requests have a stable target.

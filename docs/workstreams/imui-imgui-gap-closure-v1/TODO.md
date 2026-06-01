@@ -487,6 +487,14 @@ Last updated: 2026-06-01
       re-exporting `DragValueOptions`. `controls/drag_value/options.rs` owns option fields and
       defaults. The source gate prevents options/default policy from drifting back into the root
       control.
+- [x] Split editor `DragValue` typing input assembly into a private child owner without changing
+      hidden input mounting, constrained parse, validation, selection behavior, commit/cancel
+      mapping, scrub focus restore, scrub revision bumping, outcome callback emission, redraw,
+      scrub frame behavior, or public `DragValue` options.
+      Result: `controls/drag_value.rs` keeps keyed control orchestration, scrub mode switching,
+      `DragValueCore` wiring, live model updates, and scrub/input composition while delegating
+      `NumericInput` typing assembly to `controls/drag_value/typing.rs`. The source gate prevents
+      typing input policy and focus handoff from drifting back into the root control.
 - [x] Split editor input-group icon/clear-button segment rendering into a private child owner
       without changing the existing `crate::primitives::input_group::*` helper names or segment
       call paths.

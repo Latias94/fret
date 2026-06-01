@@ -12,6 +12,16 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-01 editor DragValue typing owner-split result:
+`ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps keyed control orchestration, scrub
+mode switching, `DragValueCore` wiring, live model updates, and scrub/input composition while
+delegating typed `NumericInput` assembly to `controls/drag_value/typing.rs`. The private typing
+owner contains constrained parse wrapping, validation/options forwarding, hidden typing layout
+consumption, commit/cancel outcome mapping, scrub focus restore, scrub revision bumping, redraw,
+and numeric text-entry focus handoff. Public `DragValue` options, scrub frame behavior, and mounted
+hidden input semantics remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split.
+
 2026-06-01 editor AxisDragValue typing-key owner-split result:
 `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps keyed scrub/typing
 orchestration, mounted text input props, focus handoff, scrub frame assembly, and typing frame
