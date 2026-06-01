@@ -368,6 +368,14 @@ records plus the `DeclarativeDockInteractionService` helpers. Managed dock-space
 cross-window docking call paths remain unchanged, and `tools/gate_imui_workstream_source.py`
 freezes the split.
 
+2026-06-01 docking declarative drag-route owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
+entrypoint, layout/render/input orchestration, and public docking APIs. The private
+`dock/declarative/drag_route.rs` owner contains internal dock drag route anchor installation,
+dock-space node registration, dock drag session-kind checks, active-window invalidation gating, and
+drop-time dock drag kind detection. Public dock-space APIs and cross-window docking call paths
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 IMUI text-picker popup render owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` now keeps
 session/input/open-policy orchestration only. `text_picker_controls/core/popup.rs` owns popup

@@ -1337,6 +1337,38 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Docking Declarative Drag Route Owner-Split Evidence - 2026-06-01
+
+Claim verified: docking declarative drag route/session-kind policy moved out of the large
+declarative dock-space orchestration owner into a private `declarative/drag_route.rs` owner without
+changing internal drag route anchor registration, dock-space node registration, active dock drag
+invalidation, drop-time dock drag cancellation, or public docking APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs` keeps the managed-surface entrypoint,
+  layout/render/input orchestration, and public docking APIs.
+- `ecosystem/fret-docking/src/dock/declarative/drag_route.rs` owns internal dock drag route
+  installation, dock-space node registration, dock drag session-kind checks, active-window
+  invalidation gating, and drop-time dock drag kind detection.
+- `tools/gate_imui_workstream_source.py` now tracks the declarative/drag_route split and rejects
+  route installation or dock drag session-kind policy from drifting back into the declarative
+  orchestration owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks both the declarative
+  orchestration file and the drag route owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking --no-fail-fast`: pass (90 passed).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor NumericInput Element Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `NumericInput` keyed element and render assembly moved out of the public

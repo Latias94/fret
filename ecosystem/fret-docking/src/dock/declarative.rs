@@ -30,6 +30,7 @@ use fret_runtime::Effect;
 
 mod drag_preview;
 mod drag_resolve;
+mod drag_route;
 mod floating;
 mod frame;
 mod geometry;
@@ -48,6 +49,7 @@ use drag_resolve::{
     declarative_panel_drag_allowed, declarative_resolve_internal_drag_drop,
     declarative_resolve_internal_drag_hover, declarative_tabs_group_drag_allowed,
 };
+use drag_route::{dock_dragging_affects_window, is_dock_drag_kind, keep_internal_drag_route_alive};
 use floating::{
     apply_declarative_floating_hover_paint_state, declarative_floating_hover_for_window,
     declarative_hit_test_floating_close, declarative_hit_test_floating_title_bar,
@@ -85,25 +87,6 @@ use tab_metrics::{
     prepare_declarative_tab_title,
 };
 use tear_off::clamp_declarative_floating_rect_to_bounds;
-
-fn keep_internal_drag_route_alive<H: UiHost>(app: &mut H, window: AppWindowId, host_node: NodeId) {
-    fret_ui::internal_drag::set_route(app, window, fret_runtime::DRAG_KIND_DOCK_PANEL, host_node);
-    fret_ui::internal_drag::set_route(app, window, fret_runtime::DRAG_KIND_DOCK_TABS, host_node);
-    if app.global::<DockManager>().is_some() {
-        app.with_global_mut_untracked(DockManager::default, |dock, _app| {
-            dock.register_dock_space_node(window, host_node);
-        });
-    }
-}
-
-fn dock_dragging_affects_window<H: UiHost>(app: &H, window: AppWindowId) -> bool {
-    app.any_drag_session(|drag| {
-        (drag.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
-            || drag.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
-            && (drag.source_window == window || drag.current_window == window)
-            && drag.dragging
-    })
-}
 
 fn publish_declarative_docking_diagnostics<H: UiHost>(app: &mut H, window: AppWindowId) {
     if !should_publish_docking_diagnostics(app, diagnostics_env_enabled()) {
@@ -784,10 +767,10 @@ where
                 cx.invalidate_self(fret_ui::Invalidation::Layout);
             }
             if end_drag
-                && cx.app().drag(e.pointer_id).is_some_and(|drag| {
-                    drag.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
-                        || drag.kind == fret_runtime::DRAG_KIND_DOCK_TABS
-                })
+                && cx
+                    .app()
+                    .drag(e.pointer_id)
+                    .is_some_and(|drag| is_dock_drag_kind(drag.kind))
             {
                 cx.app().cancel_drag(e.pointer_id);
             }

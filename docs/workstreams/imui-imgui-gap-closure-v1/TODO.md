@@ -390,6 +390,14 @@ Last updated: 2026-06-01
       owns declarative pressed/drag/hover records plus `DeclarativeDockInteractionService` state
       mutation/query helpers. The source gate prevents interaction state records from drifting
       back into the declarative orchestration owner.
+- [x] Split docking declarative drag route/session-kind policy into a private child owner without
+      changing internal drag route anchor registration, dock-space node registration, active dock
+      drag invalidation, drop-time dock drag cancellation, or public docking APIs.
+      Result: `dock/declarative.rs` keeps the managed-surface entrypoint, layout/render/input
+      orchestration, and public docking APIs. `dock/declarative/drag_route.rs` owns dock drag route
+      installation, dock drag session-kind checks, active-window invalidation gating, and
+      drop-time dock drag kind detection. The source gate prevents dock drag route/session policy
+      from drifting back into the declarative orchestration owner.
 - [x] Split editor `NumericInput` keyed element and render assembly into a private child owner
       without changing public constructors/builders, callsite/id-source keying, draft/error model
       routing, focus target capture, selection replacement behavior, joined-input frame chrome,
