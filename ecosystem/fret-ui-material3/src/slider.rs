@@ -31,7 +31,7 @@ use fret_ui_kit::{
 };
 
 use crate::foundation::context::material_layout_direction_in_scope;
-use crate::foundation::indication::material_pressable_indication_config;
+use crate::foundation::indication::material_pressable_indication_config_in_scope;
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::{
@@ -648,7 +648,7 @@ pub fn slider<H: UiHost>(
                 || state_layer_default,
             );
             let state_layer_size = slider_tokens::state_layer_size(theme);
-            let config = material_pressable_indication_config(theme, None);
+            let config = material_pressable_indication_config_in_scope(&*cx, None);
 
             let handle_w = slider_tokens::handle_width(theme, enabled, token_interaction);
 
@@ -1692,7 +1692,7 @@ pub fn range_slider<H: UiHost>(
                 || state_layer_default,
             );
             let state_layer_size = slider_tokens::state_layer_size(theme);
-            let config = material_pressable_indication_config(theme, None);
+            let config = material_pressable_indication_config_in_scope(&*cx, None);
 
             let handle_w_active = slider_tokens::handle_width(theme, enabled, interaction_active);
             let handle_w_inactive =

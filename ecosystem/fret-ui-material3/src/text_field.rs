@@ -41,7 +41,7 @@ use crate::foundation::field_motion::{
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interactive_size::minimum_interactive_size;
 use crate::foundation::logical_edges::{set_inset_inline_end, set_inset_inline_start};
@@ -1269,7 +1269,8 @@ impl TextField {
                                     let pressed_opacity = theme
                                         .number_by_key("md.sys.state.pressed.state-layer-opacity")
                                         .unwrap_or(0.1);
-                                    let config = material_pressable_indication_config(theme, None);
+                                    let config =
+                                        material_pressable_indication_config_in_scope(&*cx, None);
 
                                     (
                                         hit_width,

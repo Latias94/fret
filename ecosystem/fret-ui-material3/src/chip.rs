@@ -26,7 +26,7 @@ use fret_ui_kit::{
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::pressable_interaction;
 use crate::foundation::interactive_size::{
@@ -321,7 +321,7 @@ impl AssistChip {
                                 chip_tokens::state_layer_opacity(theme, interaction);
                             let ripple_base_opacity =
                                 chip_tokens::pressed_state_layer_opacity(theme);
-                            let config = material_pressable_indication_config(theme, None);
+                            let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                             let (background, shadow, outline) = match self.variant {
                                 AssistChipVariant::Elevated => {

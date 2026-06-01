@@ -24,7 +24,7 @@ use crate::foundation::elevation::{
 };
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::style_overrides::merge_style_override_slots;
@@ -298,7 +298,7 @@ impl CarouselItem {
                                 carousel_item_tokens::state_layer_opacity(theme, interaction);
                             let ripple_base_opacity =
                                 carousel_item_tokens::pressed_state_layer_opacity(theme);
-                            let config = material_pressable_indication_config(theme, None);
+                            let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                             let disabled_opacity =
                                 disabled.then(|| carousel_item_tokens::disabled_opacity(theme));

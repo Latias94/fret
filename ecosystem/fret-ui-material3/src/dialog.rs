@@ -28,7 +28,7 @@ use fret_ui_kit::{
 };
 
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::modal_motion::material_modal_panel_transform;
 use crate::foundation::style_overrides::merge_style_override_slots;
@@ -249,7 +249,8 @@ impl DialogAction {
 
                         let ripple_base_opacity =
                             dialog_tokens::action_pressed_state_layer_opacity(theme);
-                        let indication_config = material_pressable_indication_config(theme, None);
+                        let indication_config =
+                            material_pressable_indication_config_in_scope(&*cx, None);
 
                         let label_style = dialog_tokens::action_label_text_style(theme);
 
