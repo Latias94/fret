@@ -4,6 +4,7 @@ pub(crate) mod events;
 pub(crate) mod goldens;
 pub(crate) mod headless_autocomplete_cases;
 pub(crate) mod headless_carousel_item_cases;
+pub(crate) mod headless_fixture_primitives;
 pub(crate) mod headless_interactions;
 pub(crate) mod headless_list_cases;
 pub(crate) mod headless_menu_dialog_style_cases;

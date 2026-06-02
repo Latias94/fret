@@ -1,13 +1,17 @@
 use std::sync::Arc;
 
-use fret_core::{Point, Px, Rect, Size};
-use fret_icons::IconId;
+use fret_core::Rect;
 use fret_runtime::Model;
 use fret_ui_material3::{
     NavigationBar, NavigationBarItem, NavigationDrawer, NavigationDrawerItem,
     NavigationDrawerVariant, NavigationRail, NavigationRailItem,
 };
 use serde::Deserialize;
+
+use super::headless_fixture_primitives::{
+    Material3HeadlessBoundsV1, Material3HeadlessIconV1, Material3HeadlessSettleWindowV1,
+    assert_material3_headless_schema_version,
+};
 
 const MATERIAL3_HEADLESS_NAVIGATION_CASES_V1: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -42,15 +46,15 @@ enum Material3NavigationGoldenCaseKindV1 {
 pub(crate) struct Material3NavigationGoldenCaseV1 {
     id: String,
     kind: Material3NavigationGoldenCaseKindV1,
-    bounds: [f32; 2],
+    bounds: Material3HeadlessBoundsV1,
     selected_value: String,
     a11y_label: String,
     test_id: String,
     modal_test_id: Option<String>,
     underlay_label: Option<String>,
     underlay_test_id: Option<String>,
-    settle_from_frame: usize,
-    total_frames: usize,
+    #[serde(flatten)]
+    settle: Material3HeadlessSettleWindowV1,
     items: Vec<Material3NavigationItemDefinitionV1>,
 }
 
@@ -60,10 +64,7 @@ impl Material3NavigationGoldenCaseV1 {
     }
 
     pub(crate) fn bounds(&self) -> Rect {
-        Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(self.bounds[0]), Px(self.bounds[1])),
-        )
+        self.bounds.rect()
     }
 
     pub(crate) fn selected_value(&self) -> Arc<str> {
@@ -89,11 +90,11 @@ impl Material3NavigationGoldenCaseV1 {
     }
 
     pub(crate) fn settle_from_frame(&self) -> usize {
-        self.settle_from_frame
+        self.settle.settle_from_frame()
     }
 
     pub(crate) fn total_frames(&self) -> usize {
-        self.total_frames
+        self.settle.total_frames()
     }
 
     pub(crate) fn navigation_bar(&self, model: Model<Arc<str>>) -> NavigationBar {
@@ -158,7 +159,7 @@ impl Material3NavigationGoldenCaseV1 {
 struct Material3NavigationItemDefinitionV1 {
     value: String,
     label: String,
-    icon: Material3NavigationIconV1,
+    icon: Material3HeadlessIconV1,
     badge: Option<Material3NavigationBadgeV1>,
     #[serde(default)]
     disabled: bool,
@@ -168,11 +169,8 @@ struct Material3NavigationItemDefinitionV1 {
 
 impl Material3NavigationItemDefinitionV1 {
     fn navigation_bar_item(&self) -> NavigationBarItem {
-        let item = NavigationBarItem::new(
-            self.value.clone(),
-            self.label.clone(),
-            self.icon.to_icon_id(),
-        );
+        let item =
+            NavigationBarItem::new(self.value.clone(), self.label.clone(), self.icon.icon_id());
         let item = match self.badge.as_ref() {
             Some(Material3NavigationBadgeV1::Dot) => item.badge_dot(),
             Some(Material3NavigationBadgeV1::Text { text })
@@ -183,11 +181,8 @@ impl Material3NavigationItemDefinitionV1 {
     }
 
     fn navigation_rail_item(&self) -> NavigationRailItem {
-        let item = NavigationRailItem::new(
-            self.value.clone(),
-            self.label.clone(),
-            self.icon.to_icon_id(),
-        );
+        let item =
+            NavigationRailItem::new(self.value.clone(), self.label.clone(), self.icon.icon_id());
         let item = match self.badge.as_ref() {
             Some(Material3NavigationBadgeV1::Dot) => item.badge_dot(),
             Some(Material3NavigationBadgeV1::Text { text })
@@ -204,11 +199,8 @@ impl Material3NavigationItemDefinitionV1 {
     }
 
     fn navigation_drawer_item(&self) -> NavigationDrawerItem {
-        let item = NavigationDrawerItem::new(
-            self.value.clone(),
-            self.label.clone(),
-            self.icon.to_icon_id(),
-        );
+        let item =
+            NavigationDrawerItem::new(self.value.clone(), self.label.clone(), self.icon.icon_id());
         let item = match self.badge.as_ref() {
             Some(Material3NavigationBadgeV1::Text { text })
             | Some(Material3NavigationBadgeV1::Label { text }) => item.badge_label(text.clone()),
@@ -242,35 +234,10 @@ enum Material3NavigationBadgeV1 {
     Label { text: String },
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum Material3NavigationIconV1 {
-    Search,
-    Settings,
-    MoreHorizontal,
-    Play,
-    Slash,
-}
-
-impl Material3NavigationIconV1 {
-    fn to_icon_id(self) -> IconId {
-        match self {
-            Self::Search => fret_icons::ids::ui::SEARCH,
-            Self::Settings => fret_icons::ids::ui::SETTINGS,
-            Self::MoreHorizontal => fret_icons::ids::ui::MORE_HORIZONTAL,
-            Self::Play => fret_icons::ids::ui::PLAY,
-            Self::Slash => fret_icons::ids::ui::SLASH,
-        }
-    }
-}
-
 pub(crate) fn load_material3_navigation_golden_suite_v1() -> Material3NavigationGoldenSuiteV1 {
     let suite: Material3NavigationGoldenSuiteV1 =
         serde_json::from_str(MATERIAL3_HEADLESS_NAVIGATION_CASES_V1)
             .expect("material3 navigation golden fixture must parse");
-    assert_eq!(
-        suite.schema_version, 1,
-        "material3 navigation golden fixture schema version"
-    );
+    assert_material3_headless_schema_version(suite.schema_version, 1, "navigation golden");
     suite
 }

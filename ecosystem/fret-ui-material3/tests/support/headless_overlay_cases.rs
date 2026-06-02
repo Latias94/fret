@@ -1,12 +1,15 @@
 use std::sync::Arc;
 
-use fret_core::{Point, Px, Rect, Size};
-use fret_icons::IconId;
+use fret_core::{Px, Rect};
 use fret_ui_material3::{
     SelectItem,
     menu::{MenuEntry, MenuItem},
 };
 use serde::Deserialize;
+
+use super::headless_fixture_primitives::{
+    Material3HeadlessBoundsV1, Material3HeadlessIconV1, assert_material3_headless_schema_version,
+};
 
 const MATERIAL3_HEADLESS_OVERLAYS_CASES_V1: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -45,7 +48,7 @@ enum Material3OverlayGoldenCaseKindV1 {
 pub(crate) struct Material3OverlayGoldenCaseV1 {
     id: String,
     kind: Material3OverlayGoldenCaseKindV1,
-    bounds: [f32; 2],
+    bounds: Material3HeadlessBoundsV1,
     padding: Option<f32>,
     open_wait_frames: usize,
     settle_from_frame: Option<usize>,
@@ -68,10 +71,7 @@ impl Material3OverlayGoldenCaseV1 {
     }
 
     pub(crate) fn bounds(&self) -> Rect {
-        Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(self.bounds[0]), Px(self.bounds[1])),
-        )
+        self.bounds.rect()
     }
 
     pub(crate) fn padding(&self) -> Px {
@@ -300,7 +300,7 @@ struct Material3OverlaySelectV1 {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Material3OverlaySelectTriggerV1 {
-    leading_icon: Option<Material3OverlayIconV1>,
+    leading_icon: Option<Material3HeadlessIconV1>,
     label: String,
     supporting_text: String,
     a11y_label: String,
@@ -311,8 +311,8 @@ pub(crate) struct Material3OverlaySelectTriggerV1 {
 }
 
 impl Material3OverlaySelectTriggerV1 {
-    pub(crate) fn leading_icon(&self) -> Option<IconId> {
-        self.leading_icon.map(Material3OverlayIconV1::to_icon_id)
+    pub(crate) fn leading_icon(&self) -> Option<fret_icons::IconId> {
+        self.leading_icon.map(Material3HeadlessIconV1::icon_id)
     }
 
     pub(crate) fn label(&self) -> &str {
@@ -344,8 +344,8 @@ impl Material3OverlaySelectTriggerV1 {
 struct Material3OverlaySelectItemV1 {
     value: String,
     label: String,
-    leading_icon: Option<Material3OverlayIconV1>,
-    trailing_icon: Option<Material3OverlayIconV1>,
+    leading_icon: Option<Material3HeadlessIconV1>,
+    trailing_icon: Option<Material3HeadlessIconV1>,
     #[serde(default)]
     disabled: bool,
     test_id: String,
@@ -355,10 +355,10 @@ impl Material3OverlaySelectItemV1 {
     fn to_select_item(&self) -> SelectItem {
         let mut item = SelectItem::new(self.value.clone(), self.label.clone());
         if let Some(icon) = self.leading_icon {
-            item = item.leading_icon(icon.to_icon_id());
+            item = item.leading_icon(icon.icon_id());
         }
         if let Some(icon) = self.trailing_icon {
-            item = item.trailing_icon(icon.to_icon_id());
+            item = item.trailing_icon(icon.icon_id());
         }
         if self.disabled {
             item = item.disabled(true);
@@ -367,31 +367,10 @@ impl Material3OverlaySelectItemV1 {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum Material3OverlayIconV1 {
-    Search,
-    Settings,
-    ChevronRight,
-}
-
-impl Material3OverlayIconV1 {
-    fn to_icon_id(self) -> IconId {
-        match self {
-            Self::Search => fret_icons::ids::ui::SEARCH,
-            Self::Settings => fret_icons::ids::ui::SETTINGS,
-            Self::ChevronRight => fret_icons::ids::ui::CHEVRON_RIGHT,
-        }
-    }
-}
-
 pub(crate) fn load_material3_overlay_golden_suite_v1() -> Material3OverlayGoldenSuiteV1 {
     let suite: Material3OverlayGoldenSuiteV1 =
         serde_json::from_str(MATERIAL3_HEADLESS_OVERLAYS_CASES_V1)
             .expect("material3 overlays golden fixture must parse");
-    assert_eq!(
-        suite.schema_version, 1,
-        "material3 overlays golden fixture schema version"
-    );
+    assert_material3_headless_schema_version(suite.schema_version, 1, "overlays golden");
     suite
 }

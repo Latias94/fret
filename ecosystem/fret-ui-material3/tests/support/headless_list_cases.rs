@@ -1,9 +1,13 @@
 use std::sync::Arc;
 
-use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui_material3::{List, ListItem};
 use serde::Deserialize;
+
+use super::headless_fixture_primitives::{
+    Material3HeadlessIconV1, Material3HeadlessSettleWindowV1,
+    assert_material3_headless_schema_version,
+};
 
 const MATERIAL3_HEADLESS_LIST_CASES_V1: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -53,8 +57,8 @@ struct Material3ListItemDefinitionV1 {
     overline_text: Option<String>,
     supporting_text: Option<String>,
     trailing_supporting_text: Option<String>,
-    leading_icon: Option<Material3ListIconV1>,
-    trailing_icon: Option<Material3ListIconV1>,
+    leading_icon: Option<Material3HeadlessIconV1>,
+    trailing_icon: Option<Material3HeadlessIconV1>,
     #[serde(default)]
     disabled: bool,
     test_id: Option<String>,
@@ -77,11 +81,11 @@ impl Material3ListItemDefinitionV1 {
         }
 
         if let Some(icon) = self.leading_icon {
-            item = item.leading_icon(icon.to_icon_id());
+            item = item.leading_icon(icon.icon_id());
         }
 
         if let Some(icon) = self.trailing_icon {
-            item = item.trailing_icon(icon.to_icon_id());
+            item = item.trailing_icon(icon.icon_id());
         }
 
         if self.disabled {
@@ -96,33 +100,13 @@ impl Material3ListItemDefinitionV1 {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum Material3ListIconV1 {
-    Search,
-    Settings,
-    ChevronRight,
-    Slash,
-}
-
-impl Material3ListIconV1 {
-    fn to_icon_id(self) -> IconId {
-        match self {
-            Self::Search => fret_icons::ids::ui::SEARCH,
-            Self::Settings => fret_icons::ids::ui::SETTINGS,
-            Self::ChevronRight => fret_icons::ids::ui::CHEVRON_RIGHT,
-            Self::Slash => fret_icons::ids::ui::SLASH,
-        }
-    }
-}
-
 #[derive(Debug, Deserialize)]
 pub(crate) struct Material3ListGoldenCaseV1 {
     id: String,
     hover_test_id: Option<String>,
     focus_test_id: Option<String>,
-    settle_from_frame: usize,
-    total_frames: usize,
+    #[serde(flatten)]
+    settle: Material3HeadlessSettleWindowV1,
 }
 
 impl Material3ListGoldenCaseV1 {
@@ -143,20 +127,17 @@ impl Material3ListGoldenCaseV1 {
     }
 
     pub(crate) fn settle_from_frame(&self) -> usize {
-        self.settle_from_frame
+        self.settle.settle_from_frame()
     }
 
     pub(crate) fn total_frames(&self) -> usize {
-        self.total_frames
+        self.settle.total_frames()
     }
 }
 
 pub(crate) fn load_material3_list_golden_suite_v1() -> Material3ListGoldenSuiteV1 {
     let suite: Material3ListGoldenSuiteV1 = serde_json::from_str(MATERIAL3_HEADLESS_LIST_CASES_V1)
         .expect("material3 list golden fixture must parse");
-    assert_eq!(
-        suite.schema_version, 1,
-        "material3 list golden fixture schema version"
-    );
+    assert_material3_headless_schema_version(suite.schema_version, 1, "list golden");
     suite
 }
