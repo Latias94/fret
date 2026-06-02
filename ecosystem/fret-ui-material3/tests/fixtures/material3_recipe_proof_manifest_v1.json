@@ -1,0 +1,333 @@
+{
+  "schema_version": 1,
+  "suite": "material3-recipe-proof-manifest-v1",
+  "notes": "Structured proof matrix for public Material3 recipe surfaces. token_visual_component proves token function outcomes only; headless_golden_suites prove rendered recipe scenes; behavior_tests prove focused semantics, layout, motion, or interaction behavior. Known gaps must stay explicit until a headless golden or stronger proof is added.",
+  "entries": [
+    {
+      "id": "autocomplete",
+      "source": "src/autocomplete.rs",
+      "token_visual_component": "autocomplete",
+      "headless_golden_suites": ["autocomplete"],
+      "behavior_tests": ["autocomplete_motion.rs", "automation_surface.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "badge",
+      "source": "src/badge.rs",
+      "token_visual_component": "badge",
+      "headless_golden_suites": ["badge"],
+      "behavior_tests": ["badge_semantics.rs", "automation_surface.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "bottom_sheet",
+      "source": "src/bottom_sheet.rs",
+      "token_visual_component": "bottom_sheet",
+      "headless_golden_suites": ["bottom_sheet"],
+      "behavior_tests": ["bottom_sheet_motion.rs", "material3_overlay_interactions.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "button",
+      "source": "src/button.rs",
+      "token_visual_component": "button",
+      "headless_golden_suites": ["controls"],
+      "behavior_tests": ["button_state.rs", "material3_choice_action_interactions.rs", "minimum_touch_target.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "card",
+      "source": "src/card.rs",
+      "token_visual_component": "card",
+      "headless_golden_suites": ["controls"],
+      "behavior_tests": ["card_state.rs", "material3_choice_action_interactions.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "carousel_item",
+      "source": "src/carousel_item.rs",
+      "token_visual_component": "carousel_item",
+      "headless_golden_suites": ["carousel_item"],
+      "behavior_tests": ["carousel_item_state.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "checkbox",
+      "source": "src/checkbox.rs",
+      "token_visual_component": "checkbox",
+      "headless_golden_suites": ["controls"],
+      "behavior_tests": ["checkbox_state.rs", "material3_choice_action_interactions.rs", "minimum_touch_target.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "chip",
+      "source": "src/chip.rs",
+      "token_visual_component": "chip",
+      "headless_golden_suites": ["controls"],
+      "behavior_tests": ["chip_state.rs", "material3_choice_action_interactions.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "chip_set",
+      "source": "src/chip_set.rs",
+      "token_visual_component": null,
+      "headless_golden_suites": [],
+      "behavior_tests": ["automation_surface.rs", "chip_state.rs", "material3_choice_action_interactions.rs"],
+      "proof_status": "behavior_only",
+      "known_gap": "ChipSet is a policy/layout container with no Material token module, but it still needs a headless golden for roving focus and wrap layout scene stability."
+    },
+    {
+      "id": "date_picker",
+      "source": "src/date_picker.rs",
+      "token_visual_component": "date_picker",
+      "headless_golden_suites": ["date_picker"],
+      "behavior_tests": ["automation_surface.rs", "date_picker_motion.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "dialog",
+      "source": "src/dialog.rs",
+      "token_visual_component": "dialog",
+      "headless_golden_suites": ["menu_dialog_style"],
+      "behavior_tests": ["dialog_state.rs", "material3_overlay_interactions.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "divider",
+      "source": "src/divider.rs",
+      "token_visual_component": "divider",
+      "headless_golden_suites": ["divider"],
+      "behavior_tests": ["divider_state.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "dropdown_menu",
+      "source": "src/dropdown_menu.rs",
+      "token_visual_component": "dropdown_menu",
+      "headless_golden_suites": ["overlays"],
+      "behavior_tests": ["material3_overlay_interactions.rs", "menu_state.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "exposed_dropdown",
+      "source": "src/exposed_dropdown.rs",
+      "token_visual_component": "exposed_dropdown",
+      "headless_golden_suites": [],
+      "behavior_tests": ["autocomplete_motion.rs", "automation_surface.rs", "material3_field_interactions.rs"],
+      "proof_status": "behavior_only",
+      "known_gap": "ExposedDropdown has motion, field interaction, and automation-surface coverage, but no fixture-driven headless golden suite for rendered recipe scene stability."
+    },
+    {
+      "id": "fab",
+      "source": "src/fab.rs",
+      "token_visual_component": "fab",
+      "headless_golden_suites": ["fab"],
+      "behavior_tests": ["fab_state.rs", "material3_choice_action_interactions.rs", "minimum_touch_target.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "filter_chip",
+      "source": "src/filter_chip.rs",
+      "token_visual_component": "filter_chip",
+      "headless_golden_suites": ["controls"],
+      "behavior_tests": ["chip_state.rs", "material3_choice_action_interactions.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "icon_button",
+      "source": "src/icon_button.rs",
+      "token_visual_component": "icon_button",
+      "headless_golden_suites": [],
+      "behavior_tests": ["automation_surface.rs", "icon_button_state.rs", "material3_choice_action_interactions.rs"],
+      "proof_status": "behavior_only",
+      "known_gap": "IconButton has token visual and focused interaction coverage, but no fixture-driven headless golden across standard, filled, tonal, outlined, and toggle variants."
+    },
+    {
+      "id": "input_chip",
+      "source": "src/input_chip.rs",
+      "token_visual_component": "input_chip",
+      "headless_golden_suites": ["controls"],
+      "behavior_tests": ["chip_state.rs", "material3_choice_action_interactions.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "list",
+      "source": "src/list.rs",
+      "token_visual_component": "list",
+      "headless_golden_suites": ["list"],
+      "behavior_tests": ["list_state.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "menu",
+      "source": "src/menu.rs",
+      "token_visual_component": "menu",
+      "headless_golden_suites": ["menu_dialog_style"],
+      "behavior_tests": ["material3_overlay_interactions.rs", "menu_state.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "modal_navigation_drawer",
+      "source": "src/modal_navigation_drawer.rs",
+      "token_visual_component": "modal_navigation_drawer",
+      "headless_golden_suites": ["navigation"],
+      "behavior_tests": ["material3_navigation_interactions.rs", "navigation_drawer_state.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "motion",
+      "source": "src/motion.rs",
+      "token_visual_component": null,
+      "headless_golden_suites": [],
+      "behavior_tests": ["autocomplete_motion.rs", "bottom_sheet_motion.rs", "material3_choice_action_interactions.rs", "search_bar_motion.rs"],
+      "proof_status": "supporting_api",
+      "known_gap": "motion.rs is a public deterministic helper module, not a rendered recipe. It is exercised through component motion tests rather than a token visual or headless golden component."
+    },
+    {
+      "id": "navigation_bar",
+      "source": "src/navigation_bar.rs",
+      "token_visual_component": "navigation_bar",
+      "headless_golden_suites": ["navigation"],
+      "behavior_tests": ["material3_navigation_interactions.rs", "minimum_touch_target.rs", "navigation_state.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "navigation_drawer",
+      "source": "src/navigation_drawer.rs",
+      "token_visual_component": "navigation_drawer",
+      "headless_golden_suites": ["navigation"],
+      "behavior_tests": ["material3_navigation_interactions.rs", "navigation_drawer_state.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "navigation_rail",
+      "source": "src/navigation_rail.rs",
+      "token_visual_component": "navigation_rail",
+      "headless_golden_suites": ["navigation"],
+      "behavior_tests": ["material3_navigation_interactions.rs", "minimum_touch_target.rs", "navigation_state.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "progress_indicator",
+      "source": "src/progress_indicator.rs",
+      "token_visual_component": "progress_indicator",
+      "headless_golden_suites": ["progress_indicator"],
+      "behavior_tests": ["progress_indicator_state.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "radio",
+      "source": "src/radio.rs",
+      "token_visual_component": "radio",
+      "headless_golden_suites": [],
+      "behavior_tests": ["automation_surface.rs", "material3_choice_action_interactions.rs", "radio_alignment.rs", "radio_state.rs"],
+      "proof_status": "behavior_only",
+      "known_gap": "Radio has state, semantics, and pressed-geometry coverage, but no fixture-driven headless golden suite across standalone and group variants."
+    },
+    {
+      "id": "search_bar",
+      "source": "src/search_bar.rs",
+      "token_visual_component": "search_bar",
+      "headless_golden_suites": ["search_bar"],
+      "behavior_tests": ["search_bar_accessibility.rs", "search_bar_motion.rs", "search_view_behavior.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "search_view",
+      "source": "src/search_view.rs",
+      "token_visual_component": "search_view",
+      "headless_golden_suites": ["search_view"],
+      "behavior_tests": ["search_bar_accessibility.rs", "search_view_behavior.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "segmented_button",
+      "source": "src/segmented_button.rs",
+      "token_visual_component": "segmented_button",
+      "headless_golden_suites": ["segmented_button"],
+      "behavior_tests": ["material3_choice_action_interactions.rs", "minimum_touch_target.rs", "segmented_button_state.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "select",
+      "source": "src/select.rs",
+      "token_visual_component": "select",
+      "headless_golden_suites": ["controls", "overlays"],
+      "behavior_tests": ["automation_surface.rs", "material3_field_interactions.rs", "select_behavior.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "slider",
+      "source": "src/slider.rs",
+      "token_visual_component": "slider",
+      "headless_golden_suites": ["slider"],
+      "behavior_tests": ["material3_choice_action_interactions.rs", "minimum_touch_target.rs", "slider_state.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "snackbar",
+      "source": "src/snackbar.rs",
+      "token_visual_component": "snackbar",
+      "headless_golden_suites": ["snackbar"],
+      "behavior_tests": ["material3_overlay_interactions.rs", "snackbar_state.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "suggestion_chip",
+      "source": "src/suggestion_chip.rs",
+      "token_visual_component": "suggestion_chip",
+      "headless_golden_suites": ["controls"],
+      "behavior_tests": ["chip_state.rs", "material3_choice_action_interactions.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "switch",
+      "source": "src/switch.rs",
+      "token_visual_component": "switch",
+      "headless_golden_suites": ["controls"],
+      "behavior_tests": ["material3_choice_action_interactions.rs", "minimum_touch_target.rs", "switch_state.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "tabs",
+      "source": "src/tabs.rs",
+      "token_visual_component": "tabs",
+      "headless_golden_suites": [],
+      "behavior_tests": ["automation_surface.rs", "material3_choice_action_interactions.rs", "minimum_touch_target.rs", "tabs_state.rs"],
+      "proof_status": "behavior_only",
+      "known_gap": "Tabs has state, automation-surface, touch-target, and interaction coverage, but no fixture-driven headless golden suite for indicator and panel scene stability."
+    },
+    {
+      "id": "text_field",
+      "source": "src/text_field.rs",
+      "token_visual_component": "text_field",
+      "headless_golden_suites": ["text_field"],
+      "behavior_tests": ["automation_surface.rs", "material3_field_interactions.rs", "text_field_hover.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "time_picker",
+      "source": "src/time_picker.rs",
+      "token_visual_component": "time_picker",
+      "headless_golden_suites": ["time_picker"],
+      "behavior_tests": ["automation_surface.rs", "material3_time_picker_interactions.rs", "time_picker_clock_face.rs", "time_picker_motion.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "tooltip",
+      "source": "src/tooltip.rs",
+      "token_visual_component": "tooltip",
+      "headless_golden_suites": ["overlays"],
+      "behavior_tests": ["material3_overlay_interactions.rs", "tooltip_state.rs"],
+      "proof_status": "headless_golden"
+    },
+    {
+      "id": "top_app_bar",
+      "source": "src/top_app_bar.rs",
+      "token_visual_component": "top_app_bar",
+      "headless_golden_suites": ["top_app_bar"],
+      "behavior_tests": ["top_app_bar_alignment.rs"],
+      "proof_status": "headless_golden"
+    }
+  ]
+}
