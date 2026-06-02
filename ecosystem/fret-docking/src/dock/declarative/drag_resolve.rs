@@ -10,16 +10,12 @@ use super::super::drop_resolve::{
     dock_drop_target_diagnostics, resolve_dock_drop_intent_panel, resolve_dock_drop_intent_tabs,
     resolve_dock_drop_target,
 };
-use super::super::layout::{dock_space_regions, split_tab_bar};
+use super::super::layout::dock_space_regions;
 use super::super::manager::DockManager;
 use super::super::services::DockingPolicyService;
-use super::super::types::{DockDropTarget, DockPanelDragPayload, DockTabsDragPayload};
+use super::super::types::{DockPanelDragPayload, DockTabsDragPayload};
 use super::geometry::declarative_layout_snapshot_for_bounds;
-use super::interaction::DeclarativeDockInteractionService;
-use super::tab_metrics::{
-    declarative_apply_tab_bar_drag_auto_scroll, declarative_sync_tab_scroll_for_window,
-    declarative_tab_scroll_for_frame, declarative_tab_widths_for_layout,
-};
+use super::tab_metrics::{declarative_tab_scroll_for_frame, declarative_tab_widths_for_layout};
 use super::tear_off::{
     declarative_allow_tear_off_for_panel, declarative_default_floating_rect_for_panel,
     declarative_resolve_tear_off_hover,
@@ -27,12 +23,14 @@ use super::tear_off::{
 
 mod begin_drag;
 mod diagnostics;
+mod hover_autoscroll;
 
 pub(super) use begin_drag::{begin_declarative_panel_drag, begin_declarative_tabs_group_drag};
 use diagnostics::{
     capture_drag_drop_diagnostics, record_drag_resolve_diagnostics,
     update_hover_and_capture_diagnostics,
 };
+use hover_autoscroll::apply_drag_hover_auto_scroll;
 
 fn declarative_dragged_tab_for_drop<H: UiHost>(
     app: &H,
@@ -351,38 +349,18 @@ pub(super) fn declarative_resolve_internal_drag_hover<H: UiHost>(
         dragged_tab_for_drop,
         diagnostics_enabled.then_some(&mut candidates),
     );
-    let mut auto_scrolled = false;
-    if let Some(DockDropTarget::Dock(target)) = hover.as_mut() {
-        let target_tabs = target.tabs;
-        let tabs_len =
-            app.global::<DockManager>()
-                .and_then(|dock| match dock.graph.node(target_tabs) {
-                    Some(fret_core::DockNode::Tabs { tabs, .. }) => Some(tabs.len()),
-                    _ => None,
-                });
-        let tabs_rect = snapshot.layout_all.get(&target_tabs).copied();
-        let frame_id = app.frame_id();
-        let should_scroll = tabs_len.is_some()
-            && tabs_rect.is_some()
-            && app.with_global_mut(
-                DeclarativeDockInteractionService::default,
-                |service, _app| service.should_auto_scroll_tab_drag(window, target_tabs, frame_id),
-            );
-        if let (true, Some(tabs_len), Some(tabs_rect)) = (should_scroll, tabs_len, tabs_rect) {
-            let (tab_bar, _content) = split_tab_bar(tabs_rect);
-            auto_scrolled = declarative_apply_tab_bar_drag_auto_scroll(
-                theme.clone(),
-                target,
-                tab_bar,
-                tabs_len,
-                font_size,
-                position,
-                &tab_widths,
-                &mut tab_scroll,
-                dragged_tab_for_drop,
-            );
-        }
-    }
+    let auto_scrolled = apply_drag_hover_auto_scroll(
+        app,
+        window,
+        &mut hover,
+        &snapshot.layout_all,
+        theme.clone(),
+        font_size,
+        position,
+        &tab_widths,
+        &mut tab_scroll,
+        dragged_tab_for_drop,
+    );
 
     let (changed, diagnostics) = update_hover_and_capture_diagnostics(
         app,
@@ -396,14 +374,6 @@ pub(super) fn declarative_resolve_internal_drag_hover<H: UiHost>(
         window,
         candidates,
     );
-    if auto_scrolled {
-        declarative_sync_tab_scroll_for_window(
-            app,
-            window,
-            &tab_scroll,
-            snapshot.layout_all.keys().copied(),
-        );
-    }
     record_drag_resolve_diagnostics(app, window, diagnostics);
     if std::env::var_os("FRET_DOCK_DRAG_DEBUG").is_some_and(|v| !v.is_empty()) && changed {
         let target = app

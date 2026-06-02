@@ -2,6 +2,38 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Docking declarative drag hover auto-scroll owner split - 2026-06-03
+
+This maintenance slice makes the editor-grade tab-drag hand-feel path explicit instead of burying
+hover-time tab-bar auto-scroll inside hover/drop resolution:
+
+- `ecosystem/fret-docking/src/dock/declarative/drag_resolve/hover_autoscroll.rs` owns target tab
+  stack lookup, tab-bar rect lookup, auto-scroll frame gating, tab-bar split geometry,
+  `declarative_apply_tab_bar_drag_auto_scroll(...)`, and tab scroll synchronization.
+- `ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` keeps hover/drop target
+  resolution, drop intent effect projection, tear-off handoff, diagnostics capture/publication,
+  debug tracing, and panel/tabs drag allow checks.
+- Evidence anchor: Docking declarative drag hover auto-scroll owner split - 2026-06-03.
+- Evidence anchor: ecosystem/fret-docking/src/dock/declarative/drag_resolve/hover_autoscroll.rs.
+- Evidence anchor: hover-time tab-bar drag auto-scroll.
+- Evidence anchor: drag_resolve.rs keeps hover/drop resolution, diagnostics, and debug tracing.
+- Tab-stack length lookup, auto-scroll frame gating, insert-index updates, scroll synchronization,
+  diagnostics payloads, and public docking APIs remain unchanged.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so hover auto-scroll policy
+  cannot drift back into the hover/drop resolve owner.
+
+Fresh gates:
+
+- `cargo fmt -p fret-docking` - passed.
+- `cargo check -p fret-docking` - passed.
+- `cargo nextest run -p fret-docking floating_title_bar_drag center_drop tab_drop drop_hint --no-fail-fast` - passed.
+- `cargo nextest run -p fret-docking drags_floating_title_bar --no-fail-fast` - passed.
+- `cargo fmt -p fret-docking -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Docking declarative drag resolve diagnostics owner split - 2026-06-03
 
 This maintenance slice makes docking multi-window drag diagnostics a dedicated owner instead of

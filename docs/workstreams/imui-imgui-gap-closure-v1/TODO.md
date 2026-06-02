@@ -656,6 +656,15 @@ Last updated: 2026-06-03
       capture and publication. `dock/declarative/drag_resolve.rs` keeps hover/drop resolution,
       drop-intent effect projection, tab-bar auto-scroll, tear-off handoff, debug tracing, and
       panel/tabs drag allow checks.
+- [x] Split docking declarative hover-time tab-bar drag auto-scroll out of
+      `ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` into a private child owner
+      without changing tab-stack length lookup, tab-bar rect lookup, auto-scroll frame gating,
+      tab-bar split geometry, auto-scroll insert-index updates, tab scroll synchronization,
+      hover/drop resolution, diagnostics capture/publication, or public docking APIs.
+      Result: `dock/declarative/drag_resolve/hover_autoscroll.rs` owns hover-time tab-bar
+      auto-scroll gating, target tab lookup, tab-bar geometry projection, auto-scroll application,
+      and tab scroll synchronization. `dock/declarative/drag_resolve.rs` keeps hover/drop
+      resolution, drop intent, tear-off handoff, diagnostics, debug tracing, and allow checks.
 - [x] Split docking declarative drag ghost and tab insert preview preparation into a private child
       owner without changing drag ghost lookup, drag source tab fallback, ghost title fallback,
       prepared ghost title text, center-zone insert preview titles, or public docking APIs.

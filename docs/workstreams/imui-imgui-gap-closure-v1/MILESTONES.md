@@ -12,6 +12,16 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-03 docking declarative drag-hover auto-scroll owner-split result:
+`ecosystem/fret-docking/src/dock/declarative/drag_resolve/hover_autoscroll.rs` now owns hover-time
+tab-bar drag auto-scroll gating, target tab stack lookup, tab-bar geometry projection,
+`declarative_apply_tab_bar_drag_auto_scroll(...)`, and tab scroll synchronization.
+`ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` keeps hover/drop target resolution,
+drop intent effect projection, tear-off handoff, diagnostics capture/publication, debug tracing,
+and panel/tabs drag allow checks. Public docking APIs, diagnostics payloads, and tab-drag
+auto-scroll behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split.
+
 2026-06-03 docking declarative drag-resolve diagnostics owner-split result:
 `ecosystem/fret-docking/src/dock/declarative/drag_resolve/diagnostics.rs` now owns drag hover/drop
 diagnostics capture, graph stats/signature capture, `DockDropResolveDiagnostics` construction,
