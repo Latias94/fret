@@ -647,6 +647,15 @@ Last updated: 2026-06-03
       session payload startup. `dock/declarative/drag_resolve.rs` keeps internal drag hover/drop
       resolution, drop-intent effect projection, tab-bar auto-scroll, tear-off handoff,
       diagnostics publication, and panel/tabs drag allow checks.
+- [x] Split docking declarative drag-resolve diagnostics capture/publication out of
+      `ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` into a private child owner
+      without changing hover state updates, hover-change detection, drop-hover clearing,
+      candidate rect diagnostics, graph stats/signature capture, diagnostics store publication,
+      debug tracing, hover/drop resolution, drop-intent application, or public docking APIs.
+      Result: `dock/declarative/drag_resolve/diagnostics.rs` owns drag hover/drop diagnostics
+      capture and publication. `dock/declarative/drag_resolve.rs` keeps hover/drop resolution,
+      drop-intent effect projection, tab-bar auto-scroll, tear-off handoff, debug tracing, and
+      panel/tabs drag allow checks.
 - [x] Split docking declarative drag ghost and tab insert preview preparation into a private child
       owner without changing drag ghost lookup, drag source tab fallback, ghost title fallback,
       prepared ghost title text, center-zone insert preview titles, or public docking APIs.

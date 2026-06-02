@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Docking Declarative Drag Resolve Diagnostics Owner Split - 2026-06-03
+
+Claim verified: declarative docking drag hover/drop diagnostics capture and publication moved out
+of `ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` into private
+`ecosystem/fret-docking/src/dock/declarative/drag_resolve/diagnostics.rs` without changing hover
+state updates, hover-change detection, drop-hover clearing, candidate rect diagnostics, graph
+stats/signature capture, `DockDropResolveDiagnostics` payloads, diagnostics store publication,
+debug tracing, hover/drop target resolution, drop intent application, or public docking APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative/drag_resolve/diagnostics.rs` owns drag hover/drop
+  diagnostics capture, graph stats/signature capture, `DockDropResolveDiagnostics` construction,
+  hover update/clear side effects needed for diagnostics, and `WindowInteractionDiagnosticsStore`
+  publication.
+- `ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` keeps hover/drop target
+  resolution, drop intent effect projection, tab-bar auto-scroll during drag, tear-off handoff,
+  debug tracing, and panel/tabs drag allow checks.
+- `tools/gate_imui_workstream_source.py` rejects diagnostics capture/publication drift back into
+  `drag_resolve.rs` and rejects hover/drop resolve policy from drifting into the diagnostics owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the drag-resolve
+  diagnostics owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking floating_title_bar_drag center_drop tab_drop drop_hint --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-docking drags_floating_title_bar --no-fail-fast`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Declarative Begin Drag Owner Split - 2026-06-03
 
 Claim verified: declarative docking cross-window drag-session payload startup moved out of

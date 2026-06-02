@@ -4,13 +4,9 @@ use fret_core::{AppWindowId, PanelKey, Rect, Size};
 use fret_runtime::Effect;
 use fret_ui::UiHost;
 
-use super::super::diagnostics::{
-    diagnostics_env_enabled, dock_graph_signature_for_window, dock_graph_stats_for_window,
-    should_publish_docking_diagnostics,
-};
+use super::super::diagnostics::{diagnostics_env_enabled, should_publish_docking_diagnostics};
 use super::super::drop_resolve::{
-    DockPanelDropDrag, DockTabsDropDrag, apply_dock_drop_intent,
-    compute_dock_drop_resolve_diagnostics, dock_drop_intent_debug_kind,
+    DockPanelDropDrag, DockTabsDropDrag, apply_dock_drop_intent, dock_drop_intent_debug_kind,
     dock_drop_target_diagnostics, resolve_dock_drop_intent_panel, resolve_dock_drop_intent_tabs,
     resolve_dock_drop_target,
 };
@@ -30,8 +26,13 @@ use super::tear_off::{
 };
 
 mod begin_drag;
+mod diagnostics;
 
 pub(super) use begin_drag::{begin_declarative_panel_drag, begin_declarative_tabs_group_drag};
+use diagnostics::{
+    capture_drag_drop_diagnostics, record_drag_resolve_diagnostics,
+    update_hover_and_capture_diagnostics,
+};
 
 fn declarative_dragged_tab_for_drop<H: UiHost>(
     app: &H,
@@ -221,47 +222,19 @@ pub(super) fn declarative_resolve_internal_drag_drop<H: UiHost>(
     };
     apply_dock_drop_intent(intent.clone(), &mut effects, &mut invalidate_layout);
 
-    let (graph_stats, graph_signature, diagnostics) =
-        app.with_global_mut(DockManager::default, |dock, _app| {
-            dock.hover = None;
-            let graph_stats =
-                diagnostics_enabled.then(|| dock_graph_stats_for_window(&dock.graph, window));
-            let graph_signature =
-                diagnostics_enabled.then(|| dock_graph_signature_for_window(&dock.graph, window));
-            let diagnostics = diagnostics_enabled.then(|| {
-                compute_dock_drop_resolve_diagnostics(
-                    pointer_id,
-                    position,
-                    bounds,
-                    dock_bounds,
-                    source,
-                    &dock.graph,
-                    window,
-                    target.as_ref(),
-                    candidates,
-                )
-            });
-            (graph_stats, graph_signature, diagnostics)
-        });
-
-    let frame_id = app.frame_id();
-    if let Some(dock_drop_resolve) = diagnostics {
-        app.with_global_mut_untracked(
-            fret_runtime::WindowInteractionDiagnosticsStore::default,
-            |svc, _app| {
-                svc.record_docking(
-                    window,
-                    frame_id,
-                    fret_runtime::DockingInteractionDiagnostics {
-                        dock_drop_resolve: Some(dock_drop_resolve),
-                        dock_graph_stats: graph_stats,
-                        dock_graph_signature: graph_signature,
-                        ..Default::default()
-                    },
-                );
-            },
-        );
-    }
+    let diagnostics = capture_drag_drop_diagnostics(
+        app,
+        diagnostics_enabled,
+        pointer_id,
+        position,
+        bounds,
+        dock_bounds,
+        source,
+        window,
+        target.as_ref(),
+        candidates,
+    );
+    record_drag_resolve_diagnostics(app, window, diagnostics);
     if std::env::var_os("FRET_DOCK_DRAG_DEBUG").is_some_and(|v| !v.is_empty()) {
         let drop_target_diag = dock_drop_target_diagnostics(target.as_ref());
         tracing::info!(
@@ -411,29 +384,18 @@ pub(super) fn declarative_resolve_internal_drag_hover<H: UiHost>(
         }
     }
 
-    let (changed, graph_stats, graph_signature, diagnostics) =
-        app.with_global_mut(DockManager::default, |dock, _app| {
-            let changed = dock.hover != hover;
-            dock.hover = hover;
-            let graph_stats =
-                diagnostics_enabled.then(|| dock_graph_stats_for_window(&dock.graph, window));
-            let graph_signature =
-                diagnostics_enabled.then(|| dock_graph_signature_for_window(&dock.graph, window));
-            let diagnostics = diagnostics_enabled.then(|| {
-                compute_dock_drop_resolve_diagnostics(
-                    pointer_id,
-                    position,
-                    bounds,
-                    dock_bounds,
-                    source,
-                    &dock.graph,
-                    window,
-                    dock.hover.as_ref(),
-                    candidates,
-                )
-            });
-            (changed, graph_stats, graph_signature, diagnostics)
-        });
+    let (changed, diagnostics) = update_hover_and_capture_diagnostics(
+        app,
+        diagnostics_enabled,
+        hover,
+        pointer_id,
+        position,
+        bounds,
+        dock_bounds,
+        source,
+        window,
+        candidates,
+    );
     if auto_scrolled {
         declarative_sync_tab_scroll_for_window(
             app,
@@ -442,24 +404,7 @@ pub(super) fn declarative_resolve_internal_drag_hover<H: UiHost>(
             snapshot.layout_all.keys().copied(),
         );
     }
-    let frame_id = app.frame_id();
-    if let Some(dock_drop_resolve) = diagnostics {
-        app.with_global_mut_untracked(
-            fret_runtime::WindowInteractionDiagnosticsStore::default,
-            |svc, _app| {
-                svc.record_docking(
-                    window,
-                    frame_id,
-                    fret_runtime::DockingInteractionDiagnostics {
-                        dock_drop_resolve: Some(dock_drop_resolve),
-                        dock_graph_stats: graph_stats,
-                        dock_graph_signature: graph_signature,
-                        ..Default::default()
-                    },
-                );
-            },
-        );
-    }
+    record_drag_resolve_diagnostics(app, window, diagnostics);
     if std::env::var_os("FRET_DOCK_DRAG_DEBUG").is_some_and(|v| !v.is_empty()) && changed {
         let target = app
             .global::<DockManager>()
