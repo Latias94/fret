@@ -26,6 +26,7 @@ use support::headless_list_cases::load_material3_list_golden_suite_v1;
 use support::headless_menu_dialog_style_cases::{
     Material3MenuDialogStyleGoldenCaseKindV1, load_material3_menu_dialog_style_golden_suite_v1,
 };
+use support::headless_navigation_cases::load_material3_navigation_golden_suite_v1;
 use support::headless_search_cases::load_material3_search_golden_suite_v1;
 use support::headless_slider_cases::{
     Material3SliderKeyboardInteractionV1, Material3SliderPointerInteractionV1,
@@ -1314,13 +1315,9 @@ fn material3_headless_top_app_bar_suite_goldens_v1() {
 }
 
 #[test]
-#[ignore = "stale broad headless golden; use navigation_state for default gate and run explicitly when refreshing material3-navigation goldens"]
 fn material3_headless_navigation_suite_goldens_v1() {
-    use fret_icons::ids;
     use fret_ui_material3::{
-        Button, ButtonVariant, ModalNavigationDrawer, NavigationBar, NavigationBarItem,
-        NavigationDrawer, NavigationDrawerItem, NavigationDrawerVariant, NavigationRail,
-        NavigationRailItem,
+        Button, ButtonVariant, ModalNavigationDrawer, NavigationDrawerVariant,
     };
 
     let schemes = [
@@ -1345,6 +1342,7 @@ fn material3_headless_navigation_suite_goldens_v1() {
             "light.expressive",
         ),
     ];
+    let navigation_suite = load_material3_navigation_golden_suite_v1();
 
     for scale_factor in [1.0, 1.25, 2.0] {
         let scale = scale_segment(scale_factor);
@@ -1354,6 +1352,7 @@ fn material3_headless_navigation_suite_goldens_v1() {
 
             // NavigationBar: horizontal destinations with badges.
             {
+                let case = navigation_suite.case("bar.selected");
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -1363,12 +1362,9 @@ fn material3_headless_navigation_suite_goldens_v1() {
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
-                let bounds = Rect::new(
-                    Point::new(Px(0.0), Px(0.0)),
-                    Size::new(Px(520.0), Px(220.0)),
-                );
+                let bounds = case.bounds();
 
-                let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("settings"));
+                let value: Model<Arc<str>> = app.models_mut().insert(case.selected_value());
 
                 let render = move |ui: &mut UiTree<TestHost>,
                                    app: &mut TestHost,
@@ -1381,31 +1377,7 @@ fn material3_headless_navigation_suite_goldens_v1() {
                         bounds,
                         "root",
                         |cx| {
-                            let bar = NavigationBar::new(value.clone())
-                                .a11y_label("Material 3 Navigation Bar")
-                                .test_id("headless-material3-navigation-bar")
-                                .items(vec![
-                                    NavigationBarItem::new("search", "Search", ids::ui::SEARCH)
-                                        .badge_dot()
-                                        .a11y_label("Destination Search")
-                                        .test_id("nav-bar-search"),
-                                    NavigationBarItem::new(
-                                        "settings",
-                                        "Settings",
-                                        ids::ui::SETTINGS,
-                                    )
-                                    .a11y_label("Destination Settings")
-                                    .test_id("nav-bar-settings"),
-                                    NavigationBarItem::new(
-                                        "more",
-                                        "More",
-                                        ids::ui::MORE_HORIZONTAL,
-                                    )
-                                    .badge_text("9")
-                                    .a11y_label("Destination More")
-                                    .test_id("nav-bar-more"),
-                                ])
-                                .into_element(cx);
+                            let bar = case.navigation_bar(value.clone()).into_element(cx);
 
                             vec![with_padding(cx, Px(24.0), bar)]
                         },
@@ -1416,15 +1388,15 @@ fn material3_headless_navigation_suite_goldens_v1() {
                     "expected the Material3 navigation bar scene to be stable ({label}, {scale})"
                 );
                 cases.insert(
-                    "bar.selected".to_string(),
+                    case.id().to_string(),
                     settle_material3_scene_snapshot_v1(
                         &mut app,
                         &mut ui,
                         &mut services,
                         bounds,
                         scale_factor,
-                        8,
-                        14,
+                        case.settle_from_frame(),
+                        case.total_frames(),
                         &message,
                         &render,
                     ),
@@ -1433,6 +1405,7 @@ fn material3_headless_navigation_suite_goldens_v1() {
 
             // NavigationRail: vertical destinations with disabled item.
             {
+                let case = navigation_suite.case("rail.selected");
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -1442,12 +1415,9 @@ fn material3_headless_navigation_suite_goldens_v1() {
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
-                let bounds = Rect::new(
-                    Point::new(Px(0.0), Px(0.0)),
-                    Size::new(Px(300.0), Px(520.0)),
-                );
+                let bounds = case.bounds();
 
-                let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("play"));
+                let value: Model<Arc<str>> = app.models_mut().insert(case.selected_value());
 
                 let render = move |ui: &mut UiTree<TestHost>,
                                    app: &mut TestHost,
@@ -1460,31 +1430,7 @@ fn material3_headless_navigation_suite_goldens_v1() {
                         bounds,
                         "root",
                         |cx| {
-                            let rail = NavigationRail::new(value.clone())
-                                .a11y_label("Material 3 Navigation Rail")
-                                .test_id("headless-material3-navigation-rail")
-                                .items(vec![
-                                    NavigationRailItem::new("search", "Search", ids::ui::SEARCH)
-                                        .badge_dot()
-                                        .a11y_label("Destination Search")
-                                        .test_id("nav-rail-search"),
-                                    NavigationRailItem::new(
-                                        "settings",
-                                        "Settings",
-                                        ids::ui::SETTINGS,
-                                    )
-                                    .a11y_label("Destination Settings")
-                                    .test_id("nav-rail-settings"),
-                                    NavigationRailItem::new("play", "Play", ids::ui::PLAY)
-                                        .badge_text("99+")
-                                        .a11y_label("Destination Play")
-                                        .test_id("nav-rail-play"),
-                                    NavigationRailItem::new("disabled", "Disabled", ids::ui::SLASH)
-                                        .disabled(true)
-                                        .a11y_label("Destination Disabled")
-                                        .test_id("nav-rail-disabled"),
-                                ])
-                                .into_element(cx);
+                            let rail = case.navigation_rail(value.clone()).into_element(cx);
 
                             vec![with_padding(cx, Px(24.0), rail)]
                         },
@@ -1495,15 +1441,15 @@ fn material3_headless_navigation_suite_goldens_v1() {
                     "expected the Material3 navigation rail scene to be stable ({label}, {scale})"
                 );
                 cases.insert(
-                    "rail.selected".to_string(),
+                    case.id().to_string(),
                     settle_material3_scene_snapshot_v1(
                         &mut app,
                         &mut ui,
                         &mut services,
                         bounds,
                         scale_factor,
-                        8,
-                        14,
+                        case.settle_from_frame(),
+                        case.total_frames(),
                         &message,
                         &render,
                     ),
@@ -1512,6 +1458,7 @@ fn material3_headless_navigation_suite_goldens_v1() {
 
             // NavigationDrawer: pill selection + badges.
             {
+                let case = navigation_suite.case("drawer.selected");
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -1521,12 +1468,9 @@ fn material3_headless_navigation_suite_goldens_v1() {
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
-                let bounds = Rect::new(
-                    Point::new(Px(0.0), Px(0.0)),
-                    Size::new(Px(360.0), Px(520.0)),
-                );
+                let bounds = case.bounds();
 
-                let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("settings"));
+                let value: Model<Arc<str>> = app.models_mut().insert(case.selected_value());
 
                 let render = move |ui: &mut UiTree<TestHost>,
                                    app: &mut TestHost,
@@ -1539,34 +1483,8 @@ fn material3_headless_navigation_suite_goldens_v1() {
                         bounds,
                         "root",
                         |cx| {
-                            let drawer = NavigationDrawer::new(value.clone())
-                                .a11y_label("Material 3 Navigation Drawer")
-                                .test_id("headless-material3-navigation-drawer")
-                                .items(vec![
-                                    NavigationDrawerItem::new("search", "Search", ids::ui::SEARCH)
-                                        .a11y_label("Destination Search")
-                                        .test_id("nav-drawer-search"),
-                                    NavigationDrawerItem::new(
-                                        "settings",
-                                        "Settings",
-                                        ids::ui::SETTINGS,
-                                    )
-                                    .badge_label("2")
-                                    .a11y_label("Destination Settings")
-                                    .test_id("nav-drawer-settings"),
-                                    NavigationDrawerItem::new("play", "Play", ids::ui::PLAY)
-                                        .badge_label("99+")
-                                        .a11y_label("Destination Play")
-                                        .test_id("nav-drawer-play"),
-                                    NavigationDrawerItem::new(
-                                        "disabled",
-                                        "Disabled",
-                                        ids::ui::SLASH,
-                                    )
-                                    .disabled(true)
-                                    .a11y_label("Destination Disabled")
-                                    .test_id("nav-drawer-disabled"),
-                                ])
+                            let drawer = case
+                                .navigation_drawer(value.clone(), NavigationDrawerVariant::Standard)
                                 .into_element(cx);
 
                             vec![with_padding(cx, Px(24.0), drawer)]
@@ -1578,15 +1496,15 @@ fn material3_headless_navigation_suite_goldens_v1() {
                     "expected the Material3 navigation drawer scene to be stable ({label}, {scale})"
                 );
                 cases.insert(
-                    "drawer.selected".to_string(),
+                    case.id().to_string(),
                     settle_material3_scene_snapshot_v1(
                         &mut app,
                         &mut ui,
                         &mut services,
                         bounds,
                         scale_factor,
-                        8,
-                        14,
+                        case.settle_from_frame(),
+                        case.total_frames(),
                         &message,
                         &render,
                     ),
@@ -1595,6 +1513,7 @@ fn material3_headless_navigation_suite_goldens_v1() {
 
             // ModalNavigationDrawer: overlay open (scrim + focus trap surface).
             {
+                let case = navigation_suite.case("modal_drawer.open");
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -1604,13 +1523,10 @@ fn material3_headless_navigation_suite_goldens_v1() {
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
-                let bounds = Rect::new(
-                    Point::new(Px(0.0), Px(0.0)),
-                    Size::new(Px(860.0), Px(520.0)),
-                );
+                let bounds = case.bounds();
 
                 let open = app.models_mut().insert(true);
-                let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("search"));
+                let value: Model<Arc<str>> = app.models_mut().insert(case.selected_value());
 
                 let render = move |ui: &mut UiTree<TestHost>,
                                    app: &mut TestHost,
@@ -1625,58 +1541,27 @@ fn material3_headless_navigation_suite_goldens_v1() {
                         "root",
                         |cx| {
                             let panel_value = value.clone();
-                            let panel = move |cx: &mut fret_ui::elements::ElementContext<
-                                '_,
-                                TestHost,
-                            >| {
-                                NavigationDrawer::new(panel_value.clone())
-                                    .variant(NavigationDrawerVariant::Modal)
-                                    .a11y_label("Material 3 Modal Navigation Drawer")
-                                    .test_id("headless-material3-modal-navigation-drawer-panel")
-                                    .items(vec![
-                                        NavigationDrawerItem::new(
-                                            "search",
-                                            "Search",
-                                            ids::ui::SEARCH,
-                                        )
-                                        .a11y_label("Destination Search")
-                                        .test_id("nav-modal-drawer-search"),
-                                        NavigationDrawerItem::new(
-                                            "settings",
-                                            "Settings",
-                                            ids::ui::SETTINGS,
-                                        )
-                                        .badge_label("2")
-                                        .a11y_label("Destination Settings")
-                                        .test_id("nav-modal-drawer-settings"),
-                                        NavigationDrawerItem::new("play", "Play", ids::ui::PLAY)
-                                            .badge_label("99+")
-                                            .a11y_label("Destination Play")
-                                            .test_id("nav-modal-drawer-play"),
-                                        NavigationDrawerItem::new(
-                                            "disabled",
-                                            "Disabled",
-                                            ids::ui::SLASH,
-                                        )
-                                        .disabled(true)
-                                        .a11y_label("Destination Disabled")
-                                        .test_id("nav-modal-drawer-disabled"),
-                                    ])
+                            let panel =
+                                move |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>| {
+                                    case.navigation_drawer(
+                                        panel_value.clone(),
+                                        NavigationDrawerVariant::Modal,
+                                    )
                                     .into_element(cx)
-                            };
+                                };
 
                             let underlay =
                                 move |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>| {
-                                    Button::new("Underlay probe")
+                                    Button::new(case.underlay_label())
                                         .variant(ButtonVariant::Outlined)
-                                        .test_id("nav-modal-drawer-underlay-probe")
+                                        .test_id(case.underlay_test_id())
                                         .into_element(cx)
                                 };
 
                             let modal = ModalNavigationDrawer::new(open.clone())
                                 .open_duration_ms(Some(1))
                                 .close_duration_ms(Some(1))
-                                .test_id("headless-material3-modal-navigation-drawer")
+                                .test_id(case.modal_test_id())
                                 .into_element(cx, panel, underlay);
 
                             vec![with_padding(cx, Px(24.0), modal)]
@@ -1688,7 +1573,7 @@ fn material3_headless_navigation_suite_goldens_v1() {
                     "expected the Material3 modal navigation drawer overlay scene to be stable ({label}, {scale})"
                 );
                 cases.insert(
-                    "modal_drawer.open".to_string(),
+                    case.id().to_string(),
                     settle_material3_overlay_scene_snapshot_v1(
                         &mut app,
                         &mut ui,
@@ -1696,8 +1581,8 @@ fn material3_headless_navigation_suite_goldens_v1() {
                         window,
                         bounds,
                         scale_factor,
-                        4,
-                        10,
+                        case.settle_from_frame(),
+                        case.total_frames(),
                         &message,
                         &render,
                     ),
