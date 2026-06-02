@@ -6012,6 +6012,13 @@ opening the slice.
       box-zoom, pan, and wheel event routing plus interaction session records; `declarative.rs`
       keeps panel assembly, paint orchestration, output publication, view/output snapshot records,
       shared geometry helpers, and plot state model wiring.
+- [x] Split Fret Plot declarative output/view snapshot projection out of the implementation root
+      without changing paint owners, event routing, public panel props, optional IMUI adapter
+      routing, or plot model projection.
+      Result: `ecosystem/fret-plot/src/declarative/output.rs` owns output publication, query
+      extraction, pointer cursor snapshots, output snapshot construction, and state/default view
+      bounds projection; `declarative.rs` keeps panel assembly, paint orchestration, grid/axis
+      painting, shared geometry helpers, and plot state model wiring.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll

@@ -382,6 +382,38 @@ Fresh gates:
 - `python tools\check_workstream_catalog.py` - passed.
 - `git diff --check` - passed.
 
+## Fret Plot declarative output owner split - 2026-06-02
+
+This refresh keeps the optional IMUI plot adapter declarative-only while moving output projection
+out of the implementation root:
+
+- `ecosystem/fret-plot/src/declarative/output.rs` now owns output publication, query extraction,
+  pointer cursor snapshots, output snapshot construction, and state/default view bounds projection.
+  It is the output publication, query extraction, pointer cursor snapshots, and view bounds projection owner.
+- `ecosystem/fret-plot/src/declarative.rs` keeps panel assembly, paint orchestration, grid/axis
+  painting, shared geometry helpers, and plot state model wiring.
+  Panel paint orchestration stays in `declarative.rs`.
+- `ecosystem/fret-plot/src/declarative/interaction.rs` imports current-view and pointer snapshot
+  helpers from the output owner, keeping event routing out of paint orchestration.
+- No public props, optional IMUI adapter policy, retained plot bridge, or crate layering changed in
+  this slice.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed with existing dead-code warnings in
+  `plot/view.rs`.
+- `cargo test -p fret-plot --lib line_plot_panel_uses_controlled_view_bounds --no-fail-fast` -
+  passed.
+- `cargo test -p fret-plot --lib line_plot_panel_updates_output_cursor --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_query_drag_updates_output_query --no-fail-fast` -
+  passed.
+- `cargo test -p fret-plot --lib line_plot_panel_drags --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative interaction owner split - 2026-06-02
 
 This refresh keeps the optional IMUI plot adapter declarative-only while moving event routing out of
@@ -390,8 +422,9 @@ the implementation root:
 - `ecosystem/fret-plot/src/declarative/interaction.rs` now owns the legend, draggable, query, box-zoom, pan, and wheel event routing owner,
   including interaction session records, selection overlay records, legend hover projection, and
   pointer-event snapshot projection.
-- `ecosystem/fret-plot/src/declarative.rs` keeps panel assembly, paint orchestration, output publication stays in `declarative.rs`,
-  view/output snapshot records, shared geometry helpers, and plot state model wiring.
+- `ecosystem/fret-plot/src/declarative.rs` kept panel assembly, paint orchestration, output
+  publication, view/output snapshot records, shared geometry helpers, and plot state model wiring
+  for this slice; the later output owner split narrows that current root role.
 - Paint owners stay event-free, and no public props, optional IMUI adapter policy, retained plot
   bridge, or crate layering changed in this slice.
 

@@ -5264,6 +5264,12 @@ pan, and wheel event routing plus interaction session records. The declarative r
 assembly, paint orchestration, output publication, view/output snapshot records, shared geometry
 helpers, and plot state model wiring.
 
+Fret Plot declarative output owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/output.rs` now owns output publication, query extraction,
+pointer cursor snapshots, output snapshot construction, and state/default view bounds projection.
+The declarative root keeps panel assembly, paint orchestration, grid/axis painting, shared geometry
+helpers, and plot state model wiring.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,

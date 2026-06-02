@@ -1882,6 +1882,7 @@
     "ecosystem/fret-plot/src/declarative/legend.rs",
     "ecosystem/fret-plot/src/declarative/model.rs",
     "ecosystem/fret-plot/src/declarative/overlays.rs",
+    "ecosystem/fret-plot/src/declarative/output.rs",
     "ecosystem/fret-plot/src/declarative/readout.rs",
     "ecosystem/fret-plot/src/declarative/selection.rs",
     "ecosystem/fret-plot/src/declarative/tests.rs",
