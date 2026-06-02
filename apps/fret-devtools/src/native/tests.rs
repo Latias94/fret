@@ -1131,6 +1131,46 @@ fn devtools_recent_failed_evidence_target_carries_result_json_payload() {
 }
 
 #[test]
+fn guide_recent_evidence_state_projects_target_and_report() {
+    let mut app = App::new();
+    app.set_global(DevtoolsConfig {
+        transport: DiagTransportKind::WebSocket,
+        ws_url: Arc::<str>::from("ws://127.0.0.1:7331/diag"),
+        token: Arc::<str>::from("secret-token"),
+        fs_out_dir: Arc::<str>::from("target/fret-diag"),
+        ws_port: 7331,
+    });
+    let st = init_window(&mut app, AppWindowId::default());
+    app.models_mut()
+        .update(&st.gate_run_result_history, |entries| {
+            entries.push(gate_run::GateRunResultHistoryEntry {
+                id: "failed-gate".to_string(),
+                label: "Failed gate".to_string(),
+                command_line:
+                    "cargo run -p fretboard-dev -- diag run tools/diag-scripts/smoke.json --json"
+                        .to_string(),
+                result_path: "F:/repo/.fret/diag/gate-runs/failed-gate.json".to_string(),
+                result_json: serde_json::json!({
+                    "diag_args": ["run", "tools/diag-scripts/smoke.json", "--json"]
+                })
+                .to_string(),
+                status: "failed".to_string(),
+                error: Some("gate failed".to_string()),
+            });
+        })
+        .expect("insert gate history");
+
+    let recent = collect_guide_recent_evidence_state(&app, &st);
+    let target = recent.target.expect("recent target");
+    assert_eq!(target.kind, "gate");
+    assert_eq!(target.id, "failed-gate");
+    assert!(!recent.bundle_dir_available);
+    assert!(recent.rerunnable);
+    assert!(recent.report_text.contains("failed_evidence_target: gate failed-gate"));
+    assert!(recent.report_text.contains("failed_evidence_rerunnable: gate"));
+}
+
+#[test]
 fn devtools_recent_evidence_selection_effect_routes_to_existing_history_state() {
     let gate = RecentEvidenceTarget {
         kind: "gate",

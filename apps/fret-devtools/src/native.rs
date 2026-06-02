@@ -46,6 +46,8 @@ use fret_ui_shadcn::facade as shadcn;
 mod demo_metrics_debug;
 mod followup;
 mod gate_run;
+#[path = "native/guide_recent_evidence_state.rs"]
+mod guide_recent_evidence_state;
 #[path = "native/header_state.rs"]
 mod header_state;
 mod pack;
@@ -65,6 +67,7 @@ use demo_metrics_debug::{
     demo_metrics_debug_action_command_for_copy_command, demo_metrics_debug_action_command_text,
     devtools_demo_metrics_debug_panel,
 };
+use guide_recent_evidence_state::collect_guide_recent_evidence_state;
 use header_state::{collect_header_diagnostics_state, header_next_action_lines};
 use discovery_lines::{
     devtools_dogfood_workflow_lines, devtools_first_open_lines,
@@ -3108,37 +3111,7 @@ fn right_panel(
 }
 
 fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
-    let gate_run_result_history = cx
-        .app
-        .models()
-        .read(&st.gate_run_result_history, |v| v.clone())
-        .unwrap_or_default();
-    let workflow_run_result_history = cx
-        .app
-        .models()
-        .read(&st.workflow_run_result_history, |v| v.clone())
-        .unwrap_or_default();
-    let followup_result_history = cx
-        .app
-        .models()
-        .read(&st.followup_result_history, |v| v.clone())
-        .unwrap_or_default();
-    let recent_failed_evidence_target = devtools_recent_failed_evidence_target(
-        &gate_run_result_history,
-        &workflow_run_result_history,
-        &followup_result_history,
-    );
-    let recent_failed_evidence_bundle_dir_available = recent_failed_evidence_target
-        .as_ref()
-        .and_then(recent_failed_evidence_bundle_dir)
-        .is_some();
-    let recent_workflow_commands = devtools_workflow_commands_from_state(cx.app, st);
-    let recent_failed_evidence_rerunnable = recent_failed_evidence_target
-        .as_ref()
-        .and_then(|target| {
-            recent_failed_evidence_rerun_command_from_state(target, &recent_workflow_commands)
-        })
-        .is_some();
+    let recent = collect_guide_recent_evidence_state(cx.app, st);
     let recent_evidence_actions = ui::h_row(|cx| {
         [
             shadcn::Button::new("Copy recent evidence report")
@@ -3149,43 +3122,43 @@ fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElem
             shadcn::Button::new("Select failed evidence")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .disabled(recent_failed_evidence_target.is_none())
+                .disabled(recent.target.is_none())
                 .on_click(CMD_SELECT_RECENT_FAILED_EVIDENCE)
                 .into_element(cx),
             shadcn::Button::new("Rerun failed evidence")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .disabled(!recent_failed_evidence_rerunnable)
+                .disabled(!recent.rerunnable)
                 .on_click(CMD_RERUN_RECENT_FAILED_EVIDENCE)
                 .into_element(cx),
             shadcn::Button::new("Copy failed evidence path")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .disabled(recent_failed_evidence_target.is_none())
+                .disabled(recent.target.is_none())
                 .on_click(CMD_COPY_RECENT_FAILED_EVIDENCE_PATH)
                 .into_element(cx),
             shadcn::Button::new("Copy failed bundle dir")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .disabled(!recent_failed_evidence_bundle_dir_available)
+                .disabled(!recent.bundle_dir_available)
                 .on_click(CMD_COPY_RECENT_FAILED_EVIDENCE_BUNDLE_DIR)
                 .into_element(cx),
             shadcn::Button::new("Copy failed evidence command")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .disabled(recent_failed_evidence_target.is_none())
+                .disabled(recent.target.is_none())
                 .on_click(CMD_COPY_RECENT_FAILED_EVIDENCE_COMMAND)
                 .into_element(cx),
             shadcn::Button::new("Copy failed evidence JSON")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .disabled(recent_failed_evidence_target.is_none())
+                .disabled(recent.target.is_none())
                 .on_click(CMD_COPY_RECENT_FAILED_EVIDENCE_JSON)
                 .into_element(cx),
             shadcn::Button::new("Open failed evidence JSON")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .disabled(recent_failed_evidence_target.is_none())
+                .disabled(recent.target.is_none())
                 .on_click(CMD_OPEN_RECENT_FAILED_EVIDENCE_JSON)
                 .into_element(cx),
         ]
@@ -3196,13 +3169,7 @@ fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElem
     .into_element(cx);
     let recent_evidence_blob = text_blob_sized(
         cx,
-        devtools_recent_evidence_lines_with_workflow_commands(
-            &gate_run_result_history,
-            &workflow_run_result_history,
-            &followup_result_history,
-            &recent_workflow_commands,
-        )
-        .join("\n"),
+        recent.report_text,
         Px(132.0),
     );
     let recent_evidence_panel = diag_section(
