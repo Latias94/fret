@@ -5269,6 +5269,11 @@ Fret Plot declarative tag overlay paint owner split - 2026-06-02:
 `overlays.rs` re-exports tag overlay painting and keeps shared annotation token/text-box and marker
 paint helpers for tag, text, and draggable-label owners.
 
+Fret Plot declarative plot text overlay paint owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/overlays/text.rs` now owns `PlotText` placement, right-axis
+anchoring, background quad, and text emission. `overlays.rs` re-exports plot text overlay painting
+and keeps shared annotation token/text-box, clamp, and marker paint helpers.
+
 Fret Plot declarative tests owner split - 2026-06-02:
 `ecosystem/fret-plot/src/declarative/tests.rs` now owns the declarative plot panel regression tests,
 including `TestHost`, scene helpers, paint regressions, drag output regressions, and

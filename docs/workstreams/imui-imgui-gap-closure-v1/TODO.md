@@ -6020,6 +6020,14 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/overlays/tags.rs` owns `TagX` and `TagY`
       projection; `overlays.rs` re-exports tag overlay painting and keeps shared annotation helper
       ownership for tag, text, and draggable-label overlays.
+- [x] Split Fret Plot declarative plot text overlay painting out of the overlay paint owner without
+      changing reference lines, draggable point/rect paint, image overlays, draggable labels, tag
+      overlays, shared annotation helpers, multi-axis projection, panel paint orchestration, public
+      panel props, optional IMUI adapter routing, or plot model projection.
+      Result: `ecosystem/fret-plot/src/declarative/overlays/text.rs` owns `PlotText` placement,
+      right-axis anchoring, background quad, and text emission; `overlays.rs` re-exports plot text
+      overlay painting and keeps shared annotation helper ownership for tag, text, and
+      draggable-label overlays.
 - [x] Split Fret Plot declarative plot panel regression tests out of the implementation root
       without changing implementation code, public panel props, optional IMUI adapter routing, test
       host behavior, or declarative paint/drag coverage.

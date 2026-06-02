@@ -3,6 +3,45 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Plot Text Overlay Paint Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative `PlotText` overlay projection moved out of
+`ecosystem/fret-plot/src/declarative/overlays.rs` into private
+`ecosystem/fret-plot/src/declarative/overlays/text.rs` without changing reference-line,
+draggable-shape, image overlay, draggable label, tag overlay, shared annotation helpers, panel paint
+orchestration, event routing, output publication, public panel props, optional IMUI adapter
+routing, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/overlays/text.rs` is the `PlotText` overlay paint owner.
+- `overlays.rs` re-exports plot text overlay painting while keeping shared annotation token,
+  clamp, text-box, and marker paint helpers for tag, text, and draggable-label owners.
+- The text owner imports only plot transforms, plot-text placement, background/text emission, and
+  shared annotation helpers, staying event-free, output-free, state-model-free, image-overlay-free,
+  authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` rejects plot-text projection from drifting back into
+  `overlays.rs` and rejects non-text overlay concerns from `overlays/text.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new plot text overlay
+  paint owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_plot_text_overlay --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_right_axis_tag_y_and_plot_text_overlays --no-fail-fast`:
+  pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_tag_x_and_y_overlays --no-fail-fast`:
+  pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Tag Overlay Paint Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative `TagX` and `TagY` overlay projection moved out of
