@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Tests Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative plot panel regression tests moved out of
+`ecosystem/fret-plot/src/declarative.rs` into private
+`ecosystem/fret-plot/src/declarative/tests.rs` without changing implementation code, public panel
+props, optional IMUI adapter routing, test host behavior, or declarative paint/drag coverage.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/tests.rs` owns the declarative plot panel regression tests,
+  including the `TestHost` harness, scene helpers, paint regressions, drag output regressions, and
+  linked-cursor/readout regressions.
+- `ecosystem/fret-plot/src/declarative.rs` keeps implementation code and only retains
+  `#[cfg(test)] mod tests;` as the test module hook.
+- `tools/gate_imui_workstream_source.py` tracks root, tests, overlay, heatmap, axis label, readout,
+  selection, commands, legend, model, panels, and props owners separately and rejects the test
+  harness and test bodies from drifting back into the root implementation owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new tests owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_drags --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Overlay Paint Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative reference, draggable, image, tag, and text overlay painting

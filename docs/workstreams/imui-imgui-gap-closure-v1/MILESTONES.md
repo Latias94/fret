@@ -5253,6 +5253,11 @@ paint, image layer painting, draggable labels, tag overlays, and text overlays. 
 keeps panel paint orchestration, draggable overlay event routing, output publication, and plot state
 handling, so overlay paint stays state-free and event-free.
 
+Fret Plot declarative tests owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/tests.rs` now owns the declarative plot panel regression tests,
+including `TestHost`, scene helpers, paint regressions, drag output regressions, and
+linked-cursor/readout regressions. The implementation root keeps `#[cfg(test)] mod tests;` only.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,

@@ -382,6 +382,30 @@ Fresh gates:
 - `python tools\check_workstream_catalog.py` - passed.
 - `git diff --check` - passed.
 
+## Fret Plot declarative tests owner split - 2026-06-02
+
+This refresh keeps the optional IMUI plot adapter declarative-only while moving the plot panel
+regression harness out of the implementation root:
+
+- `ecosystem/fret-plot/src/declarative/tests.rs` now owns the declarative plot panel regression tests,
+  including the `TestHost`, scene helpers, paint regressions, drag output regressions, and
+  linked-cursor/readout regressions.
+- The test harness moved out of `declarative.rs`; the implementation root keeps `#[cfg(test)] mod tests;` only.
+- No implementation code, public props, optional IMUI adapter policy, retained plot bridge, or
+  crate layering changed in this slice.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed with existing dead-code warnings in
+  `plot/view.rs`.
+- `cargo test -p fret-plot --lib line_plot_panel_paints --no-fail-fast` - passed, 26 tests.
+- `cargo test -p fret-plot --lib line_plot_panel_drags --no-fail-fast` - passed, 4 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative overlay paint owner split - 2026-06-02
 
 This refresh keeps the optional IMUI plot adapter declarative-only while moving overlay painting out

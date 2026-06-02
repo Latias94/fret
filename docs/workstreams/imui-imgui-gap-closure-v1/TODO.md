@@ -5999,6 +5999,12 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/overlays.rs` owns reference, draggable, image,
       tag, and text overlay painting; `declarative.rs` keeps panel paint orchestration, draggable
       overlay event routing, output publication, and plot state handling.
+- [x] Split Fret Plot declarative plot panel regression tests out of the implementation root
+      without changing implementation code, public panel props, optional IMUI adapter routing, test
+      host behavior, or declarative paint/drag coverage.
+      Result: `ecosystem/fret-plot/src/declarative/tests.rs` owns the `TestHost`, scene helpers,
+      paint regressions, drag output regressions, and linked-cursor/readout regressions;
+      `declarative.rs` keeps `#[cfg(test)] mod tests;` only.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll
