@@ -2,6 +2,30 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative shaded series paint owner split - 2026-06-02
+
+This maintenance slice keeps shaded band fill and upper/lower stroke path drawing out of the shared
+series router while preserving the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/series_paint/shaded.rs` is the shaded band fill and upper/lower stroke path owner.
+- Series paint router delegates shaded drawing and keeps non-shaded series routing.
+- The shaded owner stays event-free, output-free, overlay-free, axis-routing-free,
+  authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so shaded command/path logic
+  cannot drift back into `series_paint.rs` and non-shaded concerns cannot drift into `shaded.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo test -p fret-plot --lib shaded_plot_panel_paints_band_fill_and_two_strokes_on_declarative_path --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_series_legend --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative error-bars series paint owner split - 2026-06-02
 
 This maintenance slice keeps error-bars caps/markers stroke path drawing out of the shared series

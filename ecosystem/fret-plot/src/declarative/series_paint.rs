@@ -10,8 +10,7 @@ use crate::style::LinePlotStyle;
 
 use super::commands::{
     area_fill_commands_from_polyline, line_plot_area_fill_path_key, line_plot_series_path_key,
-    line_plot_shaded_lower_path_key, shaded_band_commands_from_series, stems_commands_from_points,
-    step_commands_from_polyline,
+    stems_commands_from_points, step_commands_from_polyline,
 };
 use super::geometry::line_plot_view_bounds_for_y_axis;
 use super::model::PlotPanelModel;
@@ -20,10 +19,12 @@ use super::style_helpers::series_color;
 mod bar_histogram;
 mod candlestick;
 mod error_bars;
+mod shaded;
 
 use bar_histogram::{paint_line_plot_bars_series, paint_line_plot_histogram_series};
 use candlestick::paint_line_plot_candlestick_series;
 use error_bars::paint_line_plot_error_bars_series;
+use shaded::paint_line_plot_shaded_series;
 
 pub(super) fn paint_line_plot_series(
     painter: &mut CanvasPainter<'_>,
@@ -128,70 +129,17 @@ pub(super) fn paint_line_plot_series(
             continue;
         }
         if let Some(lower_data) = &series.lower_data {
-            let (fill_commands, upper_commands, lower_commands) =
-                shaded_band_commands_from_series(series_transform, &*series.data, &**lower_data);
-
-            let mut stroke_color = series
-                .stroke_color
-                .unwrap_or_else(|| series_color(style, index, series_count));
-            if let Some(emphasized) = emphasized_series
-                && series.id != emphasized
-            {
-                stroke_color.a *= style.dimmed_series_alpha.clamp(0.0, 1.0);
-            }
-
-            if let Some(fill) = series.fill
-                && !fill_commands.is_empty()
-            {
-                let mut fill_color = fill.color.unwrap_or_else(|| {
-                    series
-                        .stroke_color
-                        .unwrap_or_else(|| series_color(style, index, series_count))
-                });
-                fill_color.a = (fill_color.a * fill.alpha.clamp(0.0, 1.0)).clamp(0.0, 1.0);
-                if let Some(emphasized) = emphasized_series
-                    && series.id != emphasized
-                {
-                    fill_color.a *= style.dimmed_series_alpha.clamp(0.0, 1.0);
-                }
-                painter.path(
-                    line_plot_area_fill_path_key(series.id.0),
-                    DrawOrder(19),
-                    Point::new(Px(0.0), Px(0.0)),
-                    &fill_commands,
-                    PathStyle::Fill(fret_core::FillStyle::default()),
-                    fill_color,
-                    raster_scale_factor,
-                );
-            }
-
-            let stroke_width = series.stroke_width.unwrap_or(style.stroke_width);
-            if upper_commands.len() >= 2 {
-                painter.path(
-                    line_plot_series_path_key(series.id.0),
-                    DrawOrder(20),
-                    Point::new(Px(0.0), Px(0.0)),
-                    &upper_commands,
-                    PathStyle::Stroke(StrokeStyle {
-                        width: stroke_width,
-                    }),
-                    stroke_color,
-                    raster_scale_factor,
-                );
-            }
-            if lower_commands.len() >= 2 {
-                painter.path(
-                    line_plot_shaded_lower_path_key(series.id.0),
-                    DrawOrder(20),
-                    Point::new(Px(0.0), Px(0.0)),
-                    &lower_commands,
-                    PathStyle::Stroke(StrokeStyle {
-                        width: stroke_width,
-                    }),
-                    stroke_color,
-                    raster_scale_factor,
-                );
-            }
+            paint_line_plot_shaded_series(
+                painter,
+                series,
+                lower_data,
+                series_transform,
+                style,
+                index,
+                series_count,
+                emphasized_series,
+                raster_scale_factor,
+            );
             continue;
         }
         let Some(points) = series.data.as_slice() else {
