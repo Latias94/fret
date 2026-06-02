@@ -15,7 +15,8 @@ use crate::series::SeriesId;
 use crate::state::PlotOutputSnapshot;
 use crate::style::{LinePlotStyle, MouseReadoutMode, OverlayAnchor, ReadoutSeriesPolicy};
 
-use super::{PlotPanelModel, axis_tick_label_text, push_horizontal_line, push_vertical_line};
+use super::paint_primitives::{push_horizontal_line, push_vertical_line};
+use super::{PlotPanelModel, axis_tick_label_text};
 
 pub(super) fn paint_line_plot_cursor_readout(
     painter: &mut CanvasPainter<'_>,

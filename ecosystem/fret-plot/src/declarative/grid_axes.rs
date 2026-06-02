@@ -8,7 +8,7 @@ use crate::plot::axis::{AxisLabelFormatter, AxisTicks, axis_ticks_scaled};
 use crate::style::LinePlotStyle;
 
 use super::axis_labels::paint_line_plot_axis_tick_labels;
-use super::{push_horizontal_line, push_vertical_line};
+use super::paint_primitives::{push_horizontal_line, push_vertical_line};
 
 pub(super) fn paint_line_plot_grid_and_axes(
     painter: &mut CanvasPainter<'_>,

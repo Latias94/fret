@@ -382,6 +382,37 @@ Fresh gates:
 - `python tools\check_workstream_catalog.py` - passed.
 - `git diff --check` - passed.
 
+## Fret Plot declarative paint primitives owner split - 2026-06-02
+
+This refresh keeps the optional IMUI plot adapter declarative-only while moving shared Quad paint
+helpers out of the implementation root:
+
+- `ecosystem/fret-plot/src/declarative/paint_primitives.rs` now owns the shared Quad primitive owner for line and filled-rect paint helpers,
+  including vertical lines, horizontal lines, and filled rectangles.
+- Grid, readout, heatmap, and overlay owners import primitives explicitly from
+  `paint_primitives.rs`.
+- `ecosystem/fret-plot/src/declarative.rs` keeps panel assembly, paint orchestration, shared
+  geometry helpers, and plot state model wiring.
+  Panel paint orchestration stays in `declarative.rs`.
+- No public props, optional IMUI adapter policy, retained plot bridge, event routing, output
+  publication, or crate layering changed in this slice.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed with existing dead-code warnings in
+  `plot/view.rs`.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_axes_and_grid --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib heatmap_plot_panel_paints_grid_cells --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_cursor_readout_without_output_model --no-fail-fast` -
+  passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_plot_image_overlay --no-fail-fast` -
+  passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative grid axes owner split - 2026-06-02
 
 This refresh keeps the optional IMUI plot adapter declarative-only while moving grid/axis baseline
@@ -393,8 +424,9 @@ painting out of the implementation root:
 - `ecosystem/fret-plot/src/declarative.rs` keeps panel assembly, paint orchestration, shared paint
   primitives, shared geometry helpers, and plot state model wiring.
   Panel paint orchestration stays in `declarative.rs`.
-- Shared paint primitives stay in `declarative.rs` because readout, heatmap, and overlay owners
-  still share those helpers.
+- Shared paint primitives stayed in `declarative.rs` for this slice because readout, heatmap, and
+  overlay owners still shared those helpers; the later paint primitive owner split narrows that
+  current root role.
 - No public props, optional IMUI adapter policy, retained plot bridge, event routing, output
   publication, or crate layering changed in this slice.
 

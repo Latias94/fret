@@ -9,7 +9,8 @@ use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
 use crate::cartesian::PlotTransform;
 use crate::style::LinePlotStyle;
 
-use super::{model::PlotPanelHeatmap, push_filled_rect};
+use super::model::PlotPanelHeatmap;
+use super::paint_primitives::push_filled_rect;
 
 pub(super) fn paint_line_plot_heatmap(
     painter: &mut CanvasPainter<'_>,

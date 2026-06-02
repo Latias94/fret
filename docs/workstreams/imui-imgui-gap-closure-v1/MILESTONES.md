@@ -5276,6 +5276,12 @@ painting, baseline axis painting, and primary-axis tick label orchestration. The
 keeps panel assembly, paint orchestration, shared paint primitives, shared geometry helpers, and
 plot state model wiring.
 
+Fret Plot declarative paint primitives owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/paint_primitives.rs` now owns shared Quad helpers for vertical
+lines, horizontal lines, and filled rectangles. Grid, readout, heatmap, and overlay owners import
+those primitives explicitly, and the declarative root keeps panel assembly, paint orchestration,
+shared geometry helpers, and plot state model wiring.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,
