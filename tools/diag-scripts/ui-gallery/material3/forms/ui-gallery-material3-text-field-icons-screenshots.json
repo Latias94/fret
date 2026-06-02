@@ -1,7 +1,9 @@
 {
   "meta": {
     "required_launch_features": ["gallery-material3"],
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+    "name": "ui-gallery-material3-text-field-icons-screenshots",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "material3", "text_field", "icons", "screenshots"]
   },
   "schema_version": 2,
   "steps": [

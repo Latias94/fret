@@ -21,13 +21,15 @@ fn material3_runtime_evidence_suite_is_curated_script_v2_evidence() {
     assert_eq!(suite["kind"], "diag_script_suite_manifest");
 
     let scripts = string_array_field(&suite, "scripts");
-    assert!(
-        scripts.len() >= 30,
-        "Material3 runtime evidence should cover the broad promoted script set"
-    );
     assert_sorted_unique(&scripts, "Material3 runtime evidence suite");
 
-    let script_set: BTreeSet<_> = scripts.iter().copied().collect();
+    let script_set: BTreeSet<String> = scripts.iter().map(|path| (*path).to_string()).collect();
+    assert_eq!(
+        script_set,
+        material3_diag_script_paths(),
+        "Material3 runtime evidence suite should cover every Material3 gallery diag script"
+    );
+
     for expected in [
         "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-state-matrix-chip-action-state.json",
         "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-state-matrix-compact-visuals.json",
@@ -64,6 +66,15 @@ fn material3_runtime_evidence_suite_is_curated_script_v2_evidence() {
             script["schema_version"], 2,
             "{script_path} should stay on diag script v2"
         );
+        let expected_name = Path::new(script_path)
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .expect("script path should have a UTF-8 file stem");
+        assert_eq!(
+            script["meta"]["name"].as_str(),
+            Some(expected_name),
+            "{script_path} should publish a stable meta.name matching its file stem"
+        );
         assert_array_contains(
             &script["meta"]["required_launch_features"],
             "gallery-material3",
@@ -73,6 +84,16 @@ fn material3_runtime_evidence_suite_is_curated_script_v2_evidence() {
             &script["meta"]["required_capabilities"],
             "diag.script_v2",
             &format!("{script_path} required capabilities"),
+        );
+        assert_array_contains(
+            &script["meta"]["tags"],
+            "ui_gallery",
+            &format!("{script_path} tags"),
+        );
+        assert_array_contains(
+            &script["meta"]["tags"],
+            "material3",
+            &format!("{script_path} tags"),
         );
 
         let step_types = collect_step_types(&script["steps"]);
@@ -150,6 +171,33 @@ fn read_repo_file(path: &str) -> String {
     let path = repo_root().join(path);
     fs::read_to_string(&path)
         .unwrap_or_else(|err| panic!("read_to_string failed for {}: {err}", path.display()))
+}
+
+fn material3_diag_script_paths() -> BTreeSet<String> {
+    let dir = repo_root().join("tools/diag-scripts/ui-gallery/material3");
+    let mut paths = BTreeSet::new();
+    collect_material3_diag_script_paths(&dir, &mut paths);
+    paths
+}
+
+fn collect_material3_diag_script_paths(dir: &Path, paths: &mut BTreeSet<String>) {
+    for entry in fs::read_dir(dir)
+        .unwrap_or_else(|err| panic!("read_dir failed for {}: {err}", dir.display()))
+    {
+        let entry = entry.unwrap_or_else(|err| panic!("read_dir entry failed: {err}"));
+        let path = entry.path();
+        if path.is_dir() {
+            collect_material3_diag_script_paths(&path, paths);
+            continue;
+        }
+        if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+            continue;
+        }
+        let relative = path
+            .strip_prefix(repo_root())
+            .unwrap_or_else(|err| panic!("strip_prefix failed for {}: {err}", path.display()));
+        paths.insert(relative.to_string_lossy().replace('\\', "/"));
+    }
 }
 
 fn string_array_field<'a>(entry: &'a Value, field: &str) -> Vec<&'a str> {

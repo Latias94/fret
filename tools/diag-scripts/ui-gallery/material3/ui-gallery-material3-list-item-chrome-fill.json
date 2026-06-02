@@ -2,7 +2,8 @@
   "meta": {
     "required_launch_features": ["gallery-material3"],
     "name": "ui-gallery-material3-list-item-chrome-fill",
-    "required_capabilities": ["diag.script_v2"]
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_gallery", "material3", "list", "list_item", "visual_chrome", "diagnostics"]
   },
   "schema_version": 2,
   "steps": [
@@ -122,4 +123,3 @@
     }
   ]
 }
-

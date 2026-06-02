@@ -11,6 +11,6 @@
   "owner": "material3",
   "platforms": ["native"],
   "tier": "correctness",
-  "expected_duration_ms": 900000,
+  "expected_duration_ms": 1200000,
   "tags": ["ui-gallery", "material3", "runtime-evidence", "correctness"]
 }

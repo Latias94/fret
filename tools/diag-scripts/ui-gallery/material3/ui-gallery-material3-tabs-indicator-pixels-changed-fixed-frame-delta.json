@@ -1,7 +1,11 @@
 {
   "schema_version": 2,
   "meta": {
-    "required_launch_features": ["gallery-material3"]
+    "required_launch_features": ["gallery-material3"],
+    "env_defaults": { "FRET_DIAG_FIXED_FRAME_DELTA_MS": "16" },
+    "name": "ui-gallery-material3-tabs-indicator-pixels-changed-fixed-frame-delta",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "material3", "tabs", "indicator", "fixed_frame_delta", "screenshots"]
   },
   "steps": [
     {

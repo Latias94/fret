@@ -130,10 +130,11 @@ Runtime screenshot and interaction evidence is tracked by a separate diagnostics
 - Gate:
   `apps/fret-ui-gallery/tests/material3_runtime_evidence_suite.rs`
 
-That suite is intentionally narrower than "every file under `tools/diag-scripts/ui-gallery/material3`".
-It promotes Material3 scripts that already declare explicit script-v2 capability metadata, then keeps
-the generated registry membership gated from the app side. Legacy scripts without explicit
-capability metadata should be promoted only after their authoring contract is made precise.
+That suite intentionally tracks every current JSON script under `tools/diag-scripts/ui-gallery/material3`
+recursively after each script declares explicit script-v2 capability metadata. The app-side gate
+keeps the directory contents, suite manifest, and generated registry membership aligned, so future
+Material3 diagnostic scripts must either be promoted with precise metadata or consciously split into
+a separate suite.
 
 ## API Documentation Follow-up
 

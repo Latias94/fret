@@ -304,19 +304,22 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     divider, progress, and search-bar sections.
 - 2026-06-02 Runtime evidence suite promotion:
   - Added `ui-gallery-material3-runtime-evidence` as the broad Material3 diagnostics suite, covering
-    38 promoted script-v2 artifacts across visual chrome, State Matrix behavior, nested overlay
-    arbitration, routed navigation, expressive screenshots, and switch motion/timeline evidence.
+    all 52 current Material3 gallery JSON script-v2 artifacts across visual chrome, State Matrix
+    behavior, nested overlay arbitration, routed navigation, expressive screenshots, and switch
+    motion/timeline evidence, including the nested `button/` and `forms/` scripts.
   - Added the `ui-gallery-material3-runtime-evidence` campaign manifest so maintainers can run the
     Material3 evidence pass through `fretboard-dev diag campaign` instead of discovering individual
     scripts manually.
   - The app-side suite gate verifies that every suite member is a Material3 UI Gallery script, stays
-    on script v2, declares `gallery-material3`, declares `diag.script_v2`, captures a diagnostics
-    bundle, declares `diag.screenshot_png` whenever it captures screenshots, and is promoted in the
-    generated registry with the suite membership.
+    on script v2, publishes `meta.name`, carries `ui_gallery` and `material3` tags, declares
+    `gallery-material3`, declares `diag.script_v2`, captures a diagnostics bundle, declares
+    `diag.screenshot_png` whenever it captures screenshots, and is promoted in the generated
+    registry with the suite membership.
   - Fixed the `ui-gallery-material3-exposed-dropdown-filtering` script metadata so its screenshot
     capture now advertises `diag.screenshot_png`.
-  - Scripts that still lack explicit capability metadata remain outside this broad suite until their
-    authoring contract is clarified.
+  - The previous legacy no-capability scripts now have explicit `name`, `required_capabilities`, and
+    tags. The frame-time-sensitive indicator scripts also declare
+    `FRET_DIAG_FIXED_FRAME_DELTA_MS=16`.
   - Gates:
     `cargo test -p fret-ui-gallery --features gallery-material3 --test material3_runtime_evidence_suite -- --nocapture`,
     `python tools/check_diag_scripts_registry.py`, and

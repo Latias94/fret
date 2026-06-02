@@ -1,7 +1,9 @@
 {
   "meta": {
     "required_launch_features": ["gallery-material3"],
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+    "name": "ui-gallery-material3-autocomplete-leading-icon-screenshots",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "material3", "autocomplete", "leading_icon", "screenshots"]
   },
   "schema_version": 2,
   "steps": [

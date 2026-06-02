@@ -10490,6 +10490,50 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-material3-autocomplete-filtering",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-autocomplete-filtering.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-runtime-evidence"
+      ],
+      "tags": [
+        "autocomplete",
+        "filtering",
+        "material3",
+        "screenshots",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-material3-autocomplete-leading-icon-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/material3/forms/ui-gallery-material3-autocomplete-leading-icon-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-runtime-evidence"
+      ],
+      "tags": [
+        "autocomplete",
+        "leading_icon",
+        "material3",
+        "screenshots",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-material3-autocomplete-option-chrome-fill",
       "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-autocomplete-option-chrome-fill.json",
       "required_capabilities": [
@@ -10501,7 +10545,14 @@
       "suite_memberships": [
         "ui-gallery-material3-runtime-evidence"
       ],
-      "tags": [],
+      "tags": [
+        "autocomplete",
+        "diagnostics",
+        "material3",
+        "option",
+        "ui_gallery",
+        "visual_chrome"
+      ],
       "target_hints": []
     },
     {
@@ -10529,6 +10580,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-material3-button-sizes-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/material3/button/ui-gallery-material3-button-sizes-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-runtime-evidence"
+      ],
+      "tags": [
+        "button",
+        "material3",
+        "screenshots",
+        "sizes",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-material3-checkbox-centered-chrome",
       "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-checkbox-centered-chrome.json",
       "required_capabilities": [
@@ -10540,7 +10613,14 @@
       "suite_memberships": [
         "ui-gallery-material3-runtime-evidence"
       ],
-      "tags": [],
+      "tags": [
+        "checkbox",
+        "diagnostics",
+        "material3",
+        "minimum_target",
+        "ui_gallery",
+        "visual_chrome"
+      ],
       "target_hints": []
     },
     {
@@ -10652,7 +10732,13 @@
         "ui-gallery-material3-exposed-dropdown-filtering",
         "ui-gallery-material3-runtime-evidence"
       ],
-      "tags": [],
+      "tags": [
+        "exposed_dropdown",
+        "filtering",
+        "material3",
+        "screenshots",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
@@ -10667,7 +10753,14 @@
       "suite_memberships": [
         "ui-gallery-material3-runtime-evidence"
       ],
-      "tags": [],
+      "tags": [
+        "diagnostics",
+        "icon_button",
+        "material3",
+        "minimum_target",
+        "ui_gallery",
+        "visual_chrome"
+      ],
       "target_hints": []
     },
     {
@@ -10705,7 +10798,14 @@
       "suite_memberships": [
         "ui-gallery-material3-runtime-evidence"
       ],
-      "tags": [],
+      "tags": [
+        "diagnostics",
+        "list",
+        "list_item",
+        "material3",
+        "ui_gallery",
+        "visual_chrome"
+      ],
       "target_hints": []
     },
     {
@@ -10743,7 +10843,14 @@
       "suite_memberships": [
         "ui-gallery-material3-runtime-evidence"
       ],
-      "tags": [],
+      "tags": [
+        "diagnostics",
+        "material3",
+        "menu",
+        "menu_item",
+        "ui_gallery",
+        "visual_chrome"
+      ],
       "target_hints": []
     },
     {
@@ -10769,6 +10876,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-material3-navigation-bar-indicator-pixels-changed-fixed-frame-delta",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-bar-indicator-pixels-changed-fixed-frame-delta.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-runtime-evidence"
+      ],
+      "tags": [
+        "fixed_frame_delta",
+        "indicator",
+        "material3",
+        "navigation_bar",
+        "screenshots",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-material3-navigation-bar-item-chrome-fill",
       "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-bar-item-chrome-fill.json",
       "required_capabilities": [
@@ -10780,7 +10910,14 @@
       "suite_memberships": [
         "ui-gallery-material3-runtime-evidence"
       ],
-      "tags": [],
+      "tags": [
+        "diagnostics",
+        "item",
+        "material3",
+        "navigation_bar",
+        "ui_gallery",
+        "visual_chrome"
+      ],
       "target_hints": []
     },
     {
@@ -10795,7 +10932,37 @@
       "suite_memberships": [
         "ui-gallery-material3-runtime-evidence"
       ],
-      "tags": [],
+      "tags": [
+        "diagnostics",
+        "item",
+        "material3",
+        "navigation_drawer",
+        "ui_gallery",
+        "visual_chrome"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-material3-navigation-rail-indicator-pixels-changed-fixed-frame-delta",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-rail-indicator-pixels-changed-fixed-frame-delta.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-runtime-evidence"
+      ],
+      "tags": [
+        "fixed_frame_delta",
+        "indicator",
+        "material3",
+        "navigation_rail",
+        "screenshots",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
@@ -10810,7 +10977,14 @@
       "suite_memberships": [
         "ui-gallery-material3-runtime-evidence"
       ],
-      "tags": [],
+      "tags": [
+        "diagnostics",
+        "item",
+        "material3",
+        "navigation_rail",
+        "ui_gallery",
+        "visual_chrome"
+      ],
       "target_hints": []
     },
     {
@@ -10887,6 +11061,27 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-material3-search-view-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-search-view-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-runtime-evidence"
+      ],
+      "tags": [
+        "material3",
+        "screenshots",
+        "search_view",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-material3-segmented-button-roving-semantics-screenshots",
       "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-segmented-button-roving-semantics-screenshots.json",
       "required_capabilities": [
@@ -10912,6 +11107,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-material3-select-a11y-parity-bundle",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-a11y-parity-bundle.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-runtime-evidence"
+      ],
+      "tags": [
+        "a11y",
+        "bundle",
+        "focus_restore",
+        "material3",
+        "select",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-material3-select-item-chrome-fill",
       "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-item-chrome-fill.json",
       "required_capabilities": [
@@ -10923,7 +11140,104 @@
       "suite_memberships": [
         "ui-gallery-material3-runtime-evidence"
       ],
-      "tags": [],
+      "tags": [
+        "diagnostics",
+        "item",
+        "material3",
+        "select",
+        "ui_gallery",
+        "visual_chrome"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-material3-select-menu-positioning-transform-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-menu-positioning-transform-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-runtime-evidence"
+      ],
+      "tags": [
+        "material3",
+        "positioning",
+        "screenshots",
+        "select",
+        "transform",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-material3-select-menu-width-floor-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-menu-width-floor-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-runtime-evidence"
+      ],
+      "tags": [
+        "material3",
+        "screenshots",
+        "select",
+        "ui_gallery",
+        "width_floor"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-material3-select-rich-options-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-rich-options-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-runtime-evidence"
+      ],
+      "tags": [
+        "material3",
+        "rich_options",
+        "screenshots",
+        "select",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-material3-select-typeahead-delay",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-typeahead-delay.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-runtime-evidence"
+      ],
+      "tags": [
+        "delay",
+        "material3",
+        "screenshots",
+        "select",
+        "typeahead",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
@@ -11223,6 +11537,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-material3-tabs-indicator-pixels-changed-fixed-frame-delta",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-tabs-indicator-pixels-changed-fixed-frame-delta.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-runtime-evidence"
+      ],
+      "tags": [
+        "fixed_frame_delta",
+        "indicator",
+        "material3",
+        "screenshots",
+        "tabs",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-material3-tabs-item-chrome-fill",
       "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-tabs-item-chrome-fill.json",
       "required_capabilities": [
@@ -11234,7 +11571,14 @@
       "suite_memberships": [
         "ui-gallery-material3-runtime-evidence"
       ],
-      "tags": [],
+      "tags": [
+        "diagnostics",
+        "item",
+        "material3",
+        "tabs",
+        "ui_gallery",
+        "visual_chrome"
+      ],
       "target_hints": []
     },
     {
@@ -11300,6 +11644,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-material3-text-field-icons-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/material3/forms/ui-gallery-material3-text-field-icons-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-runtime-evidence"
+      ],
+      "tags": [
+        "icons",
+        "material3",
+        "screenshots",
+        "text_field",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-material3-time-picker-chrome-fill",
       "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-time-picker-chrome-fill.json",
       "required_capabilities": [
@@ -11311,7 +11677,35 @@
       "suite_memberships": [
         "ui-gallery-material3-runtime-evidence"
       ],
-      "tags": [],
+      "tags": [
+        "diagnostics",
+        "material3",
+        "time_picker",
+        "ui_gallery",
+        "visual_chrome"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-material3-top-app-bar-scroll-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-top-app-bar-scroll-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-runtime-evidence"
+      ],
+      "tags": [
+        "material3",
+        "screenshots",
+        "scroll",
+        "top_app_bar",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
