@@ -502,6 +502,15 @@ Each TODO is labeled:
         after the active movement/pending-drag phases decline the move.
       - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
         locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking declarative PointerMove viewport-capture owner split keeps viewport
+      forwarding out of the PointerMove movement-phase owner:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M53_DOCKING_DECLARATIVE_POINTER_MOVE_VIEWPORT_CAPTURE_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/dock/declarative/events/pointer_move/viewport_capture.rs`
+        owns active viewport capture forwarding, right-button context-menu drag movement tracking,
+        `ViewportInputKind::PointerMove` emission, capture-state persistence, propagation stop,
+        and same-window capture suppression.
+      - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

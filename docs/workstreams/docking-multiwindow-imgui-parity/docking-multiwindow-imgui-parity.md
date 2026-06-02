@@ -119,6 +119,11 @@ Platform note:
   (moves PointerMove split-handle, floating, tab, overflow-menu, cursor, and redraw projection
   into a private hover owner without changing docking interaction behavior or the Wayland
   acceptance boundary)
+- Latest docking declarative PointerMove viewport-capture owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M53_DOCKING_DECLARATIVE_POINTER_MOVE_VIEWPORT_CAPTURE_OWNER_SPLIT_2026-06-02.md`
+  (moves PointerMove viewport capture forwarding, right-button drag movement tracking, and
+  same-window capture suppression into a private viewport-capture owner without changing docking
+  interaction behavior or the Wayland acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
