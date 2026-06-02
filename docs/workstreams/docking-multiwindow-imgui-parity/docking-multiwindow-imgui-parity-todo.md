@@ -511,6 +511,15 @@ Each TODO is labeled:
         and same-window capture suppression.
       - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
         locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking declarative PointerMove divider-drag owner split keeps split resize
+      handling out of the PointerMove movement-phase owner:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M54_DOCKING_DECLARATIVE_POINTER_MOVE_DIVIDER_DRAG_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/dock/declarative/events/pointer_move/divider_drag.rs`
+        owns divider drag lookup, left-button release cleanup, split-handle cursor projection,
+        adjacent fraction calculation, graph mutation, layout invalidation, redraw, and
+        propagation stop.
+      - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
