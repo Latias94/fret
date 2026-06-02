@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Editor Chrome Surface Sanitizer Owner-Split Evidence - 2026-06-02
+
+Claim verified: editor chrome surface background sanitization moved out of `primitives/chrome.rs`
+into a private child owner without changing transparent fallback behavior, half-transparent
+opaque-over behavior, TextInput/TextArea chrome resolution, popup surface sanitization, or the
+existing `crate::primitives::chrome::sanitize_editor_surface_bg` import path.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/chrome.rs` keeps editor frame/style resolution,
+  joined TextInput/TextArea style helpers, and re-exports `sanitize_editor_surface_bg`.
+- `ecosystem/fret-ui-editor/src/primitives/chrome/surface.rs` owns color mixing, transparent input
+  fallback, opaque-over projection, and `sanitize_editor_surface_bg(...)`.
+- `ecosystem/fret-ui-editor/src/primitives/popup_surface.rs` continues to consume the sanitizer via
+  `crate::primitives::chrome::sanitize_editor_surface_bg`.
+- `tools/gate_imui_workstream_source.py` tracks the chrome style owner and surface owner separately
+  and rejects surface policy from drifting back into style resolution.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new surface owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo test -p fret-ui-editor --no-fail-fast chrome`: pass, 25 unit tests plus 1 integration
+  filtered test.
+- `cargo test -p fret-ui-editor --no-fail-fast popup_surface`: pass, 6 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Theme Dense Preset Patch Owner-Split Evidence - 2026-06-02
 
 Claim verified: editor ImGui-like dense preset token patch construction moved out of

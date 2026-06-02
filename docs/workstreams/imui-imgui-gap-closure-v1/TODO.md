@@ -58,6 +58,15 @@ Last updated: 2026-06-02
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor chrome surface background sanitization out of
+      `ecosystem/fret-ui-editor/src/primitives/chrome.rs` into a private child owner without
+      changing transparent/half-transparent fallback behavior, cached-layer opacity guards,
+      TextInput/TextArea chrome resolution, popup surface sanitization, or existing
+      `crate::primitives::chrome::sanitize_editor_surface_bg` import paths.
+      Result: `primitives/chrome.rs` keeps editor frame/style resolution and re-exports the
+      sanitizer. `primitives/chrome/surface.rs` owns color mixing, fallback input background,
+      opaque-over projection, and transparency policy. The source gate prevents surface policy from
+      drifting back into the style-resolution owner.
 - [x] Split editor theme ImGui-like dense preset patch construction out of
       `ecosystem/fret-ui-editor/src/theme/patches.rs` into a private child owner without changing
       default patch tokens, dense override token values, preset dispatch, install/replay APIs, or
