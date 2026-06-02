@@ -1382,6 +1382,13 @@ indicator re-export routing only. `boolean_controls/visual/indicators.rs` owns c
 radio ring/dot, and switch state badge chrome. Public checkbox, radio, and switch behavior remains
 unchanged.
 
+2026-06-03 boolean indicator visual child owner-split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/visual/indicators.rs` is now a private re-export
+hub only. `boolean_controls/visual/indicators/checkbox.rs` owns checkbox checked/unchecked pill
+text, `radio.rs` owns radio outer/dot geometry, and `switch.rs` owns switch On/Off badge text.
+Palette channel selection, shared boolean label mounting, and public checkbox/radio/switch behavior
+remain unchanged.
+
 2026-05-31 editor style/theme picker density status result:
 `ecosystem/fret-ui-editor/src/theme.rs` now exposes `EditorThemePresetV1::picker_status_label()` as
 stable picker metadata, and `controls/editor_theme_preset_picker/render.rs` renders compact

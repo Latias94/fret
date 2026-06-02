@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-06-03
 
+## IMUI Boolean Indicator Visual Child Owner Split - 2026-06-03
+
+Claim verified: checkbox/radio/switch boolean indicator visual builders moved behind dedicated
+private child owners without changing checkbox checked/unchecked pill text, radio outer/dot
+geometry, switch On/Off badge text, palette channel selection, shared boolean label mounting, or
+public checkbox/radio/switch behavior.
+
+Evidence:
+
+- IMUI boolean indicator visual child owner split - 2026-06-03.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual/indicators.rs` keeps private re-exports
+  only.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual/indicators/checkbox.rs` owns checkbox
+  checked/unchecked pill text.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual/indicators/radio.rs` owns radio outer/dot
+  geometry.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual/indicators/switch.rs` owns switch On/Off
+  badge text.
+- Evidence anchor: checkbox checked/unchecked pill text.
+- Evidence anchor: radio outer/dot geometry.
+- Evidence anchor: switch On/Off badge text.
+- Evidence anchor: indicators.rs keeps private re-exports only.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib checkbox --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib radio --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib switch --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Debug Draw Round Command Payload Owner Split - 2026-06-03
 
 Claim verified: circle/ngon/ellipse debug-draw command payload variants moved out of

@@ -2,6 +2,39 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI boolean indicator visual child owner split - 2026-06-03
+
+This maintenance slice keeps boolean visual chrome readable while preserving the existing
+checkbox/radio/switch public behavior:
+
+- IMUI boolean indicator visual child owner split - 2026-06-03.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual/indicators.rs` keeps private re-exports
+  only.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual/indicators/checkbox.rs` owns checkbox
+  checked/unchecked pill text.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual/indicators/radio.rs` owns radio outer/dot
+  geometry.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual/indicators/switch.rs` owns switch On/Off
+  badge text.
+- Evidence anchor: checkbox checked/unchecked pill text.
+- Evidence anchor: radio outer/dot geometry.
+- Evidence anchor: switch On/Off badge text.
+- Evidence anchor: indicators.rs keeps private re-exports only.
+- Public checkbox, radio, switch, palette resolution, and shared boolean label behavior remain
+  unchanged.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib checkbox --no-fail-fast` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib radio --no-fail-fast` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib switch --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## DevTools Demo/Metrics/Debug action catalog owner split - 2026-06-03
 
 This maintenance slice keeps the Demo/Metrics/Debug route productized while reducing the route
