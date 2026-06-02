@@ -1,7 +1,7 @@
 # Material 3 shadcn-level completeness matrix v1
 
 Status: Active
-Last updated: 2026-06-01
+Last updated: 2026-06-02
 
 This matrix tracks `ecosystem/fret-ui-material3` against the completeness bar we use for mature
 `fret-ui-shadcn` recipes. It is not a visual-copying exercise: Material 3 remains spec/token-driven,
@@ -252,12 +252,27 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
   - Gates:
     `material3_navigation_interactions::modal_navigation_drawer_drives_routed_content_and_closes_on_destination_activation`
     plus `ui-gallery-material3-modal-navigation-drawer-routed-content.json`.
+- 2026-06-02 Recipe proof closure:
+  - The public recipe proof manifest now rejects `behavior_only` and `token_only`, allows only
+    `motion` as `supporting_api`, and verifies each referenced headless suite has a runner, a test
+    marker, and the full 3-scale by 4-scheme golden matrix.
+  - Tabs and ChipSet now have dedicated fixture-driven headless suites, clearing the last rendered
+    recipe proof gaps in the current manifest.
+  - ChipSet deliberately keeps disabled state on child chips rather than exposing a container-level
+    disabled API, because the set is a grouping and roving-focus policy surface.
+  - Evidence: `docs/workstreams/material3/material3-recipe-proof-closure-v1.md`,
+    `ecosystem/fret-ui-material3/tests/material3_recipe_proof_manifest.rs`,
+    `ecosystem/fret-ui-material3/tests/material3_headless_goldens.rs`,
+    `ecosystem/fret-ui-material3/tests/fixtures/material3_recipe_proof_manifest_v1.json`,
+    `ecosystem/fret-ui-material3/tests/support/headless_golden_runners/mod.rs`.
 
 ## Next Recommended Focus
 
-1. Add Tabs presence motion or richer scroll affordances only after a concrete product gate proves
-   the current force-mounted presence contract or scrollable metric coverage is insufficient.
-2. Add a pointer-corridor diagnostics replay for Material submenus only if a product flow depends
-   on high-speed hover travel between root menu rows and submenu panels.
-3. Extend real-device/mobile IME and inset proof for overlay-heavy Material flows if mobile search
-   and bottom-sheet surfaces become product priorities.
+1. Audit gallery snippets and first-party examples against the recipe proof manifest, prioritizing
+   components whose tested surface is richer than their teaching surface.
+2. Run a rustdoc/API ergonomics pass for Material recipes, especially style builders, slot APIs,
+   stable `test_id` parts, and component-family composition examples.
+3. Split ChipSet `Toolbar` semantics into a separate mechanism/a11y follow-up if the core semantics
+   vocabulary is expanded.
+4. Add Tabs presence motion, submenu pointer-corridor diagnostics, or mobile IME/inset proof only
+   after concrete product gates prove those conditional risks matter.
