@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Line Props Builder Owner Split - 2026-06-02
+
+Claim verified: `LinePlotPanelProps` constructor and builder methods moved out of
+`ecosystem/fret-plot/src/declarative/props.rs` into private
+`ecosystem/fret-plot/src/declarative/props/line.rs` without changing public type names, builder
+method names/signatures, default canvas/style/axis scale/step-mode behavior, state/output routing,
+axis label setters, panel entrypoints, optional IMUI adapter routing, paint owners, event owners,
+output publication, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/props/line.rs` owns the line plot prop constructor plus
+  output/state/style/axis-label/axis-scale/step-mode builder methods.
+- `props.rs` declares the private line builder owner, re-exports public prop records, and keeps
+  remaining plot prop builders plus heatmap colorbar defaults.
+- `tools/gate_imui_workstream_source.py` rejects line builder methods from drifting back into
+  `props.rs` and rejects non-line plot prop builders from drifting into `props/line.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new line prop builder
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo nextest run -p fret-plot line_plot_panel_paints_seeded_line_on_declarative_path line_plot_panel_updates_output_cursor_on_pointer_move line_plot_panel_uses_controlled_view_bounds_on_declarative_path --no-fail-fast`:
+  pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Line/Area/Stems Command Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative line, area-fill, stems, and step command projection moved out

@@ -5957,6 +5957,14 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/props/records.rs` owns all public plot panel
       prop record definitions; `props.rs` re-exports those records and keeps builder methods plus
       heatmap colorbar defaults.
+- [x] Split Fret Plot declarative `LinePlotPanelProps` builder methods out of the props builder
+      root without changing public type names, builder method names/signatures, canvas/style/axis
+      scale/step-mode defaults, state/output routing, axis label setters, panel entrypoints,
+      optional IMUI adapter routing, paint owners, event owners, output publication, or plot model
+      projection behavior.
+      Result: `ecosystem/fret-plot/src/declarative/props/line.rs` owns the line constructor and
+      builder methods; `props.rs` declares the owner, re-exports records, and keeps remaining
+      builders plus heatmap colorbar defaults.
 - [x] Split Fret Plot declarative legend paint/hit-testing out of the retained-free paint/event root
       without changing legend row metrics, swatch/text painting, hover/pin highlight, swatch/label
       hit testing, hidden-series mutation, pinned-series mutation, public panel props, or optional

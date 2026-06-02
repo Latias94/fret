@@ -2,6 +2,38 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative line props builder owner split - 2026-06-02
+
+This maintenance slice keeps line plot prop construction out of the shared props root while
+preserving the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/props/line.rs` owns `LinePlotPanelProps` construction plus
+  output/state/style/axis-label/axis-scale/step-mode builder methods.
+- `props.rs` declares the line builder owner, re-exports public prop records, and keeps remaining
+  plot prop builders plus heatmap colorbar defaults.
+- Evidence anchor: builder methods for error-bars remain in the props root.
+- Evidence anchor: Props root declares line builder owner.
+- Evidence anchor: LinePlotPanelProps builder owner.
+- Evidence anchor: line plot props builder owner.
+- Evidence anchor: Props root declares the private line builder owner.
+- Public panel props, panel entrypoints, optional IMUI adapter routing, paint/event owners, output
+  publication, and plot model projection remain unchanged.
+- The line props builder owner stays non-line-props-free, authoring-free, retained-free, paint-free,
+  event-free, and output-publication-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so line builder methods cannot
+  drift back into `props.rs` and other plot prop builders cannot drift into `props/line.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo nextest run -p fret-plot line_plot_panel_paints_seeded_line_on_declarative_path line_plot_panel_updates_output_cursor_on_pointer_move line_plot_panel_uses_controlled_view_bounds_on_declarative_path --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative line/area/stems command owner split - 2026-06-02
 
 This maintenance slice turns the shared command root into a thin projection hub while preserving the

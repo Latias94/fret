@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 plot line props builder owner-split result:
+`ecosystem/fret-plot/src/declarative/props.rs` now declares the private line builder owner,
+re-exports public prop records, and keeps remaining plot prop builders plus heatmap colorbar
+defaults while `ecosystem/fret-plot/src/declarative/props/line.rs` owns `LinePlotPanelProps`
+construction and output/state/style/axis-label/axis-scale/step-mode builder methods. Public prop
+type names, builder signatures/defaults, panel entrypoints, optional IMUI adapter routing,
+paint/event owners, output publication, and plot model projection remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 plot line/area/stems command owner-split result:
 `ecosystem/fret-plot/src/declarative/commands.rs` is now a thin command projection hub that keeps
 shared line/area path keys and re-exports private command owners while
