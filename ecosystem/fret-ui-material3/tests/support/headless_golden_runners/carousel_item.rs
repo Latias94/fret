@@ -6,9 +6,8 @@ use fret_ui::{
     Theme, UiTree,
     element::{ContainerProps, FlexProps, Length, TextProps},
 };
-use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 
-use super::scale_segment;
+use super::{MATERIAL3_HEADLESS_SCALE_FACTORS_V1, MATERIAL3_HEADLESS_SCHEMES_V1, scale_segment};
 use crate::support::{
     goldens::{
         Material3HeadlessGoldenV1, Material3HeadlessSuiteV1, settle_material3_scene_snapshot_v1,
@@ -24,34 +23,15 @@ use crate::support::{
 };
 
 pub(crate) fn run_material3_headless_carousel_item_suite_goldens_v1() {
-    let schemes = [
-        (
-            SchemeMode::Dark,
-            DynamicVariant::TonalSpot,
-            "dark.tonal_spot",
-        ),
-        (
-            SchemeMode::Light,
-            DynamicVariant::TonalSpot,
-            "light.tonal_spot",
-        ),
-        (
-            SchemeMode::Dark,
-            DynamicVariant::Expressive,
-            "dark.expressive",
-        ),
-        (
-            SchemeMode::Light,
-            DynamicVariant::Expressive,
-            "light.expressive",
-        ),
-    ];
     let carousel_suite = load_material3_carousel_item_golden_suite_v1();
 
-    for scale_factor in [1.0, 1.25, 2.0] {
+    for scale_factor in MATERIAL3_HEADLESS_SCALE_FACTORS_V1 {
         let scale = scale_segment(scale_factor);
 
-        for (mode, variant, label) in schemes {
+        for scheme in MATERIAL3_HEADLESS_SCHEMES_V1 {
+            let mode = scheme.mode;
+            let variant = scheme.variant;
+            let label = scheme.label;
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
 
             for case in carousel_suite.cases() {

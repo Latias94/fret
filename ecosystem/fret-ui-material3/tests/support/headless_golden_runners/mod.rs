@@ -25,6 +25,40 @@ pub(crate) mod text_field;
 pub(crate) mod time_picker;
 pub(crate) mod top_app_bar;
 
+use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Material3HeadlessSchemeV1 {
+    pub(crate) mode: SchemeMode,
+    pub(crate) variant: DynamicVariant,
+    pub(crate) label: &'static str,
+}
+
+pub(crate) const MATERIAL3_HEADLESS_SCHEMES_V1: [Material3HeadlessSchemeV1; 4] = [
+    Material3HeadlessSchemeV1 {
+        mode: SchemeMode::Dark,
+        variant: DynamicVariant::TonalSpot,
+        label: "dark.tonal_spot",
+    },
+    Material3HeadlessSchemeV1 {
+        mode: SchemeMode::Light,
+        variant: DynamicVariant::TonalSpot,
+        label: "light.tonal_spot",
+    },
+    Material3HeadlessSchemeV1 {
+        mode: SchemeMode::Dark,
+        variant: DynamicVariant::Expressive,
+        label: "dark.expressive",
+    },
+    Material3HeadlessSchemeV1 {
+        mode: SchemeMode::Light,
+        variant: DynamicVariant::Expressive,
+        label: "light.expressive",
+    },
+];
+
+pub(crate) const MATERIAL3_HEADLESS_SCALE_FACTORS_V1: [f32; 3] = [1.0, 1.25, 2.0];
+
 pub(crate) fn scale_segment(scale_factor: f32) -> &'static str {
     if (scale_factor - 1.0).abs() < 1e-6 {
         "scale1_0"

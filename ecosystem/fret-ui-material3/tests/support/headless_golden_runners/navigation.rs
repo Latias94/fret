@@ -3,10 +3,9 @@ use std::{collections::BTreeMap, sync::Arc};
 use fret_core::{AppWindowId, Px, UiServices};
 use fret_runtime::{Model, ModelHost, PlatformCapabilities};
 use fret_ui::UiTree;
-use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 use fret_ui_material3::{Button, ButtonVariant, ModalNavigationDrawer, NavigationDrawerVariant};
 
-use super::scale_segment;
+use super::{MATERIAL3_HEADLESS_SCALE_FACTORS_V1, MATERIAL3_HEADLESS_SCHEMES_V1, scale_segment};
 use crate::support::{
     goldens::{
         Material3HeadlessGoldenV1, Material3HeadlessSuiteV1,
@@ -20,34 +19,15 @@ use crate::support::{
 };
 
 pub(crate) fn run_material3_headless_navigation_suite_goldens_v1() {
-    let schemes = [
-        (
-            SchemeMode::Dark,
-            DynamicVariant::TonalSpot,
-            "dark.tonal_spot",
-        ),
-        (
-            SchemeMode::Light,
-            DynamicVariant::TonalSpot,
-            "light.tonal_spot",
-        ),
-        (
-            SchemeMode::Dark,
-            DynamicVariant::Expressive,
-            "dark.expressive",
-        ),
-        (
-            SchemeMode::Light,
-            DynamicVariant::Expressive,
-            "light.expressive",
-        ),
-    ];
     let navigation_suite = load_material3_navigation_golden_suite_v1();
 
-    for scale_factor in [1.0, 1.25, 2.0] {
+    for scale_factor in MATERIAL3_HEADLESS_SCALE_FACTORS_V1 {
         let scale = scale_segment(scale_factor);
 
-        for (mode, variant, label) in schemes {
+        for scheme in MATERIAL3_HEADLESS_SCHEMES_V1 {
+            let mode = scheme.mode;
+            let variant = scheme.variant;
+            let label = scheme.label;
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
 
             {

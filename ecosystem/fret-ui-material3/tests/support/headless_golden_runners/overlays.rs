@@ -7,12 +7,11 @@ use fret_ui::{
     element::{CrossAlign, FlexProps, Length, MainAlign},
 };
 use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
-use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 use fret_ui_material3::{
     Button, DropdownMenu, PlainTooltip, RichTooltip, Select, SelectItem, TooltipProvider,
 };
 
-use super::scale_segment;
+use super::{MATERIAL3_HEADLESS_SCALE_FACTORS_V1, MATERIAL3_HEADLESS_SCHEMES_V1, scale_segment};
 use crate::support::{
     events::{pointer_down, pointer_up},
     goldens::{
@@ -52,34 +51,15 @@ fn select_from_fixture(
 }
 
 pub(crate) fn run_material3_headless_overlays_suite_goldens_v1() {
-    let schemes = [
-        (
-            SchemeMode::Dark,
-            DynamicVariant::TonalSpot,
-            "dark.tonal_spot",
-        ),
-        (
-            SchemeMode::Light,
-            DynamicVariant::TonalSpot,
-            "light.tonal_spot",
-        ),
-        (
-            SchemeMode::Dark,
-            DynamicVariant::Expressive,
-            "dark.expressive",
-        ),
-        (
-            SchemeMode::Light,
-            DynamicVariant::Expressive,
-            "light.expressive",
-        ),
-    ];
     let overlay_suite = load_material3_overlay_golden_suite_v1();
 
-    for scale_factor in [1.0, 1.25, 2.0] {
+    for scale_factor in MATERIAL3_HEADLESS_SCALE_FACTORS_V1 {
         let scale = scale_segment(scale_factor);
 
-        for (mode, variant, label) in schemes {
+        for scheme in MATERIAL3_HEADLESS_SCHEMES_V1 {
+            let mode = scheme.mode;
+            let variant = scheme.variant;
+            let label = scheme.label;
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
 
             for case in overlay_suite.tooltip_menu_cases() {

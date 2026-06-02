@@ -3,9 +3,8 @@ use std::collections::BTreeMap;
 use fret_core::{AppWindowId, KeyCode, Point, PointerId, Px, Rect, Size, UiServices};
 use fret_runtime::{ModelHost, PlatformCapabilities};
 use fret_ui::UiTree;
-use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 
-use super::scale_segment;
+use super::{MATERIAL3_HEADLESS_SCALE_FACTORS_V1, MATERIAL3_HEADLESS_SCHEMES_V1, scale_segment};
 use crate::support::{
     events::{key_down, key_up, pointer_down, pointer_move},
     goldens::{
@@ -25,34 +24,15 @@ use crate::support::{
 pub(crate) fn run_material3_headless_slider_suite_goldens_v1() {
     use fret_ui::element::FlexProps;
 
-    let schemes = [
-        (
-            SchemeMode::Dark,
-            DynamicVariant::TonalSpot,
-            "dark.tonal_spot",
-        ),
-        (
-            SchemeMode::Light,
-            DynamicVariant::TonalSpot,
-            "light.tonal_spot",
-        ),
-        (
-            SchemeMode::Dark,
-            DynamicVariant::Expressive,
-            "dark.expressive",
-        ),
-        (
-            SchemeMode::Light,
-            DynamicVariant::Expressive,
-            "light.expressive",
-        ),
-    ];
     let slider_suite = load_material3_slider_golden_suite_v1();
 
-    for scale_factor in [1.0, 1.25, 2.0] {
+    for scale_factor in MATERIAL3_HEADLESS_SCALE_FACTORS_V1 {
         let scale = scale_segment(scale_factor);
 
-        for (mode, variant, label) in schemes {
+        for scheme in MATERIAL3_HEADLESS_SCHEMES_V1 {
+            let mode = scheme.mode;
+            let variant = scheme.variant;
+            let label = scheme.label;
             let bounds = Rect::new(
                 Point::new(Px(0.0), Px(0.0)),
                 Size::new(Px(520.0), Px(320.0)),

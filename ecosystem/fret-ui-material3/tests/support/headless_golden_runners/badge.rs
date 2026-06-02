@@ -3,9 +3,8 @@ use std::collections::BTreeMap;
 use fret_core::{AppWindowId, Point, Px, Rect, Size, UiServices};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::{Theme, UiTree, element::AnyElement};
-use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 
-use super::scale_segment;
+use super::{MATERIAL3_HEADLESS_SCALE_FACTORS_V1, MATERIAL3_HEADLESS_SCHEMES_V1, scale_segment};
 use crate::support::{
     goldens::{
         Material3HeadlessGoldenV1, Material3HeadlessSuiteV1, settle_material3_scene_snapshot_v1,
@@ -21,33 +20,13 @@ pub(crate) fn run_material3_headless_badge_suite_goldens_v1() {
     use fret_ui::element::{ContainerProps, FlexProps, Length};
     use fret_ui_material3::{Badge, BadgePlacement};
 
-    let schemes = [
-        (
-            SchemeMode::Dark,
-            DynamicVariant::TonalSpot,
-            "dark.tonal_spot",
-        ),
-        (
-            SchemeMode::Light,
-            DynamicVariant::TonalSpot,
-            "light.tonal_spot",
-        ),
-        (
-            SchemeMode::Dark,
-            DynamicVariant::Expressive,
-            "dark.expressive",
-        ),
-        (
-            SchemeMode::Light,
-            DynamicVariant::Expressive,
-            "light.expressive",
-        ),
-    ];
-
-    for scale_factor in [1.0, 1.25, 2.0] {
+    for scale_factor in MATERIAL3_HEADLESS_SCALE_FACTORS_V1 {
         let scale = scale_segment(scale_factor);
 
-        for (mode, variant, label) in schemes {
+        for scheme in MATERIAL3_HEADLESS_SCHEMES_V1 {
+            let mode = scheme.mode;
+            let variant = scheme.variant;
+            let label = scheme.label;
             let mut app = TestHost::default();
             app.set_global(PlatformCapabilities::default());
             apply_material_theme(&mut app, mode, variant);

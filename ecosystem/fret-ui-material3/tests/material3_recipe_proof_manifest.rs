@@ -17,6 +17,14 @@ const MATERIAL3_TOKEN_VISUAL_CASES_V1: &str = include_str!(concat!(
     "/tests/fixtures/material3_token_visual_cases_v1.json"
 ));
 const MATERIAL3_HEADLESS_GOLDEN_TESTS: &str = include_str!("material3_headless_goldens.rs");
+const MATERIAL3_HEADLESS_GOLDEN_SCALE_SEGMENTS: [&str; 3] = ["scale1_0", "scale1_25", "scale2_0"];
+const MATERIAL3_HEADLESS_GOLDEN_SCHEME_LABELS: [&str; 4] = [
+    "dark.tonal_spot",
+    "light.tonal_spot",
+    "dark.expressive",
+    "light.expressive",
+];
+const SUPPORTING_API_STATUS_ALLOWLIST: [&str; 1] = ["motion"];
 
 #[derive(Debug, Deserialize)]
 struct Material3RecipeProofManifestV1 {
@@ -59,6 +67,7 @@ struct Material3TokenVisualCaseV1 {
 #[test]
 fn material3_recipe_proof_manifest_tracks_public_recipe_coverage_v1() {
     let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = repo_root_for_crate_dir(&crate_dir);
     let manifest: Material3RecipeProofManifestV1 =
         serde_json::from_str(MATERIAL3_RECIPE_PROOF_MANIFEST_V1)
             .expect("material3 recipe proof manifest must parse");
@@ -108,6 +117,7 @@ fn material3_recipe_proof_manifest_tracks_public_recipe_coverage_v1() {
                 "{} references runner {suite}, but material3_headless_goldens.rs does not call {test_marker}",
                 entry.id
             );
+            assert_headless_golden_suite_files_exist(&repo_root, &entry.id, suite);
         }
 
         for test in &entry.behavior_tests {
@@ -132,6 +142,14 @@ fn public_root_recipe_sources(crate_dir: &Path) -> BTreeSet<String> {
             (file != "lib.rs").then(|| format!("src/{file}"))
         })
         .collect()
+}
+
+fn repo_root_for_crate_dir(crate_dir: &Path) -> PathBuf {
+    crate_dir
+        .parent()
+        .and_then(|path| path.parent())
+        .map(Path::to_path_buf)
+        .expect("material3 crate must live under ecosystem/<crate>")
 }
 
 fn assert_sorted_unique_manifest_entries(entries: &[Material3RecipeProofEntryV1]) {
@@ -188,38 +206,50 @@ fn assert_status_contract(entry: &Material3RecipeProofEntryV1) {
             );
         }
         Material3RecipeProofStatusV1::BehaviorOnly => {
-            assert!(
-                entry.headless_golden_suites.is_empty(),
-                "{} is behavior_only but already lists headless_golden_suites",
+            panic!(
+                "{} is behavior_only; public Material3 recipe proof entries must now use headless_golden or supporting_api",
                 entry.id
             );
-            assert!(
-                !entry.behavior_tests.is_empty(),
-                "{} is behavior_only but has no behavior_tests",
-                entry.id
-            );
-            assert_known_gap(entry);
         }
         Material3RecipeProofStatusV1::TokenOnly => {
-            assert!(
-                entry.token_visual_component.is_some(),
-                "{} is token_only but has no token_visual_component",
+            panic!(
+                "{} is token_only; public Material3 recipe proof entries must now use headless_golden or supporting_api",
                 entry.id
             );
-            assert!(
-                entry.headless_golden_suites.is_empty() && entry.behavior_tests.is_empty(),
-                "{} is token_only but already lists stronger proof artifacts",
-                entry.id
-            );
-            assert_known_gap(entry);
         }
         Material3RecipeProofStatusV1::SupportingApi => {
+            assert!(
+                SUPPORTING_API_STATUS_ALLOWLIST.contains(&entry.id.as_str()),
+                "{} is supporting_api but is not in the explicit allowlist {:?}",
+                entry.id,
+                SUPPORTING_API_STATUS_ALLOWLIST
+            );
             assert!(
                 entry.token_visual_component.is_none(),
                 "{} is supporting_api but lists a token_visual_component",
                 entry.id
             );
             assert_known_gap(entry);
+        }
+    }
+}
+
+fn assert_headless_golden_suite_files_exist(repo_root: &Path, entry_id: &str, suite: &str) {
+    let golden_stem = suite.replace('_', "-");
+    let golden_dir = repo_root
+        .join("goldens")
+        .join("material3-headless")
+        .join("v1");
+
+    for scale in MATERIAL3_HEADLESS_GOLDEN_SCALE_SEGMENTS {
+        for label in MATERIAL3_HEADLESS_GOLDEN_SCHEME_LABELS {
+            let file_name = format!("material3-{golden_stem}.{scale}.{label}.json");
+            let path = golden_dir.join(&file_name);
+            assert!(
+                path.exists(),
+                "{entry_id} references headless golden suite {suite}, but golden file is missing: {}",
+                path.display()
+            );
         }
     }
 }
