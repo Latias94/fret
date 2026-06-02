@@ -538,6 +538,15 @@ Each TODO is labeled:
         stop.
       - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
         locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking declarative PointerMove pending tabs-group drag owner split keeps
+      tabs-group activation out of the PointerMove movement-phase owner:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M57_DOCKING_DECLARATIVE_POINTER_MOVE_PENDING_TABS_GROUP_DRAG_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/dock/declarative/events/pointer_move/pending_tabs_group_drag.rs`
+        owns pending tabs-group drag lookup, left-button release cleanup, activation threshold,
+        `begin_declarative_tabs_group_drag`, hover clearing, capture release, redraw, and
+        propagation stop.
+      - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
