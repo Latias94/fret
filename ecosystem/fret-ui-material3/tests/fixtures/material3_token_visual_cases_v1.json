@@ -1067,6 +1067,15 @@
       ]
     },
     {
+      "id": "bottom-sheet-standard-light",
+      "component": "bottom_sheet",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "standard" },
+      "assertions": [
+        { "role": "standard_container_elevation", "kind": "metric", "token": "md.comp.sheet.bottom.docked.standard.container.elevation" }
+      ]
+    },
+    {
       "id": "plain-tooltip-open-light",
       "component": "tooltip",
       "scheme": { "mode": "light", "variant": "tonal_spot" },
