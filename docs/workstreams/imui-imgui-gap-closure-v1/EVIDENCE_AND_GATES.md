@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-02
 
+## IMUI Disclosure Header Indicator Owner-Split Evidence - 2026-06-02
+
+Claim verified: IMUI disclosure header indicator-slot assembly moved out of
+`disclosure_controls/visual/header/children.rs` into a private child owner without changing fixed
+indicator width, chrome-glyph rendering, inherited foreground, label text role, spacer behavior,
+row gap, or public disclosure helper behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header/children.rs` keeps
+  `HeaderChildrenRequest`, row flex composition, child ordering, label text, and spacer assembly.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header/children/indicator.rs` owns
+  the fixed 12px indicator slot and `text_chrome_glyph(...)` rendering with inherited foreground.
+- `tools/gate_imui_workstream_source.py` now tracks the indicator owner and rejects indicator slot
+  policy from drifting back into the row-children owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new indicator owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo test -p fret-ui-kit --features imui --no-fail-fast disclosure_controls::tests`: pass,
+  6 library tests passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass, 540 dedicated directories / 47 standalone
+  markdown files.
+- `git diff --check`: pass.
+
 ## Editor ColorEdit Popup Body Layout Owner-Split Evidence - 2026-06-02
 
 Claim verified: editor `ColorEdit` popup body assembly now delegates popup content ordering,

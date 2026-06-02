@@ -58,6 +58,14 @@ Last updated: 2026-06-02
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI disclosure header indicator-slot assembly out of
+      `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header/children.rs` into a
+      private child owner without changing indicator width, glyph chrome, inherited foreground,
+      label text role, spacer behavior, row gap, or public disclosure helpers.
+      Result: `disclosure_controls/visual/header/children.rs` keeps header row child ordering,
+      label text, and spacer composition. `disclosure_controls/visual/header/children/indicator.rs`
+      owns the fixed indicator slot and chrome-glyph rendering. The source gate prevents indicator
+      slot policy from drifting back into the row-children owner.
 - [x] Split editor `TextField` unbuffered multiline Escape-clear key handling into a private
       element child owner without changing clear-on-Escape behavior, redraw requests, multiline vs
       single-line cancel routing, buffered commit/cancel key handling, clear-button behavior,
