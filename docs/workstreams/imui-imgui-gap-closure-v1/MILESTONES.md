@@ -2930,6 +2930,12 @@ now owns line and polyline stroke painting, and
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear/rect_quad_triangle.rs`
 owns rect, quad, and triangle stroke painting. `stroked/linear.rs` keeps private re-exports.
 
+2026-06-03 debug-draw stroked rect/quad/triangle path paint child owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear/rect_quad_triangle.rs`
+is now a private re-export hub only. `rect.rs`, `quad.rs`, and `triangle.rs` own the three concrete
+stroked linear path paint branches, preserving path command generation, culling checks, stroke style
+dispatch, and canvas path dispatch.
+
 2026-05-28 debug-draw list summary classification owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/list/classification.rs` now owns
 command-kind to list summary class mapping. `summaries/list.rs` keeps aggregate counters, public

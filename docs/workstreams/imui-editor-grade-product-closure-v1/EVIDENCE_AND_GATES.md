@@ -2,6 +2,36 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI debug draw stroked rect/quad/triangle path paint child owner split - 2026-06-03
+
+This maintenance slice keeps debug-draw path painting readable while preserving public draw-list
+behavior:
+
+- IMUI debug draw stroked rect/quad/triangle path paint child owner split - 2026-06-03.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear/rect_quad_triangle.rs`
+  keeps private re-exports only.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear/rect_quad_triangle/rect.rs`
+  owns rect stroked path paint.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear/rect_quad_triangle/quad.rs`
+  owns quad stroked path paint.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear/rect_quad_triangle/triangle.rs`
+  owns triangle stroked path paint.
+- Evidence anchor: rect/quad/triangle stroked path paint branches.
+- Evidence anchor: rect_quad_triangle.rs keeps private re-exports only.
+- Public draw-list commands, path command generation, culling checks, stroke style dispatch, and
+  canvas path dispatch remain unchanged.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## IMUI boolean indicator visual child owner split - 2026-06-03
 
 This maintenance slice keeps boolean visual chrome readable while preserving the existing

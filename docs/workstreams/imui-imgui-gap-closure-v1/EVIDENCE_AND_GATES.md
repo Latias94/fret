@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-03
 
+## IMUI Debug Draw Stroked Rect/Quad/Triangle Path Paint Child Owner Split - 2026-06-03
+
+Claim verified: stroked rect/quad/triangle debug-draw path painters moved behind dedicated private
+child owners without changing public draw-list commands, path command generation, shared stroke
+style dispatch, canvas path dispatch, culling checks, or debug-draw smoke behavior.
+
+Evidence:
+
+- IMUI debug draw stroked rect/quad/triangle path paint child owner split - 2026-06-03.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear/rect_quad_triangle.rs`
+  keeps private re-exports only.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear/rect_quad_triangle/rect.rs`
+  owns rect stroked path paint.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear/rect_quad_triangle/quad.rs`
+  owns quad stroked path paint.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear/rect_quad_triangle/triangle.rs`
+  owns triangle stroked path paint.
+- Evidence anchor: rect/quad/triangle stroked path paint branches.
+- Evidence anchor: rect_quad_triangle.rs keeps private re-exports only.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Boolean Indicator Visual Child Owner Split - 2026-06-03
 
 Claim verified: checkbox/radio/switch boolean indicator visual builders moved behind dedicated
