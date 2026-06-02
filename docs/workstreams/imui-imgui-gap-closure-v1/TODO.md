@@ -58,6 +58,16 @@ Last updated: 2026-06-02
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `InspectorPanel` header/title/toolbar/search slot assembly out of
+      `ecosystem/fret-ui-editor/src/composites/inspector_panel/element.rs` into a private header
+      child owner without changing title readout text-role behavior, toolbar test-id routing, search
+      field/search-assist mounting, header chrome, content/root test-id routing, or public
+      `InspectorPanel` APIs.
+      Result: `composites/inspector_panel/element.rs` keeps metrics/query context, content element,
+      and root container assembly. `composites/inspector_panel/element/header.rs` owns header input
+      data, title/toolbar rows, search slot composition, header container chrome, and header test-id
+      routing. The source gate prevents header assembly from drifting back into the root element
+      owner.
 - [x] Split editor chrome surface background sanitization out of
       `ecosystem/fret-ui-editor/src/primitives/chrome.rs` into a private child owner without
       changing transparent/half-transparent fallback behavior, cached-layer opacity guards,

@@ -1200,6 +1200,7 @@
     "ecosystem/fret-ui-editor/src/primitives/readout/theme_preset/tests.rs",
     "ecosystem/fret-ui-editor/src/composites/inspector_panel.rs",
     "ecosystem/fret-ui-editor/src/composites/inspector_panel/element.rs",
+    "ecosystem/fret-ui-editor/src/composites/inspector_panel/element/header.rs",
     "ecosystem/fret-ui-editor/src/composites/inspector_panel/element/search.rs",
     "ecosystem/fret-ui-editor/src/composites/inspector_panel/options.rs",
     "ecosystem/fret-ui-editor/src/composites/inspector_panel/tests.rs",

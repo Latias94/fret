@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Editor InspectorPanel Header Owner-Split Evidence - 2026-06-02
+
+Claim verified: editor `InspectorPanel` header/title/toolbar/search slot assembly moved out of
+`composites/inspector_panel/element.rs` into a private header child owner without changing title
+readout text-role behavior, toolbar/header test-id routing, search field/search-assist mounting,
+header chrome, content/root container assembly, or public `InspectorPanel` APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/inspector_panel/element.rs` keeps metrics resolution,
+  query context creation, content element assembly, and root panel container assembly.
+- `ecosystem/fret-ui-editor/src/composites/inspector_panel/element/header.rs` owns
+  `InspectorPanelHeaderInput`, title/toolbar rows, search slot composition, header container chrome,
+  and header test-id routing.
+- `ecosystem/fret-ui-editor/src/composites/inspector_panel/element/search.rs` remains the search
+  field/search-assist field owner.
+- `tools/gate_imui_workstream_source.py` tracks root, header, and search owners separately and
+  rejects title/search/header assembly from drifting back into the root element owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new header owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo test -p fret-ui-editor --no-fail-fast inspector_panel`: pass, 2 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Chrome Surface Sanitizer Owner-Split Evidence - 2026-06-02
 
 Claim verified: editor chrome surface background sanitization moved out of `primitives/chrome.rs`

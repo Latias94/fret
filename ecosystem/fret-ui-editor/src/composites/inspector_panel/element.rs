@@ -14,11 +14,11 @@ use crate::primitives::colors::{
     editor_panel_header_border, editor_property_header_foreground,
 };
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
-use crate::primitives::readout::editor_inspector_panel_title_text_props;
 
+mod header;
 mod search;
 
-use search::inspector_panel_search_element;
+use header::{InspectorPanelHeaderInput, inspector_panel_header_element};
 
 use super::{InspectorPanelCx, InspectorPanelOptions};
 
@@ -90,154 +90,27 @@ where
             query_lower: Arc::from(query_lower),
         };
 
-        let title = options.title.clone();
-
-        let mut toolbar = toolbar(cx, &panel_cx);
-        let has_header = title.is_some() || !toolbar.is_empty() || search.is_some();
-
-        let header = has_header.then(|| {
-            let mut out = Vec::new();
-            if let Some(title) = title.clone() {
-                let mut row = {
-                    let toolbar = std::mem::take(&mut toolbar);
-                    cx.flex(
-                        FlexProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Auto,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            direction: Axis::Horizontal,
-                            gap: SpacingLength::Px(Px(6.0)),
-                            padding: Edges::all(Px(0.0)).into(),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Center,
-                            wrap: false,
-                        },
-                        move |cx| {
-                            let mut row = Vec::new();
-                            row.push(cx.text_props(editor_inspector_panel_title_text_props(
-                                title.clone(),
-                                header_fg,
-                                density.row_height,
-                            )));
-                            row.extend(toolbar);
-                            row
-                        },
-                    )
-                };
-
-                if let Some(test_id) = options.toolbar_test_id.as_ref() {
-                    row = row.test_id(test_id.clone());
-                }
-
-                out.push(row);
-            } else if !toolbar.is_empty() {
-                let toolbar = std::mem::take(&mut toolbar);
-                let mut row = cx.flex(
-                    FlexProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Auto,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        direction: Axis::Horizontal,
-                        gap: SpacingLength::Px(Px(6.0)),
-                        padding: Edges::all(Px(0.0)).into(),
-                        justify: MainAlign::End,
-                        align: CrossAlign::Center,
-                        wrap: false,
-                    },
-                    move |_cx| toolbar,
-                );
-
-                if let Some(test_id) = options.toolbar_test_id.as_ref() {
-                    row = row.test_id(test_id.clone());
-                }
-
-                out.push(row);
-            }
-
-            if let Some(search) = search.clone() {
-                let search_el = inspector_panel_search_element(
-                    cx,
-                    search,
-                    options.enabled,
-                    options.search_test_id.clone(),
-                    options.search_clear_test_id.clone(),
-                    options.search_assist.clone(),
-                );
-
-                out.push(search_el);
-            }
-
-            let mut header = cx.container(
-                ContainerProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Auto,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    padding: Edges {
-                        top: Px(density.padding_y.0 + 3.0),
-                        right: density.padding_x,
-                        bottom: Px(density.padding_y.0 + 4.0),
-                        left: density.padding_x,
-                    }
-                    .into(),
-                    background: Some(header_bg),
-                    corner_radii: Corners {
-                        top_left: radius,
-                        top_right: radius,
-                        bottom_right: Px(0.0),
-                        bottom_left: Px(0.0),
-                    },
-                    border: Edges {
-                        top: Px(0.0),
-                        right: Px(0.0),
-                        bottom: Px(1.0),
-                        left: Px(0.0),
-                    },
-                    border_color: Some(header_border),
-                    ..Default::default()
-                },
-                move |cx| {
-                    vec![cx.flex(
-                        FlexProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Auto,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            direction: Axis::Vertical,
-                            gap: SpacingLength::Px(header_gap),
-                            padding: Edges::all(Px(0.0)).into(),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Stretch,
-                            wrap: false,
-                        },
-                        move |_cx| out,
-                    )]
-                },
-            );
-
-            if let Some(test_id) = options.header_test_id.as_ref() {
-                header = header.test_id(test_id.clone());
-            }
-            header
-        });
+        let toolbar_elements = toolbar(cx, &panel_cx);
+        let header = inspector_panel_header_element(
+            cx,
+            InspectorPanelHeaderInput {
+                title: options.title.clone(),
+                toolbar: toolbar_elements,
+                search: search.clone(),
+                enabled: options.enabled,
+                search_test_id: options.search_test_id.clone(),
+                search_clear_test_id: options.search_clear_test_id.clone(),
+                search_assist: options.search_assist.clone(),
+                toolbar_test_id: options.toolbar_test_id.clone(),
+                header_test_id: options.header_test_id.clone(),
+                density,
+                header_gap,
+                header_bg,
+                header_border,
+                radius,
+                header_fg,
+            },
+        );
 
         let mut content = cx.flex(
             FlexProps {
