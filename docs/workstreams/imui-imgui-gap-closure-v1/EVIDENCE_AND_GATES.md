@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Prop Records Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative public `*PlotPanelProps` record definitions moved out of
+`ecosystem/fret-plot/src/declarative/props.rs` into private
+`ecosystem/fret-plot/src/declarative/props/records.rs` without changing public props type names,
+field visibility, builder method behavior, heatmap colorbar defaults, panel entrypoints, optional
+IMUI adapter routing, paint owners, event owners, output publication, or plot model projection
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/props/records.rs` owns all public plot panel prop record
+  definitions.
+- `props.rs` re-exports the records and keeps builder methods for each concrete plot panel props
+  type.
+- The records owner imports only model handles, canvas props, axis label formatters, scale/style,
+  output/state models, and `StepMode`, staying builder-free, panel-entrypoint-free, paint-free,
+  event-free, authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` rejects public prop record definitions from drifting back
+  into `props.rs` and rejects builder/default policy from drifting into `props/records.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new prop records owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Box Zoom Interaction Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative box zoom session state, modifier expansion, active-selection

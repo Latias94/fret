@@ -5950,6 +5950,13 @@ opening the slice.
       projection into private `PlotPanelModel` records, including histogram bin projection, while
       `declarative.rs` keeps paint/event/layout orchestration and `declarative/panels.rs` plus
       `props.rs` keep the public entrypoint and props owners.
+- [x] Split Fret Plot declarative public prop records out of the props builder owner without
+      changing public `*PlotPanelProps` type names, field visibility, builder method behavior,
+      heatmap colorbar defaults, panel entrypoints, optional IMUI adapter routing, paint owners,
+      event owners, output publication, or plot model projection behavior.
+      Result: `ecosystem/fret-plot/src/declarative/props/records.rs` owns all public plot panel
+      prop record definitions; `props.rs` re-exports those records and keeps builder methods plus
+      heatmap colorbar defaults.
 - [x] Split Fret Plot declarative legend paint/hit-testing out of the retained-free paint/event root
       without changing legend row metrics, swatch/text painting, hover/pin highlight, swatch/label
       hit testing, hidden-series mutation, pinned-series mutation, public panel props, or optional

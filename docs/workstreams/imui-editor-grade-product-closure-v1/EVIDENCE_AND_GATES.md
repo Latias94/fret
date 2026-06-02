@@ -2,6 +2,32 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative prop records owner split - 2026-06-02
+
+This maintenance slice keeps public plot panel prop records out of the builder-method owner while
+preserving the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/props/records.rs` owns the public `*PlotPanelProps` record
+  definitions.
+- `props.rs` re-exports prop records and keeps builder methods plus heatmap colorbar defaults.
+- Evidence anchor: public `*PlotPanelProps` record definitions.
+- Evidence anchor: Props root re-exports plot panel prop records.
+- The records owner stays builder-free, panel-entrypoint-free, paint-free, event-free,
+  authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so public prop records cannot
+  drift back into `props.rs` and builder/default policy cannot drift into `props/records.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative box zoom interaction owner split - 2026-06-02
 
 This maintenance slice keeps box zoom event routing out of the shared interaction owner while

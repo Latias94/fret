@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 plot prop records owner-split result:
+`ecosystem/fret-plot/src/declarative/props.rs` now re-exports public plot panel prop records and
+keeps builder methods plus heatmap colorbar defaults while
+`ecosystem/fret-plot/src/declarative/props/records.rs` owns the public `*PlotPanelProps` record
+definitions. Public type names, field visibility, builder behavior, panel entrypoints, optional
+IMUI adapter routing, paint/event owners, output publication, and plot model projection remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 plot box zoom interaction owner-split result:
 `ecosystem/fret-plot/src/declarative/interaction.rs` now keeps legend event routing, pointer event
 snapshots, selection overlay records, shared mouse-button helpers, and child interaction re-exports
