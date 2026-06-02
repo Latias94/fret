@@ -11,9 +11,8 @@ use fret_diag::devtools::DevtoolsOps;
 use fret_diag::{
     DevtoolsGatePerfThresholdCommandInputV1, DevtoolsGateScriptTargetCommandInputV1,
     DevtoolsGateResourceFootprintThresholdCommandInputV1, devtools_gate_perf_threshold_command,
-    devtools_gate_profiles_v1,
-    devtools_gate_resource_footprint_threshold_command, devtools_gate_script_target_command,
-    devtools_gate_script_target_profile_ids_v1,
+    devtools_gate_profiles_v1, devtools_gate_resource_footprint_threshold_command,
+    devtools_gate_script_target_command,
 };
 use fret_diag::regression_summary::{
     DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1,
@@ -46,6 +45,8 @@ use fret_ui_shadcn::facade as shadcn;
 mod demo_metrics_debug;
 mod followup;
 mod gate_run;
+#[path = "native/gate_profile_state.rs"]
+mod gate_profile_state;
 #[path = "native/guide_recent_evidence_state.rs"]
 mod guide_recent_evidence_state;
 #[path = "native/header_state.rs"]
@@ -67,6 +68,7 @@ use demo_metrics_debug::{
     demo_metrics_debug_action_command_for_copy_command, demo_metrics_debug_action_command_text,
     devtools_demo_metrics_debug_panel,
 };
+use gate_profile_state::{collect_gate_profile_panel_state, gate_profile_select_items};
 use guide_recent_evidence_state::collect_guide_recent_evidence_state;
 use header_state::{collect_header_diagnostics_state, header_next_action_lines};
 use discovery_lines::{
@@ -3210,8 +3212,12 @@ fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElem
         "First-class campaign validation and selected-session suite runs reuse the shared diag command path from the GUI shell.",
         workflow_run_rows,
     );
+    let gate_panel = collect_gate_profile_panel_state(cx.app, st);
     let mut gate_command_rows = Vec::new();
     for line in devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref()) {
+        gate_command_rows.push(cx.text(line));
+    }
+    for line in gate_panel.gate_profile_lines {
         gate_command_rows.push(cx.text(line));
     }
     gate_command_rows.push(devtools_gate_profile_command_builder(cx, st));
@@ -8912,32 +8918,10 @@ fn devtools_gate_profile_command_builder(
     cx: &mut ElementContext<'_, App>,
     st: &State,
 ) -> AnyElement {
-    let selected_profile_id = cx
-        .app
-        .models()
-        .read(&st.gate_profile_selected_id, |v| v.clone())
-        .ok()
-        .flatten()
-        .unwrap_or_else(|| Arc::<str>::from("stale-paint-scene"));
-    let generated_command = generated_gate_command_from_state(cx.app, st);
-    let command_preview = generated_command
-        .as_ref()
-        .map(|command| command.command_line.clone())
-        .unwrap_or_else(|| "Select a script-target gate profile.".to_string());
-    let selected_profile_label = devtools_gate_profiles_v1()
-        .iter()
-        .find(|profile| profile.id == selected_profile_id.as_ref())
-        .map(|profile| format!("{} ({})", profile.label, profile.id))
-        .unwrap_or_else(|| selected_profile_id.to_string());
-
-    let profile_items = devtools_gate_profiles_v1()
-        .iter()
-        .filter(|profile| {
-            devtools_gate_script_target_profile_ids_v1().contains(&profile.id)
-                || profile.id == "perf-thresholds"
-                || profile.id == "resource-footprint-thresholds"
-        })
-        .map(|profile| shadcn::SelectItem::new(profile.id, format!("{} ({})", profile.label, profile.id)))
+    let panel = collect_gate_profile_panel_state(cx.app, st);
+    let profile_items = gate_profile_select_items()
+        .into_iter()
+        .map(|(id, label)| shadcn::SelectItem::new(id, label))
         .collect::<Vec<_>>();
     let profile_select =
         shadcn::Select::new(st.gate_profile_selected_id.clone(), st.gate_profile_open.clone())
@@ -8945,32 +8929,11 @@ fn devtools_gate_profile_command_builder(
             .items(profile_items)
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(260.0)))
             .into_element(cx);
-    let gate_inputs = match selected_profile_id.as_ref() {
+    let gate_inputs = match panel.selected_profile_id.as_ref() {
         "perf-thresholds" => perf_threshold_gate_inputs(cx, st),
         "resource-footprint-thresholds" => resource_footprint_threshold_gate_inputs(cx, st),
         _ => script_target_gate_inputs(cx, st),
     };
-    let command_state_line = generated_command
-        .as_ref()
-        .map(|command| {
-            if command.is_runnable() {
-                format!("diag args: {}", command.diag_args.join(" "))
-            } else if command.missing_inputs.is_empty() {
-                "diag args: <not runnable>".to_string()
-            } else {
-                format!("missing inputs: {}", command.missing_inputs.join(", "))
-            }
-        })
-        .unwrap_or_else(|| "diag args: <unsupported profile>".to_string());
-    let copy_enabled = generated_command.is_some();
-    let run_enabled = generated_command
-        .as_ref()
-        .is_some_and(|command| command.is_runnable());
-    let gate_run_in_flight = cx
-        .app
-        .models()
-        .read(&st.gate_run_in_flight, |v| *v)
-        .unwrap_or(false);
     let gate_run_result_path = cx
         .app
         .models()
@@ -8985,36 +8948,14 @@ fn devtools_gate_profile_command_builder(
         .ok()
         .flatten()
         .map(|v| v.to_string());
-    let gate_run_result_json = cx
-        .app
-        .models()
-        .read(&st.gate_run_last_result_json, |v| v.clone())
-        .unwrap_or_default();
     let gate_run_result_history = cx
         .app
         .models()
         .read(&st.gate_run_result_history, |v| v.clone())
         .unwrap_or_default();
-    let gate_run_selected_result_path = cx
-        .app
-        .models()
-        .read(&st.gate_run_selected_result_path, |v| v.clone())
-        .ok()
-        .flatten();
-    let selected_gate_run_result_entry = gate_run::gate_run_result_history_selected_or_latest_entry(
-        &gate_run_result_history,
-        gate_run_selected_result_path.as_deref(),
-    );
-    let selected_gate_run_result_path = selected_gate_run_result_entry
-        .as_ref()
-        .map(|entry| entry.result_path.clone());
-    let selected_gate_run_result_json = selected_gate_run_result_entry
-        .as_ref()
-        .map(|entry| entry.result_json.clone())
-        .unwrap_or_else(|| gate_run_result_json.clone());
     let gate_result_actions = ui::h_row(|cx| {
         let mut out: Vec<AnyElement> = Vec::new();
-        if selected_gate_run_result_path.is_some() {
+        if panel.selected_gate_run_result_path.is_some() {
             out.push(
                 shadcn::Button::new("Copy gate result")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -9030,7 +8971,7 @@ fn devtools_gate_profile_command_builder(
                     .into_element(cx),
             );
         }
-        if selected_gate_run_result_entry.is_some() {
+        if panel.selected_gate_run_result_entry.is_some() {
             out.push(
                 shadcn::Button::new("Copy gate command")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -9039,7 +8980,7 @@ fn devtools_gate_profile_command_builder(
                     .into_element(cx),
             );
         }
-        if !selected_gate_run_result_json.trim().is_empty() {
+        if !panel.selected_gate_run_result_json.trim().is_empty() {
             out.push(
                 shadcn::Button::new("Copy gate JSON")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -9057,14 +8998,14 @@ fn devtools_gate_profile_command_builder(
     let gate_result_details = text_blob_sized(
         cx,
         gate_run::gate_run_result_history_entry_detail_lines(
-            selected_gate_run_result_entry.as_ref(),
+            panel.selected_gate_run_result_entry.as_ref(),
         )
         .join("\n"),
         Px(78.0),
     );
     let gate_result_summary = text_blob_sized(
         cx,
-        gate_run::gate_run_result_summary_lines(&selected_gate_run_result_json).join("\n"),
+        gate_run::gate_run_result_summary_lines(&panel.selected_gate_run_result_json).join("\n"),
         Px(92.0),
     );
     let gate_result_history_summary = text_blob_sized(
@@ -9076,15 +9017,15 @@ fn devtools_gate_profile_command_builder(
         cx,
         &st.gate_run_selected_result_path,
         &gate_run_result_history,
-        selected_gate_run_result_path.as_deref(),
+        panel.selected_gate_run_result_path.as_deref(),
     );
     let gate_run_status_line = format!(
         "gate_run_in_flight={} last_gate_result={} last_gate_error={}",
-        gate_run_in_flight,
+        panel.gate_run_in_flight,
         gate_run_result_path.as_deref().unwrap_or("-"),
         gate_run_error.as_deref().unwrap_or("-")
     );
-    let command_line_for_copy = command_preview.clone();
+    let command_line_for_copy = panel.command_preview.clone();
     let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
         let token = host.next_clipboard_token();
         host.push_effect(Effect::ClipboardWriteText {
@@ -9097,13 +9038,13 @@ fn devtools_gate_profile_command_builder(
     let copy_button = shadcn::Button::new("Copy generated command")
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
-        .disabled(!copy_enabled)
+        .disabled(!panel.copy_enabled)
         .on_activate(on_copy)
         .into_element(cx);
     let run_button = shadcn::Button::new("Run generated command")
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
-        .disabled(!run_enabled || gate_run_in_flight)
+        .disabled(!panel.run_enabled || panel.gate_run_in_flight)
         .on_click(CMD_GATE_RUN_GENERATED)
         .into_element(cx);
     let controls = ui::h_row(|_cx| [profile_select, copy_button, run_button])
@@ -9111,24 +9052,25 @@ fn devtools_gate_profile_command_builder(
     .items_center()
     .layout(fret_ui_kit::LayoutRefinement::default().w_full())
     .into_element(cx);
-    let preview = text_blob_sized(cx, command_preview, Px(58.0));
+    let preview = text_blob_sized(cx, panel.command_preview.clone(), Px(58.0));
     let result_preview = text_blob_sized(
         cx,
-        if selected_gate_run_result_json.trim().is_empty() {
+        if panel.selected_gate_run_result_json.trim().is_empty() {
             "<no generated gate result yet>".to_string()
         } else {
-            selected_gate_run_result_json
+            panel.selected_gate_run_result_json.clone()
         },
         Px(92.0),
     );
     ui::v_stack(|cx| {
         [
             cx.text(format!(
-                "Runnable generated gate: {selected_profile_label}"
+                "Runnable generated gate: {}",
+                panel.selected_profile_label
             )),
             controls,
             gate_inputs,
-            cx.text(command_state_line),
+            cx.text(panel.command_state_line.clone()),
             cx.text(gate_run_status_line),
             preview,
             diag_section(

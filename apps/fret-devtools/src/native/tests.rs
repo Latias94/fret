@@ -2,6 +2,7 @@ use super::*;
 use super::header_state::{
     HeaderDiagnosticsState, header_next_action_lines_for_artifacts_root,
 };
+use super::gate_profile_state::collect_gate_profile_panel_state;
 use super::recent_evidence::recent_evidence_next_action;
 use super::workflow_panel_state::collect_workflow_panel_state;
 
@@ -1790,6 +1791,31 @@ fn devtools_gate_command_lines_surface_first_class_gates() {
     assert!(text.contains("check.perf_thresholds.json"));
     assert!(text.contains("check.resource_footprint.json"));
     assert!(text.contains("resource.footprint.json"));
+}
+
+#[test]
+fn gate_profile_panel_state_defaults_to_stale_paint_scene() {
+    let mut app = App::new();
+    app.set_global(DevtoolsConfig {
+        transport: DiagTransportKind::WebSocket,
+        ws_url: Arc::<str>::from("ws://127.0.0.1:7331/diag"),
+        token: Arc::<str>::from("secret-token"),
+        fs_out_dir: Arc::<str>::from("target/fret-diag"),
+        ws_port: 7331,
+    });
+    let st = init_window(&mut app, AppWindowId::default());
+    let panel = collect_gate_profile_panel_state(&app, &st);
+    assert_eq!(panel.selected_profile_id.as_ref(), "stale-paint-scene");
+    assert!(panel.selected_profile_label.contains("stale-paint-scene"));
+    assert!(panel.command_preview.contains("Select a script-target gate profile."));
+    assert!(!panel.copy_enabled);
+    assert!(!panel.run_enabled);
+    assert!(
+        panel
+            .gate_profile_lines
+            .iter()
+            .any(|line| line.contains("artifacts root: target/fret-diag"))
+    );
 }
 
 #[test]
