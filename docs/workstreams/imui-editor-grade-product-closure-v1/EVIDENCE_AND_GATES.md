@@ -2,6 +2,41 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative area/shaded/stems props builder owner split - 2026-06-03
+
+This maintenance slice turns the remaining props root into a pure builder-owner facade while
+preserving the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/props/area.rs` owns `AreaPlotPanelProps` construction plus
+  output/state/style/axis-label/axis-scale/step-mode builder methods.
+- `ecosystem/fret-plot/src/declarative/props/shaded.rs` owns `ShadedPlotPanelProps` construction
+  plus output/state/style/axis-label/axis-scale/step-mode builder methods.
+- `ecosystem/fret-plot/src/declarative/props/stems.rs` owns `StemsPlotPanelProps` construction
+  plus output/state/style/axis-label/axis-scale/step-mode builder methods.
+- `props.rs` is now a pure builder-owner facade.
+- Evidence anchor: Props root is now a pure builder-owner facade.
+- Evidence anchor: Fret Plot declarative area props builder owner split - 2026-06-03.
+- Evidence anchor: AreaPlotPanelProps builder owner.
+- Evidence anchor: Fret Plot declarative shaded props builder owner split - 2026-06-03.
+- Evidence anchor: ShadedPlotPanelProps builder owner.
+- Evidence anchor: Fret Plot declarative stems props builder owner split - 2026-06-03.
+- Evidence anchor: StemsPlotPanelProps builder owner.
+- Public panel props, panel entrypoints, optional IMUI adapter routing, paint/event owners, output
+  publication, and plot model projection remain unchanged.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so area/shaded/stems builder
+  methods cannot drift back into `props.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo nextest run -p fret-plot area_plot_panel shaded_plot_panel stems_plot_panel --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative histogram2d props builder owner split - 2026-06-03
 
 This maintenance slice keeps histogram2d plot prop construction out of the shared props root while

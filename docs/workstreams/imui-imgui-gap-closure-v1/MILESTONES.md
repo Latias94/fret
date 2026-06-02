@@ -12,6 +12,18 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-03 plot area/shaded/stems props builder owner-split result:
+`ecosystem/fret-plot/src/declarative/props.rs` is now a pure builder-owner facade that declares
+private owners and re-exports public prop records while
+`ecosystem/fret-plot/src/declarative/props/area.rs`,
+`ecosystem/fret-plot/src/declarative/props/shaded.rs`, and
+`ecosystem/fret-plot/src/declarative/props/stems.rs` own `AreaPlotPanelProps`,
+`ShadedPlotPanelProps`, and `StemsPlotPanelProps` construction plus
+output/state/style/axis-label/axis-scale/step-mode builder methods. Public prop type names,
+builder signatures/defaults, panel entrypoints, optional IMUI adapter routing, paint/event owners,
+output publication, and plot model projection remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-03 plot histogram2d props builder owner-split result:
 `ecosystem/fret-plot/src/declarative/props.rs` now declares the private histogram2d, heatmap,
 candlestick, bars, histogram, error-bars, and line builder owners, re-exports public prop records,

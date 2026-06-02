@@ -6013,6 +6013,13 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/props/histogram2d.rs` owns the histogram2d
       constructor, default `style.heatmap_show_colorbar = true`, and builder methods; `props.rs`
       declares the owner, re-exports records, and keeps remaining builders.
+- [x] Split Fret Plot declarative `AreaPlotPanelProps`, `ShadedPlotPanelProps`, and
+      `StemsPlotPanelProps` builder methods out of the props builder root without changing public
+      type names, builder method names/signatures, canvas/style/axis scale/step-mode defaults,
+      state/output routing, axis label setters, panel entrypoints, optional IMUI adapter routing,
+      paint owners, event owners, output publication, or plot model projection behavior.
+      Result: `props.rs` is now a pure facade; `props/area.rs`, `props/shaded.rs`, and
+      `props/stems.rs` own the remaining area/shaded/stems constructors and builder methods.
 - [x] Split Fret Plot declarative legend paint/hit-testing out of the retained-free paint/event root
       without changing legend row metrics, swatch/text painting, hover/pin highlight, swatch/label
       hit testing, hidden-series mutation, pinned-series mutation, public panel props, or optional
