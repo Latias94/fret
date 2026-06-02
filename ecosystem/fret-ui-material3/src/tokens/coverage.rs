@@ -167,6 +167,29 @@ pub(crate) fn validate_manifest_against_sources() -> Result<(), String> {
     }
 }
 
+pub(crate) fn validate_recipe_sources_are_token_free() -> Result<(), String> {
+    let manifest = load_manifest();
+    let errors: Vec<_> = manifest
+        .sources
+        .iter()
+        .filter(|source| source.layer == MaterialTokenSourceLayer::Recipe)
+        .filter(|source| !source.tokens.is_empty())
+        .map(|source| {
+            format!(
+                "{}: recipe layer should delegate literal Material tokens to token modules; found {}",
+                source.path,
+                source.tokens.join(", ")
+            )
+        })
+        .collect();
+
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors.join("\n"))
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct MaterialTokenManifest {
     schema_version: u32,

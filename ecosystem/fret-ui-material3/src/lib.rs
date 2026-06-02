@@ -371,6 +371,13 @@ mod tests {
     }
 
     #[test]
+    fn material3_recipe_sources_do_not_own_literal_tokens() {
+        crate::tokens::coverage::validate_recipe_sources_are_token_free().expect(
+            "Material3 recipe sources should delegate literal md.* tokens to token modules",
+        );
+    }
+
+    #[test]
     fn material3_literal_md_tokens_resolve_in_v30_theme() {
         let cfg =
             theme_config_with_colors(TypographyOptions::default(), ColorSchemeOptions::default());
