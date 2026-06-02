@@ -56,6 +56,12 @@ pub(super) fn run_button_case(case: &Case, theme: &Theme) {
                 actual_button_number(theme, variant, interaction, &assertion.role),
                 token_number(theme, require_token(assertion, "token")),
             ),
+            "text_style_source" => assert_text_style_eq(
+                &case.id,
+                &assertion.role,
+                actual_button_text_style(theme, ButtonSize::Small, &assertion.role),
+                control_text_style(theme, require_token(assertion, "source_token")),
+            ),
             "text_style_alias" => assert_text_style_alias(theme, case, assertion),
             other => panic!(
                 "{}:{} unsupported assertion kind {other}",

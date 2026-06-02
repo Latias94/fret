@@ -260,6 +260,12 @@ pub(super) fn run_segmented_button_case(case: &Case, theme: &Theme) {
                 actual_segmented_button_number(theme, interaction, &assertion.role),
                 token_number(theme, require_token(assertion, "token")),
             ),
+            "text_style_source" => assert_text_style_eq(
+                &case.id,
+                &assertion.role,
+                actual_segmented_button_text_style(theme, &assertion.role),
+                control_text_style(theme, require_token(assertion, "source_token")),
+            ),
             other => panic!(
                 "{}:{} unsupported assertion kind {other}",
                 case.id, assertion.role

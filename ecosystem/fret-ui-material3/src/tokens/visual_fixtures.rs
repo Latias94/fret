@@ -2,7 +2,7 @@ use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
 use fret_ui_kit::typography::{self, TextIntent};
 
-use crate::button::ButtonVariant;
+use crate::button::{ButtonSize, ButtonVariant};
 use crate::card::CardVariant;
 use crate::fab::{FabSize, FabVariant};
 use crate::foundation::interaction::PressableInteraction;
@@ -170,6 +170,13 @@ fn actual_button_number(
         }
         ("state_layer_opacity", None) => panic!("state_layer_opacity requires interaction"),
         _ => panic!("unsupported button number role {role}"),
+    }
+}
+
+fn actual_button_text_style(theme: &Theme, size: ButtonSize, role: &str) -> TextStyle {
+    match role {
+        "label_text_style" => button::label_text_style(theme, size),
+        other => panic!("unsupported button text style role {other}"),
     }
 }
 
@@ -623,6 +630,7 @@ fn actual_date_picker_color(theme: &Theme, variant: DatePickerTokenVariant, role
         "container_color" => date_picker::container_color(theme, variant),
         "weekdays_label_text_color" => date_picker::weekdays_label_text_color(theme, variant),
         "header_headline_color" => date_picker::header_headline_color(theme),
+        "month_nav_title_color" => date_picker::month_nav_title_color(theme),
         "date_today_outline_color" => date_picker::date_today_outline_color(theme, variant),
         "date_unselected_label_text_color" => {
             date_picker::date_unselected_label_text_color(theme, variant)
@@ -676,6 +684,8 @@ fn actual_date_picker_text_style(
     match role {
         "weekdays_label_text_style" => date_picker::weekdays_label_text_style(theme, variant),
         "header_headline_style" => date_picker::header_headline_style(theme),
+        "month_nav_title_text_style" => date_picker::month_nav_title_text_style(theme)
+            .expect("date picker month nav title style should resolve"),
         "date_label_text_style" => date_picker::date_label_text_style(theme, variant),
         other => panic!("unsupported date picker text style role {other}"),
     }
@@ -1124,6 +1134,13 @@ fn actual_segmented_button_number(
         ),
         "pressed_state_layer_opacity" => segmented_button::pressed_state_layer_opacity(theme),
         other => panic!("unsupported segmented button number role {other}"),
+    }
+}
+
+fn actual_segmented_button_text_style(theme: &Theme, role: &str) -> TextStyle {
+    match role {
+        "label_text_style" => segmented_button::label_text_style(theme),
+        other => panic!("unsupported segmented button text style role {other}"),
     }
 }
 
