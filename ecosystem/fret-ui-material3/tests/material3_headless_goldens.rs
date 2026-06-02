@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, sync::Arc};
 
 use fret_core::{
-    AppWindowId, Edges, KeyCode, NodeId, Point, PointerId, Px, Rect, Scene, Size, UiServices,
+    AppWindowId, Edges, KeyCode, NodeId, Point, PointerId, Px, Rect, Size, UiServices,
 };
 use fret_runtime::{Model, ModelHost, PlatformCapabilities};
 use fret_ui::element::{AnyElement, ContainerProps};
@@ -19,6 +19,7 @@ use support::goldens::{
     write_or_assert_material3_suite_v1,
 };
 use support::headless_autocomplete_cases::load_material3_autocomplete_golden_suite_v1;
+use support::headless_carousel_item_cases::load_material3_carousel_item_golden_suite_v1;
 use support::headless_list_cases::load_material3_list_golden_suite_v1;
 use support::headless_menu_dialog_style_cases::{
     Material3MenuDialogStyleGoldenCaseKindV1, load_material3_menu_dialog_style_golden_suite_v1,
@@ -5278,7 +5279,6 @@ fn material3_headless_search_view_suite_goldens_v1() {
 #[test]
 fn material3_headless_carousel_item_suite_goldens_v1() {
     use fret_ui::element::{ContainerProps, FlexProps, Length, TextProps};
-    use fret_ui_material3::{CarouselItem, CarouselItemVariant};
 
     let schemes = [
         (
@@ -5302,6 +5302,7 @@ fn material3_headless_carousel_item_suite_goldens_v1() {
             "light.expressive",
         ),
     ];
+    let carousel_suite = load_material3_carousel_item_golden_suite_v1();
 
     for scale_factor in [1.0, 1.25, 2.0] {
         let scale = scale_segment(scale_factor);
@@ -5309,11 +5310,8 @@ fn material3_headless_carousel_item_suite_goldens_v1() {
         for (mode, variant, label) in schemes {
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
 
-            for (case_name, hover_id, focus_id) in [
-                ("idle", None, None),
-                ("hover_standard", Some("carousel-standard"), None),
-                ("focus_visible_outline", None, Some("carousel-outline")),
-            ] {
+            for case in carousel_suite.cases() {
+                let case_name = case.id();
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -5349,7 +5347,7 @@ fn material3_headless_carousel_item_suite_goldens_v1() {
 
                             let item_content =
                                 |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>,
-                                 label: &'static str| {
+                                 label: &str| {
                                     let mut container = ContainerProps::default();
                                     container.layout.size.width = Length::Fill;
                                     container.layout.size.height = Length::Fill;
@@ -5368,32 +5366,16 @@ fn material3_headless_carousel_item_suite_goldens_v1() {
                             props.wrap = false;
 
                             let content = cx.flex(props, |cx| {
-                                vec![
-                                    CarouselItem::new()
-                                        .variant(CarouselItemVariant::Standard)
-                                        .width(Px(420.0))
-                                        .height(Px(92.0))
-                                        .on_activate(on_activate.clone())
-                                        .test_id("carousel-standard")
-                                        .into_element(cx, |cx| vec![item_content(cx, "Standard")]),
-                                    CarouselItem::new()
-                                        .variant(CarouselItemVariant::WithOutline)
-                                        .width(Px(420.0))
-                                        .height(Px(92.0))
-                                        .on_activate(on_activate.clone())
-                                        .test_id("carousel-outline")
-                                        .into_element(cx, |cx| {
-                                            vec![item_content(cx, "With outline")]
-                                        }),
-                                    CarouselItem::new()
-                                        .variant(CarouselItemVariant::WithOutline)
-                                        .width(Px(420.0))
-                                        .height(Px(92.0))
-                                        .on_activate(on_activate.clone())
-                                        .disabled(true)
-                                        .test_id("carousel-disabled")
-                                        .into_element(cx, |cx| vec![item_content(cx, "Disabled")]),
-                                ]
+                                let mut elements = Vec::new();
+                                for item in carousel_suite.items() {
+                                    elements.push(
+                                        item.carousel_item(on_activate.clone())
+                                            .into_element(cx, |cx| {
+                                                vec![item_content(cx, item.label())]
+                                            }),
+                                    );
+                                }
+                                elements
                             });
 
                             vec![with_padding(cx, Px(24.0), content)]
@@ -5406,7 +5388,7 @@ fn material3_headless_carousel_item_suite_goldens_v1() {
                 ui.request_semantics_snapshot();
                 ui.layout_all(&mut app, &mut services, bounds, scale_factor);
 
-                if case_name == "idle" {
+                if case.is_idle() {
                     ui.dispatch_event(
                         &mut app,
                         &mut services,
@@ -5414,7 +5396,7 @@ fn material3_headless_carousel_item_suite_goldens_v1() {
                     );
                 }
 
-                if let Some(test_id) = hover_id {
+                if let Some(test_id) = case.hover_test_id() {
                     let node_id: NodeId = ui
                         .semantics_snapshot()
                         .and_then(|snapshot| {
@@ -5441,7 +5423,7 @@ fn material3_headless_carousel_item_suite_goldens_v1() {
                     );
                 }
 
-                if let Some(test_id) = focus_id {
+                if let Some(test_id) = case.focus_test_id() {
                     let node_id: NodeId = ui
                         .semantics_snapshot()
                         .and_then(|snapshot| {
@@ -5459,42 +5441,27 @@ fn material3_headless_carousel_item_suite_goldens_v1() {
                     ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
                 }
 
-                let mut settled: Option<Material3HeadlessGoldenV1> = None;
-                for frame in 0..64 {
-                    app.advance_frame();
-                    let root = render(&mut ui, &mut app, &mut services);
-                    ui.set_root(root);
-                    ui.layout_all(&mut app, &mut services, bounds, scale_factor);
-
-                    let mut scene = Scene::default();
-                    ui.paint_all(&mut app, &mut services, bounds, &mut scene, scale_factor);
-
-                    if frame < 28 {
-                        continue;
-                    }
-
-                    let snapshot = material3_scene_snapshot_v1(&scene);
-                    if let Some(prev) = settled.as_ref() {
-                        assert_eq!(
-                            snapshot, *prev,
-                            "expected carousel item scene to be stable after animations settle ({label}, {scale}, {case_name})"
-                        );
-                    } else {
-                        settled = Some(snapshot);
-                    }
-                }
-
-                let Some(snapshot) = settled else {
-                    panic!(
-                        "expected a stable carousel item snapshot ({label}, {scale}, {case_name})"
-                    );
-                };
-                cases.insert(case_name.to_string(), snapshot);
+                let message = format!(
+                    "expected carousel item scene to be stable after animations settle ({label}, {scale}, {case_name})"
+                );
+                let snapshot = settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    case.settle_from_frame(),
+                    case.total_frames(),
+                    &message,
+                    &render,
+                );
+                cases.insert(case.id().to_string(), snapshot);
             }
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-carousel-item.{scale}.{label}"),
+                "material3_headless_carousel_item_suite_goldens_v1",
                 &suite,
             );
         }
