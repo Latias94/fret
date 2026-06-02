@@ -28,12 +28,12 @@ fn debug_draw_path_builder_records_stroke_and_fill_commands() {
     });
 
     assert_eq!(list.command_count(), 2);
-    let DebugDrawCommand::Polyline {
+    let DebugDrawCommand::Linear(DebugDrawLinearCommand::Polyline {
         points,
         style,
         closed,
         ..
-    } = &list.commands[0]
+    }) = &list.commands[0]
     else {
         panic!("path stroke should record a polyline command");
     };
@@ -42,7 +42,9 @@ fn debug_draw_path_builder_records_stroke_and_fill_commands() {
     assert_eq!(style.join, StrokeJoinV1::Round);
     assert!(*closed);
 
-    let DebugDrawCommand::ConvexPolyFilled { points, .. } = &list.commands[1] else {
+    let DebugDrawCommand::Linear(DebugDrawLinearCommand::ConvexPolyFilled { points, .. }) =
+        &list.commands[1]
+    else {
         panic!("path fill should record a convex fill command");
     };
     assert_eq!(&**points, &[p0, p1, p2, p3]);
@@ -74,9 +76,10 @@ fn debug_draw_path_builder_records_concave_fill_command() {
     });
 
     assert_eq!(list.command_count(), 1);
-    let DebugDrawCommand::ConcavePolyFilled {
-        points: recorded, ..
-    } = &list.commands[0]
+    let DebugDrawCommand::Linear(DebugDrawLinearCommand::ConcavePolyFilled {
+        points: recorded,
+        ..
+    }) = &list.commands[0]
     else {
         panic!("path concave fill should record a dedicated command");
     };

@@ -26,7 +26,8 @@ mod response;
 mod summaries;
 
 use commands::{
-    DebugDrawClipCommand, DebugDrawCommand, DebugDrawMediaCommand, DebugDrawMeshCommand,
+    DebugDrawClipCommand, DebugDrawCommand, DebugDrawLinearCommand, DebugDrawMediaCommand,
+    DebugDrawMeshCommand,
 };
 pub use draw_list::ImUiDebugDrawList;
 pub(super) use facade::debug_draw_with_options;

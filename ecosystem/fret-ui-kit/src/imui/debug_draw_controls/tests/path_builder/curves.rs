@@ -22,7 +22,9 @@ fn debug_draw_path_builder_appends_bezier_curve_samples() {
         path.stroke(Color::from_srgb_hex_rgb(0xff_ff_ff), Px(1.0), false);
     });
 
-    let DebugDrawCommand::Polyline { points, .. } = &list.commands[0] else {
+    let DebugDrawCommand::Linear(DebugDrawLinearCommand::Polyline { points, .. }) =
+        &list.commands[0]
+    else {
         panic!("path Bezier helpers should record a sampled polyline command");
     };
     assert_eq!(

@@ -12,6 +12,16 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-03 IMUI debug-draw linear-command payload owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/linear.rs` now owns
+line/poly/rect/quad/triangle debug-draw command payload variants, including convex/concave polygon
+fills and multi-color rect fill.
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` keeps round,
+Bezier, mesh, clip, media, text, and the `Linear(DebugDrawLinearCommand)` wrapper. Public
+`ImUiDebugDrawList` linear geometry APIs, command summaries, point/vertex/index/triangle counts,
+path paint dispatch, residual multi-color rect paint, media dispatch filtering, and debug-draw
+response APIs remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-03 IMUI debug-draw clip-command payload owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/clip.rs` now owns
 push/pop clip-stack debug-draw command payload variants.

@@ -2,5 +2,6 @@ mod summary_projection;
 mod types;
 
 pub(super) use types::{
-    DebugDrawClipCommand, DebugDrawCommand, DebugDrawMediaCommand, DebugDrawMeshCommand,
+    DebugDrawClipCommand, DebugDrawCommand, DebugDrawLinearCommand, DebugDrawMediaCommand,
+    DebugDrawMeshCommand,
 };

@@ -36,6 +36,36 @@ Fresh gates:
 - `python tools\check_workstream_catalog.py` - passed.
 - `git diff --check` - passed.
 
+## IMUI debug draw linear command payload owner split - 2026-06-03
+
+This maintenance slice separates linear geometry command payload ownership from the root
+debug-draw command enum:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/linear.rs` owns
+  line/poly/rect/quad/triangle debug-draw command payload variants.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` keeps round,
+  Bezier, mesh, clip, media, text, and the `Linear(DebugDrawLinearCommand)` wrapper.
+- Evidence anchor: IMUI debug draw linear command payload owner split - 2026-06-03.
+- Evidence anchor: ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/linear.rs.
+- Evidence anchor: line/poly/rect/quad/triangle debug-draw command payload variants.
+- Evidence anchor: DebugDrawCommand keeps round, bezier, mesh, clip, media, text, and Linear wrapper.
+- Public `ImUiDebugDrawList` line/poly/rect/quad/triangle methods, command summaries,
+  point/vertex/index/triangle counts, path paint dispatch, residual multi-color rect paint, media
+  dispatch filtering, and debug-draw response APIs remain unchanged.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so linear command payload
+  variants cannot drift back into the root command enum owner.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## IMUI debug draw clip command payload owner split - 2026-06-03
 
 This maintenance slice separates clip-stack command payload ownership from the root debug-draw

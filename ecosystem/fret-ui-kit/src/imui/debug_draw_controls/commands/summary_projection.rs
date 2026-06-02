@@ -28,17 +28,7 @@ impl DebugDrawCommand {
         }
 
         match self {
-            DebugDrawCommand::Line { .. }
-            | DebugDrawCommand::Polyline { .. }
-            | DebugDrawCommand::ConvexPolyFilled { .. }
-            | DebugDrawCommand::ConcavePolyFilled { .. }
-            | DebugDrawCommand::Rect { .. }
-            | DebugDrawCommand::RectFilled { .. }
-            | DebugDrawCommand::RectFilledMultiColor { .. }
-            | DebugDrawCommand::Quad { .. }
-            | DebugDrawCommand::QuadFilled { .. }
-            | DebugDrawCommand::Triangle { .. }
-            | DebugDrawCommand::TriangleFilled { .. }
+            DebugDrawCommand::Linear(_)
             | DebugDrawCommand::Mesh(DebugDrawMeshCommand::TriangleMesh { .. })
             | DebugDrawCommand::Circle { .. }
             | DebugDrawCommand::CircleFilled { .. }

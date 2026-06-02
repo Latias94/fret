@@ -58,6 +58,17 @@ Last updated: 2026-06-03
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw linear geometry command payload variants out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` into a
+      private child owner without changing public `ImUiDebugDrawList` line/poly/rect/quad/triangle
+      methods, command summaries, geometry point/vertex/index/triangle projection, path paint
+      dispatch, residual multi-color rect paint, media dispatch filtering, or public debug-draw
+      response APIs.
+      Result: `debug_draw_controls/commands/types/command/linear.rs` owns line, polyline,
+      convex/concave polygon fill, rect, multi-color rect, quad, and triangle payload variants.
+      `command.rs` keeps round, Bezier, mesh, clip, media, text, and the
+      `Linear(DebugDrawLinearCommand)` wrapper; draw-list builders, geometry summaries, path paint,
+      residual paint, and tests route through the private linear owner.
 - [x] Split IMUI debug-draw clip-stack command payload variants out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` into a
       private child owner without changing public `ImUiDebugDrawList` clip methods, command

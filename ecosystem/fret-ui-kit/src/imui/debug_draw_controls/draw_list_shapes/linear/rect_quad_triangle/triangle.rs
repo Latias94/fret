@@ -1,6 +1,6 @@
 use fret_core::{Color, Point, Px};
 
-use super::super::super::super::commands::DebugDrawCommand;
+use super::super::super::super::commands::{DebugDrawCommand, DebugDrawLinearCommand};
 use super::super::super::super::{DebugDrawStrokeStyle, ImUiDebugDrawList};
 
 impl ImUiDebugDrawList {
@@ -16,17 +16,19 @@ impl ImUiDebugDrawList {
         color: Color,
         style: impl Into<DebugDrawStrokeStyle>,
     ) {
-        self.commands.push(DebugDrawCommand::Triangle {
-            p1,
-            p2,
-            p3,
-            color,
-            style: style.into(),
-        });
+        self.commands
+            .push(DebugDrawCommand::Linear(DebugDrawLinearCommand::Triangle {
+                p1,
+                p2,
+                p3,
+                color,
+                style: style.into(),
+            }));
     }
 
     pub fn add_triangle_filled(&mut self, p1: Point, p2: Point, p3: Point, color: Color) {
-        self.commands
-            .push(DebugDrawCommand::TriangleFilled { p1, p2, p3, color });
+        self.commands.push(DebugDrawCommand::Linear(
+            DebugDrawLinearCommand::TriangleFilled { p1, p2, p3, color },
+        ));
     }
 }

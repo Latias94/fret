@@ -24,17 +24,7 @@ pub(super) fn paint_debug_draw_commands(
             DebugDrawCommand::Media(_) => {
                 media::paint_debug_draw_media_command(painter, key, order, command);
             }
-            DebugDrawCommand::Line { .. }
-            | DebugDrawCommand::Polyline { .. }
-            | DebugDrawCommand::ConvexPolyFilled { .. }
-            | DebugDrawCommand::ConcavePolyFilled { .. }
-            | DebugDrawCommand::Rect { .. }
-            | DebugDrawCommand::RectFilled { .. }
-            | DebugDrawCommand::RectFilledMultiColor { .. }
-            | DebugDrawCommand::Quad { .. }
-            | DebugDrawCommand::QuadFilled { .. }
-            | DebugDrawCommand::Triangle { .. }
-            | DebugDrawCommand::TriangleFilled { .. }
+            DebugDrawCommand::Linear(_)
             | DebugDrawCommand::Mesh(_)
             | DebugDrawCommand::Circle { .. }
             | DebugDrawCommand::CircleFilled { .. }

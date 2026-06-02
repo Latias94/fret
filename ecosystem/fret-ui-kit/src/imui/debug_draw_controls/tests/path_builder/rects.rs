@@ -14,7 +14,9 @@ fn debug_draw_path_builder_appends_rect_points() {
         path.stroke(Color::from_srgb_hex_rgb(0xff_ff_ff), Px(1.0), true);
     });
 
-    let DebugDrawCommand::Polyline { points, closed, .. } = &list.commands[0] else {
+    let DebugDrawCommand::Linear(DebugDrawLinearCommand::Polyline { points, closed, .. }) =
+        &list.commands[0]
+    else {
         panic!("path rect helper should record a closed polyline command");
     };
     assert!(*closed);
@@ -48,7 +50,9 @@ fn debug_draw_path_builder_appends_rounded_rect_corner_samples() {
         path.fill_convex(Color::from_srgb_hex_rgb(0xff_ff_ff));
     });
 
-    let DebugDrawCommand::ConvexPolyFilled { points, .. } = &list.commands[0] else {
+    let DebugDrawCommand::Linear(DebugDrawLinearCommand::ConvexPolyFilled { points, .. }) =
+        &list.commands[0]
+    else {
         panic!("rounded path rect helper should record sampled convex fill points");
     };
     assert_eq!(points.len(), 10);

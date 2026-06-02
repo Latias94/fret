@@ -34,14 +34,17 @@ fn debug_draw_channels_merge_in_channel_order() {
     list.channels_merge();
 
     assert_eq!(list.command_count(), 4);
-    assert!(matches!(list.commands[0], DebugDrawCommand::Line { .. }));
+    assert!(matches!(
+        list.commands[0],
+        DebugDrawCommand::Linear(DebugDrawLinearCommand::Line { .. })
+    ));
     assert!(matches!(
         list.commands[1],
         DebugDrawCommand::CircleFilled { .. }
     ));
     assert!(matches!(
         list.commands[2],
-        DebugDrawCommand::RectFilled { .. }
+        DebugDrawCommand::Linear(DebugDrawLinearCommand::RectFilled { .. })
     ));
     assert!(matches!(list.commands[3], DebugDrawCommand::Text { .. }));
 }

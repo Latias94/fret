@@ -3,6 +3,48 @@
 Status: Active
 Last updated: 2026-06-03
 
+## IMUI Debug Draw Linear Command Payload Owner Split - 2026-06-03
+
+Claim verified: line/poly/rect/quad/triangle debug-draw command payload variants moved out of
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` into private
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/linear.rs` without
+changing public `ImUiDebugDrawList` linear geometry APIs, command summaries,
+point/vertex/index/triangle count projection, path paint dispatch, residual multi-color rect paint,
+media dispatch filtering, or public debug-draw response APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/linear.rs` owns
+  line/poly/rect/quad/triangle debug-draw command payload variants.
+- Evidence anchor: line/poly/rect/quad/triangle debug-draw command payload variants.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` keeps round,
+  Bezier, mesh, clip, media, text, and the `Linear(DebugDrawLinearCommand)` wrapper.
+- Evidence anchor: DebugDrawCommand keeps round, bezier, mesh, clip, media, text, and Linear wrapper.
+- Draw-list linear builders still expose the same public methods and now wrap the private linear
+  payload owner through `DebugDrawCommand::Linear(...)`.
+- Geometry summary projection still emits the same `DebugDrawCommandKind` values and keeps the same
+  point/vertex/index/triangle counts, including multi-color rect's 4 vertices, 6 indices, and 2
+  triangles.
+- Paint dispatch still routes stroked/filled line/poly/rect/quad/triangle path commands through the
+  linear path paint owners, keeps residual multi-color rect paint in `paint_shapes/residual.rs`,
+  and treats linear commands as non-media for media dispatch filtering.
+- `tools/gate_imui_workstream_source.py` source-checks the split so linear payload variants cannot
+  drift back into the root command enum owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Debug Draw Clip Command Payload Owner Split - 2026-06-03
 
 Claim verified: push/pop clip-stack debug-draw command payload variants moved out of

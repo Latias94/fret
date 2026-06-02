@@ -3,17 +3,7 @@ use crate::imui::debug_draw_controls::DebugDrawCommand;
 pub(super) fn is_non_media_command(command: &DebugDrawCommand) -> bool {
     match command {
         DebugDrawCommand::Media(_) => false,
-        DebugDrawCommand::Line { .. }
-        | DebugDrawCommand::Polyline { .. }
-        | DebugDrawCommand::ConvexPolyFilled { .. }
-        | DebugDrawCommand::ConcavePolyFilled { .. }
-        | DebugDrawCommand::Rect { .. }
-        | DebugDrawCommand::RectFilled { .. }
-        | DebugDrawCommand::RectFilledMultiColor { .. }
-        | DebugDrawCommand::Quad { .. }
-        | DebugDrawCommand::QuadFilled { .. }
-        | DebugDrawCommand::Triangle { .. }
-        | DebugDrawCommand::TriangleFilled { .. }
+        DebugDrawCommand::Linear(_)
         | DebugDrawCommand::Mesh(_)
         | DebugDrawCommand::Circle { .. }
         | DebugDrawCommand::CircleFilled { .. }

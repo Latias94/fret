@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{Color, Point, Px};
 
-use super::super::super::commands::DebugDrawCommand;
+use super::super::super::commands::{DebugDrawCommand, DebugDrawLinearCommand};
 use super::super::super::{DebugDrawStrokeStyle, ImUiDebugDrawList};
 
 impl ImUiDebugDrawList {
@@ -17,12 +17,13 @@ impl ImUiDebugDrawList {
         color: Color,
         style: impl Into<DebugDrawStrokeStyle>,
     ) {
-        self.commands.push(DebugDrawCommand::Line {
-            from,
-            to,
-            color,
-            style: style.into(),
-        });
+        self.commands
+            .push(DebugDrawCommand::Linear(DebugDrawLinearCommand::Line {
+                from,
+                to,
+                color,
+                style: style.into(),
+            }));
     }
 
     pub fn add_polyline<I>(&mut self, points: I, color: Color, thickness: Px, closed: bool)
@@ -42,12 +43,13 @@ impl ImUiDebugDrawList {
         I: IntoIterator<Item = Point>,
     {
         let points: Arc<[Point]> = Arc::from(points.into_iter().collect::<Vec<_>>());
-        self.commands.push(DebugDrawCommand::Polyline {
-            points,
-            color,
-            style: style.into(),
-            closed,
-        });
+        self.commands
+            .push(DebugDrawCommand::Linear(DebugDrawLinearCommand::Polyline {
+                points,
+                color,
+                style: style.into(),
+                closed,
+            }));
     }
 
     pub fn add_convex_poly_filled<I>(&mut self, points: I, color: Color)
@@ -55,8 +57,9 @@ impl ImUiDebugDrawList {
         I: IntoIterator<Item = Point>,
     {
         let points: Arc<[Point]> = Arc::from(points.into_iter().collect::<Vec<_>>());
-        self.commands
-            .push(DebugDrawCommand::ConvexPolyFilled { points, color });
+        self.commands.push(DebugDrawCommand::Linear(
+            DebugDrawLinearCommand::ConvexPolyFilled { points, color },
+        ));
     }
 
     pub fn add_concave_poly_filled<I>(&mut self, points: I, color: Color)
@@ -64,7 +67,8 @@ impl ImUiDebugDrawList {
         I: IntoIterator<Item = Point>,
     {
         let points: Arc<[Point]> = Arc::from(points.into_iter().collect::<Vec<_>>());
-        self.commands
-            .push(DebugDrawCommand::ConcavePolyFilled { points, color });
+        self.commands.push(DebugDrawCommand::Linear(
+            DebugDrawLinearCommand::ConcavePolyFilled { points, color },
+        ));
     }
 }

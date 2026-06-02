@@ -76,42 +76,45 @@ pub(super) fn add_linear_commands(list: &mut ImUiDebugDrawList) {
 }
 
 pub(super) fn assert_linear_command_order(commands: &[DebugDrawCommand], offset: usize) {
-    assert!(matches!(commands[offset], DebugDrawCommand::Line { .. }));
+    assert!(matches!(
+        commands[offset],
+        DebugDrawCommand::Linear(DebugDrawLinearCommand::Line { .. })
+    ));
     assert!(matches!(
         commands[offset + 1],
-        DebugDrawCommand::Polyline { .. }
+        DebugDrawCommand::Linear(DebugDrawLinearCommand::Polyline { .. })
     ));
     assert!(matches!(
         commands[offset + 2],
-        DebugDrawCommand::ConvexPolyFilled { .. }
+        DebugDrawCommand::Linear(DebugDrawLinearCommand::ConvexPolyFilled { .. })
     ));
     assert!(matches!(
         commands[offset + 3],
-        DebugDrawCommand::Rect { .. }
+        DebugDrawCommand::Linear(DebugDrawLinearCommand::Rect { .. })
     ));
     assert!(matches!(
         commands[offset + 4],
-        DebugDrawCommand::RectFilled { .. }
+        DebugDrawCommand::Linear(DebugDrawLinearCommand::RectFilled { .. })
     ));
     assert!(matches!(
         commands[offset + 5],
-        DebugDrawCommand::RectFilledMultiColor { .. }
+        DebugDrawCommand::Linear(DebugDrawLinearCommand::RectFilledMultiColor { .. })
     ));
     assert!(matches!(
         commands[offset + 6],
-        DebugDrawCommand::Quad { .. }
+        DebugDrawCommand::Linear(DebugDrawLinearCommand::Quad { .. })
     ));
     assert!(matches!(
         commands[offset + 7],
-        DebugDrawCommand::QuadFilled { .. }
+        DebugDrawCommand::Linear(DebugDrawLinearCommand::QuadFilled { .. })
     ));
     assert!(matches!(
         commands[offset + 8],
-        DebugDrawCommand::Triangle { .. }
+        DebugDrawCommand::Linear(DebugDrawLinearCommand::Triangle { .. })
     ));
     assert!(matches!(
         commands[offset + 9],
-        DebugDrawCommand::TriangleFilled { .. }
+        DebugDrawCommand::Linear(DebugDrawLinearCommand::TriangleFilled { .. })
     ));
 }
 

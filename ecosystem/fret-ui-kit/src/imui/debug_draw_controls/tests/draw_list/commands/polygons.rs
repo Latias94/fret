@@ -13,9 +13,10 @@ fn debug_draw_list_records_concave_poly_fill_command() {
 
     list.add_concave_poly_filled(points, Color::from_srgb_hex_rgb(0xff_ff_ff));
 
-    let DebugDrawCommand::ConcavePolyFilled {
-        points: recorded, ..
-    } = &list.commands[0]
+    let DebugDrawCommand::Linear(DebugDrawLinearCommand::ConcavePolyFilled {
+        points: recorded,
+        ..
+    }) = &list.commands[0]
     else {
         panic!("concave polygon fill should record a dedicated command");
     };
