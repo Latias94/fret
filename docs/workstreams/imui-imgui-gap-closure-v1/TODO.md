@@ -2718,6 +2718,12 @@ Last updated: 2026-06-03
       Result: `paint_shapes/path_commands/round.rs` now only dispatches to `round/stroked.rs` and
       `round/filled.rs`; those owners handle stroked circle/ngon/ellipse commands and filled
       circle/ngon/ellipse commands respectively.
+      2026-06-03 follow-up: split IMUI debug-draw round path paint primitives into circle/ngon/
+      ellipse child owners for both stroked and filled paint without changing draw-list commands,
+      path command generation, stroke/fill style dispatch, canvas path dispatch, or debug-draw
+      smoke behavior. `paint_shapes/paths/stroked/round.rs` and
+      `paint_shapes/paths/filled/round.rs` are now private re-export hubs; their `circle.rs`,
+      `ngon.rs`, and `ellipse.rs` child owners hold the concrete path-paint branches.
 - [x] Split IMUI debug-draw linear path-command paint dispatch into stroked and filled private
       owners without changing public draw-list commands, path paint routing, stroke/fill painter
       calls, command fallthrough, or debug-draw smoke behavior.

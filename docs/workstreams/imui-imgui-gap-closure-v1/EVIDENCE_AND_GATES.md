@@ -15430,6 +15430,52 @@ Focused gates:
 - `cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast`: pass; 39
   debug-draw tests passed.
 
+## Debug-Draw Round Path Paint Primitive Owner-Split Evidence - 2026-06-03
+
+Claim verified: IMUI debug-draw round path paint primitives split into circle/ngon/ellipse child
+owners for both stroked and filled paint without changing public draw-list commands, path command
+generation, stroke/fill style dispatch, canvas path dispatch, summaries, or debug-draw smoke
+behavior.
+
+Evidence:
+
+- IMUI debug draw round path paint primitive owner split - 2026-06-03.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/round.rs` is now
+  a private re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/round.rs` is now a
+  private re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/round/circle.rs`
+  owns stroked circle path paint.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/round/ngon.rs`
+  owns stroked ngon path paint.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/round/ellipse.rs`
+  owns stroked ellipse path paint.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/round/circle.rs`
+  owns filled circle path paint.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/round/ngon.rs`
+  owns filled ngon path paint.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/round/ellipse.rs`
+  owns filled ellipse path paint.
+- Evidence anchor: stroked round.rs is now a private re-export hub.
+- Evidence anchor: filled round.rs is now a private re-export hub.
+- Evidence anchor: circle/ngon/ellipse stroked and filled round path paint branches.
+- `tools/gate_imui_workstream_source.py` now rejects path-paint bodies from drifting back into the
+  round paint hubs and checks each concrete child owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Linear Path-Command Dispatch Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI debug-draw linear path-command paint dispatch split into stroked and filled

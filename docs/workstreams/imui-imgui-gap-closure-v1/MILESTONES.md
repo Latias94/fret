@@ -2889,6 +2889,14 @@ pressable props/chrome assembly, action activation, response population, and vis
 dispatches to stroked and filled round command owners. `round/stroked.rs` owns circle/ngon/ellipse
 stroke paint routing, and `round/filled.rs` owns circle/ngon/ellipse fill routing.
 
+2026-06-03 debug-draw round path paint primitive owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/round.rs` is now a
+private re-export hub over circle, ngon, and ellipse stroked round path paint branches.
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/round.rs` is now a
+private re-export hub over circle, ngon, and ellipse filled round path paint branches. The six
+child owners keep the same path command generation, stroke/fill style dispatch, canvas path
+dispatch, and debug-draw behavior.
+
 2026-05-28 debug-draw linear path-command dispatch owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands/linear.rs` now only
 dispatches to stroked and filled linear command owners. `linear/stroked.rs` owns line/polyline/rect/

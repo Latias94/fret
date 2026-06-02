@@ -5562,6 +5562,40 @@ Result: passed locally. The focused debug-draw nextest gate reported `39 tests r
 check-cfg and `current_effective_opacity` dead code. `git diff --check` reported only the
 pre-existing line-ending warnings for `Cargo.lock` and `apps/fret-examples/src/lib.rs`.
 
+## IMUI debug draw round path paint primitive owner split - 2026-06-03
+
+Scope: keep the stroked and filled round path-paint modules as private hubs while moving concrete
+circle/ngon/ellipse paint bodies into focused child owners.
+
+- IMUI debug draw round path paint primitive owner split - 2026-06-03.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/round.rs` is now a
+  private re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/round.rs` is now a
+  private re-export hub.
+- Evidence anchor: ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/round/circle.rs.
+- Evidence anchor: ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/round/ngon.rs.
+- Evidence anchor: ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/round/ellipse.rs.
+- Evidence anchor: ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/round/circle.rs.
+- Evidence anchor: ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/round/ngon.rs.
+- Evidence anchor: ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/round/ellipse.rs.
+- Evidence anchor: stroked round.rs is now a private re-export hub.
+- Evidence anchor: filled round.rs is now a private re-export hub.
+- Evidence anchor: circle/ngon/ellipse stroked and filled round path paint branches.
+- Public draw-list commands, path command generation, stroke/fill style dispatch, canvas path
+  dispatch, summaries, and debug-draw response APIs remain unchanged.
+- `tools/gate_imui_workstream_source.py` checks both hubs plus the six child owners.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## IMUI debug draw stroked path paint owner split - 2026-05-25
 
 Scope: keep `paint_shapes/paths/stroked.rs` as the stroked path-paint facade while moving linear,
