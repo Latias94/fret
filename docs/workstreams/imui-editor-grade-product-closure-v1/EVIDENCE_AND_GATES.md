@@ -2,6 +2,40 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Docking drop resolve target owner split - 2026-06-03
+
+This maintenance slice keeps docking drop target resolution separate from drop intent, effect, and
+diagnostics orchestration:
+
+- `ecosystem/fret-docking/src/dock/drop_resolve/target.rs` owns dock drop target resolution,
+  including tab-bar insert targets, inner/outer hint-pad targets, float/empty-space targets,
+  previous-hover latching, inverted docking, and policy allow checks.
+- `ecosystem/fret-docking/src/dock/drop_resolve/floating_hit.rs` remains the floating-window hit
+  owner used by target resolution.
+- `ecosystem/fret-docking/src/dock/drop_resolve.rs` keeps drop intent, apply, and diagnostics
+  orchestration.
+- Evidence anchor: Docking drop resolve target owner split - 2026-06-03.
+- Evidence anchor: ecosystem/fret-docking/src/dock/drop_resolve/target.rs.
+- Evidence anchor: dock drop target resolution.
+- Evidence anchor: Drop resolve root keeps drop intent, apply, and diagnostics orchestration.
+- Public docking APIs, floating/outside-window target classification, tab-bar insert resolution,
+  hint picking, previous-hover latching, policy checks, drop intents, effect projection, and
+  diagnostics payloads remain unchanged.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so target-resolution helpers
+  cannot drift back into `drop_resolve.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-docking` - passed.
+- `cargo check -p fret-docking` - passed.
+- `cargo nextest run -p fret-docking floating_title_bar_drag center_drop tab_drop drop_hint --no-fail-fast` - passed.
+- `cargo nextest run -p fret-docking drags_floating_title_bar --no-fail-fast` - passed.
+- `cargo fmt -p fret-docking -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Docking drop resolve floating hit owner split - 2026-06-03
 
 This maintenance slice keeps docking drop resolution moving toward editor-grade multi-window hand

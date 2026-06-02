@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Docking Drop Resolve Target Owner Split - 2026-06-03
+
+Claim verified: dock drop target resolution moved out of
+`ecosystem/fret-docking/src/dock/drop_resolve.rs` into private
+`ecosystem/fret-docking/src/dock/drop_resolve/target.rs` without changing floating/outside-window
+target classification, tab-bar insert target resolution, inner/outer hint picking, empty dock-space
+targeting, previous-hover latching, inverted docking, policy allow checks, drop-intent projection,
+effect application, diagnostics publication, or public docking APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/drop_resolve/target.rs` owns dock target resolution, layout-map
+  projection, tab-bar insert target resolution, hint-pad target picking, float/empty target
+  classification, previous-hover latching, inverted docking, and policy allow checks.
+- `ecosystem/fret-docking/src/dock/drop_resolve.rs` keeps drop intent, apply, and diagnostics
+  orchestration while re-exporting `resolve_dock_drop_target(...)` for existing declarative callers.
+- `ecosystem/fret-docking/src/dock/drop_resolve/floating_hit.rs` remains the floating hit-test
+  owner used by the target owner.
+- `tools/gate_imui_workstream_source.py` rejects target-resolution drift back into the drop resolve
+  root and rejects drop intent/effect/diagnostics policy in the target owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new target owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking floating_title_bar_drag center_drop tab_drop drop_hint --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-docking drags_floating_title_bar --no-fail-fast`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Drop Resolve Floating Hit Owner Split - 2026-06-03
 
 Claim verified: floating-window hit tests used by dock drop target resolution moved out of

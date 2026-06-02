@@ -595,6 +595,15 @@ Last updated: 2026-06-03
       layout-context projection. `dock/drop_resolve.rs` keeps target, intent, apply, and diagnostics
       orchestration. The source gate prevents floating hit/context helpers from drifting back into
       the drop resolve root.
+- [x] Split docking drop resolve target resolution into a private child owner without changing
+      floating/outside-window target classification, tab-bar insert target resolution, inner/outer
+      hint-pad target picking, empty dock-space targeting, previous-hover latching, inverted
+      docking, policy allow checks, drop-intent projection, effect application, diagnostics
+      publication, or public docking APIs.
+      Result: `dock/drop_resolve/target.rs` owns target resolution and policy checks.
+      `dock/drop_resolve.rs` keeps drop-intent, apply, and diagnostics orchestration while
+      re-exporting `resolve_dock_drop_target(...)`. The source gate prevents target-resolution
+      helpers from drifting back into the drop resolve root.
 - [x] Split docking declarative internal drag/drop resolve and drag-start policy into a private
       child owner without changing hover/drop target resolution, tab-bar auto-scroll during drag,
       tear-off handoff, drop intent application, drag diagnostics publication, drag inversion
