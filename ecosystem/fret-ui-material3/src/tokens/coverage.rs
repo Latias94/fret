@@ -84,6 +84,16 @@ pub(crate) fn validate_manifest_against_sources() -> Result<(), String> {
             manifest.schema_version
         ));
     }
+    if manifest.suite != usage::MATERIAL_TOKEN_USAGE_MANIFEST_SUITE {
+        errors.push(format!(
+            "material token usage manifest suite must be {}; found {}",
+            usage::MATERIAL_TOKEN_USAGE_MANIFEST_SUITE,
+            manifest.suite
+        ));
+    }
+    if manifest.notes != usage::MATERIAL_TOKEN_USAGE_MANIFEST_NOTES {
+        errors.push("material token usage manifest notes drifted from usage metadata".to_string());
+    }
 
     let crate_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let audited_scan = match usage::scan_audited_sources(crate_dir) {
@@ -193,6 +203,8 @@ pub(crate) fn validate_recipe_sources_are_token_free() -> Result<(), String> {
 #[derive(Debug, Deserialize)]
 struct MaterialTokenManifest {
     schema_version: u32,
+    suite: String,
+    notes: String,
     sources: Vec<MaterialTokenSource>,
 }
 
