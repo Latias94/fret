@@ -12,9 +12,18 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 plot wheel zoom interaction owner-split result:
+`ecosystem/fret-plot/src/declarative/interaction.rs` now keeps legend/query/box-zoom/pan event
+routing and re-exports wheel zoom entrypoints while
+`ecosystem/fret-plot/src/declarative/interaction/wheel.rs` owns wheel region detection,
+modifier-to-axis selection, axis-lock filtering, clamp/sanitize handling, and view-bound update
+projection. Paint owners, output publication, public panel props, plot model projection, optional
+IMUI adapter routing, and retained-free boundaries remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 plot draggable interaction owner-split result:
-`ecosystem/fret-plot/src/declarative/interaction.rs` now keeps legend/query/box-zoom/pan/wheel
-event routing and re-exports draggable interaction entrypoints while
+`ecosystem/fret-plot/src/declarative/interaction.rs` now keeps legend/query/box-zoom/pan event
+routing and re-exports draggable interaction entrypoints while
 `ecosystem/fret-plot/src/declarative/interaction/draggable.rs` owns draggable overlay hit-testing,
 drag-session mutation, multi-axis drag transform selection, and `PlotDragOutput` projection. Paint
 owners, output publication, public panel props, plot model projection, optional IMUI adapter

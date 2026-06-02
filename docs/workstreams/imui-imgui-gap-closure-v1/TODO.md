@@ -6060,8 +6060,8 @@ opening the slice.
       changing paint owners, output publication, public panel props, optional IMUI adapter routing,
       or state model ownership.
       Result: `ecosystem/fret-plot/src/declarative/interaction.rs` owns legend, query, box-zoom,
-      pan, and wheel event routing plus non-draggable interaction session records while re-exporting
-      the draggable owner; `declarative.rs` keeps panel assembly, paint orchestration, output
+      and pan event routing plus non-draggable interaction session records while re-exporting
+      child interaction owners; `declarative.rs` keeps panel assembly, paint orchestration, output
       publication, view/output snapshot records, shared geometry helpers, and plot state model
       wiring.
 - [x] Split Fret Plot declarative draggable overlay event routing out of the interaction owner
@@ -6070,7 +6070,14 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/interaction/draggable.rs` owns draggable overlay
       hit-testing, drag-session mutation, multi-axis drag transform selection, and `PlotDragOutput`
       projection; `interaction.rs` re-exports the draggable entrypoints and keeps
-      legend/query/box-zoom/pan/wheel routing.
+      legend/query/box-zoom/pan routing plus wheel re-export routing.
+- [x] Split Fret Plot declarative wheel zoom event routing out of the interaction owner without
+      changing legend routing, query drag, box zoom, pan, draggable overlays, paint owners, output
+      publication, public panel props, optional IMUI adapter routing, or plot model projection.
+      Result: `ecosystem/fret-plot/src/declarative/interaction/wheel.rs` owns wheel region
+      detection, modifier-to-axis selection, axis-lock filtering, clamp/sanitize handling, and view
+      bound update projection; `interaction.rs` re-exports the wheel entrypoint and keeps
+      legend/query/box-zoom/pan routing.
 - [x] Split Fret Plot declarative output/view snapshot projection out of the implementation root
       without changing paint owners, event routing, public panel props, optional IMUI adapter
       routing, or plot model projection.

@@ -2,6 +2,33 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative wheel zoom interaction owner split - 2026-06-02
+
+This maintenance slice keeps wheel zoom event routing out of the shared interaction owner while
+preserving the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/interaction/wheel.rs` is the wheel zoom event routing owner.
+- `interaction.rs` re-exports wheel zoom entrypoints and keeps legend/query/box-zoom/pan routing.
+- Evidence anchor: wheel zoom event routing owner.
+- Evidence anchor: Interaction root re-exports wheel zoom event routing.
+- Evidence anchor: legend, query, box-zoom, and pan event routing.
+- The wheel owner stays paint-free, output-publication-free, query/box/pan/draggable-free,
+  authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so wheel region detection,
+  modifier-to-axis selection, axis-lock filtering, and zoom projection cannot drift back into
+  `interaction.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_wheel --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative draggable interaction owner split - 2026-06-02
 
 This maintenance slice keeps draggable overlay event routing out of the shared interaction owner

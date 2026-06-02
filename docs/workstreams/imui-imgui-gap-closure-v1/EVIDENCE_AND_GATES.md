@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Wheel Zoom Interaction Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative wheel zoom region detection, modifier-to-axis selection,
+axis-lock filtering, clamp/sanitize handling, and view-bound update projection moved out of
+`ecosystem/fret-plot/src/declarative/interaction.rs` into private
+`ecosystem/fret-plot/src/declarative/interaction/wheel.rs` without changing legend routing, query
+drag, box zoom, pan, draggable overlays, paint owners, output publication, public panel props,
+optional IMUI adapter routing, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/interaction/wheel.rs` is the wheel zoom event routing owner.
+- `interaction.rs` re-exports `handle_line_plot_wheel_zoom_event(...)` while keeping legend,
+  query, box-zoom, and pan routing plus non-draggable interaction session records.
+- The wheel owner imports only plot geometry, current view-bound projection, input-map wheel
+  policy, scaled zoom/clamp helpers, axis locks, and view-bound state updates, staying paint-free,
+  output-publication-free, query/box/pan/draggable-free, authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` rejects wheel region/zoom projection logic from drifting
+  back into `interaction.rs` and rejects non-wheel interaction concerns from
+  `interaction/wheel.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new wheel interaction
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_wheel --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Draggable Interaction Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative draggable overlay hit-testing, drag-session mutation,
