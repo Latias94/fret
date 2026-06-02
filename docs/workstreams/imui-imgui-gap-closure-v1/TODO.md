@@ -6059,10 +6059,18 @@ opening the slice.
 - [x] Split Fret Plot declarative interaction event routing out of the implementation root without
       changing paint owners, output publication, public panel props, optional IMUI adapter routing,
       or state model ownership.
-      Result: `ecosystem/fret-plot/src/declarative/interaction.rs` owns legend, draggable, query,
-      box-zoom, pan, and wheel event routing plus interaction session records; `declarative.rs`
-      keeps panel assembly, paint orchestration, output publication, view/output snapshot records,
-      shared geometry helpers, and plot state model wiring.
+      Result: `ecosystem/fret-plot/src/declarative/interaction.rs` owns legend, query, box-zoom,
+      pan, and wheel event routing plus non-draggable interaction session records while re-exporting
+      the draggable owner; `declarative.rs` keeps panel assembly, paint orchestration, output
+      publication, view/output snapshot records, shared geometry helpers, and plot state model
+      wiring.
+- [x] Split Fret Plot declarative draggable overlay event routing out of the interaction owner
+      without changing legend routing, query drag, box zoom, pan, wheel zoom, paint owners, output
+      publication, public panel props, optional IMUI adapter routing, or plot model projection.
+      Result: `ecosystem/fret-plot/src/declarative/interaction/draggable.rs` owns draggable overlay
+      hit-testing, drag-session mutation, multi-axis drag transform selection, and `PlotDragOutput`
+      projection; `interaction.rs` re-exports the draggable entrypoints and keeps
+      legend/query/box-zoom/pan/wheel routing.
 - [x] Split Fret Plot declarative output/view snapshot projection out of the implementation root
       without changing paint owners, event routing, public panel props, optional IMUI adapter
       routing, or plot model projection.

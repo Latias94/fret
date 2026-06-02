@@ -3,6 +3,45 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Draggable Interaction Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative draggable overlay hit-testing, drag-session mutation,
+multi-axis drag transform selection, and `PlotDragOutput` projection moved out of
+`ecosystem/fret-plot/src/declarative/interaction.rs` into private
+`ecosystem/fret-plot/src/declarative/interaction/draggable.rs` without changing legend routing,
+query drag, box zoom, pan, wheel zoom, paint owners, output publication, public panel props,
+optional IMUI adapter routing, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/interaction/draggable.rs` is the draggable overlay event
+  routing owner.
+- `interaction.rs` re-exports `LinePlotDragSession` and
+  `handle_line_plot_draggable_overlay_event(...)` while keeping legend/query/box-zoom/pan/wheel
+  orchestration plus shared mouse-button helpers.
+- The draggable owner imports only plot transforms, draggable overlay records, current view-bound
+  projection, legend hit exclusion, drag sessions, and `PlotDragOutput` assembly, staying
+  paint-free, output-publication-free, query/box/pan/wheel-free, authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` rejects draggable overlay hit-test/session/output logic
+  from drifting back into `interaction.rs` and rejects non-draggable interaction concerns from
+  `interaction/draggable.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new draggable
+  interaction owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_drags --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_legend --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Annotation Overlay Helper Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative annotation tokens, annotation labels, text-box emission,
