@@ -5995,3 +5995,13 @@ opening the slice.
       Result: `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/install.rs` owns active
       trigger installation. `active_trigger_behavior.rs` keeps the stable install/populate entry
       points and delegates installation to the owner.
+- [x] Split IMUI popup-menu panel assembly out of
+      `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs` into a private assembly owner
+      without changing popup keep-alive state reads, anchored layout placement, panel palette and
+      semantics, menu-nav state initialization, stored panel id, first-item detection, content
+      focus tracking, or popup-policy / menubar-policy provider boundaries.
+      Result: `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/assembly.rs` now owns the
+      root-name wiring, nav-item state setup, semantics-with-id assembly, stored panel-id update,
+      and `PopupMenuBuilt` return shaping. `popup_overlay/menu/panel.rs` keeps the stable
+      build-entry signature, state gating, anchored layout, palette resolution, and delegates final
+      panel assembly to the private owner.
