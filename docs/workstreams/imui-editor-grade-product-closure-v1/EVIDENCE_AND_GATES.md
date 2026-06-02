@@ -382,6 +382,33 @@ Fresh gates:
 - `python tools\check_workstream_catalog.py` - passed.
 - `git diff --check` - passed.
 
+## Fret Plot declarative overlay paint owner split - 2026-06-02
+
+This refresh keeps the optional IMUI plot adapter declarative-only while moving overlay painting out
+of the retained-free paint/event root:
+
+- `ecosystem/fret-plot/src/declarative/overlays.rs` now owns the reference, draggable, image, tag, and text overlay paint owner,
+  including annotation tokens, overlay text boxes, tag markers, plot-image regions, and label
+  clamping.
+- `ecosystem/fret-plot/src/declarative.rs` imports overlay paint entrypoints while panel paint
+  orchestration, draggable overlay event routing, output publication, and plot state handling stay
+  in the root.
+- The overlay paint owner does not own `PlotState`, pointer event handling, output publication,
+  `UiHost`, `fret-authoring`, retained plot bridges, or optional IMUI adapter policy; overlay paint stays state-free and event-free,
+  and draggable overlay event routing stays in `declarative.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed with existing dead-code warnings in
+  `plot/view.rs`.
+- `cargo test -p fret-plot --lib line_plot_panel_paints --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_drags --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative heatmap owner split - 2026-06-02
 
 This refresh keeps the optional IMUI plot adapter declarative-only while moving heatmap painting out

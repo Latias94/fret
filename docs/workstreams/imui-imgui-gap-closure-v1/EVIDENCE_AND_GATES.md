@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Overlay Paint Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative reference, draggable, image, tag, and text overlay painting
+moved out of `ecosystem/fret-plot/src/declarative.rs` into private
+`ecosystem/fret-plot/src/declarative/overlays.rs` without changing multi-axis overlay projection,
+annotation token resolution, draggable label value formatting, image layer routing, plot tag
+placement, text overlay clamping, public panel props, or optional IMUI adapter routing.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/overlays.rs` owns the reference, draggable, image, tag, and text overlay paint owner,
+  including annotation tokens, text boxes, tag markers, plot-image regions, and overlay label
+  clamping.
+- `ecosystem/fret-plot/src/declarative.rs` keeps panel paint orchestration, draggable overlay event
+  routing, output publication, and plot state handling while delegating overlay paint to the
+  private owner.
+- `tools/gate_imui_workstream_source.py` tracks root, overlay, heatmap, axis label, readout,
+  selection, commands, legend, model, panels, and props owners separately and rejects overlay paint
+  helpers from drifting back into the root paint/event owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new overlay paint owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_drags --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Heatmap Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative heatmap grid cell painting and default colorbar projection

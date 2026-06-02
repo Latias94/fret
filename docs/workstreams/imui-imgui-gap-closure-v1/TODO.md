@@ -5992,6 +5992,13 @@ opening the slice.
       default colorbar projection; `declarative/model.rs` keeps heatmap model projection and
       `declarative.rs` keeps panel paint orchestration, event output publication, and plot state
       handling.
+- [x] Split Fret Plot declarative overlay painting out of the retained-free paint/event root
+      without changing reference lines, draggable point/rect paint, image layer routing,
+      draggable labels, tag overlays, text overlays, multi-axis projection, public panel props, or
+      optional IMUI adapter routing.
+      Result: `ecosystem/fret-plot/src/declarative/overlays.rs` owns reference, draggable, image,
+      tag, and text overlay painting; `declarative.rs` keeps panel paint orchestration, draggable
+      overlay event routing, output publication, and plot state handling.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll

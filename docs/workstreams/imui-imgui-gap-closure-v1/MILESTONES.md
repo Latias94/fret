@@ -5247,6 +5247,12 @@ colorbar projection, including clipping, colormap sampling, gradient steps, and 
 declarative root keeps panel paint orchestration, event output publication, and plot state handling
 while `declarative/model.rs` keeps heatmap model projection for heatmap and histogram2d plot models.
 
+Fret Plot declarative overlay paint owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/overlays.rs` now owns reference lines, draggable point/rect
+paint, image layer painting, draggable labels, tag overlays, and text overlays. The declarative root
+keeps panel paint orchestration, draggable overlay event routing, output publication, and plot state
+handling, so overlay paint stays state-free and event-free.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,
