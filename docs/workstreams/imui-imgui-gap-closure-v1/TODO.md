@@ -6019,6 +6019,13 @@ opening the slice.
       extraction, pointer cursor snapshots, output snapshot construction, and state/default view
       bounds projection; `declarative.rs` keeps panel assembly, paint orchestration, grid/axis
       painting, shared geometry helpers, and plot state model wiring.
+- [x] Split Fret Plot declarative grid and baseline axis painting out of the implementation root
+      without changing series painting, right-axis label painting, event routing, output
+      publication, public panel props, optional IMUI adapter routing, or shared paint primitives.
+      Result: `ecosystem/fret-plot/src/declarative/grid_axes.rs` owns grid tick projection, grid
+      line painting, baseline axis painting, and primary-axis tick label orchestration;
+      `declarative.rs` keeps panel assembly, paint orchestration, shared paint primitives, shared
+      geometry helpers, and plot state model wiring.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll

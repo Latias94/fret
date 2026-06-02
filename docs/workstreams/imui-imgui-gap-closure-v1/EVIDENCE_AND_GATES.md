@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Grid Axes Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative grid line, baseline axis, and primary tick label
+orchestration moved out of `ecosystem/fret-plot/src/declarative.rs` into private
+`ecosystem/fret-plot/src/declarative/grid_axes.rs` without changing series painting, right-axis
+label painting, event routing, output publication, public panel props, optional IMUI adapter
+routing, or shared paint primitives.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/grid_axes.rs` owns grid tick projection, grid line painting,
+  baseline axis painting, and the primary-axis tick label paint call.
+- `ecosystem/fret-plot/src/declarative.rs` keeps panel assembly, paint orchestration, shared paint
+  primitives, shared geometry helpers, and plot state model wiring.
+- Shared paint primitives stay in `declarative.rs` because readout, heatmap, and overlay owners
+  still share those helpers; this slice only narrows the grid/axis owner.
+- `tools/gate_imui_workstream_source.py` rejects the grid/axis paint function from drifting back
+  into the root implementation owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new grid axes owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_axes_and_grid --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_axis_tick_labels --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_right_axis_tick_labels --no-fail-fast`:
+  pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Output Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative output publication, query extraction, pointer cursor

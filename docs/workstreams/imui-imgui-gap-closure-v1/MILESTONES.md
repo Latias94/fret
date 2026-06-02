@@ -5270,6 +5270,12 @@ pointer cursor snapshots, output snapshot construction, and state/default view b
 The declarative root keeps panel assembly, paint orchestration, grid/axis painting, shared geometry
 helpers, and plot state model wiring.
 
+Fret Plot declarative grid axes owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/grid_axes.rs` now owns grid tick projection, grid line
+painting, baseline axis painting, and primary-axis tick label orchestration. The declarative root
+keeps panel assembly, paint orchestration, shared paint primitives, shared geometry helpers, and
+plot state model wiring.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,

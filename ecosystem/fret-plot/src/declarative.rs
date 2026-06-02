@@ -11,15 +11,14 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::cartesian::{AxisScale, DataRect, PlotTransform, polyline_commands};
 use crate::models::{StepMode, YAxis};
-use crate::plot::axis::{
-    AxisLabelFormatter, AxisTicks, axis_ticks_scaled, log10_tick_label_or_empty,
-};
+use crate::plot::axis::{AxisLabelFormatter, log10_tick_label_or_empty};
 use crate::series::SeriesId;
 use crate::state::{PlotImageLayer, PlotOutput, PlotOutputSnapshot, PlotOverlays, PlotState};
 use crate::style::LinePlotStyle;
 
 mod axis_labels;
 mod commands;
+mod grid_axes;
 mod heatmap;
 mod interaction;
 mod legend;
@@ -31,7 +30,7 @@ mod props;
 mod readout;
 mod selection;
 
-use axis_labels::{paint_line_plot_axis_tick_labels, paint_line_plot_right_axis_tick_labels};
+use axis_labels::paint_line_plot_right_axis_tick_labels;
 use commands::{
     area_fill_commands_from_polyline, bars_commands_from_series, candlestick_commands_from_series,
     error_bars_commands_from_series, histogram_commands_from_series, line_plot_area_fill_path_key,
@@ -39,6 +38,7 @@ use commands::{
     line_plot_shaded_lower_path_key, shaded_band_commands_from_series, stems_commands_from_points,
     step_commands_from_polyline,
 };
+use grid_axes::paint_line_plot_grid_and_axes;
 use heatmap::{paint_line_plot_heatmap, paint_line_plot_heatmap_colorbar};
 use interaction::{
     LinePlotBoxZoomSession, LinePlotDragSession, LinePlotPanSession, LinePlotQueryDragSession,
@@ -1053,108 +1053,6 @@ fn line_plot_view_bounds_for_y_axis(primary: DataRect, axis_bounds: DataRect) ->
         y_min: axis_bounds.y_min,
         y_max: axis_bounds.y_max,
     }
-}
-
-fn paint_line_plot_grid_and_axes(
-    painter: &mut CanvasPainter<'_>,
-    transform: PlotTransform,
-    style: LinePlotStyle,
-    x_axis_labels: &AxisLabelFormatter,
-    y_axis_labels: &AxisLabelFormatter,
-) {
-    let plot = transform.viewport;
-    if plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
-        return;
-    }
-
-    let theme = painter.theme().snapshot();
-    let mut grid_color = style
-        .grid_color
-        .unwrap_or_else(|| theme.color_required("border"));
-    grid_color.a *= 0.45;
-    let axis_color = style
-        .axis_color
-        .unwrap_or_else(|| theme.color_required("border"));
-    let tick_count = style.tick_count.max(2);
-
-    let x_ticks = axis_ticks_scaled(
-        transform.data.x_min,
-        transform.data.x_max,
-        tick_count,
-        AxisTicks::Nice,
-        transform.x_scale,
-    );
-    let y_ticks = axis_ticks_scaled(
-        transform.data.y_min,
-        transform.data.y_max,
-        tick_count,
-        AxisTicks::Nice,
-        transform.y_scale,
-    );
-
-    for x in x_ticks.iter().copied() {
-        let Some(px) = transform.data_x_to_px(x) else {
-            continue;
-        };
-        push_vertical_line(
-            painter,
-            px,
-            plot.origin.y,
-            plot.size.height,
-            DrawOrder(2),
-            grid_color,
-        );
-    }
-
-    for y in y_ticks.iter().copied() {
-        let Some(py) = transform.data_y_to_px(y) else {
-            continue;
-        };
-        push_horizontal_line(
-            painter,
-            plot.origin.x,
-            py,
-            plot.size.width,
-            DrawOrder(2),
-            grid_color,
-        );
-    }
-
-    let baseline_y = transform
-        .data_y_to_px(0.0)
-        .filter(|y| y.0 >= plot.origin.y.0 && y.0 <= plot.origin.y.0 + plot.size.height.0)
-        .unwrap_or_else(|| Px(plot.origin.y.0 + plot.size.height.0 - 1.0));
-    let baseline_x = transform
-        .data_x_to_px(0.0)
-        .filter(|x| x.0 >= plot.origin.x.0 && x.0 <= plot.origin.x.0 + plot.size.width.0)
-        .unwrap_or(plot.origin.x);
-
-    push_horizontal_line(
-        painter,
-        plot.origin.x,
-        baseline_y,
-        plot.size.width,
-        DrawOrder(10),
-        axis_color,
-    );
-    push_vertical_line(
-        painter,
-        baseline_x,
-        plot.origin.y,
-        plot.size.height,
-        DrawOrder(10),
-        axis_color,
-    );
-
-    paint_line_plot_axis_tick_labels(
-        painter,
-        transform,
-        style,
-        &x_ticks,
-        &y_ticks,
-        x_axis_labels,
-        y_axis_labels,
-    );
 }
 
 fn push_vertical_line(

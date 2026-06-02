@@ -1877,6 +1877,7 @@
     "ecosystem/fret-plot/src/declarative.rs",
     "ecosystem/fret-plot/src/declarative/axis_labels.rs",
     "ecosystem/fret-plot/src/declarative/commands.rs",
+    "ecosystem/fret-plot/src/declarative/grid_axes.rs",
     "ecosystem/fret-plot/src/declarative/heatmap.rs",
     "ecosystem/fret-plot/src/declarative/interaction.rs",
     "ecosystem/fret-plot/src/declarative/legend.rs",

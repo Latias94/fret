@@ -382,6 +382,37 @@ Fresh gates:
 - `python tools\check_workstream_catalog.py` - passed.
 - `git diff --check` - passed.
 
+## Fret Plot declarative grid axes owner split - 2026-06-02
+
+This refresh keeps the optional IMUI plot adapter declarative-only while moving grid/axis baseline
+painting out of the implementation root:
+
+- `ecosystem/fret-plot/src/declarative/grid_axes.rs` now owns the grid line, baseline axis, and primary tick label orchestration owner,
+  including tick projection, grid line painting, baseline axis painting, and the primary-axis tick
+  label paint call.
+- `ecosystem/fret-plot/src/declarative.rs` keeps panel assembly, paint orchestration, shared paint
+  primitives, shared geometry helpers, and plot state model wiring.
+  Panel paint orchestration stays in `declarative.rs`.
+- Shared paint primitives stay in `declarative.rs` because readout, heatmap, and overlay owners
+  still share those helpers.
+- No public props, optional IMUI adapter policy, retained plot bridge, event routing, output
+  publication, or crate layering changed in this slice.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed with existing dead-code warnings in
+  `plot/view.rs`.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_axes_and_grid --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_axis_tick_labels --no-fail-fast` -
+  passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_right_axis_tick_labels --no-fail-fast` -
+  passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative output owner split - 2026-06-02
 
 This refresh keeps the optional IMUI plot adapter declarative-only while moving output projection
