@@ -1,11 +1,8 @@
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, Edges, Px};
+use fret_core::{Color, Corners, Edges, Px};
 use fret_runtime::Model;
-use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
-    SpacingLength,
-};
+use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, SizeStyle};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::primitives::input_group::derived_test_id;
@@ -24,8 +21,9 @@ use super::picker::{alpha_bar, hsv_hue_wheel_picker, hsv_picker};
 use super::preview::color_side_preview;
 use super::swatches::{history_swatches, preset_swatches};
 
-const COLOR_POPUP_WIDTH: Px = Px(216.0);
-const COLOR_POPUP_WITH_SIDE_PREVIEW_WIDTH: Px = Px(272.0);
+mod layout;
+
+use layout::{ColorPopupContentArgs, color_popup_content, color_popup_width};
 
 pub(super) struct ColorPopupBodyArgs {
     pub(super) model: Model<Color>,
@@ -233,59 +231,18 @@ pub(super) fn color_popup_body<H: UiHost>(
     } else {
         None
     };
-    let popup_width = if effective_popup_options.picker != ColorEditPopupPicker::Hidden
-        && effective_popup_options.side_preview.has_visible_content()
-    {
-        COLOR_POPUP_WITH_SIDE_PREVIEW_WIDTH
-    } else {
-        COLOR_POPUP_WIDTH
-    };
-    let content = cx.flex(
-        FlexProps {
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Auto,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            direction: Axis::Vertical,
-            gap: SpacingLength::Px(Px(8.0)),
-            padding: Edges::all(Px(0.0)).into(),
-            justify: MainAlign::Start,
-            align: CrossAlign::Stretch,
-            wrap: false,
-        },
-        move |cx| {
-            let mut out = Vec::new();
-            match (picker, side_preview) {
-                (Some(picker), Some(side_preview)) => {
-                    out.push(picker_side_preview_row(cx, picker, side_preview));
-                }
-                (Some(picker), None) => out.push(picker),
-                (None, Some(side_preview)) => out.push(side_preview),
-                (None, None) => {}
-            }
-            if let Some(picker_options) = picker_options {
-                out.push(picker_options);
-            }
-            if let Some(eyedropper) = eyedropper {
-                out.push(eyedropper);
-            }
-            if let Some(numbers) = numbers {
-                out.push(numbers);
-            }
-            if let Some(history_swatches) = history_swatches {
-                out.push(history_swatches);
-            }
-            if let Some(swatches) = swatches {
-                out.push(swatches);
-            }
-            if let Some(standalone_alpha_bar) = standalone_alpha_bar {
-                out.push(standalone_alpha_bar);
-            }
-            out
+    let popup_width = color_popup_width(effective_popup_options.picker, side_preview.is_some());
+    let content = color_popup_content(
+        cx,
+        ColorPopupContentArgs {
+            picker,
+            side_preview,
+            picker_options,
+            eyedropper,
+            numbers,
+            history_swatches,
+            swatches,
+            standalone_alpha_bar,
         },
     );
     let popup = cx.container(
@@ -314,30 +271,4 @@ pub(super) fn color_popup_body<H: UiHost>(
     } else {
         popup
     }
-}
-
-fn picker_side_preview_row<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    picker: AnyElement,
-    side_preview: AnyElement,
-) -> AnyElement {
-    cx.flex(
-        FlexProps {
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Auto,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            direction: Axis::Horizontal,
-            gap: SpacingLength::Px(Px(8.0)),
-            padding: Edges::all(Px(0.0)).into(),
-            justify: MainAlign::Start,
-            align: CrossAlign::Start,
-            wrap: false,
-        },
-        move |_cx| vec![picker, side_preview],
-    )
 }

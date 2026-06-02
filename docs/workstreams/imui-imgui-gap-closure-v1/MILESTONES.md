@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 editor ColorEdit popup body layout owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/body.rs` now keeps popup model reads,
+effective option resolution, and picker/numeric/swatches/eyedropper element creation while
+delegating popup content ordering, picker-plus-side-preview row layout, and width selection to
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/body/layout.rs`. Popup defaults, runtime
+picker options, side-preview visibility, standalone alpha-bar behavior, and public `ColorEdit`
+options remain unchanged, and `tools/gate_imui_workstream_source.py` plus
+`imui_surface_policy` freeze the new body/layout owner boundary.
+
 2026-06-02 fret-imui composition region-container test owner-split result:
 `ecosystem/fret-imui/src/tests/composition/layout_collections.rs` now keeps the layout, porting
 sugar, table, virtual-list, separator, and bullet-text composition coverage while delegating

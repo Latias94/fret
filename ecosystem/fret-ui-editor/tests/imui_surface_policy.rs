@@ -30,6 +30,8 @@ const COLOR_EDIT_SWATCH_CONTEXT_MENU_RS: &str =
     include_str!("../src/controls/color_edit/swatch/context_menu.rs");
 const COLOR_EDIT_POPUP_RS: &str = include_str!("../src/controls/color_edit/popup.rs");
 const COLOR_EDIT_POPUP_BODY_RS: &str = include_str!("../src/controls/color_edit/popup/body.rs");
+const COLOR_EDIT_POPUP_BODY_LAYOUT_RS: &str =
+    include_str!("../src/controls/color_edit/popup/body/layout.rs");
 const COLOR_EDIT_POPUP_NUMERIC_RS: &str =
     include_str!("../src/controls/color_edit/popup/numeric.rs");
 const COLOR_EDIT_POPUP_NUMERIC_FIELD_RS: &str =
@@ -316,8 +318,15 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("fn preview_color_for_alpha_visibility("));
     assert!(COLOR_EDIT_POPUP_BODY_RS.contains("struct ColorPopupBodyArgs"));
     assert!(COLOR_EDIT_POPUP_BODY_RS.contains("fn color_popup_body<"));
-    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("fn picker_side_preview_row<"));
-    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("COLOR_POPUP_WITH_SIDE_PREVIEW_WIDTH"));
+    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("mod layout;"));
+    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("ColorPopupContentArgs"));
+    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("color_popup_content("));
+    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("color_popup_width("));
+    assert!(!COLOR_EDIT_POPUP_BODY_RS.contains("fn picker_side_preview_row<"));
+    assert!(!COLOR_EDIT_POPUP_BODY_RS.contains("COLOR_POPUP_WITH_SIDE_PREVIEW_WIDTH"));
+    assert!(COLOR_EDIT_POPUP_BODY_LAYOUT_RS.contains("fn picker_side_preview_row<"));
+    assert!(COLOR_EDIT_POPUP_BODY_LAYOUT_RS.contains("COLOR_POPUP_WITH_SIDE_PREVIEW_WIDTH"));
+    assert!(COLOR_EDIT_POPUP_BODY_LAYOUT_RS.contains("ColorEditPopupPicker::Hidden"));
     assert!(COLOR_EDIT_POPUP_BODY_RS.contains("ColorEditPopupPicker::HsvHueBar"));
     assert!(COLOR_EDIT_POPUP_BODY_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
     assert!(COLOR_EDIT_POPUP_BODY_RS.contains("color_picker_options("));

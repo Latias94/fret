@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Editor ColorEdit Popup Body Layout Owner-Split Evidence - 2026-06-02
+
+Claim verified: editor `ColorEdit` popup body assembly now delegates popup content ordering,
+picker/side-preview row layout, and width selection to a dedicated body layout owner without
+changing popup option resolution, picker/numeric/swatches/eyedropper element creation, side-preview
+visibility, standalone alpha-bar behavior, or public `ColorEdit` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/body.rs` keeps `ColorPopupBodyArgs`,
+  model reads, effective popup option resolution, and creation of picker, picker options,
+  side-preview, eyedropper, numeric inputs, history swatches, preset swatches, and standalone alpha
+  bar elements.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/body/layout.rs` owns
+  `ColorPopupContentArgs`, popup width selection, content ordering, and the picker plus side-preview
+  row layout.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now freezes the body/layout split and
+  rejects row-layout helpers drifting back into `body.rs`.
+- `tools/gate_imui_workstream_source.py` and
+  `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` track the new layout owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo test -p fret-ui-editor --features imui --test imui_surface_policy`: pass, 2 passed.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass, 540 dedicated directories / 47 standalone
+  markdown files.
+- `git diff --check`: pass.
+
 ## Fret-IMUI Composition Region-Container Test Owner-Split Evidence - 2026-06-02
 
 Claim verified: `fret-imui` composition layout-collection tests now keep ChildRegion/ListBox
