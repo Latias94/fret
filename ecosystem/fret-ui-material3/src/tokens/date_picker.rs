@@ -106,6 +106,21 @@ pub(crate) fn header_headline_color(theme: &Theme) -> Color {
     )
 }
 
+pub(crate) fn month_nav_title_text_style(theme: &Theme) -> Option<TextStyle> {
+    typography::text_style_chain_optional(
+        theme,
+        &[
+            "md.sys.typescale.title-large",
+            "md.sys.typescale.title-medium",
+        ],
+        TextIntent::Control,
+    )
+}
+
+pub(crate) fn month_nav_title_color(theme: &Theme) -> Color {
+    MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface")
+}
+
 pub(crate) fn date_cell_width(theme: &Theme, variant: DatePickerTokenVariant) -> Px {
     date_picker_metric(theme, variant, "date.container.width", Px(40.0))
 }

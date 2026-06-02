@@ -3,12 +3,14 @@
 //! Material Web currently exposes segmented buttons as a labs component, but the v30 token set is
 //! stable enough to drive an outcome-oriented implementation.
 
-use fret_core::{Color, Px};
+use fret_core::{Color, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::{
     MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
 };
+use crate::tokens::typography as material_typography;
 
 pub(crate) const COMPONENT_PREFIX: &str = "md.comp.outlined-segmented-button";
 
@@ -59,6 +61,15 @@ pub(crate) fn icon_size(theme: &Theme) -> Px {
         theme,
         "md.comp.outlined-segmented-button.with-icon.icon.size",
         Px(18.0),
+    )
+}
+
+pub(crate) fn label_text_style(theme: &Theme) -> TextStyle {
+    material_typography::text_style(
+        theme,
+        Some("md.comp.outlined-segmented-button.label-text"),
+        "md.sys.typescale.label-large",
+        TextIntent::Control,
     )
 }
 

@@ -61,11 +61,7 @@
       "id": "date_picker",
       "layer": "recipe",
       "path": "src/date_picker.rs",
-      "tokens": [
-        "md.sys.color.on-surface",
-        "md.sys.typescale.title-large",
-        "md.sys.typescale.title-medium"
-      ]
+      "tokens": []
     },
     {
       "id": "dialog",
@@ -185,9 +181,7 @@
       "id": "segmented_button",
       "layer": "recipe",
       "path": "src/segmented_button.rs",
-      "tokens": [
-        "md.sys.typescale.label-large"
-      ]
+      "tokens": []
     },
     {
       "id": "select",
@@ -854,7 +848,9 @@
         "md.sys.shape.corner.full",
         "md.sys.shape.corner.large",
         "md.sys.typescale.body-large",
-        "md.sys.typescale.headline-large"
+        "md.sys.typescale.headline-large",
+        "md.sys.typescale.title-large",
+        "md.sys.typescale.title-medium"
       ]
     },
     {
@@ -1532,7 +1528,8 @@
         "md.sys.color.on-surface",
         "md.sys.color.outline",
         "md.sys.color.secondary-container",
-        "md.sys.shape.corner.full"
+        "md.sys.shape.corner.full",
+        "md.sys.typescale.label-large"
       ]
     },
     {

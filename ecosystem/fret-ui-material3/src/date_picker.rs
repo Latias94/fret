@@ -20,7 +20,6 @@ use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::headless::calendar::{CalendarMonth, month_grid};
 use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
-use fret_ui_kit::typography::TextIntent;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 use time::{Date, OffsetDateTime, Weekday};
 
@@ -38,11 +37,9 @@ use crate::foundation::strings::{
 };
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{absolute_region_layout, diagnostic_anchor, part_test_id};
-use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion;
 use crate::tokens::date_picker as date_tokens;
 use crate::tokens::date_picker::DatePickerTokenVariant;
-use crate::tokens::typography as material_typography;
 
 fn default_date_picker_test_id() -> Arc<str> {
     static ID: OnceLock<Arc<str>> = OnceLock::new();
@@ -944,15 +941,8 @@ fn month_nav_header<H: UiHost>(
     let title_el = {
         let (style, color) = {
             let theme = Theme::global(&*cx.app);
-            let style = material_typography::text_style_chain_optional(
-                theme,
-                &[
-                    "md.sys.typescale.title-large",
-                    "md.sys.typescale.title-medium",
-                ],
-                TextIntent::Control,
-            );
-            let color = MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface");
+            let style = date_tokens::month_nav_title_text_style(theme);
+            let color = date_tokens::month_nav_title_color(theme);
             (style, color)
         };
 
