@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Error-Bars Command Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative error-bars cap and marker command projection moved out of
+`ecosystem/fret-plot/src/declarative/commands.rs` into private
+`ecosystem/fret-plot/src/declarative/commands/error_bars.rs` without changing x/y error cap
+projection, marker shape command construction, marker radius gating, slice-vs-indexed series data
+iteration, public plot panel props, panel entrypoints, optional IMUI adapter routing, paint owners,
+event owners, output publication, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/commands/error_bars.rs` owns error-bar x/y cap command
+  construction and marker shape command construction for Plus, X, Square, Diamond, TriangleUp,
+  TriangleDown, and Circle.
+- `commands.rs` re-exports the error-bars command entrypoint and keeps shared path keys plus
+  non-error-bars command builders.
+- `series_paint/error_bars.rs` remains the paint owner for draw order, stroke style, color, and
+  painter dispatch while importing the same command entrypoint from the command owner.
+- `tools/gate_imui_workstream_source.py` rejects error-bars command construction and marker-shape
+  command helpers from drifting back into `commands.rs` and rejects other series command builders
+  from drifting into the error-bars owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new error-bars command
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo nextest run -p fret-plot error_bars_plot_panel --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Bar/Histogram Command Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative bar and histogram closed-rectangle command projection moved

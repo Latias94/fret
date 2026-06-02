@@ -2,6 +2,36 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative error-bars command owner split - 2026-06-02
+
+This maintenance slice keeps error-bars cap and marker command construction out of the shared
+command root while preserving the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/commands/error_bars.rs` owns error-bar x/y cap command
+  projection and marker shape command projection.
+- `commands.rs` re-exports the error-bars command entrypoint and keeps non-error-bars command
+  builders plus shared path keys.
+- Evidence anchor: error-bars cap and marker command projection owner.
+- Evidence anchor: Commands root re-exports error-bars command entrypoint.
+- `series_paint/error_bars.rs` remains the paint owner for draw order, stroke style, color, and
+  painter dispatch.
+- The error-bars command owner stays bar/histogram-free, candlestick-free, shaded-free, paint-free,
+  event-free, output-free, authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so error-bars command logic
+  cannot drift back into `commands.rs` and other series command builders cannot drift into the
+  error-bars owner.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo nextest run -p fret-plot error_bars_plot_panel --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative bar/histogram command owner split - 2026-06-02
 
 This maintenance slice keeps bar and histogram closed-rectangle command construction out of the

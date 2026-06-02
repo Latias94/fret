@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 plot error-bars command owner-split result:
+`ecosystem/fret-plot/src/declarative/commands.rs` now re-exports the error-bars command entrypoint
+and keeps shared path keys plus non-error-bars command builders while
+`ecosystem/fret-plot/src/declarative/commands/error_bars.rs` owns x/y cap command construction,
+marker shape command construction, marker radius gating, and slice-vs-indexed series data
+iteration. Error-bars painter dispatch, stroke style, color, public panel props, panel entrypoints,
+optional IMUI adapter routing, paint/event owners, output publication, and plot model projection
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 plot bar/histogram command owner-split result:
 `ecosystem/fret-plot/src/declarative/commands.rs` now re-exports bar and histogram command
 entrypoints and keeps shared path keys plus non-bar/histogram command builders while

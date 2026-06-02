@@ -5986,6 +5986,14 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/commands/bar_histogram.rs` owns histogram and
       bar closed-rect command construction; `commands.rs` re-exports bar/histogram command
       entrypoints and keeps non-bar/histogram command builders.
+- [x] Split Fret Plot declarative error-bars path-command projection out of the shared command owner
+      without changing x/y error cap projection, marker shape command construction, marker radius
+      gating, slice-vs-indexed series data iteration, painter dispatch, public panel props, panel
+      entrypoints, optional IMUI adapter routing, paint owners, event owners, output publication, or
+      plot model projection behavior.
+      Result: `ecosystem/fret-plot/src/declarative/commands/error_bars.rs` owns error-bar cap and
+      marker command construction; `commands.rs` re-exports the error-bars command entrypoint and
+      keeps non-error-bars command builders.
 - [x] Split Fret Plot declarative selection overlay paint and tooltip geometry out of the
       retained-free paint/event root without changing query/box-zoom rectangles, tooltip placement,
       tooltip text formatting, persisted query rendering, active selection rendering,
