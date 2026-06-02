@@ -58,6 +58,16 @@ Last updated: 2026-06-02
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI pointer-region drag phase handling out of
+      `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pointer_region.rs` into private
+      down/move/up phase owners without changing left-button gating, focus/cursor handling,
+      pointer capture, thresholded movement, drag-start/stop transients, cancel cleanup,
+      pointer-capture release, or public helper names.
+      Result: `interaction_runtime/drag/pointer_region.rs` is now a private phase re-export hub.
+      `pointer_region/down.rs` owns left-button focus/cursor/capture/start behavior,
+      `pointer_region/move_phase.rs` owns thresholded move, started/stopped transients, and cancel
+      cleanup, and `pointer_region/up.rs` owns finish/cancel plus pointer-capture release. The
+      source gate prevents phase logic from drifting back into the hub.
 - [x] Split IMUI disclosure header indicator-slot assembly out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header/children.rs` into a
       private child owner without changing indicator width, glyph chrome, inherited foreground,

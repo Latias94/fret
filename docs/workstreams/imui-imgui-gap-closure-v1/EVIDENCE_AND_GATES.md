@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-06-02
 
+## IMUI Pointer-Region Drag Phase Owner-Split Evidence - 2026-06-02
+
+Claim verified: IMUI pointer-region drag phase handling moved out of
+`interaction_runtime/drag/pointer_region.rs` into private down/move/up owners without changing
+left-button gating, focus/cursor handling, pointer capture, thresholded movement, drag-start/stop
+transients, cancel cleanup, pointer-capture release, or public helper names.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pointer_region.rs` is now a private
+  phase re-export hub that preserves the existing helper names for call sites.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pointer_region/down.rs` owns
+  left-button gating, focus request, optional cursor setting, pointer capture, and drag start.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pointer_region/move_phase.rs` owns
+  thresholded movement, drag-start/stop transients, cancel cleanup, pointer-capture release, and
+  redraw notification.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pointer_region/up.rs` owns final drag
+  stop/cancel behavior plus pointer-capture release.
+- `tools/gate_imui_workstream_source.py` tracks the phase owners and rejects phase logic from
+  drifting back into the hub.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new phase owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo test -p fret-imui --no-fail-fast interaction_drag`: pass, 8 tests.
+- `cargo test -p fret-ui-kit --features imui --no-fail-fast --test imui_child_region_smoke --test
+  imui_table_smoke --test imui_floating_area_options_smoke`: pass, 14 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass, 540 dedicated directories / 47 standalone
+  markdown files.
+- `git diff --check`: pass.
+
 ## IMUI Disclosure Header Indicator Owner-Split Evidence - 2026-06-02
 
 Claim verified: IMUI disclosure header indicator-slot assembly moved out of
