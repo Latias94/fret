@@ -47,7 +47,7 @@ pub(super) fn paint_debug_draw_commands(
             | DebugDrawCommand::Text { .. } => {
                 paint_debug_draw_shape_command(painter, index, command, scale);
             }
-            DebugDrawCommand::PushClipRect { .. } | DebugDrawCommand::PopClipRect => {}
+            DebugDrawCommand::Clip(_) => {}
         }
     }
 

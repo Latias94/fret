@@ -1,7 +1,7 @@
 use fret_core::Rect;
 
 use super::super::super::summaries::DebugDrawCommandSummary;
-use super::super::DebugDrawCommand;
+use super::super::{DebugDrawClipCommand, DebugDrawCommand};
 
 pub(super) fn apply_clip_state(
     command: &DebugDrawCommand,
@@ -9,11 +9,11 @@ pub(super) fn apply_clip_state(
     summary: &mut DebugDrawCommandSummary,
 ) {
     match command {
-        DebugDrawCommand::PushClipRect { rect } => {
+        DebugDrawCommand::Clip(DebugDrawClipCommand::PushClipRect { rect }) => {
             clip_stack.push(*rect);
             summary.clip_rect = Some(*rect);
         }
-        DebugDrawCommand::PopClipRect => {
+        DebugDrawCommand::Clip(DebugDrawClipCommand::PopClipRect) => {
             clip_stack.pop();
             summary.clip_rect = clip_stack.last().copied();
         }

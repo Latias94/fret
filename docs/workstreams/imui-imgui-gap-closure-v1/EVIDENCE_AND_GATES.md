@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-06-03
 
+## IMUI Debug Draw Clip Command Payload Owner Split - 2026-06-03
+
+Claim verified: push/pop clip-stack debug-draw command payload variants moved out of
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` into private
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/clip.rs` without
+changing public `ImUiDebugDrawList` clip APIs, command summaries, clip-depth/clip-rect projection,
+paint clip push/pop handling, media dispatch filtering, residual shape paint dispatch, or public
+debug-draw response APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/clip.rs` owns
+  `PushClipRect` and `PopClipRect` payload variants.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` keeps geometry,
+  mesh, media, text, and the `Clip(DebugDrawClipCommand)` wrapper.
+- Evidence anchor: DebugDrawCommand keeps geometry, mesh, media, text, and Clip wrapper.
+- Draw-list clip builders still expose `push_clip_rect(...)` and `pop_clip_rect(...)` and now wrap
+  the private clip owner through `DebugDrawCommand::Clip(...)`.
+- Summary projection still emits `DebugDrawCommandKind::PushClipRect` /
+  `DebugDrawCommandKind::PopClipRect`, preserves `point_count = 4` for push, and keeps
+  `clip_rect` / `clip_depth` tracking in `summary_projection/clip_state.rs`.
+- Paint dispatch still routes clip stack push/pop through `paint/clip.rs`, excludes clip commands
+  from residual shape paint, and treats clip commands as non-media for media dispatch filtering.
+- `tools/gate_imui_workstream_source.py` source-checks the split so clip payload variants cannot
+  drift back into the root command enum owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## DevTools Demo/Metrics/Debug Action Catalog Owner Split - 2026-06-03
 
 Claim verified: Demo/Metrics/Debug action catalog, copy command ids, action command bundle text,

@@ -66,7 +66,10 @@ fn debug_draw_list_records_clip_stack_commands() {
     assert_eq!(list.command_count(), 2);
     assert!(matches!(
         list.commands[0],
-        DebugDrawCommand::PushClipRect { .. }
+        DebugDrawCommand::Clip(DebugDrawClipCommand::PushClipRect { .. })
     ));
-    assert!(matches!(list.commands[1], DebugDrawCommand::PopClipRect));
+    assert!(matches!(
+        list.commands[1],
+        DebugDrawCommand::Clip(DebugDrawClipCommand::PopClipRect)
+    ));
 }

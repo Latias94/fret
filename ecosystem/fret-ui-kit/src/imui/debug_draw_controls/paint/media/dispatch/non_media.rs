@@ -23,8 +23,7 @@ pub(super) fn is_non_media_command(command: &DebugDrawCommand) -> bool {
         | DebugDrawCommand::EllipseFilled { .. }
         | DebugDrawCommand::BezierQuadratic { .. }
         | DebugDrawCommand::BezierCubic { .. }
-        | DebugDrawCommand::PushClipRect { .. }
-        | DebugDrawCommand::PopClipRect
+        | DebugDrawCommand::Clip(_)
         | DebugDrawCommand::Text { .. } => true,
     }
 }

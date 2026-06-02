@@ -1,7 +1,7 @@
 use fret_ui::canvas::CanvasPainter;
 
-use super::super::DebugDrawCommand;
 use super::super::geometry::rect_is_empty;
+use super::super::{DebugDrawClipCommand, DebugDrawCommand};
 
 pub(super) fn paint_debug_draw_clip_command(
     painter: &mut CanvasPainter<'_>,
@@ -9,7 +9,7 @@ pub(super) fn paint_debug_draw_clip_command(
     open_clip_depth: &mut usize,
 ) -> bool {
     match command {
-        DebugDrawCommand::PushClipRect { rect } => {
+        DebugDrawCommand::Clip(DebugDrawClipCommand::PushClipRect { rect }) => {
             if rect_is_empty(*rect) {
                 return true;
             }
@@ -19,7 +19,7 @@ pub(super) fn paint_debug_draw_clip_command(
             *open_clip_depth += 1;
             true
         }
-        DebugDrawCommand::PopClipRect => {
+        DebugDrawCommand::Clip(DebugDrawClipCommand::PopClipRect) => {
             if *open_clip_depth == 0 {
                 return true;
             }

@@ -4,9 +4,11 @@ use fret_core::{Color, Point, Px, Rect, Size};
 
 use crate::imui::debug_draw_controls::DebugDrawStrokeStyle;
 
+mod clip;
 mod media;
 mod mesh;
 
+pub(in crate::imui::debug_draw_controls) use clip::DebugDrawClipCommand;
 pub(in crate::imui::debug_draw_controls) use media::DebugDrawMediaCommand;
 pub(in crate::imui::debug_draw_controls) use mesh::DebugDrawMeshCommand;
 
@@ -131,10 +133,7 @@ pub(in crate::imui::debug_draw_controls) enum DebugDrawCommand {
         color: Color,
         style: DebugDrawStrokeStyle,
     },
-    PushClipRect {
-        rect: Rect,
-    },
-    PopClipRect,
+    Clip(DebugDrawClipCommand),
     Media(DebugDrawMediaCommand),
     Text {
         origin: Point,

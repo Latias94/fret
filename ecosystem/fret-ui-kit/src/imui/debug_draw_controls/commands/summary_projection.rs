@@ -51,8 +51,7 @@ impl DebugDrawCommand {
                 unreachable!("geometry commands are handled by geometry_summary")
             }
             DebugDrawCommand::Mesh(DebugDrawMeshCommand::ImageTriangleMesh { .. })
-            | DebugDrawCommand::PushClipRect { .. }
-            | DebugDrawCommand::PopClipRect
+            | DebugDrawCommand::Clip(_)
             | DebugDrawCommand::Media(_)
             | DebugDrawCommand::Text { .. } => {
                 unreachable!("residual commands are handled by residual_summary")

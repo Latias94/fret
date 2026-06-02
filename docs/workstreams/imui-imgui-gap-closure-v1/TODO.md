@@ -58,6 +58,15 @@ Last updated: 2026-06-03
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw clip-stack command payload variants out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` into a
+      private child owner without changing public `ImUiDebugDrawList` clip methods, command
+      summaries, summary clip-depth/clip-rect projection, paint clip push/pop handling, media
+      dispatch filtering, residual shape paint dispatch, or public debug-draw response APIs.
+      Result: `debug_draw_controls/commands/types/command/clip.rs` owns `PushClipRect` and
+      `PopClipRect` payload variants. `command.rs` keeps geometry, mesh, media, text, and the
+      `Clip(DebugDrawClipCommand)` wrapper; draw-list clip builders, summary projection,
+      clip-state tracking, and paint dispatch route through the private clip owner.
 - [x] Split DevTools Demo/Metrics/Debug action catalog, copy command ids, command bundle text,
       metadata lines, and selected-bundle readiness projection out of
       `apps/fret-devtools/src/demo_metrics_debug.rs` into a private child owner without changing

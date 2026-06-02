@@ -61,8 +61,7 @@ pub(super) fn paint_residual_shape_command(
         | DebugDrawCommand::EllipseFilled { .. }
         | DebugDrawCommand::BezierQuadratic { .. }
         | DebugDrawCommand::BezierCubic { .. }
-        | DebugDrawCommand::PushClipRect { .. }
-        | DebugDrawCommand::PopClipRect
+        | DebugDrawCommand::Clip(_)
         | DebugDrawCommand::Media(_) => {}
     }
 }

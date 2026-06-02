@@ -1,5 +1,7 @@
 use super::super::super::summaries::{DebugDrawCommandKind, DebugDrawCommandSummary};
-use super::super::{DebugDrawCommand, DebugDrawMediaCommand, DebugDrawMeshCommand};
+use super::super::{
+    DebugDrawClipCommand, DebugDrawCommand, DebugDrawMediaCommand, DebugDrawMeshCommand,
+};
 use super::media;
 
 pub(super) fn residual_summary(command: &DebugDrawCommand) -> Option<DebugDrawCommandSummary> {
@@ -14,14 +16,14 @@ pub(super) fn residual_summary(command: &DebugDrawCommand) -> Option<DebugDrawCo
             vertices.len(),
             indices.len(),
         )),
-        DebugDrawCommand::PushClipRect { .. } => {
+        DebugDrawCommand::Clip(DebugDrawClipCommand::PushClipRect { .. }) => {
             let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::PushClipRect);
             summary.point_count = 4;
             Some(summary)
         }
-        DebugDrawCommand::PopClipRect => Some(DebugDrawCommandSummary::new(
-            DebugDrawCommandKind::PopClipRect,
-        )),
+        DebugDrawCommand::Clip(DebugDrawClipCommand::PopClipRect) => Some(
+            DebugDrawCommandSummary::new(DebugDrawCommandKind::PopClipRect),
+        ),
         DebugDrawCommand::Media(DebugDrawMediaCommand::Image { image, .. }) => Some(
             media::image_rect_summary(DebugDrawCommandKind::Image, *image),
         ),
