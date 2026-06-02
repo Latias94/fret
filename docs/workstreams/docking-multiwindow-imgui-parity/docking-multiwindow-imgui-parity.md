@@ -129,6 +129,11 @@ Platform note:
   (moves PointerMove split-handle resize handling, fraction updates, layout invalidation, and
   propagation stop into a private divider-drag owner without changing docking interaction behavior
   or the Wayland acceptance boundary)
+- Latest docking declarative PointerMove floating-drag owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M55_DOCKING_DECLARATIVE_POINTER_MOVE_FLOATING_DRAG_OWNER_SPLIT_2026-06-02.md`
+  (moves PointerMove floating title-bar movement, in-window rect updates, drag preview hover
+  resolution, and drag-state persistence into a private floating-drag owner without changing
+  docking interaction behavior or the Wayland acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

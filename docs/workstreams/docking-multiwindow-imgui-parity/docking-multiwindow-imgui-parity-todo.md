@@ -520,6 +520,15 @@ Each TODO is labeled:
         propagation stop.
       - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
         locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking declarative PointerMove floating-drag owner split keeps floating
+      title-bar movement out of the PointerMove movement-phase owner:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M55_DOCKING_DECLARATIVE_POINTER_MOVE_FLOATING_DRAG_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/dock/declarative/events/pointer_move/floating_drag.rs`
+        owns floating drag lookup, left-button release cleanup, activation threshold, drag
+        inversion preview policy, `DockOp::SetFloatingRect`, dock hover preview resolution,
+        drag-state persistence, cursor projection, redraw, and propagation stop.
+      - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
