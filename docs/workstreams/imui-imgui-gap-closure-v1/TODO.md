@@ -665,6 +665,16 @@ Last updated: 2026-06-03
       auto-scroll gating, target tab lookup, tab-bar geometry projection, auto-scroll application,
       and tab scroll synchronization. `dock/declarative/drag_resolve.rs` keeps hover/drop
       resolution, drop intent, tear-off handoff, diagnostics, debug tracing, and allow checks.
+- [x] Split docking declarative panel/tabs drop-intent preparation out of
+      `ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` into a private child owner
+      without changing payload projection, source-window propagation, tear-off allow checks,
+      default floating rect fallback from last panel sizes, empty-intent fallback, target
+      resolution, effect application, diagnostics, debug tracing, or public docking APIs.
+      Result: `dock/declarative/drag_resolve/drop_intent.rs` owns panel/tabs payload-to-intent
+      preparation, `DockPanelDropDrag` / `DockTabsDropDrag` construction, declarative tear-off
+      allow checks, and default floating rect fallback. `dock/declarative/drag_resolve.rs` keeps
+      target resolution, effect application, diagnostics, debug tracing, auto-scroll routing, and
+      allow checks.
 - [x] Split docking declarative drag ghost and tab insert preview preparation into a private child
       owner without changing drag ghost lookup, drag source tab fallback, ghost title fallback,
       prepared ghost title text, center-zone insert preview titles, or public docking APIs.

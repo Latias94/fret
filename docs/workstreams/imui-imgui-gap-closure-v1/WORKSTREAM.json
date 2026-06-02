@@ -1939,6 +1939,7 @@
     "ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs",
     "ecosystem/fret-docking/src/dock/declarative/drag_resolve/begin_drag.rs",
     "ecosystem/fret-docking/src/dock/declarative/drag_resolve/diagnostics.rs",
+    "ecosystem/fret-docking/src/dock/declarative/drag_resolve/drop_intent.rs",
     "ecosystem/fret-docking/src/dock/declarative/drag_resolve/hover_autoscroll.rs",
     "ecosystem/fret-docking/src/dock/declarative/frame.rs",
     "ecosystem/fret-docking/src/dock/declarative/floating.rs",

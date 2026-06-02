@@ -2,6 +2,39 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Docking declarative drop intent preparation owner split - 2026-06-03
+
+This maintenance slice separates declarative drop-intent preparation from docking target
+resolution and effect application:
+
+- `ecosystem/fret-docking/src/dock/declarative/drag_resolve/drop_intent.rs` owns panel/tabs
+  payload-to-intent preparation, `DockPanelDropDrag` / `DockTabsDropDrag` construction,
+  declarative tear-off allow checks, and default floating rect fallback from last panel sizes.
+- `ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` keeps target resolution,
+  `apply_dock_drop_intent(...)`, diagnostics capture/publication, debug tracing, hover-time
+  auto-scroll routing, and panel/tabs drag allow checks.
+- Evidence anchor: Docking declarative drop intent preparation owner split - 2026-06-03.
+- Evidence anchor: ecosystem/fret-docking/src/dock/declarative/drag_resolve/drop_intent.rs.
+- Evidence anchor: panel/tabs drop-intent preparation and declarative tear-off allow checks.
+- Evidence anchor: drag_resolve.rs keeps target resolution, effect application, and diagnostics.
+- Panel/tabs payload projection, source-window propagation, tear-off allow checks, default floating
+  rect fallback, empty-intent fallback, diagnostics payloads, and public docking APIs remain
+  unchanged.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so drop-intent preparation
+  cannot drift back into the hover/drop resolve owner.
+
+Fresh gates:
+
+- `cargo fmt -p fret-docking` - passed.
+- `cargo check -p fret-docking` - passed.
+- `cargo nextest run -p fret-docking floating_title_bar_drag center_drop tab_drop drop_hint --no-fail-fast` - passed.
+- `cargo nextest run -p fret-docking drags_floating_title_bar --no-fail-fast` - passed.
+- `cargo fmt -p fret-docking -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Docking declarative drag hover auto-scroll owner split - 2026-06-03
 
 This maintenance slice makes the editor-grade tab-drag hand-feel path explicit instead of burying

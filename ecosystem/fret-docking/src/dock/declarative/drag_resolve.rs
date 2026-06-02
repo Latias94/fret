@@ -1,13 +1,10 @@
-use std::collections::HashMap;
-
-use fret_core::{AppWindowId, PanelKey, Rect, Size};
+use fret_core::{AppWindowId, PanelKey, Rect};
 use fret_runtime::Effect;
 use fret_ui::UiHost;
 
 use super::super::diagnostics::{diagnostics_env_enabled, should_publish_docking_diagnostics};
 use super::super::drop_resolve::{
-    DockPanelDropDrag, DockTabsDropDrag, apply_dock_drop_intent, dock_drop_intent_debug_kind,
-    dock_drop_target_diagnostics, resolve_dock_drop_intent_panel, resolve_dock_drop_intent_tabs,
+    apply_dock_drop_intent, dock_drop_intent_debug_kind, dock_drop_target_diagnostics,
     resolve_dock_drop_target,
 };
 use super::super::layout::dock_space_regions;
@@ -16,13 +13,11 @@ use super::super::services::DockingPolicyService;
 use super::super::types::{DockPanelDragPayload, DockTabsDragPayload};
 use super::geometry::declarative_layout_snapshot_for_bounds;
 use super::tab_metrics::{declarative_tab_scroll_for_frame, declarative_tab_widths_for_layout};
-use super::tear_off::{
-    declarative_allow_tear_off_for_panel, declarative_default_floating_rect_for_panel,
-    declarative_resolve_tear_off_hover,
-};
+use super::tear_off::declarative_resolve_tear_off_hover;
 
 mod begin_drag;
 mod diagnostics;
+mod drop_intent;
 mod hover_autoscroll;
 
 pub(super) use begin_drag::{begin_declarative_panel_drag, begin_declarative_tabs_group_drag};
@@ -30,6 +25,7 @@ use diagnostics::{
     capture_drag_drop_diagnostics, record_drag_resolve_diagnostics,
     update_hover_and_capture_diagnostics,
 };
+use drop_intent::resolve_declarative_drag_drop_intent;
 use hover_autoscroll::apply_drag_hover_auto_scroll;
 
 fn declarative_dragged_tab_for_drop<H: UiHost>(
@@ -138,86 +134,21 @@ pub(super) fn declarative_resolve_internal_drag_drop<H: UiHost>(
         diagnostics_enabled.then_some(&mut candidates),
     );
 
-    let panel_last_sizes: HashMap<PanelKey, Size> = snapshot
-        .paint_panel_bounds
-        .iter()
-        .map(|(panel, rect)| (panel.clone(), rect.size))
-        .collect();
     let mut effects = Vec::new();
     let mut invalidate_layout = false;
-    let intent = if let Some(payload) = panel_payload.as_ref() {
-        let allow_panel_tear_off = declarative_allow_tear_off_for_panel(
-            app,
-            allow_tear_off,
-            allow_multi_window_tear_off,
-            source_window,
-            &payload.panel,
-        );
-        resolve_dock_drop_intent_panel(
-            target.clone(),
-            DockPanelDropDrag {
-                source_window,
-                panel: &payload.panel,
-                grab_offset: payload.grab_offset,
-                tear_off_requested: payload.tear_off_requested,
-            },
-            window,
-            bounds,
-            position,
-            allow_panel_tear_off,
-            false,
-            |panel, position, grab_offset, window_bounds| {
-                declarative_default_floating_rect_for_panel(
-                    panel,
-                    position,
-                    grab_offset,
-                    window_bounds,
-                    &panel_last_sizes,
-                )
-            },
-        )
-    } else if let Some(payload) = tabs_payload.as_ref() {
-        let panel = payload
-            .tabs
-            .get(payload.active)
-            .or_else(|| payload.tabs.first());
-        let allow_tabs_tear_off = panel.is_some_and(|panel| {
-            declarative_allow_tear_off_for_panel(
-                app,
-                allow_tear_off,
-                allow_multi_window_tear_off,
-                source_window,
-                panel,
-            )
-        });
-        resolve_dock_drop_intent_tabs(
-            target.clone(),
-            DockTabsDropDrag {
-                source_window,
-                source_tabs: payload.source_tabs,
-                tabs: &payload.tabs,
-                active: payload.active,
-                grab_offset: payload.grab_offset,
-                tear_off_requested: payload.tear_off_requested,
-            },
-            window,
-            bounds,
-            position,
-            allow_tabs_tear_off,
-            false,
-            |panel, position, grab_offset, window_bounds| {
-                declarative_default_floating_rect_for_panel(
-                    panel,
-                    position,
-                    grab_offset,
-                    window_bounds,
-                    &panel_last_sizes,
-                )
-            },
-        )
-    } else {
-        super::super::types::DockDropIntent::None
-    };
+    let intent = resolve_declarative_drag_drop_intent(
+        app,
+        target.as_ref(),
+        panel_payload.as_ref(),
+        tabs_payload.as_ref(),
+        source_window,
+        window,
+        bounds,
+        position,
+        allow_tear_off,
+        allow_multi_window_tear_off,
+        &snapshot.paint_panel_bounds,
+    );
     apply_dock_drop_intent(intent.clone(), &mut effects, &mut invalidate_layout);
 
     let diagnostics = capture_drag_drop_diagnostics(
