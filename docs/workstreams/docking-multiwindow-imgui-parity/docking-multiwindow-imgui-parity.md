@@ -97,6 +97,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M47_DOCKING_DECLARATIVE_POINTER_DOWN_EVENT_OWNER_SPLIT_2026-06-02.md`
   (moves PointerDown overflow/floating/split/viewport/tab-drag activation into a private event child
   owner without changing docking interaction behavior or the Wayland acceptance boundary)
+- Latest docking declarative PointerUp event owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M48_DOCKING_DECLARATIVE_POINTER_UP_EVENT_OWNER_SPLIT_2026-06-02.md`
+  (moves PointerUp viewport/floating/split/tab release commits into a private event child owner
+  without changing docking interaction behavior or the Wayland acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
@@ -351,6 +355,8 @@ Current policy (Wayland):
   `docs/workstreams/docking-multiwindow-imgui-parity/M46_DOCKING_DECLARATIVE_INTERNAL_DRAG_EVENT_OWNER_SPLIT_2026-06-02.md`.
 - Latest docking declarative PointerDown event owner split:
   `docs/workstreams/docking-multiwindow-imgui-parity/M47_DOCKING_DECLARATIVE_POINTER_DOWN_EVENT_OWNER_SPLIT_2026-06-02.md`.
+- Latest docking declarative PointerUp event owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M48_DOCKING_DECLARATIVE_POINTER_UP_EVENT_OWNER_SPLIT_2026-06-02.md`.
 
 ## Capabilities (contract) — windowing quality signals (v1)
 
