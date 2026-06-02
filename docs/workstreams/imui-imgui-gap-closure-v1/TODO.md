@@ -1318,6 +1318,15 @@ Last updated: 2026-06-02
       Result: `composites/gradient_editor.rs` keeps public composition and stop rows.
       `composites/gradient_editor/preview.rs` owns preview drag state, pressable pointer handlers,
       gradient fill construction, and stop marker painting.
+- [x] Split editor gradient preview canvas painting into a private preview child owner without
+      changing preview drag state, pointer down/move/up behavior, stop position mutation, fallback
+      muted gradient, angle projection, marker sizing, active marker outline, canvas layout, or
+      public gradient editor APIs.
+      Result: `composites/gradient_editor/preview.rs` keeps preview state, pressable assembly, and
+      pointer handlers. `composites/gradient_editor/preview/paint.rs` owns canvas paint closure
+      construction, gradient vector projection, stop clamping/fallback stops, preview quad, marker
+      geometry, active marker resolution, and marker painting. The source gate prevents paint
+      geometry from drifting back into the pointer/pressable preview owner.
 - [x] Split the shared editor popup-list readout helpers into a private child owner without
       changing popup row geometry, alignment, empty-state copy, or popup-list text-role coverage.
       Result: `primitives/readout.rs` now keeps the non-popup editor readout helpers only.

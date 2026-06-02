@@ -51,6 +51,15 @@ closing, and redraw requests. Context-menu routing, drag/drop hooks, tooltip sta
 pressable registration, and public `ColorEdit` behavior remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-02 editor GradientEditor preview paint owner-split result:
+`ecosystem/fret-ui-editor/src/composites/gradient_editor/preview.rs` now keeps preview state,
+pressable assembly, and pointer down/move/up stop mutation while delegating canvas painting to
+`ecosystem/fret-ui-editor/src/composites/gradient_editor/preview/paint.rs`. The private paint owner
+contains gradient vector projection, stop clamping/fallback stops, preview quad painting, marker
+geometry, active marker resolution, and marker painting. Canvas layout, drag behavior, public
+gradient editor APIs, and IMUI adapter routing remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 editor ColorEdit popup body layout owner-split result:
 `ecosystem/fret-ui-editor/src/controls/color_edit/popup/body.rs` now keeps popup model reads,
 effective option resolution, and picker/numeric/swatches/eyedropper element creation while

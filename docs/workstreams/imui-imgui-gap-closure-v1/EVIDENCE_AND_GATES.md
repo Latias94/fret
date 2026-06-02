@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Editor GradientEditor Preview Paint Owner-Split Evidence - 2026-06-02
+
+Claim verified: editor gradient preview canvas painting moved out of
+`composites/gradient_editor/preview.rs` into private
+`composites/gradient_editor/preview/paint.rs` without changing preview drag state, pointer
+down/move/up behavior, stop position mutation, fallback muted gradient, angle projection, marker
+sizing, active marker outline, canvas layout, public gradient editor APIs, or IMUI adapter routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor/preview.rs` keeps preview state,
+  pressable assembly, pointer down/move/up handlers, hit testing, stop position model mutation,
+  canvas layout, and calls into the paint owner.
+- `ecosystem/fret-ui-editor/src/composites/gradient_editor/preview/paint.rs` owns canvas paint
+  closure construction, gradient vector projection, stop clamping/fallback stops, preview quad
+  painting, marker geometry, active marker resolution, and marker painting.
+- `tools/gate_imui_workstream_source.py` tracks preview root and paint owners separately, and
+  rejects gradient paint geometry from drifting back into the pointer/pressable preview owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new paint owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo test -p fret-ui-editor --features imui gradient --no-fail-fast`: pass, 1 test.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor ColorEdit Swatch Activation Owner-Split Evidence - 2026-06-02
 
 Claim verified: editor color-edit main swatch popup activation moved out of
