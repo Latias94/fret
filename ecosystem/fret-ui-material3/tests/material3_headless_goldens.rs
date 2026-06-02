@@ -19,6 +19,7 @@ use support::goldens::{
     write_or_assert_material3_suite_v1,
 };
 use support::headless_autocomplete_cases::load_material3_autocomplete_golden_suite_v1;
+use support::headless_list_cases::load_material3_list_golden_suite_v1;
 use support::headless_menu_dialog_style_cases::{
     Material3MenuDialogStyleGoldenCaseKindV1, load_material3_menu_dialog_style_golden_suite_v1,
 };
@@ -1917,7 +1918,6 @@ fn material3_headless_divider_suite_goldens_v1() {
 #[test]
 fn material3_headless_list_suite_goldens_v1() {
     use fret_ui::element::FlexProps;
-    use fret_ui_material3::{List, ListItem};
 
     let schemes = [
         (
@@ -1941,6 +1941,7 @@ fn material3_headless_list_suite_goldens_v1() {
             "light.expressive",
         ),
     ];
+    let list_suite = load_material3_list_golden_suite_v1();
 
     for scale_factor in [1.0, 1.25, 2.0] {
         let scale = scale_segment(scale_factor);
@@ -1948,11 +1949,8 @@ fn material3_headless_list_suite_goldens_v1() {
         for (mode, variant, label) in schemes {
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
 
-            for (case_name, hover_id, focus_id) in [
-                ("idle", None, None),
-                ("hover_selected", Some("list-beta"), None),
-                ("focus_visible_selected", None, Some("list-beta")),
-            ] {
+            for case in list_suite.cases() {
+                let case_name = case.id();
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -1967,7 +1965,7 @@ fn material3_headless_list_suite_goldens_v1() {
                     Size::new(Px(520.0), Px(420.0)),
                 );
 
-                let selected = app.models_mut().insert(Arc::<str>::from("beta"));
+                let selected = app.models_mut().insert(list_suite.list().selected_value());
 
                 let render = |ui: &mut UiTree<TestHost>,
                               app: &mut TestHost,
@@ -1983,27 +1981,7 @@ fn material3_headless_list_suite_goldens_v1() {
                             let mut props = FlexProps::default();
                             props.direction = fret_core::Axis::Vertical;
                             props.gap = fret_ui::element::SpacingLength::Px(Px(12.0));
-                            let list = List::new(selected.clone())
-                                .test_id("list")
-                                .items(vec![
-                                    ListItem::new("alpha", "Alpha")
-                                        .leading_icon(fret_icons::ids::ui::SEARCH)
-                                        .supporting_text("Supporting text")
-                                        .test_id("list-alpha"),
-                                    ListItem::new("beta", "Beta (selected)")
-                                        .leading_icon(fret_icons::ids::ui::SETTINGS)
-                                        .supporting_text("Selected supporting text")
-                                        .trailing_supporting_text("Meta")
-                                        .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
-                                        .test_id("list-beta"),
-                                    ListItem::new("charlie", "Charlie (disabled)")
-                                        .overline_text("Overline")
-                                        .supporting_text("Disabled supporting text")
-                                        .leading_icon(fret_icons::ids::ui::SLASH)
-                                        .disabled(true)
-                                        .test_id("list-charlie"),
-                                ])
-                                .into_element(cx);
+                            let list = list_suite.list().list(selected.clone()).into_element(cx);
 
                             let content = cx.flex(props, |_cx| vec![list]);
                             vec![with_padding(cx, Px(24.0), content)]
@@ -2016,7 +1994,7 @@ fn material3_headless_list_suite_goldens_v1() {
                 ui.request_semantics_snapshot();
                 ui.layout_all(&mut app, &mut services, bounds, scale_factor);
 
-                if case_name == "idle" {
+                if case.is_idle() {
                     ui.dispatch_event(
                         &mut app,
                         &mut services,
@@ -2024,7 +2002,7 @@ fn material3_headless_list_suite_goldens_v1() {
                     );
                 }
 
-                if let Some(test_id) = hover_id {
+                if let Some(test_id) = case.hover_test_id() {
                     let node_id: NodeId = ui
                         .semantics_snapshot()
                         .and_then(|snapshot| {
@@ -2051,7 +2029,7 @@ fn material3_headless_list_suite_goldens_v1() {
                     );
                 }
 
-                if let Some(test_id) = focus_id {
+                if let Some(test_id) = case.focus_test_id() {
                     let node_id: NodeId = ui
                         .semantics_snapshot()
                         .and_then(|snapshot| {
@@ -2069,39 +2047,29 @@ fn material3_headless_list_suite_goldens_v1() {
                     ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
                 }
 
-                let mut settled: Option<Material3HeadlessGoldenV1> = None;
-                for frame in 0..64 {
-                    app.advance_frame();
-                    let root = render(&mut ui, &mut app, &mut services);
-                    ui.set_root(root);
-                    ui.layout_all(&mut app, &mut services, bounds, scale_factor);
-
-                    let mut scene = Scene::default();
-                    ui.paint_all(&mut app, &mut services, bounds, &mut scene, scale_factor);
-
-                    if frame < 28 {
-                        continue;
-                    }
-
-                    let snapshot = material3_scene_snapshot_v1(&scene);
-                    if let Some(prev) = settled.as_ref() {
-                        assert_eq!(
-                            snapshot, *prev,
-                            "expected list scene to be stable after animations settle ({label}, {scale}, {case_name})"
-                        );
-                    } else {
-                        settled = Some(snapshot);
-                    }
-                }
-
-                let Some(snapshot) = settled else {
-                    panic!("expected a settled list snapshot ({label}, {scale}, {case_name})");
-                };
-                cases.insert(case_name.to_string(), snapshot);
+                let message = format!(
+                    "expected list scene to be stable after animations settle ({label}, {scale}, {case_name})"
+                );
+                let snapshot = settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    case.settle_from_frame(),
+                    case.total_frames(),
+                    &message,
+                    &render,
+                );
+                cases.insert(case.id().to_string(), snapshot);
             }
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(&format!("material3-list.{scale}.{label}"), &suite);
+            write_or_assert_material3_suite_for_test_v1(
+                &format!("material3-list.{scale}.{label}"),
+                "material3_headless_list_suite_goldens_v1",
+                &suite,
+            );
         }
     }
 }

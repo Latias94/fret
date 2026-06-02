@@ -3,6 +3,7 @@
 pub(crate) mod events;
 pub(crate) mod goldens;
 pub(crate) mod headless_autocomplete_cases;
+pub(crate) mod headless_list_cases;
 pub(crate) mod headless_menu_dialog_style_cases;
 pub(crate) mod headless_search_cases;
 pub(crate) mod headless_snackbar_cases;
