@@ -3,7 +3,7 @@
 //! Reference: Material Web v30 `md.comp.date-picker.{docked,modal}.*` tokens.
 
 use fret_core::{Color, Corners, Px, TextStyle};
-use fret_ui::Theme;
+use fret_ui::{Theme, theme::CubicBezier};
 use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
@@ -187,6 +187,33 @@ pub(crate) fn date_outside_month_opacity(theme: &Theme, variant: DatePickerToken
     )
 }
 
+pub(crate) fn modal_open_duration_ms(theme: &Theme) -> u32 {
+    MaterialTokenResolver::new(theme).duration_ms_sys("md.sys.motion.duration.medium2", 300)
+}
+
+pub(crate) fn modal_close_duration_ms(theme: &Theme) -> u32 {
+    MaterialTokenResolver::new(theme).duration_ms_sys("md.sys.motion.duration.medium2", 300)
+}
+
+pub(crate) fn modal_easing(theme: &Theme, easing_key: Option<&str>) -> CubicBezier {
+    MaterialTokenResolver::new(theme).easing_optional_or_linear(Some(
+        easing_key.unwrap_or("md.sys.motion.easing.emphasized"),
+    ))
+}
+
+pub(crate) fn modal_scrim_color(theme: &Theme) -> Color {
+    MaterialTokenResolver::new(theme).color_sys("md.sys.color.scrim")
+}
+
+pub(crate) fn modal_scrim_opacity(theme: &Theme, fallback: f32) -> f32 {
+    MaterialTokenResolver::new(theme)
+        .number_sys(
+            "md.sys.fret.material.date-picker.modal.scrim.opacity",
+            fallback,
+        )
+        .clamp(0.0, 1.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -269,5 +296,45 @@ mod tests {
             calendar_horizontal_padding(&theme, DatePickerTokenVariant::Docked),
             Px(16.0)
         );
+    }
+
+    #[test]
+    fn date_picker_modal_tokens_prefer_theme_values() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .durations_ms
+            .insert("md.sys.motion.duration.medium2".to_string(), 180);
+        patch.easings.insert(
+            "md.sys.motion.easing.test-date-picker".to_string(),
+            CubicBezier {
+                x1: 0.1,
+                y1: 0.2,
+                x2: 0.3,
+                y2: 0.4,
+            },
+        );
+        patch.numbers.insert(
+            "md.sys.fret.material.date-picker.modal.scrim.opacity".to_string(),
+            0.24,
+        );
+        let scrim = Color::from_srgb_hex_rgb(0x11_22_33);
+        patch
+            .colors
+            .insert("md.sys.color.scrim".to_string(), "#112233".to_string());
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(modal_open_duration_ms(&theme), 180);
+        assert_eq!(modal_close_duration_ms(&theme), 180);
+        assert_eq!(
+            modal_easing(&theme, Some("md.sys.motion.easing.test-date-picker")),
+            CubicBezier {
+                x1: 0.1,
+                y1: 0.2,
+                x2: 0.3,
+                y2: 0.4,
+            }
+        );
+        assert_eq!(modal_scrim_color(&theme), scrim);
+        assert_eq!(modal_scrim_opacity(&theme, 0.32), 0.24);
     }
 }

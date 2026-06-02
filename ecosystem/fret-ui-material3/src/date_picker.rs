@@ -307,7 +307,7 @@ impl DatePickerDialog {
             scrim_opacity: 0.32,
             open_duration_ms: None,
             close_duration_ms: None,
-            easing_key: Some(Arc::<str>::from("md.sys.motion.easing.emphasized")),
+            easing_key: None,
             on_dismiss_request: None,
             selectable_dates: None,
             test_id: None,
@@ -445,21 +445,18 @@ impl DatePickerDialog {
                     .update(&models.draft_selected, |m| *m = external_selected);
             }
 
-            let easing_key = self
-                .easing_key
-                .clone()
-                .unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
-
             let (theme_motion_ms, bezier) = {
                 let theme = Theme::global(&*cx.app);
-                let tokens = MaterialTokenResolver::new(theme);
-                let motion_ms = tokens.duration_ms_sys("md.sys.motion.duration.medium2", 300);
-                let bezier = tokens.easing_optional_or_linear(Some(easing_key.as_ref()));
+                let motion_ms = date_tokens::modal_open_duration_ms(theme);
+                let bezier = date_tokens::modal_easing(theme, self.easing_key.as_deref());
                 (motion_ms, bezier)
             };
 
             let open_ms = self.open_duration_ms.unwrap_or(theme_motion_ms);
-            let close_ms = self.close_duration_ms.unwrap_or(theme_motion_ms);
+            let close_ms = self.close_duration_ms.unwrap_or_else(|| {
+                let theme = Theme::global(&*cx.app);
+                date_tokens::modal_close_duration_ms(theme)
+            });
             let open_ticks = motion::ms_to_frames(open_ms);
             let close_ticks = motion::ms_to_frames(close_ms);
 
@@ -480,15 +477,9 @@ impl DatePickerDialog {
             if presence.present {
                 let (scrim_base, scrim_opacity) = {
                     let theme = Theme::global(&*cx.app);
-                    let tokens = MaterialTokenResolver::new(theme);
                     (
-                        tokens.color_sys("md.sys.color.scrim"),
-                        tokens
-                            .number_sys(
-                                "md.sys.fret.material.date-picker.modal.scrim.opacity",
-                                self.scrim_opacity,
-                            )
-                            .clamp(0.0, 1.0),
+                        date_tokens::modal_scrim_color(theme),
+                        date_tokens::modal_scrim_opacity(theme, self.scrim_opacity),
                     )
                 };
                 let scrim_alpha = (scrim_base.a * scrim_opacity * transition.progress)

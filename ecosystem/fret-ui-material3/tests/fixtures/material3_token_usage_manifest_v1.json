@@ -72,10 +72,6 @@
       "path": "src/date_picker.rs",
       "tokens": [
         "md.sys.color.on-surface",
-        "md.sys.color.scrim",
-        "md.sys.fret.material.date-picker.modal.scrim.opacity",
-        "md.sys.motion.duration.medium2",
-        "md.sys.motion.easing.emphasized",
         "md.sys.typescale.title-large",
         "md.sys.typescale.title-medium"
       ]
@@ -861,8 +857,12 @@
         "md.sys.color.on-surface",
         "md.sys.color.on-surface-variant",
         "md.sys.color.primary",
+        "md.sys.color.scrim",
         "md.sys.color.surface-container-high",
         "md.sys.fret.material.date-picker.calendar.horizontal-padding",
+        "md.sys.fret.material.date-picker.modal.scrim.opacity",
+        "md.sys.motion.duration.medium2",
+        "md.sys.motion.easing.emphasized",
         "md.sys.shape.corner.full",
         "md.sys.shape.corner.large",
         "md.sys.typescale.body-large",
