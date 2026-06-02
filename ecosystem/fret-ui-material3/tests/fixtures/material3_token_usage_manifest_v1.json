@@ -217,9 +217,7 @@
       "id": "snackbar",
       "layer": "recipe",
       "path": "src/snackbar.rs",
-      "tokens": [
-        "md.comp.snackbar.supporting-text.color"
-      ]
+      "tokens": []
     },
     {
       "id": "suggestion_chip",

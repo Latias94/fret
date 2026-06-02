@@ -21,6 +21,9 @@ use crate::foundation::token_resolver::MaterialTokenResolver;
 #[cfg(test)]
 use crate::tokens::typography;
 
+const SUPPORTING_TEXT_KEY: &str = "md.comp.snackbar.supporting-text";
+const SUPPORTING_TEXT_COLOR_KEY: &str = "md.comp.snackbar.supporting-text.color";
+
 fn snackbar_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
     MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
 }
@@ -66,21 +69,27 @@ pub(crate) fn container_background(theme: &Theme) -> Color {
 
 #[cfg(test)]
 pub(crate) fn supporting_text_color(theme: &Theme) -> Color {
-    MaterialTokenResolver::new(theme).color_comp_or_sys(
-        "md.comp.snackbar.supporting-text.color",
-        "md.sys.color.inverse-on-surface",
-    )
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(SUPPORTING_TEXT_COLOR_KEY, "md.sys.color.inverse-on-surface")
 }
 
 #[cfg(test)]
 pub(crate) fn supporting_text_style(theme: &Theme) -> TextStyle {
     typography::text_style_with_weight(
         theme,
-        Some("md.comp.snackbar.supporting-text"),
+        Some(SUPPORTING_TEXT_KEY),
         "md.sys.typescale.body-medium",
         Some("md.comp.snackbar.supporting-text.weight"),
         TextIntent::Content,
     )
+}
+
+pub(crate) fn supporting_text_style_key() -> &'static str {
+    SUPPORTING_TEXT_KEY
+}
+
+pub(crate) fn supporting_text_color_key() -> &'static str {
+    SUPPORTING_TEXT_COLOR_KEY
 }
 
 pub(crate) fn open_duration_ms(theme: &Theme) -> u32 {
@@ -125,31 +134,31 @@ pub(crate) fn palette() -> ToastVariantPalette {
     ToastVariantPalette {
         default: ToastVariantColors::new(
             "md.comp.snackbar.container.color",
-            "md.comp.snackbar.supporting-text.color",
+            SUPPORTING_TEXT_COLOR_KEY,
         ),
         destructive: ToastVariantColors::new(
             "md.comp.snackbar.container.color",
-            "md.comp.snackbar.supporting-text.color",
+            SUPPORTING_TEXT_COLOR_KEY,
         ),
         success: ToastVariantColors::new(
             "md.comp.snackbar.container.color",
-            "md.comp.snackbar.supporting-text.color",
+            SUPPORTING_TEXT_COLOR_KEY,
         ),
         info: ToastVariantColors::new(
             "md.comp.snackbar.container.color",
-            "md.comp.snackbar.supporting-text.color",
+            SUPPORTING_TEXT_COLOR_KEY,
         ),
         warning: ToastVariantColors::new(
             "md.comp.snackbar.container.color",
-            "md.comp.snackbar.supporting-text.color",
+            SUPPORTING_TEXT_COLOR_KEY,
         ),
         error: ToastVariantColors::new(
             "md.comp.snackbar.container.color",
-            "md.comp.snackbar.supporting-text.color",
+            SUPPORTING_TEXT_COLOR_KEY,
         ),
         loading: ToastVariantColors::new(
             "md.comp.snackbar.container.color",
-            "md.comp.snackbar.supporting-text.color",
+            SUPPORTING_TEXT_COLOR_KEY,
         ),
     }
 }
