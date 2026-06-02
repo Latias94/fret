@@ -620,6 +620,15 @@ Last updated: 2026-06-03
       diagnostics, and resolve diagnostics payload construction. `dock/drop_resolve.rs` is now a
       pure diagnostics/intent/target/floating-hit re-export hub. The source gate prevents
       diagnostics helpers from drifting back into the drop resolve root.
+- [x] Split `ImUiFacade` keyed identity sugar into a private child owner without changing
+      `id(...)`, `push_id(...)`, `for_each_keyed(...)`, child facade construction, runtime
+      preparation, build-focus capture, `UiWriter` behavior, disabled-scope behavior, or public
+      facade method names.
+      Result: `facade_writer/facade_core/identity.rs` owns keyed identity scopes and keyed
+      iteration sugar. `facade_writer/facade_core.rs` keeps storage, focus capture, `cx_mut`,
+      `add`, and the `UiWriter` implementation, while `facade_core/disabled_scope.rs` remains the
+      disabled-scope owner. The source gate prevents identity sugar from drifting back into the
+      facade core root.
 - [x] Split docking declarative internal drag/drop resolve and drag-start policy into a private
       child owner without changing hover/drop target resolution, tab-bar auto-scroll during drag,
       tear-off handoff, drop intent application, drag diagnostics publication, drag inversion

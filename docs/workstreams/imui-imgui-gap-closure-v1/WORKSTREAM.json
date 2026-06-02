@@ -468,6 +468,7 @@
     "ecosystem/fret-ui-kit/src/imui/facade_writer/basic_surface/text.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core/disabled_scope.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core/identity.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods/disabled_scope.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods/push_id.rs",

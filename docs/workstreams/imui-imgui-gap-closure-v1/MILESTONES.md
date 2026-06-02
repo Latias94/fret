@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-03 IMUI facade core identity owner-split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core/identity.rs` now owns
+`ImUiFacade::id`, `ImUiFacade::push_id`, and `ImUiFacade::for_each_keyed`.
+`ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core.rs` keeps storage, focus capture,
+`cx_mut`, `add`, and the `UiWriter` implementation, while
+`facade_core/disabled_scope.rs` remains the disabled-scope behavior owner. Public facade method
+names, child facade construction, runtime preparation, build-focus capture, and disabled-scope
+behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-03 docking drop resolve diagnostics owner-split result:
 `ecosystem/fret-docking/src/dock/drop_resolve/diagnostics.rs` now owns resolved target diagnostics,
 preview diagnostics, and resolve diagnostics payload construction.
@@ -2693,7 +2702,8 @@ response orchestration.
 2026-05-28 facade-core disabled-scope owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core/disabled_scope.rs` now owns
 `ImUiFacade::disabled_scope` behavior. `facade_writer/facade_core.rs` keeps the facade storage
-shape, focus recording, keyed id helpers, and `UiWriter` implementation.
+shape, focus recording, and `UiWriter` implementation; the 2026-06-03 identity follow-up moves
+keyed id helpers to `facade_core/identity.rs`.
 
 2026-05-28 table builder row/cell owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/builder/row_methods.rs` now owns `row` /

@@ -2,6 +2,39 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI facade core identity owner split - 2026-06-03
+
+This maintenance slice keeps Dear ImGui-style identity sugar source-compatible while making the
+concrete `ImUiFacade` core owner narrower:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core/identity.rs` owns
+  `ImUiFacade::id`, `ImUiFacade::push_id`, and `ImUiFacade::for_each_keyed`.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core.rs` keeps storage, focus capture,
+  `cx_mut`, `add`, and the `UiWriter` implementation.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core/disabled_scope.rs` remains the
+  disabled-scope behavior owner.
+- Evidence anchor: IMUI facade core identity owner split - 2026-06-03.
+- Evidence anchor: ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core/identity.rs.
+- Evidence anchor: ImUiFacade keyed identity scopes and keyed iteration sugar.
+- Evidence anchor: facade_core.rs keeps storage, focus capture, cx_mut/add, and UiWriter only.
+- Public facade method names, child facade construction, runtime preparation, build-focus capture,
+  `UiWriter` behavior, and disabled-scope behavior remain unchanged.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so keyed identity sugar cannot
+  drift back into `facade_core.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_external_adapter_example --no-fail-fast` - passed.
+- `cargo nextest run -p fret-imui ui_writer_imui_facade_ext_compiles models_text_identity --no-fail-fast` - passed.
+- `cargo nextest run -p fret-imui --features diagnostics identity_diagnostics --no-fail-fast` - passed.
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Docking drop resolve diagnostics owner split - 2026-06-03
 
 This maintenance slice separates drop target and preview diagnostics projection from docking drop
@@ -4179,16 +4212,19 @@ Scope: keep `facade_writer.rs` as the public trait/default-method hub while movi
 `ImUiFacade` writer object, focus-capture helper, keyed child construction, and disabled-scope
 wrapper into a narrower owner module.
 
-- `ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core.rs` now owns `ImUiFacade`, its
-  `UiWriter` implementation, `record_focusable`, `id`/`push_id`/`for_each_keyed`, `cx_mut`, `add`,
-  and inherent `disabled_scope`.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core.rs` initially consolidated
+  `ImUiFacade`, its `UiWriter` implementation, `record_focusable`,
+  `id`/`push_id`/`for_each_keyed`, `cx_mut`, `add`, and inherent `disabled_scope`; the 2026-06-03
+  follow-up keeps storage, focus capture, `cx_mut`, `add`, and `UiWriter` in the core root while
+  moving keyed identity sugar to `facade_core/identity.rs`.
 - `facade_writer.rs` re-exports `ImUiFacade` and keeps `UiWriterImUiFacadeExt` as the public
   extension trait hub, including trait default methods that delegate to component/policy owners.
 - `ImUiFacade` fields remain internal to `crate::imui` (`pub(in crate::imui)`) so existing IMUI
   element builders can construct nested facades without exposing writer internals outside the
   module boundary.
-- The split reduces `facade_writer.rs` from 1420 lines after the previous facade/container splits
-  to 1290 lines; the new `facade_core.rs` owner is 134 lines.
+- The split reduced `facade_writer.rs` from 1420 lines after the previous facade/container splits
+  to 1290 lines; later owner follow-ups reduced `facade_core.rs` further without changing public
+  facade behavior.
 - The source gate now rejects `ImUiFacade` struct/core impl and `UiWriter` impl from returning to
   `facade_writer.rs`, and verifies the field visibility does not become fully public.
 

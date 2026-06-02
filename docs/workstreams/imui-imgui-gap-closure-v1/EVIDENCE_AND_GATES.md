@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-06-03
 
+## IMUI Facade Core Identity Owner Split - 2026-06-03
+
+Claim verified: `ImUiFacade` keyed identity scopes and keyed iteration sugar moved out of
+`ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core.rs` into private
+`ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core/identity.rs` without changing
+`id(...)`, `push_id(...)`, `for_each_keyed(...)`, child facade construction, build-focus capture,
+runtime preparation, `UiWriter` implementation, disabled-scope behavior, or public facade method
+names.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core/identity.rs` owns
+  `ImUiFacade::id`, `ImUiFacade::push_id`, and `ImUiFacade::for_each_keyed`.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core.rs` keeps `ImUiFacade` storage,
+  focus capture, `cx_mut`, `add`, and the `UiWriter` implementation.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core/disabled_scope.rs` remains the
+  disabled-scope behavior owner.
+- `tools/gate_imui_workstream_source.py` rejects keyed identity/runtime-preparation body drift
+  back into `facade_core.rs` and rejects storage/writer/disabled-scope drift into the identity
+  owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the identity owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_external_adapter_example --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui ui_writer_imui_facade_ext_compiles models_text_identity --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui --features diagnostics identity_diagnostics --no-fail-fast`:
+  pass.
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Drop Resolve Diagnostics Owner Split - 2026-06-03
 
 Claim verified: drop target and preview diagnostics projection moved out of
@@ -14560,7 +14600,8 @@ preparation, or public facade behavior.
 Evidence:
 
 - `ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core.rs` keeps the facade storage shape,
-  focus recording, keyed id helpers, and `UiWriter` implementation.
+  focus recording, and `UiWriter` implementation; the 2026-06-03 follow-up moves keyed id helpers
+  to `facade_core/identity.rs`.
 - `ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core/disabled_scope.rs` owns
   `ImUiFacade::disabled_scope` behavior.
 - `tools/gate_imui_workstream_source.py` now rejects disabled-scope behavior from drifting back
