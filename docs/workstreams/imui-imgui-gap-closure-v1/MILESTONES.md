@@ -12,6 +12,16 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-03 docking declarative target-resolution owner-split result:
+`ecosystem/fret-docking/src/dock/declarative/drag_resolve/target.rs` now owns layout snapshot
+lookup, dock-bounds projection, tab-width/tab-scroll preparation, theme-derived hint sizing,
+docking policy lookup, candidate diagnostics collection, dragged-tab lookup, and
+`resolve_dock_drop_target(...)`. `ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs`
+keeps hover/drop lifecycle branching, tear-off handoff, drop-intent dispatch, effect application,
+diagnostics capture/publication, debug tracing, and drag allow checks. Public docking APIs,
+diagnostics payloads, previous-hover latching, and target-resolution behavior remain unchanged,
+and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-03 docking declarative drop-intent preparation owner-split result:
 `ecosystem/fret-docking/src/dock/declarative/drag_resolve/drop_intent.rs` now owns panel/tabs
 payload-to-intent preparation, `DockPanelDropDrag` / `DockTabsDropDrag` construction, declarative

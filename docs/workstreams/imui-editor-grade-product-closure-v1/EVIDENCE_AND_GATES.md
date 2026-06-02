@@ -2,6 +2,39 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Docking declarative target resolution owner split - 2026-06-03
+
+This maintenance slice separates declarative drop-target resolution input projection from
+hover/drop lifecycle orchestration:
+
+- `ecosystem/fret-docking/src/dock/declarative/drag_resolve/target.rs` owns layout snapshot
+  lookup, dock-bounds projection, tab-width/tab-scroll preparation, theme-derived hint sizing,
+  policy lookup, candidate diagnostics collection, dragged-tab lookup, and
+  `resolve_dock_drop_target(...)`.
+- `ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` keeps hover/drop lifecycle
+  branching, tear-off handoff, drop-intent preparation dispatch, effect application, diagnostics
+  capture/publication, debug tracing, and drag allow checks.
+- Evidence anchor: Docking declarative target resolution owner split - 2026-06-03.
+- Evidence anchor: ecosystem/fret-docking/src/dock/declarative/drag_resolve/target.rs.
+- Evidence anchor: snapshot, tab metrics, hint sizing, policy, candidates, and resolve_dock_drop_target.
+- Evidence anchor: drag_resolve.rs keeps hover/drop lifecycle, effect application, diagnostics, and tear-off handoff.
+- Previous-hover latching, dragged-tab lookup, candidate diagnostics, hint scaling, diagnostics
+  payloads, and public docking APIs remain unchanged.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so target-resolution prep
+  cannot drift back into the hover/drop lifecycle owner.
+
+Fresh gates:
+
+- `cargo fmt -p fret-docking` - passed.
+- `cargo check -p fret-docking` - passed.
+- `cargo nextest run -p fret-docking floating_title_bar_drag center_drop tab_drop drop_hint --no-fail-fast` - passed.
+- `cargo nextest run -p fret-docking drags_floating_title_bar --no-fail-fast` - passed.
+- `cargo fmt -p fret-docking -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Docking declarative drop intent preparation owner split - 2026-06-03
 
 This maintenance slice separates declarative drop-intent preparation from docking target

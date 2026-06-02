@@ -5,20 +5,17 @@ use fret_ui::UiHost;
 use super::super::diagnostics::{diagnostics_env_enabled, should_publish_docking_diagnostics};
 use super::super::drop_resolve::{
     apply_dock_drop_intent, dock_drop_intent_debug_kind, dock_drop_target_diagnostics,
-    resolve_dock_drop_target,
 };
-use super::super::layout::dock_space_regions;
 use super::super::manager::DockManager;
 use super::super::services::DockingPolicyService;
 use super::super::types::{DockPanelDragPayload, DockTabsDragPayload};
-use super::geometry::declarative_layout_snapshot_for_bounds;
-use super::tab_metrics::{declarative_tab_scroll_for_frame, declarative_tab_widths_for_layout};
 use super::tear_off::declarative_resolve_tear_off_hover;
 
 mod begin_drag;
 mod diagnostics;
 mod drop_intent;
 mod hover_autoscroll;
+mod target;
 
 pub(super) use begin_drag::{begin_declarative_panel_drag, begin_declarative_tabs_group_drag};
 use diagnostics::{
@@ -27,16 +24,7 @@ use diagnostics::{
 };
 use drop_intent::resolve_declarative_drag_drop_intent;
 use hover_autoscroll::apply_drag_hover_auto_scroll;
-
-fn declarative_dragged_tab_for_drop<H: UiHost>(
-    app: &H,
-    drag: &fret_runtime::DragSession,
-) -> Option<(fret_core::DockNodeId, usize)> {
-    let payload = drag.payload::<DockPanelDragPayload>()?;
-    app.global::<DockManager>()?
-        .graph
-        .find_panel_in_window(drag.source_window, &payload.panel)
-}
+use target::{declarative_dragged_tab_for_drop, resolve_declarative_drag_target};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn declarative_resolve_internal_drag_drop<H: UiHost>(
@@ -77,68 +65,32 @@ pub(super) fn declarative_resolve_internal_drag_drop<H: UiHost>(
     let panel_payload = drag.payload::<DockPanelDragPayload>().cloned();
     let tabs_payload = drag.payload::<DockTabsDragPayload>().cloned();
 
-    let Some(snapshot) = declarative_layout_snapshot_for_bounds(app, window, bounds) else {
+    let diagnostics_enabled = should_publish_docking_diagnostics(app, diagnostics_env_enabled());
+    let prev_hover = app
+        .global::<DockManager>()
+        .and_then(|dock| dock.hover.clone());
+    let Some(target_resolution) = resolve_declarative_drag_target(
+        app,
+        window,
+        bounds,
+        theme,
+        position,
+        dock_previews_enabled,
+        prev_hover,
+        dragged_tab_for_drop,
+        diagnostics_enabled,
+    ) else {
         let hover_cleared = app.with_global_mut(DockManager::default, |dock, _app| {
             dock.hover.take().is_some()
         });
         return (Vec::new(), hover_cleared, false, true);
     };
-    let (_chrome, dock_bounds) = dock_space_regions(bounds);
-    let settings = app
-        .global::<fret_runtime::DockingInteractionSettings>()
-        .copied()
-        .unwrap_or_default();
-    let font_size = theme.metric_token("font.size");
-    let hint_font_size_inner =
-        fret_core::Px((font_size.0 * settings.dock_hint_scale_inner.max(0.0)).max(0.0));
-    let hint_font_size_outer =
-        fret_core::Px((font_size.0 * settings.dock_hint_scale_outer.max(0.0)).max(0.0));
-    let tab_widths =
-        declarative_tab_widths_for_layout(app, window, theme.clone(), &snapshot.layout_all);
-    let tab_scroll = declarative_tab_scroll_for_frame(
-        app,
-        window,
-        theme.clone(),
-        &snapshot.layout_all,
-        &tab_widths,
-        false,
-    );
-    let policy = app
-        .global::<DockingPolicyService>()
-        .and_then(|service| service.policy());
-    let diagnostics_enabled = should_publish_docking_diagnostics(app, diagnostics_env_enabled());
-    let prev_hover = app
-        .global::<DockManager>()
-        .and_then(|dock| dock.hover.clone());
-    let mut candidates = Vec::<fret_runtime::DockDropCandidateRectDiagnostics>::new();
-    let graph = &app.global::<DockManager>().expect("dock manager").graph;
-    let (target, source) = resolve_dock_drop_target(
-        prev_hover,
-        !dock_previews_enabled,
-        true,
-        window,
-        policy.as_deref(),
-        graph,
-        snapshot.root,
-        dock_bounds,
-        bounds,
-        &tab_scroll,
-        &tab_widths,
-        theme.clone(),
-        hint_font_size_inner,
-        hint_font_size_outer,
-        snapshot.split_handle_gap,
-        snapshot.split_handle_hit_thickness,
-        position,
-        dragged_tab_for_drop,
-        diagnostics_enabled.then_some(&mut candidates),
-    );
 
     let mut effects = Vec::new();
     let mut invalidate_layout = false;
     let intent = resolve_declarative_drag_drop_intent(
         app,
-        target.as_ref(),
+        target_resolution.target.as_ref(),
         panel_payload.as_ref(),
         tabs_payload.as_ref(),
         source_window,
@@ -147,7 +99,7 @@ pub(super) fn declarative_resolve_internal_drag_drop<H: UiHost>(
         position,
         allow_tear_off,
         allow_multi_window_tear_off,
-        &snapshot.paint_panel_bounds,
+        &target_resolution.snapshot.paint_panel_bounds,
     );
     apply_dock_drop_intent(intent.clone(), &mut effects, &mut invalidate_layout);
 
@@ -157,22 +109,22 @@ pub(super) fn declarative_resolve_internal_drag_drop<H: UiHost>(
         pointer_id,
         position,
         bounds,
-        dock_bounds,
-        source,
+        target_resolution.dock_bounds,
+        target_resolution.source,
         window,
-        target.as_ref(),
-        candidates,
+        target_resolution.target.as_ref(),
+        target_resolution.candidates,
     );
     record_drag_resolve_diagnostics(app, window, diagnostics);
     if std::env::var_os("FRET_DOCK_DRAG_DEBUG").is_some_and(|v| !v.is_empty()) {
-        let drop_target_diag = dock_drop_target_diagnostics(target.as_ref());
+        let drop_target_diag = dock_drop_target_diagnostics(target_resolution.target.as_ref());
         tracing::info!(
             window = ?window,
             source_window = ?source_window,
             pointer_id = ?pointer_id,
             pos = ?position,
             invert_docking = !dock_previews_enabled,
-            resolve_source = ?source,
+            resolve_source = ?target_resolution.source,
             drop_target = ?drop_target_diag,
             intent_kind = dock_drop_intent_debug_kind(&intent),
             "declarative dock drag drop"
@@ -216,9 +168,6 @@ pub(super) fn declarative_resolve_internal_drag_hover<H: UiHost>(
     }
     let dragged_tab_for_drop = declarative_dragged_tab_for_drop(app, drag);
 
-    let Some(snapshot) = declarative_layout_snapshot_for_bounds(app, window, bounds) else {
-        return (Vec::new(), false, false);
-    };
     let tear_off = declarative_resolve_tear_off_hover(
         app,
         window,
@@ -234,76 +183,44 @@ pub(super) fn declarative_resolve_internal_drag_hover<H: UiHost>(
         });
         return (tear_off.effects, true, true);
     }
-    let (_chrome, dock_bounds) = dock_space_regions(bounds);
-    let settings = app
-        .global::<fret_runtime::DockingInteractionSettings>()
-        .copied()
-        .unwrap_or_default();
-    let font_size = theme.metric_token("font.size");
-    let hint_font_size_inner =
-        fret_core::Px((font_size.0 * settings.dock_hint_scale_inner.max(0.0)).max(0.0));
-    let hint_font_size_outer =
-        fret_core::Px((font_size.0 * settings.dock_hint_scale_outer.max(0.0)).max(0.0));
-    let tab_widths =
-        declarative_tab_widths_for_layout(app, window, theme.clone(), &snapshot.layout_all);
-    let mut tab_scroll = declarative_tab_scroll_for_frame(
+    let diagnostics_enabled = should_publish_docking_diagnostics(app, diagnostics_env_enabled());
+    let Some(mut target_resolution) = resolve_declarative_drag_target(
         app,
         window,
-        theme.clone(),
-        &snapshot.layout_all,
-        &tab_widths,
-        false,
-    );
-    let policy = app
-        .global::<DockingPolicyService>()
-        .and_then(|service| service.policy());
-    let diagnostics_enabled = should_publish_docking_diagnostics(app, diagnostics_env_enabled());
-    let mut candidates = Vec::<fret_runtime::DockDropCandidateRectDiagnostics>::new();
-    let (mut hover, source) = resolve_dock_drop_target(
-        None,
-        !dock_previews_enabled,
-        true,
-        window,
-        policy.as_deref(),
-        &app.global::<DockManager>().expect("dock manager").graph,
-        snapshot.root,
-        dock_bounds,
         bounds,
-        &tab_scroll,
-        &tab_widths,
         theme.clone(),
-        hint_font_size_inner,
-        hint_font_size_outer,
-        snapshot.split_handle_gap,
-        snapshot.split_handle_hit_thickness,
         position,
+        dock_previews_enabled,
+        None,
         dragged_tab_for_drop,
-        diagnostics_enabled.then_some(&mut candidates),
-    );
+        diagnostics_enabled,
+    ) else {
+        return (Vec::new(), false, false);
+    };
     let auto_scrolled = apply_drag_hover_auto_scroll(
         app,
         window,
-        &mut hover,
-        &snapshot.layout_all,
+        &mut target_resolution.target,
+        &target_resolution.snapshot.layout_all,
         theme.clone(),
-        font_size,
+        target_resolution.font_size,
         position,
-        &tab_widths,
-        &mut tab_scroll,
+        &target_resolution.tab_widths,
+        &mut target_resolution.tab_scroll,
         dragged_tab_for_drop,
     );
 
     let (changed, diagnostics) = update_hover_and_capture_diagnostics(
         app,
         diagnostics_enabled,
-        hover,
+        target_resolution.target,
         pointer_id,
         position,
         bounds,
-        dock_bounds,
-        source,
+        target_resolution.dock_bounds,
+        target_resolution.source,
         window,
-        candidates,
+        target_resolution.candidates,
     );
     record_drag_resolve_diagnostics(app, window, diagnostics);
     if std::env::var_os("FRET_DOCK_DRAG_DEBUG").is_some_and(|v| !v.is_empty()) && changed {
@@ -313,7 +230,7 @@ pub(super) fn declarative_resolve_internal_drag_hover<H: UiHost>(
         tracing::info!(
             window = ?window,
             invert_docking = !dock_previews_enabled,
-            source = ?source,
+            source = ?target_resolution.source,
             target = ?target,
             "declarative dock drag hover changed"
         );

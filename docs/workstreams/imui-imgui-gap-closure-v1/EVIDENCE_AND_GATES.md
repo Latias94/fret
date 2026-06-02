@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Docking Declarative Target Resolution Owner Split - 2026-06-03
+
+Claim verified: declarative docking drop-target resolution input projection moved out of
+`ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` into private
+`ecosystem/fret-docking/src/dock/declarative/drag_resolve/target.rs` without changing layout
+snapshot lookup, dock-bounds derivation, tab-width/tab-scroll preparation, hint font scaling,
+policy lookup, previous-hover latching, dragged-tab lookup, candidate rect diagnostics, hover/drop
+target resolution, drop-intent application, tear-off handoff, diagnostics capture/publication,
+debug tracing, or public docking APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative/drag_resolve/target.rs` owns layout snapshot
+  lookup, dock-bounds projection, theme-derived hint sizing, tab metrics, docking policy lookup,
+  candidate diagnostics collection, dragged-tab lookup, and the `resolve_dock_drop_target(...)`
+  call.
+- `ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` keeps hover/drop lifecycle
+  branching, tear-off handoff, `resolve_declarative_drag_drop_intent(...)`,
+  `apply_dock_drop_intent(...)`, diagnostics capture/publication, debug tracing, and drag allow
+  checks.
+- `tools/gate_imui_workstream_source.py` rejects target-resolution prep drifting back into
+  `drag_resolve.rs` and rejects drop-intent, effect application, diagnostics publication,
+  tear-off, auto-scroll, begin-drag, and paint policy from drifting into the target owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the target owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking floating_title_bar_drag center_drop tab_drop drop_hint --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-docking drags_floating_title_bar --no-fail-fast`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Declarative Drop Intent Preparation Owner Split - 2026-06-03
 
 Claim verified: declarative docking panel/tabs drop-intent preparation moved out of
