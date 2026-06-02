@@ -19,6 +19,9 @@ use support::goldens::{
 };
 use support::headless_autocomplete_cases::load_material3_autocomplete_golden_suite_v1;
 use support::headless_carousel_item_cases::load_material3_carousel_item_golden_suite_v1;
+use support::headless_interactions::{
+    dispatch_idle_pointer, dispatch_key_tap, focus_test_id, hover_test_id,
+};
 use support::headless_list_cases::load_material3_list_golden_suite_v1;
 use support::headless_menu_dialog_style_cases::{
     Material3MenuDialogStyleGoldenCaseKindV1, load_material3_menu_dialog_style_golden_suite_v1,
@@ -2011,57 +2014,24 @@ fn material3_headless_list_suite_goldens_v1() {
                 ui.request_semantics_snapshot();
                 ui.layout_all(&mut app, &mut services, bounds, scale_factor);
 
+                let interaction_context = format!("{label}, {scale}, {case_name}");
                 if case.is_idle() {
-                    ui.dispatch_event(
-                        &mut app,
-                        &mut services,
-                        &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
-                    );
+                    dispatch_idle_pointer(&mut ui, &mut app, &mut services);
                 }
 
                 if let Some(test_id) = case.hover_test_id() {
-                    let node_id: NodeId = ui
-                        .semantics_snapshot()
-                        .and_then(|snapshot| {
-                            snapshot.nodes.iter().find_map(|node| {
-                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
-                            })
-                        })
-                        .unwrap_or_else(|| {
-                            panic!(
-                                "expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})"
-                            )
-                        });
-                    let node_bounds = ui.debug_node_visual_bounds(node_id).unwrap_or_else(|| {
-                        panic!("expected {test_id} bounds ({label}, {scale}, {case_name})")
-                    });
-                    let hover_at = Point::new(
-                        Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.5),
-                        Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
-                    );
-                    ui.dispatch_event(
+                    hover_test_id(
+                        &mut ui,
                         &mut app,
                         &mut services,
-                        &pointer_move(PointerId(1), hover_at),
+                        test_id,
+                        &interaction_context,
                     );
                 }
 
                 if let Some(test_id) = case.focus_test_id() {
-                    let node_id: NodeId = ui
-                        .semantics_snapshot()
-                        .and_then(|snapshot| {
-                            snapshot.nodes.iter().find_map(|node| {
-                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
-                            })
-                        })
-                        .unwrap_or_else(|| {
-                            panic!(
-                                "expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})"
-                            )
-                        });
-                    ui.set_focus(Some(node_id));
-                    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
-                    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                    focus_test_id(&mut ui, test_id, &interaction_context);
+                    dispatch_key_tap(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
                 }
 
                 let message = format!(
@@ -2442,35 +2412,19 @@ fn material3_headless_slider_suite_goldens_v1() {
                 ui.request_semantics_snapshot();
                 ui.layout_all(&mut app, &mut services, bounds, scale_factor);
 
-                ui.dispatch_event(
-                    &mut app,
-                    &mut services,
-                    &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
-                );
+                let interaction_context = format!("{label}, {scale}, {case_name}");
+                dispatch_idle_pointer(&mut ui, &mut app, &mut services);
 
                 if let Some(test_id) = case.hover_test_id() {
-                    let node_id: NodeId = ui
-                        .semantics_snapshot()
-                        .and_then(|snapshot| {
-                            snapshot.nodes.iter().find_map(|node| {
-                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
-                            })
-                        })
-                        .unwrap_or_else(|| {
-                            panic!("expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})")
-                        });
-                    let node_bounds = ui.debug_node_visual_bounds(node_id).unwrap_or_else(|| {
-                        panic!("expected {test_id} bounds ({label}, {scale}, {case_name})")
-                    });
-                    let hover_at = Point::new(
-                        Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.5),
-                        Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
-                    );
-                    ui.dispatch_event(
+                    let hover_target = hover_test_id(
+                        &mut ui,
                         &mut app,
                         &mut services,
-                        &pointer_move(PointerId(1), hover_at),
+                        test_id,
+                        &interaction_context,
                     );
+                    let node_bounds = hover_target.bounds;
+                    let hover_at = hover_target.center;
 
                     match case.pointer_interaction() {
                         Some(Material3SliderPointerInteractionV1::Pressed) => {
@@ -2526,17 +2480,7 @@ fn material3_headless_slider_suite_goldens_v1() {
                 }
 
                 if let Some(test_id) = case.focus_test_id() {
-                    let node_id: NodeId = ui
-                        .semantics_snapshot()
-                        .and_then(|snapshot| {
-                            snapshot.nodes.iter().find_map(|node| {
-                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
-                            })
-                        })
-                        .unwrap_or_else(|| {
-                            panic!("expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})")
-                        });
-                    ui.set_focus(Some(node_id));
+                    focus_test_id(&mut ui, test_id, &interaction_context);
 
                     match case.keyboard_interaction() {
                         Some(Material3SliderKeyboardInteractionV1::SingleArrowCycle) => {
@@ -2698,18 +2642,7 @@ fn material3_headless_slider_suite_goldens_v1() {
                                     "expected range slider secondary focus test id ({label}, {scale}, {case_name})"
                                 )
                             });
-                            let end_node_id: NodeId = ui
-                                .semantics_snapshot()
-                                .and_then(|snapshot| {
-                                    snapshot.nodes.iter().find_map(|node| {
-                                        (node.test_id.as_deref() == Some(end_test_id))
-                                            .then_some(node.id)
-                                    })
-                                })
-                                .unwrap_or_else(|| {
-                                    panic!("expected {end_test_id} in semantics snapshot ({label}, {scale}, {case_name})")
-                                });
-                            ui.set_focus(Some(end_node_id));
+                            focus_test_id(&mut ui, end_test_id, &interaction_context);
 
                             ui.dispatch_event(
                                 &mut app,
@@ -2792,18 +2725,7 @@ fn material3_headless_slider_suite_goldens_v1() {
                                     "expected range slider secondary focus test id ({label}, {scale}, {case_name})"
                                 )
                             });
-                            let end_node_id: NodeId = ui
-                                .semantics_snapshot()
-                                .and_then(|snapshot| {
-                                    snapshot.nodes.iter().find_map(|node| {
-                                        (node.test_id.as_deref() == Some(end_test_id))
-                                            .then_some(node.id)
-                                    })
-                                })
-                                .unwrap_or_else(|| {
-                                    panic!("expected {end_test_id} in semantics snapshot ({label}, {scale}, {case_name})")
-                                });
-                            ui.set_focus(Some(end_node_id));
+                            focus_test_id(&mut ui, end_test_id, &interaction_context);
 
                             ui.dispatch_event(
                                 &mut app,
@@ -4928,57 +4850,24 @@ fn material3_headless_text_field_suite_goldens_v1() {
                 ui.request_semantics_snapshot();
                 ui.layout_all(&mut app, &mut services, bounds, scale_factor);
 
+                let interaction_context = format!("{label}, {scale}, {case_name}");
                 if case.is_idle() {
-                    ui.dispatch_event(
-                        &mut app,
-                        &mut services,
-                        &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
-                    );
+                    dispatch_idle_pointer(&mut ui, &mut app, &mut services);
                 }
 
                 if let Some(test_id) = case.hover_test_id() {
-                    let node_id: NodeId = ui
-                        .semantics_snapshot()
-                        .and_then(|snapshot| {
-                            snapshot.nodes.iter().find_map(|node| {
-                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
-                            })
-                        })
-                        .unwrap_or_else(|| {
-                            panic!(
-                                "expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})"
-                            )
-                        });
-                    let node_bounds = ui.debug_node_visual_bounds(node_id).unwrap_or_else(|| {
-                        panic!("expected {test_id} bounds ({label}, {scale}, {case_name})")
-                    });
-                    let hover_at = Point::new(
-                        Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.5),
-                        Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
-                    );
-                    ui.dispatch_event(
+                    hover_test_id(
+                        &mut ui,
                         &mut app,
                         &mut services,
-                        &pointer_move(PointerId(1), hover_at),
+                        test_id,
+                        &interaction_context,
                     );
                 }
 
                 if let Some(test_id) = case.focus_test_id() {
-                    let node_id: NodeId = ui
-                        .semantics_snapshot()
-                        .and_then(|snapshot| {
-                            snapshot.nodes.iter().find_map(|node| {
-                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
-                            })
-                        })
-                        .unwrap_or_else(|| {
-                            panic!(
-                                "expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})"
-                            )
-                        });
-                    ui.set_focus(Some(node_id));
-                    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
-                    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                    focus_test_id(&mut ui, test_id, &interaction_context);
+                    dispatch_key_tap(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
                 }
 
                 let message = format!(
@@ -5405,57 +5294,24 @@ fn material3_headless_carousel_item_suite_goldens_v1() {
                 ui.request_semantics_snapshot();
                 ui.layout_all(&mut app, &mut services, bounds, scale_factor);
 
+                let interaction_context = format!("{label}, {scale}, {case_name}");
                 if case.is_idle() {
-                    ui.dispatch_event(
-                        &mut app,
-                        &mut services,
-                        &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
-                    );
+                    dispatch_idle_pointer(&mut ui, &mut app, &mut services);
                 }
 
                 if let Some(test_id) = case.hover_test_id() {
-                    let node_id: NodeId = ui
-                        .semantics_snapshot()
-                        .and_then(|snapshot| {
-                            snapshot.nodes.iter().find_map(|node| {
-                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
-                            })
-                        })
-                        .unwrap_or_else(|| {
-                            panic!(
-                                "expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})"
-                            )
-                        });
-                    let node_bounds = ui.debug_node_visual_bounds(node_id).unwrap_or_else(|| {
-                        panic!("expected {test_id} bounds ({label}, {scale}, {case_name})")
-                    });
-                    let hover_at = Point::new(
-                        Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.5),
-                        Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
-                    );
-                    ui.dispatch_event(
+                    hover_test_id(
+                        &mut ui,
                         &mut app,
                         &mut services,
-                        &pointer_move(PointerId(1), hover_at),
+                        test_id,
+                        &interaction_context,
                     );
                 }
 
                 if let Some(test_id) = case.focus_test_id() {
-                    let node_id: NodeId = ui
-                        .semantics_snapshot()
-                        .and_then(|snapshot| {
-                            snapshot.nodes.iter().find_map(|node| {
-                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
-                            })
-                        })
-                        .unwrap_or_else(|| {
-                            panic!(
-                                "expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})"
-                            )
-                        });
-                    ui.set_focus(Some(node_id));
-                    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
-                    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                    focus_test_id(&mut ui, test_id, &interaction_context);
+                    dispatch_key_tap(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
                 }
 
                 let message = format!(
