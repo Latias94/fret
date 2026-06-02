@@ -14,15 +14,12 @@ use super::super::drop_resolve::{
     dock_drop_target_diagnostics, resolve_dock_drop_intent_panel, resolve_dock_drop_intent_tabs,
     resolve_dock_drop_target,
 };
-use super::super::host_frame::begin_cross_window_dock_drag;
 use super::super::layout::{dock_space_regions, split_tab_bar};
 use super::super::manager::DockManager;
 use super::super::services::DockingPolicyService;
 use super::super::types::{DockDropTarget, DockPanelDragPayload, DockTabsDragPayload};
 use super::geometry::declarative_layout_snapshot_for_bounds;
-use super::interaction::{
-    DeclarativeDockInteractionService, DeclarativePendingDockDrag, DeclarativePendingDockTabsDrag,
-};
+use super::interaction::DeclarativeDockInteractionService;
 use super::tab_metrics::{
     declarative_apply_tab_bar_drag_auto_scroll, declarative_sync_tab_scroll_for_window,
     declarative_tab_scroll_for_frame, declarative_tab_widths_for_layout,
@@ -31,6 +28,10 @@ use super::tear_off::{
     declarative_allow_tear_off_for_panel, declarative_default_floating_rect_for_panel,
     declarative_resolve_tear_off_hover,
 };
+
+mod begin_drag;
+
+pub(super) use begin_drag::{begin_declarative_panel_drag, begin_declarative_tabs_group_drag};
 
 fn declarative_dragged_tab_for_drop<H: UiHost>(
     app: &H,
@@ -501,81 +502,4 @@ pub(super) fn declarative_tabs_group_drag_allowed<H: UiHost>(
     policy
         .as_deref()
         .is_none_or(|policy| policy.allow_tabs_group_drag(window, tabs))
-}
-
-pub(super) fn begin_declarative_panel_drag<H: UiHost>(
-    app: &mut H,
-    window: AppWindowId,
-    pointer_id: fret_core::PointerId,
-    pending: DeclarativePendingDockDrag,
-    position: fret_core::Point,
-    modifiers: fret_core::Modifiers,
-) {
-    let settings = app
-        .global::<fret_runtime::DockingInteractionSettings>()
-        .copied()
-        .unwrap_or_default();
-    let wants_dock_previews = settings.drag_inversion.wants_dock_previews(modifiers);
-    let grab_offset = pending.grab_offset;
-    begin_cross_window_dock_drag(
-        app,
-        pointer_id,
-        fret_runtime::DRAG_KIND_DOCK_PANEL,
-        window,
-        pending.start,
-        position,
-        DockPanelDragPayload {
-            panel: pending.panel,
-            grab_offset,
-            tear_off_requested: false,
-            tear_off_requested_at_tick: None,
-            tear_off_oob_start_frame: None,
-            dock_previews_enabled: wants_dock_previews,
-        },
-        None,
-        grab_offset,
-    );
-}
-
-pub(super) fn begin_declarative_tabs_group_drag<H: UiHost>(
-    app: &mut H,
-    window: AppWindowId,
-    pointer_id: fret_core::PointerId,
-    pending: DeclarativePendingDockTabsDrag,
-    position: fret_core::Point,
-    modifiers: fret_core::Modifiers,
-) {
-    let settings = app
-        .global::<fret_runtime::DockingInteractionSettings>()
-        .copied()
-        .unwrap_or_default();
-    let wants_dock_previews = settings.drag_inversion.wants_dock_previews(modifiers);
-    let (tabs, active) = app
-        .global::<DockManager>()
-        .and_then(|dock| match dock.graph.node(pending.tabs) {
-            Some(fret_core::DockNode::Tabs { tabs, active }) => Some((tabs.clone(), *active)),
-            _ => None,
-        })
-        .unwrap_or_else(|| (Vec::new(), 0));
-    let grab_offset = pending.grab_offset;
-    begin_cross_window_dock_drag(
-        app,
-        pointer_id,
-        fret_runtime::DRAG_KIND_DOCK_TABS,
-        window,
-        pending.start,
-        position,
-        DockTabsDragPayload {
-            source_tabs: pending.tabs,
-            tabs,
-            active,
-            grab_offset,
-            tear_off_requested: false,
-            tear_off_requested_at_tick: None,
-            tear_off_oob_start_frame: None,
-            dock_previews_enabled: wants_dock_previews,
-        },
-        None,
-        grab_offset,
-    );
 }

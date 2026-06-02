@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-03 docking declarative begin-drag owner-split result:
+`ecosystem/fret-docking/src/dock/declarative/drag_resolve/begin_drag.rs` now owns panel/tabs
+cross-window drag-session startup and drag payload construction.
+`ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` keeps internal drag hover/drop
+resolution, drop intent effect projection, tab-bar auto-scroll, tear-off handoff, diagnostics
+publication, and panel/tabs drag allow checks. Public docking APIs, drag inversion flags,
+grab-offset propagation, tab active-index capture, and tear-off payload defaults remain unchanged,
+and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-03 editor theme preset picker ListBox render owner-split result:
 `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/listbox.rs` now owns
 ListBox semantics, header text, preset iteration, and picker container chrome.

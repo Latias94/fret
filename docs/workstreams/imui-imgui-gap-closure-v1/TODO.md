@@ -638,6 +638,15 @@ Last updated: 2026-06-03
       resolution, drop resolution, drop-intent effect projection, drag diagnostics publication,
       panel/tabs drag allow checks, and cross-window drag session payload startup. The source gate
       prevents drag/drop resolve policy from drifting back into the declarative orchestration owner.
+- [x] Split docking declarative begin-drag payload startup out of
+      `ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` into a private child owner
+      without changing panel/tabs drag session startup, drag inversion payload flags,
+      grab-offset propagation, tab active-index capture, tear-off payload defaults, hover/drop
+      resolution, diagnostics publication, policy allow checks, or public docking APIs.
+      Result: `dock/declarative/drag_resolve/begin_drag.rs` owns cross-window panel/tabs drag
+      session payload startup. `dock/declarative/drag_resolve.rs` keeps internal drag hover/drop
+      resolution, drop-intent effect projection, tab-bar auto-scroll, tear-off handoff,
+      diagnostics publication, and panel/tabs drag allow checks.
 - [x] Split docking declarative drag ghost and tab insert preview preparation into a private child
       owner without changing drag ghost lookup, drag source tab fallback, ghost title fallback,
       prepared ghost title text, center-zone insert preview titles, or public docking APIs.

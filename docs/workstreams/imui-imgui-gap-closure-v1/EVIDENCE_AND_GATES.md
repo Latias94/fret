@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Docking Declarative Begin Drag Owner Split - 2026-06-03
+
+Claim verified: declarative docking cross-window drag-session payload startup moved out of
+`ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` into private
+`ecosystem/fret-docking/src/dock/declarative/drag_resolve/begin_drag.rs` without changing
+panel/tabs drag session startup, drag inversion payload flags, grab-offset propagation, tab-group
+active-tab capture, tear-off payload defaults, hover/drop target resolution, drop intent
+application, drag diagnostics publication, policy allow checks, or public docking APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative/drag_resolve/begin_drag.rs` owns
+  `begin_declarative_panel_drag(...)`, `begin_declarative_tabs_group_drag(...)`, cross-window
+  drag-session startup, and panel/tabs drag payload construction.
+- `ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` keeps internal drag hover/drop
+  resolution, drop intent effect projection, tab-bar auto-scroll during drag, tear-off handoff,
+  drag diagnostics publication, and panel/tabs drag allow checks.
+- `tools/gate_imui_workstream_source.py` rejects cross-window drag-start payload construction from
+  returning to `drag_resolve.rs` and rejects hover/drop resolve policy from drifting into the
+  begin-drag owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the begin-drag owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking floating_title_bar_drag center_drop tab_drop drop_hint --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-docking drags_floating_title_bar --no-fail-fast`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Theme Preset Picker ListBox Render Owner Split - 2026-06-03
 
 Claim verified: editor theme preset picker ListBox semantics, header text, preset iteration, and

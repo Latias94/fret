@@ -2,6 +2,38 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Docking declarative begin drag owner split - 2026-06-03
+
+This maintenance slice keeps editor-grade multi-window drag startup separate from docking hover/drop
+resolution:
+
+- `ecosystem/fret-docking/src/dock/declarative/drag_resolve/begin_drag.rs` owns
+  `begin_declarative_panel_drag(...)`, `begin_declarative_tabs_group_drag(...)`, cross-window
+  drag-session startup, and panel/tabs drag payload construction.
+- `ecosystem/fret-docking/src/dock/declarative/drag_resolve.rs` keeps hover/drop target
+  resolution, drop intent effect projection, tab-bar drag auto-scroll, tear-off handoff,
+  diagnostics publication, and panel/tabs drag allow checks.
+- Evidence anchor: Docking declarative begin drag owner split - 2026-06-03.
+- Evidence anchor: ecosystem/fret-docking/src/dock/declarative/drag_resolve/begin_drag.rs.
+- Evidence anchor: cross-window drag-session payload startup.
+- Evidence anchor: drag_resolve.rs keeps hover/drop resolution and diagnostics only.
+- Panel/tabs drag startup, drag inversion payload flags, grab-offset propagation, tab active-index
+  capture, tear-off payload defaults, and public docking APIs remain unchanged.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so begin-drag payload startup
+  cannot drift back into the hover/drop resolve owner.
+
+Fresh gates:
+
+- `cargo fmt -p fret-docking` - passed.
+- `cargo check -p fret-docking` - passed.
+- `cargo nextest run -p fret-docking floating_title_bar_drag center_drop tab_drop drop_hint --no-fail-fast` - passed.
+- `cargo nextest run -p fret-docking drags_floating_title_bar --no-fail-fast` - passed.
+- `cargo fmt -p fret-docking -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Editor theme preset picker ListBox render owner split - 2026-06-03
 
 This maintenance slice keeps the editor-owned style/theme picker proof narrow while separating the
