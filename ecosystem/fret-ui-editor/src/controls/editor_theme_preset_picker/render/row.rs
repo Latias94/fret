@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
-use fret_ui::action::{ActivateReason, OnActivate};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableA11y, PressableProps, RingPlacement, RingStyle, SizeStyle, SpacingLength,
@@ -14,6 +13,8 @@ use crate::primitives::readout::{
     editor_theme_preset_picker_row_status_text_props,
 };
 use crate::theme::EditorThemePresetV1;
+
+mod behavior;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn preset_row<H: UiHost>(
@@ -40,7 +41,7 @@ pub(super) fn preset_row<H: UiHost>(
         .as_ref()
         .map(|prefix| Arc::<str>::from(format!("{prefix}.{}", preset.key())));
     let label = Arc::<str>::from(preset.label());
-    let model_for_activate = model.clone();
+    let on_activate = behavior::theme_preset_row_activate(model, preset);
 
     let mut row = cx.pressable(
         PressableProps {
@@ -74,14 +75,7 @@ pub(super) fn preset_row<H: UiHost>(
             ..Default::default()
         },
         move |cx, state| {
-            let on_activate: OnActivate =
-                Arc::new(move |host, action_cx, _reason: ActivateReason| {
-                    let _ = host
-                        .models_mut()
-                        .update(&model_for_activate, |value| *value = preset);
-                    host.request_redraw(action_cx.window);
-                });
-            cx.pressable_add_on_activate(on_activate);
+            cx.pressable_add_on_activate(on_activate.clone());
 
             let active_bg = mix_color(subtle_bg, accent, 0.42);
             let hover_bg = mix_color(subtle_bg, accent, 0.18);

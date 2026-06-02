@@ -1243,6 +1243,7 @@
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/options.rs",
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render.rs",
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row.rs",
+    "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row/behavior.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/element.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/input.rs",

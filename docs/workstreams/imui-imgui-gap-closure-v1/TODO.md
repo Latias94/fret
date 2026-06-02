@@ -6023,3 +6023,11 @@ opening the slice.
       preview cell chrome; `color_edit/popup/preview/side/original.rs` owns the original-color
       pressable restore action, a11y/button semantics, model updates, redraw request, and
       `restore_reference_color(...)`.
+- [x] Split editor theme-preset picker row activation behavior out of
+      `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row.rs` into a
+      private behavior owner without changing ListBoxOption semantics, row focusability,
+      selected/hover/pressed chrome, status label rendering, model update, redraw request, or the
+      reversible preset replay tests.
+      Result: `editor_theme_preset_picker/render/row.rs` keeps row layout, visual state, labels,
+      status text, test IDs, and `mix_color(...)`; `render/row/behavior.rs` owns the activate
+      handler that writes the selected `EditorThemePresetV1` model and requests redraw.

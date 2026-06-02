@@ -25955,3 +25955,27 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-02 editor theme-preset picker row activation behavior owner split:
+
+- Claim: editor theme-preset picker row activation moved from
+  `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row.rs` into
+  `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row/behavior.rs`
+  without changing ListBoxOption semantics, focusability, selected/hover/pressed row chrome, status
+  label rendering, model update, redraw request, or reversible preset replay behavior.
+- Evidence anchors: `render/row.rs` declares `mod behavior;`, builds
+  `behavior::theme_preset_row_activate(model, preset)`, and keeps `PressableProps`,
+  `SemanticsRole::ListBoxOption`, focus ring, selected/hover/pressed background logic, row label
+  and status text props, test IDs, and `mix_color(...)`; `render/row/behavior.rs` owns
+  `OnActivate`, `ActivateReason`, `host.models_mut().update(&model, ...)`, and
+  `host.request_redraw(action_cx.window)`; the source gate rejects activation model writes drifting
+  back into the row render owner.
+- Passed: `cargo fmt --package fret-ui-editor`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo test -p fret-ui-editor --features imui editor_theme_preset_picker --no-fail-fast`.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
