@@ -1905,6 +1905,7 @@
     "ecosystem/fret-plot/src/declarative/paint_primitives.rs",
     "ecosystem/fret-plot/src/declarative/panel_paint.rs",
     "ecosystem/fret-plot/src/declarative/props.rs",
+    "ecosystem/fret-plot/src/declarative/props/error_bars.rs",
     "ecosystem/fret-plot/src/declarative/props/line.rs",
     "ecosystem/fret-plot/src/declarative/props/records.rs",
     "ecosystem/fret-plot/src/declarative/readout.rs",
