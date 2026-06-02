@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-06-02
+Last updated: 2026-06-03
 
 ## Worktree Convergence - 2026-05-26
 
@@ -5997,6 +5997,14 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/props/candlestick.rs` owns the candlestick
       constructor and builder methods; `props.rs` declares the owner, re-exports records, and keeps
       remaining builders plus heatmap colorbar defaults.
+- [x] Split Fret Plot declarative `HeatmapPlotPanelProps` builder methods out of the props builder
+      root without changing public type names, builder method names/signatures, canvas/axis
+      scale/step-mode defaults, heatmap default colorbar enablement, state/output routing, axis
+      label setters, panel entrypoints, optional IMUI adapter routing, paint owners, event owners,
+      output publication, or plot model projection behavior.
+      Result: `ecosystem/fret-plot/src/declarative/props/heatmap.rs` owns the heatmap constructor,
+      default `style.heatmap_show_colorbar = true`, and builder methods; `props.rs` declares the
+      owner, re-exports records, and keeps remaining builders plus the histogram2d colorbar default.
 - [x] Split Fret Plot declarative legend paint/hit-testing out of the retained-free paint/event root
       without changing legend row metrics, swatch/text painting, hover/pin highlight, swatch/label
       hit testing, hidden-series mutation, pinned-series mutation, public panel props, or optional

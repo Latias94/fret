@@ -1,7 +1,42 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-06-02
+Last updated: 2026-06-03
+
+## Fret Plot Declarative Heatmap Props Builder Owner Split - 2026-06-03
+
+Claim verified: `HeatmapPlotPanelProps` constructor and builder methods moved out of
+`ecosystem/fret-plot/src/declarative/props.rs` into private
+`ecosystem/fret-plot/src/declarative/props/heatmap.rs` without changing public type names, builder
+method names/signatures, default canvas/axis scale/step-mode behavior, default heatmap colorbar
+enablement, state/output routing, axis label setters, panel entrypoints, optional IMUI adapter
+routing, paint owners, event owners, output publication, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/props/heatmap.rs` owns the heatmap plot prop constructor
+  plus output/state/style/axis-label/axis-scale/step-mode builder methods.
+- `props/heatmap.rs` preserves `style.heatmap_show_colorbar = true` as the heatmap default.
+- `props.rs` declares the private heatmap, candlestick, bars, histogram, error-bars, and line
+  builder owners, re-exports public prop records, and keeps remaining plot prop builders plus the
+  histogram2d colorbar default.
+- `tools/gate_imui_workstream_source.py` rejects heatmap builder methods from drifting back into
+  `props.rs` and rejects non-heatmap plot prop builders from drifting into `props/heatmap.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new heatmap prop builder
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo nextest run -p fret-plot heatmap_plot_panel --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
 
 ## Fret Plot Declarative Candlestick Props Builder Owner Split - 2026-06-02
 

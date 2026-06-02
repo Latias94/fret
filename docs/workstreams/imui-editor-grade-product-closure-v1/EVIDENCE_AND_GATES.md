@@ -2,6 +2,39 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative heatmap props builder owner split - 2026-06-03
+
+This maintenance slice keeps heatmap plot prop construction out of the shared props root while
+preserving the opt-in IMUI plot adapter behavior and the heatmap default colorbar:
+
+- `ecosystem/fret-plot/src/declarative/props/heatmap.rs` owns `HeatmapPlotPanelProps`
+  construction plus output/state/style/axis-label/axis-scale/step-mode builder methods.
+- `props/heatmap.rs` preserves `style.heatmap_show_colorbar = true`.
+- `props.rs` declares the heatmap, candlestick, bars, histogram, error-bars, and line builder
+  owners, re-exports public prop records, and keeps remaining plot prop builders plus the
+  histogram2d colorbar default.
+- Evidence anchor: builder methods for histogram2d remain in the props root.
+- Evidence anchor: Props root declares heatmap builder owner.
+- Evidence anchor: HeatmapPlotPanelProps builder owner.
+- Public panel props, panel entrypoints, optional IMUI adapter routing, paint/event owners, output
+  publication, and plot model projection remain unchanged.
+- The heatmap props builder owner stays non-heatmap-props-free, authoring-free, retained-free,
+  paint-free, event-free, and output-publication-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so heatmap builder methods
+  cannot drift back into `props.rs` and other plot prop builders cannot drift into
+  `props/heatmap.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo nextest run -p fret-plot heatmap_plot_panel --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative candlestick props builder owner split - 2026-06-02
 
 This maintenance slice keeps candlestick plot prop construction out of the shared props root while
