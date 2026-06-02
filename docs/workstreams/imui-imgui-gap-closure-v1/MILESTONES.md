@@ -12,6 +12,16 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 plot shaded command owner-split result:
+`ecosystem/fret-plot/src/declarative/commands.rs` now re-exports shaded command entrypoints and
+keeps shared line/area keys plus non-shaded command builders while
+`ecosystem/fret-plot/src/declarative/commands/shaded.rs` owns shaded lower path-key projection,
+sorted-series cursor interpolation, segment splitting, viewport x filtering, fallback aligned-series
+projection, upper/lower stroke commands, and fill band closure. Shaded painter dispatch,
+style/color/draw-order behavior, public panel props, panel entrypoints, optional IMUI adapter
+routing, paint/event owners, output publication, and plot model projection remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 plot error-bars command owner-split result:
 `ecosystem/fret-plot/src/declarative/commands.rs` now re-exports the error-bars command entrypoint
 and keeps shared path keys plus non-error-bars command builders while

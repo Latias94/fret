@@ -2,6 +2,37 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative shaded command owner split - 2026-06-02
+
+This maintenance slice keeps shaded-band cursor and command construction out of the shared command
+root while preserving the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/commands/shaded.rs` owns shaded lower path-key projection,
+  sorted-series cursor interpolation, fallback aligned-series projection, upper/lower stroke
+  commands, and fill band closure.
+- `commands.rs` re-exports shaded command entrypoints and keeps non-shaded command builders plus
+  shared path keys.
+- Evidence anchor: shaded band sorted-cursor command projection owner.
+- Evidence anchor: Commands root re-exports shaded command entrypoints.
+- `series_paint/shaded.rs` remains the paint owner for style/color, draw order, and painter
+  dispatch.
+- The shaded command owner stays bar/histogram-free, candlestick-free, error-bars-free, paint-free,
+  event-free, output-free, authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so shaded command logic cannot
+  drift back into `commands.rs` and other series command builders cannot drift into the shaded
+  owner.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo nextest run -p fret-plot shaded_plot_panel --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative error-bars command owner split - 2026-06-02
 
 This maintenance slice keeps error-bars cap and marker command construction out of the shared

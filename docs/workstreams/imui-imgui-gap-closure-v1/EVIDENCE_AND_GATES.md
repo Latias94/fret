@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Shaded Command Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative shaded-band command projection moved out of
+`ecosystem/fret-plot/src/declarative/commands.rs` into private
+`ecosystem/fret-plot/src/declarative/commands/shaded.rs` without changing lower-band path keys,
+sorted-series cursor interpolation, segment splitting, viewport x filtering, fallback index-aligned
+band projection, upper/lower stroke command construction, fill command closure, public plot panel
+props, panel entrypoints, optional IMUI adapter routing, paint owners, event owners, output
+publication, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/commands/shaded.rs` owns shaded lower path-key projection,
+  sorted-series cursor sampling, fallback aligned-series projection, upper/lower stroke commands,
+  and fill band closure.
+- `commands.rs` re-exports shaded command entrypoints and keeps shared line/area keys plus
+  non-shaded command builders.
+- `series_paint/shaded.rs` remains the paint owner for style/color, draw order, and painter
+  dispatch while importing the same command entrypoints from the command owner.
+- `tools/gate_imui_workstream_source.py` rejects shaded cursor/command construction from drifting
+  back into `commands.rs` and rejects other series command builders from drifting into the shaded
+  owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new shaded command owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo nextest run -p fret-plot shaded_plot_panel --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Error-Bars Command Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative error-bars cap and marker command projection moved out of

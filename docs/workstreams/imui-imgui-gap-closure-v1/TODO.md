@@ -5994,6 +5994,15 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/commands/error_bars.rs` owns error-bar cap and
       marker command construction; `commands.rs` re-exports the error-bars command entrypoint and
       keeps non-error-bars command builders.
+- [x] Split Fret Plot declarative shaded path-command projection out of the shared command owner
+      without changing lower-band path keys, sorted-series cursor interpolation, segment splitting,
+      viewport x filtering, fallback index-aligned band projection, upper/lower stroke command
+      construction, fill command closure, painter dispatch, public panel props, panel entrypoints,
+      optional IMUI adapter routing, paint owners, event owners, output publication, or plot model
+      projection behavior.
+      Result: `ecosystem/fret-plot/src/declarative/commands/shaded.rs` owns shaded sorted-cursor
+      and fallback band command construction; `commands.rs` re-exports shaded command entrypoints
+      and keeps non-shaded command builders.
 - [x] Split Fret Plot declarative selection overlay paint and tooltip geometry out of the
       retained-free paint/event root without changing query/box-zoom rectangles, tooltip placement,
       tooltip text formatting, persisted query rendering, active selection rendering,
