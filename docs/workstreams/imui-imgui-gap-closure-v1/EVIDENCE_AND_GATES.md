@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Line/Area/Stems Series Paint Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative line, area-fill, and stems stroke path drawing moved out of
+`ecosystem/fret-plot/src/declarative/series_paint.rs` into private
+`ecosystem/fret-plot/src/declarative/series_paint/line_area.rs` without changing concrete
+non-line/area/stems series routing, panel paint orchestration, event routing, output publication,
+public panel props, optional IMUI adapter routing, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/series_paint/line_area.rs` is the line, area-fill, and
+  stems stroke path owner.
+- Series paint router delegates line/area/stems drawing and keeps axis transform selection plus
+  concrete series routing.
+- The line/area/stems owner imports only polyline, area-fill, stems, step-mode command builders,
+  series path keying, and shared style fallback, staying event-free, output-free, overlay-free,
+  axis-routing-free, authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` rejects line/area/stems command/path logic from drifting
+  back into `series_paint.rs` and rejects non-line/area/stems concerns from `line_area.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new line/area/stems
+  series paint owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_seeded_line --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib area_plot_panel_paints_area_fill_and_stroke_on_declarative_path --no-fail-fast`:
+  pass.
+- `cargo test -p fret-plot --lib stems_plot_panel_paints_stems_from_baseline_on_declarative_path --no-fail-fast`:
+  pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_series_legend --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Shaded Series Paint Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative shaded band fill and upper/lower stroke path drawing moved

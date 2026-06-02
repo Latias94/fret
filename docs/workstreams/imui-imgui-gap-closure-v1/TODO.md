@@ -6092,6 +6092,13 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/series_paint/shaded.rs` owns shaded band fill
       and upper/lower stroke path drawing; `series_paint.rs` delegates shaded drawing and keeps
       line, area, and stems series routing.
+- [x] Split Fret Plot declarative line/area/stems series painting out of the series paint router
+      without changing concrete non-line/area/stems series routing, panel paint orchestration,
+      event routing, output publication, public panel props, optional IMUI adapter routing, or plot
+      model projection.
+      Result: `ecosystem/fret-plot/src/declarative/series_paint/line_area.rs` owns line,
+      area-fill, and stems stroke path drawing; `series_paint.rs` now delegates all concrete series
+      drawing and keeps axis transform selection plus concrete series routing.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll

@@ -1893,6 +1893,7 @@
     "ecosystem/fret-plot/src/declarative/series_paint/bar_histogram.rs",
     "ecosystem/fret-plot/src/declarative/series_paint/candlestick.rs",
     "ecosystem/fret-plot/src/declarative/series_paint/error_bars.rs",
+    "ecosystem/fret-plot/src/declarative/series_paint/line_area.rs",
     "ecosystem/fret-plot/src/declarative/series_paint/shaded.rs",
     "ecosystem/fret-plot/src/declarative/style_helpers.rs",
     "ecosystem/fret-plot/src/declarative/tests.rs",
