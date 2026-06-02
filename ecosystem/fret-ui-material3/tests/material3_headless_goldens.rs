@@ -18,6 +18,7 @@ use support::goldens::{
     snapshot_material3_scene_at_frame_v1, write_or_assert_material3_suite_for_test_v1,
     write_or_assert_material3_suite_v1,
 };
+use support::headless_autocomplete_cases::load_material3_autocomplete_golden_suite_v1;
 use support::headless_snackbar_cases::load_material3_snackbar_golden_suite_v1;
 use support::host::{FakeUiServices, TestHost};
 use support::layout::with_padding;
@@ -3498,7 +3499,7 @@ fn material3_headless_overlays_suite_goldens_v1() {
 fn material3_headless_autocomplete_suite_goldens_v1() {
     use fret_ui::element::{FlexProps, Length};
     use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
-    use fret_ui_material3::{Autocomplete, AutocompleteItem, AutocompleteVariant};
+    use fret_ui_material3::{Autocomplete, AutocompleteVariant};
 
     let schemes = [
         (
@@ -3522,6 +3523,8 @@ fn material3_headless_autocomplete_suite_goldens_v1() {
             "light.expressive",
         ),
     ];
+    let autocomplete_suite = load_material3_autocomplete_golden_suite_v1();
+    let autocomplete_items = autocomplete_suite.items();
 
     for scale_factor in [1.0, 1.25, 2.0] {
         let scale = scale_segment(scale_factor);
@@ -3533,6 +3536,7 @@ fn material3_headless_autocomplete_suite_goldens_v1() {
             );
 
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+            let closed_case = autocomplete_suite.closed_case();
 
             // Closed scene: show both variants so token drift is visible.
             {
@@ -3547,13 +3551,7 @@ fn material3_headless_autocomplete_suite_goldens_v1() {
 
                 let outlined_model = app.models_mut().insert(String::new());
                 let filled_model = app.models_mut().insert(String::new());
-                let items: Arc<[AutocompleteItem]> = Arc::from(vec![
-                    AutocompleteItem::new("alpha", "Alpha"),
-                    AutocompleteItem::new("beta", "Beta"),
-                    AutocompleteItem::new("gamma", "Gamma"),
-                    AutocompleteItem::new("delta", "Delta"),
-                    AutocompleteItem::new("epsilon", "Epsilon"),
-                ]);
+                let items = autocomplete_items.clone();
 
                 let render = move |ui: &mut UiTree<TestHost>,
                                    app: &mut TestHost,
@@ -3613,7 +3611,7 @@ fn material3_headless_autocomplete_suite_goldens_v1() {
                     "expected the Material3 autocomplete closed scene to be stable after animations settle ({label}, {scale})"
                 );
                 cases.insert(
-                    "both_closed".to_string(),
+                    closed_case.id().to_string(),
                     settle_material3_overlay_scene_snapshot_v1(
                         &mut app,
                         &mut ui,
@@ -3629,10 +3627,10 @@ fn material3_headless_autocomplete_suite_goldens_v1() {
                 );
             }
 
-            for (case_name, focus_test_id) in [
-                ("outlined_open", "material3-ac-outlined"),
-                ("filled_open", "material3-ac-filled"),
-            ] {
+            for case in autocomplete_suite.open_cases() {
+                let case_name = case.id();
+                let focus_test_id = case.focus_test_id();
+
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -3644,13 +3642,7 @@ fn material3_headless_autocomplete_suite_goldens_v1() {
 
                 let outlined_model = app.models_mut().insert(String::new());
                 let filled_model = app.models_mut().insert(String::new());
-                let items: Arc<[AutocompleteItem]> = Arc::from(vec![
-                    AutocompleteItem::new("alpha", "Alpha"),
-                    AutocompleteItem::new("beta", "Beta"),
-                    AutocompleteItem::new("gamma", "Gamma"),
-                    AutocompleteItem::new("delta", "Delta"),
-                    AutocompleteItem::new("epsilon", "Epsilon"),
-                ]);
+                let items = autocomplete_items.clone();
 
                 let render = move |ui: &mut UiTree<TestHost>,
                                    app: &mut TestHost,
@@ -3768,7 +3760,7 @@ fn material3_headless_autocomplete_suite_goldens_v1() {
                     "expected the Material3 autocomplete overlay scene to be stable after animations settle ({label}, {scale}, {case_name})"
                 );
                 cases.insert(
-                    case_name.to_string(),
+                    case.id().to_string(),
                     settle_material3_overlay_scene_snapshot_v1(
                         &mut app,
                         &mut ui,
@@ -3785,8 +3777,9 @@ fn material3_headless_autocomplete_suite_goldens_v1() {
             }
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-autocomplete.{scale}.{label}"),
+                "material3_headless_autocomplete_suite_goldens_v1",
                 &suite,
             );
         }
