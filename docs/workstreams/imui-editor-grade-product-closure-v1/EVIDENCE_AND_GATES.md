@@ -2,6 +2,39 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Editor theme preset picker ListBox render owner split - 2026-06-03
+
+This maintenance slice keeps the editor-owned style/theme picker proof narrow while separating the
+ListBox render shell from row chrome and activation behavior:
+
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/listbox.rs` owns
+  ListBox semantics, header text, preset iteration, and picker container chrome.
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render.rs` keeps
+  `EditorThemePresetPickerRenderInput` plus the build entry that delegates to the ListBox owner.
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row.rs` remains the
+  ListBoxOption row chrome owner.
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row/behavior.rs`
+  remains the selected-preset activation owner.
+- Evidence anchor: Editor theme preset picker ListBox render owner split - 2026-06-03.
+- Evidence anchor: ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/listbox.rs.
+- Evidence anchor: ListBox semantics, header text, preset iteration, and container chrome.
+- Evidence anchor: render.rs keeps render input and build entry only.
+- Render input shape, selected-row semantics, row activation behavior, density status labels, theme
+  preset replay behavior, and public IMUI/editor facade APIs remain unchanged.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so the ListBox shell cannot
+  drift back into `render.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-editor` - passed.
+- `cargo check -p fret-ui-editor --features imui` - passed.
+- `cargo nextest run -p fret-ui-editor editor_theme_preset_picker --no-fail-fast` - passed.
+- `cargo fmt -p fret-ui-editor -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## IMUI facade core identity owner split - 2026-06-03
 
 This maintenance slice keeps Dear ImGui-style identity sugar source-compatible while making the

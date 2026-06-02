@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Editor Theme Preset Picker ListBox Render Owner Split - 2026-06-03
+
+Claim verified: editor theme preset picker ListBox semantics, header text, preset iteration, and
+container chrome moved out of
+`ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render.rs` into private
+`ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/listbox.rs` without
+changing render input shape, selected-row semantics, row activation behavior, density status labels,
+theme preset replay behavior, or public IMUI/editor facade APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/listbox.rs` owns
+  `SemanticsRole::ListBox`, header text construction, preset iteration, and picker container
+  chrome.
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render.rs` keeps
+  `EditorThemePresetPickerRenderInput` plus the build entry that delegates to the ListBox owner.
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row.rs` remains the
+  ListBoxOption row chrome owner, and `render/row/behavior.rs` remains the activation owner.
+- `tools/gate_imui_workstream_source.py` rejects ListBox/container/header drift back into
+  `render.rs` and rejects row/root/style-runtime drift into the ListBox owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the ListBox render owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo nextest run -p fret-ui-editor editor_theme_preset_picker --no-fail-fast`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Facade Core Identity Owner Split - 2026-06-03
 
 Claim verified: `ImUiFacade` keyed identity scopes and keyed iteration sugar moved out of

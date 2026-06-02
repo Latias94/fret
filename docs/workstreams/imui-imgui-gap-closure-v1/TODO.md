@@ -6581,3 +6581,10 @@ opening the slice.
       Result: `editor_theme_preset_picker/render/row.rs` keeps row layout, visual state, labels,
       status text, test IDs, and `mix_color(...)`; `render/row/behavior.rs` owns the activate
       handler that writes the selected `EditorThemePresetV1` model and requests redraw.
+- [x] Split editor theme preset picker ListBox render assembly into a private child owner without
+      changing render input shape, selected-row semantics, row activation behavior, density status
+      labels, theme preset replay behavior, or public IMUI/editor facade APIs.
+      Result: `editor_theme_preset_picker/render/listbox.rs` owns ListBox semantics, header text,
+      preset iteration, and container chrome. `editor_theme_preset_picker/render.rs` keeps
+      `EditorThemePresetPickerRenderInput` and the build entry only, while row chrome and
+      activation stay in their existing row owners.

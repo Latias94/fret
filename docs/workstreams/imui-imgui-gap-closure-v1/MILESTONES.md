@@ -12,6 +12,16 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-03 editor theme preset picker ListBox render owner-split result:
+`ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/listbox.rs` now owns
+ListBox semantics, header text, preset iteration, and picker container chrome.
+`ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render.rs` keeps
+`EditorThemePresetPickerRenderInput` and the build entry that delegates to the ListBox owner.
+`ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row.rs` remains the
+ListBoxOption row chrome owner, and `render/row/behavior.rs` remains the selected-preset activation
+owner. Public editor/IMUI facade APIs, render input shape, preset replay behavior, and density
+status labels remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-03 IMUI facade core identity owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core/identity.rs` now owns
 `ImUiFacade::id`, `ImUiFacade::push_id`, and `ImUiFacade::for_each_keyed`.
