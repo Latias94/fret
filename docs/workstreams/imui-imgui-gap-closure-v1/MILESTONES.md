@@ -22,6 +22,16 @@ Vec2/Vec3/Vec4 model-id tuples, preserves explicit `id_source` precedence and
 entrypoints. Public VecEdit APIs, keyed element assembly, axis ordering, and layout semantics remain
 unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-02 editor EnumSelect overlay panel owner-split result:
+`ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` now keeps open/filter/reveal state
+preparation, placement policy, close-focus policy, and dismiss request assembly while delegating
+anchored popup panel composition to
+`ecosystem/fret-ui-editor/src/controls/enum_select/overlay/panel.rs`. The private panel owner
+contains anchored props, popup panel chrome, search/list column layout, search test-id mounting,
+list viewport test-id derivation, and root list test-id mounting. Filter, list viewport, empty row,
+selected-row reveal, row rendering, and dismiss behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 editor ColorEdit popup body layout owner-split result:
 `ecosystem/fret-ui-editor/src/controls/color_edit/popup/body.rs` now keeps popup model reads,
 effective option resolution, and picker/numeric/swatches/eyedropper element creation while

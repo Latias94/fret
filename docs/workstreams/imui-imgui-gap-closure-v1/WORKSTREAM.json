@@ -1373,6 +1373,7 @@
     "ecosystem/fret-ui-editor/src/controls/enum_select/overlay/filter.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select/overlay/filter/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select/overlay/list.rs",
+    "ecosystem/fret-ui-editor/src/controls/enum_select/overlay/panel.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select/overlay/reveal.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select/overlay/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select/options.rs",

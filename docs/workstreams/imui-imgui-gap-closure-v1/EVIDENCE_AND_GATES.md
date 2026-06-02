@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Editor EnumSelect Overlay Panel Owner-Split Evidence - 2026-06-02
+
+Claim verified: editor `EnumSelect` overlay anchored panel composition moved out of
+`controls/enum_select/overlay.rs` into private `controls/enum_select/overlay/panel.rs` without
+changing popup placement, panel chrome, search field test-id routing, list viewport inputs,
+list/root test-id mounting, filter results, selected-row reveal inputs, dismiss behavior, or
+close-focus policy.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` keeps open/filter/reveal state
+  preparation, popup placement policy, close-focus policy, and dismiss request assembly.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay/panel.rs` owns anchored props, popup
+  panel chrome, search/list column layout, search test-id mounting, list viewport test-id
+  derivation, list viewport input assembly, and root list test-id mounting.
+- `ecosystem/fret-ui-editor/src/controls/enum_select/overlay/list.rs` remains the scroll/list
+  viewport owner, and `overlay/reveal.rs`, `overlay/filter.rs`, `overlay/empty.rs`, and
+  `row.rs` remain their existing policy owners.
+- `tools/gate_imui_workstream_source.py` tracks the request owner and panel owner separately, and
+  rejects `MiniSearchBox`, `AnchoredProps`, direct list viewport assembly, panel chrome, and
+  viewport test-id derivation from drifting back into the overlay request owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new panel owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo test -p fret-ui-editor --features imui enum_select --no-fail-fast`: pass, 10 tests.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor VecEdit Caller-Keying Owner-Split Evidence - 2026-06-02
 
 Claim verified: editor `VecEdit` caller-keyed routing moved out of

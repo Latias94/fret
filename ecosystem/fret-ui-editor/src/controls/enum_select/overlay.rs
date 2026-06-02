@@ -1,12 +1,8 @@
 use std::sync::{Arc, Mutex};
 
-use fret_core::{Axis, Corners, Edges, Px};
+use fret_core::{Edges, Px};
 use fret_runtime::Model;
 use fret_ui::action::ActionCx;
-use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    SizeStyle, SpacingLength,
-};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::scroll::ScrollHandle;
@@ -14,7 +10,6 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::primitives::{combobox as kit_combobox, popper};
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
-use crate::controls::MiniSearchBox;
 use crate::primitives::popup_list::{editor_popup_side_offset, editor_popup_window_margin};
 use crate::primitives::popup_surface::EditorPopupSurfaceChrome;
 use crate::primitives::{EditorDensity, EditorTokenKeys};
@@ -24,11 +19,11 @@ use super::{EnumSelectItem, EnumSelectOptions};
 mod empty;
 mod filter;
 mod list;
+mod panel;
 mod reveal;
 
 use filter::filter_enum_select_items;
-use list::{EnumSelectListViewportInput, enum_select_list_viewport};
-use reveal::enum_select_viewport_test_id;
+use panel::{EnumSelectOverlayPanelInput, enum_select_overlay_panel};
 
 #[cfg(test)]
 mod tests;
@@ -53,10 +48,6 @@ pub(super) fn request_overlay<H: UiHost>(
     let open_change_reason_for_list = open_change_reason.clone();
     let open_change_reason_for_dismiss = open_change_reason.clone();
     let list_test_id = options.list_test_id.clone();
-    let list_viewport_test_id = list_test_id
-        .as_ref()
-        .map(|test_id| enum_select_viewport_test_id(test_id.as_ref()));
-    let item_test_id_prefix = list_test_id.clone();
     let search_test_id = options.search_test_id.clone();
     let scroll_handle = cx.slot_state(ScrollHandle::default, |handle| handle.clone());
     let pending_selected_reveal = cx.local_model_keyed("pending_selected_reveal", || false);
@@ -118,106 +109,26 @@ pub(super) fn request_overlay<H: UiHost>(
     )
     .with_collision_padding(Edges::all(editor_popup_window_margin()));
 
-    let list = cx.anchored_props(
-        fret_ui::element::AnchoredProps {
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Auto,
-                    height: Length::Auto,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            outer_margin: Edges::all(Px(0.0)),
-            anchor_element: Some(trigger_id.0),
-            side: placement.side,
-            align: placement.align,
-            side_offset: placement.side_offset,
-            options: placement.options(),
-            ..Default::default()
-        },
-        move |cx| {
-            let filtered = filtered.clone();
-            let panel = cx.container(
-                ContainerProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Px(Px(260.0)),
-                            height: Length::Auto,
-                            ..Default::default()
-                        },
-                        overflow: Overflow::Clip,
-                        ..Default::default()
-                    },
-                    padding: Edges::all(Px(8.0)).into(),
-                    background: Some(popup_chrome.bg),
-                    border: Edges::all(Px(1.0)),
-                    border_color: Some(popup_chrome.border),
-                    corner_radii: Corners::all(popup_chrome.radius),
-                    shadow: popup_chrome.shadow,
-                    ..Default::default()
-                },
-                move |cx| {
-                    // `Container` does not imply vertical flow layout. Use an explicit column so
-                    // the search box and the list do not overlap.
-                    vec![cx.flex(
-                        FlexProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Auto,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            direction: Axis::Vertical,
-                            gap: SpacingLength::Px(Px(6.0)),
-                            padding: Edges::all(Px(0.0)).into(),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Stretch,
-                            wrap: false,
-                        },
-                        move |cx| {
-                            let mut out: Vec<AnyElement> = Vec::new();
-
-                            let mut search = MiniSearchBox::new(filter.clone()).into_element(cx);
-                            if let Some(test_id) = search_test_id.as_ref() {
-                                search = search.test_id(test_id.clone());
-                            }
-                            out.push(search);
-
-                            out.push(enum_select_list_viewport(
-                                cx,
-                                EnumSelectListViewportInput {
-                                    filtered: filtered.clone(),
-                                    max_height: max_h,
-                                    density,
-                                    list_viewport_test_id: list_viewport_test_id.clone(),
-                                    item_test_id_prefix: item_test_id_prefix.clone(),
-                                    model: model_for_list.clone(),
-                                    open: open_for_list.clone(),
-                                    query: query_for_list.clone(),
-                                    open_change_reason: open_change_reason_for_list.clone(),
-                                    scroll_handle: scroll_handle.clone(),
-                                    pending_selected_reveal: pending_selected_reveal.clone(),
-                                    should_reveal_selected,
-                                },
-                            ));
-                            out
-                        },
-                    )]
-                },
-            );
-
-            vec![panel]
+    let list = enum_select_overlay_panel(
+        cx,
+        EnumSelectOverlayPanelInput {
+            trigger_id,
+            placement,
+            popup_chrome,
+            filtered,
+            max_height: max_h,
+            density,
+            list_test_id,
+            search_test_id,
+            model: model_for_list,
+            open: open_for_list,
+            query: query_for_list,
+            open_change_reason: open_change_reason_for_list,
+            scroll_handle,
+            pending_selected_reveal,
+            should_reveal_selected,
         },
     );
-
-    let list = if let Some(test_id) = list_test_id.as_ref() {
-        list.test_id(test_id.clone())
-    } else {
-        list
-    };
 
     // For editor selects, we want menu-like outside press dismissal that does not "click through"
     // (outside press closes the overlay without activating the underlay), but we do not need

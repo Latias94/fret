@@ -199,6 +199,16 @@ Last updated: 2026-06-02
       scroll viewport, row collection, empty-state branch, selected-row capture, and reveal call.
       The source gate prevents scroll/list/reveal policy from drifting back into the overlay
       request owner.
+- [x] Split editor `EnumSelect` overlay anchored panel composition into a private child owner
+      without changing popup placement, panel chrome, search field test-id routing, list viewport
+      inputs, list/root test-id mounting, filter results, selected-row reveal inputs, dismiss
+      behavior, or close-focus policy.
+      Result: `controls/enum_select/overlay.rs` keeps open/filter/reveal state preparation,
+      placement policy, close-focus, and dismiss request assembly.
+      `controls/enum_select/overlay/panel.rs` owns anchored props, popup panel chrome, search/list
+      column layout, search test-id mounting, list viewport test-id derivation, and list/root
+      test-id mounting. The source gate prevents anchored panel/search/list composition from
+      drifting back into the overlay request owner.
 - [x] Split `fret-ui-kit::imui` debug-draw stroke visibility/path-style projection into a private
       child owner without changing `DebugDrawStrokeStyle` fields, builders, default values,
       invalid dash/miter guards, `is_visible(...)`, `path_style(...)`, or public debug-draw option
