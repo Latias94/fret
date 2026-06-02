@@ -70,6 +70,11 @@ fn material3_headless_autocomplete_suite_goldens_v1() {
 }
 
 #[test]
+fn material3_headless_exposed_dropdown_suite_goldens_v1() {
+    support::headless_golden_runners::exposed_dropdown::run_material3_headless_exposed_dropdown_suite_goldens_v1();
+}
+
+#[test]
 fn material3_headless_menu_dialog_style_suite_goldens_v1() {
     support::headless_golden_runners::menu_dialog_style::run_material3_headless_menu_dialog_style_suite_goldens_v1();
 }

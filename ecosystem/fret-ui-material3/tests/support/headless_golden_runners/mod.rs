@@ -5,6 +5,7 @@ pub(crate) mod carousel_item;
 pub(crate) mod controls;
 pub(crate) mod date_picker;
 pub(crate) mod divider;
+pub(crate) mod exposed_dropdown;
 pub(crate) mod fab;
 pub(crate) mod list;
 pub(crate) mod menu_dialog_style;

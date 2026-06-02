@@ -112,10 +112,9 @@
       "id": "exposed_dropdown",
       "source": "src/exposed_dropdown.rs",
       "token_visual_component": "exposed_dropdown",
-      "headless_golden_suites": [],
+      "headless_golden_suites": ["exposed_dropdown"],
       "behavior_tests": ["autocomplete_motion.rs", "automation_surface.rs", "material3_field_interactions.rs"],
-      "proof_status": "behavior_only",
-      "known_gap": "ExposedDropdown has motion, field interaction, and automation-surface coverage, but no fixture-driven headless golden suite for rendered recipe scene stability."
+      "proof_status": "headless_golden"
     },
     {
       "id": "fab",
