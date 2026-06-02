@@ -5241,6 +5241,12 @@ declarative root keeps grid/baseline axis painting, shared axis label formatting
 orchestration, event output publication, and plot state handling, so axis labels stay declarative
 and out of the optional IMUI adapter.
 
+Fret Plot declarative heatmap owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/heatmap.rs` now owns heatmap grid cell painting and default
+colorbar projection, including clipping, colormap sampling, gradient steps, and min/max labels. The
+declarative root keeps panel paint orchestration, event output publication, and plot state handling
+while `declarative/model.rs` keeps heatmap model projection for heatmap and histogram2d plot models.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,

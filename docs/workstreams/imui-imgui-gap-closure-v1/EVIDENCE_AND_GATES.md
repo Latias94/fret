@@ -3,6 +3,45 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Heatmap Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative heatmap grid cell painting and default colorbar projection
+moved out of `ecosystem/fret-plot/src/declarative.rs` into private
+`ecosystem/fret-plot/src/declarative/heatmap.rs` without changing heatmap clipping, value-to-color
+mapping, colorbar label formatting, histogram2d heatmap routing, public panel props, or optional
+IMUI adapter routing.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/heatmap.rs` owns the heatmap and colorbar paint owner,
+  including finite grid-cell projection, colormap sampling, colorbar panel painting, gradient steps,
+  and min/max text labels.
+- `ecosystem/fret-plot/src/declarative/model.rs` still owns heatmap model projection for heatmap
+  and histogram2d plot models; `declarative.rs` keeps panel paint orchestration and delegates only
+  heatmap presentation to the private owner.
+- `tools/gate_imui_workstream_source.py` tracks root, heatmap, axis label, readout, selection,
+  commands, legend, model, panels, and props owners separately and rejects heatmap paint bodies from
+  drifting back into the root paint/event owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new heatmap owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib heatmap_plot_panel_paints_grid_cells_as_declarative_quads --no-fail-fast`:
+  pass, 1 test.
+- `cargo test -p fret-plot --lib heatmap_plot_panel_paints_default_colorbar_on_declarative_path --no-fail-fast`:
+  pass, 1 test.
+- `cargo test -p fret-plot --lib histogram2d_plot_panel_paints_grid_cells_and_default_colorbar_on_declarative_path --no-fail-fast`:
+  pass, 1 test.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Axis Label Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative primary and right-axis tick label painting moved out of

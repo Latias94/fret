@@ -5984,6 +5984,14 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/axis_labels.rs` owns primary and right-axis
       label painting; `declarative.rs` keeps grid/baseline painting, shared axis label formatting,
       view-bounds orchestration, event output publication, and plot state handling.
+- [x] Split Fret Plot declarative heatmap and colorbar painting out of the retained-free
+      paint/event root without changing heatmap clipping, value-to-color mapping, colorbar label
+      formatting, histogram2d heatmap routing, public panel props, or optional IMUI adapter
+      routing.
+      Result: `ecosystem/fret-plot/src/declarative/heatmap.rs` owns heatmap grid cell painting and
+      default colorbar projection; `declarative/model.rs` keeps heatmap model projection and
+      `declarative.rs` keeps panel paint orchestration, event output publication, and plot state
+      handling.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll

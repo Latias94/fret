@@ -382,6 +382,36 @@ Fresh gates:
 - `python tools\check_workstream_catalog.py` - passed.
 - `git diff --check` - passed.
 
+## Fret Plot declarative heatmap owner split - 2026-06-02
+
+This refresh keeps the optional IMUI plot adapter declarative-only while moving heatmap painting out
+of the retained-free paint/event root:
+
+- `ecosystem/fret-plot/src/declarative/heatmap.rs` now owns the heatmap and colorbar paint owner,
+  including grid cell painting and default colorbar projection, colormap sampling, gradient steps,
+  and min/max text labels.
+- Heatmap model projection stays in `declarative/model.rs`; `ecosystem/fret-plot/src/declarative.rs`
+  imports heatmap paint entrypoints while panel paint orchestration, event output publication, and
+  plot state handling stay in the root.
+- The heatmap owner does not own `PlotState`, pointer event handling, output publication,
+  `UiHost`, `fret-authoring`, retained plot bridges, or optional IMUI adapter policy.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed with existing dead-code warnings in
+  `plot/view.rs`.
+- `cargo test -p fret-plot --lib heatmap_plot_panel_paints_grid_cells_as_declarative_quads --no-fail-fast` -
+  passed, 1 test.
+- `cargo test -p fret-plot --lib heatmap_plot_panel_paints_default_colorbar_on_declarative_path --no-fail-fast` -
+  passed, 1 test.
+- `cargo test -p fret-plot --lib histogram2d_plot_panel_paints_grid_cells_and_default_colorbar_on_declarative_path --no-fail-fast` -
+  passed, 1 test.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative axis label owner split - 2026-06-02
 
 This refresh keeps the optional IMUI plot adapter declarative-only while moving axis label painting
