@@ -162,5 +162,7 @@ clippy` for `fret-ui-material3`.
   is expanded; that should be a separate mechanism/a11y lane.
 - Gallery teaching-surface coverage is text-gated, not a visual proof. It prevents missing
   copyable examples and page wiring, but does not replace diagnostics screenshots or layout bundles.
+  The compact State Matrix surfaces now have a focused layout/screenshot script; broader teaching
+  surfaces still need visual diagnostics only when the component risk justifies it.
 - Rustdoc and README API guidance are now text/API-manifest gated, but the snippets remain
   illustrative `ignore` examples rather than executable doctests.

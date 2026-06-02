@@ -12,6 +12,9 @@ const MATERIAL3_RECIPE_PROOF_MANIFEST_V1: &str = include_str!(concat!(
 ));
 const MATERIAL3_TEACHING_SURFACE_MANIFEST_V1: &str =
     include_str!("fixtures/material3_teaching_surface_manifest_v1.json");
+const MATERIAL3_STATE_MATRIX_COMPACT_VISUALS_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-state-matrix-compact-visuals.json"
+);
 const MATERIAL3_SNIPPET_MOD: &str = include_str!("../src/ui/snippets/material3/mod.rs");
 const GALLERY_SPEC: &str = include_str!("../src/spec.rs");
 const GALLERY_CONTENT: &str = include_str!("../src/ui/content.rs");
@@ -74,6 +77,69 @@ fn material3_teaching_surface_manifest_tracks_recipe_proof_manifest_v1() {
     }
 }
 
+#[test]
+fn material3_state_matrix_compact_visuals_diag_covers_text_gated_surfaces() {
+    let script = parse_json(MATERIAL3_STATE_MATRIX_COMPACT_VISUALS_DIAG);
+
+    assert_eq!(script["schema_version"], 2);
+    assert_array_contains(
+        &script["meta"]["required_capabilities"],
+        "diag.screenshot_png",
+        "state matrix compact visuals diag capabilities",
+    );
+    assert_array_contains(
+        &script["meta"]["required_launch_features"],
+        "gallery-material3",
+        "state matrix compact visuals launch features",
+    );
+    assert_eq!(
+        script["meta"]["env_defaults"]["FRET_UI_GALLERY_START_PAGE"],
+        "material3_state_matrix"
+    );
+
+    let steps = script["steps"]
+        .as_array()
+        .expect("diag script steps must be an array");
+    assert!(
+        steps
+            .iter()
+            .any(|step| step["type"] == "capture_layout_sidecar"),
+        "state matrix compact visuals diag should capture layout sidecars"
+    );
+    assert!(
+        steps
+            .iter()
+            .any(|step| step["type"] == "capture_screenshot"),
+        "state matrix compact visuals diag should capture screenshots"
+    );
+    assert!(
+        steps.iter().any(|step| step["type"] == "capture_bundle"),
+        "state matrix compact visuals diag should capture a bundle"
+    );
+
+    for needle in [
+        "ui-gallery-material3-carousel-item-standard",
+        "ui-gallery-material3-carousel-item-outlined",
+        "ui-gallery-material3-carousel-item-disabled",
+        "ui-gallery-material3-divider-horizontal",
+        "ui-gallery-material3-divider-vertical",
+        "ui-gallery-material3-linear-progress",
+        "ui-gallery-material3-linear-progress-indeterminate",
+        "ui-gallery-material3-circular-progress-four-color",
+        "ui-gallery-material3-search-bar",
+        "ui-gallery-material3-state-matrix-carousel-items.layout",
+        "ui-gallery-material3-state-matrix-dividers.layout",
+        "ui-gallery-material3-state-matrix-progress-indicators.layout",
+        "ui-gallery-material3-state-matrix-search-bar.layout",
+        "ui-gallery-material3-state-matrix-compact-visuals",
+    ] {
+        assert!(
+            MATERIAL3_STATE_MATRIX_COMPACT_VISUALS_DIAG.contains(needle),
+            "state matrix compact visuals diag should cover `{needle}`"
+        );
+    }
+}
+
 fn parse_json(source: &str) -> Value {
     serde_json::from_str(source).expect("manifest json must parse")
 }
@@ -109,6 +175,16 @@ fn string_array_field<'a>(entry: &'a Value, field: &str) -> Vec<&'a str> {
                 .unwrap_or_else(|| panic!("manifest field `{field}` must contain strings"))
         })
         .collect()
+}
+
+fn assert_array_contains(value: &Value, expected: &str, label: &str) {
+    let values = value
+        .as_array()
+        .unwrap_or_else(|| panic!("{label} must be an array"));
+    assert!(
+        values.iter().any(|value| value.as_str() == Some(expected)),
+        "{label} should contain `{expected}`"
+    );
 }
 
 fn assert_sorted_unique(entries: &[Value], label: &str) {

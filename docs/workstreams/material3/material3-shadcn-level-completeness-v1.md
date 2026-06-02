@@ -288,12 +288,24 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     copyable `new_controllable` / `uncontrolled` / `*_model()` paths.
   - Gates:
     `cargo test -p fret-ui-material3 --test material3_api_doc_surface_manifest -- --nocapture`.
+- 2026-06-02 State Matrix compact visual evidence:
+  - `ui-gallery-material3-state-matrix-compact-visuals.json` now captures layout sidecars and
+    screenshots for the compact Material3 State Matrix teaching surfaces that do not yet have
+    dedicated pages: `CarouselItem`, `Divider`, `LinearProgressIndicator`,
+    `CircularProgressIndicator`, and standalone `SearchBar`.
+  - The app-side teaching-surface gate now verifies this script keeps the `gallery-material3`
+    launch feature, starts on `material3_state_matrix`, and covers the expected stable `test_id`
+    anchors plus layout/screenshot/bundle capture steps.
+  - Gates:
+    `cargo test -p fret-ui-gallery --features gallery-material3 --test material3_teaching_surface_manifest -- material3_state_matrix_compact_visuals_diag_covers_text_gated_surfaces --nocapture`.
+  - Evidence run:
+    `target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\material3\ui-gallery-material3-state-matrix-compact-visuals.json --dir target\fret-diag-material3-state-matrix-compact-visuals-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3 --bin fret-ui-gallery`.
+    The run reached `stage: passed` and produced four screenshots plus layout sidecars for carousel,
+    divider, progress, and search-bar sections.
 
 ## Next Recommended Focus
 
 1. Split ChipSet `Toolbar` semantics into a separate mechanism/a11y follow-up if the core semantics
    vocabulary is expanded.
-2. Add diagnostics screenshots or layout bundles for the compact State Matrix examples if visual
-   teaching-surface parity becomes product-critical.
-3. Add Tabs presence motion, submenu pointer-corridor diagnostics, or mobile IME/inset proof only
+2. Add Tabs presence motion, submenu pointer-corridor diagnostics, or mobile IME/inset proof only
    after concrete product gates prove those conditional risks matter.
