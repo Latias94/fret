@@ -1598,7 +1598,7 @@ fn material_menu_item<H: UiHost>(
                         style.item_icon_color.as_ref(),
                         states,
                         |color| color.resolve(theme),
-                        || menu_tokens::item_icon_color(theme, enabled),
+                        || menu_tokens::item_icon_color(theme, enabled, interaction),
                     );
                     let supporting_text_color = resolve_override_slot_with(
                         style.item_supporting_text_color.as_ref(),

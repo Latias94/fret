@@ -1762,6 +1762,10 @@ fn actual_menu_color(
         "container_shadow_color" => menu::container_shadow_color(theme),
         "divider_color" => menu::divider_color(theme),
         "item_label_color" | "label_color" => label,
+        "item_icon_color" => menu::item_icon_color(theme, enabled, interaction),
+        "item_supporting_text_color" => menu::item_supporting_text_color(theme, enabled),
+        "item_trailing_text_color" => menu::item_trailing_text_color(theme, enabled),
+        "section_label_color" => menu::section_label_color(theme),
         "state_layer_color" => state_layer,
         other => panic!("unsupported menu color role {other}"),
     }
@@ -1770,10 +1774,14 @@ fn actual_menu_color(
 fn actual_menu_metric(theme: &Theme, role: &str) -> Px {
     match role {
         "item_height" => menu::list_item_height(theme),
+        "item_two_line_height" => menu::list_item_two_line_height(theme),
         "item_min_width" => menu::item_min_width(theme),
         "item_max_width" => menu::item_max_width(theme),
         "container_vertical_padding" => menu::container_vertical_padding(theme),
         "item_horizontal_padding" => menu::item_horizontal_padding(theme),
+        "item_slot_gap" => menu::item_slot_gap(theme),
+        "item_icon_size" => menu::item_icon_size(theme),
+        "section_label_height" => menu::section_label_height(theme),
         "container_elevation" => menu::container_elevation(theme),
         "divider_height" => menu::divider_height(theme),
         other => panic!("unsupported menu metric role {other}"),
@@ -1812,6 +1820,9 @@ fn actual_menu_corners(theme: &Theme, role: &str) -> Corners {
 fn actual_menu_text_style(theme: &Theme, role: &str) -> TextStyle {
     match role {
         "item_label_text_style" | "label_text_style" => menu::item_label_text_style(theme),
+        "item_supporting_text_style" => menu::item_supporting_text_style(theme),
+        "item_trailing_text_style" => menu::item_trailing_text_style(theme),
+        "section_label_text_style" => menu::section_label_text_style(theme),
         other => panic!("unsupported menu text style role {other}"),
     }
 }

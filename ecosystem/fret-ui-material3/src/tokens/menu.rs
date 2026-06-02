@@ -239,8 +239,12 @@ pub(crate) fn item_outcomes(
     let mut opacity = tokens.number_optional(Some(opacity_key), 0.0);
 
     if !enabled {
-        let label_opacity = tokens.number_optional(
-            Some("md.comp.menu.list-item.disabled.label-text.opacity"),
+        label = tokens.color_comp_or_fallback(
+            "md.comp.menu.list-item.disabled.label-text.color",
+            defaults.content_color,
+        );
+        let label_opacity = tokens.number_chain(
+            &["md.comp.menu.list-item.disabled.label-text.opacity"],
             defaults.disabled_opacity,
         );
         label = alpha_mul(label, label_opacity);
@@ -250,16 +254,61 @@ pub(crate) fn item_outcomes(
     (label, state_layer, opacity)
 }
 
-pub(crate) fn item_icon_color(theme: &Theme, enabled: bool) -> Color {
-    item_content_color(
-        theme,
-        enabled,
+pub(crate) fn item_icon_color(
+    theme: &Theme,
+    enabled: bool,
+    interaction: MenuItemInteraction,
+) -> Color {
+    let comp_keys: &[&str] = if !enabled {
         &[
+            "md.comp.menu.list-item.with-leading-icon.disabled.leading-icon.color",
+            "md.comp.menu.list-item.with-trailing-icon.disabled.trailing-icon.color",
             "md.comp.menu.list-item.leading-icon.color",
             "md.comp.menu.list-item.trailing-icon.color",
             "md.comp.menu.list-item.icon.color",
+        ]
+    } else {
+        match interaction {
+            MenuItemInteraction::Pressed => &[
+                "md.comp.menu.list-item.with-leading-icon.pressed.icon.color",
+                "md.comp.menu.list-item.with-trailing-icon.pressed.icon.color",
+                "md.comp.menu.list-item.leading-icon.color",
+                "md.comp.menu.list-item.trailing-icon.color",
+                "md.comp.menu.list-item.icon.color",
+            ],
+            MenuItemInteraction::Focused => &[
+                "md.comp.menu.list-item.with-leading-icon.focus.icon.color",
+                "md.comp.menu.list-item.with-trailing-icon.focus.icon.color",
+                "md.comp.menu.list-item.leading-icon.color",
+                "md.comp.menu.list-item.trailing-icon.color",
+                "md.comp.menu.list-item.icon.color",
+            ],
+            MenuItemInteraction::Hovered => &[
+                "md.comp.menu.list-item.with-leading-icon.hover.icon.color",
+                "md.comp.menu.list-item.with-trailing-icon.hover.icon.color",
+                "md.comp.menu.list-item.leading-icon.color",
+                "md.comp.menu.list-item.trailing-icon.color",
+                "md.comp.menu.list-item.icon.color",
+            ],
+            MenuItemInteraction::Default => &[
+                "md.comp.menu.list-item.with-leading-icon.leading-icon.color",
+                "md.comp.menu.list-item.with-trailing-icon.trailing-icon.color",
+                "md.comp.menu.list-item.leading-icon.color",
+                "md.comp.menu.list-item.trailing-icon.color",
+                "md.comp.menu.list-item.icon.color",
+            ],
+        }
+    };
+
+    item_content_color(
+        theme,
+        enabled,
+        comp_keys,
+        &[
+            "md.comp.menu.list-item.with-leading-icon.disabled.leading-icon.opacity",
+            "md.comp.menu.list-item.with-trailing-icon.disabled.trailing-icon.opacity",
+            "md.comp.menu.list-item.disabled.leading-icon.opacity",
         ],
-        "md.comp.menu.list-item.disabled.leading-icon.opacity",
     )
 }
 
@@ -268,7 +317,7 @@ pub(crate) fn item_supporting_text_color(theme: &Theme, enabled: bool) -> Color 
         theme,
         enabled,
         &["md.comp.menu.list-item.supporting-text.color"],
-        "md.comp.menu.list-item.disabled.supporting-text.opacity",
+        &["md.comp.menu.list-item.disabled.supporting-text.opacity"],
     )
 }
 
@@ -280,7 +329,7 @@ pub(crate) fn item_trailing_text_color(theme: &Theme, enabled: bool) -> Color {
             "md.comp.menu.list-item.trailing-text.color",
             "md.comp.menu.list-item.shortcut.color",
         ],
-        "md.comp.menu.list-item.disabled.trailing-text.opacity",
+        &["md.comp.menu.list-item.disabled.trailing-text.opacity"],
     )
 }
 
@@ -298,13 +347,13 @@ fn item_content_color(
     theme: &Theme,
     enabled: bool,
     comp_keys: &[&str],
-    disabled_opacity_key: &str,
+    disabled_opacity_keys: &[&str],
 ) -> Color {
     let defaults = MaterialContentDefaults::on_surface(theme);
     let tokens = MaterialTokenResolver::new(theme);
     let mut color = tokens.color_comp_chain_or_sys(comp_keys, "md.sys.color.on-surface-variant");
     if !enabled {
-        let opacity = tokens.number_optional(Some(disabled_opacity_key), defaults.disabled_opacity);
+        let opacity = tokens.number_chain(disabled_opacity_keys, defaults.disabled_opacity);
         color = alpha_mul(color, opacity);
     }
     color
@@ -346,6 +395,56 @@ mod tests {
         assert_eq!(item_slot_gap(&theme), Px(16.0));
         assert_eq!(item_icon_size(&theme), Px(28.0));
         assert_eq!(container_shape(&theme), Corners::all(Px(6.0)));
+    }
+
+    #[test]
+    fn menu_disabled_label_prefers_disabled_color_and_opacity() {
+        let mut patch = ThemeConfig::default();
+        patch.colors.insert(
+            "md.comp.menu.list-item.label-text.color".to_string(),
+            "#ff0000".to_string(),
+        );
+        patch.colors.insert(
+            "md.comp.menu.list-item.disabled.label-text.color".to_string(),
+            "#0000ff".to_string(),
+        );
+        patch.numbers.insert(
+            "md.comp.menu.list-item.disabled.label-text.opacity".to_string(),
+            0.5,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        let (label, _, state_opacity) = item_outcomes(&theme, false, MenuItemInteraction::Default);
+        let expected = alpha_mul(
+            theme
+                .color_by_key("md.comp.menu.list-item.disabled.label-text.color")
+                .expect("patched disabled label color"),
+            0.5,
+        );
+
+        assert_eq!(label, expected);
+        assert_eq!(state_opacity, 0.0);
+    }
+
+    #[test]
+    fn menu_icon_color_prefers_material_web_interaction_keys() {
+        let mut patch = ThemeConfig::default();
+        patch.colors.insert(
+            "md.comp.menu.list-item.icon.color".to_string(),
+            "#ff0000".to_string(),
+        );
+        patch.colors.insert(
+            "md.comp.menu.list-item.with-leading-icon.pressed.icon.color".to_string(),
+            "#00aa00".to_string(),
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            item_icon_color(&theme, true, MenuItemInteraction::Pressed),
+            theme
+                .color_by_key("md.comp.menu.list-item.with-leading-icon.pressed.icon.color")
+                .expect("patched pressed icon color")
+        );
     }
 
     #[test]

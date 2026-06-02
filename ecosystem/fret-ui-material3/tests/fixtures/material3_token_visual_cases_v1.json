@@ -1007,6 +1007,39 @@
       ]
     },
     {
+      "id": "menu-disabled-light",
+      "component": "menu",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "plain", "enabled": false, "interaction": "none" },
+      "assertions": [
+        { "role": "item_label_color", "kind": "color_alpha", "color_token": "md.comp.menu.list-item.disabled.label-text.color", "opacity_token": "md.comp.menu.list-item.disabled.label-text.opacity" },
+        { "role": "item_icon_color", "kind": "color_alpha", "color_token": "md.comp.menu.list-item.with-leading-icon.disabled.leading-icon.color", "opacity_token": "md.comp.menu.list-item.with-leading-icon.disabled.leading-icon.opacity" },
+        { "role": "state_layer_opacity", "kind": "number_literal", "value": 0.0 }
+      ]
+    },
+    {
+      "id": "menu-supporting-light",
+      "component": "menu",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "supporting", "enabled": true, "interaction": "none" },
+      "assertions": [
+        { "role": "item_min_width", "kind": "metric", "token": "md.comp.menu.list-item.container.min-width" },
+        { "role": "item_max_width", "kind": "metric", "token": "md.comp.menu.list-item.container.max-width" },
+        { "role": "item_two_line_height", "kind": "metric", "token": "md.comp.menu.list-item.supporting-text.container.height" },
+        { "role": "container_vertical_padding", "kind": "metric", "token": "md.comp.menu.container.vertical-padding" },
+        { "role": "item_horizontal_padding", "kind": "metric", "token": "md.comp.menu.list-item.content.horizontal-padding" },
+        { "role": "item_slot_gap", "kind": "metric", "token": "md.comp.menu.list-item.content.gap" },
+        { "role": "item_icon_size", "kind": "metric", "token": "md.comp.menu.list-item.icon.size" },
+        { "role": "section_label_height", "kind": "metric", "token": "md.comp.menu.section-label.container.height" },
+        { "role": "item_supporting_text_color", "kind": "color", "token": "md.comp.menu.list-item.supporting-text.color" },
+        { "role": "item_trailing_text_color", "kind": "color", "token": "md.comp.menu.list-item.trailing-text.color" },
+        { "role": "section_label_color", "kind": "color", "token": "md.comp.menu.section-label.label-text.color" },
+        { "role": "item_supporting_text_style", "kind": "text_style_weight_source", "source_token": "md.comp.menu.list-item.supporting-text", "token": "md.comp.menu.list-item.supporting-text.weight" },
+        { "role": "item_trailing_text_style", "kind": "text_style_weight_source", "source_token": "md.comp.menu.list-item.trailing-text", "token": "md.comp.menu.list-item.trailing-text.weight" },
+        { "role": "section_label_text_style", "kind": "text_style_weight_source", "source_token": "md.comp.menu.section-label.label-text", "token": "md.comp.menu.section-label.label-text.weight" }
+      ]
+    },
+    {
       "id": "dropdown-menu-hovered-light",
       "component": "dropdown_menu",
       "scheme": { "mode": "light", "variant": "tonal_spot" },

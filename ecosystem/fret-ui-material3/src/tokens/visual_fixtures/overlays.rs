@@ -34,6 +34,12 @@ pub(super) fn run_menu_case(case: &Case, theme: &Theme) {
                 actual_menu_number(theme, enabled, interaction, &assertion.role),
                 token_number(theme, require_token(assertion, "token")),
             ),
+            "number_literal" => assert_number_close(
+                &case.id,
+                &assertion.role,
+                actual_menu_number(theme, enabled, interaction, &assertion.role),
+                require_value(assertion),
+            ),
             "corners_metric" => assert_corners_eq(
                 &case.id,
                 &assertion.role,
