@@ -1883,6 +1883,7 @@
     "ecosystem/fret-plot/src/declarative/interaction.rs",
     "ecosystem/fret-plot/src/declarative/interaction/draggable.rs",
     "ecosystem/fret-plot/src/declarative/interaction/pan.rs",
+    "ecosystem/fret-plot/src/declarative/interaction/query.rs",
     "ecosystem/fret-plot/src/declarative/interaction/wheel.rs",
     "ecosystem/fret-plot/src/declarative/legend.rs",
     "ecosystem/fret-plot/src/declarative/model.rs",
