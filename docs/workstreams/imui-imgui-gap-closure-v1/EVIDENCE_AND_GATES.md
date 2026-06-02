@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Editor Chrome Input Resolver Owner-Split Evidence - 2026-06-02
+
+Claim verified: editor chrome text-field input token resolution moved out of `primitives/chrome.rs`
+into a private input child owner without changing editor-token precedence, legacy component-token
+fallback, `ChromeRefinement` overrides, non-negative padding/size clamping, TextInput/TextArea style
+assembly, joined input/textarea helpers, or caller import paths for public chrome helpers.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/primitives/chrome.rs` keeps frame/style assembly, joined
+  TextInput/TextArea style helpers, text-style intent selection, and surface sanitizer routing.
+- `ecosystem/fret-ui-editor/src/primitives/chrome/input.rs` owns `ResolvedInputChrome`
+  construction, editor/legacy token lookup, `ChromeRefinement` fallback, and normalized
+  padding/metric projection.
+- `ecosystem/fret-ui-editor/src/primitives/chrome/surface.rs` remains the surface opacity/sanitizer
+  owner.
+- `tools/gate_imui_workstream_source.py` tracks input, surface, and style assembly owners
+  separately and rejects token fallback policy from drifting back into the root chrome owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new input owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo test -p fret-ui-editor --no-fail-fast chrome`: pass, 25 unit tests plus 1 integration
+  filtered test.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor InspectorPanel Header Owner-Split Evidence - 2026-06-02
 
 Claim verified: editor `InspectorPanel` header/title/toolbar/search slot assembly moved out of

@@ -1156,6 +1156,7 @@
     "ecosystem/fret-ui-editor/src/theme/patches/dense.rs",
     "ecosystem/fret-ui-editor/src/theme/tests.rs",
     "ecosystem/fret-ui-editor/src/primitives/chrome.rs",
+    "ecosystem/fret-ui-editor/src/primitives/chrome/input.rs",
     "ecosystem/fret-ui-editor/src/primitives/chrome/surface.rs",
     "ecosystem/fret-ui-editor/src/primitives/chrome/tests.rs",
     "ecosystem/fret-ui-editor/src/primitives/colors.rs",

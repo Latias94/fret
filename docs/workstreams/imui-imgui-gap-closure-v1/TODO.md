@@ -58,6 +58,16 @@ Last updated: 2026-06-02
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor chrome text-field input token resolution out of
+      `ecosystem/fret-ui-editor/src/primitives/chrome.rs` into a private input child owner without
+      changing editor-token precedence, legacy component-token fallback, `ChromeRefinement`
+      overrides, non-negative padding/size clamping, TextInput/TextArea style assembly, or joined
+      input/textarea style helpers.
+      Result: `primitives/chrome.rs` keeps frame/style assembly, joined-style helpers, and surface
+      sanitization routing. `primitives/chrome/input.rs` owns `ResolvedInputChrome` construction,
+      editor/legacy token lookup, refinement fallback, and normalized padding/metric projection.
+      The source gate prevents token fallback policy from drifting back into the style assembly
+      owner.
 - [x] Split editor `InspectorPanel` header/title/toolbar/search slot assembly out of
       `ecosystem/fret-ui-editor/src/composites/inspector_panel/element.rs` into a private header
       child owner without changing title readout text-role behavior, toolbar test-id routing, search
