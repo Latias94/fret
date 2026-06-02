@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Readout Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative cursor and linked-cursor readout painting moved out of
+`ecosystem/fret-plot/src/declarative.rs` into private
+`ecosystem/fret-plot/src/declarative/readout.rs` without changing crosshair painting, overlay
+placement, readout text construction, series row projection, pinned-series filtering, linked cursor
+readout policy, axis label formatting, public panel props, or optional IMUI adapter routing.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/readout.rs` owns cursor and linked-cursor readout paint,
+  series row projection and pinned-series filtering.
+- `ecosystem/fret-plot/src/declarative.rs` keeps shared axis label formatting, event output
+  publication, and plot state handling while delegating readout paint to the private owner.
+- `tools/gate_imui_workstream_source.py` tracks root, readout, selection, commands, legend, model,
+  panels, and props owners separately and rejects readout paint/row projection bodies from
+  drifting back into the root paint/event owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new readout owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib imui_adapter_stays_opt_in_and_declarative_only --no-fail-fast`:
+  pass, 1 test.
+- `cargo test -p fret-plot --lib line_chart_builder_stays_model_only_on_default_surface --no-fail-fast`:
+  pass, 1 test.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Selection Overlay Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative selection overlay paint and tooltip geometry moved out of

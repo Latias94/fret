@@ -382,6 +382,32 @@ Fresh gates:
 - `python tools\check_workstream_catalog.py` - passed.
 - `git diff --check` - passed.
 
+## Fret Plot declarative readout owner split - 2026-06-02
+
+This refresh keeps the optional IMUI plot adapter declarative-only while moving cursor readout
+painting and series row projection out of the retained-free paint/event root:
+
+- `ecosystem/fret-plot/src/declarative/readout.rs` now owns the cursor and linked-cursor readout paint owner,
+  including crosshair painting, overlay placement, text construction, and series row projection and pinned-series filtering.
+- `ecosystem/fret-plot/src/declarative.rs` imports readout paint entrypoints while axis label formatting stays shared in `declarative.rs`
+  for annotations, axes, tags, selection, and readout.
+- The readout owner does not own `PlotState`, pointer event handling, output publication,
+  `UiHost`, `fret-authoring`, retained plot bridges, or optional IMUI adapter policy.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed with existing dead-code warnings in
+  `plot/view.rs`.
+- `cargo test -p fret-plot --lib imui_adapter_stays_opt_in_and_declarative_only --no-fail-fast` -
+  passed, 1 test.
+- `cargo test -p fret-plot --lib line_chart_builder_stays_model_only_on_default_surface --no-fail-fast` -
+  passed, 1 test.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## DevTools Demo/Metrics/Debug line projection owner split - 2026-06-02
 
 This refresh keeps the Dear ImGui-style Demo/Metrics/Debug route productized in DevTools while

@@ -5969,6 +5969,14 @@ opening the slice.
       drag/session mutation, public panel props, or optional IMUI adapter routing.
       Result: `ecosystem/fret-plot/src/declarative/selection.rs` owns selection overlay paint and
       tooltip placement; `declarative.rs` keeps drag/session mutation and pointer event handling.
+- [x] Split Fret Plot declarative cursor readout painting and row projection out of the
+      retained-free paint/event root without changing crosshair painting, overlay placement,
+      readout text construction, series row projection, pinned-series filtering, linked cursor
+      readout policy, shared axis label formatting, public panel props, or optional IMUI adapter
+      routing.
+      Result: `ecosystem/fret-plot/src/declarative/readout.rs` owns cursor/linked-cursor readout
+      paint plus row projection; `declarative.rs` keeps shared axis label formatting, event output
+      publication, and plot state handling.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll

@@ -1878,6 +1878,7 @@
     "ecosystem/fret-plot/src/declarative/commands.rs",
     "ecosystem/fret-plot/src/declarative/legend.rs",
     "ecosystem/fret-plot/src/declarative/model.rs",
+    "ecosystem/fret-plot/src/declarative/readout.rs",
     "ecosystem/fret-plot/src/declarative/selection.rs",
     "ecosystem/fret-docking/src/dock/declarative.rs",
     "ecosystem/fret-docking/src/dock/declarative/drag_preview.rs",

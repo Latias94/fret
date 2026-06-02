@@ -5228,6 +5228,12 @@ painting and tooltip placement/text. The declarative root keeps drag/session mut
 event handling, so selection interaction policy stays out of the paint/tooltip owner and the
 optional IMUI adapter.
 
+Fret Plot declarative readout owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/readout.rs` now owns cursor and linked-cursor readout painting,
+overlay placement, series row projection, and pinned-series filtering. The declarative root keeps
+shared axis label formatting, event output publication, and plot state handling, so readout
+presentation stays declarative and out of the optional IMUI adapter.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,
