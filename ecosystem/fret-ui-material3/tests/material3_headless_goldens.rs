@@ -19,6 +19,7 @@ use support::goldens::{
     write_or_assert_material3_suite_v1,
 };
 use support::headless_autocomplete_cases::load_material3_autocomplete_golden_suite_v1;
+use support::headless_search_cases::load_material3_search_golden_suite_v1;
 use support::headless_snackbar_cases::load_material3_snackbar_golden_suite_v1;
 use support::host::{FakeUiServices, TestHost};
 use support::layout::with_padding;
@@ -5042,6 +5043,7 @@ fn material3_headless_search_bar_suite_goldens_v1() {
             "light.expressive",
         ),
     ];
+    let search_suite = load_material3_search_golden_suite_v1();
 
     for scale_factor in [1.0, 1.25, 2.0] {
         let scale = scale_segment(scale_factor);
@@ -5049,12 +5051,8 @@ fn material3_headless_search_bar_suite_goldens_v1() {
         for (mode, variant, label) in schemes {
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
 
-            for (case_name, hover, pressed, focus_visible) in [
-                ("idle", false, false, false),
-                ("hover", true, false, false),
-                ("pressed", true, true, false),
-                ("focus_visible", false, false, true),
-            ] {
+            for case in search_suite.search_bar_cases() {
+                let case_name = case.id();
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -5125,22 +5123,20 @@ fn material3_headless_search_bar_suite_goldens_v1() {
                     );
                 }
 
-                if hover {
+                if case.hover() {
                     ui.dispatch_event(&mut app, &mut services, &pointer_move(PointerId(1), center));
                 }
 
-                if pressed {
+                if case.pressed() {
                     ui.dispatch_event(&mut app, &mut services, &pointer_down(PointerId(1), center));
                 }
 
-                if focus_visible {
+                if case.focus_visible() {
                     ui.set_focus(Some(node_id));
                     ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
                     ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
                 }
 
-                let settle_from = if pressed { 48 } else { 28 };
-                let total_frames = if pressed { 96 } else { 64 };
                 let message = format!(
                     "expected the Material3 search bar scene to be stable ({label}, {scale}, {case_name})"
                 );
@@ -5150,18 +5146,19 @@ fn material3_headless_search_bar_suite_goldens_v1() {
                     &mut services,
                     bounds,
                     scale_factor,
-                    settle_from,
-                    total_frames,
+                    case.settle_from_frame(),
+                    case.total_frames(),
                     &message,
                     &render,
                 );
 
-                cases.insert(case_name.to_string(), snapshot);
+                cases.insert(case.id().to_string(), snapshot);
             }
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-search-bar.{scale}.{label}"),
+                "material3_headless_search_bar_suite_goldens_v1",
                 &suite,
             );
         }
@@ -5171,7 +5168,7 @@ fn material3_headless_search_bar_suite_goldens_v1() {
 #[test]
 fn material3_headless_search_view_suite_goldens_v1() {
     use fret_ui::element::FlexProps;
-    use fret_ui_material3::{SearchView, SearchViewPresentation};
+    use fret_ui_material3::SearchView;
 
     let schemes = [
         (
@@ -5195,6 +5192,8 @@ fn material3_headless_search_view_suite_goldens_v1() {
             "light.expressive",
         ),
     ];
+    let search_suite = load_material3_search_golden_suite_v1();
+    let search_view_results = search_suite.search_view_results();
 
     for scale_factor in [1.0, 1.25, 2.0] {
         let scale = scale_segment(scale_factor);
@@ -5202,11 +5201,8 @@ fn material3_headless_search_view_suite_goldens_v1() {
         for (mode, variant, label) in schemes {
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
 
-            for (case_name, open, presentation) in [
-                ("closed", false, SearchViewPresentation::Docked),
-                ("open", true, SearchViewPresentation::Docked),
-                ("full_screen_open", true, SearchViewPresentation::FullScreen),
-            ] {
+            for case in search_suite.search_view_cases() {
+                let case_name = case.id();
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -5221,12 +5217,15 @@ fn material3_headless_search_view_suite_goldens_v1() {
                     Size::new(Px(720.0), Px(520.0)),
                 );
 
-                let open_model = app.models_mut().insert(open);
+                let open_model = app.models_mut().insert(case.open());
                 let query = app.models_mut().insert(String::new());
+                let presentation = case.presentation();
+                let results = search_view_results.clone();
 
                 let render = move |ui: &mut UiTree<TestHost>,
                                    app: &mut TestHost,
                                    services: &mut dyn UiServices| {
+                    let results = results.clone();
                     fret_ui::declarative::render_root(
                         ui,
                         app,
@@ -5240,12 +5239,10 @@ fn material3_headless_search_view_suite_goldens_v1() {
                                 props.direction = fret_core::Axis::Vertical;
                                 props.gap = fret_ui::element::SpacingLength::Px(Px(8.0));
                                 cx.flex(props, |cx| {
-                                    vec![
-                                        cx.text("Alpha"),
-                                        cx.text("Bravo"),
-                                        cx.text("Charlie"),
-                                        cx.text("Delta"),
-                                    ]
+                                    results
+                                        .iter()
+                                        .map(|label| cx.text(label.clone()))
+                                        .collect::<Vec<_>>()
                                 })
                             });
 
@@ -5278,7 +5275,7 @@ fn material3_headless_search_view_suite_goldens_v1() {
                     "expected the Material3 search view overlay scene to be stable ({label}, {scale}, {case_name})"
                 );
                 cases.insert(
-                    case_name.to_string(),
+                    case.id().to_string(),
                     settle_material3_overlay_scene_snapshot_v1(
                         &mut app,
                         &mut ui,
@@ -5295,8 +5292,9 @@ fn material3_headless_search_view_suite_goldens_v1() {
             }
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-search-view.{scale}.{label}"),
+                "material3_headless_search_view_suite_goldens_v1",
                 &suite,
             );
         }

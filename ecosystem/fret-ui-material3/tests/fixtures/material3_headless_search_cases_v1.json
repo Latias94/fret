@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "suite": "material3-headless-search-cases-v1",
+  "notes": "Fixture-driven headless golden cases for Material 3 SearchBar and SearchView presentation.",
+  "search_bar_cases": [
+    {
+      "id": "idle",
+      "hover": false,
+      "pressed": false,
+      "focus_visible": false
+    },
+    {
+      "id": "hover",
+      "hover": true,
+      "pressed": false,
+      "focus_visible": false
+    },
+    {
+      "id": "pressed",
+      "hover": true,
+      "pressed": true,
+      "focus_visible": false
+    },
+    {
+      "id": "focus_visible",
+      "hover": false,
+      "pressed": false,
+      "focus_visible": true
+    }
+  ],
+  "search_view_results": ["Alpha", "Bravo", "Charlie", "Delta"],
+  "search_view_cases": [
+    {
+      "id": "closed",
+      "open": false,
+      "presentation": "docked"
+    },
+    {
+      "id": "open",
+      "open": true,
+      "presentation": "docked"
+    },
+    {
+      "id": "full_screen_open",
+      "open": true,
+      "presentation": "full_screen"
+    }
+  ]
+}
