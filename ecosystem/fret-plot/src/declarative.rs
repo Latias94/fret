@@ -9,7 +9,7 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::cartesian::{AxisScale, DataRect, PlotTransform, polyline_commands};
 use crate::models::{StepMode, YAxis};
-use crate::plot::axis::{AxisLabelFormatter, log10_tick_label_or_empty};
+use crate::plot::axis::AxisLabelFormatter;
 use crate::series::SeriesId;
 use crate::state::{PlotImageLayer, PlotOutput, PlotOutputSnapshot, PlotOverlays, PlotState};
 use crate::style::LinePlotStyle;
@@ -29,6 +29,7 @@ mod panels;
 mod props;
 mod readout;
 mod selection;
+mod style_helpers;
 
 use axis_labels::paint_line_plot_right_axis_tick_labels;
 use commands::{
@@ -66,6 +67,7 @@ use selection::{
     paint_line_plot_active_selection, paint_line_plot_query_selection,
     paint_line_plot_selection_tooltip,
 };
+use style_helpers::series_color;
 
 pub use panels::{
     area_plot_panel, area_plot_panel_in, bars_plot_panel, bars_plot_panel_in,
@@ -1045,25 +1047,6 @@ fn paint_line_plot_panel(
         x_scale,
         y_scale,
     );
-}
-
-fn axis_tick_label_text(
-    scale: AxisScale,
-    formatter: &AxisLabelFormatter,
-    value: f64,
-    span: f64,
-) -> String {
-    if scale == AxisScale::Log10 && formatter.is_number_auto() {
-        return log10_tick_label_or_empty(value);
-    }
-    formatter.format(value, span)
-}
-
-fn series_color(style: LinePlotStyle, series_index: usize, series_count: usize) -> Color {
-    if series_count <= 1 {
-        return style.stroke_color;
-    }
-    style.series_palette[series_index % style.series_palette.len()]
 }
 
 #[cfg(test)]

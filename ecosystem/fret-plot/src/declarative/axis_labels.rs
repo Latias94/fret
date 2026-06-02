@@ -7,8 +7,8 @@ use crate::cartesian::{AxisScale, DataRect, PlotTransform};
 use crate::plot::axis::{AxisLabelFormatter, AxisTicks, axis_ticks_scaled};
 use crate::style::LinePlotStyle;
 
-use super::axis_tick_label_text;
 use super::geometry::line_plot_view_bounds_for_y_axis;
+use super::style_helpers::axis_tick_label_text;
 
 pub(super) fn paint_line_plot_axis_tick_labels(
     painter: &mut CanvasPainter<'_>,

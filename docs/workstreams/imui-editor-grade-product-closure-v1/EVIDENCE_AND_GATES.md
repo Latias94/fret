@@ -382,6 +382,38 @@ Fresh gates:
 - `python tools\check_workstream_catalog.py` - passed.
 - `git diff --check` - passed.
 
+## Fret Plot declarative style helpers owner split - 2026-06-02
+
+This refresh keeps the optional IMUI plot adapter declarative-only while moving shared formatting
+and color fallback out of the implementation root:
+
+- `ecosystem/fret-plot/src/declarative/style_helpers.rs` now owns the axis label formatting and series color fallback owner,
+  including log-scale auto labels and palette fallback selection.
+- Axis labels, readout, selection, overlays, legend, and panel paint import style helpers explicitly.
+- `ecosystem/fret-plot/src/declarative.rs` keeps panel assembly, paint orchestration, and plot state
+  model wiring.
+  Panel paint orchestration stays in `declarative.rs`.
+- No public props, optional IMUI adapter policy, retained plot bridge, event routing, output
+  publication, geometry, or crate layering changed in this slice.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed with existing dead-code warnings in
+  `plot/view.rs`.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_axis_tick_labels --no-fail-fast` -
+  passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_series_legend --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_seeded_line --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_cursor_readout_without_output_model --no-fail-fast` -
+  passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_query_selection_tooltip --no-fail-fast` -
+  passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative geometry owner split - 2026-06-02
 
 This refresh keeps the optional IMUI plot adapter declarative-only while moving shared geometry out
@@ -390,8 +422,9 @@ of the implementation root:
 - `ecosystem/fret-plot/src/declarative/geometry.rs` now owns the shared inner-rect and y-axis view-bounds geometry owner,
   including plot inner-rect projection and right-axis view-bounds projection.
 - Axis labels, interaction, output, and overlay owners import geometry explicitly.
-- `ecosystem/fret-plot/src/declarative.rs` keeps panel assembly, paint orchestration, formatting
-  helpers, series color policy, and plot state model wiring.
+- `ecosystem/fret-plot/src/declarative.rs` kept panel assembly, paint orchestration, formatting
+  helpers, series color policy, and plot state model wiring for this slice; the later style helper
+  owner split narrows that current root role.
   Panel paint orchestration stays in `declarative.rs`.
 - No public props, optional IMUI adapter policy, retained plot bridge, event routing, output
   publication, formatting, color policy, or crate layering changed in this slice.

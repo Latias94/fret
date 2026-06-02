@@ -5288,6 +5288,12 @@ projection. Axis labels, interaction, output, and overlay owners import geometry
 declarative root keeps panel assembly, paint orchestration, formatting helpers, series color policy,
 and plot state model wiring.
 
+Fret Plot declarative style helpers owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/style_helpers.rs` now owns axis label formatting and series
+color fallback. Axis labels, readout, selection, overlays, legend, and panel paint import style
+helpers explicitly, and the declarative root keeps panel assembly, paint orchestration, and plot
+state model wiring.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,

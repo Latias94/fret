@@ -12,9 +12,9 @@ use crate::plot::axis::AxisLabelFormatter;
 use crate::state::{PlotImageLayer, PlotOverlays};
 use crate::style::LinePlotStyle;
 
-use super::axis_tick_label_text;
 use super::geometry::line_plot_view_bounds_for_y_axis;
 use super::paint_primitives::push_filled_rect;
+use super::style_helpers::axis_tick_label_text;
 
 pub(super) fn paint_line_plot_reference_lines(
     painter: &mut CanvasPainter<'_>,

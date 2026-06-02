@@ -10,10 +10,10 @@ use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
 use crate::plot::axis::AxisLabelFormatter;
 use crate::style::LinePlotStyle;
 
-use super::axis_tick_label_text;
 use super::interaction::{
     LinePlotSelectionKind, LinePlotSelectionOverlay, line_plot_query_rect_from_plot_points_raw,
 };
+use super::style_helpers::axis_tick_label_text;
 
 pub(super) fn paint_line_plot_query_selection(
     painter: &mut CanvasPainter<'_>,

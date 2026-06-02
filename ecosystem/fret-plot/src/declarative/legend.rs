@@ -9,7 +9,8 @@ use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
 use crate::series::SeriesId;
 use crate::style::LinePlotStyle;
 
-use super::{PlotPanelModel, series_color};
+use super::PlotPanelModel;
+use super::style_helpers::series_color;
 
 pub(super) fn paint_line_plot_legend(
     painter: &mut CanvasPainter<'_>,

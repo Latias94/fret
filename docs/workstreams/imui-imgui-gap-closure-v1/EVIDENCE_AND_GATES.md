@@ -3,22 +3,63 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Style Helpers Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative axis label formatting and series color fallback helpers moved
+out of `ecosystem/fret-plot/src/declarative.rs` into private
+`ecosystem/fret-plot/src/declarative/style_helpers.rs` without changing panel assembly, paint
+orchestration, geometry, event routing, output publication, public panel props, optional IMUI
+adapter routing, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/style_helpers.rs` is the axis label formatting and series
+  color fallback owner.
+- Axis labels, readout, selection, overlays, legend, and panel paint import style helpers
+  explicitly.
+- `ecosystem/fret-plot/src/declarative.rs` keeps panel assembly, paint orchestration, and plot
+  state model wiring, but no longer owns shared formatting or color fallback helpers.
+- `tools/gate_imui_workstream_source.py` rejects `axis_tick_label_text` and `series_color` from
+  drifting back into the root implementation owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new style helper owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_axis_tick_labels --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_series_legend --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_seeded_line --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_cursor_readout_without_output_model --no-fail-fast`:
+  pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_query_selection_tooltip --no-fail-fast`:
+  pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Geometry Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative shared inner-rect and y-axis view-bounds geometry moved out of
 `ecosystem/fret-plot/src/declarative.rs` into private
 `ecosystem/fret-plot/src/declarative/geometry.rs` without changing panel assembly, paint
-orchestration, formatting, series color policy, event routing, output publication, public panel
-props, optional IMUI adapter routing, or plot model projection behavior.
+orchestration, formatting and series color policy at that slice, event routing, output
+publication, public panel props, optional IMUI adapter routing, or plot model projection behavior.
+The later style helper owner split above moves formatting and color fallback into
+`ecosystem/fret-plot/src/declarative/style_helpers.rs`.
 
 Evidence:
 
 - `ecosystem/fret-plot/src/declarative/geometry.rs` is the shared inner-rect and y-axis
   view-bounds geometry owner.
 - Axis labels, interaction, output, and overlay owners import geometry explicitly.
-- `ecosystem/fret-plot/src/declarative.rs` keeps panel assembly, paint orchestration, formatting
-  helpers, series color policy, and plot state model wiring, but no longer owns shared geometry
-  helpers.
+- `ecosystem/fret-plot/src/declarative.rs` kept panel assembly, paint orchestration, formatting
+  helpers, series color policy, and plot state model wiring for this slice, but no longer owned
+  shared geometry helpers. The later style helper owner split narrows that current root role.
 - `tools/gate_imui_workstream_source.py` rejects `line_plot_inner_rect` and
   `line_plot_view_bounds_for_y_axis` from drifting back into the root implementation owner.
 - `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new geometry owner.
