@@ -24,6 +24,7 @@ use support::headless_menu_dialog_style_cases::{
 };
 use support::headless_search_cases::load_material3_search_golden_suite_v1;
 use support::headless_snackbar_cases::load_material3_snackbar_golden_suite_v1;
+use support::headless_text_field_cases::load_material3_text_field_golden_suite_v1;
 use support::host::{FakeUiServices, TestHost};
 use support::layout::with_padding;
 use support::theme::{apply_material_theme, apply_material_theme_rtl};
@@ -4734,7 +4735,6 @@ fn material3_headless_time_picker_suite_goldens_v1() {
 #[test]
 fn material3_headless_text_field_suite_goldens_v1() {
     use fret_ui::element::FlexProps;
-    use fret_ui_material3::{TextField, TextFieldVariant};
 
     let schemes = [
         (
@@ -4758,6 +4758,7 @@ fn material3_headless_text_field_suite_goldens_v1() {
             "light.expressive",
         ),
     ];
+    let text_field_suite = load_material3_text_field_golden_suite_v1();
 
     for scale_factor in [1.0, 1.25, 2.0] {
         let scale = scale_segment(scale_factor);
@@ -4765,13 +4766,8 @@ fn material3_headless_text_field_suite_goldens_v1() {
         for (mode, variant, label) in schemes {
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
 
-            for (case_name, hover_id, focus_id) in [
-                ("idle", None, None),
-                ("hover_outlined", Some("tf-outlined"), None),
-                ("focus_visible_outlined", None, Some("tf-outlined")),
-                ("hover_filled", Some("tf-filled"), None),
-                ("focus_visible_filled", None, Some("tf-filled")),
-            ] {
+            for case in text_field_suite.cases() {
+                let case_name = case.id();
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -4786,10 +4782,14 @@ fn material3_headless_text_field_suite_goldens_v1() {
                     Size::new(Px(640.0), Px(520.0)),
                 );
 
-                let outlined_empty = app.models_mut().insert(String::new());
-                let outlined_populated = app.models_mut().insert("Hello".to_string());
-                let filled_empty = app.models_mut().insert(String::new());
-                let filled_populated = app.models_mut().insert("Hello".to_string());
+                let field_models = text_field_suite
+                    .fields()
+                    .iter()
+                    .map(|field| {
+                        let model = app.models_mut().insert(field.value().to_string());
+                        (field, model)
+                    })
+                    .collect::<Vec<_>>();
 
                 let render = |ui: &mut UiTree<TestHost>,
                               app: &mut TestHost,
@@ -4806,68 +4806,12 @@ fn material3_headless_text_field_suite_goldens_v1() {
                             props.direction = fret_core::Axis::Vertical;
                             props.gap = fret_ui::element::SpacingLength::Px(Px(12.0));
                             let content = cx.flex(props, |cx| {
-                                vec![
-                                    TextField::new(outlined_empty.clone())
-                                        .variant(TextFieldVariant::Outlined)
-                                        .label("Outlined")
-                                        .placeholder("Placeholder")
-                                        .supporting_text("Supporting")
-                                        .test_id("tf-outlined")
-                                        .into_element(cx),
-                                    TextField::new(outlined_empty.clone())
-                                        .variant(TextFieldVariant::Outlined)
-                                        .label("Outlined (error)")
-                                        .placeholder("Placeholder")
-                                        .supporting_text("Supporting")
-                                        .error(true)
-                                        .test_id("tf-outlined-error")
-                                        .into_element(cx),
-                                    TextField::new(outlined_empty.clone())
-                                        .variant(TextFieldVariant::Outlined)
-                                        .label("Outlined (disabled)")
-                                        .placeholder("Placeholder")
-                                        .supporting_text("Supporting")
-                                        .disabled(true)
-                                        .test_id("tf-outlined-disabled")
-                                        .into_element(cx),
-                                    TextField::new(outlined_populated.clone())
-                                        .variant(TextFieldVariant::Outlined)
-                                        .label("Outlined (populated)")
-                                        .placeholder("Placeholder")
-                                        .supporting_text("Supporting")
-                                        .test_id("tf-outlined-populated")
-                                        .into_element(cx),
-                                    TextField::new(filled_empty.clone())
-                                        .variant(TextFieldVariant::Filled)
-                                        .label("Filled")
-                                        .placeholder("Placeholder")
-                                        .supporting_text("Supporting")
-                                        .test_id("tf-filled")
-                                        .into_element(cx),
-                                    TextField::new(filled_empty.clone())
-                                        .variant(TextFieldVariant::Filled)
-                                        .label("Filled (error)")
-                                        .placeholder("Placeholder")
-                                        .supporting_text("Supporting")
-                                        .error(true)
-                                        .test_id("tf-filled-error")
-                                        .into_element(cx),
-                                    TextField::new(filled_empty.clone())
-                                        .variant(TextFieldVariant::Filled)
-                                        .label("Filled (disabled)")
-                                        .placeholder("Placeholder")
-                                        .supporting_text("Supporting")
-                                        .disabled(true)
-                                        .test_id("tf-filled-disabled")
-                                        .into_element(cx),
-                                    TextField::new(filled_populated.clone())
-                                        .variant(TextFieldVariant::Filled)
-                                        .label("Filled (populated)")
-                                        .placeholder("Placeholder")
-                                        .supporting_text("Supporting")
-                                        .test_id("tf-filled-populated")
-                                        .into_element(cx),
-                                ]
+                                field_models
+                                    .iter()
+                                    .map(|(field, model)| {
+                                        field.text_field(model.clone()).into_element(cx)
+                                    })
+                                    .collect::<Vec<_>>()
                             });
 
                             vec![with_padding(cx, Px(24.0), content)]
@@ -4880,7 +4824,7 @@ fn material3_headless_text_field_suite_goldens_v1() {
                 ui.request_semantics_snapshot();
                 ui.layout_all(&mut app, &mut services, bounds, scale_factor);
 
-                if case_name == "idle" {
+                if case.is_idle() {
                     ui.dispatch_event(
                         &mut app,
                         &mut services,
@@ -4888,7 +4832,7 @@ fn material3_headless_text_field_suite_goldens_v1() {
                     );
                 }
 
-                if let Some(test_id) = hover_id {
+                if let Some(test_id) = case.hover_test_id() {
                     let node_id: NodeId = ui
                         .semantics_snapshot()
                         .and_then(|snapshot| {
@@ -4915,7 +4859,7 @@ fn material3_headless_text_field_suite_goldens_v1() {
                     );
                 }
 
-                if let Some(test_id) = focus_id {
+                if let Some(test_id) = case.focus_test_id() {
                     let node_id: NodeId = ui
                         .semantics_snapshot()
                         .and_then(|snapshot| {
@@ -4933,42 +4877,27 @@ fn material3_headless_text_field_suite_goldens_v1() {
                     ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
                 }
 
-                let mut settled: Option<Material3HeadlessGoldenV1> = None;
-                for frame in 0..64 {
-                    app.advance_frame();
-                    let root = render(&mut ui, &mut app, &mut services);
-                    ui.set_root(root);
-                    ui.layout_all(&mut app, &mut services, bounds, scale_factor);
-
-                    let mut scene = Scene::default();
-                    ui.paint_all(&mut app, &mut services, bounds, &mut scene, scale_factor);
-
-                    if frame < 28 {
-                        continue;
-                    }
-
-                    let snapshot = material3_scene_snapshot_v1(&scene);
-                    if let Some(prev) = settled.as_ref() {
-                        assert_eq!(
-                            snapshot, *prev,
-                            "expected text field scene to be stable after animations settle ({label}, {scale}, {case_name})"
-                        );
-                    } else {
-                        settled = Some(snapshot);
-                    }
-                }
-
-                let Some(snapshot) = settled else {
-                    panic!(
-                        "expected a settled text field snapshot ({label}, {scale}, {case_name})"
-                    );
-                };
-                cases.insert(case_name.to_string(), snapshot);
+                let message = format!(
+                    "expected text field scene to be stable after animations settle ({label}, {scale}, {case_name})"
+                );
+                let snapshot = settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    case.settle_from_frame(),
+                    case.total_frames(),
+                    &message,
+                    &render,
+                );
+                cases.insert(case.id().to_string(), snapshot);
             }
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-text-field.{scale}.{label}"),
+                "material3_headless_text_field_suite_goldens_v1",
                 &suite,
             );
         }

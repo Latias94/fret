@@ -6,6 +6,7 @@ pub(crate) mod headless_autocomplete_cases;
 pub(crate) mod headless_menu_dialog_style_cases;
 pub(crate) mod headless_search_cases;
 pub(crate) mod headless_snackbar_cases;
+pub(crate) mod headless_text_field_cases;
 pub(crate) mod host;
 pub(crate) mod interaction_harness;
 pub(crate) mod layout;
