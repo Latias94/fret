@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 plot line/area/stems command owner-split result:
+`ecosystem/fret-plot/src/declarative/commands.rs` is now a thin command projection hub that keeps
+shared line/area path keys and re-exports private command owners while
+`ecosystem/fret-plot/src/declarative/commands/line_area.rs` owns area fill closure, stems baseline
+projection, and step pre/post expansion. Line/area/stems painter dispatch, style/color/draw-order
+behavior, public panel props, panel entrypoints, optional IMUI adapter routing, paint/event owners,
+output publication, and plot model projection remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 plot shaded command owner-split result:
 `ecosystem/fret-plot/src/declarative/commands.rs` now re-exports shaded command entrypoints and
 keeps shared line/area keys plus non-shaded command builders while

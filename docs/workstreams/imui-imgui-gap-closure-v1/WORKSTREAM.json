@@ -1880,6 +1880,7 @@
     "ecosystem/fret-plot/src/declarative/commands/bar_histogram.rs",
     "ecosystem/fret-plot/src/declarative/commands/candlestick.rs",
     "ecosystem/fret-plot/src/declarative/commands/error_bars.rs",
+    "ecosystem/fret-plot/src/declarative/commands/line_area.rs",
     "ecosystem/fret-plot/src/declarative/commands/shaded.rs",
     "ecosystem/fret-plot/src/declarative/geometry.rs",
     "ecosystem/fret-plot/src/declarative/grid_axes.rs",

@@ -2,6 +2,35 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative line/area/stems command owner split - 2026-06-02
+
+This maintenance slice turns the shared command root into a thin projection hub while preserving the
+opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/commands/line_area.rs` owns area fill path closure, stems
+  baseline command projection, and step-mode expansion.
+- `commands.rs` keeps shared line/area path keys and re-exports all private command owners.
+- Evidence anchor: line, area-fill, stems, and step command projection owner.
+- Evidence anchor: Commands root is now a command projection hub.
+- `series_paint/line_area.rs` remains the paint owner for style/color, draw order, and painter
+  dispatch.
+- The line/area command owner stays bar/histogram-free, candlestick-free, error-bars-free,
+  shaded-free, paint-free, event-free, output-free, authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so line/area/stems/step
+  command logic cannot drift back into `commands.rs` and other series command builders cannot drift
+  into the line/area owner.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo nextest run -p fret-plot line_plot_panel_paints_seeded_line_on_declarative_path area_plot_panel_paints_area_fill_and_stroke_on_declarative_path stems_plot_panel_paints_stems_from_baseline_on_declarative_path --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative shaded command owner split - 2026-06-02
 
 This maintenance slice keeps shaded-band cursor and command construction out of the shared command

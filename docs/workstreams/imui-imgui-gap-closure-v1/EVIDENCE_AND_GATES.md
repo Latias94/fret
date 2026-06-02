@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Line/Area/Stems Command Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative line, area-fill, stems, and step command projection moved out
+of `ecosystem/fret-plot/src/declarative/commands.rs` into private
+`ecosystem/fret-plot/src/declarative/commands/line_area.rs` without changing line path keys, area
+fill closure, stems baseline projection, step pre/post expansion, public plot panel props, panel
+entrypoints, optional IMUI adapter routing, paint owners, event owners, output publication, or plot
+model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/commands/line_area.rs` owns area fill path closure, stems
+  baseline command projection, and step-mode expansion.
+- `commands.rs` is now a thin command projection hub: it keeps shared line/area path keys and
+  re-exports all private command owners.
+- `series_paint/line_area.rs` remains the paint owner for style/color, draw order, and painter
+  dispatch while importing the same command entrypoints from the command hub.
+- `tools/gate_imui_workstream_source.py` rejects line/area/stems/step command construction from
+  drifting back into `commands.rs` and rejects other series command builders from drifting into the
+  line/area owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new line/area command
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo nextest run -p fret-plot line_plot_panel_paints_seeded_line_on_declarative_path area_plot_panel_paints_area_fill_and_stroke_on_declarative_path stems_plot_panel_paints_stems_from_baseline_on_declarative_path --no-fail-fast`:
+  pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Shaded Command Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative shaded-band command projection moved out of
