@@ -24,6 +24,14 @@ pub(crate) fn container_elevation(theme: &Theme) -> Px {
     search_view_metric(theme, "md.comp.search-view.container.elevation", Px(6.0))
 }
 
+pub(crate) fn docked_header_container_height(theme: &Theme) -> Px {
+    search_view_metric(
+        theme,
+        "md.comp.search-view.docked.header.container.height",
+        Px(56.0),
+    )
+}
+
 pub(crate) fn full_screen_header_container_height(theme: &Theme) -> Px {
     search_view_metric(
         theme,
@@ -44,6 +52,16 @@ pub(crate) fn docked_container_shape(theme: &Theme) -> Corners {
             "md.sys.shape.corner.extra-large",
         ],
         Corners::all(Px(28.0)),
+    )
+}
+
+pub(crate) fn full_screen_container_shape(theme: &Theme) -> Corners {
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[
+            "md.comp.search-view.full-screen.container.shape",
+            "md.sys.shape.corner.none",
+        ],
+        Corners::all(Px(0.0)),
     )
 }
 
@@ -104,8 +122,10 @@ mod tests {
         let theme = Theme::global(&app);
 
         assert_eq!(container_elevation(theme), Px(6.0));
+        assert_eq!(docked_header_container_height(theme), Px(56.0));
         assert_eq!(full_screen_header_container_height(theme), Px(72.0));
         assert_eq!(docked_container_shape(theme), Corners::all(Px(28.0)));
+        assert_eq!(full_screen_container_shape(theme), Corners::all(Px(0.0)));
     }
 
     #[test]
@@ -115,6 +135,10 @@ mod tests {
             .metrics
             .insert("md.comp.search-view.container.elevation".to_string(), 4.0);
         patch.metrics.insert(
+            "md.comp.search-view.docked.header.container.height".to_string(),
+            64.0,
+        );
+        patch.metrics.insert(
             "md.comp.search-view.full-screen.header.container.height".to_string(),
             80.0,
         );
@@ -122,11 +146,17 @@ mod tests {
             "md.comp.search-view.docked.container.shape".to_string(),
             18.0,
         );
+        patch.metrics.insert(
+            "md.comp.search-view.full-screen.container.shape".to_string(),
+            0.0,
+        );
         let (_app, theme) = theme_with_patch(patch);
 
         assert_eq!(container_elevation(&theme), Px(4.0));
+        assert_eq!(docked_header_container_height(&theme), Px(64.0));
         assert_eq!(full_screen_header_container_height(&theme), Px(80.0));
         assert_eq!(docked_container_shape(&theme), Corners::all(Px(18.0)));
+        assert_eq!(full_screen_container_shape(&theme), Corners::all(Px(0.0)));
     }
 
     #[test]
@@ -138,6 +168,17 @@ mod tests {
         let (_app, theme) = theme_with_patch(patch);
 
         assert_eq!(docked_container_shape(&theme), Corners::all(Px(26.0)));
+    }
+
+    #[test]
+    fn search_view_full_screen_shape_uses_system_fallback() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.sys.shape.corner.none".to_string(), 2.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(full_screen_container_shape(&theme), Corners::all(Px(2.0)));
     }
 
     #[test]
@@ -165,6 +206,35 @@ mod tests {
                 top_right: Px(22.0),
                 bottom_right: Px(24.0),
                 bottom_left: Px(26.0),
+            }
+        );
+    }
+
+    #[test]
+    fn search_view_full_screen_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert(
+            "md.comp.search-view.full-screen.container.shape".to_string(),
+            0.0,
+        );
+        patch.corners.insert(
+            "md.comp.search-view.full-screen.container.shape".to_string(),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            full_screen_container_shape(&theme),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
             }
         );
     }

@@ -5,7 +5,7 @@ use fret_core::{
     SemanticsRole, Size, UiServices,
 };
 use fret_runtime::{ModelHost, PlatformCapabilities};
-use fret_ui::UiTree;
+use fret_ui::{Theme, UiTree, theme::ThemeConfig};
 use fret_ui_kit::{ColorRef, OverlayController, OverlayStackEntryKind, WidgetStateProperty};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 use fret_ui_material3::{SearchBarStyle, SearchView, SearchViewPresentation, SearchViewStyle};
@@ -492,6 +492,61 @@ fn search_view_style_overrides_docked_overlay_paint_contract() {
     assert!(
         scene_has_solid_quad_color(&scene, divider),
         "divider_color override should paint the docked SearchView divider"
+    );
+}
+
+#[test]
+fn search_view_docked_header_uses_search_view_header_height_token() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let mut patch = ThemeConfig::default();
+    patch.metrics.insert(
+        "md.comp.search-view.docked.header.container.height".to_string(),
+        68.0,
+    );
+    patch
+        .metrics
+        .insert("md.comp.search-bar.container.height".to_string(), 56.0);
+    Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(720.0), Px(180.0)),
+    );
+    let open = app.models_mut().insert(false);
+    let query = app.models_mut().insert(String::from("alpha"));
+
+    app.advance_frame();
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "root",
+        |cx| {
+            let search_view = SearchView::new(open.clone(), query.clone())
+                .test_id("m3-search-view")
+                .placeholder("Search")
+                .into_element(cx, |cx| vec![cx.text("Result alpha")]);
+            vec![with_padding(cx, Px(24.0), search_view)]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let header_chrome = semantics_test_id_layout_bounds(&ui, "m3-search-view.chrome");
+    assert!(
+        (header_chrome.size.height.0 - 68.0).abs() <= 0.5,
+        "docked SearchView header should use md.comp.search-view.docked.header.container.height; bounds={header_chrome:?}"
     );
 }
 

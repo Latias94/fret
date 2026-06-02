@@ -387,7 +387,14 @@ impl SearchBar {
 
                     let container_height =
                         search_bar_metric_override(&self.style.container_height, states, || {
-                            search_bar_tokens::container_height(theme)
+                            match self.header_tokens {
+                                SearchBarHeaderTokens::SearchView => {
+                                    search_view_tokens::docked_header_container_height(theme)
+                                }
+                                SearchBarHeaderTokens::SearchBar => {
+                                    search_bar_tokens::container_height(theme)
+                                }
+                            }
                         });
                     let container_min_width =
                         search_bar_metric_override(&self.style.container_min_width, states, || {

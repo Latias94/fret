@@ -421,7 +421,13 @@ impl SearchView {
                 let initial_focus = header_input_id_out.get();
                 let labelled_by_element = initial_focus.map(|id| id.0);
 
-                let (container_color, divider_color, header_slot_height, body_padding) = {
+                let (
+                    container_color,
+                    container_shape,
+                    divider_color,
+                    header_slot_height,
+                    body_padding,
+                ) = {
                     let theme = Theme::global(&*cx.app);
                     let states = WidgetStates::empty();
                     (
@@ -431,6 +437,7 @@ impl SearchView {
                             states,
                             || search_view_tokens::container_color(theme),
                         ),
+                        search_view_tokens::full_screen_container_shape(theme),
                         search_view_color_override(theme, &self.style.divider_color, states, || {
                             search_view_tokens::divider_color(theme)
                         }),
@@ -452,6 +459,7 @@ impl SearchView {
                     panel_container.layout.size.height = Length::Fill;
                     panel_container.layout.overflow = Overflow::Clip;
                     panel_container.background = Some(container_color);
+                    panel_container.corner_radii = container_shape;
 
                     let mut column = FlexProps::default();
                     column.direction = Axis::Vertical;

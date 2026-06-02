@@ -331,6 +331,23 @@
         { "role": "container_color", "kind": "color", "token": "md.comp.search-view.container.color" },
         { "role": "container_elevation", "kind": "metric", "token": "md.comp.search-view.container.elevation" },
         { "role": "docked_container_shape", "kind": "corners_metric", "token": "md.comp.search-view.docked.container.shape" },
+        { "role": "docked_header_container_height", "kind": "metric", "token": "md.comp.search-view.docked.header.container.height" },
+        { "role": "divider_color", "kind": "color", "token": "md.comp.search-view.divider.color" },
+        { "role": "header_leading_icon_color", "kind": "color", "token": "md.comp.search-view.header.leading-icon.color" },
+        { "role": "header_trailing_icon_color", "kind": "color", "token": "md.comp.search-view.header.trailing-icon.color" },
+        { "role": "header_input_text_color", "kind": "color", "token": "md.comp.search-view.header.input-text.color" },
+        { "role": "header_supporting_text_color", "kind": "color", "token": "md.comp.search-view.header.supporting-text.color" },
+        { "role": "header_input_text_style", "kind": "text_style_source", "source_token": "md.comp.search-view.header.input-text" }
+      ]
+    },
+    {
+      "id": "search-view-full-screen-light",
+      "component": "search_view",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "full_screen" },
+      "assertions": [
+        { "role": "container_color", "kind": "color", "token": "md.comp.search-view.container.color" },
+        { "role": "full_screen_container_shape", "kind": "corners_metric", "token": "md.comp.search-view.full-screen.container.shape" },
         { "role": "full_screen_header_container_height", "kind": "metric", "token": "md.comp.search-view.full-screen.header.container.height" },
         { "role": "divider_color", "kind": "color", "token": "md.comp.search-view.divider.color" },
         { "role": "header_leading_icon_color", "kind": "color", "token": "md.comp.search-view.header.leading-icon.color" },

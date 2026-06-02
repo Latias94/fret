@@ -570,6 +570,7 @@ fn actual_search_view_color(theme: &Theme, role: &str) -> Color {
 fn actual_search_view_metric(theme: &Theme, role: &str) -> Px {
     match role {
         "container_elevation" => search_view::container_elevation(theme),
+        "docked_header_container_height" => search_view::docked_header_container_height(theme),
         "full_screen_header_container_height" => {
             search_view::full_screen_header_container_height(theme)
         }
@@ -580,6 +581,7 @@ fn actual_search_view_metric(theme: &Theme, role: &str) -> Px {
 fn actual_search_view_corners(theme: &Theme, role: &str) -> Corners {
     match role {
         "docked_container_shape" => search_view::docked_container_shape(theme),
+        "full_screen_container_shape" => search_view::full_screen_container_shape(theme),
         other => panic!("unsupported search view corners role {other}"),
     }
 }
