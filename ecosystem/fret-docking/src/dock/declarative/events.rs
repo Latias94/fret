@@ -4,6 +4,7 @@ use fret_ui::managed_surface::ManagedSurfaceEventCx;
 mod internal_drag;
 mod pointer_cancel;
 mod pointer_down;
+mod pointer_move;
 mod pointer_up;
 
 pub(super) fn handle_declarative_event<H: UiHost + 'static>(
@@ -24,6 +25,9 @@ pub(super) fn handle_declarative_event<H: UiHost + 'static>(
         }
         fret_core::Event::Pointer(event @ fret_core::PointerEvent::Down { .. }) => {
             pointer_down::handle_pointer_down_event(cx, event, window);
+        }
+        fret_core::Event::Pointer(event @ fret_core::PointerEvent::Move { .. }) => {
+            pointer_move::handle_pointer_move_event(cx, event, window);
         }
         fret_core::Event::Pointer(event @ fret_core::PointerEvent::Up { .. }) => {
             pointer_up::handle_pointer_up_event(cx, event, window);

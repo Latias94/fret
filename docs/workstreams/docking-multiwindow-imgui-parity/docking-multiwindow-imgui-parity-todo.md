@@ -477,6 +477,15 @@ Each TODO is labeled:
         `TabChromePaintInput` / `TabDetailPaintInput` hover/menu state projection.
       - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
         locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking declarative PointerMove event owner split keeps viewport/divider/
+      floating/pending-drag/hover/cursor behavior out of the event router:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M50_DOCKING_DECLARATIVE_POINTER_MOVE_EVENT_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/dock/declarative/events/pointer_move.rs` owns
+        `ViewportInputKind::PointerMove`, context-menu drag movement tracking, divider drag
+        fraction updates, floating title-bar movement, pending dock drag activation, and
+        hover/cursor projection.
+      - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

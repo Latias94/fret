@@ -105,6 +105,11 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M49_DOCKING_DECLARATIVE_POINTER_CANCEL_EVENT_OWNER_SPLIT_2026-06-02.md`
   (moves PointerCancel viewport/tab/floating cleanup into a private event child owner without
   changing docking interaction behavior or the Wayland acceptance boundary)
+- Latest docking declarative PointerMove event owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M50_DOCKING_DECLARATIVE_POINTER_MOVE_EVENT_OWNER_SPLIT_2026-06-02.md`
+  (moves PointerMove viewport/divider/floating/pending-drag/hover/cursor behavior into a private
+  event child owner without changing docking interaction behavior or the Wayland acceptance
+  boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
