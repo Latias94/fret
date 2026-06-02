@@ -1,12 +1,16 @@
 //! Typed token access for Material 3 navigation drawers.
 
 use fret_core::{Color, Corners, Px, TextStyle};
-use fret_ui::Theme;
+use fret_ui::{Theme, theme::CubicBezier};
 
+use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::navigation_drawer::NavigationDrawerVariant;
 use crate::tokens::navigation_common;
 
 pub(crate) use navigation_common::NavigationItemInteraction as NavigationDrawerItemInteraction;
+
+const MODAL_MOTION_DURATION_KEY: &str = "md.sys.motion.duration.medium2";
+const MODAL_MOTION_EASING_KEY: &str = "md.sys.motion.easing.emphasized";
 
 pub(crate) fn container_width(theme: &Theme) -> Px {
     navigation_common::drawer_container_width(theme)
@@ -103,4 +107,75 @@ pub(crate) fn large_badge_label_color(theme: &Theme) -> Color {
 
 pub(crate) fn icon_size(theme: &Theme) -> Px {
     navigation_common::drawer_icon_size(theme)
+}
+
+pub(crate) fn modal_open_duration_ms(theme: &Theme) -> u32 {
+    MaterialTokenResolver::new(theme).duration_ms_sys(MODAL_MOTION_DURATION_KEY, 300)
+}
+
+pub(crate) fn modal_close_duration_ms(theme: &Theme) -> u32 {
+    MaterialTokenResolver::new(theme).duration_ms_sys(MODAL_MOTION_DURATION_KEY, 300)
+}
+
+pub(crate) fn modal_easing(theme: &Theme, easing_key: Option<&str>) -> CubicBezier {
+    MaterialTokenResolver::new(theme)
+        .easing_optional_or_linear(Some(easing_key.unwrap_or(MODAL_MOTION_EASING_KEY)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn modal_navigation_drawer_motion_defaults_to_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(modal_open_duration_ms(theme), 300);
+        assert_eq!(modal_close_duration_ms(theme), 300);
+        assert_eq!(
+            modal_easing(theme, None),
+            theme.easing_required(MODAL_MOTION_EASING_KEY)
+        );
+    }
+
+    #[test]
+    fn modal_navigation_drawer_motion_prefers_theme_overrides() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .durations_ms
+            .insert(MODAL_MOTION_DURATION_KEY.to_string(), 180);
+        patch.easings.insert(
+            "md.sys.motion.easing.test-modal-drawer".to_string(),
+            CubicBezier {
+                x1: 0.1,
+                y1: 0.2,
+                x2: 0.3,
+                y2: 0.4,
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(modal_open_duration_ms(&theme), 180);
+        assert_eq!(modal_close_duration_ms(&theme), 180);
+        assert_eq!(
+            modal_easing(&theme, Some("md.sys.motion.easing.test-modal-drawer")),
+            CubicBezier {
+                x1: 0.1,
+                y1: 0.2,
+                x2: 0.3,
+                y2: 0.4,
+            }
+        );
+    }
 }

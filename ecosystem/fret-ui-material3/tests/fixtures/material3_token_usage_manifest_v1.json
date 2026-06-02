@@ -146,10 +146,7 @@
       "id": "modal_navigation_drawer",
       "layer": "recipe",
       "path": "src/modal_navigation_drawer.rs",
-      "tokens": [
-        "md.sys.motion.duration.medium2",
-        "md.sys.motion.easing.emphasized"
-      ]
+      "tokens": []
     },
     {
       "id": "motion",
@@ -1400,7 +1397,10 @@
       "id": "tokens.navigation_drawer",
       "layer": "token_module",
       "path": "src/tokens/navigation_drawer.rs",
-      "tokens": []
+      "tokens": [
+        "md.sys.motion.duration.medium2",
+        "md.sys.motion.easing.emphasized"
+      ]
     },
     {
       "id": "tokens.navigation_rail",

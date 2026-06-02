@@ -22,7 +22,6 @@ use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::foundation::test_id::{optional_part_test_id, part_test_id};
-use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion;
 use crate::tokens::navigation_drawer as drawer_tokens;
 
@@ -58,7 +57,7 @@ impl ModalNavigationDrawer {
             open,
             open_duration_ms: None,
             close_duration_ms: None,
-            easing_key: Some(Arc::<str>::from("md.sys.motion.easing.emphasized")),
+            easing_key: None,
             on_dismiss_request: None,
             test_id: None,
         }
@@ -126,20 +125,15 @@ impl ModalNavigationDrawer {
 
             let (open_ms, close_ms, bezier, scrim_color_base, scrim_opacity, drawer_w) = {
                 let theme = Theme::global(&*cx.app);
-                let tokens = MaterialTokenResolver::new(theme);
 
-                let open_ms = self.open_duration_ms.unwrap_or_else(|| {
-                    tokens.duration_ms_sys("md.sys.motion.duration.medium2", 300)
-                });
-                let close_ms = self.close_duration_ms.unwrap_or_else(|| {
-                    tokens.duration_ms_sys("md.sys.motion.duration.medium2", 300)
-                });
+                let open_ms = self
+                    .open_duration_ms
+                    .unwrap_or_else(|| drawer_tokens::modal_open_duration_ms(theme));
+                let close_ms = self
+                    .close_duration_ms
+                    .unwrap_or_else(|| drawer_tokens::modal_close_duration_ms(theme));
 
-                let easing_key = self
-                    .easing_key
-                    .clone()
-                    .unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
-                let bezier = tokens.easing_optional_or_linear(Some(easing_key.as_ref()));
+                let bezier = drawer_tokens::modal_easing(theme, self.easing_key.as_deref());
 
                 let scrim_color_base = drawer_tokens::scrim_color(theme);
                 let scrim_opacity = drawer_tokens::scrim_opacity(theme);
