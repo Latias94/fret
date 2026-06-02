@@ -3,8 +3,8 @@ use fret_runtime::UiHost;
 
 use crate::DockManager;
 
-use super::{auto_close, layout_invalidation};
 use super::tear_off::DockTearOffMachine;
+use super::{auto_close, layout_invalidation};
 
 pub(super) fn handle_applied_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
     if app.global::<DockManager>().is_none() {

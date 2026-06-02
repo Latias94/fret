@@ -7,6 +7,7 @@ use fret_core::{
 
 use super::super::consts::{DOCK_TAB_CLOSE_GAP, DOCK_TAB_CLOSE_SIZE};
 use super::super::hit_test::{tab_close_rect, tab_scroll_for_node};
+use super::super::layout::split_tab_bar;
 use super::super::tab_bar_geometry::TabBarGeometry;
 use super::super::tab_overflow::{
     TabOverflowMenuState, overflow_menu_close_rect, overflow_menu_max_scroll,
@@ -14,7 +15,6 @@ use super::super::tab_overflow::{
     tab_overflow_button_rect, tab_overflow_menu_rect, tab_strip_rect_with_overflow_button,
 };
 use super::super::types::PreparedTabTitle;
-use super::super::layout::split_tab_bar;
 use fret_core::{DockGraph, DockNode, DockNodeId};
 
 fn tab_title_clip_rect(
