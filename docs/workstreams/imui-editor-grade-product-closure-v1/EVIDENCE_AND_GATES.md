@@ -2,6 +2,33 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative pan interaction owner split - 2026-06-02
+
+This maintenance slice keeps pan event routing out of the shared interaction owner while preserving
+the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/interaction/pan.rs` is the pan event routing owner.
+- `interaction.rs` re-exports pan entrypoints and keeps legend/query/box-zoom routing.
+- Evidence anchor: pan event routing owner.
+- Evidence anchor: Interaction root re-exports pan event routing.
+- Evidence anchor: legend, query, and box-zoom event routing.
+- The pan owner stays paint-free, output-publication-free, query/box/wheel/draggable-free,
+  authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so pan session state,
+  pointer-drag routing, axis-lock filtering, and scaled pan projection cannot drift back into
+  `interaction.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_pan --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative wheel zoom interaction owner split - 2026-06-02
 
 This maintenance slice keeps wheel zoom event routing out of the shared interaction owner while

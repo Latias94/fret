@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Pan Interaction Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative pan session state, pointer-drag routing, axis-lock filtering,
+and scaled pan view-bound projection moved out of
+`ecosystem/fret-plot/src/declarative/interaction.rs` into private
+`ecosystem/fret-plot/src/declarative/interaction/pan.rs` without changing legend routing, query
+drag, box zoom, wheel zoom, draggable overlays, paint owners, output publication, public panel
+props, optional IMUI adapter routing, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/interaction/pan.rs` is the pan event routing owner.
+- `interaction.rs` re-exports `LinePlotPanSession` and `handle_line_plot_pan_event(...)` while
+  keeping legend, query, and box-zoom routing plus child interaction owner re-exports.
+- The pan owner imports only plot geometry, legend hit exclusion, current view-bound projection,
+  scaled sanitize helpers, axis locks, and view-bound state updates, staying paint-free,
+  output-publication-free, query/box/wheel/draggable-free, authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` rejects pan session/view-bound projection logic from
+  drifting back into `interaction.rs` and rejects non-pan interaction concerns from
+  `interaction/pan.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new pan interaction
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_pan --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Wheel Zoom Interaction Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative wheel zoom region detection, modifier-to-axis selection,

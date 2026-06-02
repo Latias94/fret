@@ -23,15 +23,12 @@ use super::model::PlotPanelModel;
 use super::output::{line_plot_current_view_bounds_for_event, line_plot_pointer_output_snapshot};
 
 mod draggable;
+mod pan;
 mod wheel;
 
 pub(super) use draggable::{LinePlotDragSession, handle_line_plot_draggable_overlay_event};
+pub(super) use pan::{LinePlotPanSession, handle_line_plot_pan_event};
 pub(super) use wheel::handle_line_plot_wheel_zoom_event;
-
-#[derive(Debug, Clone, Copy)]
-pub(super) struct LinePlotPanSession {
-    last_position: Point,
-}
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct LinePlotBoxZoomSession {
@@ -511,127 +508,6 @@ fn line_plot_apply_box_select_modifiers(
     }
 
     (start, end)
-}
-
-#[allow(clippy::too_many_arguments)]
-pub(super) fn handle_line_plot_pan_event<H: UiHost>(
-    app: &mut H,
-    state: &Model<PlotState>,
-    pan_session: &Rc<RefCell<Option<LinePlotPanSession>>>,
-    event: &Event,
-    bounds: Rect,
-    model: &PlotPanelModel,
-    style: LinePlotStyle,
-    x_scale: AxisScale,
-    y_scale: AxisScale,
-) -> bool {
-    let plot = line_plot_inner_rect(bounds, style);
-    if plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
-        return false;
-    }
-
-    match event {
-        Event::Pointer(fret_core::PointerEvent::Down {
-            position,
-            button: MouseButton::Left,
-            modifiers,
-            ..
-        }) if !modifiers.shift && !modifiers.alt && !modifiers.ctrl && plot.contains(*position) => {
-            if line_plot_legend_hit(model, plot, *position).is_some() {
-                return false;
-            }
-            *pan_session.borrow_mut() = Some(LinePlotPanSession {
-                last_position: *position,
-            });
-            true
-        }
-        Event::Pointer(fret_core::PointerEvent::Move {
-            position, buttons, ..
-        }) if buttons.left => {
-            let Some(mut session) = *pan_session.borrow() else {
-                return false;
-            };
-            let current_view = line_plot_current_view_bounds_for_event(
-                app,
-                Some(state),
-                model,
-                style,
-                x_scale,
-                y_scale,
-            );
-            let dx_px = position.x.0 - session.last_position.x.0;
-            let dy_px = position.y.0 - session.last_position.y.0;
-            if dx_px == 0.0 && dy_px == 0.0 {
-                return true;
-            }
-            let mut next =
-                pan_line_plot_view_bounds(current_view, plot, dx_px, dy_px, x_scale, y_scale);
-            let axis_locks = state
-                .read_ref(app, |state| state.axis_locks)
-                .unwrap_or_default();
-            if axis_locks.x.pan {
-                next.x_min = current_view.x_min;
-                next.x_max = current_view.x_max;
-            }
-            if axis_locks.y.pan {
-                next.y_min = current_view.y_min;
-                next.y_max = current_view.y_max;
-            }
-            let _ = state.update(app, |state, _cx| {
-                state.view_is_auto = false;
-                state.view_bounds = Some(next);
-            });
-            session.last_position = *position;
-            *pan_session.borrow_mut() = Some(session);
-            true
-        }
-        Event::Pointer(fret_core::PointerEvent::Move { buttons, .. }) if !buttons.left => {
-            pan_session.borrow_mut().take().is_some()
-        }
-        Event::Pointer(fret_core::PointerEvent::Up {
-            button: MouseButton::Left,
-            ..
-        }) => pan_session.borrow_mut().take().is_some(),
-        _ => false,
-    }
-}
-
-fn pan_line_plot_view_bounds(
-    view: DataRect,
-    plot: Rect,
-    dx_px: f32,
-    dy_px: f32,
-    x_scale: AxisScale,
-    y_scale: AxisScale,
-) -> DataRect {
-    let pan_axis = |scale: AxisScale, min: f64, max: f64, delta_px: f32, span_px: f32| {
-        let Some(axis_min) = scale.to_axis(min) else {
-            return (min, max);
-        };
-        let Some(axis_max) = scale.to_axis(max) else {
-            return (min, max);
-        };
-        if span_px <= 0.0 {
-            return (min, max);
-        }
-        let axis_delta = -(delta_px as f64) / span_px as f64 * (axis_max - axis_min);
-        (
-            scale.from_axis(axis_min + axis_delta).unwrap_or(min),
-            scale.from_axis(axis_max + axis_delta).unwrap_or(max),
-        )
-    };
-    let (x_min, x_max) = pan_axis(x_scale, view.x_min, view.x_max, dx_px, plot.size.width.0);
-    let (y_min, y_max) = pan_axis(y_scale, view.y_min, view.y_max, -dy_px, plot.size.height.0);
-    sanitize_data_rect_scaled(
-        DataRect {
-            x_min,
-            x_max,
-            y_min,
-            y_max,
-        },
-        x_scale,
-        y_scale,
-    )
 }
 
 pub(super) fn line_plot_legend_hover_from_event(
