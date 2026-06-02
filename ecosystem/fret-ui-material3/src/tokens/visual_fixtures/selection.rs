@@ -1,9 +1,18 @@
-use super::*;
+use fret_core::{Color, Corners, Px, TextStyle};
+use fret_ui::Theme;
+
+use crate::foundation::interaction::PressableInteraction;
 use crate::icon_button::{IconButtonSize, IconButtonVariant};
 use crate::tokens::{
     checkbox, chip, filter_chip, icon_button as icon_button_tokens, input_chip, radio,
     segmented_button, slider, suggestion_chip, switch,
 };
+
+use super::super::visual_fixture_model::Case;
+use super::assertions::*;
+use super::input::{enabled_input, pressable_interaction};
+use super::token_lookup::*;
+use super::typography_helpers::{control_text_style, control_text_style_with_weight};
 
 pub(super) fn run_checkbox_case(case: &Case, theme: &Theme) {
     let selected = case.input.selected;

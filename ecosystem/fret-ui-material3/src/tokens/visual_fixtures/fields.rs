@@ -1,10 +1,20 @@
-use super::*;
+use fret_core::{Color, Corners, Px, TextStyle};
+use fret_ui::Theme;
+
+use crate::foundation::interaction::PressableInteraction;
+use crate::foundation::token_resolver::blend_over;
 use crate::select::SelectVariant;
 use crate::text_field::TextFieldVariant;
 use crate::tokens::date_picker::DatePickerTokenVariant;
 use crate::tokens::{
     autocomplete, date_picker, search_bar, search_view, select, text_field, time_input, time_picker,
 };
+
+use super::super::visual_fixture_model::Case;
+use super::assertions::*;
+use super::input::pressable_interaction;
+use super::token_lookup::*;
+use super::typography_helpers::{content_text_style, control_text_style};
 
 pub(super) fn run_text_field_case(case: &Case, theme: &Theme) {
     let variant = text_field_variant(&case.input.variant, &case.id);

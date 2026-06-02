@@ -1,5 +1,16 @@
-use super::*;
+use fret_core::{Color, Corners, Px, TextStyle};
+use fret_ui::Theme;
+
 use crate::tokens::{dialog, dropdown_menu, menu, sheet_bottom, snackbar, tooltip};
+
+use super::super::visual_fixture_model::Case;
+use super::assertions::*;
+use super::input::enabled_input;
+use super::token_lookup::*;
+use super::typography_helpers::{
+    content_text_style_with_weight, control_text_style_with_weight, text_intent_for_role,
+    text_style_with_weight,
+};
 
 pub(super) fn run_menu_case(case: &Case, theme: &Theme) {
     let enabled = enabled_input(case);

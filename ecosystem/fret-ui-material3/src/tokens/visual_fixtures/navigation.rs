@@ -1,7 +1,14 @@
-use super::*;
+use fret_core::{Color, Corners, Px, TextStyle};
+use fret_ui::Theme;
+
 use crate::navigation_drawer::NavigationDrawerVariant;
 use crate::tokens::{navigation_bar, navigation_drawer, navigation_rail, tabs, top_app_bar};
 use crate::top_app_bar::TopAppBarVariant;
+
+use super::super::visual_fixture_model::Case;
+use super::assertions::*;
+use super::token_lookup::*;
+use super::typography_helpers::{control_text_style, control_text_style_with_weight};
 
 pub(super) fn run_tabs_case(case: &Case, theme: &Theme) {
     let selected = case.input.selected;
