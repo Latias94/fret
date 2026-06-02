@@ -5942,6 +5942,14 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/imui.rs` exposes thin `UiWriter` helpers for the declarative
       plot panel props under the opt-in `imui` feature, while the default `fret-plot` surface stays
       declarative and retained plot bridge code stays deleted.
+- [x] Split Fret Plot declarative model projection out of the retained-free paint/event root
+      without changing public plot panel props, `*_plot_panel` entrypoints, optional IMUI adapter
+      routing, histogram bin projection, multi-axis bounds propagation, or the deleted retained
+      bridge boundary.
+      Result: `ecosystem/fret-plot/src/declarative/model.rs` owns all concrete plot model to
+      private `PlotPanelModel` projection, including histogram bin projection, while
+      `declarative.rs` keeps paint/event/layout orchestration and `declarative/panels.rs` plus
+      `props.rs` keep the public entrypoint and props owners.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll

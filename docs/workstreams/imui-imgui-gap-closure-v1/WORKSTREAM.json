@@ -1874,6 +1874,8 @@
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger/behavior/response.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls/item_methods.rs",
+    "ecosystem/fret-plot/src/declarative.rs",
+    "ecosystem/fret-plot/src/declarative/model.rs",
     "ecosystem/fret-docking/src/dock/declarative.rs",
     "ecosystem/fret-docking/src/dock/declarative/drag_preview.rs",
     "ecosystem/fret-docking/src/dock/declarative/drag_route.rs",

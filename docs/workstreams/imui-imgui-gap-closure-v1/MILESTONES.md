@@ -5202,6 +5202,14 @@ The public IMUI table API stayed stable.
 existing declarative plot panels. `fret-plot` default features remain empty, `fret-imui` and
 `fret-ui-kit::imui` do not depend on `fret-plot`, and the retained plot bridge stays deleted.
 
+Fret Plot declarative model projection owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/model.rs` now owns all concrete plot model projection into the
+private `PlotPanelModel` records, including histogram bin projection. The declarative root keeps the
+retained-free paint/event/layout core, while `declarative/panels.rs` and `declarative/props.rs`
+continue to own public entrypoints and public props. This keeps the optional IMUI plot adapter
+thin over declarative panels instead of rebuilding plot policy in `fret-imui` or
+`fret-ui-kit::imui`.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,

@@ -229,8 +229,8 @@ the root implementation file without changing the retained-free plot rendering p
 - `ecosystem/fret-plot/src/declarative/panels.rs` now owns the public `*_plot_panel` entrypoints
   and `*_plot_panel_in` wrappers for line, error-bars, histogram, bars, candlestick, heatmap,
   histogram2d, area, shaded, and stems plot panels.
-- The private normalized panel model and retained-free paint/event core stay in `declarative.rs`,
-  including grid/axes, overlays, readout, interaction output, and tests.
+- The retained-free paint/event core stays in `declarative.rs`, including grid/axes, overlays,
+  readout, interaction output, and tests.
 - `ecosystem/fret-plot/src/declarative/props.rs` remains the public props/builder owner, so the
   optional `fret-plot/imui` adapter continues to delegate through declarative panel entrypoints.
 
@@ -253,8 +253,8 @@ reducing the remaining `fret-plot` declarative implementation file:
 - `ecosystem/fret-plot/src/declarative/props.rs` now owns the public `*PlotPanelProps` types and
   builder methods for line, error-bars, histogram, bars, candlestick, heatmap, histogram2d, area,
   shaded, and stems plot panels.
-- `ecosystem/fret-plot/src/declarative.rs` keeps the private normalized panel model, public panel
-  entrypoints, retained-free canvas painting, event handling, readout, and test coverage.
+- `ecosystem/fret-plot/src/declarative.rs` keeps retained-free canvas painting, event handling,
+  readout, and test coverage while the public panel entrypoints and props live in child owners.
 - `ecosystem/fret-plot/src/imui.rs` remains a thin optional `UiWriter` adapter over the
   declarative panel entrypoints, so plot ergonomics do not move into `fret-imui` or
   `fret-ui-kit::imui`.
@@ -265,6 +265,36 @@ Fresh gates:
 - `cargo check -p fret-plot` - passed with existing dead-code warnings in `plot/view.rs`.
 - `cargo check -p fret-plot --features imui` - passed with the same existing warnings.
 - `cargo nextest run -p fret-plot --lib imui_adapter_stays_opt_in_and_declarative_only line_chart_builder_stays_model_only_on_default_surface --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
+## Fret Plot declarative model projection owner split - 2026-06-02
+
+This refresh keeps the optional IMUI plot adapter declarative-only while moving normalized plot
+model projection out of the retained-free paint/event root:
+
+- `ecosystem/fret-plot/src/declarative/model.rs` now owns the projection path where all concrete plot models project into private `PlotPanelModel` records
+  for line, area, shaded, stems, error-bars, histogram, bars, candlestick, heatmap, and histogram2d
+  panels.
+- The projection owner also owns histogram bin projection, including conversion from histogram
+  values to sorted render series and bin-width metadata.
+- `ecosystem/fret-plot/src/declarative.rs` imports the private projection records and keeps
+  paint/event/layout orchestration only.
+- `ecosystem/fret-plot/src/declarative/panels.rs` and
+  `ecosystem/fret-plot/src/declarative/props.rs` remain the public entrypoint and props owners,
+  which keeps paint/event/panel entrypoints out of the projection owner.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed with existing dead-code warnings in
+  `plot/view.rs`.
+- `cargo test -p fret-plot --lib imui_adapter_stays_opt_in_and_declarative_only --no-fail-fast` -
+  passed, 1 test.
+- `cargo test -p fret-plot --lib line_chart_builder_stays_model_only_on_default_surface --no-fail-fast` -
+  passed, 1 test.
 - `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
 - `python tools\gate_imui_workstream_source.py` - passed.
 - `python tools\check_workstream_catalog.py` - passed.

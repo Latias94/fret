@@ -12,15 +12,10 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform, polyline_commands};
 use crate::input_map::{ModifierKey, ModifiersMask, PlotInputMap};
-use crate::models::{
-    AreaPlotModel, BarsPlotModel, CandlestickPlotModel, ErrorBarsPlotModel, HeatmapPlotModel,
-    Histogram2DPlotModel, HistogramPlotModel, LinePlotModel, ShadedPlotModel, StemsPlotModel,
-    StepMode, YAxis,
-};
+use crate::models::{StepMode, YAxis};
 use crate::plot::axis::{
     AxisLabelFormatter, AxisTicks, axis_ticks_scaled, log10_tick_label_or_empty,
 };
-use crate::plot::histogram::histogram_bins;
 use crate::plot::readout::{
     PlotCursorReadoutArgs, PlotCursorReadoutRow, PlotCursorReadoutSeries, plot_cursor_readout,
 };
@@ -28,15 +23,21 @@ use crate::plot::view::{
     clamp_view_to_data_scaled, clamp_zoom_factors, data_rect_from_plot_points_scaled,
     local_from_absolute, sanitize_data_rect_scaled, zoom_view_at_px_scaled,
 };
-use crate::series::{Series, SeriesId};
+use crate::series::SeriesId;
 use crate::state::{
     PlotDragOutput, PlotDragPhase, PlotImageLayer, PlotOutput, PlotOutputSnapshot, PlotOverlays,
     PlotState,
 };
 use crate::style::{LinePlotStyle, MouseReadoutMode, OverlayAnchor, ReadoutSeriesPolicy};
 
+mod model;
 mod panels;
 mod props;
+
+use model::{
+    PlotPanelBars, PlotPanelCandlestick, PlotPanelErrorBars, PlotPanelHeatmap, PlotPanelHistogram,
+    PlotPanelModel,
+};
 
 pub use panels::{
     area_plot_panel, area_plot_panel_in, bars_plot_panel, bars_plot_panel_in,
@@ -67,400 +68,6 @@ struct PlotPanelProps {
     x_scale: AxisScale,
     y_scale: AxisScale,
     step_mode: Option<StepMode>,
-}
-
-#[derive(Debug, Clone)]
-struct PlotPanelModel {
-    data_bounds: DataRect,
-    data_bounds_y2: Option<DataRect>,
-    data_bounds_y3: Option<DataRect>,
-    data_bounds_y4: Option<DataRect>,
-    heatmap: Option<PlotPanelHeatmap>,
-    series: Vec<PlotPanelSeries>,
-}
-
-#[derive(Debug, Clone)]
-struct PlotPanelHeatmap {
-    data_bounds: DataRect,
-    cols: usize,
-    rows: usize,
-    values: std::sync::Arc<[f32]>,
-    value_min: f32,
-    value_max: f32,
-}
-
-#[derive(Debug, Clone)]
-struct PlotPanelSeries {
-    id: SeriesId,
-    label: std::sync::Arc<str>,
-    data: Series,
-    lower_data: Option<Series>,
-    error_bars: Option<PlotPanelErrorBars>,
-    histogram: Option<PlotPanelHistogram>,
-    bars: Option<PlotPanelBars>,
-    candlestick: Option<PlotPanelCandlestick>,
-    y_axis: YAxis,
-    stroke_color: Option<Color>,
-    stroke_width: Option<Px>,
-    fill: Option<PlotPanelFill>,
-    stem_baseline: Option<f32>,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct PlotPanelFill {
-    color: Option<Color>,
-    alpha: f32,
-    baseline: f32,
-}
-
-#[derive(Debug, Clone)]
-struct PlotPanelErrorBars {
-    x_errors: Option<std::sync::Arc<[crate::models::ErrorBar]>>,
-    y_errors: Option<std::sync::Arc<[crate::models::ErrorBar]>>,
-    cap_size: Px,
-    show_caps: bool,
-    marker_radius: Px,
-    show_markers: bool,
-    marker_shape: crate::models::MarkerShape,
-}
-
-#[derive(Debug, Clone)]
-struct PlotPanelHistogram {
-    bin_width: f64,
-    bar_gap_fraction: f32,
-}
-
-#[derive(Debug, Clone)]
-struct PlotPanelBars {
-    bar_width: f64,
-    baseline: f64,
-    baselines: Option<std::sync::Arc<[f64]>>,
-}
-
-#[derive(Debug, Clone)]
-struct PlotPanelCandlestick {
-    points: std::sync::Arc<[crate::models::OhlcPoint]>,
-    candle_width: f64,
-    up_fill: Option<Color>,
-    down_fill: Option<Color>,
-    wick_color: Option<Color>,
-}
-
-impl From<&HeatmapPlotModel> for PlotPanelModel {
-    fn from(model: &HeatmapPlotModel) -> Self {
-        Self {
-            data_bounds: model.data_bounds,
-            data_bounds_y2: None,
-            data_bounds_y3: None,
-            data_bounds_y4: None,
-            heatmap: Some(PlotPanelHeatmap {
-                data_bounds: model.data_bounds,
-                cols: model.cols,
-                rows: model.rows,
-                values: model.values.clone(),
-                value_min: model.value_min,
-                value_max: model.value_max,
-            }),
-            series: Vec::new(),
-        }
-    }
-}
-
-impl From<&Histogram2DPlotModel> for PlotPanelModel {
-    fn from(model: &Histogram2DPlotModel) -> Self {
-        Self {
-            data_bounds: model.data_bounds,
-            data_bounds_y2: None,
-            data_bounds_y3: None,
-            data_bounds_y4: None,
-            heatmap: Some(PlotPanelHeatmap {
-                data_bounds: model.data_bounds,
-                cols: model.cols,
-                rows: model.rows,
-                values: model.values.clone(),
-                value_min: model.value_min,
-                value_max: model.value_max,
-            }),
-            series: Vec::new(),
-        }
-    }
-}
-
-impl From<&ErrorBarsPlotModel> for PlotPanelModel {
-    fn from(model: &ErrorBarsPlotModel) -> Self {
-        Self {
-            data_bounds: model.data_bounds,
-            data_bounds_y2: model.data_bounds_y2,
-            data_bounds_y3: model.data_bounds_y3,
-            data_bounds_y4: model.data_bounds_y4,
-            heatmap: None,
-            series: model
-                .series
-                .iter()
-                .map(|series| PlotPanelSeries {
-                    id: series.id,
-                    label: series.label.clone(),
-                    data: series.data.clone(),
-                    lower_data: None,
-                    error_bars: Some(PlotPanelErrorBars {
-                        x_errors: series.x_errors.clone(),
-                        y_errors: series.y_errors.clone(),
-                        cap_size: series.cap_size,
-                        show_caps: series.show_caps,
-                        marker_radius: series.marker_radius,
-                        show_markers: series.show_markers,
-                        marker_shape: series.marker_shape,
-                    }),
-                    histogram: None,
-                    bars: None,
-                    candlestick: None,
-                    y_axis: series.y_axis,
-                    stroke_color: series.stroke_color,
-                    stroke_width: series.stroke_width,
-                    fill: None,
-                    stem_baseline: None,
-                })
-                .collect(),
-        }
-    }
-}
-
-impl From<&BarsPlotModel> for PlotPanelModel {
-    fn from(model: &BarsPlotModel) -> Self {
-        Self {
-            data_bounds: model.data_bounds,
-            data_bounds_y2: model.data_bounds_y2,
-            data_bounds_y3: model.data_bounds_y3,
-            data_bounds_y4: model.data_bounds_y4,
-            heatmap: None,
-            series: model
-                .series
-                .iter()
-                .map(|series| PlotPanelSeries {
-                    id: series.id,
-                    label: series.label.clone(),
-                    data: series.data.clone(),
-                    lower_data: None,
-                    error_bars: None,
-                    histogram: None,
-                    bars: Some(PlotPanelBars {
-                        bar_width: f64::from(series.bar_width),
-                        baseline: f64::from(series.baseline),
-                        baselines: series.baseline_by_index.clone(),
-                    }),
-                    candlestick: None,
-                    y_axis: series.y_axis,
-                    stroke_color: series.fill_color,
-                    stroke_width: None,
-                    fill: None,
-                    stem_baseline: None,
-                })
-                .collect(),
-        }
-    }
-}
-
-impl From<&HistogramPlotModel> for PlotPanelModel {
-    fn from(model: &HistogramPlotModel) -> Self {
-        Self {
-            data_bounds: model.data_bounds,
-            data_bounds_y2: model.data_bounds_y2,
-            data_bounds_y3: model.data_bounds_y3,
-            data_bounds_y4: model.data_bounds_y4,
-            heatmap: None,
-            series: model
-                .series
-                .iter()
-                .map(|series| PlotPanelSeries {
-                    id: series.id,
-                    label: series.label.clone(),
-                    data: histogram_series_from_bins(series),
-                    lower_data: None,
-                    error_bars: None,
-                    histogram: Some(PlotPanelHistogram {
-                        bin_width: histogram_series_bin_width(series),
-                        bar_gap_fraction: series.bar_gap_fraction,
-                    }),
-                    bars: None,
-                    candlestick: None,
-                    y_axis: series.y_axis,
-                    stroke_color: series.fill_color,
-                    stroke_width: None,
-                    fill: None,
-                    stem_baseline: None,
-                })
-                .collect(),
-        }
-    }
-}
-
-impl From<&CandlestickPlotModel> for PlotPanelModel {
-    fn from(model: &CandlestickPlotModel) -> Self {
-        Self {
-            data_bounds: model.data_bounds,
-            data_bounds_y2: model.data_bounds_y2,
-            data_bounds_y3: model.data_bounds_y3,
-            data_bounds_y4: model.data_bounds_y4,
-            heatmap: None,
-            series: model
-                .series
-                .iter()
-                .map(|series| PlotPanelSeries {
-                    id: series.id,
-                    label: series.label.clone(),
-                    data: series.close_series.clone(),
-                    lower_data: None,
-                    error_bars: None,
-                    histogram: None,
-                    bars: None,
-                    candlestick: Some(PlotPanelCandlestick {
-                        points: series.points.clone(),
-                        candle_width: f64::from(series.candle_width),
-                        up_fill: series.up_fill,
-                        down_fill: series.down_fill,
-                        wick_color: series.wick_color,
-                    }),
-                    y_axis: series.y_axis,
-                    stroke_color: series.wick_color,
-                    stroke_width: series.stroke_width,
-                    fill: None,
-                    stem_baseline: None,
-                })
-                .collect(),
-        }
-    }
-}
-
-impl From<&LinePlotModel> for PlotPanelModel {
-    fn from(model: &LinePlotModel) -> Self {
-        Self {
-            data_bounds: model.data_bounds,
-            data_bounds_y2: model.data_bounds_y2,
-            data_bounds_y3: model.data_bounds_y3,
-            data_bounds_y4: model.data_bounds_y4,
-            heatmap: None,
-            series: model
-                .series
-                .iter()
-                .map(|series| PlotPanelSeries {
-                    id: series.id,
-                    label: series.label.clone(),
-                    data: series.data.clone(),
-                    lower_data: None,
-                    error_bars: None,
-                    histogram: None,
-                    bars: None,
-                    candlestick: None,
-                    y_axis: series.y_axis,
-                    stroke_color: series.stroke_color,
-                    stroke_width: series.stroke_width,
-                    fill: None,
-                    stem_baseline: None,
-                })
-                .collect(),
-        }
-    }
-}
-
-impl From<&AreaPlotModel> for PlotPanelModel {
-    fn from(model: &AreaPlotModel) -> Self {
-        Self {
-            data_bounds: model.data_bounds,
-            data_bounds_y2: model.data_bounds_y2,
-            data_bounds_y3: model.data_bounds_y3,
-            data_bounds_y4: model.data_bounds_y4,
-            heatmap: None,
-            series: model
-                .series
-                .iter()
-                .map(|series| PlotPanelSeries {
-                    id: series.id,
-                    label: series.label.clone(),
-                    data: series.data.clone(),
-                    lower_data: None,
-                    error_bars: None,
-                    histogram: None,
-                    bars: None,
-                    candlestick: None,
-                    y_axis: series.y_axis,
-                    stroke_color: series.stroke_color,
-                    stroke_width: series.stroke_width,
-                    fill: Some(PlotPanelFill {
-                        color: series.fill_color,
-                        alpha: series.fill_alpha,
-                        baseline: series.baseline,
-                    }),
-                    stem_baseline: None,
-                })
-                .collect(),
-        }
-    }
-}
-
-impl From<&ShadedPlotModel> for PlotPanelModel {
-    fn from(model: &ShadedPlotModel) -> Self {
-        Self {
-            data_bounds: model.data_bounds,
-            data_bounds_y2: model.data_bounds_y2,
-            data_bounds_y3: model.data_bounds_y3,
-            data_bounds_y4: model.data_bounds_y4,
-            heatmap: None,
-            series: model
-                .series
-                .iter()
-                .map(|series| PlotPanelSeries {
-                    id: series.id,
-                    label: series.label.clone(),
-                    data: series.upper.clone(),
-                    lower_data: Some(series.lower.clone()),
-                    error_bars: None,
-                    histogram: None,
-                    bars: None,
-                    candlestick: None,
-                    y_axis: series.y_axis,
-                    stroke_color: series.stroke_color.or(series.fill_color),
-                    stroke_width: series.stroke_width,
-                    fill: Some(PlotPanelFill {
-                        color: series.fill_color,
-                        alpha: series.fill_alpha,
-                        baseline: 0.0,
-                    }),
-                    stem_baseline: None,
-                })
-                .collect(),
-        }
-    }
-}
-
-impl From<&StemsPlotModel> for PlotPanelModel {
-    fn from(model: &StemsPlotModel) -> Self {
-        Self {
-            data_bounds: model.data_bounds,
-            data_bounds_y2: model.data_bounds_y2,
-            data_bounds_y3: model.data_bounds_y3,
-            data_bounds_y4: model.data_bounds_y4,
-            heatmap: None,
-            series: model
-                .series
-                .iter()
-                .map(|series| PlotPanelSeries {
-                    id: series.id,
-                    label: series.label.clone(),
-                    data: series.data.clone(),
-                    lower_data: None,
-                    error_bars: None,
-                    histogram: None,
-                    bars: None,
-                    candlestick: None,
-                    y_axis: series.y_axis,
-                    stroke_color: series.stroke_color,
-                    stroke_width: series.stroke_width,
-                    fill: None,
-                    stem_baseline: Some(series.baseline),
-                })
-                .collect(),
-        }
-    }
 }
 
 #[track_caller]
@@ -5811,32 +5418,6 @@ fn line_plot_candlestick_down_path_key(series_id: u64) -> u64 {
     0x706c_6f74_6364_6f77_u64 ^ series_id
 }
 
-fn histogram_series_from_bins(series: &crate::models::HistogramSeries) -> Series {
-    let Some(bins) = histogram_bins(&series.values, series.bin_count, series.range) else {
-        return Series::from_points_sorted(Vec::new(), true);
-    };
-
-    let points: Vec<DataPoint> = bins
-        .counts
-        .iter()
-        .copied()
-        .enumerate()
-        .filter_map(|(index, count)| {
-            (count.is_finite() && count > 0.0).then(|| DataPoint {
-                x: bins.center_x(index),
-                y: count,
-            })
-        })
-        .collect();
-    Series::from_points_sorted(points, true)
-}
-
-fn histogram_series_bin_width(series: &crate::models::HistogramSeries) -> f64 {
-    histogram_bins(&series.values, series.bin_count, series.range)
-        .map(|bins| bins.bin_width)
-        .unwrap_or(0.0)
-}
-
 fn line_plot_device_point_budget(transform: PlotTransform, scale_factor: f32) -> usize {
     let width = transform.viewport.size.width.0.max(0.0);
     let device_width = (width * scale_factor.max(1.0)).max(1.0);
@@ -6626,7 +6207,7 @@ mod tests {
         AreaPlotModel, AreaSeries, BarSeries, BarsPlotModel, CandlestickPlotModel,
         CandlestickSeries, ErrorBar, ErrorBarsPlotModel, ErrorBarsSeries, HeatmapPlotModel,
         Histogram2DPlotModel, HistogramPlotModel, HistogramSeries, LinePlotModel, LineSeries,
-        OhlcPoint, StemsPlotModel, StemsSeries, YAxis,
+        OhlcPoint, ShadedPlotModel, StemsPlotModel, StemsSeries, YAxis,
     };
     use crate::series::Series;
     use crate::state::{

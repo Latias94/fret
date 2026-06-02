@@ -3,6 +3,54 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Model Projection Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative model projection moved out of
+`ecosystem/fret-plot/src/declarative.rs` into private
+`ecosystem/fret-plot/src/declarative/model.rs` without changing public plot panel props,
+`*_plot_panel` entrypoints, optional IMUI adapter routing, histogram bin projection, multi-axis
+bounds propagation, retained-free paint/event/layout behavior, or the deleted retained bridge
+boundary.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/model.rs` owns the projection path where all concrete plot
+  models project into private `PlotPanelModel` records, including line, area, shaded, stems,
+  error-bars, histogram, bars, candlestick, heatmap, and histogram2d projection.
+- The model owner carries histogram bin projection through `histogram_series_from_bins(...)` and
+  `histogram_series_bin_width(...)`.
+- `ecosystem/fret-plot/src/declarative.rs` keeps plot paint/event/layout orchestration and imports
+  the private projection records instead of owning projection construction.
+- `ecosystem/fret-plot/src/declarative/panels.rs` and
+  `ecosystem/fret-plot/src/declarative/props.rs` continue to own public entrypoints and public
+  props, keeping paint/event/panel entrypoints out of the projection owner.
+- `tools/gate_imui_workstream_source.py` tracks root, model, panels, and props owners separately
+  and rejects projection structs, `From<...>` impls, and histogram projection helpers from
+  drifting back into the root paint/event owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new projection owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib imui_adapter_stays_opt_in_and_declarative_only --no-fail-fast`:
+  pass, 1 test.
+- `cargo test -p fret-plot --lib line_chart_builder_stays_model_only_on_default_surface --no-fail-fast`:
+  pass, 1 test.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- The first parallel `cargo test` attempt failed before execution because the test module had
+  previously relied on the root declarative file's broad `ShadedPlotModel` import. The test module
+  now imports `ShadedPlotModel` explicitly, and the focused tests passed when rerun serially.
+
 ## Editor AxisDragValue Typing Focus Owner-Split Evidence - 2026-06-02
 
 Claim verified: editor AxisDragValue typing focus lifecycle moved out of
