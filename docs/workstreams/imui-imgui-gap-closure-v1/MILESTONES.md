@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-03 docking drop resolve diagnostics owner-split result:
+`ecosystem/fret-docking/src/dock/drop_resolve/diagnostics.rs` now owns resolved target diagnostics,
+preview diagnostics, and resolve diagnostics payload construction.
+`ecosystem/fret-docking/src/dock/drop_resolve.rs` is now a pure private module and re-export hub
+for diagnostics, intent, target, and floating-hit owners. Public docking APIs, target resolution,
+drop-intent projection, floating hit testing, and diagnostics payloads remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-03 docking drop resolve intent owner-split result:
 `ecosystem/fret-docking/src/dock/drop_resolve/intent.rs` now owns panel/tab drop intent projection,
 in-window float intent projection, tear-off request gating, effect emission, invalidate-layout

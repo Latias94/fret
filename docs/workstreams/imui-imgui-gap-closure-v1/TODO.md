@@ -612,6 +612,14 @@ Last updated: 2026-06-03
       projection, effect emission, and debug intent labels. `dock/drop_resolve.rs` keeps diagnostics
       orchestration while re-exporting the intent owner API. The source gate prevents intent/effect
       helpers from drifting back into the drop resolve root.
+- [x] Split docking drop resolve diagnostics projection into a private child owner without changing
+      resolved target diagnostics, preview diagnostics, candidate rect publication, target
+      resolution, drop-intent projection, effect emission, floating hit testing, or public docking
+      APIs.
+      Result: `dock/drop_resolve/diagnostics.rs` owns resolved target diagnostics, preview
+      diagnostics, and resolve diagnostics payload construction. `dock/drop_resolve.rs` is now a
+      pure diagnostics/intent/target/floating-hit re-export hub. The source gate prevents
+      diagnostics helpers from drifting back into the drop resolve root.
 - [x] Split docking declarative internal drag/drop resolve and drag-start policy into a private
       child owner without changing hover/drop target resolution, tab-bar auto-scroll during drag,
       tear-off handoff, drop intent application, drag diagnostics publication, drag inversion

@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Docking Drop Resolve Diagnostics Owner Split - 2026-06-03
+
+Claim verified: drop target and preview diagnostics projection moved out of
+`ecosystem/fret-docking/src/dock/drop_resolve.rs` into private
+`ecosystem/fret-docking/src/dock/drop_resolve/diagnostics.rs` without changing resolved target
+diagnostics, preview diagnostics, candidate rect publication, target resolution, drop intent
+projection, effect emission, floating hit testing, or public docking APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/drop_resolve/diagnostics.rs` owns
+  `dock_drop_target_diagnostics(...)` and `compute_dock_drop_resolve_diagnostics(...)`.
+- `ecosystem/fret-docking/src/dock/drop_resolve.rs` is now a pure private
+  diagnostics/intent/target/floating-hit module and re-export hub.
+- `ecosystem/fret-docking/src/dock/drop_resolve/intent.rs`,
+  `ecosystem/fret-docking/src/dock/drop_resolve/target.rs`, and
+  `ecosystem/fret-docking/src/dock/drop_resolve/floating_hit.rs` remain their respective owners.
+- `tools/gate_imui_workstream_source.py` rejects diagnostics drift back into the drop resolve root
+  and rejects target/intent/floating behavior in the diagnostics owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the diagnostics owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking floating_title_bar_drag center_drop tab_drop drop_hint --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-docking drags_floating_title_bar --no-fail-fast`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Drop Resolve Intent Owner Split - 2026-06-03
 
 Claim verified: drop intent projection and effect emission moved out of

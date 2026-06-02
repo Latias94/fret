@@ -1927,6 +1927,7 @@
     "ecosystem/fret-plot/src/declarative/style_helpers.rs",
     "ecosystem/fret-plot/src/declarative/tests.rs",
     "ecosystem/fret-docking/src/dock/drop_resolve.rs",
+    "ecosystem/fret-docking/src/dock/drop_resolve/diagnostics.rs",
     "ecosystem/fret-docking/src/dock/drop_resolve/floating_hit.rs",
     "ecosystem/fret-docking/src/dock/drop_resolve/intent.rs",
     "ecosystem/fret-docking/src/dock/drop_resolve/target.rs",

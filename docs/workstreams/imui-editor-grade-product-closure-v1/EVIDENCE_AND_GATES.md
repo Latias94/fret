@@ -2,6 +2,39 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Docking drop resolve diagnostics owner split - 2026-06-03
+
+This maintenance slice separates drop target and preview diagnostics projection from docking drop
+resolve orchestration:
+
+- `ecosystem/fret-docking/src/dock/drop_resolve/diagnostics.rs` owns resolved target diagnostics
+  projection, preview diagnostics projection, and resolve diagnostics payload construction.
+- `ecosystem/fret-docking/src/dock/drop_resolve.rs` is now a pure private module and re-export hub
+  for diagnostics, intent, target, and floating-hit owners.
+- `ecosystem/fret-docking/src/dock/drop_resolve/intent.rs`,
+  `ecosystem/fret-docking/src/dock/drop_resolve/target.rs`, and
+  `ecosystem/fret-docking/src/dock/drop_resolve/floating_hit.rs` remain their respective owners.
+- Evidence anchor: Docking drop resolve diagnostics owner split - 2026-06-03.
+- Evidence anchor: ecosystem/fret-docking/src/dock/drop_resolve/diagnostics.rs.
+- Evidence anchor: drop target and preview diagnostics projection.
+- Evidence anchor: Drop resolve root is now a pure diagnostics/intent/target/floating-hit re-export hub.
+- Public docking APIs, target diagnostics, preview diagnostics, candidate rect publication, target
+  resolution, drop intent projection, and floating hit testing remain unchanged.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so diagnostics helpers cannot
+  drift back into `drop_resolve.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-docking` - passed.
+- `cargo check -p fret-docking` - passed.
+- `cargo nextest run -p fret-docking floating_title_bar_drag center_drop tab_drop drop_hint --no-fail-fast` - passed.
+- `cargo nextest run -p fret-docking drags_floating_title_bar --no-fail-fast` - passed.
+- `cargo fmt -p fret-docking -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Docking drop resolve intent owner split - 2026-06-03
 
 This maintenance slice separates drop intent projection and effect emission from docking drop
