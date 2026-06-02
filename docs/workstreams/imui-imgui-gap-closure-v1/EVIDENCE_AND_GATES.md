@@ -3,18 +3,58 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Series Paint Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative series-specific paint routing moved out of
+`ecosystem/fret-plot/src/declarative/panel_paint.rs` into private
+`ecosystem/fret-plot/src/declarative/series_paint.rs` without changing panel background/grid,
+heatmap, overlay, legend, selection, readout, event routing, output publication, public panel props,
+optional IMUI adapter routing, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/series_paint.rs` is the line, area, shaded, stems,
+  histogram, bars, candlestick, and error-bar series paint owner.
+- Panel paint owner keeps background, grid, overlays, legend, selection, and readout orchestration.
+- The series paint owner imports command builders, geometry, and style helpers explicitly and stays
+  event-free, output-free, overlay-free, authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` rejects series path/color command logic from drifting back
+  into `panel_paint.rs` and rejects panel/overlay/readout concerns from `series_paint.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new series paint owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_seeded_line --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_axes_and_grid --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_series_legend --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_plot_image_overlay --no-fail-fast`:
+  pass.
+- `cargo test -p fret-plot --lib line_plot_panel_drags --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Panel Paint Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative panel paint orchestration moved out of
 `ecosystem/fret-plot/src/declarative.rs` into private
 `ecosystem/fret-plot/src/declarative/panel_paint.rs` without changing panel element assembly,
 event routing, output publication, public panel props, optional IMUI adapter routing, or plot model
-projection behavior.
+projection behavior. The later series paint owner split above moves current series path/bar/
+candlestick/error/shaded/stems drawing into
+`ecosystem/fret-plot/src/declarative/series_paint.rs`.
 
 Evidence:
 
-- `ecosystem/fret-plot/src/declarative/panel_paint.rs` is the panel background, grid, series,
-  overlay, legend, and readout paint orchestration owner.
+- At that slice, `ecosystem/fret-plot/src/declarative/panel_paint.rs` was the panel background,
+  grid, series, overlay, legend, and readout paint orchestration owner; the current series loop
+  owner is `series_paint.rs`.
 - Root keeps panel element and event wiring in `ecosystem/fret-plot/src/declarative.rs`.
 - The panel paint owner imports grid/axis, heatmap, right-axis labels, overlays, selection,
   readout, command builders, geometry, and style helpers explicitly.

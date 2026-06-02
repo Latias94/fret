@@ -6055,8 +6055,16 @@ opening the slice.
       optional IMUI adapter routing, plot model projection, or existing paint sub-owner behavior.
       Result: `ecosystem/fret-plot/src/declarative/panel_paint.rs` owns panel background, grid,
       heatmap, right-axis labels, series, overlays, legend, selection/readout, and command-builder
-      orchestration; `declarative.rs` keeps panel element assembly, event wiring, output
-      publication, and plot state model wiring.
+      orchestration at that slice; `declarative.rs` keeps panel element assembly, event wiring,
+      output publication, and plot state model wiring. The later series-paint owner split moves
+      current series path/bar/candlestick/error/shaded/stems drawing into `series_paint.rs`.
+- [x] Split Fret Plot declarative series painting out of the panel paint owner without changing
+      panel background/grid, heatmap, overlay, legend, selection, readout, event routing, output
+      publication, public panel props, optional IMUI adapter routing, or plot model projection.
+      Result: `ecosystem/fret-plot/src/declarative/series_paint.rs` owns line, area, shaded,
+      stems, histogram, bars, candlestick, and error-bar series painting; `panel_paint.rs` keeps
+      background, grid, heatmap, right-axis labels, overlays, legend, selection/readout, and panel
+      paint orchestration.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll

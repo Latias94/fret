@@ -28,6 +28,7 @@ mod panels;
 mod props;
 mod readout;
 mod selection;
+mod series_paint;
 mod style_helpers;
 
 use interaction::{

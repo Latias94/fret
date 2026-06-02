@@ -2,12 +2,40 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative series paint owner split - 2026-06-02
+
+This maintenance slice keeps concrete plot series drawing out of the panel-level orchestration
+owner while preserving the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/series_paint.rs` is the line, area, shaded, stems, histogram, bars, candlestick, and error-bar series paint owner.
+- Panel paint owner keeps background, grid, overlays, legend, selection, and readout orchestration.
+- The series owner stays event-free, output-free, overlay-free, authoring-free, and retained-free;
+  it imports existing command builders, multi-axis geometry, and style helper owners explicitly.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so series path/color command
+  logic cannot drift back into `panel_paint.rs` and panel/readout/overlay concerns cannot drift
+  into `series_paint.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_seeded_line --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_axes_and_grid --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_series_legend --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_plot_image_overlay --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_drags --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative panel paint owner split - 2026-06-02
 
 This maintenance slice keeps the opt-in plot adapter's declarative panel implementation reviewable
 while preserving the editor-grade IMUI layering goal:
 
-- `ecosystem/fret-plot/src/declarative/panel_paint.rs` is the panel background, grid, series, overlay, legend, and readout paint orchestration owner.
+- At that slice, `ecosystem/fret-plot/src/declarative/panel_paint.rs` was the panel background, grid, series, overlay, legend, and readout paint orchestration owner; the later series owner split above narrows current panel paint responsibility.
 - Root keeps panel element and event wiring in `ecosystem/fret-plot/src/declarative.rs`, plus the
   public `panels.rs` and `props.rs` re-export hub.
 - The paint owner stays event-free, state-model-free, authoring-free, and retained-free; it imports

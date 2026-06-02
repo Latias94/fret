@@ -5297,9 +5297,16 @@ state model wiring at that slice. The later panel-paint owner split narrows the 
 Fret Plot declarative panel paint owner split - 2026-06-02:
 `ecosystem/fret-plot/src/declarative/panel_paint.rs` now owns panel background, grid, heatmap,
 right-axis labels, series, overlays, legend, selection/readout, and command-builder paint
-orchestration. The declarative root keeps panel element assembly, event wiring, output
-publication, and plot state model wiring, while the source gate keeps event/state/retained concerns
-out of the paint owner.
+orchestration at that slice. The declarative root keeps panel element assembly, event wiring,
+output publication, and plot state model wiring, while the source gate keeps event/state/retained
+concerns out of the paint owner. The later series-paint owner split narrows current panel paint
+responsibility.
+
+Fret Plot declarative series paint owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/series_paint.rs` now owns line, area, shaded, stems,
+histogram, bars, candlestick, and error-bar series painting. `panel_paint.rs` keeps background,
+grid, heatmap, right-axis labels, overlays, legend, selection/readout, and panel-level paint
+orchestration, while the source gate keeps event/output/overlay concerns out of the series owner.
 
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
