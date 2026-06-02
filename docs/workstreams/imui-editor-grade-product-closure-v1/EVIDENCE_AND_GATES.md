@@ -327,6 +327,34 @@ Fresh gates:
 - `python tools\check_workstream_catalog.py` - passed.
 - `git diff --check` - passed.
 
+## Fret Plot declarative path-command owner split - 2026-06-02
+
+This refresh keeps the optional IMUI plot adapter declarative-only while moving series-to-path
+projection out of the retained-free paint/event root:
+
+- `ecosystem/fret-plot/src/declarative/commands.rs` now owns the path-command projection owner,
+  including line, area, shaded, stems, histogram, bars, candlestick, and error-bar command builders.
+- The command owner also owns path-key helpers, step-mode expansion, marker command generation, and
+  candlestick device-point budgeting.
+- `ecosystem/fret-plot/src/declarative.rs` imports the command projection entrypoints while
+  paint/event orchestration stays in `declarative.rs`.
+- The command owner does not depend on `CanvasPainter`, `UiHost`, `ElementContext`, `PlotState`,
+  `fret-authoring`, retained plot bridges, or optional IMUI adapter policy.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed with existing dead-code warnings in
+  `plot/view.rs`.
+- `cargo test -p fret-plot --lib imui_adapter_stays_opt_in_and_declarative_only --no-fail-fast` -
+  passed, 1 test.
+- `cargo test -p fret-plot --lib line_chart_builder_stays_model_only_on_default_surface --no-fail-fast` -
+  passed, 1 test.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## DevTools Demo/Metrics/Debug line projection owner split - 2026-06-02
 
 This refresh keeps the Dear ImGui-style Demo/Metrics/Debug route productized in DevTools while

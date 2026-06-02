@@ -5216,6 +5216,12 @@ including row metrics, swatch/text painting, hover/pin highlight, and swatch/lab
 declarative root keeps event state mutation for hidden-series and pinned-series changes, so legend
 interaction policy does not move into the paint/hit-test owner or the optional IMUI adapter.
 
+Fret Plot declarative path-command owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/commands.rs` now owns private path-command projection for line,
+area, shaded, stems, histogram, bars, candlestick, and error-bar series. The declarative root keeps
+paint/event orchestration and imports only command projection entrypoints, so path generation stays
+declarative and does not move into `fret-imui`, `fret-ui-kit::imui`, or the optional adapter.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,

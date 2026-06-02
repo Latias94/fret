@@ -5956,6 +5956,13 @@ opening the slice.
       IMUI adapter routing.
       Result: `ecosystem/fret-plot/src/declarative/legend.rs` owns the private legend paint and
       hit-test owner; `declarative.rs` keeps event state mutation and plot event routing.
+- [x] Split Fret Plot declarative path-command projection out of the retained-free paint/event root
+      without changing line, area, shaded, stems, histogram, bars, candlestick, or error-bar command
+      builders, path-key helpers, step-mode expansion, marker command generation, public panel
+      props, or optional IMUI adapter routing.
+      Result: `ecosystem/fret-plot/src/declarative/commands.rs` owns the private path-command
+      projection owner; `declarative.rs` keeps paint/event orchestration and imports only command
+      projection entrypoints.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll
