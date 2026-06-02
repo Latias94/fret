@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-06-02
 
+## IMUI Popup-Menu Panel Assembly Source-Gate Evidence - 2026-06-02
+
+Claim verified: popup-menu panel assembly is now tracked as the canonical owner for panel element
+construction, while `popup_overlay/menu/panel.rs` remains the lifecycle/state/layout orchestrator.
+The source gate also follows the previously split DevTools native owners instead of requiring
+first-open, workflow, recent-evidence, and gate-profile strings to drift back into `native.rs`.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs` declares `mod assembly;` and
+  delegates panel element assembly through `assembly::assemble_popup_menu_panel(...)`.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/assembly.rs` owns root-name scoping,
+  navigation state registration, popup menu semantics, stored panel-id updates, first-item focus
+  projection, and `PopupMenuBuilt` construction.
+- `tools/gate_imui_workstream_source.py` now requires `panel/assembly.rs`, rejects those assembly
+  details from drifting back into `panel.rs`, and scans the split DevTools native owner files for
+  their retained first-open/workflow/recent-evidence/gate-profile evidence strings.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new assembly owner file.
+
+Focused gates:
+
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Begin-Submenu Open-Policy Read Owner-Split Evidence - 2026-06-02
 
 Claim verified: IMUI begin-submenu open-policy readback moved out of

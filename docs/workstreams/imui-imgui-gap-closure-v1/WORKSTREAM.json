@@ -765,6 +765,7 @@
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/policy.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs",
+    "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/assembly.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/content.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/layout.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/state.rs",
