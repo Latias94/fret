@@ -42,6 +42,15 @@ handoff, and keyboard acceptance routing through `accept_text_assist_match(...)`
 `TextAssistField` APIs, panel row activation, overlay routing, accept semantics, and redraw behavior
 remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-02 editor ColorEdit swatch activation owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/swatch.rs` now keeps swatch
+pressable/chrome/drag/drop/tooltip orchestration while delegating popup activation to
+`ecosystem/fret-ui-editor/src/controls/color_edit/swatch/activation.rs`. The private activation
+owner contains visible-content gating, original-reference capture, popup open toggling, copy-menu
+closing, and redraw requests. Context-menu routing, drag/drop hooks, tooltip state, preview chrome,
+pressable registration, and public `ColorEdit` behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 editor ColorEdit popup body layout owner-split result:
 `ecosystem/fret-ui-editor/src/controls/color_edit/popup/body.rs` now keeps popup model reads,
 effective option resolution, and picker/numeric/swatches/eyedropper element creation while

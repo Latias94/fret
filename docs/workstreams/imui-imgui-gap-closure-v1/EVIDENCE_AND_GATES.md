@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Editor ColorEdit Swatch Activation Owner-Split Evidence - 2026-06-02
+
+Claim verified: editor color-edit main swatch popup activation moved out of
+`controls/color_edit/swatch.rs` into private `controls/color_edit/swatch/activation.rs` without
+changing pressable registration, popup-visible-content gating, original-reference capture, popup
+open toggling, copy-menu closing, redraw requests, context-menu routing, drag/drop hooks, tooltip
+state, preview chrome, or a11y value text.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/swatch.rs` keeps the root swatch args,
+  pressable props/a11y, context-menu routing, drag/drop hooks, tooltip hover model synchronization,
+  editor frame visuals, preview container, test-id/a11y-value mounting, and keyboard context-menu
+  installation.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/swatch/activation.rs` owns visible-content
+  guard, original-reference capture for side-preview restore, popup open toggling, copy-menu close,
+  and redraw request.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/swatch/context_menu.rs` remains the
+  context-menu pointer/keyboard owner.
+- `tools/gate_imui_workstream_source.py` tracks swatch root, activation, and context-menu owners
+  separately, and rejects activation closure details from drifting back into the root swatch owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new activation owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo test -p fret-ui-editor --features imui color_edit --no-fail-fast`: pass, 51 unit tests
+  plus 1 integration test.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor TextAssistField Keyboard Owner-Split Evidence - 2026-06-02
 
 Claim verified: editor `TextAssistField` input-owned keyboard policy moved out of

@@ -1,10 +1,10 @@
+mod activation;
 mod context_menu;
 
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PressableA11y, PressableProps,
     SizeStyle,
@@ -15,6 +15,7 @@ use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
+use self::activation::{ColorSwatchActivateInput, color_swatch_activate};
 use self::context_menu::{
     install_context_menu_keyboard_handler, install_context_menu_pointer_handler,
 };
@@ -92,46 +93,21 @@ pub(super) fn color_swatch<H: UiHost>(
         (frame_chrome, density.hit_thickness, swatch_size, ring)
     };
 
-    let open_for_activate = open.clone();
     let open_for_paint = open.clone();
     let tooltip_open_for_paint = tooltip_open.clone();
-    let copy_menu_open_for_activate = copy_menu_open.clone();
     let copy_menu_open_for_pointer = copy_menu_open.clone();
     let copy_menu_open_for_paint = copy_menu_open.clone();
     let open_for_pointer = open.clone();
     let tooltip_open_for_pointer = tooltip_open.clone();
-    let reference_for_activate = reference.clone();
-    let model_for_activate = model.clone();
     let drag_drop_store_for_swatch = drag_drop_store.clone();
-    let on_activate: OnActivate =
-        Arc::new(move |host, action_cx: ActionCx, _reason: ActivateReason| {
-            if !popup_has_visible_content {
-                return;
-            }
-            let prev = host
-                .models_mut()
-                .get_copied(&open_for_activate)
-                .unwrap_or(false);
-            let opening = !prev;
-            if opening && popup_options.side_preview.shows_original() {
-                let current = host
-                    .models_mut()
-                    .get_copied(&model_for_activate)
-                    .unwrap_or(Color::TRANSPARENT);
-                let _ = host
-                    .models_mut()
-                    .update(&reference_for_activate, |reference| {
-                        *reference = Some(current)
-                    });
-            }
-            let _ = host
-                .models_mut()
-                .update(&open_for_activate, |v| *v = opening);
-            let _ = host
-                .models_mut()
-                .update(&copy_menu_open_for_activate, |v| *v = false);
-            host.request_redraw(action_cx.window);
-        });
+    let on_activate = color_swatch_activate(ColorSwatchActivateInput {
+        model: model.clone(),
+        open: open.clone(),
+        copy_menu_open: copy_menu_open.clone(),
+        reference: reference.clone(),
+        popup_has_visible_content,
+        popup_options,
+    });
 
     let mut swatch = cx.pressable(
         PressableProps {

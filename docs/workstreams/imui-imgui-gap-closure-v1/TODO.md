@@ -768,6 +768,15 @@ Last updated: 2026-06-02
       tooltip/drag/drop/chrome/preview ownership. `controls/color_edit/swatch/context_menu.rs`
       owns pointer and keyboard copy-menu opening policy. The source gate prevents context-menu
       input policy from drifting back into the root swatch owner.
+- [x] Split editor color-edit main swatch popup activation into a private child owner without
+      changing pressable registration, popup-visible-content gating, original-reference capture,
+      popup open toggling, copy-menu closing, redraw requests, context-menu routing, drag/drop
+      hooks, tooltip state, preview chrome, or a11y value text.
+      Result: `controls/color_edit/swatch.rs` keeps swatch pressable/chrome/drag/drop/tooltip
+      orchestration and delegates activation to `controls/color_edit/swatch/activation.rs`. The
+      private activation owner contains visible-content guard, original-reference capture,
+      open-state toggle, copy-menu close, and redraw request. The source gate prevents popup
+      activation policy from drifting back into the root swatch owner.
 - [x] Split editor color-edit popup swatch slot behavior into a private child owner without
       changing preset/history row entrypoints, row wrapping, stable test-id derivation,
       pressable/a11y chrome, activation color application, drag source/drop target behavior,
