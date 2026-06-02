@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 fret-imui composition region-container test owner-split result:
+`ecosystem/fret-imui/src/tests/composition/layout_collections.rs` now keeps the layout, porting
+sugar, table, virtual-list, separator, and bullet-text composition coverage while delegating
+ChildRegion/ListBox region-container coverage to
+`ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers.rs`. Test names and
+behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the parent router plus
+region-container child owner boundary.
+
 2026-06-02 IMUI begin-submenu open-policy read owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/open_policy.rs` now keeps
 clicked-trigger reconciliation, stale close cleanup, and popup close/open dispatch while delegating

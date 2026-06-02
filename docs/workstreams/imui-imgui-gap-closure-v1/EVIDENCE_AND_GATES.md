@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret-IMUI Composition Region-Container Test Owner-Split Evidence - 2026-06-02
+
+Claim verified: `fret-imui` composition layout-collection tests now keep ChildRegion/ListBox
+region-container coverage in a dedicated child owner while the parent module remains responsible for
+the remaining layout, table, virtual-list, separator, and bullet-text coverage. No helper behavior or
+test names changed.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/composition/layout_collections.rs` declares
+  `mod region_containers;` and no longer owns the ChildRegion/ListBox region-container test bodies.
+- `ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers.rs` owns
+  ChildRegion scroll/chrome/resize/auto-size coverage and ListBox semantics/scroll coverage.
+- `tools/gate_imui_workstream_source.py` now tracks the child owner file, requires the parent module
+  declaration, and rejects moved region-container tests from drifting back into the parent file.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new child owner file.
+
+Focused gates:
+
+- `cargo nextest run -p fret-imui layout_collections --no-fail-fast`: unavailable in this
+  environment (`cargo nextest` is not installed).
+- `cargo fmt -p fret-imui`: pass.
+- `cargo test -p fret-imui layout_collections`: pass, 28 passed / 158 filtered.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass, 540 dedicated directories / 47 standalone
+  markdown files.
+- `git diff --check`: pass.
+
 ## IMUI Popup-Menu Panel Assembly Source-Gate Evidence - 2026-06-02
 
 Claim verified: popup-menu panel assembly is now tracked as the canonical owner for panel element

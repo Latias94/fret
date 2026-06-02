@@ -1864,6 +1864,7 @@
     "ecosystem/fret-imui/src/tests/popup_hover/mod.rs",
     "ecosystem/fret-imui/src/tests/composition/mod.rs",
     "ecosystem/fret-imui/src/tests/composition/layout_collections.rs",
+    "ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers.rs",
     "ecosystem/fret-imui/src/tests/models_combo/mod.rs",
     "ecosystem/fret-imui/src/tests/models_controls/image_item.rs",
     "ecosystem/fret-imui/src/tests/models_controls/mod.rs",

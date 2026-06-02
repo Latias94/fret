@@ -812,6 +812,7 @@ def main() -> None:
                 "ecosystem/fret-ui-kit/src/imui/options/misc/separator_text.rs",
                 "ecosystem/fret-ui-kit/tests/imui_table_smoke.rs",
                 "ecosystem/fret-imui/src/tests/composition/layout_collections.rs",
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers.rs",
                 "ecosystem/fret-imui/src/tests/models_controls/radio.rs",
                 "apps/fret-ui-gallery/src/driver/chrome.rs",
                 "apps/fret-ui-gallery/src/driver/shell.rs",
@@ -11925,6 +11926,26 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-imui/src/tests/composition/layout_collections.rs"),
             required=[
+                "mod region_containers;",
+                "fn table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells()",
+                "fn virtual_list_helper_mounts_small_render_window_and_scrolls_to_target_row()",
+            ],
+            forbidden=[
+                "fn child_region_helper_stacks_content_and_forwards_scroll_options()",
+                "fn list_box_container_stamps_semantics_scroll_and_hosts_selectables()",
+                "fn child_region_helper_can_host_menu_bar_and_popup_menu()",
+                "fn child_region_helper_can_switch_between_framed_and_bare_chrome()",
+                "fn child_region_helper_renders_resize_y_handle_without_breaking_scroll_chrome()",
+                "fn child_region_without_height_constraint_auto_sizes_to_content()",
+                "fn child_region_without_width_constraint_auto_sizes_to_content()",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers.rs"
+            ),
+            required=[
+                "use super::*;",
                 "fn list_box_container_stamps_semantics_scroll_and_hosts_selectables()",
                 "ui.list_box_with_options(",
                 "ListBoxOptions {",
@@ -12054,18 +12075,6 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-imui/src/tests/composition/layout_collections.rs"),
             required=[
-                "fn child_region_without_height_constraint_auto_sizes_to_content()",
-                "\"imui-child-region.auto-height\"",
-                "\"imui-child-region.auto-height.viewport\"",
-                "\"imui-child-region.auto-height.after\"",
-                "auto-height child region should contain measured content",
-                "following siblings should be pushed below the auto-height child region",
-                "fn child_region_without_width_constraint_auto_sizes_to_content()",
-                "\"imui-child-region.auto-width\"",
-                "\"imui-child-region.auto-width.viewport\"",
-                "\"imui-child-region.auto-width.after\"",
-                "auto-width child region should contain measured content",
-                "following siblings should be pushed after the auto-width child region",
                 "fn table_helper_skips_hidden_columns_in_header_and_body()",
                 "TableColumn::px(\"Status\", Px(96.0)).hidden()",
                 "\"imui-table-hidden-column.header.cell.status\"",
@@ -12089,6 +12098,26 @@ def main() -> None:
                 "left pinned column should not move with center scroll",
                 "right pinned column should not move with center scroll",
                 "center column should move left with horizontal scroll",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers.rs"
+            ),
+            required=[
+                "fn child_region_without_height_constraint_auto_sizes_to_content()",
+                "\"imui-child-region.auto-height\"",
+                "\"imui-child-region.auto-height.viewport\"",
+                "\"imui-child-region.auto-height.after\"",
+                "auto-height child region should contain measured content",
+                "following siblings should be pushed below the auto-height child region",
+                "fn child_region_without_width_constraint_auto_sizes_to_content()",
+                "\"imui-child-region.auto-width\"",
+                "\"imui-child-region.auto-width.viewport\"",
+                "\"imui-child-region.auto-width.after\"",
+                "auto-width child region should contain measured content",
+                "following siblings should be pushed after the auto-width child region",
             ],
             forbidden=[],
         ),
@@ -46092,7 +46121,7 @@ def main() -> None:
         SourceCheck(
             Path("docs/workstreams/README.md"),
             required=[
-                "Dedicated directories: 510",
+                "Dedicated directories: 540",
                 "`docs/workstreams/imui-style-theme-editor-proof-v1/`",
                 "closed narrow proof for Dear ImGui-style editor theme preset switching in `fret-ui-editor`",
                 "without moving `GetStyle` / `PushStyleVar` / global style-stack policy into runtime",
@@ -46623,7 +46652,9 @@ def main() -> None:
             ],
         ),
         SourceCheck(
-            Path("ecosystem/fret-imui/src/tests/composition/layout_collections.rs"),
+            Path(
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers.rs"
+            ),
             required=[
                 "fn list_box_container_stamps_semantics_scroll_and_hosts_selectables()",
                 "ui.list_box_with_options(",
@@ -53114,9 +53145,10 @@ def main() -> None:
             required=[
                 "mod toast_render;",
                 "use toast_render::{",
-                "ToastViewportPauseState, alpha_mul, sonner_toast_description_style, sonner_toast_title_style,",
-                "toast_description_text, toast_icon_from_override, toast_icon_glyph, toast_part_test_id,",
-                "toast_stack_shift_output,",
+                "ToastViewportPauseState, alpha_mul, resolve_toast_color_key, resolve_toast_text_color,",
+                "resolve_toast_text_style, sonner_toast_description_style, sonner_toast_title_style,",
+                "toast_button_state_layer, toast_description_text, toast_icon_button_state_layer,",
+                "toast_icon_from_override, toast_icon_glyph, toast_part_test_id, toast_stack_shift_output,",
                 "let stack_shift = toast_stack_shift_output(",
                 "let was_paused = cx.slot_state(ToastViewportPauseState::default",
                 "toast_part_test_id(test_id.as_ref(), \"close\")",
