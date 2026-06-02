@@ -6059,9 +6059,10 @@ opening the slice.
 - [x] Split Fret Plot declarative interaction event routing out of the implementation root without
       changing paint owners, output publication, public panel props, optional IMUI adapter routing,
       or state model ownership.
-      Result: `ecosystem/fret-plot/src/declarative/interaction.rs` owns legend and box-zoom event
-      routing plus box session records while re-exporting child interaction owners; `declarative.rs`
-      keeps panel assembly, paint orchestration, output
+      Result: `ecosystem/fret-plot/src/declarative/interaction.rs` owns legend event routing,
+      pointer event snapshots, selection overlay records, and shared mouse-button helpers while
+      re-exporting child interaction owners; `declarative.rs` keeps panel assembly, paint
+      orchestration, output
       publication, view/output snapshot records, shared geometry helpers, and plot state model
       wiring.
 - [x] Split Fret Plot declarative draggable overlay event routing out of the interaction owner
@@ -6070,7 +6071,15 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/interaction/draggable.rs` owns draggable overlay
       hit-testing, drag-session mutation, multi-axis drag transform selection, and `PlotDragOutput`
       projection; `interaction.rs` re-exports the draggable entrypoints and keeps
-      legend/box-zoom routing plus query/pan/wheel re-export routing.
+      legend routing plus box/query/pan/wheel re-export routing.
+- [x] Split Fret Plot declarative box zoom event routing out of the interaction owner without
+      changing legend routing, query drag, pan, wheel zoom, draggable overlays, active-selection
+      rendering, paint owners, output publication, public panel props, optional IMUI adapter
+      routing, or plot model projection.
+      Result: `ecosystem/fret-plot/src/declarative/interaction/box_zoom.rs` owns box zoom session
+      state, modifier expansion, active-selection updates, axis-lock filtering, clamp/sanitize
+      handling, and view-bound update routing; `interaction.rs` re-exports the box zoom entrypoint
+      and keeps legend routing plus event snapshots.
 - [x] Split Fret Plot declarative query drag event routing out of the interaction owner without
       changing legend routing, box zoom, pan, wheel zoom, draggable overlays, active-selection
       rendering, paint owners, output publication, public panel props, optional IMUI adapter
@@ -6078,13 +6087,13 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/interaction/query.rs` owns query drag session
       state, query selection overlay updates, query rectangle data projection, and
       `PlotState::query` update routing; `interaction.rs` re-exports the query entrypoints and
-      keeps legend/box-zoom routing.
+      keeps legend routing plus box re-export routing.
 - [x] Split Fret Plot declarative pan event routing out of the interaction owner without changing
       legend routing, query drag, box zoom, wheel zoom, draggable overlays, paint owners, output
       publication, public panel props, optional IMUI adapter routing, or plot model projection.
       Result: `ecosystem/fret-plot/src/declarative/interaction/pan.rs` owns pan session state,
       pointer-drag routing, axis-lock filtering, and scaled pan view-bound projection;
-      `interaction.rs` re-exports the pan entrypoint and keeps legend/box-zoom routing plus query
+      `interaction.rs` re-exports the pan entrypoint and keeps legend routing plus box/query
       re-export routing.
 - [x] Split Fret Plot declarative wheel zoom event routing out of the interaction owner without
       changing legend routing, query drag, box zoom, pan, draggable overlays, paint owners, output
@@ -6092,7 +6101,7 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/interaction/wheel.rs` owns wheel region
       detection, modifier-to-axis selection, axis-lock filtering, clamp/sanitize handling, and view
       bound update projection; `interaction.rs` re-exports the wheel entrypoint and keeps
-      legend/box-zoom routing plus query/pan re-export routing.
+      legend routing plus box/query/pan re-export routing.
 - [x] Split Fret Plot declarative output/view snapshot projection out of the implementation root
       without changing paint owners, event routing, public panel props, optional IMUI adapter
       routing, or plot model projection.

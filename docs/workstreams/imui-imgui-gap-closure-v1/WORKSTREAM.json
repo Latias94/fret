@@ -1881,6 +1881,7 @@
     "ecosystem/fret-plot/src/declarative/grid_axes.rs",
     "ecosystem/fret-plot/src/declarative/heatmap.rs",
     "ecosystem/fret-plot/src/declarative/interaction.rs",
+    "ecosystem/fret-plot/src/declarative/interaction/box_zoom.rs",
     "ecosystem/fret-plot/src/declarative/interaction/draggable.rs",
     "ecosystem/fret-plot/src/declarative/interaction/pan.rs",
     "ecosystem/fret-plot/src/declarative/interaction/query.rs",

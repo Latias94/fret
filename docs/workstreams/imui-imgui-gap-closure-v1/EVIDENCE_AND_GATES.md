@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Box Zoom Interaction Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative box zoom session state, modifier expansion, active-selection
+updates, axis-lock filtering, clamp/sanitize handling, and view-bound update routing moved out of
+`ecosystem/fret-plot/src/declarative/interaction.rs` into private
+`ecosystem/fret-plot/src/declarative/interaction/box_zoom.rs` without changing legend routing,
+query drag, pan, wheel zoom, draggable overlays, active-selection rendering, paint owners, output
+publication, public panel props, optional IMUI adapter routing, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/interaction/box_zoom.rs` is the box zoom event routing
+  owner.
+- `interaction.rs` re-exports `LinePlotBoxZoomSession` and
+  `handle_line_plot_box_zoom_event(...)` while keeping legend routing, event snapshots, selection
+  overlay records, mouse-button helper, and child interaction owner re-exports.
+- The box zoom owner imports only plot geometry, legend hit exclusion, input-map box zoom policy,
+  current view-bound projection, scaled rect/clamp/sanitize helpers, shared selection overlay
+  records, axis locks, and view-bound state updates, staying paint-free, output-publication-free,
+  query/pan/wheel/draggable-free, authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` rejects box zoom session/modifier/view-bound logic from
+  drifting back into `interaction.rs` and rejects non-box interaction concerns from
+  `interaction/box_zoom.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new box zoom interaction
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_box --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_box --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Query Interaction Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative query drag session state, query selection overlay updates,
