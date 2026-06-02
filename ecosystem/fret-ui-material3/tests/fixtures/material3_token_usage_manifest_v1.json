@@ -80,9 +80,7 @@
       "id": "dialog",
       "layer": "recipe",
       "path": "src/dialog.rs",
-      "tokens": [
-        "md.sys.motion.easing.emphasized"
-      ]
+      "tokens": []
     },
     {
       "id": "divider",

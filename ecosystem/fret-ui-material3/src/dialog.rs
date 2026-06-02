@@ -365,7 +365,7 @@ impl Dialog {
             scrim_opacity: 0.32,
             open_duration_ms: None,
             close_duration_ms: None,
-            easing_key: Some(Arc::<str>::from("md.sys.motion.easing.emphasized")),
+            easing_key: None,
             on_dismiss_request: None,
             test_id: None,
             style: DialogStyle::default(),
@@ -460,16 +460,11 @@ impl Dialog {
                 .get_model_copied(&self.open, Invalidation::Layout)
                 .unwrap_or(false);
 
-            let easing_key = self
-                .easing_key
-                .clone()
-                .unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
-
             let (open_ms_default, close_ms_default, bezier) = {
                 let theme = Theme::global(&*cx.app);
                 let open_ms = dialog_tokens::default_open_duration_ms(theme);
                 let close_ms = dialog_tokens::default_close_duration_ms(theme);
-                let bezier = dialog_tokens::easing(theme, Some(easing_key.as_ref()));
+                let bezier = dialog_tokens::easing(theme, self.easing_key.as_deref());
                 (open_ms, close_ms, bezier)
             };
 
