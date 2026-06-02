@@ -58,6 +58,16 @@ Last updated: 2026-06-02
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI textarea policy command snapshot and key resolution out of
+      `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/textarea.rs` into private child
+      owners without changing submit/cancel command capture, Ctrl+Enter vs Enter policy, Escape
+      cancel routing, IME/modifier suppression, repeat consume semantics, dispatch behavior, or
+      `fret-imui` facade semantics.
+      Result: `policy_commands/textarea.rs` keeps only capture-handler installation and dispatch.
+      `policy_commands/textarea/resolve.rs` owns key-event/repeat resolution and
+      `TextAreaPolicyCommandAction`; `policy_commands/textarea/resolve/snapshot.rs` owns
+      `TextAreaPolicyCommands`, `from_options(...)`, and `is_empty()`. The source gate prevents
+      resolver/snapshot policy from drifting back into the installer.
 - [x] Split IMUI input-text policy command snapshot storage out of
       `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/input/resolve.rs` into a
       private child owner without changing completion/history/undo/redo command capture, repeat

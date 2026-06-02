@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-02
 
+## IMUI Textarea Policy Command Resolver Owner-Split Evidence - 2026-06-02
+
+Claim verified: IMUI textarea policy command snapshot and key resolution moved out of
+`text_controls/policy_commands/textarea.rs` into private child owners without changing submit/cancel
+command capture, Ctrl+Enter vs Enter policy, Escape cancel routing, IME/modifier suppression,
+repeat consume semantics, dispatch behavior, or `fret-imui` facade semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/textarea.rs` keeps capture-handler
+  installation, action handling, and command dispatch only.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/textarea/resolve.rs` owns
+  key-event resolution, repeat consume behavior, and `TextAreaPolicyCommandAction`.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/textarea/resolve/snapshot.rs`
+  owns `TextAreaPolicyCommands`, `from_options(...)`, `is_empty()`, and submit/cancel option
+  capture.
+- `tools/gate_imui_workstream_source.py` tracks the resolver/snapshot owners and rejects textarea
+  key/snapshot policy from drifting back into the installer.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo test -p fret-imui --no-fail-fast models_text_area`: pass, 8 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass, 540 dedicated directories / 47 standalone
+  markdown files.
+- `git diff --check`: pass.
+
 ## IMUI Input-Text Policy Command Snapshot Owner-Split Evidence - 2026-06-02
 
 Claim verified: IMUI input-text policy command snapshot storage moved out of
