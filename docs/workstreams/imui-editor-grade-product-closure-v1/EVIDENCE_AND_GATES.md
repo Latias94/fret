@@ -2,6 +2,31 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative error-bars series paint owner split - 2026-06-02
+
+This maintenance slice keeps error-bars caps/markers stroke path drawing out of the shared series
+router while preserving the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/series_paint/error_bars.rs` is the error-bars caps and markers stroke path owner.
+- Series paint router delegates error-bars drawing and keeps non-error-bars series routing.
+- The error-bars owner stays event-free, output-free, overlay-free, axis-routing-free,
+  authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so error-bars command logic
+  cannot drift back into `series_paint.rs` and non-error-bars concerns cannot drift into
+  `error_bars.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo test -p fret-plot --lib error_bars_plot_panel_paints_x_y_errors_caps_and_markers --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_series_legend --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative bar and histogram series paint owner split - 2026-06-02
 
 This maintenance slice keeps bar/histogram closed fill path drawing out of the shared series router

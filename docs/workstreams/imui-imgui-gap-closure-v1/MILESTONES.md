@@ -5321,6 +5321,12 @@ closed fill path drawing. `series_paint.rs` delegates bar/histogram drawing and 
 shaded, stems, and error-bar series routing, while the source gate keeps non-bar/histogram concerns
 out of the bar/histogram owner.
 
+Fret Plot declarative error-bars series paint owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/series_paint/error_bars.rs` now owns error-bars caps and
+markers stroke path drawing. `series_paint.rs` delegates error-bars drawing and keeps line, area,
+shaded, and stems series routing, while the source gate keeps non-error-bars concerns out of the
+error-bars owner.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,

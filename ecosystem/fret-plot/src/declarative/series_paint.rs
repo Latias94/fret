@@ -9,9 +9,9 @@ use crate::series::SeriesId;
 use crate::style::LinePlotStyle;
 
 use super::commands::{
-    area_fill_commands_from_polyline, error_bars_commands_from_series,
-    line_plot_area_fill_path_key, line_plot_series_path_key, line_plot_shaded_lower_path_key,
-    shaded_band_commands_from_series, stems_commands_from_points, step_commands_from_polyline,
+    area_fill_commands_from_polyline, line_plot_area_fill_path_key, line_plot_series_path_key,
+    line_plot_shaded_lower_path_key, shaded_band_commands_from_series, stems_commands_from_points,
+    step_commands_from_polyline,
 };
 use super::geometry::line_plot_view_bounds_for_y_axis;
 use super::model::PlotPanelModel;
@@ -19,9 +19,11 @@ use super::style_helpers::series_color;
 
 mod bar_histogram;
 mod candlestick;
+mod error_bars;
 
 use bar_histogram::{paint_line_plot_bars_series, paint_line_plot_histogram_series};
 use candlestick::paint_line_plot_candlestick_series;
+use error_bars::paint_line_plot_error_bars_series;
 
 pub(super) fn paint_line_plot_series(
     painter: &mut CanvasPainter<'_>,
@@ -112,30 +114,15 @@ pub(super) fn paint_line_plot_series(
             continue;
         }
         if let Some(error_bars) = &series.error_bars {
-            let commands =
-                error_bars_commands_from_series(series_transform, &*series.data, error_bars);
-            if commands.len() < 2 {
-                continue;
-            }
-
-            let mut stroke_color = series
-                .stroke_color
-                .unwrap_or_else(|| series_color(style, index, series_count));
-            if let Some(emphasized) = emphasized_series
-                && series.id != emphasized
-            {
-                stroke_color.a *= style.dimmed_series_alpha.clamp(0.0, 1.0);
-            }
-            let stroke_width = series.stroke_width.unwrap_or(style.stroke_width);
-            painter.path(
-                line_plot_series_path_key(series.id.0),
-                DrawOrder(20),
-                Point::new(Px(0.0), Px(0.0)),
-                &commands,
-                PathStyle::Stroke(StrokeStyle {
-                    width: stroke_width,
-                }),
-                stroke_color,
+            paint_line_plot_error_bars_series(
+                painter,
+                series,
+                error_bars,
+                series_transform,
+                style,
+                index,
+                series_count,
+                emphasized_series,
                 raster_scale_factor,
             );
             continue;

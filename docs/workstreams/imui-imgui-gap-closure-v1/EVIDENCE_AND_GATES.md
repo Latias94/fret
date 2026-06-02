@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Error-Bars Series Paint Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative error-bars caps/markers stroke path drawing moved out of
+`ecosystem/fret-plot/src/declarative/series_paint.rs` into private
+`ecosystem/fret-plot/src/declarative/series_paint/error_bars.rs` without changing non-error-bars
+series routing, panel paint orchestration, event routing, output publication, public panel props,
+optional IMUI adapter routing, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/series_paint/error_bars.rs` is the error-bars caps and
+  markers stroke path owner.
+- Series paint router delegates error-bars drawing and keeps non-error-bars series routing.
+- The error-bars owner imports only error-bars command builders, series path keying, and shared
+  style fallback, staying event-free, output-free, overlay-free, axis-routing-free, authoring-free,
+  and retained-free.
+- `tools/gate_imui_workstream_source.py` rejects error-bars command logic from drifting back into
+  `series_paint.rs` and rejects non-error-bars concerns from `error_bars.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new error-bars series
+  paint owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib error_bars_plot_panel_paints_x_y_errors_caps_and_markers --no-fail-fast`:
+  pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_series_legend --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Bar And Histogram Series Paint Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative bars and histogram closed fill path drawing moved out of
