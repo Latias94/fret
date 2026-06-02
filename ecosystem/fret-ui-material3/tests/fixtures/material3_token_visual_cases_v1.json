@@ -174,6 +174,11 @@
         { "role": "menu_list_item_leading_icon_color", "kind": "color", "token": "md.comp.outlined-select.menu.list-item.with-leading-icon.leading-icon.color" },
         { "role": "menu_list_item_trailing_icon_size", "kind": "metric", "token": "md.comp.outlined-select.menu.list-item.with-trailing-icon.trailing-icon.size" },
         { "role": "menu_list_item_trailing_icon_color", "kind": "color", "token": "md.comp.outlined-select.menu.list-item.with-trailing-icon.trailing-icon.color" },
+        { "role": "menu_selectable_item_outer_horizontal_padding", "kind": "metric", "token": "md.sys.fret.material.selectable-menu-item.outer-horizontal-padding" },
+        { "role": "menu_selectable_item_outer_vertical_padding", "kind": "metric", "token": "md.sys.fret.material.selectable-menu-item.outer-vertical-padding" },
+        { "role": "menu_selectable_item_with_secondary_outer_vertical_padding", "kind": "metric", "token": "md.sys.fret.material.selectable-menu-item.with-secondary.outer-vertical-padding" },
+        { "role": "menu_list_item_content_horizontal_padding", "kind": "metric", "token": "md.sys.fret.material.selectable-menu-item.content-horizontal-padding" },
+        { "role": "menu_list_item_icon_text_gap", "kind": "metric", "token": "md.sys.fret.material.selectable-menu-item.icon-text-gap" },
         { "role": "input_text_style", "kind": "text_style_source", "source_token": "md.sys.typescale.body-large" },
         { "role": "menu_list_item_label_text_style", "kind": "text_style_source", "source_token": "md.sys.typescale.label-large" }
       ]
@@ -301,6 +306,25 @@
         { "role": "menu_container_background", "kind": "color", "token": "md.comp.outlined-autocomplete.menu.container.color" },
         { "role": "menu_list_item_height", "kind": "metric", "token": "md.comp.outlined-autocomplete.menu.list-item.container.height" },
         { "role": "menu_list_item_selected_container_color", "kind": "color", "token": "md.comp.outlined-autocomplete.menu.list-item.selected.container.color" }
+      ]
+    },
+    {
+      "id": "exposed-dropdown-filled-disabled-light",
+      "component": "exposed_dropdown",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "filled", "hovered": false, "focused": false, "disabled": true, "error": false, "enabled": false, "selected": false },
+      "assertions": [
+        { "role": "text_input_style.background", "kind": "blend_over", "base_color_token": "md.comp.filled-autocomplete.text-field.container.color", "overlay_color_token": "md.comp.filled-autocomplete.text-field.disabled.container.color", "opacity_token": "md.comp.filled-autocomplete.text-field.disabled.container.opacity" },
+        { "role": "label_color", "kind": "color_alpha", "color_token": "md.comp.filled-autocomplete.text-field.disabled.label-text.color", "opacity_token": "md.comp.filled-autocomplete.text-field.disabled.label-text.opacity" },
+        { "role": "trailing_icon_color", "kind": "color_alpha", "color_token": "md.comp.filled-autocomplete.text-field.disabled.trailing-icon.color", "opacity_token": "md.comp.filled-autocomplete.text-field.disabled.trailing-icon.opacity" },
+        { "role": "menu_container_background", "kind": "color", "token": "md.comp.filled-autocomplete.menu.container.color" },
+        { "role": "menu_container_elevation", "kind": "metric", "token": "md.comp.filled-autocomplete.menu.container.elevation" },
+        { "role": "menu_container_shape", "kind": "corners", "token": "md.comp.filled-autocomplete.menu.container.shape" },
+        { "role": "menu_list_item_label_text_color", "kind": "color_alpha", "color_token": "md.comp.list.list-item.disabled.label-text.color", "opacity_token": "md.comp.list.list-item.disabled.label-text.opacity" },
+        { "role": "menu_selectable_item_outer_horizontal_padding", "kind": "metric", "token": "md.sys.fret.material.selectable-menu-item.outer-horizontal-padding" },
+        { "role": "menu_selectable_item_outer_vertical_padding", "kind": "metric", "token": "md.sys.fret.material.selectable-menu-item.outer-vertical-padding" },
+        { "role": "menu_selectable_item_with_secondary_outer_vertical_padding", "kind": "metric", "token": "md.sys.fret.material.selectable-menu-item.with-secondary.outer-vertical-padding" },
+        { "role": "menu_list_item_content_horizontal_padding", "kind": "metric", "token": "md.sys.fret.material.selectable-menu-item.content-horizontal-padding" }
       ]
     },
     {

@@ -331,6 +331,19 @@ fn actual_select_metric(
         "menu_list_item_trailing_icon_size" => {
             select::menu_list_item_trailing_icon_size(theme, variant)
         }
+        "menu_selectable_item_outer_horizontal_padding" => {
+            select::menu_selectable_item_outer_horizontal_padding(theme, variant)
+        }
+        "menu_selectable_item_outer_vertical_padding" => {
+            select::menu_selectable_item_outer_vertical_padding(theme, variant, false)
+        }
+        "menu_selectable_item_with_secondary_outer_vertical_padding" => {
+            select::menu_selectable_item_outer_vertical_padding(theme, variant, true)
+        }
+        "menu_list_item_content_horizontal_padding" => {
+            select::menu_list_item_content_horizontal_padding(theme, variant)
+        }
+        "menu_list_item_icon_text_gap" => select::menu_list_item_icon_text_gap(theme, variant),
         other => panic!("unsupported select metric role {other}"),
     }
 }
@@ -459,6 +472,18 @@ fn actual_autocomplete_metric(
         "trailing_icon_size" => autocomplete::trailing_icon_size(theme, variant),
         "menu_container_elevation" => autocomplete::menu_container_elevation(theme, variant),
         "menu_list_item_height" => autocomplete::menu_list_item_height(theme, variant),
+        "menu_selectable_item_outer_horizontal_padding" => {
+            autocomplete::menu_selectable_item_outer_horizontal_padding(theme, variant)
+        }
+        "menu_selectable_item_outer_vertical_padding" => {
+            autocomplete::menu_selectable_item_outer_vertical_padding(theme, variant, false)
+        }
+        "menu_selectable_item_with_secondary_outer_vertical_padding" => {
+            autocomplete::menu_selectable_item_outer_vertical_padding(theme, variant, true)
+        }
+        "menu_list_item_content_horizontal_padding" => {
+            autocomplete::menu_list_item_content_horizontal_padding(theme, variant)
+        }
         other => panic!("unsupported autocomplete metric role {other}"),
     }
 }

@@ -1577,6 +1577,11 @@
       "tokens": [
         "md.comp.menu.list-item.container.shape",
         "md.comp.menu.list-item.selected.container.shape",
+        "md.sys.fret.material.selectable-menu-item.content-horizontal-padding",
+        "md.sys.fret.material.selectable-menu-item.icon-text-gap",
+        "md.sys.fret.material.selectable-menu-item.outer-horizontal-padding",
+        "md.sys.fret.material.selectable-menu-item.outer-vertical-padding",
+        "md.sys.fret.material.selectable-menu-item.with-secondary.outer-vertical-padding",
         "md.sys.shape.corner.extra-small",
         "md.sys.shape.corner.medium"
       ]
