@@ -937,6 +937,9 @@
       "input": { "variant": "modal_navigation_drawer" },
       "assertions": [
         { "role": "container_width", "kind": "metric", "token": "md.comp.navigation-drawer.container.width" },
+        { "role": "container_color", "kind": "color", "token": "md.comp.navigation-drawer.modal.container.color" },
+        { "role": "container_elevation", "kind": "metric", "token": "md.comp.navigation-drawer.modal.container.elevation" },
+        { "role": "container_shape", "kind": "corners", "token": "md.comp.navigation-drawer.container.shape" },
         { "role": "scrim_color", "kind": "color", "token": "md.comp.navigation-drawer.scrim.color" },
         { "role": "scrim_opacity", "kind": "number", "token": "md.comp.navigation-drawer.scrim.opacity" },
         { "role": "scrim_color_alpha", "kind": "color_alpha", "color_token": "md.comp.navigation-drawer.scrim.color", "opacity_token": "md.comp.navigation-drawer.scrim.opacity" }

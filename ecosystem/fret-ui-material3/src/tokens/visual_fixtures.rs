@@ -2593,7 +2593,8 @@ fn navigation_drawer_interaction(
 
 fn navigation_drawer_variant(value: &str, case_id: &str) -> NavigationDrawerVariant {
     match value {
-        "standard" | "modal_navigation_drawer" => NavigationDrawerVariant::Standard,
+        "standard" => NavigationDrawerVariant::Standard,
+        "modal_navigation_drawer" => NavigationDrawerVariant::Modal,
         "modal" | "modal_content" => NavigationDrawerVariant::Modal,
         other => panic!("{case_id}: unsupported navigation drawer variant {other}"),
     }
