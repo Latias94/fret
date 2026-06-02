@@ -16,7 +16,6 @@ use support::goldens::{
     run_overlay_frame_scaled, run_overlay_frame_with_scene_scaled,
     settle_material3_overlay_scene_snapshot_v1, settle_material3_scene_snapshot_v1,
     snapshot_material3_scene_at_frame_v1, write_or_assert_material3_suite_for_test_v1,
-    write_or_assert_material3_suite_v1,
 };
 use support::headless_autocomplete_cases::load_material3_autocomplete_golden_suite_v1;
 use support::headless_carousel_item_cases::load_material3_carousel_item_golden_suite_v1;
@@ -507,8 +506,9 @@ fn material3_headless_controls_suite_goldens_v1() {
             );
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-controls.{scale}.{label}"),
+                "material3_headless_controls_suite_goldens_v1",
                 &suite,
             );
         }
@@ -725,7 +725,11 @@ fn material3_headless_fab_suite_goldens_v1() {
             );
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(&format!("material3-fab.{scale}.{label}"), &suite);
+            write_or_assert_material3_suite_for_test_v1(
+                &format!("material3-fab.{scale}.{label}"),
+                "material3_headless_fab_suite_goldens_v1",
+                &suite,
+            );
         }
     }
 }
@@ -955,8 +959,9 @@ fn material3_headless_segmented_button_suite_goldens_v1() {
             );
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-segmented-button.{scale}.{label}"),
+                "material3_headless_segmented_button_suite_goldens_v1",
                 &suite,
             );
         }
@@ -1089,7 +1094,11 @@ fn material3_headless_badge_suite_goldens_v1() {
             );
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(&format!("material3-badge.{scale}.{label}"), &suite);
+            write_or_assert_material3_suite_for_test_v1(
+                &format!("material3-badge.{scale}.{label}"),
+                "material3_headless_badge_suite_goldens_v1",
+                &suite,
+            );
         }
     }
 }
@@ -1292,8 +1301,9 @@ fn material3_headless_top_app_bar_suite_goldens_v1() {
             );
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-top-app-bar.{scale}.{label}"),
+                "material3_headless_top_app_bar_suite_goldens_v1",
                 &suite,
             );
         }
@@ -1692,8 +1702,9 @@ fn material3_headless_navigation_suite_goldens_v1() {
             }
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-navigation.{scale}.{label}"),
+                "material3_headless_navigation_suite_goldens_v1",
                 &suite,
             );
         }
@@ -1912,8 +1923,9 @@ fn material3_headless_divider_suite_goldens_v1() {
             );
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-divider.{scale}.{label}"),
+                "material3_headless_divider_suite_goldens_v1",
                 &suite,
             );
         }
@@ -2287,8 +2299,9 @@ fn material3_headless_progress_indicator_suite_goldens_v1() {
             );
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-progress-indicator.{scale}.{label}"),
+                "material3_headless_progress_indicator_suite_goldens_v1",
                 &suite,
             );
         }
@@ -3579,8 +3592,9 @@ fn material3_headless_overlays_suite_goldens_v1() {
             );
             let suite = Material3HeadlessSuiteV1 { cases };
 
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-overlays.{scale}.{label}"),
+                "material3_headless_overlays_suite_goldens_v1",
                 &suite,
             );
         }
@@ -4337,8 +4351,9 @@ fn material3_headless_bottom_sheet_suite_goldens_v1() {
             }
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-bottom-sheet.{scale}.{label}"),
+                "material3_headless_bottom_sheet_suite_goldens_v1",
                 &suite,
             );
         }
@@ -4520,8 +4535,9 @@ fn material3_headless_date_picker_suite_goldens_v1() {
             }
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-date-picker.{scale}.{label}"),
+                "material3_headless_date_picker_suite_goldens_v1",
                 &suite,
             );
         }
@@ -4811,8 +4827,9 @@ fn material3_headless_time_picker_suite_goldens_v1() {
             }
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-time-picker.{scale}.{label}"),
+                "material3_headless_time_picker_suite_goldens_v1",
                 &suite,
             );
         }
