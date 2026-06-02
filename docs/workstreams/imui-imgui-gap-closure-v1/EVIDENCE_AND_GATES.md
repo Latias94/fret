@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Reference-Line Overlay Paint Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative infinite-line and draggable-line rectangle projection moved
+out of `ecosystem/fret-plot/src/declarative/overlays.rs` into private
+`ecosystem/fret-plot/src/declarative/overlays/reference_lines.rs` without changing draggable
+point/rect paint, image overlay, draggable labels, tag overlays, text overlays, shared annotation
+helpers, panel paint orchestration, event routing, output publication, public panel props, optional
+IMUI adapter routing, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/overlays/reference_lines.rs` is the reference and
+  draggable line rectangle paint owner.
+- `overlays.rs` re-exports reference-line overlay painting while keeping draggable point/rect
+  painting plus shared annotation token, clamp, text-box, and marker paint helpers for tag, text,
+  and draggable-label owners.
+- The reference-line owner imports only plot transforms, y-axis view-bound geometry, reference line
+  overlay records, style color fallback, and the shared filled-rect primitive, staying event-free,
+  output-free, state-model-free, image-overlay-free, authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` rejects reference-line projection from drifting back into
+  `overlays.rs` and rejects non-reference overlay concerns from `overlays/reference_lines.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new reference-line
+  overlay paint owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_reference_lines --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_draggable_lines --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Plot Text Overlay Paint Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative `PlotText` overlay projection moved out of

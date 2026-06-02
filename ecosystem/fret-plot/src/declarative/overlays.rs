@@ -12,153 +12,15 @@ use super::paint_primitives::push_filled_rect;
 
 mod draggable_labels;
 mod images;
+mod reference_lines;
 mod tags;
 mod text;
 
 pub(super) use draggable_labels::paint_line_plot_draggable_overlay_labels;
 pub(super) use images::paint_line_plot_images;
+pub(super) use reference_lines::paint_line_plot_reference_lines;
 pub(super) use tags::paint_line_plot_tag_overlays;
 pub(super) use text::paint_line_plot_text_overlays;
-
-pub(super) fn paint_line_plot_reference_lines(
-    painter: &mut CanvasPainter<'_>,
-    plot: Rect,
-    view_bounds: DataRect,
-    view_bounds_y2: Option<DataRect>,
-    view_bounds_y3: Option<DataRect>,
-    view_bounds_y4: Option<DataRect>,
-    overlays: &PlotOverlays,
-    style: LinePlotStyle,
-    x_scale: AxisScale,
-    y_scale: AxisScale,
-) {
-    if overlays.inf_lines_x.is_empty()
-        && overlays.inf_lines_y.is_empty()
-        && overlays.drag_lines_x.is_empty()
-        && overlays.drag_lines_y.is_empty()
-    {
-        return;
-    }
-    let Some(transform) = (PlotTransform {
-        viewport: plot,
-        data: view_bounds,
-        x_scale,
-        y_scale,
-    })
-    .prepare() else {
-        return;
-    };
-
-    let transform_y2 = view_bounds_y2.and_then(|axis_bounds| {
-        (PlotTransform {
-            viewport: plot,
-            data: line_plot_view_bounds_for_y_axis(view_bounds, axis_bounds),
-            x_scale,
-            y_scale,
-        })
-        .prepare()
-    });
-    let transform_y3 = view_bounds_y3.and_then(|axis_bounds| {
-        (PlotTransform {
-            viewport: plot,
-            data: line_plot_view_bounds_for_y_axis(view_bounds, axis_bounds),
-            x_scale,
-            y_scale,
-        })
-        .prepare()
-    });
-    let transform_y4 = view_bounds_y4.and_then(|axis_bounds| {
-        (PlotTransform {
-            viewport: plot,
-            data: line_plot_view_bounds_for_y_axis(view_bounds, axis_bounds),
-            x_scale,
-            y_scale,
-        })
-        .prepare()
-    });
-
-    let theme = painter.theme().snapshot();
-    let base_color = style
-        .crosshair_color
-        .unwrap_or_else(|| theme.color_required("muted-foreground"));
-    let default_color = Color {
-        a: (base_color.a * 0.45).clamp(0.05, 1.0),
-        ..base_color
-    };
-
-    let x_lines = overlays
-        .inf_lines_x
-        .iter()
-        .map(|line| (line.x, line.width, line.color.unwrap_or(default_color)))
-        .chain(
-            overlays
-                .drag_lines_x
-                .iter()
-                .map(|line| (line.x, line.width, line.color.unwrap_or(default_color))),
-        );
-    for (x_value, line_width, line_color) in x_lines {
-        let Some(x) = transform.data_x_to_px(x_value) else {
-            continue;
-        };
-        let width = line_width.0.max(1.0).min(plot.size.width.0.max(1.0));
-        let left =
-            (x.0 - width * 0.5).clamp(plot.origin.x.0, plot.origin.x.0 + plot.size.width.0 - width);
-        push_filled_rect(
-            painter,
-            Rect::new(
-                Point::new(Px(left.round()), plot.origin.y),
-                Size::new(Px(width), plot.size.height),
-            ),
-            DrawOrder(3),
-            line_color,
-        );
-    }
-
-    let y_lines = overlays
-        .inf_lines_y
-        .iter()
-        .map(|line| {
-            (
-                line.y,
-                line.axis,
-                line.width,
-                line.color.unwrap_or(default_color),
-            )
-        })
-        .chain(overlays.drag_lines_y.iter().map(|line| {
-            (
-                line.y,
-                line.axis,
-                line.width,
-                line.color.unwrap_or(default_color),
-            )
-        }));
-    for (y_value, axis, line_width, line_color) in y_lines {
-        let transform = match axis {
-            crate::models::YAxis::Left => transform,
-            crate::models::YAxis::Right => transform_y2.unwrap_or(transform),
-            crate::models::YAxis::Right2 => transform_y3.unwrap_or(transform),
-            crate::models::YAxis::Right3 => transform_y4.unwrap_or(transform),
-        };
-        let Some(y) = transform.data_y_to_px(y_value) else {
-            continue;
-        };
-        let height = line_width.0.max(1.0).min(plot.size.height.0.max(1.0));
-        let top = (y.0 - height * 0.5).clamp(
-            plot.origin.y.0,
-            plot.origin.y.0 + plot.size.height.0 - height,
-        );
-        push_filled_rect(
-            painter,
-            Rect::new(
-                Point::new(plot.origin.x, Px(top.round())),
-                Size::new(plot.size.width, Px(height)),
-            ),
-            DrawOrder(3),
-            line_color,
-        );
-    }
-}
 
 pub(super) fn paint_line_plot_draggable_shapes(
     painter: &mut CanvasPainter<'_>,

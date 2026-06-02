@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 plot reference-line overlay paint owner-split result:
+`ecosystem/fret-plot/src/declarative/overlays.rs` now keeps overlay re-exports, draggable
+point/rect paint, and shared annotation helpers while delegating infinite-line and draggable-line
+rectangle projection to `ecosystem/fret-plot/src/declarative/overlays/reference_lines.rs`. The
+private reference-line owner owns x/y reference line transform projection, right-axis view-bound
+routing, style crosshair fallback, and filled-rect emission. Image, draggable-label, tag, text,
+panel orchestration, event routing, public panel props, plot model projection, and optional IMUI
+adapter routing remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 editor AxisDragValue typing focus owner-split result:
 `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps keyed scrub/typing
 orchestration, input and frame routing, and key-handler installation while delegating typing focus

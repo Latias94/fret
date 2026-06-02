@@ -2,6 +2,33 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative reference-line overlay paint owner split - 2026-06-02
+
+This maintenance slice keeps infinite-line and draggable-line rectangle projection out of the
+shared overlay owner while preserving the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/overlays/reference_lines.rs` is the reference and draggable line rectangle paint owner.
+- `overlays.rs` re-exports reference-line overlay painting and keeps draggable point/rect painting plus shared annotation helpers.
+- Evidence anchor: reference and draggable line rectangle paint owner.
+- Evidence anchor: Overlays root re-exports reference-line overlay painting.
+- The reference-line owner stays event-free, output-free, state-model-free, image-overlay-free,
+  authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so reference-line projection
+  cannot drift back into `overlays.rs` and non-reference overlay concerns cannot drift into
+  `overlays/reference_lines.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_reference_lines --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_draggable_lines --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative plot text overlay paint owner split - 2026-06-02
 
 This maintenance slice keeps `PlotText` overlay placement and text/background emission out of the
