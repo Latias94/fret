@@ -1,4 +1,4 @@
 mod summary_projection;
 mod types;
 
-pub(super) use types::DebugDrawCommand;
+pub(super) use types::{DebugDrawCommand, DebugDrawMediaCommand};

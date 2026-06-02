@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-03
 
+## IMUI Debug Draw Media Command Payload Owner Split - 2026-06-03
+
+Claim verified: raster, rounded-image, and SVG debug-draw command payload variants moved out of
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` into private
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/media.rs` without
+changing public `ImUiDebugDrawList` image/SVG APIs, command summaries, paint dispatch, clip stack
+handling, image mesh/text behavior, or public debug-draw response APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/media.rs` owns
+  raster, rounded-image, and SVG debug-draw command payload variants.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` keeps geometry,
+  clip, image mesh, text, and the `Media(DebugDrawMediaCommand)` wrapper.
+- Draw-list image/SVG builders still expose the same public methods and now wrap the private
+  media payload owner through `DebugDrawCommand::Media(...)`.
+- Paint and summary dispatch now match `DebugDrawCommand::Media(DebugDrawMediaCommand::...)`
+  while preserving command kind projection and media paint behavior.
+- `tools/gate_imui_workstream_source.py` source-checks the split so media payload variants cannot
+  drift back into the root command enum owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw --no-fail-fast`: pass.
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Declarative Target Resolution Owner Split - 2026-06-03
 
 Claim verified: declarative docking drop-target resolution input projection moved out of

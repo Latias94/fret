@@ -2,13 +2,7 @@ use crate::imui::debug_draw_controls::DebugDrawCommand;
 
 pub(super) fn is_non_media_command(command: &DebugDrawCommand) -> bool {
     match command {
-        DebugDrawCommand::Image { .. }
-        | DebugDrawCommand::ImageRegion { .. }
-        | DebugDrawCommand::ImageQuad { .. }
-        | DebugDrawCommand::ImageRounded { .. }
-        | DebugDrawCommand::ImageRegionRounded { .. }
-        | DebugDrawCommand::SvgImage { .. }
-        | DebugDrawCommand::SvgMaskIcon { .. } => false,
+        DebugDrawCommand::Media(_) => false,
         DebugDrawCommand::Line { .. }
         | DebugDrawCommand::Polyline { .. }
         | DebugDrawCommand::ConvexPolyFilled { .. }

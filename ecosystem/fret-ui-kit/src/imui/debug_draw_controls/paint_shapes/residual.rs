@@ -63,12 +63,6 @@ pub(super) fn paint_residual_shape_command(
         | DebugDrawCommand::BezierCubic { .. }
         | DebugDrawCommand::PushClipRect { .. }
         | DebugDrawCommand::PopClipRect
-        | DebugDrawCommand::Image { .. }
-        | DebugDrawCommand::ImageRegion { .. }
-        | DebugDrawCommand::ImageQuad { .. }
-        | DebugDrawCommand::ImageRounded { .. }
-        | DebugDrawCommand::ImageRegionRounded { .. }
-        | DebugDrawCommand::SvgImage { .. }
-        | DebugDrawCommand::SvgMaskIcon { .. } => {}
+        | DebugDrawCommand::Media(_) => {}
     }
 }

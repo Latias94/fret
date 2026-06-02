@@ -1,6 +1,6 @@
 use fret_core::{ImageId, Px, Rect, UvRect};
 
-use super::super::super::commands::DebugDrawCommand;
+use super::super::super::commands::{DebugDrawCommand, DebugDrawMediaCommand};
 use super::super::super::{DebugDrawImageOptions, DebugDrawRoundCorners, ImUiDebugDrawList};
 
 impl ImUiDebugDrawList {
@@ -28,13 +28,15 @@ impl ImUiDebugDrawList {
         rounding: Px,
         corners: DebugDrawRoundCorners,
     ) {
-        self.commands.push(DebugDrawCommand::ImageRounded {
-            rect,
-            image,
-            options,
-            rounding,
-            corners,
-        });
+        self.commands.push(DebugDrawCommand::Media(
+            DebugDrawMediaCommand::ImageRounded {
+                rect,
+                image,
+                options,
+                rounding,
+                corners,
+            },
+        ));
     }
 
     pub fn add_image_region_rounded(
@@ -46,13 +48,15 @@ impl ImUiDebugDrawList {
         rounding: Px,
         corners: DebugDrawRoundCorners,
     ) {
-        self.commands.push(DebugDrawCommand::ImageRegionRounded {
-            rect,
-            image,
-            uv,
-            options,
-            rounding,
-            corners,
-        });
+        self.commands.push(DebugDrawCommand::Media(
+            DebugDrawMediaCommand::ImageRegionRounded {
+                rect,
+                image,
+                uv,
+                options,
+                rounding,
+                corners,
+            },
+        ));
     }
 }

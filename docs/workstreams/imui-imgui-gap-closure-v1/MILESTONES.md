@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-03 IMUI debug-draw media-command payload owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/media.rs` now owns
+raster, rounded-image, and SVG debug-draw command payload variants.
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` keeps geometry,
+clip, image mesh, text, and the `Media(DebugDrawMediaCommand)` wrapper. Public
+`ImUiDebugDrawList` image/SVG APIs, command summaries, paint dispatch, debug-draw response APIs,
+image mesh behavior, and text behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-03 docking declarative target-resolution owner-split result:
 `ecosystem/fret-docking/src/dock/declarative/drag_resolve/target.rs` now owns layout snapshot
 lookup, dock-bounds projection, tab-width/tab-scroll preparation, theme-derived hint sizing,

@@ -1,5 +1,5 @@
 use super::super::super::summaries::{DebugDrawCommandKind, DebugDrawCommandSummary};
-use super::super::DebugDrawCommand;
+use super::super::{DebugDrawCommand, DebugDrawMediaCommand};
 use super::media;
 
 pub(super) fn residual_summary(command: &DebugDrawCommand) -> Option<DebugDrawCommandSummary> {
@@ -22,27 +22,25 @@ pub(super) fn residual_summary(command: &DebugDrawCommand) -> Option<DebugDrawCo
         DebugDrawCommand::PopClipRect => Some(DebugDrawCommandSummary::new(
             DebugDrawCommandKind::PopClipRect,
         )),
-        DebugDrawCommand::Image { image, .. } => Some(media::image_rect_summary(
-            DebugDrawCommandKind::Image,
-            *image,
-        )),
-        DebugDrawCommand::ImageRegion { image, .. } => Some(media::image_rect_summary(
-            DebugDrawCommandKind::ImageRegion,
-            *image,
-        )),
-        DebugDrawCommand::ImageQuad { image, .. } => Some(media::image_quad_summary(*image)),
-        DebugDrawCommand::ImageRounded { image, .. } => Some(media::image_rect_summary(
-            DebugDrawCommandKind::ImageRounded,
-            *image,
-        )),
-        DebugDrawCommand::ImageRegionRounded { image, .. } => Some(media::image_rect_summary(
-            DebugDrawCommandKind::ImageRegionRounded,
-            *image,
-        )),
-        DebugDrawCommand::SvgImage { .. } => {
+        DebugDrawCommand::Media(DebugDrawMediaCommand::Image { image, .. }) => Some(
+            media::image_rect_summary(DebugDrawCommandKind::Image, *image),
+        ),
+        DebugDrawCommand::Media(DebugDrawMediaCommand::ImageRegion { image, .. }) => Some(
+            media::image_rect_summary(DebugDrawCommandKind::ImageRegion, *image),
+        ),
+        DebugDrawCommand::Media(DebugDrawMediaCommand::ImageQuad { image, .. }) => {
+            Some(media::image_quad_summary(*image))
+        }
+        DebugDrawCommand::Media(DebugDrawMediaCommand::ImageRounded { image, .. }) => Some(
+            media::image_rect_summary(DebugDrawCommandKind::ImageRounded, *image),
+        ),
+        DebugDrawCommand::Media(DebugDrawMediaCommand::ImageRegionRounded { image, .. }) => Some(
+            media::image_rect_summary(DebugDrawCommandKind::ImageRegionRounded, *image),
+        ),
+        DebugDrawCommand::Media(DebugDrawMediaCommand::SvgImage { .. }) => {
             Some(media::svg_rect_summary(DebugDrawCommandKind::SvgImage))
         }
-        DebugDrawCommand::SvgMaskIcon { .. } => {
+        DebugDrawCommand::Media(DebugDrawMediaCommand::SvgMaskIcon { .. }) => {
             Some(media::svg_rect_summary(DebugDrawCommandKind::SvgMaskIcon))
         }
         DebugDrawCommand::Text { .. } => {

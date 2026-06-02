@@ -55,29 +55,32 @@ fn debug_draw_list_records_image_overlay_commands() {
     );
 
     assert_eq!(list.command_count(), 7);
-    assert!(matches!(list.commands[0], DebugDrawCommand::Image { .. }));
+    assert!(matches!(
+        list.commands[0],
+        DebugDrawCommand::Media(DebugDrawMediaCommand::Image { .. })
+    ));
     assert!(matches!(
         list.commands[1],
-        DebugDrawCommand::ImageRegion { .. }
+        DebugDrawCommand::Media(DebugDrawMediaCommand::ImageRegion { .. })
     ));
     assert!(matches!(
         list.commands[2],
-        DebugDrawCommand::ImageQuad { .. }
+        DebugDrawCommand::Media(DebugDrawMediaCommand::ImageQuad { .. })
     ));
     assert!(matches!(
         list.commands[3],
-        DebugDrawCommand::ImageRounded { .. }
+        DebugDrawCommand::Media(DebugDrawMediaCommand::ImageRounded { .. })
     ));
     assert!(matches!(
         list.commands[4],
-        DebugDrawCommand::ImageRegionRounded { .. }
+        DebugDrawCommand::Media(DebugDrawMediaCommand::ImageRegionRounded { .. })
     ));
     assert!(matches!(
         list.commands[5],
-        DebugDrawCommand::SvgImage { .. }
+        DebugDrawCommand::Media(DebugDrawMediaCommand::SvgImage { .. })
     ));
     assert!(matches!(
         list.commands[6],
-        DebugDrawCommand::SvgMaskIcon { .. }
+        DebugDrawCommand::Media(DebugDrawMediaCommand::SvgMaskIcon { .. })
     ));
 }

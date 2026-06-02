@@ -2,6 +2,36 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI debug draw media command payload owner split - 2026-06-03
+
+This maintenance slice separates media command payload ownership from the root debug-draw command
+enum:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/media.rs` owns
+  raster, rounded-image, and SVG debug-draw command payload variants.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` keeps geometry,
+  clip, image mesh, text, and the `Media(DebugDrawMediaCommand)` wrapper.
+- Evidence anchor: IMUI debug draw media command payload owner split - 2026-06-03.
+- Evidence anchor: ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/media.rs.
+- Evidence anchor: raster, rounded-image, and SVG debug-draw command payload variants.
+- Evidence anchor: DebugDrawCommand keeps geometry, clip, image mesh, text, and Media wrapper.
+- Public `ImUiDebugDrawList` image/SVG methods, command summaries, paint dispatch, debug-draw
+  response APIs, image mesh behavior, and text behavior remain unchanged.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so media command payload
+  variants cannot drift back into the root command enum owner.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw --no-fail-fast` - passed.
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Docking declarative target resolution owner split - 2026-06-03
 
 This maintenance slice separates declarative drop-target resolution input projection from

@@ -1,7 +1,7 @@
 use fret_core::DrawOrder;
 use fret_ui::canvas::CanvasPainter;
 
-use crate::imui::debug_draw_controls::DebugDrawCommand;
+use crate::imui::debug_draw_controls::{DebugDrawCommand, DebugDrawMediaCommand};
 
 use super::super::{MediaPaintKey, svg};
 
@@ -12,7 +12,7 @@ pub(super) fn paint_svg_media_command(
     command: &DebugDrawCommand,
 ) -> bool {
     match command {
-        DebugDrawCommand::SvgImage { rect, svg, options } => {
+        DebugDrawCommand::Media(DebugDrawMediaCommand::SvgImage { rect, svg, options }) => {
             svg::paint_svg_image_command(
                 painter,
                 MediaPaintKey {
@@ -25,12 +25,12 @@ pub(super) fn paint_svg_media_command(
             );
             true
         }
-        DebugDrawCommand::SvgMaskIcon {
+        DebugDrawCommand::Media(DebugDrawMediaCommand::SvgMaskIcon {
             rect,
             svg,
             color,
             options,
-        } => {
+        }) => {
             svg::paint_svg_mask_icon_command(
                 painter,
                 MediaPaintKey {

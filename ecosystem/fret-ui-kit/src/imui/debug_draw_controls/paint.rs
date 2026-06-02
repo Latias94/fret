@@ -21,13 +21,7 @@ pub(super) fn paint_debug_draw_commands(
         }
 
         match command {
-            DebugDrawCommand::Image { .. }
-            | DebugDrawCommand::ImageRegion { .. }
-            | DebugDrawCommand::ImageQuad { .. }
-            | DebugDrawCommand::ImageRounded { .. }
-            | DebugDrawCommand::ImageRegionRounded { .. }
-            | DebugDrawCommand::SvgImage { .. }
-            | DebugDrawCommand::SvgMaskIcon { .. } => {
+            DebugDrawCommand::Media(_) => {
                 media::paint_debug_draw_media_command(painter, key, order, command);
             }
             DebugDrawCommand::Line { .. }

@@ -53,13 +53,7 @@ impl DebugDrawCommand {
             DebugDrawCommand::ImageTriangleMesh { .. }
             | DebugDrawCommand::PushClipRect { .. }
             | DebugDrawCommand::PopClipRect
-            | DebugDrawCommand::Image { .. }
-            | DebugDrawCommand::ImageRegion { .. }
-            | DebugDrawCommand::ImageQuad { .. }
-            | DebugDrawCommand::ImageRounded { .. }
-            | DebugDrawCommand::ImageRegionRounded { .. }
-            | DebugDrawCommand::SvgImage { .. }
-            | DebugDrawCommand::SvgMaskIcon { .. }
+            | DebugDrawCommand::Media(_)
             | DebugDrawCommand::Text { .. } => {
                 unreachable!("residual commands are handled by residual_summary")
             }

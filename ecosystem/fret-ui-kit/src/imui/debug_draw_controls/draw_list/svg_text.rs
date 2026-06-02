@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret_core::{Color, Point, Px, Rect};
 use fret_ui::SvgSource;
 
-use super::super::commands::DebugDrawCommand;
+use super::super::commands::{DebugDrawCommand, DebugDrawMediaCommand};
 use super::super::{DebugDrawSvgOptions, ImUiDebugDrawList};
 
 impl ImUiDebugDrawList {
@@ -18,7 +18,11 @@ impl ImUiDebugDrawList {
         options: DebugDrawSvgOptions,
     ) {
         self.commands
-            .push(DebugDrawCommand::SvgImage { rect, svg, options });
+            .push(DebugDrawCommand::Media(DebugDrawMediaCommand::SvgImage {
+                rect,
+                svg,
+                options,
+            }));
     }
 
     pub fn add_svg_mask_icon(&mut self, rect: Rect, svg: SvgSource, color: Color) {
@@ -32,12 +36,14 @@ impl ImUiDebugDrawList {
         color: Color,
         options: DebugDrawSvgOptions,
     ) {
-        self.commands.push(DebugDrawCommand::SvgMaskIcon {
-            rect,
-            svg,
-            color,
-            options,
-        });
+        self.commands.push(DebugDrawCommand::Media(
+            DebugDrawMediaCommand::SvgMaskIcon {
+                rect,
+                svg,
+                color,
+                options,
+            },
+        ));
     }
 
     pub fn add_text(&mut self, origin: Point, text: impl Into<Arc<str>>, color: Color, size: Px) {

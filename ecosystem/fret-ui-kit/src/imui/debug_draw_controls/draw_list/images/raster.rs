@@ -1,6 +1,6 @@
 use fret_core::{ImageId, Point, Rect, UvPoint, UvRect};
 
-use super::super::super::commands::DebugDrawCommand;
+use super::super::super::commands::{DebugDrawCommand, DebugDrawMediaCommand};
 use super::super::super::{DebugDrawImageOptions, DebugDrawImageQuadOptions, ImUiDebugDrawList};
 
 impl ImUiDebugDrawList {
@@ -14,11 +14,12 @@ impl ImUiDebugDrawList {
         image: ImageId,
         options: DebugDrawImageOptions,
     ) {
-        self.commands.push(DebugDrawCommand::Image {
-            rect,
-            image,
-            options,
-        });
+        self.commands
+            .push(DebugDrawCommand::Media(DebugDrawMediaCommand::Image {
+                rect,
+                image,
+                options,
+            }));
     }
 
     pub fn add_image_region(
@@ -28,12 +29,14 @@ impl ImUiDebugDrawList {
         uv: UvRect,
         options: DebugDrawImageOptions,
     ) {
-        self.commands.push(DebugDrawCommand::ImageRegion {
-            rect,
-            image,
-            uv,
-            options,
-        });
+        self.commands.push(DebugDrawCommand::Media(
+            DebugDrawMediaCommand::ImageRegion {
+                rect,
+                image,
+                uv,
+                options,
+            },
+        ));
     }
 
     pub fn add_image_quad(&mut self, image: ImageId, points: [Point; 4], uvs: [UvPoint; 4]) {
@@ -47,11 +50,12 @@ impl ImUiDebugDrawList {
         uvs: [UvPoint; 4],
         options: DebugDrawImageQuadOptions,
     ) {
-        self.commands.push(DebugDrawCommand::ImageQuad {
-            image,
-            points,
-            uvs,
-            options,
-        });
+        self.commands
+            .push(DebugDrawCommand::Media(DebugDrawMediaCommand::ImageQuad {
+                image,
+                points,
+                uvs,
+                options,
+            }));
     }
 }

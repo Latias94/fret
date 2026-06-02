@@ -58,6 +58,15 @@ Last updated: 2026-06-03
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw media command payload variants out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` into a
+      private child owner without changing public `ImUiDebugDrawList` image/SVG methods, command
+      summaries, paint dispatch, clip stack handling, image mesh/text behavior, or public
+      debug-draw response APIs.
+      Result: `debug_draw_controls/commands/types/command/media.rs` owns raster, rounded-image,
+      and SVG debug-draw command payload variants. `command.rs` keeps geometry, clip, image mesh,
+      text, and the `Media(DebugDrawMediaCommand)` wrapper; draw-list builders, summary
+      projection, and media paint dispatch route through the new private owner.
 - [x] Split editor chrome text-field input token resolution out of
       `ecosystem/fret-ui-editor/src/primitives/chrome.rs` into a private input child owner without
       changing editor-token precedence, legacy component-token fallback, `ChromeRefinement`

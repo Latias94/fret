@@ -1,12 +1,14 @@
 use std::sync::Arc;
 
-use fret_core::{Color, ImageId, Point, Px, Rect, Size, UvPoint, UvRect};
-use fret_ui::SvgSource;
+use fret_core::{Color, ImageId, Point, Px, Rect, Size};
 
 use crate::imui::debug_draw_controls::{
-    DebugDrawImageMeshOptions, DebugDrawImageOptions, DebugDrawImageQuadOptions,
-    DebugDrawRoundCorners, DebugDrawStrokeStyle, DebugDrawSvgOptions, DebugDrawVertex,
+    DebugDrawImageMeshOptions, DebugDrawStrokeStyle, DebugDrawVertex,
 };
+
+mod media;
+
+pub(in crate::imui::debug_draw_controls) use media::DebugDrawMediaCommand;
 
 #[derive(Debug, Clone)]
 pub(in crate::imui::debug_draw_controls) enum DebugDrawCommand {
@@ -142,49 +144,7 @@ pub(in crate::imui::debug_draw_controls) enum DebugDrawCommand {
         rect: Rect,
     },
     PopClipRect,
-    Image {
-        rect: Rect,
-        image: ImageId,
-        options: DebugDrawImageOptions,
-    },
-    ImageRegion {
-        rect: Rect,
-        image: ImageId,
-        uv: UvRect,
-        options: DebugDrawImageOptions,
-    },
-    ImageQuad {
-        image: ImageId,
-        points: [Point; 4],
-        uvs: [UvPoint; 4],
-        options: DebugDrawImageQuadOptions,
-    },
-    ImageRounded {
-        rect: Rect,
-        image: ImageId,
-        options: DebugDrawImageOptions,
-        rounding: Px,
-        corners: DebugDrawRoundCorners,
-    },
-    ImageRegionRounded {
-        rect: Rect,
-        image: ImageId,
-        uv: UvRect,
-        options: DebugDrawImageOptions,
-        rounding: Px,
-        corners: DebugDrawRoundCorners,
-    },
-    SvgImage {
-        rect: Rect,
-        svg: SvgSource,
-        options: DebugDrawSvgOptions,
-    },
-    SvgMaskIcon {
-        rect: Rect,
-        svg: SvgSource,
-        color: Color,
-        options: DebugDrawSvgOptions,
-    },
+    Media(DebugDrawMediaCommand),
     Text {
         origin: Point,
         text: Arc<str>,
