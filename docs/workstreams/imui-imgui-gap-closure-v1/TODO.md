@@ -5963,6 +5963,12 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/commands.rs` owns the private path-command
       projection owner; `declarative.rs` keeps paint/event orchestration and imports only command
       projection entrypoints.
+- [x] Split Fret Plot declarative selection overlay paint and tooltip geometry out of the
+      retained-free paint/event root without changing query/box-zoom rectangles, tooltip placement,
+      tooltip text formatting, persisted query rendering, active selection rendering,
+      drag/session mutation, public panel props, or optional IMUI adapter routing.
+      Result: `ecosystem/fret-plot/src/declarative/selection.rs` owns selection overlay paint and
+      tooltip placement; `declarative.rs` keeps drag/session mutation and pointer event handling.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll

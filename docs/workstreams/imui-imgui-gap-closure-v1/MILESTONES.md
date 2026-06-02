@@ -5222,6 +5222,12 @@ area, shaded, stems, histogram, bars, candlestick, and error-bar series. The dec
 paint/event orchestration and imports only command projection entrypoints, so path generation stays
 declarative and does not move into `fret-imui`, `fret-ui-kit::imui`, or the optional adapter.
 
+Fret Plot declarative selection overlay owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/selection.rs` now owns query/box-zoom selection rectangle
+painting and tooltip placement/text. The declarative root keeps drag/session mutation and pointer
+event handling, so selection interaction policy stays out of the paint/tooltip owner and the
+optional IMUI adapter.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,

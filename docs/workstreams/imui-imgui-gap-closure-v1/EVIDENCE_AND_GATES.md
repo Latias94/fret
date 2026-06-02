@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Selection Overlay Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative selection overlay paint and tooltip geometry moved out of
+`ecosystem/fret-plot/src/declarative.rs` into private
+`ecosystem/fret-plot/src/declarative/selection.rs` without changing query/box-zoom selection
+rectangles, tooltip placement, tooltip text formatting, persisted query selection rendering,
+active selection rendering, drag/session mutation, public panel props, or optional IMUI adapter
+routing.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/selection.rs` owns selection overlay paint and tooltip
+  placement, including query and active box-zoom selection rectangles.
+- `ecosystem/fret-plot/src/declarative.rs` keeps drag/session mutation and pointer event handling
+  while delegating selection overlay paint and tooltip queries to the private owner.
+- `tools/gate_imui_workstream_source.py` tracks root, selection, commands, legend, model, panels,
+  and props owners separately and rejects selection paint/tooltip bodies from drifting back into
+  the root paint/event owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new selection owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib imui_adapter_stays_opt_in_and_declarative_only --no-fail-fast`:
+  pass, 1 test.
+- `cargo test -p fret-plot --lib line_chart_builder_stays_model_only_on_default_surface --no-fail-fast`:
+  pass, 1 test.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Path-Command Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative path-command projection moved out of
