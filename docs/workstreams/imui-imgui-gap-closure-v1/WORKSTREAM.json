@@ -1300,6 +1300,7 @@
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview/fill.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview/side.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview/side/original.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/swatches.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/swatches/slot.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/tooltip.rs",

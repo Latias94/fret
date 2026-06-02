@@ -71,6 +71,8 @@ const COLOR_EDIT_POPUP_PREVIEW_FILL_RS: &str =
     include_str!("../src/controls/color_edit/popup/preview/fill.rs");
 const COLOR_EDIT_POPUP_PREVIEW_SIDE_RS: &str =
     include_str!("../src/controls/color_edit/popup/preview/side.rs");
+const COLOR_EDIT_POPUP_PREVIEW_SIDE_ORIGINAL_RS: &str =
+    include_str!("../src/controls/color_edit/popup/preview/side/original.rs");
 const COLOR_EDIT_POPUP_SWATCHES_RS: &str =
     include_str!("../src/controls/color_edit/popup/swatches.rs");
 const COLOR_EDIT_POPUP_SWATCHES_SLOT_RS: &str =
@@ -172,6 +174,22 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("use side::{"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("fn color_preview_stack<"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("fn checkerboard_grid<"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("mod original;"));
+    assert!(
+        COLOR_EDIT_POPUP_PREVIEW_SIDE_RS
+            .contains("pub(in crate::controls::color_edit) use original::restore_reference_color;")
+    );
+    assert!(
+        COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("original::original_reference_preview_cell(")
+    );
+    assert!(!COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("OnActivate"));
+    assert!(!COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("PressableProps"));
+    assert!(
+        COLOR_EDIT_POPUP_PREVIEW_SIDE_ORIGINAL_RS.contains("fn original_reference_preview_cell<")
+    );
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_ORIGINAL_RS.contains("fn restore_reference_color("));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_ORIGINAL_RS.contains("OnActivate"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_ORIGINAL_RS.contains("PressableProps"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("mod hue_wheel;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("pub(in crate::controls::color_edit) mod alpha;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("pub(super) use alpha::alpha_bar;"));
@@ -314,7 +332,7 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("fn color_side_preview<"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("SIDE_PREVIEW_SWATCH_WIDTH"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("SIDE_PREVIEW_SWATCH_HEIGHT"));
-    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("fn restore_reference_color("));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_ORIGINAL_RS.contains("fn restore_reference_color("));
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("fn preview_color_for_alpha_visibility("));
     assert!(COLOR_EDIT_POPUP_BODY_RS.contains("struct ColorPopupBodyArgs"));
     assert!(COLOR_EDIT_POPUP_BODY_RS.contains("fn color_popup_body<"));

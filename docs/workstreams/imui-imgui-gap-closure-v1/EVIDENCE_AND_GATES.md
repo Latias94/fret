@@ -25929,3 +25929,29 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `cargo fmt --package fret-ui-kit -- --check`.
 - Passed: `git diff --check`.
+
+2026-06-02 editor color-edit side-preview original restore owner split:
+
+- Claim: color-edit side-preview original-color restore behavior moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview/side.rs` into
+  `ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview/side/original.rs` without
+  changing current/original preview ordering, swatch sizing, caption chrome, original restore
+  alpha-preservation rules, a11y/button semantics, model updates, or test re-export paths.
+- Evidence anchors: `popup/preview/side.rs` declares `mod original;`, re-exports
+  `restore_reference_color` for the existing color-edit tests, keeps `color_side_preview(...)`,
+  current-cell rendering, shared preview cell chrome, sizing constants, and caption text-role
+  usage, and delegates original cell construction to `original::original_reference_preview_cell(...)`;
+  `popup/preview/side/original.rs` owns `PressableProps`, `OnActivate`, `ActionCx`,
+  `SemanticsRole::Button`, `preview_color_for_alpha_visibility(...)`, model/draft/error updates,
+  redraw request, and `restore_reference_color(...)`; `imui_surface_policy.rs` now includes the new
+  owner and asserts the pressable restore behavior stays out of the side hub.
+- Passed: `cargo fmt --package fret-ui-editor`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo test -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `cargo test -p fret-ui-editor --features imui color_edit --no-fail-fast`.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

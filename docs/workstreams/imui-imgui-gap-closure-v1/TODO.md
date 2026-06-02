@@ -6014,3 +6014,12 @@ opening the slice.
       left-button capture and optional activation; `events/move_phase.rs` owns immediate resize
       drag movement and cancel cleanup; `events/up.rs` owns mouse-up drag cancellation and pointer
       release.
+- [x] Split editor color-edit side-preview original restore behavior out of
+      `ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview/side.rs` into a private
+      original-preview owner without changing current/original side-preview ordering, swatch
+      sizing, caption chrome, original-color restore semantics, alpha preservation rules, or test
+      re-export paths.
+      Result: `color_edit/popup/preview/side.rs` keeps side-preview row orchestration plus shared
+      preview cell chrome; `color_edit/popup/preview/side/original.rs` owns the original-color
+      pressable restore action, a11y/button semantics, model updates, redraw request, and
+      `restore_reference_color(...)`.

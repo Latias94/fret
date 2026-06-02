@@ -2,10 +2,9 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableA11y, PressableProps, SizeStyle, SpacingLength,
+    SizeStyle, SpacingLength,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -16,6 +15,11 @@ use crate::primitives::readout::editor_preview_caption_text_props;
 use super::super::super::model::format_hex;
 use super::super::super::{ColorEditAlphaPreview, ColorEditPopupSidePreview};
 use super::fill::{color_preview_stack, preview_color_for_alpha_visibility};
+
+mod original;
+
+#[cfg(test)]
+pub(in crate::controls::color_edit) use original::restore_reference_color;
 
 pub(in crate::controls::color_edit) const SIDE_PREVIEW_SWATCH_WIDTH: Px = Px(72.0);
 pub(in crate::controls::color_edit) const SIDE_PREVIEW_SWATCH_HEIGHT: Px = Px(48.0);
@@ -38,7 +42,7 @@ pub(in crate::controls::color_edit::popup) fn color_side_preview<H: UiHost>(
         .then(|| original)
         .flatten()
         .map(|original| {
-            original_reference_preview_cell(
+            original::original_reference_preview_cell(
                 cx,
                 original,
                 model,
@@ -105,65 +109,6 @@ fn current_preview_cell<H: UiHost>(
         alpha_preview,
         test_id,
     )
-}
-
-fn original_reference_preview_cell<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    original: Color,
-    model: Model<Color>,
-    draft: Model<String>,
-    error: Model<Option<Arc<str>>>,
-    show_alpha: bool,
-    enabled: bool,
-    alpha_preview: ColorEditAlphaPreview,
-    test_id: Option<Arc<str>>,
-) -> AnyElement {
-    let restore: OnActivate =
-        Arc::new(move |host, action_cx: ActionCx, _reason: ActivateReason| {
-            let current = host
-                .models_mut()
-                .get_copied(&model)
-                .unwrap_or(Color::TRANSPARENT);
-            let next = restore_reference_color(original, current, show_alpha);
-            let formatted = format_hex(next, show_alpha);
-
-            let _ = host.models_mut().update(&model, |color| *color = next);
-            let _ = host
-                .models_mut()
-                .update(&draft, |text| *text = formatted.as_ref().to_string());
-            let _ = host.models_mut().update(&error, |value| *value = None);
-            host.request_redraw(action_cx.window);
-        });
-
-    let color = preview_color_for_alpha_visibility(original, show_alpha);
-    let mut cell = cx.pressable(
-        PressableProps {
-            layout: preview_cell_layout(),
-            enabled,
-            focusable: enabled,
-            a11y: PressableA11y {
-                role: Some(fret_core::SemanticsRole::Button),
-                label: Some(Arc::from("Original color")),
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        move |cx, _st| {
-            cx.pressable_add_on_activate(restore.clone());
-            vec![preview_cell_content(
-                cx,
-                "Original",
-                color,
-                show_alpha,
-                alpha_preview,
-            )]
-        },
-    );
-
-    if let Some(test_id) = test_id {
-        cell = cell.test_id(test_id);
-    }
-    cell.a11y_value(format_hex(color, show_alpha))
 }
 
 fn preview_cell_container<H: UiHost>(
@@ -265,19 +210,5 @@ fn preview_cell_layout() -> LayoutStyle {
             ..Default::default()
         },
         ..Default::default()
-    }
-}
-
-pub(in crate::controls::color_edit) fn restore_reference_color(
-    reference: Color,
-    current: Color,
-    show_alpha: bool,
-) -> Color {
-    if show_alpha {
-        reference
-    } else {
-        let mut next = reference;
-        next.a = current.a;
-        next
     }
 }
