@@ -1,8 +1,8 @@
 use fret_core::DrawOrder;
 use fret_ui::canvas::CanvasPainter;
 
-use super::super::DebugDrawCommand;
 use super::super::paint_helpers::{paint_image_triangle_mesh, paint_triangle_mesh};
+use super::super::{DebugDrawCommand, DebugDrawMeshCommand};
 use super::{rects, text};
 
 pub(super) fn paint_residual_shape_command(
@@ -27,15 +27,15 @@ pub(super) fn paint_residual_shape_command(
             *rect,
             [*upper_left, *upper_right, *bottom_right, *bottom_left],
         ),
-        DebugDrawCommand::TriangleMesh { vertices, indices } => {
+        DebugDrawCommand::Mesh(DebugDrawMeshCommand::TriangleMesh { vertices, indices }) => {
             paint_triangle_mesh(painter, order, vertices, indices);
         }
-        DebugDrawCommand::ImageTriangleMesh {
+        DebugDrawCommand::Mesh(DebugDrawMeshCommand::ImageTriangleMesh {
             image,
             vertices,
             indices,
             options,
-        } => {
+        }) => {
             paint_image_triangle_mesh(painter, order, *image, vertices, indices, *options);
         }
         DebugDrawCommand::Text {

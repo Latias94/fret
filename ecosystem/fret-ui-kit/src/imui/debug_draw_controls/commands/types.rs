@@ -1,3 +1,5 @@
 mod command;
 
-pub(in crate::imui::debug_draw_controls) use command::{DebugDrawCommand, DebugDrawMediaCommand};
+pub(in crate::imui::debug_draw_controls) use command::{
+    DebugDrawCommand, DebugDrawMediaCommand, DebugDrawMeshCommand,
+};

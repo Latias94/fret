@@ -25,7 +25,7 @@ mod paths;
 mod response;
 mod summaries;
 
-use commands::{DebugDrawCommand, DebugDrawMediaCommand};
+use commands::{DebugDrawCommand, DebugDrawMediaCommand, DebugDrawMeshCommand};
 pub use draw_list::ImUiDebugDrawList;
 pub(super) use facade::debug_draw_with_options;
 pub use options::{

@@ -14,8 +14,7 @@ pub(super) fn is_non_media_command(command: &DebugDrawCommand) -> bool {
         | DebugDrawCommand::QuadFilled { .. }
         | DebugDrawCommand::Triangle { .. }
         | DebugDrawCommand::TriangleFilled { .. }
-        | DebugDrawCommand::TriangleMesh { .. }
-        | DebugDrawCommand::ImageTriangleMesh { .. }
+        | DebugDrawCommand::Mesh(_)
         | DebugDrawCommand::Circle { .. }
         | DebugDrawCommand::CircleFilled { .. }
         | DebugDrawCommand::Ngon { .. }

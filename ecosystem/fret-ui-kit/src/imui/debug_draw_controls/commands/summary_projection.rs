@@ -1,7 +1,7 @@
 use fret_core::Rect;
 
 use super::super::summaries::DebugDrawCommandSummary;
-use super::DebugDrawCommand;
+use super::{DebugDrawCommand, DebugDrawMeshCommand};
 
 mod clip_state;
 mod geometry;
@@ -39,7 +39,7 @@ impl DebugDrawCommand {
             | DebugDrawCommand::QuadFilled { .. }
             | DebugDrawCommand::Triangle { .. }
             | DebugDrawCommand::TriangleFilled { .. }
-            | DebugDrawCommand::TriangleMesh { .. }
+            | DebugDrawCommand::Mesh(DebugDrawMeshCommand::TriangleMesh { .. })
             | DebugDrawCommand::Circle { .. }
             | DebugDrawCommand::CircleFilled { .. }
             | DebugDrawCommand::Ngon { .. }
@@ -50,7 +50,7 @@ impl DebugDrawCommand {
             | DebugDrawCommand::BezierCubic { .. } => {
                 unreachable!("geometry commands are handled by geometry_summary")
             }
-            DebugDrawCommand::ImageTriangleMesh { .. }
+            DebugDrawCommand::Mesh(DebugDrawMeshCommand::ImageTriangleMesh { .. })
             | DebugDrawCommand::PushClipRect { .. }
             | DebugDrawCommand::PopClipRect
             | DebugDrawCommand::Media(_)

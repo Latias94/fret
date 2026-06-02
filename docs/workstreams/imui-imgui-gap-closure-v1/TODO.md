@@ -58,6 +58,15 @@ Last updated: 2026-06-03
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw triangle mesh and image triangle mesh command payload variants out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` into a
+      private child owner without changing public `ImUiDebugDrawList` mesh methods, command
+      summaries, paint dispatch, clip stack handling, media image/SVG behavior, text behavior, or
+      public debug-draw response APIs.
+      Result: `debug_draw_controls/commands/types/command/mesh.rs` owns triangle mesh and image
+      triangle mesh debug-draw command payload variants. `command.rs` keeps geometry, clip, media,
+      text, and the `Mesh(DebugDrawMeshCommand)` wrapper; draw-list builders, summary projection,
+      and residual shape paint dispatch route through the new private owner.
 - [x] Split IMUI debug-draw media command payload variants out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` into a
       private child owner without changing public `ImUiDebugDrawList` image/SVG methods, command

@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-03 IMUI debug-draw mesh-command payload owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/mesh.rs` now owns
+triangle mesh and image triangle mesh debug-draw command payload variants.
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` keeps geometry,
+clip, media, text, and the `Mesh(DebugDrawMeshCommand)` wrapper. Public
+`ImUiDebugDrawList` mesh APIs, command summaries, paint dispatch, debug-draw response APIs,
+media image/SVG behavior, and text behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-03 IMUI debug-draw media-command payload owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/media.rs` now owns
 raster, rounded-image, and SVG debug-draw command payload variants.

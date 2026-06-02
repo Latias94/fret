@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
-use fret_core::{Color, ImageId, Point, Px, Rect, Size};
+use fret_core::{Color, Point, Px, Rect, Size};
 
-use crate::imui::debug_draw_controls::{
-    DebugDrawImageMeshOptions, DebugDrawStrokeStyle, DebugDrawVertex,
-};
+use crate::imui::debug_draw_controls::DebugDrawStrokeStyle;
 
 mod media;
+mod mesh;
 
 pub(in crate::imui::debug_draw_controls) use media::DebugDrawMediaCommand;
+pub(in crate::imui::debug_draw_controls) use mesh::DebugDrawMeshCommand;
 
 #[derive(Debug, Clone)]
 pub(in crate::imui::debug_draw_controls) enum DebugDrawCommand {
@@ -76,16 +76,7 @@ pub(in crate::imui::debug_draw_controls) enum DebugDrawCommand {
         p3: Point,
         color: Color,
     },
-    TriangleMesh {
-        vertices: Arc<[DebugDrawVertex]>,
-        indices: Arc<[u32]>,
-    },
-    ImageTriangleMesh {
-        image: ImageId,
-        vertices: Arc<[DebugDrawVertex]>,
-        indices: Arc<[u32]>,
-        options: DebugDrawImageMeshOptions,
-    },
+    Mesh(DebugDrawMeshCommand),
     Circle {
         center: Point,
         radius: Px,

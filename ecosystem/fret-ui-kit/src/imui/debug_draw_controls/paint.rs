@@ -35,8 +35,7 @@ pub(super) fn paint_debug_draw_commands(
             | DebugDrawCommand::QuadFilled { .. }
             | DebugDrawCommand::Triangle { .. }
             | DebugDrawCommand::TriangleFilled { .. }
-            | DebugDrawCommand::TriangleMesh { .. }
-            | DebugDrawCommand::ImageTriangleMesh { .. }
+            | DebugDrawCommand::Mesh(_)
             | DebugDrawCommand::Circle { .. }
             | DebugDrawCommand::CircleFilled { .. }
             | DebugDrawCommand::Ngon { .. }

@@ -1,15 +1,15 @@
 use super::super::super::summaries::{DebugDrawCommandKind, DebugDrawCommandSummary};
-use super::super::{DebugDrawCommand, DebugDrawMediaCommand};
+use super::super::{DebugDrawCommand, DebugDrawMediaCommand, DebugDrawMeshCommand};
 use super::media;
 
 pub(super) fn residual_summary(command: &DebugDrawCommand) -> Option<DebugDrawCommandSummary> {
     match command {
-        DebugDrawCommand::ImageTriangleMesh {
+        DebugDrawCommand::Mesh(DebugDrawMeshCommand::ImageTriangleMesh {
             image,
             vertices,
             indices,
             ..
-        } => Some(media::image_triangle_mesh_summary(
+        }) => Some(media::image_triangle_mesh_summary(
             *image,
             vertices.len(),
             indices.len(),
@@ -57,7 +57,7 @@ pub(super) fn residual_summary(command: &DebugDrawCommand) -> Option<DebugDrawCo
         | DebugDrawCommand::QuadFilled { .. }
         | DebugDrawCommand::Triangle { .. }
         | DebugDrawCommand::TriangleFilled { .. }
-        | DebugDrawCommand::TriangleMesh { .. }
+        | DebugDrawCommand::Mesh(DebugDrawMeshCommand::TriangleMesh { .. })
         | DebugDrawCommand::Circle { .. }
         | DebugDrawCommand::CircleFilled { .. }
         | DebugDrawCommand::Ngon { .. }

@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-06-03
 
+## IMUI Debug Draw Mesh Command Payload Owner Split - 2026-06-03
+
+Claim verified: triangle mesh and image triangle mesh debug-draw command payload variants moved
+out of `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` into
+private
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/mesh.rs` without
+changing public `ImUiDebugDrawList` mesh APIs, command summaries, paint dispatch, clip stack
+handling, media image/SVG behavior, text behavior, or public debug-draw response APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/mesh.rs` owns
+  triangle mesh and image triangle mesh debug-draw command payload variants.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` keeps geometry,
+  clip, media, text, and the `Mesh(DebugDrawMeshCommand)` wrapper.
+- Draw-list mesh builders still expose the same public methods and now wrap the private mesh
+  payload owner through `DebugDrawCommand::Mesh(...)`.
+- Paint and summary dispatch now match
+  `DebugDrawCommand::Mesh(DebugDrawMeshCommand::...)` while preserving command kind projection,
+  vertex/index counts, triangle counts, and image mesh paint behavior.
+- `tools/gate_imui_workstream_source.py` source-checks the split so mesh payload variants cannot
+  drift back into the root command enum owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Debug Draw Media Command Payload Owner Split - 2026-06-03
 
 Claim verified: raster, rounded-image, and SVG debug-draw command payload variants moved out of

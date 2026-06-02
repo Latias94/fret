@@ -33,9 +33,11 @@ fn debug_draw_list_records_triangle_mesh_commands() {
     assert_eq!(list.command_count(), 2);
     assert!(matches!(
         list.commands[0],
-        DebugDrawCommand::TriangleMesh { .. }
+        DebugDrawCommand::Mesh(DebugDrawMeshCommand::TriangleMesh { .. })
     ));
-    let DebugDrawCommand::ImageTriangleMesh { options, .. } = &list.commands[1] else {
+    let DebugDrawCommand::Mesh(DebugDrawMeshCommand::ImageTriangleMesh { options, .. }) =
+        &list.commands[1]
+    else {
         panic!("expected image triangle mesh command");
     };
     assert_eq!(options.sampling, ImageSamplingHint::Nearest);

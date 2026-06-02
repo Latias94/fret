@@ -2,6 +2,35 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI debug draw mesh command payload owner split - 2026-06-03
+
+This maintenance slice separates mesh command payload ownership from the root debug-draw command
+enum:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/mesh.rs` owns
+  triangle mesh and image triangle mesh debug-draw command payload variants.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` keeps geometry,
+  clip, media, text, and the `Mesh(DebugDrawMeshCommand)` wrapper.
+- Evidence anchor: IMUI debug draw mesh command payload owner split - 2026-06-03.
+- Evidence anchor: ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/mesh.rs.
+- Evidence anchor: triangle mesh and image triangle mesh debug-draw command payload variants.
+- Evidence anchor: DebugDrawCommand keeps geometry, clip, media, text, and Mesh wrapper.
+- Public `ImUiDebugDrawList` mesh methods, command summaries, paint dispatch, debug-draw response
+  APIs, media image/SVG behavior, and text behavior remain unchanged.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so mesh command payload
+  variants cannot drift back into the root command enum owner.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## IMUI debug draw media command payload owner split - 2026-06-03
 
 This maintenance slice separates media command payload ownership from the root debug-draw command

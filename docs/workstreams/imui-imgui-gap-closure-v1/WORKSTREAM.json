@@ -1417,6 +1417,7 @@
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/media.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/mesh.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/clip_state.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/geometry.rs",

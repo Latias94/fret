@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::ImageId;
 
-use super::super::super::commands::DebugDrawCommand;
+use super::super::super::commands::{DebugDrawCommand, DebugDrawMeshCommand};
 use super::super::super::{DebugDrawImageMeshOptions, DebugDrawVertex, ImUiDebugDrawList};
 
 impl ImUiDebugDrawList {
@@ -29,11 +29,13 @@ impl ImUiDebugDrawList {
         V: IntoIterator<Item = DebugDrawVertex>,
         I: IntoIterator<Item = u32>,
     {
-        self.commands.push(DebugDrawCommand::ImageTriangleMesh {
-            image,
-            vertices: Arc::from(vertices.into_iter().collect::<Vec<_>>()),
-            indices: Arc::from(indices.into_iter().collect::<Vec<_>>()),
-            options,
-        });
+        self.commands.push(DebugDrawCommand::Mesh(
+            DebugDrawMeshCommand::ImageTriangleMesh {
+                image,
+                vertices: Arc::from(vertices.into_iter().collect::<Vec<_>>()),
+                indices: Arc::from(indices.into_iter().collect::<Vec<_>>()),
+                options,
+            },
+        ));
     }
 }
