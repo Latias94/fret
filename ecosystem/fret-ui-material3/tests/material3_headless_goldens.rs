@@ -24,6 +24,10 @@ use support::headless_menu_dialog_style_cases::{
     Material3MenuDialogStyleGoldenCaseKindV1, load_material3_menu_dialog_style_golden_suite_v1,
 };
 use support::headless_search_cases::load_material3_search_golden_suite_v1;
+use support::headless_slider_cases::{
+    Material3SliderKeyboardInteractionV1, Material3SliderPointerInteractionV1,
+    load_material3_slider_golden_suite_v1,
+};
 use support::headless_snackbar_cases::load_material3_snackbar_golden_suite_v1;
 use support::headless_text_field_cases::load_material3_text_field_golden_suite_v1;
 use support::host::{FakeUiServices, TestHost};
@@ -2293,36 +2297,6 @@ fn material3_headless_progress_indicator_suite_goldens_v1() {
 #[test]
 fn material3_headless_slider_suite_goldens_v1() {
     use fret_ui::element::FlexProps;
-    use fret_ui_material3::{RangeSlider, Slider};
-
-    let cases_to_render = [
-        ("idle", None, None),
-        ("hover", Some("slider-30"), None),
-        ("focus_visible", None, Some("slider-30")),
-        ("keyboard_page", None, Some("slider-30")),
-        ("rtl_idle", None, None),
-        ("rtl_keyboard_arrows", None, Some("slider-30")),
-        ("pressed", Some("slider-30"), None),
-        ("dragging", Some("slider-30"), None),
-        ("with_tick_marks", None, None),
-        ("tick_count", None, None),
-        ("range_dragging", Some("range-slider-30-70"), None),
-        (
-            "range_focus_thumb_switch",
-            None,
-            Some("range-slider-30-70.start"),
-        ),
-        (
-            "range_keyboard_page",
-            None,
-            Some("range-slider-30-70.start"),
-        ),
-        (
-            "rtl_range_keyboard_arrows",
-            None,
-            Some("range-slider-30-70.start"),
-        ),
-    ];
 
     let schemes = [
         (
@@ -2346,6 +2320,7 @@ fn material3_headless_slider_suite_goldens_v1() {
             "light.expressive",
         ),
     ];
+    let slider_suite = load_material3_slider_golden_suite_v1();
 
     for scale_factor in [1.0, 1.25, 2.0] {
         let scale = scale_segment(scale_factor);
@@ -2358,11 +2333,12 @@ fn material3_headless_slider_suite_goldens_v1() {
 
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
 
-            for (case_name, hover_id, focus_id) in cases_to_render {
+            for case in slider_suite.cases() {
+                let case_name = case.id();
                 let window = AppWindowId::default();
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
-                if case_name.starts_with("rtl_") {
+                if case.is_rtl() {
                     apply_material_theme_rtl(&mut app, mode, variant);
                 } else {
                     apply_material_theme(&mut app, mode, variant);
@@ -2372,11 +2348,27 @@ fn material3_headless_slider_suite_goldens_v1() {
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
-                let value_0 = app.models_mut().insert(0.0f32);
-                let value_30 = app.models_mut().insert(0.3f32);
-                let value_100 = app.models_mut().insert(1.0f32);
-                let range_30_70 = app.models_mut().insert([0.3f32, 0.7f32]);
-                let range_10_90 = app.models_mut().insert([0.1f32, 0.9f32]);
+                let single_value_models = slider_suite
+                    .single_value_models()
+                    .iter()
+                    .map(|definition| {
+                        (
+                            definition.id().to_string(),
+                            app.models_mut().insert(definition.value()),
+                        )
+                    })
+                    .collect::<BTreeMap<_, _>>();
+                let range_value_models = slider_suite
+                    .range_value_models()
+                    .iter()
+                    .map(|definition| {
+                        (
+                            definition.id().to_string(),
+                            app.models_mut().insert(definition.values()),
+                        )
+                    })
+                    .collect::<BTreeMap<_, _>>();
+                let render_config = slider_suite.render_config_for(case);
 
                 let render = |ui: &mut UiTree<TestHost>,
                               app: &mut TestHost,
@@ -2393,75 +2385,37 @@ fn material3_headless_slider_suite_goldens_v1() {
                             props.direction = fret_core::Axis::Vertical;
                             props.gap = fret_ui::element::SpacingLength::Px(Px(24.0));
                             let content = cx.flex(props, |cx| {
-                                let slider_step = if case_name == "with_tick_marks" {
-                                    0.1
-                                } else {
-                                    0.01
-                                };
-                                let slider_with_ticks =
-                                    case_name == "with_tick_marks" || case_name == "tick_count";
-                                let slider_tick_count = (case_name == "tick_count").then_some(6u16);
+                                let mut elements = Vec::new();
 
-                                let build_slider =
-                                    |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>,
-                                     model: Model<f32>,
-                                     test_id: &'static str,
-                                     disabled: bool| {
-                                        let slider = Slider::new(model)
-                                            .range(0.0, 1.0)
-                                            .step(slider_step)
-                                            .with_tick_marks(slider_with_ticks);
-                                        let slider = if let Some(c) = slider_tick_count {
-                                            slider.tick_marks_count(c)
-                                        } else {
-                                            slider
-                                        };
-                                        let slider = if disabled {
-                                            slider.disabled(true)
-                                        } else {
-                                            slider
-                                        };
-                                        slider.test_id(test_id).into_element(cx)
-                                    };
-                                let build_range_slider =
-                                    |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>,
-                                     model: Model<[f32; 2]>,
-                                     test_id: &'static str,
-                                     disabled: bool| {
-                                        let slider = RangeSlider::new(model)
-                                            .range(0.0, 1.0)
-                                            .step(slider_step)
-                                            .with_tick_marks(slider_with_ticks);
-                                        let slider = if let Some(c) = slider_tick_count {
-                                            slider.tick_marks_count(c)
-                                        } else {
-                                            slider
-                                        };
-                                        let slider = if disabled {
-                                            slider.disabled(true)
-                                        } else {
-                                            slider
-                                        };
-                                        slider.test_id(test_id).into_element(cx)
-                                    };
-                                vec![
-                                    build_slider(cx, value_0.clone(), "slider-0", false),
-                                    build_slider(cx, value_30.clone(), "slider-30", false),
-                                    build_slider(cx, value_100.clone(), "slider-100", false),
-                                    build_slider(cx, value_30.clone(), "slider-30-disabled", true),
-                                    build_range_slider(
-                                        cx,
-                                        range_30_70.clone(),
-                                        "range-slider-30-70",
-                                        false,
-                                    ),
-                                    build_range_slider(
-                                        cx,
-                                        range_10_90.clone(),
-                                        "range-slider-10-90-disabled",
-                                        true,
-                                    ),
-                                ]
+                                for slider in slider_suite.sliders() {
+                                    let model = single_value_models
+                                        .get(slider.model_id())
+                                        .unwrap_or_else(|| {
+                                            panic!(
+                                                "expected single slider model {} ({label}, {scale}, {case_name})",
+                                                slider.model_id()
+                                            )
+                                        })
+                                        .clone();
+                                    elements.push(slider.slider(model, render_config).into_element(cx));
+                                }
+
+                                for slider in slider_suite.range_sliders() {
+                                    let model = range_value_models
+                                        .get(slider.model_id())
+                                        .unwrap_or_else(|| {
+                                            panic!(
+                                                "expected range slider model {} ({label}, {scale}, {case_name})",
+                                                slider.model_id()
+                                            )
+                                        })
+                                        .clone();
+                                    elements.push(
+                                        slider.range_slider(model, render_config).into_element(cx),
+                                    );
+                                }
+
+                                elements
                             });
 
                             vec![with_padding(cx, Px(24.0), content)]
@@ -2480,7 +2434,7 @@ fn material3_headless_slider_suite_goldens_v1() {
                     &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
                 );
 
-                if let Some(test_id) = hover_id {
+                if let Some(test_id) = case.hover_test_id() {
                     let node_id: NodeId = ui
                         .semantics_snapshot()
                         .and_then(|snapshot| {
@@ -2504,59 +2458,60 @@ fn material3_headless_slider_suite_goldens_v1() {
                         &pointer_move(PointerId(1), hover_at),
                     );
 
-                    if case_name == "pressed" {
-                        ui.dispatch_event(
-                            &mut app,
-                            &mut services,
-                            &pointer_down(PointerId(1), hover_at),
-                        );
-                    }
-
-                    if case_name == "dragging" {
-                        ui.dispatch_event(
-                            &mut app,
-                            &mut services,
-                            &pointer_down(PointerId(1), hover_at),
-                        );
-                        let drag_to = Point::new(
-                            Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.8),
-                            Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
-                        );
-                        ui.dispatch_event(
-                            &mut app,
-                            &mut services,
-                            &pointer_move(PointerId(1), drag_to),
-                        );
-                    }
-
-                    if case_name == "range_dragging" {
-                        let start_at = Point::new(
-                            Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.85),
-                            Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
-                        );
-                        let drag_to = Point::new(
-                            Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.95),
-                            Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
-                        );
-                        ui.dispatch_event(
-                            &mut app,
-                            &mut services,
-                            &pointer_move(PointerId(1), start_at),
-                        );
-                        ui.dispatch_event(
-                            &mut app,
-                            &mut services,
-                            &pointer_down(PointerId(1), start_at),
-                        );
-                        ui.dispatch_event(
-                            &mut app,
-                            &mut services,
-                            &pointer_move(PointerId(1), drag_to),
-                        );
+                    match case.pointer_interaction() {
+                        Some(Material3SliderPointerInteractionV1::Pressed) => {
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &pointer_down(PointerId(1), hover_at),
+                            );
+                        }
+                        Some(Material3SliderPointerInteractionV1::Dragging) => {
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &pointer_down(PointerId(1), hover_at),
+                            );
+                            let drag_to = Point::new(
+                                Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.8),
+                                Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
+                            );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &pointer_move(PointerId(1), drag_to),
+                            );
+                        }
+                        Some(Material3SliderPointerInteractionV1::RangeDragging) => {
+                            let start_at = Point::new(
+                                Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.85),
+                                Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
+                            );
+                            let drag_to = Point::new(
+                                Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.95),
+                                Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
+                            );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &pointer_move(PointerId(1), start_at),
+                            );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &pointer_down(PointerId(1), start_at),
+                            );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &pointer_move(PointerId(1), drag_to),
+                            );
+                        }
+                        None => {}
                     }
                 }
 
-                if let Some(test_id) = focus_id {
+                if let Some(test_id) = case.focus_test_id() {
                     let node_id: NodeId = ui
                         .semantics_snapshot()
                         .and_then(|snapshot| {
@@ -2569,218 +2524,380 @@ fn material3_headless_slider_suite_goldens_v1() {
                         });
                     ui.set_focus(Some(node_id));
 
-                    if case_name == "keyboard_page" {
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageUp));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageUp));
-                        let after_page_up =
-                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
-                        assert!(
-                            (after_page_up - 0.4).abs() <= 1e-6,
-                            "expected slider PageUp to increment by a page (case={case_name}, {label}, {scale})"
-                        );
-
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageDown));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageDown));
-                        let after_page_down =
-                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
-                        assert!(
-                            (after_page_down - 0.3).abs() <= 1e-6,
-                            "expected slider PageDown to decrement by a page (case={case_name}, {label}, {scale})"
-                        );
-
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Home));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Home));
-                        let after_home =
-                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
-                        assert!(
-                            after_home.abs() <= 1e-6,
-                            "expected slider Home to snap to min (case={case_name}, {label}, {scale})"
-                        );
-
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::End));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::End));
-                        let after_end =
-                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
-                        assert!(
-                            (after_end - 1.0).abs() <= 1e-6,
-                            "expected slider End to snap to max (case={case_name}, {label}, {scale})"
-                        );
-                    } else if case_name == "rtl_keyboard_arrows" {
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
-                        let after_right =
-                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
-                        assert!(
-                            (after_right - 0.29).abs() <= 1e-6,
-                            "expected slider ArrowRight to decrement under RTL (case={case_name}, {label}, {scale})"
-                        );
-
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowLeft));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowLeft));
-                        let after_left =
-                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
-                        assert!(
-                            (after_left - 0.30).abs() <= 1e-6,
-                            "expected slider ArrowLeft to increment under RTL (case={case_name}, {label}, {scale})"
-                        );
-                    } else if case_name == "range_focus_thumb_switch" {
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
-
-                        let end_node_id: NodeId = ui
-                            .semantics_snapshot()
-                            .and_then(|snapshot| {
-                                snapshot.nodes.iter().find_map(|node| {
-                                    (node.test_id.as_deref()
-                                        == Some("range-slider-30-70.end"))
-                                    .then_some(node.id)
-                                })
-                            })
-                            .unwrap_or_else(|| {
-                                panic!("expected range-slider-30-70.end in semantics snapshot ({label}, {scale}, {case_name})")
+                    match case.keyboard_interaction() {
+                        Some(Material3SliderKeyboardInteractionV1::SingleArrowCycle) => {
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_down(KeyCode::ArrowRight),
+                            );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_up(KeyCode::ArrowRight),
+                            );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_down(KeyCode::ArrowLeft),
+                            );
+                            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowLeft));
+                        }
+                        Some(Material3SliderKeyboardInteractionV1::SinglePageHomeEnd) => {
+                            let model_id = case.assert_model_id().unwrap_or_else(|| {
+                                panic!(
+                                    "expected single slider assert model id ({label}, {scale}, {case_name})"
+                                )
                             });
-                        ui.set_focus(Some(end_node_id));
+                            let value_model =
+                                single_value_models.get(model_id).unwrap_or_else(|| {
+                                    panic!(
+                                        "expected single slider assert model {model_id} ({label}, {scale}, {case_name})"
+                                    )
+                                });
 
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
-                    } else if case_name == "range_keyboard_page" {
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageUp));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageUp));
-                        let after_page_up = app
-                            .models_mut()
-                            .read(&range_30_70, |v| *v)
-                            .ok()
-                            .unwrap_or([0.0, 0.0]);
-                        assert!(
-                            (after_page_up[0] - 0.4).abs() <= 1e-6
-                                && (after_page_up[1] - 0.7).abs() <= 1e-6,
-                            "expected range slider start PageUp to increment start by a page (case={case_name}, {label}, {scale})"
-                        );
+                            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageUp));
+                            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageUp));
+                            let after_page_up = app
+                                .models_mut()
+                                .read(value_model, |v| *v)
+                                .ok()
+                                .unwrap_or(0.0);
+                            assert!(
+                                (after_page_up - 0.4).abs() <= 1e-6,
+                                "expected slider PageUp to increment by a page (case={case_name}, {label}, {scale})"
+                            );
 
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageDown));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageDown));
-                        let after_page_down = app
-                            .models_mut()
-                            .read(&range_30_70, |v| *v)
-                            .ok()
-                            .unwrap_or([0.0, 0.0]);
-                        assert!(
-                            (after_page_down[0] - 0.3).abs() <= 1e-6
-                                && (after_page_down[1] - 0.7).abs() <= 1e-6,
-                            "expected range slider start PageDown to decrement start by a page (case={case_name}, {label}, {scale})"
-                        );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_down(KeyCode::PageDown),
+                            );
+                            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageDown));
+                            let after_page_down = app
+                                .models_mut()
+                                .read(value_model, |v| *v)
+                                .ok()
+                                .unwrap_or(0.0);
+                            assert!(
+                                (after_page_down - 0.3).abs() <= 1e-6,
+                                "expected slider PageDown to decrement by a page (case={case_name}, {label}, {scale})"
+                            );
 
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Home));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Home));
-                        let after_home = app
-                            .models_mut()
-                            .read(&range_30_70, |v| *v)
-                            .ok()
-                            .unwrap_or([0.0, 0.0]);
-                        assert!(
-                            after_home[0].abs() <= 1e-6 && (after_home[1] - 0.7).abs() <= 1e-6,
-                            "expected range slider start Home to snap to min (case={case_name}, {label}, {scale})"
-                        );
+                            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Home));
+                            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Home));
+                            let after_home = app
+                                .models_mut()
+                                .read(value_model, |v| *v)
+                                .ok()
+                                .unwrap_or(0.0);
+                            assert!(
+                                after_home.abs() <= 1e-6,
+                                "expected slider Home to snap to min (case={case_name}, {label}, {scale})"
+                            );
 
-                        let end_node_id: NodeId = ui
-                            .semantics_snapshot()
-                            .and_then(|snapshot| {
-                                snapshot.nodes.iter().find_map(|node| {
-                                    (node.test_id.as_deref()
-                                        == Some("range-slider-30-70.end"))
-                                    .then_some(node.id)
-                                })
-                            })
-                            .unwrap_or_else(|| {
-                                panic!("expected range-slider-30-70.end in semantics snapshot ({label}, {scale}, {case_name})")
+                            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::End));
+                            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::End));
+                            let after_end = app
+                                .models_mut()
+                                .read(value_model, |v| *v)
+                                .ok()
+                                .unwrap_or(0.0);
+                            assert!(
+                                (after_end - 1.0).abs() <= 1e-6,
+                                "expected slider End to snap to max (case={case_name}, {label}, {scale})"
+                            );
+                        }
+                        Some(Material3SliderKeyboardInteractionV1::SingleRtlArrowCycle) => {
+                            let model_id = case.assert_model_id().unwrap_or_else(|| {
+                                panic!(
+                                    "expected single slider assert model id ({label}, {scale}, {case_name})"
+                                )
                             });
-                        ui.set_focus(Some(end_node_id));
+                            let value_model =
+                                single_value_models.get(model_id).unwrap_or_else(|| {
+                                    panic!(
+                                        "expected single slider assert model {model_id} ({label}, {scale}, {case_name})"
+                                    )
+                                });
 
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageDown));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageDown));
-                        let after_end_page_down = app
-                            .models_mut()
-                            .read(&range_30_70, |v| *v)
-                            .ok()
-                            .unwrap_or([0.0, 0.0]);
-                        assert!(
-                            after_end_page_down[0].abs() <= 1e-6
-                                && (after_end_page_down[1] - 0.6).abs() <= 1e-6,
-                            "expected range slider end PageDown to decrement end by a page (case={case_name}, {label}, {scale})"
-                        );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_down(KeyCode::ArrowRight),
+                            );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_up(KeyCode::ArrowRight),
+                            );
+                            let after_right = app
+                                .models_mut()
+                                .read(value_model, |v| *v)
+                                .ok()
+                                .unwrap_or(0.0);
+                            assert!(
+                                (after_right - 0.29).abs() <= 1e-6,
+                                "expected slider ArrowRight to decrement under RTL (case={case_name}, {label}, {scale})"
+                            );
 
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageUp));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageUp));
-                        let after_end_page_up = app
-                            .models_mut()
-                            .read(&range_30_70, |v| *v)
-                            .ok()
-                            .unwrap_or([0.0, 0.0]);
-                        assert!(
-                            after_end_page_up[0].abs() <= 1e-6
-                                && (after_end_page_up[1] - 0.7).abs() <= 1e-6,
-                            "expected range slider end PageUp to increment end by a page (case={case_name}, {label}, {scale})"
-                        );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_down(KeyCode::ArrowLeft),
+                            );
+                            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowLeft));
+                            let after_left = app
+                                .models_mut()
+                                .read(value_model, |v| *v)
+                                .ok()
+                                .unwrap_or(0.0);
+                            assert!(
+                                (after_left - 0.30).abs() <= 1e-6,
+                                "expected slider ArrowLeft to increment under RTL (case={case_name}, {label}, {scale})"
+                            );
+                        }
+                        Some(Material3SliderKeyboardInteractionV1::RangeThumbSwitch) => {
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_down(KeyCode::ArrowRight),
+                            );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_up(KeyCode::ArrowRight),
+                            );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_down(KeyCode::ArrowRight),
+                            );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_up(KeyCode::ArrowRight),
+                            );
 
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Home));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Home));
-                        let after_end_home = app
-                            .models_mut()
-                            .read(&range_30_70, |v| *v)
-                            .ok()
-                            .unwrap_or([0.0, 0.0]);
-                        assert!(
-                            after_end_home[0].abs() <= 1e-6 && after_end_home[1].abs() <= 1e-6,
-                            "expected range slider end Home to snap to start value (case={case_name}, {label}, {scale})"
-                        );
+                            let end_test_id = case.secondary_focus_test_id().unwrap_or_else(|| {
+                                panic!(
+                                    "expected range slider secondary focus test id ({label}, {scale}, {case_name})"
+                                )
+                            });
+                            let end_node_id: NodeId = ui
+                                .semantics_snapshot()
+                                .and_then(|snapshot| {
+                                    snapshot.nodes.iter().find_map(|node| {
+                                        (node.test_id.as_deref() == Some(end_test_id))
+                                            .then_some(node.id)
+                                    })
+                                })
+                                .unwrap_or_else(|| {
+                                    panic!("expected {end_test_id} in semantics snapshot ({label}, {scale}, {case_name})")
+                                });
+                            ui.set_focus(Some(end_node_id));
 
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::End));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::End));
-                        let after_end_end = app
-                            .models_mut()
-                            .read(&range_30_70, |v| *v)
-                            .ok()
-                            .unwrap_or([0.0, 0.0]);
-                        assert!(
-                            after_end_end[0].abs() <= 1e-6
-                                && (after_end_end[1] - 1.0).abs() <= 1e-6,
-                            "expected range slider end End to snap to max (case={case_name}, {label}, {scale})"
-                        );
-                    } else if case_name == "rtl_range_keyboard_arrows" {
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
-                        let after_right = app
-                            .models_mut()
-                            .read(&range_30_70, |v| *v)
-                            .ok()
-                            .unwrap_or([0.0, 0.0]);
-                        assert!(
-                            (after_right[0] - 0.29).abs() <= 1e-6
-                                && (after_right[1] - 0.7).abs() <= 1e-6,
-                            "expected range slider start ArrowRight to decrement under RTL (case={case_name}, {label}, {scale})"
-                        );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_down(KeyCode::ArrowRight),
+                            );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_up(KeyCode::ArrowRight),
+                            );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_down(KeyCode::ArrowRight),
+                            );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_up(KeyCode::ArrowRight),
+                            );
+                        }
+                        Some(Material3SliderKeyboardInteractionV1::RangePageHomeEnd) => {
+                            let model_id = case.assert_model_id().unwrap_or_else(|| {
+                                panic!(
+                                    "expected range slider assert model id ({label}, {scale}, {case_name})"
+                                )
+                            });
+                            let range_model =
+                                range_value_models.get(model_id).unwrap_or_else(|| {
+                                    panic!(
+                                        "expected range slider assert model {model_id} ({label}, {scale}, {case_name})"
+                                    )
+                                });
 
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowLeft));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowLeft));
-                        let after_left = app
-                            .models_mut()
-                            .read(&range_30_70, |v| *v)
-                            .ok()
-                            .unwrap_or([0.0, 0.0]);
-                        assert!(
-                            (after_left[0] - 0.30).abs() <= 1e-6
-                                && (after_left[1] - 0.7).abs() <= 1e-6,
-                            "expected range slider start ArrowLeft to increment under RTL (case={case_name}, {label}, {scale})"
-                        );
-                    } else {
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
-                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowLeft));
-                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowLeft));
+                            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageUp));
+                            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageUp));
+                            let after_page_up = app
+                                .models_mut()
+                                .read(range_model, |v| *v)
+                                .ok()
+                                .unwrap_or([0.0, 0.0]);
+                            assert!(
+                                (after_page_up[0] - 0.4).abs() <= 1e-6
+                                    && (after_page_up[1] - 0.7).abs() <= 1e-6,
+                                "expected range slider start PageUp to increment start by a page (case={case_name}, {label}, {scale})"
+                            );
+
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_down(KeyCode::PageDown),
+                            );
+                            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageDown));
+                            let after_page_down = app
+                                .models_mut()
+                                .read(range_model, |v| *v)
+                                .ok()
+                                .unwrap_or([0.0, 0.0]);
+                            assert!(
+                                (after_page_down[0] - 0.3).abs() <= 1e-6
+                                    && (after_page_down[1] - 0.7).abs() <= 1e-6,
+                                "expected range slider start PageDown to decrement start by a page (case={case_name}, {label}, {scale})"
+                            );
+
+                            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Home));
+                            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Home));
+                            let after_home = app
+                                .models_mut()
+                                .read(range_model, |v| *v)
+                                .ok()
+                                .unwrap_or([0.0, 0.0]);
+                            assert!(
+                                after_home[0].abs() <= 1e-6 && (after_home[1] - 0.7).abs() <= 1e-6,
+                                "expected range slider start Home to snap to min (case={case_name}, {label}, {scale})"
+                            );
+
+                            let end_test_id = case.secondary_focus_test_id().unwrap_or_else(|| {
+                                panic!(
+                                    "expected range slider secondary focus test id ({label}, {scale}, {case_name})"
+                                )
+                            });
+                            let end_node_id: NodeId = ui
+                                .semantics_snapshot()
+                                .and_then(|snapshot| {
+                                    snapshot.nodes.iter().find_map(|node| {
+                                        (node.test_id.as_deref() == Some(end_test_id))
+                                            .then_some(node.id)
+                                    })
+                                })
+                                .unwrap_or_else(|| {
+                                    panic!("expected {end_test_id} in semantics snapshot ({label}, {scale}, {case_name})")
+                                });
+                            ui.set_focus(Some(end_node_id));
+
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_down(KeyCode::PageDown),
+                            );
+                            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageDown));
+                            let after_end_page_down = app
+                                .models_mut()
+                                .read(range_model, |v| *v)
+                                .ok()
+                                .unwrap_or([0.0, 0.0]);
+                            assert!(
+                                after_end_page_down[0].abs() <= 1e-6
+                                    && (after_end_page_down[1] - 0.6).abs() <= 1e-6,
+                                "expected range slider end PageDown to decrement end by a page (case={case_name}, {label}, {scale})"
+                            );
+
+                            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageUp));
+                            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageUp));
+                            let after_end_page_up = app
+                                .models_mut()
+                                .read(range_model, |v| *v)
+                                .ok()
+                                .unwrap_or([0.0, 0.0]);
+                            assert!(
+                                after_end_page_up[0].abs() <= 1e-6
+                                    && (after_end_page_up[1] - 0.7).abs() <= 1e-6,
+                                "expected range slider end PageUp to increment end by a page (case={case_name}, {label}, {scale})"
+                            );
+
+                            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Home));
+                            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Home));
+                            let after_end_home = app
+                                .models_mut()
+                                .read(range_model, |v| *v)
+                                .ok()
+                                .unwrap_or([0.0, 0.0]);
+                            assert!(
+                                after_end_home[0].abs() <= 1e-6 && after_end_home[1].abs() <= 1e-6,
+                                "expected range slider end Home to snap to start value (case={case_name}, {label}, {scale})"
+                            );
+
+                            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::End));
+                            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::End));
+                            let after_end_end = app
+                                .models_mut()
+                                .read(range_model, |v| *v)
+                                .ok()
+                                .unwrap_or([0.0, 0.0]);
+                            assert!(
+                                after_end_end[0].abs() <= 1e-6
+                                    && (after_end_end[1] - 1.0).abs() <= 1e-6,
+                                "expected range slider end End to snap to max (case={case_name}, {label}, {scale})"
+                            );
+                        }
+                        Some(Material3SliderKeyboardInteractionV1::RangeRtlArrowCycle) => {
+                            let model_id = case.assert_model_id().unwrap_or_else(|| {
+                                panic!(
+                                    "expected range slider assert model id ({label}, {scale}, {case_name})"
+                                )
+                            });
+                            let range_model =
+                                range_value_models.get(model_id).unwrap_or_else(|| {
+                                    panic!(
+                                        "expected range slider assert model {model_id} ({label}, {scale}, {case_name})"
+                                    )
+                                });
+
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_down(KeyCode::ArrowRight),
+                            );
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_up(KeyCode::ArrowRight),
+                            );
+                            let after_right = app
+                                .models_mut()
+                                .read(range_model, |v| *v)
+                                .ok()
+                                .unwrap_or([0.0, 0.0]);
+                            assert!(
+                                (after_right[0] - 0.29).abs() <= 1e-6
+                                    && (after_right[1] - 0.7).abs() <= 1e-6,
+                                "expected range slider start ArrowRight to decrement under RTL (case={case_name}, {label}, {scale})"
+                            );
+
+                            ui.dispatch_event(
+                                &mut app,
+                                &mut services,
+                                &key_down(KeyCode::ArrowLeft),
+                            );
+                            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowLeft));
+                            let after_left = app
+                                .models_mut()
+                                .read(range_model, |v| *v)
+                                .ok()
+                                .unwrap_or([0.0, 0.0]);
+                            assert!(
+                                (after_left[0] - 0.30).abs() <= 1e-6
+                                    && (after_left[1] - 0.7).abs() <= 1e-6,
+                                "expected range slider start ArrowLeft to increment under RTL (case={case_name}, {label}, {scale})"
+                            );
+                        }
+                        None => {}
                     }
                 }
 
@@ -2788,15 +2905,15 @@ fn material3_headless_slider_suite_goldens_v1() {
                     "expected the Material3 slider scene to be stable after animations settle ({label}, {scale}, {case_name})"
                 );
                 cases.insert(
-                    case_name.to_string(),
+                    case.id().to_string(),
                     settle_material3_scene_snapshot_v1(
                         &mut app,
                         &mut ui,
                         &mut services,
                         bounds,
                         scale_factor,
-                        7,
-                        9,
+                        case.settle_from_frame(),
+                        case.total_frames(),
                         &message,
                         &render,
                     ),
@@ -2804,8 +2921,9 @@ fn material3_headless_slider_suite_goldens_v1() {
             }
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-slider.{scale}.{label}"),
+                "material3_headless_slider_suite_goldens_v1",
                 &suite,
             );
         }
