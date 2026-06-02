@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Docking Drop Resolve Floating Hit Owner Split - 2026-06-03
+
+Claim verified: floating-window hit tests used by dock drop target resolution moved out of
+`ecosystem/fret-docking/src/dock/drop_resolve.rs` into private
+`ecosystem/fret-docking/src/dock/drop_resolve/floating_hit.rs` without changing floating close,
+title-bar, body hit classification, floating layout-context projection, title-bar center-drop
+projection, tab-bar insert resolution, drop-intent projection, diagnostics publication, or public
+docking APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/drop_resolve/floating_hit.rs` owns `FloatingHitKind`,
+  `hit_test_floating(...)`, and `layout_context_for_position(...)`.
+- `ecosystem/fret-docking/src/dock/drop_resolve.rs` keeps target, intent, apply, and diagnostics
+  orchestration while importing the floating hit owner.
+- `tools/gate_imui_workstream_source.py` rejects floating hit-test/context helper drift back into
+  the drop resolve root and rejects drop target/intent/diagnostics policy in the floating hit
+  owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new floating hit owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking floating_title_bar_drag center_drop --no-fail-fast`: pass.
+- `cargo nextest run -p fret-docking drags_floating_title_bar --no-fail-fast`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Area/Shaded/Stems Props Builder Owner Split - 2026-06-03
 
 Claim verified: `AreaPlotPanelProps`, `ShadedPlotPanelProps`, and `StemsPlotPanelProps`

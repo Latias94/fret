@@ -587,6 +587,14 @@ Last updated: 2026-06-03
       aggregation. `dock/declarative/frame.rs` now owns both `DockSpaceElementFrame` construction
       and its `DockDropHints` projection. The source gate prevents the helper from drifting back
       into the declarative orchestration owner.
+- [x] Split docking drop resolve floating-window hit tests into a private child owner without
+      changing floating close/title-bar/body hit classification, floating layout-context projection,
+      title-bar center-drop projection, tab-bar insert resolution, drop-intent projection,
+      diagnostics publication, policy allow checks, or public docking APIs.
+      Result: `dock/drop_resolve/floating_hit.rs` owns `FloatingHitKind`, floating hit testing, and
+      layout-context projection. `dock/drop_resolve.rs` keeps target, intent, apply, and diagnostics
+      orchestration. The source gate prevents floating hit/context helpers from drifting back into
+      the drop resolve root.
 - [x] Split docking declarative internal drag/drop resolve and drag-start policy into a private
       child owner without changing hover/drop target resolution, tab-bar auto-scroll during drag,
       tear-off handoff, drop intent application, drag diagnostics publication, drag inversion

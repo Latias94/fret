@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-03 docking drop resolve floating-hit owner-split result:
+`ecosystem/fret-docking/src/dock/drop_resolve/floating_hit.rs` now owns floating-window close,
+title-bar, and body hit classification plus floating layout-context projection used by dock drop
+target resolution. `ecosystem/fret-docking/src/dock/drop_resolve.rs` keeps target resolution,
+drop-intent projection, effect application, and diagnostics orchestration. Public docking APIs,
+floating title-bar center-drop projection, tab-bar insert resolution, policy checks, drop intents,
+effect projection, and diagnostics payloads remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-03 plot area/shaded/stems props builder owner-split result:
 `ecosystem/fret-plot/src/declarative/props.rs` is now a pure builder-owner facade that declares
 private owners and re-exports public prop records while

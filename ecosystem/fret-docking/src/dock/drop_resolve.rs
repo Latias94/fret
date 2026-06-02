@@ -2,9 +2,10 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
+mod floating_hit;
+
 use super::DockingPolicy;
 use super::hit_test::tab_scroll_for_node;
-use super::host_frame::{FloatingChrome, floating_chrome};
 use super::layout::{
     compute_layout_map, dock_hint_pick_zone, dock_hint_rects_with_font, float_zone, split_tab_bar,
 };
@@ -12,49 +13,7 @@ use super::prelude_core::*;
 use super::prelude_runtime::*;
 use super::tab_bar_drop_target::tab_bar_insert_index_for_drop;
 use super::types::{DockDropTarget, HoverTarget};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum FloatingHitKind {
-    Close,
-    TitleBar,
-    Body,
-}
-
-pub(super) fn hit_test_floating(
-    graph: &DockGraph,
-    window: fret_core::AppWindowId,
-    position: Point,
-) -> Option<(DockNodeId, FloatingChrome, FloatingHitKind)> {
-    for floating in graph.floating_windows(window).iter().rev() {
-        let chrome = floating_chrome(floating.rect);
-        if !chrome.outer.contains(position) {
-            continue;
-        }
-        if chrome.close_button.contains(position) {
-            return Some((floating.floating, chrome, FloatingHitKind::Close));
-        }
-        if chrome.title_bar.contains(position) {
-            return Some((floating.floating, chrome, FloatingHitKind::TitleBar));
-        }
-        return Some((floating.floating, chrome, FloatingHitKind::Body));
-    }
-    None
-}
-
-pub(super) fn layout_context_for_position(
-    graph: &DockGraph,
-    window: fret_core::AppWindowId,
-    root: Option<DockNodeId>,
-    dock_bounds: Rect,
-    position: Point,
-) -> (Option<DockNodeId>, Rect) {
-    if let Some((floating, chrome, _)) = hit_test_floating(graph, window, position)
-        && chrome.inner.contains(position)
-    {
-        return (Some(floating), chrome.inner);
-    }
-    (root, dock_bounds)
-}
+use floating_hit::{FloatingHitKind, hit_test_floating, layout_context_for_position};
 
 #[allow(clippy::too_many_arguments)]
 fn dock_drop_target(

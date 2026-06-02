@@ -1926,6 +1926,8 @@
     "ecosystem/fret-plot/src/declarative/series_paint/shaded.rs",
     "ecosystem/fret-plot/src/declarative/style_helpers.rs",
     "ecosystem/fret-plot/src/declarative/tests.rs",
+    "ecosystem/fret-docking/src/dock/drop_resolve.rs",
+    "ecosystem/fret-docking/src/dock/drop_resolve/floating_hit.rs",
     "ecosystem/fret-docking/src/dock/declarative.rs",
     "ecosystem/fret-docking/src/dock/declarative/drag_preview.rs",
     "ecosystem/fret-docking/src/dock/declarative/drag_route.rs",
