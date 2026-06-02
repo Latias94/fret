@@ -3,6 +3,8 @@ use std::sync::Arc;
 use fret_ui_material3::AutocompleteItem;
 use serde::Deserialize;
 
+use super::headless_fixture_primitives::assert_material3_headless_schema_version;
+
 const MATERIAL3_HEADLESS_AUTOCOMPLETE_CASES_V1: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/material3_headless_autocomplete_cases_v1.json"
@@ -80,9 +82,6 @@ pub(crate) fn load_material3_autocomplete_golden_suite_v1() -> Material3Autocomp
     let suite: Material3AutocompleteGoldenSuiteV1 =
         serde_json::from_str(MATERIAL3_HEADLESS_AUTOCOMPLETE_CASES_V1)
             .expect("material3 autocomplete golden fixture must parse");
-    assert_eq!(
-        suite.schema_version, 1,
-        "material3 autocomplete golden fixture schema version"
-    );
+    assert_material3_headless_schema_version(suite.schema_version, 1, "autocomplete golden");
     suite
 }

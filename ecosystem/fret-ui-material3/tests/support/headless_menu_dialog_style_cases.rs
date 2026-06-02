@@ -4,6 +4,10 @@ use fret_ui_material3::menu::{MenuEntry, MenuItem, MenuStyle};
 use fret_ui_material3::{DialogAction, DialogStyle};
 use serde::Deserialize;
 
+use super::headless_fixture_primitives::{
+    Material3HeadlessSettleWindowV1, assert_material3_headless_schema_version,
+};
+
 const MATERIAL3_HEADLESS_MENU_DIALOG_STYLE_CASES_V1: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/material3_headless_menu_dialog_style_cases_v1.json"
@@ -70,8 +74,8 @@ impl Material3MenuEntryV1 {
 pub(crate) struct Material3MenuDialogStyleGoldenCaseV1 {
     id: String,
     kind: Material3MenuDialogStyleGoldenCaseKindV1,
-    settle_from_frame: usize,
-    total_frames: usize,
+    #[serde(flatten)]
+    settle: Material3HeadlessSettleWindowV1,
     headline: Option<String>,
     supporting_text: Option<String>,
     #[serde(default)]
@@ -85,11 +89,11 @@ impl Material3MenuDialogStyleGoldenCaseV1 {
     }
 
     pub(crate) fn settle_from_frame(&self) -> usize {
-        self.settle_from_frame
+        self.settle.settle_from_frame()
     }
 
     pub(crate) fn total_frames(&self) -> usize {
-        self.total_frames
+        self.settle.total_frames()
     }
 
     pub(crate) fn headline(&self) -> &str {
@@ -215,9 +219,6 @@ pub(crate) fn load_material3_menu_dialog_style_golden_suite_v1()
     let suite: Material3MenuDialogStyleGoldenSuiteV1 =
         serde_json::from_str(MATERIAL3_HEADLESS_MENU_DIALOG_STYLE_CASES_V1)
             .expect("material3 menu/dialog style golden fixture must parse");
-    assert_eq!(
-        suite.schema_version, 1,
-        "material3 menu/dialog style golden fixture schema version"
-    );
+    assert_material3_headless_schema_version(suite.schema_version, 1, "menu/dialog style golden");
     suite
 }

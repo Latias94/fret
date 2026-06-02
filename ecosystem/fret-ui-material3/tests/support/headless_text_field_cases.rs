@@ -2,6 +2,10 @@ use fret_runtime::Model;
 use fret_ui_material3::{TextField, TextFieldVariant};
 use serde::Deserialize;
 
+use super::headless_fixture_primitives::{
+    Material3HeadlessSettleWindowV1, assert_material3_headless_schema_version,
+};
+
 const MATERIAL3_HEADLESS_TEXT_FIELD_CASES_V1: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/material3_headless_text_field_cases_v1.json"
@@ -76,8 +80,8 @@ pub(crate) struct Material3TextFieldGoldenCaseV1 {
     id: String,
     hover_test_id: Option<String>,
     focus_test_id: Option<String>,
-    settle_from_frame: usize,
-    total_frames: usize,
+    #[serde(flatten)]
+    settle: Material3HeadlessSettleWindowV1,
 }
 
 impl Material3TextFieldGoldenCaseV1 {
@@ -98,11 +102,11 @@ impl Material3TextFieldGoldenCaseV1 {
     }
 
     pub(crate) fn settle_from_frame(&self) -> usize {
-        self.settle_from_frame
+        self.settle.settle_from_frame()
     }
 
     pub(crate) fn total_frames(&self) -> usize {
-        self.total_frames
+        self.settle.total_frames()
     }
 }
 
@@ -110,9 +114,6 @@ pub(crate) fn load_material3_text_field_golden_suite_v1() -> Material3TextFieldG
     let suite: Material3TextFieldGoldenSuiteV1 =
         serde_json::from_str(MATERIAL3_HEADLESS_TEXT_FIELD_CASES_V1)
             .expect("material3 text field golden fixture must parse");
-    assert_eq!(
-        suite.schema_version, 1,
-        "material3 text field golden fixture schema version"
-    );
+    assert_material3_headless_schema_version(suite.schema_version, 1, "text field golden");
     suite
 }

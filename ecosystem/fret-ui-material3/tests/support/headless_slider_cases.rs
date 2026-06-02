@@ -2,6 +2,10 @@ use fret_runtime::Model;
 use fret_ui_material3::{RangeSlider, Slider};
 use serde::Deserialize;
 
+use super::headless_fixture_primitives::{
+    Material3HeadlessSettleWindowV1, assert_material3_headless_schema_version,
+};
+
 const MATERIAL3_HEADLESS_SLIDER_CASES_V1: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/material3_headless_slider_cases_v1.json"
@@ -217,8 +221,8 @@ pub(crate) struct Material3SliderGoldenCaseV1 {
     #[serde(default)]
     with_tick_marks: bool,
     tick_marks_count: Option<u16>,
-    settle_from_frame: usize,
-    total_frames: usize,
+    #[serde(flatten)]
+    settle: Material3HeadlessSettleWindowV1,
 }
 
 impl Material3SliderGoldenCaseV1 {
@@ -255,11 +259,11 @@ impl Material3SliderGoldenCaseV1 {
     }
 
     pub(crate) fn settle_from_frame(&self) -> usize {
-        self.settle_from_frame
+        self.settle.settle_from_frame()
     }
 
     pub(crate) fn total_frames(&self) -> usize {
-        self.total_frames
+        self.settle.total_frames()
     }
 }
 
@@ -267,9 +271,6 @@ pub(crate) fn load_material3_slider_golden_suite_v1() -> Material3SliderGoldenSu
     let suite: Material3SliderGoldenSuiteV1 =
         serde_json::from_str(MATERIAL3_HEADLESS_SLIDER_CASES_V1)
             .expect("material3 slider golden fixture must parse");
-    assert_eq!(
-        suite.schema_version, 1,
-        "material3 slider golden fixture schema version"
-    );
+    assert_material3_headless_schema_version(suite.schema_version, 1, "slider golden");
     suite
 }

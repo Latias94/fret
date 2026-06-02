@@ -3,6 +3,8 @@ use std::sync::Arc;
 use fret_ui_material3::SearchViewPresentation;
 use serde::Deserialize;
 
+use super::headless_fixture_primitives::assert_material3_headless_schema_version;
+
 const MATERIAL3_HEADLESS_SEARCH_CASES_V1: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/material3_headless_search_cases_v1.json"
@@ -109,9 +111,6 @@ pub(crate) fn load_material3_search_golden_suite_v1() -> Material3SearchGoldenSu
     let suite: Material3SearchGoldenSuiteV1 =
         serde_json::from_str(MATERIAL3_HEADLESS_SEARCH_CASES_V1)
             .expect("material3 search golden fixture must parse");
-    assert_eq!(
-        suite.schema_version, 1,
-        "material3 search golden fixture schema version"
-    );
+    assert_material3_headless_schema_version(suite.schema_version, 1, "search golden");
     suite
 }
